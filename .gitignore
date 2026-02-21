@@ -1,0 +1,17 @@
+node_modules
+.pnpm-store
+.env
+.env.*
+!.env.example
+
+dist
+build
+coverage
+.turbo
+.next
+.output
+
+.DS_Store
+.vscode/*.code-workspace
+
+docker-data

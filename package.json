@@ -1,0 +1,17 @@
+{
+  "name": "finance-os",
+  "private": true,
+  "version": "0.0.0",
+  "description": "",
+  "keywords": [],
+  "author": "BigZoo",
+  "license": "ISC",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev": "echo \"dev not configured yet\"",
+    "build": "echo \"build not configured yet\"",
+    "lint": "echo \"lint not configured yet\"",
+    "typecheck": "echo \"typecheck not configured yet\"",
+    "format": "echo \"format not configured yet\""
+  }
+}
