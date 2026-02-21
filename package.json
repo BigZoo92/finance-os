@@ -9,9 +9,18 @@
   "packageManager": "pnpm@10.15.0",
   "scripts": {
     "dev": "echo \"dev not configured yet\"",
-    "build": "echo \"build not configured yet\"",
-    "lint": "echo \"lint not configured yet\"",
-    "typecheck": "echo \"typecheck not configured yet\"",
-    "format": "echo \"format not configured yet\""
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check .",
+    "check:write": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@types/node": "^25.3.0",
+    "typescript": "^5.9.3"
   }
 }

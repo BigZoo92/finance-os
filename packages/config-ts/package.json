@@ -1,0 +1,10 @@
+{
+  "name": "@finance-os/config-ts",
+  "private": true,
+  "version": "0.0.0",
+  "exports": {
+    "./base": "./base.json",
+    "./web": "./web.json",
+    "./server": "./server.json"
+  }
+}
