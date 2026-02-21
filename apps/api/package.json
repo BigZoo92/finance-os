@@ -1,0 +1,21 @@
+{
+  "name": "@finance-os/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@finance-os/db": "workspace:*",
+    "dotenv": "^17.3.1",
+    "elysia": "latest",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
