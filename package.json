@@ -16,7 +16,14 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "check": "biome check .",
-    "check:write": "biome check --write ."
+    "check:write": "biome check --write .",
+    "infra:up": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml up -d",
+    "infra:down": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml down",
+    "infra:logs": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml logs -f",
+    "infra:ps": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml ps",
+    "db:generate": "pnpm --filter @finance-os/db db:generate",
+    "db:migrate": "pnpm --filter @finance-os/db db:migrate",
+    "db:studio": "pnpm --filter @finance-os/db db:studio"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
