@@ -1,6 +1,6 @@
+import { Card } from '@finance-os/ui/components'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { Button } from '#/components/ui/button'
 
 export const Route = createFileRoute(undefined)({
   component: HomePage,
@@ -53,8 +53,9 @@ function HomePage() {
       <p>Web app OK ✅</p>
 
       <h2>API health</h2>
-      <Button></Button>
-      <pre>{JSON.stringify(apiHealth, null, 2)}</pre>
+      <Card>
+        <pre>{JSON.stringify(apiHealth, null, 2)}</pre>
+      </Card>
     </main>
   )
 }
