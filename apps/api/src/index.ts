@@ -1,3 +1,4 @@
+import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
 import { Elysia } from 'elysia'
 import { env } from './env'
@@ -5,6 +6,12 @@ import { env } from './env'
 const { sql, close } = createDbClient(env.DATABASE_URL)
 
 const app = new Elysia()
+  .use(
+    cors({
+      origin: [env.WEB_ORIGIN, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+      credentials: true,
+    })
+  )
   .get('/health', () => {
     return {
       status: 'ok',
