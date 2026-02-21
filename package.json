@@ -26,7 +26,10 @@
     "infra:ps": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml ps",
     "db:generate": "pnpm --filter @finance-os/db db:generate",
     "db:migrate": "pnpm --filter @finance-os/db db:migrate",
-    "db:studio": "pnpm --filter @finance-os/db db:studio"
+    "db:studio": "pnpm --filter @finance-os/db db:studio",
+    "worker:dev": "bun --watch apps/worker/src/index.ts",
+    "worker:start": "pnpm --filter @finance-os/worker start",
+    "worker:typecheck": "pnpm --filter @finance-os/worker typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
