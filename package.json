@@ -29,7 +29,12 @@
     "db:studio": "pnpm --filter @finance-os/db db:studio",
     "worker:dev": "bun --watch apps/worker/src/index.ts",
     "worker:start": "pnpm --filter @finance-os/worker start",
-    "worker:typecheck": "pnpm --filter @finance-os/worker typecheck"
+    "worker:typecheck": "pnpm --filter @finance-os/worker typecheck",
+    "web:dev": "pnpm --filter @finance-os/web dev",
+    "web:build": "pnpm --filter @finance-os/web build",
+    "web:start": "pnpm --filter @finance-os/web start",
+    "web:typecheck": "pnpm --filter @finance-os/web typecheck",
+    "web:test": "pnpm --filter @finance-os/web test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",

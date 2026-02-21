@@ -20,5 +20,14 @@
   },
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome"
+  },
+  "files.watcherExclude": {
+    "./apps/web/**/routeTree.gen.ts": true
+  },
+  "search.exclude": {
+    "./apps/web/**/routeTree.gen.ts": true
+  },
+  "files.readonlyInclude": {
+    "./apps/web/**/routeTree.gen.ts": true
   }
 }
