@@ -10,6 +10,18 @@ interface MyRouterContext {
   queryClient: QueryClient
 }
 
+function RootNotFound() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background text-foreground p-6">
+      <div className="rounded-lg border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground">404</p>
+        <h1 className="text-lg font-semibold">Page introuvable</h1>
+        <p className="mt-2 text-sm text-muted-foreground">La route demandée n’existe pas.</p>
+      </div>
+    </div>
+  )
+}
+
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
@@ -32,11 +44,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: RootNotFound,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
