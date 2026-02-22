@@ -1,44 +1,52 @@
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { apiHealthQueryOptions } from '@/features/system/query-options'
+
+const toErrorMessage = (value: unknown) => {
+  if (value instanceof Error) {
+    return value.message
+  }
+
+  return String(value)
+}
 
 type ApiStatus =
   | { status: 'loading' }
   | { status: 'ok'; payload: unknown }
   | { status: 'error'; message: string }
 
+const toApiStatus = (params: {
+  isPending: boolean
+  isError: boolean
+  data: unknown
+  error: unknown
+}): ApiStatus => {
+  if (params.isPending) {
+    return { status: 'loading' }
+  }
+
+  if (params.isError) {
+    return {
+      status: 'error',
+      message: toErrorMessage(params.error),
+    }
+  }
+
+  return {
+    status: 'ok',
+    payload: params.data,
+  }
+}
+
 export function ApiStatusCard() {
-  const [state, setState] = useState<ApiStatus>({ status: 'loading' })
+  const query = useQuery(apiHealthQueryOptions())
 
-  useEffect(() => {
-    let cancelled = false
-
-    const run = async () => {
-      try {
-        const res = await fetch('http://127.0.0.1:3001/health', {
-          credentials: 'include',
-        })
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-        const payload = (await res.json()) as unknown
-
-        if (!cancelled) {
-          setState({ status: 'ok', payload })
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        if (!cancelled) {
-          setState({ status: 'error', message })
-        }
-      }
-    }
-
-    void run()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const state = toApiStatus({
+    isPending: query.isPending,
+    isError: query.isError,
+    data: query.data,
+    error: query.error,
+  })
 
   return (
     <Card>

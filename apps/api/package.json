@@ -11,8 +11,12 @@
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
     "@finance-os/db": "workspace:*",
+    "@finance-os/prelude": "workspace:*",
     "@finance-os/env": "workspace:*",
+    "@finance-os/powens": "workspace:*",
+    "@finance-os/redis": "workspace:*",
     "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
     "elysia": "latest",
     "zod": "^4.3.6"
   },

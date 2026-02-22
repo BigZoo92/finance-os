@@ -1,0 +1,2 @@
+DROP INDEX "transaction_fallback_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "transaction_fallback_unique" ON "transaction" USING btree ("powens_connection_id","powens_account_id","booking_date","amount","label_hash") WHERE "transaction"."powens_transaction_id" is null;

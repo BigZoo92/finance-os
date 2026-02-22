@@ -1,0 +1,73 @@
+import type { createDbClient } from '@finance-os/db'
+import type { getApiEnv } from '@finance-os/env'
+import type { PowensAccount, PowensTokenResponse, PowensTransaction } from '@finance-os/powens'
+import type { createRedisClient } from '@finance-os/redis'
+
+export type ApiDb = ReturnType<typeof createDbClient>['db']
+export type RedisClient = ReturnType<typeof createRedisClient>['client']
+export type ApiEnv = ReturnType<typeof getApiEnv>
+
+export interface PowensRoutesDependencies {
+  db: ApiDb
+  redisClient: RedisClient
+  env: ApiEnv
+}
+
+export type PowensClient = {
+  exchangeCodeForToken: (code: string) => Promise<PowensTokenResponse>
+  listConnectionAccounts: (connectionId: string, accessToken: string) => Promise<PowensAccount[]>
+  listAccountTransactions: (params: {
+    accountId: string
+    accessToken: string
+    minDate: string
+    maxDate: string
+    limit?: number
+  }) => Promise<PowensTransaction[]>
+}
+
+export interface PowensConnectionStatusView {
+  id: number
+  powensConnectionId: string
+  status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+  lastSyncAt: Date | null
+  lastSuccessAt: Date | null
+  lastError: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface PowensConnectionRepository {
+  upsertConnectedConnection: (params: {
+    connectionId: string
+    encryptedAccessToken: string
+    now: Date
+  }) => Promise<void>
+  listConnectionStatuses: () => Promise<PowensConnectionStatusView[]>
+}
+
+export interface PowensJobQueueRepository {
+  enqueueConnectionSync: (connectionId: string) => Promise<void>
+  enqueueAllConnectionsSync: () => Promise<void>
+}
+
+export interface PowensConnectUrlService {
+  getConnectUrl: () => string
+}
+
+export interface PowensUseCases {
+  handleCallback: (input: { connectionId: string; encodedCode: string }) => Promise<void>
+  requestSync: (connectionId?: string) => Promise<void>
+  listStatuses: () => Promise<PowensConnectionStatusView[]>
+}
+
+export interface PowensRouteRuntime {
+  services: {
+    client: PowensClient
+    connectUrl: PowensConnectUrlService
+  }
+  repositories: {
+    connection: PowensConnectionRepository
+    jobs: PowensJobQueueRepository
+  }
+  useCases: PowensUseCases
+}

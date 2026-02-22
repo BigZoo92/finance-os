@@ -1,0 +1,14 @@
+{
+  "name": "@finance-os/prelude",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors/index.ts",
+    "./format": "./src/format/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

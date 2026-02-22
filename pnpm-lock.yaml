@@ -32,9 +32,21 @@ importers:
       '@finance-os/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@finance-os/powens':
+        specifier: workspace:*
+        version: link:../../packages/powens
+      '@finance-os/prelude':
+        specifier: workspace:*
+        version: link:../../packages/prelude
+      '@finance-os/redis':
+        specifier: workspace:*
+        version: link:../../packages/redis
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/pg@8.16.0)(bun-types@1.3.9)(pg@8.18.0)(postgres@3.4.8)
       elysia:
         specifier: latest
         version: 1.4.25(@sinclair/typebox@0.34.48)(exact-mirror@0.2.7(@sinclair/typebox@0.34.48))(file-type@21.3.0)(openapi-types@12.1.3)(typescript@5.9.3)
@@ -187,12 +199,18 @@ importers:
       '@finance-os/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@finance-os/powens':
+        specifier: workspace:*
+        version: link:../../packages/powens
       '@finance-os/redis':
         specifier: workspace:*
         version: link:../../packages/redis
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/pg@8.16.0)(bun-types@1.3.9)(pg@8.18.0)(postgres@3.4.8)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -223,6 +241,10 @@ importers:
       zod:
         specifier: ^3.25.76
         version: 3.25.76
+
+  packages/powens: {}
+
+  packages/prelude: {}
 
   packages/redis:
     dependencies:

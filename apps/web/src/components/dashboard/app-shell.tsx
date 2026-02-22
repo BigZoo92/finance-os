@@ -3,6 +3,7 @@ import { ExpensesList } from '@/components/dashboard/expenses-list'
 import { MetricCard } from '@/components/dashboard/metric-card'
 import { NewsFeed } from '@/components/dashboard/news-feed'
 import { PortfolioSummary } from '@/components/dashboard/portfolio-summary'
+import { PowensConnectionsCard } from '@/components/dashboard/powens-connections-card'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { Topbar } from '@/components/dashboard/topbar'
 
@@ -50,6 +51,7 @@ export function DashboardAppShell() {
 
               <div className="space-y-4">
                 <PortfolioSummary />
+                <PowensConnectionsCard />
                 <ApiStatusCard />
               </div>
             </section>

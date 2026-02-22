@@ -8,6 +8,20 @@
       "when": 1771686868787,
       "tag": "0000_safe_texas_twister",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771719252579,
+      "tag": "0001_dark_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771720065257,
+      "tag": "0002_fearless_virginia_dare",
+      "breakpoints": true
     }
   ]
 }
