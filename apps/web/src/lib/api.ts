@@ -4,9 +4,20 @@ const FALLBACK_API_BASE_URL = 'http://127.0.0.1:3001'
 
 export const getApiBaseUrl = () => env.VITE_API_BASE_URL ?? FALLBACK_API_BASE_URL
 
+const toAbsolutePathPrefix = (value: string) => {
+  const normalized = value.startsWith('/') ? value : `/${value}`
+  return normalized.endsWith('/') && normalized.length > 1 ? normalized.slice(0, -1) : normalized
+}
+
 export const toApiUrl = (path: string) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return new URL(normalizedPath, `${getApiBaseUrl()}/`).toString()
+  const baseUrl = getApiBaseUrl()
+
+  if (baseUrl.startsWith('/')) {
+    return `${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`
+  }
+
+  return new URL(normalizedPath, `${baseUrl.replace(/\/+$/, '')}/`).toString()
 }
 
 export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {
@@ -15,6 +26,11 @@ export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {
     ...init,
     headers: {
       Accept: 'application/json',
+      ...(env.VITE_PRIVATE_ACCESS_TOKEN
+        ? {
+            'x-finance-os-access-token': env.VITE_PRIVATE_ACCESS_TOKEN,
+          }
+        : {}),
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
       ...init?.headers,
     },

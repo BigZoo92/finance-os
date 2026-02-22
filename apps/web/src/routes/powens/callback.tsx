@@ -9,6 +9,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { postPowensCallback, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys } from '@/features/powens/query-options'
 
@@ -101,9 +102,14 @@ function PowensCallbackPage() {
       })
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: powensQueryKeys.status(),
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.status(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardQueryKeys.all,
+        }),
+      ])
     },
   })
 

@@ -18,6 +18,8 @@ This file defines implementation rules for the API workspace.
 
 Do not place DB writes or provider orchestration directly in route handlers.
 
+For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-cases (no Powens HTTP calls).
+
 ## 2) Elysia usage requirements
 
 - Use feature plugins and `.decorate(...)` to inject runtime dependencies.
@@ -46,6 +48,7 @@ Do not place DB writes or provider orchestration directly in route handlers.
 
 - Route delegates to `requestSync` use-case.
 - Use-case decides between `powens.syncConnection` and `powens.syncAll`.
+- Manual sync is rate-limited in Redis (cooldown guardrail).
 - Worker owns actual synchronization execution.
 
 ### 3.4 Security
@@ -54,13 +57,25 @@ Do not place DB writes or provider orchestration directly in route handlers.
 - Return sanitized error messages only.
 - Keep encryption logic centralized (`@finance-os/powens` crypto).
 
-## 4) DB and env boundaries
+## 4) Dashboard read model (`apps/api/src/routes/dashboard`)
+
+- `GET /dashboard/summary` and `GET /dashboard/transactions` are DB-only endpoints.
+- Validate query params (`range`: `7d|30d|90d`, bounded `limit`, cursor format).
+- Keep transaction pagination cursor-based and deterministic (`booking_date desc, id desc`).
+
+## 5) Debug and private mode
+
+- `GET /debug/metrics` must not expose secrets.
+- Respect private token checks (`x-finance-os-access-token`) when enabled.
+- Respect optional debug token checks (`x-finance-os-debug-token`) for metrics endpoint.
+
+## 6) DB and env boundaries
 
 - DB access only through `@finance-os/db`.
 - Env access only through `@finance-os/env`.
 - Avoid direct `process.env` usage in route/domain/repository logic.
 
-## 5) Validation expectations
+## 7) Validation expectations
 
 For Powens/API changes run:
 

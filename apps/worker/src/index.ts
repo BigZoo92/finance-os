@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { writeFile } from 'node:fs/promises'
 import { eq, sql } from 'drizzle-orm'
 import { createDbClient, schema } from '@finance-os/db'
 import {
@@ -30,6 +31,15 @@ const TRANSACTION_BATCH_SIZE = 800
 const LOCK_TTL_SECONDS = 15 * 60
 const CONNECTION_LOCK_PREFIX = 'powens:lock:connection:'
 const RECONNECT_REQUIRED_STATUS_CODES = new Set([401, 403])
+const METRIC_RETENTION_SECONDS = 3 * 24 * 60 * 60
+const SYNC_COUNT_METRIC_PREFIX = 'powens:metrics:sync:count:'
+const POWENS_CALLS_METRIC_PREFIX = 'powens:metrics:powens_calls:count:'
+const LAST_SYNC_STARTED_AT_KEY = 'powens:metrics:sync:last_started_at'
+const LAST_SYNC_STARTED_CONNECTION_KEY = 'powens:metrics:sync:last_started_connection'
+const LAST_SYNC_ENDED_AT_KEY = 'powens:metrics:sync:last_ended_at'
+const LAST_SYNC_ENDED_CONNECTION_KEY = 'powens:metrics:sync:last_ended_connection'
+const LAST_SYNC_RESULT_KEY = 'powens:metrics:sync:last_result'
+const WORKER_HEALTHCHECK_FILE = process.env.WORKER_HEALTHCHECK_FILE ?? '/tmp/worker-heartbeat'
 
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let schedulerTimer: ReturnType<typeof setInterval> | null = null
@@ -198,6 +208,46 @@ const toConnectionStatus = (error: unknown): 'error' | 'reconnect_required' => {
 const toSafeErrorMessage = (error: unknown) => {
   const raw = error instanceof Error ? error.message : String(error)
   return raw.length > 2000 ? raw.slice(0, 2000) : raw
+}
+
+const updateHeartbeatFile = async () => {
+  try {
+    await writeFile(WORKER_HEALTHCHECK_FILE, String(Date.now()), 'utf8')
+  } catch (error) {
+    console.error('[worker] failed to update heartbeat file:', toSafeErrorMessage(error))
+  }
+}
+
+const metricDaySuffix = () => formatDate(new Date())
+
+const incrementDailyMetric = async (prefix: string) => {
+  const key = `${prefix}${metricDaySuffix()}`
+  await redisClient.client.incr(key)
+  await redisClient.client.expire(key, METRIC_RETENTION_SECONDS)
+}
+
+const recordLastSyncStarted = async (connectionId: string) => {
+  const timestamp = new Date().toISOString()
+  await Promise.all([
+    redisClient.client.set(LAST_SYNC_STARTED_AT_KEY, timestamp),
+    redisClient.client.set(LAST_SYNC_STARTED_CONNECTION_KEY, connectionId),
+  ])
+}
+
+const recordLastSyncEnded = async (params: {
+  connectionId: string
+  result: 'success' | 'error' | 'reconnect_required'
+}) => {
+  const timestamp = new Date().toISOString()
+  await Promise.all([
+    redisClient.client.set(LAST_SYNC_ENDED_AT_KEY, timestamp),
+    redisClient.client.set(LAST_SYNC_ENDED_CONNECTION_KEY, params.connectionId),
+    redisClient.client.set(LAST_SYNC_RESULT_KEY, params.result),
+  ])
+}
+
+const recordPowensCall = async () => {
+  await incrementDailyMetric(POWENS_CALLS_METRIC_PREFIX)
 }
 
 const acquireConnectionLock = async (connectionId: string) => {
@@ -381,6 +431,11 @@ const syncConnection = async (connectionId: string) => {
       return
     }
 
+    await Promise.all([
+      incrementDailyMetric(SYNC_COUNT_METRIC_PREFIX),
+      recordLastSyncStarted(connectionId),
+    ])
+
     await dbClient.db
       .update(schema.powensConnection)
       .set({
@@ -392,6 +447,7 @@ const syncConnection = async (connectionId: string) => {
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
 
     const accessToken = decryptString(connection.accessTokenEncrypted, env.APP_ENCRYPTION_KEY)
+    await recordPowensCall()
     const accounts = await powensClient.listConnectionAccounts(connectionId, accessToken)
     const upsertedAccounts = await upsertAccounts(connectionId, accounts)
 
@@ -408,6 +464,7 @@ const syncConnection = async (connectionId: string) => {
     const batchBuffer: TransactionInsert[] = []
 
     for (const account of upsertedAccounts) {
+      await recordPowensCall()
       const transactions = await powensClient.listAccountTransactions({
         accessToken,
         accountId: account.powensAccountId,
@@ -453,17 +510,29 @@ const syncConnection = async (connectionId: string) => {
         updatedAt: successAt,
       })
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
+
+    await recordLastSyncEnded({
+      connectionId,
+      result: 'success',
+    })
   } catch (error) {
     const failedAt = new Date()
+    const failureStatus = toConnectionStatus(error)
+
     await dbClient.db
       .update(schema.powensConnection)
       .set({
-        status: toConnectionStatus(error),
+        status: failureStatus,
         lastSyncAt: failedAt,
         lastError: toSafeErrorMessage(error),
         updatedAt: failedAt,
       })
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
+
+    await recordLastSyncEnded({
+      connectionId,
+      result: failureStatus,
+    })
 
     console.error('[worker] connection sync failed for', connectionId, '-', toSafeErrorMessage(error))
   } finally {
@@ -502,6 +571,11 @@ const handleJob = async (job: PowensJob) => {
 }
 
 const startScheduler = () => {
+  const schedulerIntervalMs =
+    env.NODE_ENV === 'production'
+      ? Math.max(env.POWENS_SYNC_INTERVAL_MS, env.POWENS_SYNC_MIN_INTERVAL_PROD_MS)
+      : env.POWENS_SYNC_INTERVAL_MS
+
   schedulerTimer = setInterval(async () => {
     try {
       await redisClient.client.rPush(
@@ -513,9 +587,9 @@ const startScheduler = () => {
     } catch (error) {
       console.error('[worker] failed to enqueue scheduled sync:', toSafeErrorMessage(error))
     }
-  }, env.POWENS_SYNC_INTERVAL_MS)
+  }, schedulerIntervalMs)
 
-  console.log('[worker] scheduler every', env.POWENS_SYNC_INTERVAL_MS, 'ms')
+  console.log('[worker] scheduler every', schedulerIntervalMs, 'ms')
 }
 
 const consumeJobs = async () => {
@@ -553,11 +627,14 @@ const start = async () => {
   console.log('[worker] redis:', redisPong)
   console.log('[worker] databaseTime:', databaseTime)
   console.log('[worker] heartbeat every', env.WORKER_HEARTBEAT_MS, 'ms')
+  console.log('[worker] healthcheck file:', WORKER_HEALTHCHECK_FILE)
+  await updateHeartbeatFile()
 
   heartbeatTimer = setInterval(async () => {
     try {
       const [dbNow, pong] = await Promise.all([pingDatabase(), redisClient.ping()])
       console.log('[worker] heartbeat ok - db:', dbNow, '- redis:', pong)
+      await updateHeartbeatFile()
     } catch (error) {
       console.error('[worker] heartbeat failed:', toSafeErrorMessage(error))
     }

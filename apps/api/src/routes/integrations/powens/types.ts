@@ -50,6 +50,13 @@ export interface PowensJobQueueRepository {
   enqueueAllConnectionsSync: () => Promise<void>
 }
 
+export interface PowensSyncGuardRepository {
+  acquireManualSyncSlot: () => Promise<{
+    allowed: boolean
+    retryAfterSeconds: number
+  }>
+}
+
 export interface PowensConnectUrlService {
   getConnectUrl: () => string
 }
@@ -68,6 +75,7 @@ export interface PowensRouteRuntime {
   repositories: {
     connection: PowensConnectionRepository
     jobs: PowensJobQueueRepository
+    syncGuard: PowensSyncGuardRepository
   }
   useCases: PowensUseCases
 }

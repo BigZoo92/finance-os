@@ -15,6 +15,7 @@ This file defines implementation rules for the web workspace.
 
 - Route-critical fetches should be done in route loaders.
 - Prefer `context.queryClient.ensureQueryData(...)` inside loaders.
+- Use `ensureInfiniteQueryData(...)` for paginated/infinite dashboard lists when needed.
 - UI components consume data through `useQuery`/`useSuspenseQuery`.
 - Writes use `useMutation` and must invalidate affected query keys.
 - Keep query keys centralized in feature modules.
@@ -31,8 +32,10 @@ This file defines implementation rules for the web workspace.
 
 - Query options live under `src/features/powens/query-options.ts`.
 - API functions live under `src/features/powens/api.ts`.
-- `PowensConnectionsCard` uses Query + Mutation only.
-- Manual sync mutation invalidates Powens status query key.
+- Dashboard read-model query options live under `src/features/dashboard-query-options.ts`.
+- Dashboard API functions live under `src/features/dashboard-api.ts`.
+- Route `/` owns range through search params (`7d|30d|90d`) and loader deps.
+- Manual sync mutation invalidates Powens + dashboard query keys.
 
 ### 4.2 Callback flow
 
@@ -41,10 +44,12 @@ This file defines implementation rules for the web workspace.
 - Component renders loader result and exposes sync mutation action.
 - No callback orchestration with `useEffect`/`useRef`.
 
-### 4.3 API status flow
+### 4.3 Private mode and indexing
 
-- System health query options live under `src/features/system/query-options.ts`.
-- `ApiStatusCard` is Query-driven (no effect-managed local lifecycle).
+- Keep private deployment non-indexed:
+- `meta` robots noindex
+- `public/robots.txt` disallow all
+- If API private token mode is enabled, web API fetch must send `x-finance-os-access-token`.
 
 ## 5) Route file rules
 

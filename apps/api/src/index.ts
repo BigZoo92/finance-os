@@ -3,10 +3,13 @@ import { createDbClient } from '@finance-os/db'
 import { createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
 import { env } from './env'
+import { createDebugRoutes } from './routes/debug/router'
+import { createDashboardRoutes } from './routes/dashboard/router'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
+const PUBLIC_PATHS = new Set(['/health', '/db/health'])
 
 await redisClient.connect()
 
@@ -15,10 +18,57 @@ const app = new Elysia()
     cors({
       origin: [env.WEB_ORIGIN, 'http://localhost:3000', 'http://127.0.0.1:3000'],
       credentials: true,
+      allowedHeaders: [
+        'Accept',
+        'Content-Type',
+        'x-finance-os-access-token',
+        'x-finance-os-debug-token',
+      ],
+      exposeHeaders: ['retry-after', 'x-robots-tag'],
+    })
+  )
+  .onBeforeHandle(({ request, set }) => {
+    if (!env.PRIVATE_ACCESS_TOKEN) {
+      return
+    }
+
+    if (request.method === 'OPTIONS') {
+      return
+    }
+
+    const pathname = new URL(request.url).pathname
+    if (PUBLIC_PATHS.has(pathname)) {
+      return
+    }
+
+    const provided = request.headers.get('x-finance-os-access-token')
+    if (provided === env.PRIVATE_ACCESS_TOKEN) {
+      return
+    }
+
+    set.status = 401
+    return {
+      status: 'error',
+      message: 'Unauthorized',
+    }
+  })
+  .onAfterHandle(({ set }) => {
+    set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
+  })
+  .use(
+    createDashboardRoutes({
+      db,
     })
   )
   .use(
     createPowensRoutes({
+      db,
+      redisClient: redisClient.client,
+      env,
+    })
+  )
+  .use(
+    createDebugRoutes({
       db,
       redisClient: redisClient.client,
       env,

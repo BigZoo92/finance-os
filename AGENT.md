@@ -29,6 +29,7 @@ If a change affects architecture, boundaries, conventions, scripts, shared packa
 - domain/use-case layer: orchestration and business intent.
 - repository layer: persistence and queue writes.
 - service layer: external providers and deterministic helpers.
+- Dashboard data is DB-first. Web must not call Powens provider APIs directly.
 - Avoid monolithic files and hidden side effects.
 - Prefer dependency injection for use-cases to keep testability high.
 - Keep single-user assumptions. Do not introduce multi-user abstractions.
@@ -52,6 +53,7 @@ Required Elysia practices:
 - Type decorated context explicitly for feature route modules.
 - Keep route registration modular (`.use(routePlugin)` per route module).
 - Keep `set.status` and response shaping in route layer only.
+- Validate dashboard ranges and pagination inputs at route boundary (`7d|30d|90d`).
 
 ## 5) Frontend rules (TanStack Start + Query + DB)
 
@@ -67,6 +69,7 @@ Required Elysia practices:
 - Define query keys and query options in feature modules.
 - Mutations must invalidate or refresh relevant query keys.
 - Keep error normalization in helper functions, not ad hoc in JSX.
+- Use route search params for dashboard range filters (avoid duplicate local state).
 
 ### 5.3 React anti-pattern avoidance
 
@@ -106,6 +109,7 @@ Required Elysia practices:
 - Manual sync API endpoint enqueues either:
 - one connection sync (`powens.syncConnection`)
 - all connections sync (`powens.syncAll`)
+- Manual sync endpoint must enforce Redis cooldown guardrails in production usage.
 - Worker owns sync execution and status transitions (`syncing`, `connected`, `error`, `reconnect_required`).
 
 ### 6.4 Worker responsibility boundaries
@@ -114,6 +118,7 @@ Required Elysia practices:
 - Acquire/release per-connection lock in Redis.
 - Upsert accounts/transactions idempotently.
 - Update `powens_connection` status and timestamps.
+- Maintain operational metrics in Redis (daily sync count, daily Powens call count, last sync start/end).
 - Never expose access tokens in logs.
 
 ### 6.5 Security rules
@@ -122,6 +127,8 @@ Required Elysia practices:
 - Persist only encrypted access tokens (`APP_ENCRYPTION_KEY` AES-GCM path).
 - Treat callback query params as sensitive.
 - Keep API error payloads sanitized (`toSafeErrorMessage`).
+- Keep private deployments non-indexed (`robots` meta + `X-Robots-Tag` when applicable).
+- If private token mode is enabled, web requests must send `x-finance-os-access-token`.
 
 ## 7) Prelude package usage
 
@@ -160,3 +167,62 @@ Read these in addition to this root file when touching those areas:
 - `apps/api/AGENT.md`
 - `apps/web/AGENT.md`
 - `packages/prelude/AGENT.md`
+
+## 10) Production deployment (Dokploy + Docker)
+
+### 10.1 Source of truth
+
+- Production Compose file: `docker-compose.prod.yml`.
+- Production Dockerfile (multi-target): `infra/docker/Dockerfile`.
+- Production deployment guide: `docs/deploy-dokploy.md`.
+
+### 10.2 Image strategy and targets
+
+- Use a single multi-stage Dockerfile with explicit targets:
+- `web` target: TanStack Start build output (`apps/web/.output`) served by Node.
+- `api` target: Bun runtime with API sources and workspace runtime deps only.
+- `worker` target: Bun runtime with worker sources and workspace runtime deps only.
+- Runtime containers must run as non-root users.
+- Keep startup commands in `infra/docker/entrypoints/*.sh`.
+
+### 10.3 Environment variable conventions
+
+- Canonical public URL variables:
+- `APP_URL` (main public app URL)
+- `WEB_URL` (public web URL, usually same as `APP_URL`)
+- `API_URL` (public API URL, typically `${APP_URL}/api`)
+- Legacy `WEB_ORIGIN` remains supported for compatibility but do not use it for new production setup.
+- For web to api internal routing:
+- `API_INTERNAL_URL` points to internal Compose service URL (`http://api:3001`).
+- `VITE_API_BASE_URL` should be `/api` in production when using Nitro proxy routing.
+- All production required variables are documented in `.env.prod.example`.
+
+### 10.4 Migrations strategy
+
+- Production migration strategy is **API bootstrap migration** (strategy A):
+- API entrypoint runs `apps/api/src/bootstrap.ts`.
+- `bootstrap.ts` applies Drizzle migrations from `packages/db/drizzle` before starting the API server.
+- This behavior is controlled by `RUN_DB_MIGRATIONS` (`true` by default in production compose).
+- Do not add manual SQL bootstrap scripts that bypass Drizzle migration history.
+
+### 10.5 Healthchecks and service dependencies
+
+- `web` and `api` use HTTP healthchecks via `infra/docker/healthchecks/http-healthcheck.mjs`.
+- `worker` uses heartbeat-file healthcheck via `infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs`.
+- `depends_on` must use `condition: service_healthy` for startup ordering.
+- `api` must not expose host ports in production compose (internal network only).
+
+### 10.6 Deployment and verification workflow
+
+- Validate Compose before deployment:
+- `docker compose --env-file .env.prod -f docker-compose.prod.yml config`
+- Build and start:
+- `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build`
+- Verify:
+- `docker compose --env-file .env.prod -f docker-compose.prod.yml ps`
+- `docker compose --env-file .env.prod -f docker-compose.prod.yml logs --no-color --tail=200 web api worker`
+- Agents changing deployment/runtime/env contracts must update:
+- `docker-compose.prod.yml`
+- `.env.prod.example`
+- `docs/deploy-dokploy.md`
+- this `AGENT.md` section

@@ -75,6 +75,8 @@ export const transaction = pgTable(
   table => [
     index('transaction_powens_connection_id_idx').on(table.powensConnectionId),
     index('transaction_powens_account_id_idx').on(table.powensAccountId),
+    index('transaction_booking_date_idx').on(table.bookingDate),
+    index('transaction_booking_date_id_idx').on(table.bookingDate, table.id),
     uniqueIndex('transaction_powens_transaction_unique')
       .on(table.powensConnectionId, table.powensTransactionId)
       .where(sql`${table.powensTransactionId} is not null`),

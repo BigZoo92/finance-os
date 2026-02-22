@@ -1,0 +1,125 @@
+import type { createDbClient } from '@finance-os/db'
+
+export type ApiDb = ReturnType<typeof createDbClient>['db']
+
+export type DashboardRange = '7d' | '30d' | '90d'
+
+export interface DashboardTransactionCursor {
+  bookingDate: string
+  id: number
+}
+
+export interface AccountWithConnectionRow {
+  powensAccountId: string
+  powensConnectionId: string
+  accountName: string
+  accountCurrency: string
+  accountType: string | null
+  enabled: boolean
+  accountRaw: unknown
+  connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
+  lastSyncAt: Date | null
+  lastSuccessAt: Date | null
+  lastError: string | null
+}
+
+export interface DashboardFlowTotals {
+  income: string
+  expenses: string
+}
+
+export interface DashboardExpenseGroupRow {
+  category: string
+  merchant: string
+  total: string
+  count: number
+}
+
+export interface DashboardTransactionRow {
+  id: number
+  bookingDate: string
+  amount: string
+  currency: string
+  label: string
+  powensConnectionId: string
+  powensAccountId: string
+  accountName: string | null
+}
+
+export interface DashboardSummaryResponse {
+  range: DashboardRange
+  totals: {
+    balance: number
+    incomes: number
+    expenses: number
+  }
+  connections: Array<{
+    powensConnectionId: string
+    status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+    lastSyncAt: string | null
+    lastSuccessAt: string | null
+    lastError: string | null
+    balance: number
+    accountCount: number
+  }>
+  accounts: Array<{
+    powensAccountId: string
+    powensConnectionId: string
+    name: string
+    currency: string
+    type: string | null
+    enabled: boolean
+    balance: number
+  }>
+  topExpenseGroups: Array<{
+    label: string
+    category: string
+    merchant: string
+    total: number
+    count: number
+  }>
+}
+
+export interface DashboardTransactionsResponse {
+  range: DashboardRange
+  limit: number
+  nextCursor: string | null
+  items: Array<{
+    id: number
+    bookingDate: string
+    amount: number
+    currency: string
+    direction: 'income' | 'expense'
+    label: string
+    powensConnectionId: string
+    powensAccountId: string
+    accountName: string | null
+  }>
+}
+
+export interface DashboardReadRepository {
+  listAccountsWithConnections: () => Promise<AccountWithConnectionRow[]>
+  getFlowTotals: (fromDate: string) => Promise<DashboardFlowTotals>
+  listTopExpenseGroups: (fromDate: string, limit: number) => Promise<DashboardExpenseGroupRow[]>
+  listTransactions: (params: {
+    fromDate: string
+    limit: number
+    cursor: DashboardTransactionCursor | null
+  }) => Promise<DashboardTransactionRow[]>
+}
+
+export interface DashboardUseCases {
+  getSummary: (range: DashboardRange) => Promise<DashboardSummaryResponse>
+  getTransactions: (input: {
+    range: DashboardRange
+    limit: number
+    cursor: string | undefined
+  }) => Promise<DashboardTransactionsResponse>
+}
+
+export interface DashboardRouteRuntime {
+  repositories: {
+    readModel: DashboardReadRepository
+  }
+  useCases: DashboardUseCases
+}

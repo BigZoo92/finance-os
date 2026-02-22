@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
 import { getPowensRuntime } from '../context'
+import { PowensManualSyncRateLimitError } from '../domain/powens-sync-errors'
 import { powensSyncBodySchema } from '../schemas'
 
 export const syncRoute = new Elysia({
@@ -11,7 +12,21 @@ export const syncRoute = new Elysia({
     const connectionId =
       context.body?.connectionId === undefined ? undefined : String(context.body.connectionId)
 
-    await powens.useCases.requestSync(connectionId)
+    try {
+      await powens.useCases.requestSync(connectionId)
+    } catch (error) {
+      if (error instanceof PowensManualSyncRateLimitError) {
+        context.set.status = 429
+        context.set.headers['retry-after'] = String(error.retryAfterSeconds)
+        return {
+          ok: false,
+          message: 'Manual sync rate limit reached',
+          retryAfterSeconds: error.retryAfterSeconds,
+        }
+      }
+
+      throw error
+    }
 
     return { ok: true }
   },

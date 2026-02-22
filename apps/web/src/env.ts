@@ -1,6 +1,13 @@
 import { createEnv } from '@t3-oss/env-core'
 import { z } from 'zod'
 
+const apiBaseUrlSchema = z
+  .string()
+  .min(1)
+  .refine(value => value.startsWith('/') || z.string().url().safeParse(value).success, {
+    message: 'VITE_API_BASE_URL must be an absolute URL or an absolute path (for example /api)',
+  })
+
 export const env = createEnv({
   server: {
     SERVER_URL: z.string().url().optional(),
@@ -14,7 +21,8 @@ export const env = createEnv({
 
   client: {
     VITE_APP_TITLE: z.string().min(1).optional(),
-    VITE_API_BASE_URL: z.string().url().optional(),
+    VITE_API_BASE_URL: apiBaseUrlSchema.optional(),
+    VITE_PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
   },
 
   /**
