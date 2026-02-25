@@ -25,8 +25,11 @@ const toErrorMessage = (value: unknown) => {
 }
 
 export const Route = createFileRoute('/login')({
+  validateSearch: search => ({
+    reason: search.reason === 'powens_admin_required' ? 'powens_admin_required' : undefined,
+  }),
   loader: async ({ context }) => {
-    const auth = await context.queryClient.ensureQueryData(authMeQueryOptions())
+    const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
 
     if (auth.mode === 'admin') {
       throw redirect({ to: '/' })
@@ -38,21 +41,22 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const search = Route.useSearch()
+  const infoMessage =
+    search.reason === 'powens_admin_required'
+      ? 'Connexion admin requise pour finaliser le callback Powens.'
+      : null
 
   const loginMutation = useMutation({
     mutationFn: postAuthLogin,
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: authQueryKeys.me(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: dashboardQueryKeys.all,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: powensQueryKeys.all,
-        }),
-      ])
+      await queryClient.fetchQuery(authMeQueryOptions())
+      queryClient.removeQueries({
+        queryKey: dashboardQueryKeys.all,
+      })
+      queryClient.removeQueries({
+        queryKey: powensQueryKeys.all,
+      })
 
       pushToast({
         title: 'Connexion reussie',
@@ -102,6 +106,11 @@ function LoginPage() {
             <CardDescription>
               Acces admin single-user pour afficher les vraies donnees.
             </CardDescription>
+            {infoMessage ? (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100">
+                {infoMessage}
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>

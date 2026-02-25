@@ -1,4 +1,5 @@
-import { apiFetch } from '@/lib/api'
+import { apiFetch, ApiRequestError } from '@/lib/api'
+import { getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
 import type {
   DashboardRange,
   DashboardSummaryResponse,
@@ -19,12 +20,29 @@ const toSearchParams = (params: Record<string, string | number | undefined>) => 
   return search.toString()
 }
 
-export const fetchDashboardSummary = (range: DashboardRange) => {
+export const fetchDashboardSummary = async (range: DashboardRange) => {
   const query = toSearchParams({ range })
-  return apiFetch<DashboardSummaryResponse>(`/dashboard/summary?${query}`)
+
+  try {
+    return await apiFetch<DashboardSummaryResponse>(`/dashboard/summary?${query}`)
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (
+        error.status === 'network_error' ||
+        error.status === 401 ||
+        error.status === 403 ||
+        error.status === 404 ||
+        error.status >= 500
+      ) {
+        return getDemoDashboardSummary(range)
+      }
+    }
+
+    return getDemoDashboardSummary(range)
+  }
 }
 
-export const fetchDashboardTransactions = (params: {
+export const fetchDashboardTransactions = async (params: {
   range: DashboardRange
   limit: number
   cursor?: string
@@ -35,5 +53,29 @@ export const fetchDashboardTransactions = (params: {
     cursor: params.cursor,
   })
 
-  return apiFetch<DashboardTransactionsResponse>(`/dashboard/transactions?${query}`)
+  try {
+    return await apiFetch<DashboardTransactionsResponse>(`/dashboard/transactions?${query}`)
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (
+        error.status === 'network_error' ||
+        error.status === 401 ||
+        error.status === 403 ||
+        error.status === 404 ||
+        error.status >= 500
+      ) {
+        return getDemoDashboardTransactions({
+          range: params.range,
+          limit: params.limit,
+          cursor: params.cursor,
+        })
+      }
+    }
+
+    return getDemoDashboardTransactions({
+      range: params.range,
+      limit: params.limit,
+      cursor: params.cursor,
+    })
+  }
 }

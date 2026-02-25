@@ -7,10 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from '@tanstack/react-router'
+import { getGlobalStartContext } from '@tanstack/react-start'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ToastViewport } from '@/components/toast-viewport'
-import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
+import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
+import { logSsrError } from '@/lib/ssr-logger'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
@@ -31,11 +33,30 @@ function RootNotFound() {
 }
 
 export function RouteError({ error }: ErrorComponentProps) {
+  const isProduction = import.meta.env.PROD
+  const message = isProduction
+    ? 'Erreur interne. Reessaie dans quelques secondes.'
+    : String((error as unknown as { message?: string })?.message ?? error)
+  const requestContext =
+    typeof window === 'undefined'
+      ? (getGlobalStartContext() as { requestPath?: string; requestId?: string } | undefined)
+      : undefined
+  const requestId = requestContext?.requestId ?? 'n/a'
+
+  if (typeof window === 'undefined') {
+    logSsrError({
+      source: 'route-error',
+      route: requestContext?.requestPath ?? 'unknown',
+      error,
+    })
+  }
+
   return (
     <div style={{ padding: 16 }}>
-      <h2>Route error</h2>
-      <pre style={{ whiteSpace: 'pre-wrap' }}>{String((error as any)?.message ?? error)}</pre>
-      <ErrorComponent error={error} />
+      <h2>Erreur interne</h2>
+      <p>Request ID: {requestId}</p>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
+      {!isProduction ? <ErrorComponent error={error} /> : null}
     </div>
   )
 }
@@ -73,7 +94,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       return ssrAuth
     }
 
-    return context.queryClient.ensureQueryData(authMeQueryOptions())
+    return context.queryClient.fetchQuery(authMeQueryOptions())
   },
   shellComponent: RootDocument,
   notFoundComponent: RootNotFound,

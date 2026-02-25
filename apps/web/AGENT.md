@@ -1,6 +1,6 @@
 # AGENT.md - `apps/web`
 
-Last updated: 2026-02-24.
+Last updated: 2026-02-27.
 
 This file defines implementation rules for the web workspace.
 
@@ -50,7 +50,8 @@ This file defines implementation rules for the web workspace.
 - Keep private deployment non-indexed:
 - `meta` robots noindex
 - `public/robots.txt` disallow all
-- If API private token mode is enabled, web API fetch must send `x-finance-os-access-token`.
+- If `PRIVATE_ACCESS_TOKEN` is enabled, only SSR/internal web calls may send it (`x-internal-token`).
+- Never expose internal tokens via `VITE_*` variables.
 
 ## 5) Route file rules
 
@@ -72,10 +73,22 @@ If API contracts were touched, also run:
 
 - Resolve auth state through `auth.me` query (`GET /auth/me`), not `useEffect` orchestration.
 - Route loaders should prefetch `auth.me` for auth-sensitive pages.
+- `auth.me` query options must stay non-cache-friendly for reliability:
+  - `staleTime: 0`
+  - bounded `gcTime`
+  - no SSR retry loops
+- SSR auth prefetch must never throw:
+  - `404/401` from `/auth/me` => fallback demo state.
+  - `5xx/network` from `/auth/me` => fallback demo state with server-side logging only.
+- Auth-sensitive pages (`/`, `/login`, `/powens/callback`) must be served with `Cache-Control: no-store`.
+- Dashboard and Powens read queries must also be safe:
+  - `404/401/5xx/network` on `/dashboard/*` or `/integrations/powens/status` => fallback demo data.
+  - never let these query failures crash SSR route loaders.
+- Server-side API logging must include final URL + status for SSR calls, without leaking tokens/secrets.
 - Do not default UI to demo while auth is unresolved; render a neutral pending state.
 - In demo mode, UI must explicitly indicate demo state (banner and/or badges).
 - Sensitive actions (connect/sync/write flows) must be visibly disabled in demo mode.
-- Keep read-only queries active in demo mode; backend returns mocks for these routes.
+- In demo mode, disable "real data" API query functions and use deterministic demo datasets.
 - Show admin-only controls (for example logout or sync triggers) only when `mode === 'admin'`.
 
 ### Feature checklist

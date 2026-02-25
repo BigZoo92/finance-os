@@ -1,0 +1,63 @@
+TypeError: jsxDevRuntimeExports.jsxDEV is not a function
+    at RootDocument (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_ssr/router-BYpsBhgY.mjs:608:106)
+    at renderWithHooks (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8447:20)
+    at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8521:16)
+    at retryNode (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:9064:18)
+    at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237)
+    at finishFunctionComponent (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8465:234)
+    at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8523:9)
+    at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8843:13)
+    at retryNode (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:9064:18)
+    at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237)
+[web:ssr] request failed {
+  source: 'request',
+  method: 'GET',
+  route: '/',
+  message: 'jsxDevRuntimeExports.jsxDEV is not a function'
+}
+[web:ssr] debug context {
+  source: 'request',
+  route: '/',
+  env: {
+    NODE_ENV: { present: true, length: 10, prefix: 'production' },
+    LOG_LEVEL: { present: true, length: 5, prefix: 'debug' },
+    APP_DEBUG: { present: true, length: 1, prefix: '1' },
+    API_INTERNAL_URL: { present: true, length: 22, prefix: 'http://127.0.0.1:655' },
+    VITE_API_BASE_URL: { present: true, length: 4, prefix: '/api' },
+    VITE_APP_ORIGIN: { present: true, length: 21, prefix: 'http://127.0.0.1:300' },
+    VITE_PRIVATE_ACCESS_TOKEN: { present: false, length: 0, prefix: '' }
+  }
+}
+TypeError: jsxDevRuntimeExports.jsxDEV is not a function
+    at RootDocument (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_ssr/router-BYpsBhgY.mjs:608:106)
+    at renderWithHooks (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8447:20)
+    at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8521:16)
+    at retryNode (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:9064:18)
+    at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237)
+    at finishFunctionComponent (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8465:234)
+    at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8523:9)
+    at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8843:13)
+    at retryNode (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:9064:18)
+    at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237)
+TypeError: jsxDevRuntimeExports.jsxDEV is not a function
+    at RootDocument (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_ssr/router-BYpsBhgY.mjs:608:106)
+    ... 8 lines matching cause stack trace ...
+    at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237) {
+  cause: TypeError: jsxDevRuntimeExports.jsxDEV is not a function
+      at RootDocument (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_ssr/router-BYpsBhgY.mjs:608:106)
+      at renderWithHooks (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8447:20)
+      at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8521:16)
+      at retryNode (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:9064:18)
+      at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237)
+      at finishFunctionComponent (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8465:234)
+      at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8523:9)
+      at renderElement (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8843:13)
+      at retryNode (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:9064:18)
+      at renderNodeDestructive (file:///C:/Users/giver/dev/finance-os/apps/web/.output/server/_libs/react-dom.mjs:8910:237),
+  status: 500,
+  statusText: undefined,
+  headers: undefined,
+  data: undefined,
+  body: undefined,
+  unhandled: true
+}

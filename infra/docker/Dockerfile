@@ -3,6 +3,9 @@
 ARG NODE_VERSION=22.15.0
 ARG BUN_VERSION=1.2.22
 ARG PNPM_VERSION=10.15.0
+ARG GIT_SHA=unknown
+ARG GIT_TAG=unknown
+ARG BUILD_TIME=unknown
 
 FROM node:${NODE_VERSION}-alpine AS pnpm-base
 ARG PNPM_VERSION
@@ -30,12 +33,10 @@ FROM deps AS build-web
 COPY . .
 ARG VITE_APP_TITLE=finance-os
 ARG VITE_API_BASE_URL=/api
-ARG VITE_PRIVATE_ACCESS_TOKEN=
-ARG API_INTERNAL_URL=http://api:3001
+ARG API_INTERNAL_URL=http://finance-os-api:3001
 ENV NODE_ENV=production
 ENV VITE_APP_TITLE=${VITE_APP_TITLE}
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-ENV VITE_PRIVATE_ACCESS_TOKEN=${VITE_PRIVATE_ACCESS_TOKEN}
 ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 RUN pnpm --filter @finance-os/web build
 
@@ -52,12 +53,18 @@ COPY packages/redis packages/redis
 COPY infra/docker infra/docker
 
 FROM oven/bun:${BUN_VERSION}-alpine AS api
+ARG GIT_SHA
+ARG GIT_TAG
+ARG BUILD_TIME
 ENV NODE_ENV=production \
     API_HOST=0.0.0.0 \
     API_PORT=3001 \
     RUN_DB_MIGRATIONS=true \
     DRIZZLE_MIGRATIONS_FOLDER=packages/db/drizzle \
-    HEALTHCHECK_URL=http://127.0.0.1:3001/health
+    HEALTHCHECK_URL=http://127.0.0.1:3001/health \
+    GIT_SHA=${GIT_SHA} \
+    GIT_TAG=${GIT_TAG} \
+    BUILD_TIME=${BUILD_TIME}
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=bundle-api --chown=app:app /app/node_modules ./node_modules
@@ -85,9 +92,15 @@ COPY packages/redis packages/redis
 COPY infra/docker infra/docker
 
 FROM oven/bun:${BUN_VERSION}-alpine AS worker
+ARG GIT_SHA
+ARG GIT_TAG
+ARG BUILD_TIME
 ENV NODE_ENV=production \
     WORKER_HEALTHCHECK_FILE=/tmp/worker-heartbeat \
-    WORKER_HEALTHCHECK_MAX_AGE_MS=120000
+    WORKER_HEALTHCHECK_MAX_AGE_MS=120000 \
+    GIT_SHA=${GIT_SHA} \
+    GIT_TAG=${GIT_TAG} \
+    BUILD_TIME=${BUILD_TIME}
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=bundle-worker --chown=app:app /app/node_modules ./node_modules
@@ -102,11 +115,17 @@ USER app
 ENTRYPOINT ["./infra/docker/entrypoints/worker-entrypoint.sh"]
 
 FROM node:${NODE_VERSION}-alpine AS web
+ARG GIT_SHA
+ARG GIT_TAG
+ARG BUILD_TIME
 ENV NODE_ENV=production \
     NITRO_HOST=0.0.0.0 \
     NITRO_PORT=3000 \
     PORT=3000 \
-    HEALTHCHECK_URL=http://127.0.0.1:3000
+    HEALTHCHECK_URL=http://127.0.0.1:3000 \
+    GIT_SHA=${GIT_SHA} \
+    GIT_TAG=${GIT_TAG} \
+    BUILD_TIME=${BUILD_TIME}
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=build-web --chown=app:app /app/apps/web/.output ./apps/web/.output

@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
-import { getAuth } from './context'
+import { getAuth, getRequestMeta } from './context'
+import { normalizeEmail, verifyPasswordHash } from './password'
 import { consumeRateLimitSlot } from './rate-limit'
 import { authLoginBodySchema } from './schemas'
 import { createSessionToken, serializeSessionCookie, serializeSessionCookieClear } from './session'
@@ -9,8 +10,7 @@ const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials'
 const RATE_LIMIT_MESSAGE = 'Too many login attempts'
 const RATE_LIMIT_WINDOW_SECONDS = 60
 const NO_STORE_CACHE_CONTROL = 'no-store'
-
-const normalizeEmail = (value: string) => value.trim().toLowerCase()
+const BIGZOO_DISPLAY_NAME = 'BigZoo'
 
 const resolveClientIp = (request: Request) => {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -26,23 +26,33 @@ const resolveClientIp = (request: Request) => {
   return 'unknown'
 }
 
-const isSecureCookieEnvironment = (nodeEnv: string) => nodeEnv === 'production'
+const shouldUseSecureCookie = ({
+  nodeEnv,
+  allowInsecureCookieInProd,
+}: {
+  nodeEnv: string
+  allowInsecureCookieInProd: boolean
+}) => nodeEnv === 'production' && !allowInsecureCookieInProd
 
 const setNoStoreResponse = (context: { set: { headers: Record<string, unknown> } }) => {
   context.set.headers['cache-control'] = NO_STORE_CACHE_CONTROL
 }
 
-export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) => {
+export const createAuthRoutes = ({ env, redisClient, verifyPassword }: AuthRoutesDependencies) => {
   const normalizedAdminEmail = normalizeEmail(env.AUTH_ADMIN_EMAIL)
-  const secureCookie = isSecureCookieEnvironment(env.NODE_ENV)
+  const secureCookie = shouldUseSecureCookie({
+    nodeEnv: env.NODE_ENV,
+    allowInsecureCookieInProd: env.AUTH_ALLOW_INSECURE_COOKIE_IN_PROD,
+  })
 
   return new Elysia({ prefix: '/auth' })
     .post(
       '/login',
       async context => {
         setNoStoreResponse(context)
+        const requestId = getRequestMeta(context).requestId
 
-        const normalizedEmail = normalizeEmail(context.body.email)
+        const normalizedEmail = normalizeEmail(context.body.email ?? env.AUTH_ADMIN_EMAIL)
         const rateLimit = await consumeRateLimitSlot({
           redisClient,
           key: `auth:login:${resolveClientIp(context.request)}`,
@@ -55,21 +65,27 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
           context.set.headers['retry-after'] = String(rateLimit.retryAfterSeconds)
           return {
             ok: false,
+            code: 'RATE_LIMITED' as const,
             message: RATE_LIMIT_MESSAGE,
+            requestId,
           }
         }
 
-        const passwordMatches = await Bun.password.verify(
-          context.body.password,
-          env.AUTH_PASSWORD_HASH
-        )
+        const passwordMatches = await verifyPasswordHash({
+          password: context.body.password,
+          passwordHash: env.AUTH_PASSWORD_HASH,
+          ...(verifyPassword ? { verifyPassword } : {}),
+        })
+
         const credentialsValid = normalizedEmail === normalizedAdminEmail && passwordMatches
 
         if (!credentialsValid) {
           context.set.status = 401
           return {
             ok: false,
+            code: 'INVALID_CREDENTIALS' as const,
             message: INVALID_CREDENTIALS_MESSAGE,
+            requestId,
           }
         }
 
@@ -91,7 +107,10 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
             : [prev, sc]
           : sc
 
-        return { ok: true }
+        return {
+          ok: true as const,
+          requestId,
+        }
       },
       {
         body: authLoginBodySchema,
@@ -99,16 +118,36 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
     )
     .post('/logout', context => {
       setNoStoreResponse(context)
+      const requestId = getRequestMeta(context).requestId
       context.set.headers['set-cookie'] = serializeSessionCookieClear({
         secure: secureCookie,
       })
 
-      return { ok: true }
+      return {
+        ok: true as const,
+        requestId,
+      }
     })
     .get('/me', context => {
       setNoStoreResponse(context)
+      const auth = getAuth(context)
+      const requestId = getRequestMeta(context).requestId
+
+      if (auth.mode === 'admin') {
+        return {
+          mode: 'admin' as const,
+          requestId,
+          user: {
+            email: env.AUTH_ADMIN_EMAIL,
+            displayName: BIGZOO_DISPLAY_NAME,
+          },
+        }
+      }
+
       return {
-        mode: getAuth(context).mode,
+        mode: 'demo' as const,
+        requestId,
+        user: null,
       }
     })
 }

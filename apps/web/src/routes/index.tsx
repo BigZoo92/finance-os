@@ -1,12 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { DashboardAppShell } from '@/components/dashboard/app-shell'
+import { authMeQueryOptions } from '@/features/auth-query-options'
 import {
-  dashboardSummaryQueryOptions,
-  dashboardTransactionsInfiniteQueryOptions,
+  dashboardSummaryQueryOptionsWithMode,
+  dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
-import { powensStatusQueryOptions } from '@/features/powens/query-options'
+import { powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
 
 const dashboardSearchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -22,15 +23,27 @@ export const Route = createFileRoute('/')({
     range: resolveRange(search.range),
   }),
   loader: async ({ context, deps }) => {
+    const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
+
     await Promise.all([
-      context.queryClient.ensureQueryData(dashboardSummaryQueryOptions(deps.range)),
-      context.queryClient.ensureInfiniteQueryData(
-        dashboardTransactionsInfiniteQueryOptions({
+      context.queryClient.ensureQueryData(
+        dashboardSummaryQueryOptionsWithMode({
           range: deps.range,
-          limit: 30,
+          mode: auth.mode,
         })
       ),
-      context.queryClient.ensureQueryData(powensStatusQueryOptions()),
+      context.queryClient.ensureInfiniteQueryData(
+        dashboardTransactionsInfiniteQueryOptionsWithMode({
+          range: deps.range,
+          limit: 30,
+          mode: auth.mode,
+        })
+      ),
+      context.queryClient.ensureQueryData(
+        powensStatusQueryOptionsWithMode({
+          mode: auth.mode,
+        })
+      ),
     ])
   },
   component: HomePage,

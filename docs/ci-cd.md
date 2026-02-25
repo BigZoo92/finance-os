@@ -1,23 +1,22 @@
-# CI/CD GitHub Actions (finance-os)
+# CI/CD
 
-## 1) Objectif
+Le workflow de release est tag-only et immuable.
 
-Le pipeline est separe en 2 workflows:
+## Principe
 
-- `CI` (`.github/workflows/ci.yml`): validation code uniquement.
-- `Release` (`.github/workflows/release.yml`): CI + build/push GHCR + deploy Dokploy.
+- `main` valide le code
+- un tag `vX.Y.Z` publie les images GHCR
+- Dokploy ne build rien
+- GitHub Actions met a jour `APP_IMAGE_TAG` dans l'env du Compose Dokploy via `compose/update`, verifie la persistence du tag, puis declenche `compose/deploy`
 
-Regle cle:
+## Workflows
 
-- Aucun deploy sans tag Git `v*`.
-- Aucun build Docker sur le serveur Dokploy.
+### CI
 
-## 2) Triggers
-
-### CI (sans deploy)
-
-- `push` sur `main`
-- `pull_request` vers `main`
+- fichier: `.github/workflows/ci.yml`
+- triggers:
+  - `push` sur `main`
+  - `pull_request` vers `main`
 
 Etapes:
 
@@ -27,80 +26,62 @@ Etapes:
 4. `pnpm -r --if-present test`
 5. `pnpm build`
 
-Optimisations:
+### Release
 
-- Cache pnpm via `actions/setup-node` (`cache: pnpm`).
-- `concurrency` active pour annuler les runs obsoletes sur `push`/`PR`.
-
-### Release (tag-only + deploy)
-
-- `push` tag `v*` (ex: `v1.2.3`)
-- `workflow_dispatch` disponible en dry-run (build sans push/deploy)
+- fichier: `.github/workflows/release.yml`
+- triggers:
+  - `push` tag `v*`
+  - `workflow_dispatch` avec `release_tag` pour redeployer une image deja publiee
 
 Etapes sur tag:
 
-1. Reutilise la CI (`workflow_call` de `ci.yml`).
-2. Build images Docker `web/api/worker` (buildx + cache GHA).
-3. Push GHCR:
-   - `${tag}` (ex: `v1.2.3`)
-   - `sha-${commit}`
-   - `latest`
-4. Appel webhook Dokploy (retry x3 + backoff).
+1. relance la CI
+2. build les images `web`, `api`, `worker`
+3. push les tags:
+   - `vX.Y.Z`
+   - `sha-<commit>`
+4. pousse `docker-compose.prod.yml` et l'env du Compose vers Dokploy via `compose/update`
+5. met a jour l'env Dokploy:
+   - `APP_IMAGE_TAG=vX.Y.Z`
+   - `APP_VERSION=vX.Y.Z`
+   - `APP_COMMIT_SHA=<commit>`
+   - `BUILD_TIME=<timestamp>`
+6. verifie via `compose/one` que `APP_IMAGE_TAG` a bien ete persiste
+7. declenche `compose/deploy`
 
-Pourquoi `latest`:
+## Variables GitHub
 
-- Permet un deploy Dokploy simple avec `APP_IMAGE_TAG=latest`.
-- Les tags versionnes `vX.Y.Z` + `sha-*` restent disponibles pour rollback/pin.
+Repository variables:
 
-## 3) Nommage des images GHCR
-
-Avec `GHCR_IMAGE_NAME=ghcr.io/<owner>/finance-os`:
-
-- `ghcr.io/<owner>/finance-os-web:<tag>`
-- `ghcr.io/<owner>/finance-os-api:<tag>`
-- `ghcr.io/<owner>/finance-os-worker:<tag>`
-
-## 4) Comment faire une release
-
-1. Verifier que `main` est vert (CI OK).
-2. Creer un tag semver:
-
-```bash
-git checkout main
-git pull
-git tag v1.2.3
-git push origin v1.2.3
+```text
+GHCR_IMAGE_NAME
+NODE_VERSION
+BUN_VERSION
+PNPM_VERSION
+API_INTERNAL_URL
+VITE_API_BASE_URL
+VITE_APP_TITLE
 ```
 
-3. Suivre le workflow `Release` dans GitHub Actions.
-4. Verifier que le job webhook Dokploy est `success`.
+Repository secrets:
 
-## 5) Verification post-release
+```text
+DOKPLOY_URL
+DOKPLOY_API_KEY
+DOKPLOY_COMPOSE_ID
+```
 
-1. Dokploy montre un redeploy recent.
-2. Conteneurs `web/api/worker` sont `healthy`.
-3. Checks fonctionnels:
-   - home page
-   - `/api/health`
-   - login/logout
-4. (Optionnel) verifier les tags GHCR publies (`vX.Y.Z`, `sha-*`, `latest`).
+## Rollback
 
-## 6) Rollback
+Deux options:
 
-Option 1 (recommandee):
+1. `workflow_dispatch` avec `release_tag=v1.2.2`
+2. changer `APP_IMAGE_TAG=v1.2.2` dans Dokploy puis redeployer
 
-1. Dans Dokploy, definir `APP_IMAGE_TAG=v1.2.2`.
-2. Redeployer.
+## Politique
 
-Option 2:
+- ne jamais deployer `latest`
+- ne jamais rebuild sur le serveur Dokploy
+- ne jamais exposer `VITE_PRIVATE_ACCESS_TOKEN`
 
-1. Re-taguer une ancienne revision et re-lancer une release.
-2. `latest` pointera alors vers cette release.
-
-## 7) Diagnostic des echecs
-
-- Echec CI: lint/typecheck/tests/build en erreur.
-- Echec build image: verifier `infra/docker/Dockerfile`, cache buildx, args.
-- Echec push GHCR: verifier permissions workflow (`packages: write`) et visibilite package GHCR.
-- Echec webhook: verifier `DOKPLOY_WEBHOOK_URL`/`DOKPLOY_WEBHOOK_TOKEN`.
-- Echec deploy runtime: verifier `docker-compose.prod.yml`, `GHCR_IMAGE_NAME`, `APP_IMAGE_TAG`, env runtime.
+Le guide complet est dans [docs/deployment.md](/c:/Users/giver/dev/finance-os/docs/deployment.md).

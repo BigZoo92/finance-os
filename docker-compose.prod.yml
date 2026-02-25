@@ -2,29 +2,47 @@ name: finance-os-prod
 
 services:
   web:
-    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:-latest}
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
     init: true
+    # TODO:: mettre à true quand le debug sera fini CODEX NE MODIFIE PAS CETTE LIGNE
+    # read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    # Public entrypoint: browser traffic hits `web`, and Nitro proxies `/api/*`
+    # to the API through a unique internal DNS alias. Avoid the generic `api`
+    # hostname because Dokploy can attach multiple stacks to shared networks.
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - "${WEB_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
-      APP_URL: ${APP_URL:?APP_URL is required}
-      WEB_URL: ${WEB_URL:?WEB_URL is required}
-      API_URL: ${API_URL:?API_URL is required}
+      APP_URL: ${APP_URL:-}
+      WEB_URL: ${WEB_URL:-}
+      API_URL: ${API_URL:-}
+      APP_VERSION: ${APP_VERSION:-}
+      APP_COMMIT_SHA: ${APP_COMMIT_SHA:-}
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: 3000
       PORT: 3000
-      HEALTHCHECK_URL: http://127.0.0.1:3000
+      HEALTHCHECK_URL: http://127.0.0.1:3000/healthz
+      API_INTERNAL_URL: http://finance-os-api:3001
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_APP_ORIGIN: ${VITE_APP_ORIGIN:-}
+      VITE_APP_TITLE: ${VITE_APP_TITLE:-finance-os}
+      PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_DEBUG: ${APP_DEBUG:-0}
     depends_on:
       api:
         condition: service_healthy
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'node', 'infra/docker/healthchecks/http-healthcheck.mjs']
+      test: ["CMD", "node", "infra/docker/healthchecks/http-healthcheck.mjs"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -33,39 +51,53 @@ services:
       - no-new-privileges:true
 
   api:
-    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:-latest}
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
     init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop:
+      - ALL
+    # Internal-only service. Public `/api/*` requests are expected to go
+    # through `web:3000`, which proxies them to this container.
     expose:
-      - '3001'
+      - "3001"
     environment:
       NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       TZ: ${TZ:-UTC}
       API_HOST: 0.0.0.0
       API_PORT: 3001
-      APP_URL: ${APP_URL:?APP_URL is required}
-      WEB_URL: ${WEB_URL:?WEB_URL is required}
-      API_URL: ${API_URL:?API_URL is required}
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      APP_URL: ${APP_URL:-}
+      WEB_URL: ${WEB_URL:-}
+      API_URL: ${API_URL:-}
+      APP_VERSION: ${APP_VERSION:-}
+      APP_COMMIT_SHA: ${APP_COMMIT_SHA:-}
+      DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: ${REDIS_URL:-}
       PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
       DEBUG_METRICS_TOKEN: ${DEBUG_METRICS_TOKEN:-}
       POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: ${POWENS_MANUAL_SYNC_COOLDOWN_SECONDS:-300}
-      AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:?AUTH_ADMIN_EMAIL is required}
-      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?AUTH_PASSWORD_HASH is required}
-      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:?AUTH_SESSION_SECRET is required}
+      AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:-}
+      AUTH_ADMIN_PASSWORD_HASH_B64: ${AUTH_ADMIN_PASSWORD_HASH_B64:-}
+      AUTH_ADMIN_PASSWORD_HASH: ${AUTH_ADMIN_PASSWORD_HASH:-}
+      AUTH_PASSWORD_HASH_B64: ${AUTH_PASSWORD_HASH_B64:-}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:-}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
       AUTH_SESSION_TTL_DAYS: ${AUTH_SESSION_TTL_DAYS:-30}
       AUTH_LOGIN_RATE_LIMIT_PER_MIN: ${AUTH_LOGIN_RATE_LIMIT_PER_MIN:-5}
-      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:?POWENS_CLIENT_ID is required}
-      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:?POWENS_CLIENT_SECRET is required}
-      POWENS_BASE_URL: ${POWENS_BASE_URL:?POWENS_BASE_URL is required}
-      POWENS_DOMAIN: ${POWENS_DOMAIN:?POWENS_DOMAIN is required}
-      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:?POWENS_REDIRECT_URI_DEV is required}
-      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:?POWENS_REDIRECT_URI_PROD is required}
+      AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: ${AUTH_ALLOW_INSECURE_COOKIE_IN_PROD:-false}
+      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:-}
+      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:-}
+      POWENS_BASE_URL: ${POWENS_BASE_URL:-}
+      POWENS_DOMAIN: ${POWENS_DOMAIN:-}
+      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:-}
+      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:-}
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY is required}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
       RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
       DRIZZLE_MIGRATIONS_FOLDER: packages/db/drizzle
       HEALTHCHECK_URL: http://127.0.0.1:3001/health
@@ -75,9 +107,11 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - finance_os_internal
+      finance_os_internal:
+        aliases:
+          - finance-os-api
     healthcheck:
-      test: ['CMD', 'bun', 'infra/docker/healthchecks/http-healthcheck.mjs']
+      test: ["CMD", "bun", "infra/docker/healthchecks/http-healthcheck.mjs"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -86,29 +120,35 @@ services:
       - no-new-privileges:true
 
   worker:
-    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:-latest}
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
     init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop:
+      - ALL
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: ${REDIS_URL:-}
       WORKER_HEARTBEAT_MS: ${WORKER_HEARTBEAT_MS:-30000}
       WORKER_HEALTHCHECK_FILE: /tmp/worker-heartbeat
       WORKER_HEALTHCHECK_MAX_AGE_MS: ${WORKER_HEALTHCHECK_MAX_AGE_MS:-120000}
+      WORKER_AUTO_SYNC_ENABLED: ${WORKER_AUTO_SYNC_ENABLED:-false}
       POWENS_SYNC_INTERVAL_MS: ${POWENS_SYNC_INTERVAL_MS:-43200000}
       POWENS_SYNC_MIN_INTERVAL_PROD_MS: ${POWENS_SYNC_MIN_INTERVAL_PROD_MS:-43200000}
-      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:?POWENS_CLIENT_ID is required}
-      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:?POWENS_CLIENT_SECRET is required}
-      POWENS_BASE_URL: ${POWENS_BASE_URL:?POWENS_BASE_URL is required}
-      POWENS_DOMAIN: ${POWENS_DOMAIN:?POWENS_DOMAIN is required}
-      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:?POWENS_REDIRECT_URI_DEV is required}
-      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:?POWENS_REDIRECT_URI_PROD is required}
+      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:-}
+      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:-}
+      POWENS_BASE_URL: ${POWENS_BASE_URL:-}
+      POWENS_DOMAIN: ${POWENS_DOMAIN:-}
+      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:-}
+      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:-}
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY is required}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,7 +159,12 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'bun', 'infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs']
+      test:
+        [
+          "CMD",
+          "bun",
+          "infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs",
+        ]
       interval: 20s
       timeout: 5s
       retries: 10
@@ -131,35 +176,49 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-finance_os}
+      POSTGRES_USER: ${POSTGRES_USER:-finance_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       TZ: ${TZ:-UTC}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ['redis-server', '--appendonly', 'yes', '--save', '60', '1000', '--loglevel', 'warning']
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--save",
+        "60",
+        "1000",
+        "--loglevel",
+        "warning",
+      ]
     volumes:
       - redis_data:/data
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 10
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   finance_os_internal:

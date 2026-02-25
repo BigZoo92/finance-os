@@ -1,0 +1,26 @@
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    init: true
+    environment:
+      PROXY_HTTP_PORT: ${PROXY_HTTP_PORT:-3080}
+      PROXY_HTTPS_PORT: ${PROXY_HTTPS_PORT:-3443}
+    ports:
+      - "${PROXY_HTTP_PORT:-3080}:${PROXY_HTTP_PORT:-3080}"
+      - "${PROXY_HTTPS_PORT:-3443}:${PROXY_HTTPS_PORT:-3443}"
+    volumes:
+      - ./infra/docker/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - finance_os_internal
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy_data:
+  caddy_config:

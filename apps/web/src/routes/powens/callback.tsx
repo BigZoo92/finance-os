@@ -7,23 +7,54 @@ import {
   CardTitle,
 } from '@finance-os/ui/components'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { authMeQueryOptions } from '@/features/auth-query-options'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { postPowensCallback, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys } from '@/features/powens/query-options'
+import { sanitizePowensConnectionId } from '@/features/powens/sanitize-connection-id'
+import { ApiRequestError } from '@/lib/api'
 
 type CallbackLoaderState =
   | { status: 'success'; connectionId: string }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; requestId?: string; canRetryAsAdmin?: boolean }
 
-const toErrorMessage = (value: unknown) => {
-  if (value instanceof Error) {
-    return value.message
+const toErrorState = (value: unknown) => {
+  if (value instanceof ApiRequestError) {
+    if (value.code === 'DEMO_MODE_FORBIDDEN') {
+      return {
+        message: 'Connecte-toi en admin pour finaliser la connexion Powens.',
+        requestId: value.requestId,
+        canRetryAsAdmin: true,
+      } as const
+    }
+
+    if (value.status === 401 || value.status === 403) {
+      return {
+        message: 'Session admin requise pour finaliser la connexion Powens.',
+        requestId: value.requestId,
+        canRetryAsAdmin: true,
+      } as const
+    }
+
+    return {
+      message: value.message,
+      requestId: value.requestId,
+      canRetryAsAdmin: false,
+    } as const
   }
 
-  return String(value)
+  if (value instanceof Error) {
+    return {
+      message: value.message,
+      canRetryAsAdmin: false,
+    } as const
+  }
+
+  return {
+    message: String(value),
+    canRetryAsAdmin: false,
+  } as const
 }
 
 const renderLayout = (content: ReactNode) => {
@@ -50,29 +81,23 @@ export const Route = createFileRoute('/powens/callback')({
   validateSearch: search => ({
     connection_id:
       typeof search.connection_id === 'string' || typeof search.connection_id === 'number'
-        ? String(search.connection_id)
+        ? sanitizePowensConnectionId(String(search.connection_id))
         : '',
     code: typeof search.code === 'string' ? search.code : '',
+    state: typeof search.state === 'string' ? search.state : '',
   }),
   loaderDeps: ({ search }) => ({
     connectionId: search.connection_id,
     code: search.code,
+    state: search.state,
   }),
-  staleTime: Number.POSITIVE_INFINITY,
-  loader: async ({ context, deps }): Promise<CallbackLoaderState> => {
-    const auth = await context.queryClient.ensureQueryData(authMeQueryOptions())
-
-    if (auth.mode !== 'admin') {
-      return {
-        status: 'error',
-        message: 'Mode demo: callback Powens reserve au mode admin.',
-      }
-    }
-
+  staleTime: 0,
+  loader: async ({ deps }): Promise<CallbackLoaderState> => {
     if (!deps.connectionId || !deps.code) {
       return {
         status: 'error',
         message: 'Parametres manquants dans l URL de callback Powens.',
+        canRetryAsAdmin: false,
       }
     }
 
@@ -80,6 +105,7 @@ export const Route = createFileRoute('/powens/callback')({
       await postPowensCallback({
         connectionId: deps.connectionId,
         code: deps.code,
+        state: deps.state || undefined,
       })
 
       return {
@@ -87,9 +113,21 @@ export const Route = createFileRoute('/powens/callback')({
         connectionId: deps.connectionId,
       }
     } catch (error) {
+      const normalizedError = toErrorState(error)
+      if (normalizedError.canRetryAsAdmin) {
+        throw redirect({
+          to: '/login',
+          search: {
+            reason: 'powens_admin_required',
+          },
+        })
+      }
+
       return {
         status: 'error',
-        message: toErrorMessage(error),
+        message: normalizedError.message,
+        requestId: normalizedError.requestId,
+        canRetryAsAdmin: false,
       }
     }
   },
@@ -127,6 +165,14 @@ function PowensCallbackPage() {
     return renderLayout(
       <div className="space-y-3">
         <p className="text-destructive">Erreur: {state.message}</p>
+        {state.requestId ? (
+          <p className="text-xs text-muted-foreground">Request ID: {state.requestId}</p>
+        ) : null}
+        {state.canRetryAsAdmin ? (
+          <Button asChild type="button">
+            <Link to="/login">Se connecter en admin</Link>
+          </Button>
+        ) : null}
         <Button asChild type="button" variant="outline">
           <Link to="/">Retour dashboard</Link>
         </Button>
@@ -138,7 +184,7 @@ function PowensCallbackPage() {
     <>
       <p className="text-emerald-600 dark:text-emerald-400">Connexion OK.</p>
       {syncMutation.isError ? (
-        <p className="text-destructive">Erreur: {toErrorMessage(syncMutation.error)}</p>
+        <p className="text-destructive">Erreur: {toErrorState(syncMutation.error).message}</p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>

@@ -1,20 +1,25 @@
 import { getGlobalStartContext } from '@tanstack/react-start'
-import { env } from '@/env'
-import { getApiBaseUrl } from '@/lib/api'
+import { AUTH_UNAVAILABLE_RESPONSE, DEMO_AUTH_RESPONSE } from '@/features/demo-data'
+import { apiRequest } from '@/lib/api'
+import { logSsrError } from '@/lib/ssr-logger'
 import type { AuthMeResponse } from './auth-types'
 
 type RequestAuthContext = {
   requestOrigin?: string
-  requestCookieHeader?: string | null
-}
-
-const toAbsolutePathPrefix = (value: string) => {
-  const normalized = value.startsWith('/') ? value : `/${value}`
-  return normalized.endsWith('/') && normalized.length > 1 ? normalized.slice(0, -1) : normalized
+  requestPath?: string
 }
 
 const getRequestAuthContext = () => {
-  const requestContext = getGlobalStartContext() as RequestAuthContext | undefined
+  if (typeof window !== 'undefined') {
+    return null
+  }
+
+  let requestContext: RequestAuthContext | undefined
+  try {
+    requestContext = getGlobalStartContext() as RequestAuthContext | undefined
+  } catch {
+    return null
+  }
 
   if (!requestContext?.requestOrigin) {
     return null
@@ -23,58 +28,30 @@ const getRequestAuthContext = () => {
   return requestContext
 }
 
-const resolveAuthMeSsrUrl = (requestOrigin: string) => {
-  const baseUrl = getApiBaseUrl()
-
-  if (baseUrl.startsWith('/')) {
-    return new URL(`${toAbsolutePathPrefix(baseUrl)}/auth/me`, requestOrigin).toString()
-  }
-
-  return new URL('/auth/me', `${baseUrl.replace(/\/+$/, '')}/`).toString()
-}
-
-const toApiErrorMessage = async (response: Response) => {
-  let message = `HTTP ${response.status}`
-
-  try {
-    const payload = (await response.json()) as { message?: string }
-    if (typeof payload.message === 'string' && payload.message.length > 0) {
-      message = payload.message
-    }
-  } catch {
-    // Keep generic HTTP message when body is not JSON.
-  }
-
-  return message
-}
-
 export const fetchAuthMeFromSsr = async (): Promise<AuthMeResponse | null> => {
   const requestContext = getRequestAuthContext()
   if (!requestContext) {
     return null
   }
 
-  const headers = new Headers({
-    Accept: 'application/json',
+  const requestPath = requestContext.requestPath ?? '/unknown'
+  const result = await apiRequest<AuthMeResponse>('/auth/me')
+
+  if (result.ok) {
+    return result.data
+  }
+
+  if (result.error.status === 401 || result.error.status === 403 || result.error.status === 404) {
+    return DEMO_AUTH_RESPONSE
+  }
+
+  logSsrError({
+    source: 'request',
+    route: requestPath,
+    error: new Error(
+      `Auth SSR unavailable (${String(result.error.status)}): ${result.error.message} [requestId=${result.error.requestId ?? 'n/a'}]`
+    ),
   })
 
-  if (env.VITE_PRIVATE_ACCESS_TOKEN) {
-    headers.set('x-finance-os-access-token', env.VITE_PRIVATE_ACCESS_TOKEN)
-  }
-
-  if (requestContext.requestCookieHeader) {
-    headers.set('Cookie', requestContext.requestCookieHeader)
-  }
-
-  const response = await fetch(resolveAuthMeSsrUrl(requestContext.requestOrigin), {
-    method: 'GET',
-    credentials: 'include',
-    headers,
-  })
-
-  if (!response.ok) {
-    throw new Error(await toApiErrorMessage(response))
-  }
-
-  return (await response.json()) as AuthMeResponse
+  return AUTH_UNAVAILABLE_RESPONSE
 }

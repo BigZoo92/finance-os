@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun src/index.ts",
     "auth:hash": "bun src/auth/hash-password.ts",
+    "auth:hash-b64": "bun src/auth/hash-password-b64.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "bun run --watch src/index.ts"
   },

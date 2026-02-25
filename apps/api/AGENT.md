@@ -1,6 +1,6 @@
 # AGENT.md - `apps/api`
 
-Last updated: 2026-02-24.
+Last updated: 2026-02-27.
 
 This file defines implementation rules for the API workspace.
 
@@ -40,6 +40,7 @@ For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-
 ### 3.2 Callback flow
 
 - Route validates `connection_id` + `code`.
+- Route must accept callback only when admin session is valid OR signed Powens `state` is valid.
 - Use-case decodes code, exchanges token, encrypts token.
 - Repository upserts `powens_connection`.
 - Queue repository enqueues `powens.syncConnection`.
@@ -66,8 +67,10 @@ For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-
 ## 5) Debug and private mode
 
 - `GET /debug/metrics` must not expose secrets.
-- Respect private token checks (`x-finance-os-access-token`) when enabled.
-- Respect optional debug token checks (`x-finance-os-debug-token`) for metrics endpoint.
+- `GET /debug/health` and `GET /debug/auth` are internal diagnostics endpoints.
+- `GET /__routes` is a debug endpoint for runtime route introspection.
+- In production, `/__routes` must stay inaccessible unless `PRIVATE_ACCESS_TOKEN` is configured and provided.
+- Respect internal token checks (`x-internal-token` or `Authorization: Bearer ...`; `x-finance-os-access-token` remains compatibility).
 
 ## 6) DB and env boundaries
 
@@ -90,14 +93,33 @@ For Powens/API changes run:
 - In demo mode, return mocks and stop before any DB or Powens call.
 - Keep mocks in `apps/api/src/mocks/*`.
 - Sensitive endpoints (sync/connect/callback/write actions) must be admin-only.
+- Powens callback exception: signed short-lived `state` is an allowed fallback when admin cookie is missing after redirect.
 - Auth endpoints:
   - `POST /auth/login` sets session cookie.
   - `POST /auth/logout` clears session cookie.
-  - `GET /auth/me` returns auth mode and must be `Cache-Control: no-store`.
+  - `GET /auth/me` returns auth mode + user payload and must be `Cache-Control: no-store`.
+  - Auth hash source priority:
+    - `AUTH_ADMIN_PASSWORD_HASH_B64` (recommended, base64 UTF-8)
+    - fallback `AUTH_ADMIN_PASSWORD_HASH`
+    - then legacy `AUTH_PASSWORD_HASH_B64`
+    - then legacy `AUTH_PASSWORD_HASH`
+  - Supported hash formats: `pbkdf2$...` (recommended) and legacy `$argon2...`.
+  - `/auth/me` contract:
+    - admin => `200 { mode: "admin", user: { email, displayName } }`
+    - demo => `200 { mode: "demo", user: null }`
+  - `/auth/me` must never read DB/Powens.
+- Core read endpoints:
+  - `GET /dashboard/summary` and `GET /dashboard/transactions` must always exist and keep one contract for admin+demo.
+  - demo branch must execute first and return mocks before any DB query.
+  - keep `/api/*` compatibility routes available in addition to root routes for proxy strip-path resilience.
 - Private access gate:
-  - header `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
+  - accepted internal headers: `x-internal-token`, `Authorization: Bearer ...`, and compatibility `x-finance-os-access-token`.
   - in development, `/auth/login`, `/auth/logout` and `/auth/me` remain accessible without this header.
 - API errors must not leak internals: return sanitized `500` payloads.
+- API observability baseline:
+  - generate/propagate `x-request-id`.
+  - log structured JSON to stdout/stderr.
+  - normalize error payloads with `code`, `message`, `requestId`.
 
 ### Feature checklist
 

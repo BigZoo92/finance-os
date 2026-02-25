@@ -14,7 +14,7 @@ La decision est faite cote API a partir du cookie session signe `finance_os_sess
 L'auth combine 2 mecanismes:
 
 1. Barriere d'acces optionnelle:
-   - Header `x-finance-os-access-token`
+   - Headers acceptes: `x-internal-token`, `Authorization: Bearer <token>`, compat `x-finance-os-access-token`
    - compare a `PRIVATE_ACCESS_TOKEN`
    - si invalide: `401 Unauthorized`
 2. Session admin:
@@ -26,13 +26,13 @@ L'auth combine 2 mecanismes:
 Important:
 
 - En `development`, `/auth/login`, `/auth/logout` et `/auth/me` restent accessibles sans la barriere header.
-- En `production`, si `PRIVATE_ACCESS_TOKEN` est defini, le header est attendu sur toutes les routes API non publiques.
+- En `production`, `PRIVATE_ACCESS_TOKEN` est reserve aux appels serveur-a-serveur (SSR/internal tooling), jamais au navigateur.
 
 ## 3) Endpoints auth
 
 - `POST /auth/login`
   - body: `{ email, password }`
-  - verifie email + Argon2 hash (`AUTH_PASSWORD_HASH`)
+  - verifie email + Argon2 hash (priorite `AUTH_PASSWORD_HASH_B64`, fallback `AUTH_PASSWORD_HASH`)
   - pose le cookie session
 - `POST /auth/logout`
   - efface le cookie session
@@ -45,7 +45,8 @@ Important:
 Variables API:
 
 - `AUTH_ADMIN_EMAIL` (requis)
-- `AUTH_PASSWORD_HASH` (requis, Argon2)
+- `AUTH_PASSWORD_HASH_B64` (recommande, base64 UTF-8 du hash Argon2 PHC)
+- `AUTH_PASSWORD_HASH` (fallback compatibilite, utilise uniquement si `AUTH_PASSWORD_HASH_B64` est absent)
 - `AUTH_SESSION_SECRET` (requis, 32+ bytes)
 - `AUTH_SESSION_TTL_DAYS` (optionnel, defaut `30`)
 - `AUTH_LOGIN_RATE_LIMIT_PER_MIN` (optionnel, defaut `5`)
@@ -54,7 +55,7 @@ Variables API:
 Variables web:
 
 - `VITE_API_BASE_URL` (recommande: `/api`)
-- `VITE_PRIVATE_ACCESS_TOKEN` (optionnel, si barriere active)
+- `PRIVATE_ACCESS_TOKEN` (optionnel, runtime SSR uniquement; ne pas exposer en `VITE_*`)
 
 Voir aussi:
 
@@ -69,10 +70,10 @@ Ce choix evite les problemes de cookies cross-origin et garde `credentials: 'inc
 ## 6) Generer le hash du mot de passe
 
 ```bash
-echo -n "votre-mot-de-passe" | pnpm auth:hash
+echo -n "votre-mot-de-passe" | pnpm auth:hash-b64
 ```
 
-Copier le hash retourne dans `AUTH_PASSWORD_HASH`.
+Copier `AUTH_PASSWORD_HASH_B64=...` dans l'env Dokploy/API.
 
 ## 7) Test rapide (demo vs admin)
 
