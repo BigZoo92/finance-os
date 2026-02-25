@@ -5,6 +5,6 @@ const defaultAuth: AuthState = {
 }
 
 export const getAuth = <TContext extends object>(context: TContext): AuthState => {
-  const auth = (context as any).auth as AuthState | undefined
+  const auth = (context as unknown as { auth?: AuthState }).auth
   return auth ?? defaultAuth
 }

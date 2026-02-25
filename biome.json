@@ -19,7 +19,9 @@
       "!**/coverage",
       "!**/.turbo",
       "!**/.next",
-      "!**/.output"
+      "!**/.output",
+      "!**/routeTree.gen.ts",
+      "!**/routeTree.gen.tsx"
     ]
   },
   "formatter": {

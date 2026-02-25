@@ -9,8 +9,8 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ToastViewport } from '@/components/toast-viewport'
-import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
+import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
@@ -34,7 +34,9 @@ export function RouteError({ error }: ErrorComponentProps) {
   return (
     <div style={{ padding: 16 }}>
       <h2>Route error</h2>
-      <pre style={{ whiteSpace: 'pre-wrap' }}>{String((error as any)?.message ?? error)}</pre>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>
+        {String((error as unknown as { message?: string })?.message ?? error)}
+      </pre>
       <ErrorComponent error={error} />
     </div>
   )
