@@ -1,6 +1,6 @@
 # AGENT.md
 
-Last updated: 2026-02-24.
+Last updated: 2026-02-25.
 
 This file is the repository-wide source of truth for architecture and implementation rules for AI/code agents.
 
@@ -175,13 +175,16 @@ Read these in addition to this root file when touching those areas:
 - Production Compose file: `docker-compose.prod.yml`.
 - Production Dockerfile (multi-target): `infra/docker/Dockerfile`.
 - Production deployment guide: `docs/deploy-dokploy.md`.
+- CI/CD runbook: `docs/ci-cd.md`.
 
 ### 10.2 Image strategy and targets
 
-- Use a single multi-stage Dockerfile with explicit targets:
+- Use a single multi-stage Dockerfile with explicit targets, built in CI and pushed to GHCR:
 - `web` target: TanStack Start build output (`apps/web/.output`) served by Node.
 - `api` target: Bun runtime with API sources and workspace runtime deps only.
 - `worker` target: Bun runtime with worker sources and workspace runtime deps only.
+- Production compose must reference `image:` entries only for app services (`web`, `api`, `worker`).
+- Do not use `build:` for production deploys (no server-side image build).
 - Runtime containers must run as non-root users.
 - Keep startup commands in `infra/docker/entrypoints/*.sh`.
 
@@ -192,9 +195,10 @@ Read these in addition to this root file when touching those areas:
 - `WEB_URL` (public web URL, usually same as `APP_URL`)
 - `API_URL` (public API URL, typically `${APP_URL}/api`)
 - Legacy `WEB_ORIGIN` remains supported for compatibility but do not use it for new production setup.
-- For web to api internal routing:
-- `API_INTERNAL_URL` points to internal Compose service URL (`http://api:3001`).
-- `VITE_API_BASE_URL` should be `/api` in production when using Nitro proxy routing.
+- Image variables for production compose:
+- `GHCR_IMAGE_NAME` (example: `ghcr.io/<owner>/finance-os`)
+- `APP_IMAGE_TAG` (default `latest`, or pin to a release tag for rollback)
+- Build-time web variables (`API_INTERNAL_URL`, `VITE_API_BASE_URL`, `VITE_APP_TITLE`, optional `VITE_PRIVATE_ACCESS_TOKEN`) are set in GitHub Actions release workflow, not on Dokploy host.
 - All production required variables are documented in `.env.prod.example`.
 
 ### 10.4 Migrations strategy
@@ -216,8 +220,9 @@ Read these in addition to this root file when touching those areas:
 
 - Validate Compose before deployment:
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml config`
-- Build and start:
-- `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build`
+- Pull and start (no build):
+- `docker compose --env-file .env.prod -f docker-compose.prod.yml pull`
+- `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d`
 - Verify:
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml ps`
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml logs --no-color --tail=200 web api worker`
@@ -252,3 +257,25 @@ Read these in addition to this root file when touching those areas:
 - Sensitive mutations are admin-only both in API and UI.
 - UI has an explicit demo state for the feature.
 - UI does not render demo as default while auth is unresolved; use pending state until auth query resolves.
+
+## 12) CI/CD release policy (GitHub Actions + GHCR + Dokploy)
+
+- CI workflow (`.github/workflows/ci.yml`) runs on:
+- `push` to `main`
+- `pull_request` to `main`
+- Release workflow (`.github/workflows/release.yml`) runs on tags `v*` only for real deploys.
+- `workflow_dispatch` in release workflow is dry-run only (image build validation without push/deploy).
+- Release workflow must:
+- run CI gates first (lint, typecheck, tests, build)
+- build/push GHCR images for `web`, `api`, `worker`
+- tag images with release tag + `sha-*` (+ `latest` for Dokploy auto-follow)
+- trigger Dokploy webhook only after successful push
+- Use minimum permissions:
+- CI: `contents: read`
+- Release build/push: `contents: read`, `packages: write`
+- Keep secrets out of logs:
+- never echo secrets values
+- use GitHub `secrets.*` only
+- Keep deploy tag-only:
+- do not add deploy-on-branch or deploy-on-PR behavior
+- keep rollback path via `APP_IMAGE_TAG` pinning (`vX.Y.Z`) in Dokploy

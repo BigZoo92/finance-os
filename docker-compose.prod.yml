@@ -2,17 +2,8 @@ name: finance-os-prod
 
 services:
   web:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile
-      target: web
-      args:
-        NODE_VERSION: ${NODE_VERSION:-22.15.0}
-        PNPM_VERSION: ${PNPM_VERSION:-10.15.0}
-        API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3001}
-        VITE_APP_TITLE: ${VITE_APP_TITLE:-finance-os}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        VITE_PRIVATE_ACCESS_TOKEN: ${VITE_PRIVATE_ACCESS_TOKEN:-}
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     init: true
     ports:
@@ -42,14 +33,8 @@ services:
       - no-new-privileges:true
 
   api:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile
-      target: api
-      args:
-        NODE_VERSION: ${NODE_VERSION:-22.15.0}
-        BUN_VERSION: ${BUN_VERSION:-1.2.22}
-        PNPM_VERSION: ${PNPM_VERSION:-10.15.0}
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     init: true
     expose:
@@ -101,14 +86,8 @@ services:
       - no-new-privileges:true
 
   worker:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile
-      target: worker
-      args:
-        NODE_VERSION: ${NODE_VERSION:-22.15.0}
-        BUN_VERSION: ${BUN_VERSION:-1.2.22}
-        PNPM_VERSION: ${PNPM_VERSION:-10.15.0}
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     init: true
     environment:
