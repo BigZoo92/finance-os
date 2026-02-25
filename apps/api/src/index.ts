@@ -2,14 +2,32 @@ import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
 import { createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
+import { demoAccessDeniedResponse, isAdminRequiredError } from './auth/guard'
+import { createAuthRoutes } from './auth/routes'
+import { readSessionFromCookie } from './auth/session'
 import { env } from './env'
-import { createDebugRoutes } from './routes/debug/router'
 import { createDashboardRoutes } from './routes/dashboard/router'
+import { createDebugRoutes } from './routes/debug/router'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
-const PUBLIC_PATHS = new Set(['/health', '/db/health'])
+const ALWAYS_PUBLIC_PATHS = new Set(['/health', '/db/health'])
+const DEV_AUTH_PUBLIC_PATHS = new Set(['/auth/login', '/auth/logout', '/auth/me'])
+
+const shouldBypassPrivateAccessGate = ({
+  pathname,
+  nodeEnv,
+}: {
+  pathname: string
+  nodeEnv: string
+}) => {
+  if (ALWAYS_PUBLIC_PATHS.has(pathname)) {
+    return true
+  }
+
+  return nodeEnv !== 'production' && DEV_AUTH_PUBLIC_PATHS.has(pathname)
+}
 
 await redisClient.connect()
 
@@ -27,6 +45,17 @@ const app = new Elysia()
       exposeHeaders: ['retry-after', 'x-robots-tag'],
     })
   )
+  .derive(({ request }) => {
+    const session = readSessionFromCookie({
+      cookieHeader: request.headers.get('cookie'),
+      secret: env.AUTH_SESSION_SECRET,
+      ttlDays: env.AUTH_SESSION_TTL_DAYS,
+    })
+
+    return {
+      auth: { mode: session?.admin === true ? 'admin' : 'demo' } as const,
+    }
+  })
   .onBeforeHandle(({ request, set }) => {
     if (!env.PRIVATE_ACCESS_TOKEN) {
       return
@@ -37,7 +66,12 @@ const app = new Elysia()
     }
 
     const pathname = new URL(request.url).pathname
-    if (PUBLIC_PATHS.has(pathname)) {
+    if (
+      shouldBypassPrivateAccessGate({
+        pathname,
+        nodeEnv: env.NODE_ENV,
+      })
+    ) {
       return
     }
 
@@ -55,6 +89,12 @@ const app = new Elysia()
   .onAfterHandle(({ set }) => {
     set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
   })
+  .use(
+    createAuthRoutes({
+      env,
+      redisClient: redisClient.client,
+    })
+  )
   .use(
     createDashboardRoutes({
       db,
@@ -95,7 +135,20 @@ const app = new Elysia()
     }
   })
   .onError(({ code, error }) => {
-    const message = error instanceof Error ? error.message : String(error)
+    if (isAdminRequiredError(error)) {
+      return new Response(JSON.stringify(demoAccessDeniedResponse), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+
+    const status = code === 'VALIDATION' ? 400 : 500
+    const message =
+      status === 500
+        ? 'Internal server error'
+        : error instanceof Error
+          ? error.message
+          : String(error)
 
     return new Response(
       JSON.stringify({
@@ -104,7 +157,7 @@ const app = new Elysia()
         message,
       }),
       {
-        status: 500,
+        status,
         headers: { 'content-type': 'application/json' },
       }
     )

@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { requireAdmin } from '../../../../auth/guard'
 import { getPowensRuntime } from '../context'
 import { PowensManualSyncRateLimitError } from '../domain/powens-sync-errors'
 import { powensSyncBodySchema } from '../schemas'
@@ -8,6 +9,8 @@ export const syncRoute = new Elysia({
 }).post(
   '/sync',
   async context => {
+    requireAdmin(context)
+
     const powens = getPowensRuntime(context)
     const connectionId =
       context.body?.connectionId === undefined ? undefined : String(context.body.connectionId)

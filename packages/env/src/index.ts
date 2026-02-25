@@ -43,25 +43,74 @@ const parseEnv = <T extends z.ZodRawShape>(shape: T) => {
 
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '')
 
+const toDecodedBuffer = (value: string): Buffer | null => {
+  const trimmed = value.trim()
+
+  if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length % 2 === 0) {
+    try {
+      return Buffer.from(trimmed, 'hex')
+    } catch {
+      return null
+    }
+  }
+
+  if (/^[A-Za-z0-9+/]+={0,2}$/.test(trimmed)) {
+    try {
+      return Buffer.from(trimmed, 'base64')
+    } catch {
+      return null
+    }
+  }
+
+  if (/^[A-Za-z0-9_-]+$/.test(trimmed)) {
+    try {
+      return Buffer.from(trimmed, 'base64url')
+    } catch {
+      return null
+    }
+  }
+
+  return null
+}
+
+const hasExactByteLength = (value: string, bytes: number) => {
+  if (Buffer.byteLength(value, 'utf8') === bytes) {
+    return true
+  }
+
+  const decoded = toDecodedBuffer(value)
+  return decoded?.length === bytes
+}
+
+const hasMinimumByteLength = (value: string, bytes: number) => {
+  if (Buffer.byteLength(value, 'utf8') >= bytes) {
+    return true
+  }
+
+  const decoded = toDecodedBuffer(value)
+  return (decoded?.length ?? 0) >= bytes
+}
+
 const encryptionKeySchema = z
   .string()
   .min(1, 'APP_ENCRYPTION_KEY is required')
-  .refine(value => {
-    if (Buffer.byteLength(value, 'utf8') === 32) {
-      return true
-    }
+  .refine(
+    value => hasExactByteLength(value, 32),
+    'APP_ENCRYPTION_KEY must be a 32-byte value (raw, hex, base64, or base64url)'
+  )
 
-    if (/^[0-9a-fA-F]{64}$/.test(value)) {
-      return true
-    }
+const authSessionSecretSchema = z
+  .string()
+  .min(1, 'AUTH_SESSION_SECRET is required')
+  .refine(
+    value => hasMinimumByteLength(value, 32),
+    'AUTH_SESSION_SECRET must be at least 32 bytes (raw, hex, base64, or base64url)'
+  )
 
-    try {
-      const decoded = Buffer.from(value, 'base64')
-      return decoded.length === 32
-    } catch {
-      return false
-    }
-  }, 'APP_ENCRYPTION_KEY must be a 32-byte value (raw, hex, or base64)')
+const authPasswordHashSchema = z
+  .string()
+  .min(1, 'AUTH_PASSWORD_HASH is required')
+  .refine(value => value.startsWith('$argon2'), 'AUTH_PASSWORD_HASH must be an Argon2 hash')
 
 const powensShape = {
   POWENS_CLIENT_ID: z.string().min(1, 'POWENS_CLIENT_ID is required'),
@@ -77,19 +126,10 @@ const powensShape = {
 
 const assertProductionApiEnv = (values: {
   NODE_ENV: 'development' | 'test' | 'production'
-  APP_URL?: string | undefined
-  WEB_URL?: string | undefined
-  WEB_ORIGIN?: string | undefined
   POWENS_REDIRECT_URI_PROD?: string | undefined
 }) => {
   if (values.NODE_ENV !== 'production') {
     return
-  }
-
-  if (!values.APP_URL && !values.WEB_URL && !values.WEB_ORIGIN) {
-    throw new Error(
-      'Invalid environment variables:\nAPP_URL or WEB_URL (or legacy WEB_ORIGIN) is required in production'
-    )
   }
 
   if (!values.POWENS_REDIRECT_URI_PROD) {
@@ -104,7 +144,7 @@ export const getApiEnv = () => {
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     API_HOST: z.string().default('0.0.0.0'),
     API_PORT: z.coerce.number().int().positive().default(3001),
-    APP_URL: z.string().url('APP_URL must be a valid URL').optional(),
+    APP_URL: z.string().url('APP_URL must be a valid URL'),
     WEB_URL: z.string().url('WEB_URL must be a valid URL').optional(),
     API_URL: z.string().url('API_URL must be a valid URL').optional(),
     WEB_ORIGIN: z.string().url('WEB_ORIGIN must be a valid URL').optional(),
@@ -113,12 +153,17 @@ export const getApiEnv = () => {
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
+    AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
+    AUTH_PASSWORD_HASH: authPasswordHashSchema,
+    AUTH_SESSION_SECRET: authSessionSecretSchema,
+    AUTH_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
+    AUTH_LOGIN_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
     ...powensShape,
   })
 
   assertProductionApiEnv(parsed)
 
-  const webUrl = normalizeUrl(parsed.WEB_URL ?? parsed.APP_URL ?? parsed.WEB_ORIGIN ?? 'http://127.0.0.1:3000')
+  const webUrl = normalizeUrl(parsed.WEB_URL ?? parsed.WEB_ORIGIN ?? parsed.APP_URL)
   const appUrl = normalizeUrl(parsed.APP_URL ?? webUrl)
   const apiUrl = normalizeUrl(parsed.API_URL ?? `${appUrl}/api`)
 

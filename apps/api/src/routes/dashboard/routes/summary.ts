@@ -1,4 +1,6 @@
 import { Elysia } from 'elysia'
+import { getAuth } from '../../../auth/context'
+import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
 import { getDashboardRuntime } from '../context'
 import { dashboardSummaryQuerySchema } from '../schemas'
 
@@ -7,8 +9,13 @@ export const summaryRoute = new Elysia({
 }).get(
   '/summary',
   async context => {
-    const dashboard = getDashboardRuntime(context)
     const range = context.query.range ?? '30d'
+
+    if (getAuth(context).mode !== 'admin') {
+      return getDashboardSummaryMock(range)
+    }
+
+    const dashboard = getDashboardRuntime(context)
 
     return dashboard.useCases.getSummary(range)
   },

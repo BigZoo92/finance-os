@@ -1,10 +1,17 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, HeadContent, Scripts } from '@tanstack/react-router'
+import {
+  createRootRouteWithContext,
+  ErrorComponent,
+  type ErrorComponentProps,
+  HeadContent,
+  Scripts,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ToastViewport } from '@/components/toast-viewport'
+import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
+import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
-import TanStackQueryProvider from '../integrations/tanstack-query/root-provider'
 import appCss from '../styles.css?url'
 
 interface MyRouterContext {
@@ -19,6 +26,16 @@ function RootNotFound() {
         <h1 className="text-lg font-semibold">Page introuvable</h1>
         <p className="mt-2 text-sm text-muted-foreground">La route demandée n’existe pas.</p>
       </div>
+    </div>
+  )
+}
+
+export function RouteError({ error }: ErrorComponentProps) {
+  return (
+    <div style={{ padding: 16 }}>
+      <h2>Route error</h2>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>{String((error as any)?.message ?? error)}</pre>
+      <ErrorComponent error={error} />
     </div>
   )
 }
@@ -48,8 +65,19 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
     ],
   }),
+  loader: async ({ context }) => {
+    const ssrAuth = await fetchAuthMeFromSsr()
+
+    if (ssrAuth) {
+      context.queryClient.setQueryData(authQueryKeys.me(), ssrAuth)
+      return ssrAuth
+    }
+
+    return context.queryClient.ensureQueryData(authMeQueryOptions())
+  },
   shellComponent: RootDocument,
   notFoundComponent: RootNotFound,
+  errorComponent: RouteError,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
@@ -59,22 +87,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <TanStackQueryProvider>
-          {children}
-          <ToastViewport />
-          <TanStackDevtools
-            config={{
-              position: 'bottom-right',
-            }}
-            plugins={[
-              {
-                name: 'Tanstack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              TanStackQueryDevtools,
-            ]}
-          />
-        </TanStackQueryProvider>
+        {children}
+        <ToastViewport />
+        <TanStackDevtools
+          config={{
+            position: 'bottom-right',
+          }}
+          plugins={[
+            {
+              name: 'Tanstack Router',
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+            TanStackQueryDevtools,
+          ]}
+        />
         <Scripts />
       </body>
     </html>

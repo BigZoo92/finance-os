@@ -10,6 +10,9 @@ import {
 } from '@finance-os/ui/components'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { postAuthLogout } from '@/features/auth-api'
+import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
+import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
   dashboardQueryKeys,
   dashboardSummaryQueryOptions,
@@ -86,10 +89,23 @@ const formatMoney = (value: number, currency = 'EUR') => {
   }
 }
 
+const DemoWidgetBadge = ({ demo }: { demo: boolean }) => {
+  if (!demo) {
+    return null
+  }
+
+  return (
+    <Badge variant="outline" className="border-amber-500/60 bg-amber-400/15 text-amber-700 dark:text-amber-300">
+      DEMO
+    </Badge>
+  )
+}
+
 export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  const authQuery = useQuery(authMeQueryOptions())
   const summaryQuery = useQuery(dashboardSummaryQueryOptions(range))
   const transactionsQuery = useInfiniteQuery(
     dashboardTransactionsInfiniteQueryOptions({
@@ -98,9 +114,22 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     })
   )
   const statusQuery = useQuery(powensStatusQueryOptions())
+  const authViewState = resolveAuthViewState({
+    mode: authQuery.data?.mode,
+    isPending: authQuery.isPending,
+  })
+  const isAuthPending = authViewState === 'pending'
+  const isAdmin = authViewState === 'admin'
+  const isDemo = authViewState === 'demo'
 
   const connectMutation = useMutation({
-    mutationFn: fetchPowensConnectUrl,
+    mutationFn: async () => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      return fetchPowensConnectUrl()
+    },
     onSuccess: payload => {
       window.location.assign(payload.url)
     },
@@ -114,7 +143,13 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   })
 
   const syncMutation = useMutation({
-    mutationFn: () => postPowensSync(),
+    mutationFn: async () => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      return postPowensSync()
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -140,6 +175,36 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     },
   })
 
+  const logoutMutation = useMutation({
+    mutationFn: postAuthLogout,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: authQueryKeys.me(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.status(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardQueryKeys.all,
+        }),
+      ])
+
+      pushToast({
+        title: 'Session fermee',
+        description: 'Retour en mode demo.',
+        tone: 'info',
+      })
+    },
+    onError: error => {
+      pushToast({
+        title: 'Logout impossible',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
+    },
+  })
+
   const summary = summaryQuery.data
   const statusConnections = statusQuery.data?.connections ?? []
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
@@ -154,7 +219,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Finance OS Dashboard</h1>
             <p className="text-sm text-muted-foreground">
-              Vue globale DB-first: comptes, transactions et etat Powens.
+              {isAuthPending
+                ? 'Verification de la session en cours...'
+                : isDemo
+                ? 'Mode demo: donnees mockees uniquement, actions sensibles desactivees.'
+                : 'Mode admin: acces complet DB + Powens.'}
             </p>
           </div>
 
@@ -185,7 +254,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               size="sm"
               variant="outline"
               onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
+              disabled={!isAdmin || syncMutation.isPending}
             >
               {syncMutation.isPending ? 'Sync...' : 'Sync now'}
             </Button>
@@ -194,17 +263,60 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               type="button"
               size="sm"
               onClick={() => connectMutation.mutate()}
-              disabled={connectMutation.isPending}
+              disabled={!isAdmin || connectMutation.isPending}
             >
               {connectMutation.isPending ? 'Ouverture...' : 'Connect bank'}
             </Button>
+
+            {isAuthPending ? (
+              <Button type="button" size="sm" variant="ghost" disabled>
+                Session...
+              </Button>
+            ) : isDemo ? (
+              <Button type="button" size="sm" variant="secondary" onClick={() => navigate({ to: '/login' })}>
+                Se connecter
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                {logoutMutation.isPending ? 'Deconnexion...' : 'Logout'}
+              </Button>
+            )}
           </div>
         </header>
+
+        {isDemo ? (
+          <Card className="border-amber-500/40 bg-[linear-gradient(120deg,rgba(245,158,11,0.18),rgba(234,88,12,0.14),rgba(245,158,11,0.1))]">
+            <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <p className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                  <Badge className="bg-amber-500 text-black hover:bg-amber-500">DEMO</Badge>
+                  Mode demonstration active
+                </p>
+                <p className="text-sm text-amber-900/95 dark:text-amber-100/90">
+                  Tu es en mode demo. Seul le magnifique et tout-puissant BigZoo peut voir les
+                  vraies finances.
+                </p>
+              </div>
+              <Button type="button" onClick={() => navigate({ to: '/login' })}>
+                Se connecter
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <section className="grid gap-4 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle>Wealth overview</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Wealth overview
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
               <CardDescription>Total balance across all active connections.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -235,7 +347,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Top expense groups</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Top expense groups
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
               <CardDescription>Top 5 groups in the selected range.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -257,7 +372,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Connections state</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Connections state
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
               <CardDescription>Powens statuses and last sync timestamps.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -296,7 +414,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         <section className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Balance by connection</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Balance by connection
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
               <CardDescription>Fortuneo/Revolut totals from local DB.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -321,7 +442,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Balance by account</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Balance by account
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
               <CardDescription>All active accounts and current balances.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -350,7 +474,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle>Latest transactions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Latest transactions
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
               <CardDescription>Last 30 transactions, paginated with cursor.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

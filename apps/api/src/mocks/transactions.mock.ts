@@ -1,0 +1,171 @@
+import type { DashboardRange, DashboardTransactionsResponse } from '../routes/dashboard/types'
+import { decodeDashboardCursor, encodeDashboardCursor } from '../routes/dashboard/utils/cursor'
+
+const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+  {
+    id: 12012,
+    bookingDate: '2026-02-22',
+    amount: -64.2,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Carrefour Market',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 12011,
+    bookingDate: '2026-02-22',
+    amount: -12.99,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Spotify',
+    powensConnectionId: 'demo-revolut',
+    powensAccountId: 'demo-revolut-main',
+    accountName: 'Revolut Main',
+  },
+  {
+    id: 12010,
+    bookingDate: '2026-02-21',
+    amount: 2450,
+    currency: 'EUR',
+    direction: 'income',
+    label: 'Salaire',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 12009,
+    bookingDate: '2026-02-21',
+    amount: -35.9,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'SNCF',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 12008,
+    bookingDate: '2026-02-20',
+    amount: -19.99,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Netflix',
+    powensConnectionId: 'demo-revolut',
+    powensAccountId: 'demo-revolut-main',
+    accountName: 'Revolut Main',
+  },
+  {
+    id: 12007,
+    bookingDate: '2026-02-19',
+    amount: -82.5,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'TotalEnergies',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 12006,
+    bookingDate: '2026-02-19',
+    amount: -44,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Uber',
+    powensConnectionId: 'demo-revolut',
+    powensAccountId: 'demo-revolut-main',
+    accountName: 'Revolut Main',
+  },
+  {
+    id: 12005,
+    bookingDate: '2026-02-18',
+    amount: -93.4,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Monoprix',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 12004,
+    bookingDate: '2026-02-18',
+    amount: 38.42,
+    currency: 'EUR',
+    direction: 'income',
+    label: 'Remboursement',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 12003,
+    bookingDate: '2026-02-17',
+    amount: -16.8,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Boulangerie',
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+]
+
+const isBeforeCursor = (params: {
+  bookingDate: string
+  id: number
+  cursor: { bookingDate: string; id: number }
+}) => {
+  if (params.bookingDate < params.cursor.bookingDate) {
+    return true
+  }
+
+  if (params.bookingDate > params.cursor.bookingDate) {
+    return false
+  }
+
+  return params.id < params.cursor.id
+}
+
+export const getDashboardTransactionsMock = ({
+  range,
+  limit,
+  cursor,
+}: {
+  range: DashboardRange
+  limit: number
+  cursor: string | undefined
+}): DashboardTransactionsResponse => {
+  const decodedCursor = decodeDashboardCursor(cursor)
+
+  const visible = decodedCursor
+    ? DEMO_TRANSACTIONS.filter(item =>
+        isBeforeCursor({
+          bookingDate: item.bookingDate,
+          id: item.id,
+          cursor: decodedCursor,
+        })
+      )
+    : DEMO_TRANSACTIONS
+
+  const rows = visible.slice(0, limit + 1)
+  const hasNextPage = rows.length > limit
+  const items = hasNextPage ? rows.slice(0, limit) : rows
+  const tail = items[items.length - 1]
+
+  return {
+    range,
+    limit,
+    nextCursor:
+      hasNextPage && tail
+        ? encodeDashboardCursor({
+            bookingDate: tail.bookingDate,
+            id: tail.id,
+          })
+        : null,
+    items,
+  }
+}

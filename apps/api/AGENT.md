@@ -1,6 +1,6 @@
 # AGENT.md - `apps/api`
 
-Last updated: 2026-02-22.
+Last updated: 2026-02-24.
 
 This file defines implementation rules for the API workspace.
 
@@ -81,3 +81,27 @@ For Powens/API changes run:
 
 - `pnpm api:typecheck`
 - `pnpm worker:typecheck` when queue/job contracts changed
+
+## 8) Auth and demo mode rules
+
+- Auth decision source is `ctx.auth.mode` (`admin` or `demo`), resolved once from root derive.
+- Default mode is `demo` when auth cookie is absent/invalid.
+- For data routes, evaluate demo mode first in the handler.
+- In demo mode, return mocks and stop before any DB or Powens call.
+- Keep mocks in `apps/api/src/mocks/*`.
+- Sensitive endpoints (sync/connect/callback/write actions) must be admin-only.
+- Auth endpoints:
+  - `POST /auth/login` sets session cookie.
+  - `POST /auth/logout` clears session cookie.
+  - `GET /auth/me` returns auth mode and must be `Cache-Control: no-store`.
+- Private access gate:
+  - header `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
+  - in development, `/auth/login`, `/auth/logout` and `/auth/me` remain accessible without this header.
+- API errors must not leak internals: return sanitized `500` payloads.
+
+### Feature checklist
+
+- Data route implements admin/demo switch on the same endpoint.
+- Demo branch returns a minimal mock dataset from `apps/api/src/mocks/*`.
+- No repository or provider call is reachable from demo branch.
+- Admin-only mutations enforce guard in API route layer.

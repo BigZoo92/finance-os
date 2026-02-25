@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { DashboardAppShell } from '@/components/dashboard/app-shell'
 import {
   dashboardSummaryQueryOptions,
@@ -6,7 +7,6 @@ import {
 } from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { powensStatusQueryOptions } from '@/features/powens/query-options'
-import { z } from 'zod'
 
 const dashboardSearchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),

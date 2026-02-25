@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
 import { toSafeErrorMessage } from '@finance-os/prelude/errors'
+import { requireAdmin } from '../../../../auth/guard'
 import { getPowensRuntime } from '../context'
 import { powensCallbackBodySchema } from '../schemas'
 
@@ -8,6 +9,8 @@ export const callbackRoute = new Elysia({
 }).post(
   '/callback',
   async context => {
+    requireAdmin(context)
+
     const powens = getPowensRuntime(context)
 
     try {

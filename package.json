@@ -28,6 +28,7 @@
     "db:generate": "pnpm --filter @finance-os/db db:generate",
     "db:migrate": "pnpm --filter @finance-os/db db:migrate",
     "db:studio": "pnpm --filter @finance-os/db db:studio",
+    "auth:hash": "pnpm --filter @finance-os/api auth:hash",
     "worker:dev": "bun --watch apps/worker/src/index.ts",
     "worker:start": "pnpm --filter @finance-os/worker start",
     "worker:typecheck": "pnpm --filter @finance-os/worker typecheck",

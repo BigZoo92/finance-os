@@ -9,6 +9,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { authMeQueryOptions } from '@/features/auth-query-options'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { postPowensCallback, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys } from '@/features/powens/query-options'
@@ -58,7 +59,16 @@ export const Route = createFileRoute('/powens/callback')({
     code: search.code,
   }),
   staleTime: Number.POSITIVE_INFINITY,
-  loader: async ({ deps }): Promise<CallbackLoaderState> => {
+  loader: async ({ context, deps }): Promise<CallbackLoaderState> => {
+    const auth = await context.queryClient.ensureQueryData(authMeQueryOptions())
+
+    if (auth.mode !== 'admin') {
+      return {
+        status: 'error',
+        message: 'Mode demo: callback Powens reserve au mode admin.',
+      }
+    }
+
     if (!deps.connectionId || !deps.code) {
       return {
         status: 'error',

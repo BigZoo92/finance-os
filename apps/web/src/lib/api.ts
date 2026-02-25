@@ -9,31 +9,39 @@ const toAbsolutePathPrefix = (value: string) => {
   return normalized.endsWith('/') && normalized.length > 1 ? normalized.slice(0, -1) : normalized
 }
 
+//CODEX DON'T TOUCH THIS FUNCTION
 export const toApiUrl = (path: string) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const baseUrl = getApiBaseUrl()
 
   if (baseUrl.startsWith('/')) {
-    return `${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`
+    if (typeof window !== 'undefined') {
+      return `${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`
+    }
+
+    const origin = env.VITE_APP_ORIGIN ?? 'http://localhost:3000'
+    return new URL(`${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`, origin).toString()
   }
 
   return new URL(normalizedPath, `${baseUrl.replace(/\/+$/, '')}/`).toString()
 }
 
 export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {
+  const headers = new Headers(init?.headers)
+
+  headers.set('Accept', 'application/json')
+  if (env.VITE_PRIVATE_ACCESS_TOKEN) {
+    headers.set('x-finance-os-access-token', env.VITE_PRIVATE_ACCESS_TOKEN)
+  }
+
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const response = await fetch(toApiUrl(path), {
     credentials: 'include',
     ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(env.VITE_PRIVATE_ACCESS_TOKEN
-        ? {
-            'x-finance-os-access-token': env.VITE_PRIVATE_ACCESS_TOKEN,
-          }
-        : {}),
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...init?.headers,
-    },
+    headers,
   })
 
   if (!response.ok) {

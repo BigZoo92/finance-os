@@ -1,6 +1,6 @@
 # AGENT.md - `apps/web`
 
-Last updated: 2026-02-22.
+Last updated: 2026-02-24.
 
 This file defines implementation rules for the web workspace.
 
@@ -16,6 +16,7 @@ This file defines implementation rules for the web workspace.
 - Route-critical fetches should be done in route loaders.
 - Prefer `context.queryClient.ensureQueryData(...)` inside loaders.
 - Use `ensureInfiniteQueryData(...)` for paginated/infinite dashboard lists when needed.
+- Keep router-level SSR Query hydration enabled (`setupRouterSsrQueryIntegration`) so first paint matches loader-fetched data.
 - UI components consume data through `useQuery`/`useSuspenseQuery`.
 - Writes use `useMutation` and must invalidate affected query keys.
 - Keep query keys centralized in feature modules.
@@ -66,3 +67,19 @@ For web changes run:
 If API contracts were touched, also run:
 
 - `pnpm api:typecheck`
+
+## 7) Auth and demo mode rules
+
+- Resolve auth state through `auth.me` query (`GET /auth/me`), not `useEffect` orchestration.
+- Route loaders should prefetch `auth.me` for auth-sensitive pages.
+- Do not default UI to demo while auth is unresolved; render a neutral pending state.
+- In demo mode, UI must explicitly indicate demo state (banner and/or badges).
+- Sensitive actions (connect/sync/write flows) must be visibly disabled in demo mode.
+- Keep read-only queries active in demo mode; backend returns mocks for these routes.
+- Show admin-only controls (for example logout or sync triggers) only when `mode === 'admin'`.
+
+### Feature checklist
+
+- Query/mutation layer handles both `admin` and `demo` states.
+- Demo UI state is explicit and testable.
+- Sensitive mutations are blocked in UI when not admin.

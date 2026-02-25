@@ -1,6 +1,6 @@
 # AGENT.md
 
-Last updated: 2026-02-22.
+Last updated: 2026-02-24.
 
 This file is the repository-wide source of truth for architecture and implementation rules for AI/code agents.
 
@@ -226,3 +226,29 @@ Read these in addition to this root file when touching those areas:
 - `.env.prod.example`
 - `docs/deploy-dokploy.md`
 - this `AGENT.md` section
+
+## 11) Auth and demo mode (single-user)
+
+- Auth model is single-user manual auth (no multi-user abstraction).
+- API auth state must be resolved via `ctx.auth.mode` (`admin` or `demo`).
+- API auth source of truth is the root auth derive (cookie -> `ctx.auth.mode`), not duplicated per feature.
+- Demo mode is the default when cookie is missing or invalid.
+- Any feature that reads or returns business data must support demo mode on the same route.
+- Backend rule: in demo mode, return mock data only and stop before any DB query or Powens call.
+- Mock datasets live under `apps/api/src/mocks/*`.
+- Frontend rule: clearly show demo state (banner/badge), keep read-only flows available, and disable sensitive actions (connect/sync/write actions).
+- Private access barrier:
+  - header is `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
+  - in development, auth endpoints (`/auth/login`, `/auth/logout`, `/auth/me`) stay reachable without this header.
+- Auth cache/control:
+  - `GET /auth/me` must be `Cache-Control: no-store`.
+  - route loaders should prefetch `auth.me` and SSR hydration should keep first render auth-consistent (no demo->admin flash).
+
+### Feature checklist (required)
+
+- Route keeps same URL contract for both modes (admin + demo switch in handler).
+- Demo branch is evaluated first in the handler.
+- Demo branch returns a minimal mock dataset from `apps/api/src/mocks/*`.
+- Sensitive mutations are admin-only both in API and UI.
+- UI has an explicit demo state for the feature.
+- UI does not render demo as default while auth is unresolved; use pending state until auth query resolves.
