@@ -269,7 +269,9 @@ Read these in addition to this root file when touching those areas:
 - run CI gates first (lint, typecheck, tests, build)
 - build/push GHCR images for `web`, `api`, `worker`
 - tag images with release tag + `sha-*` (+ `latest` for Dokploy auto-follow)
-- trigger Dokploy webhook only after successful push
+- trigger Dokploy deploy via API only after successful push
+- prefer `compose.deploy` with `composeId` for Docker Compose deployments
+- keep `application.deploy` as fallback for application-mode setups
 - Use minimum permissions:
 - CI: `contents: read`
 - Release build/push: `contents: read`, `packages: write`
@@ -279,3 +281,5 @@ Read these in addition to this root file when touching those areas:
 - Keep deploy tag-only:
 - do not add deploy-on-branch or deploy-on-PR behavior
 - keep rollback path via `APP_IMAGE_TAG` pinning (`vX.Y.Z`) in Dokploy
+- Do not use Dokploy branch webhook for tag releases:
+- tag refs (`refs/tags/v*`) do not satisfy webhook branch filters and can return `Branch Not Match`

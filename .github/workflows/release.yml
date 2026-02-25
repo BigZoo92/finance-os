@@ -129,7 +129,7 @@ jobs:
             VITE_PRIVATE_ACCESS_TOKEN=${{ secrets.VITE_PRIVATE_ACCESS_TOKEN || '' }}
 
   trigger_dokploy:
-    name: Trigger Dokploy deployment
+    name: Trigger Dokploy deployment API
     runs-on: ubuntu-latest
     needs:
       - prepare
@@ -138,31 +138,71 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Call Dokploy webhook
+      - name: Call Dokploy API deploy endpoint
         env:
-          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
-          DOKPLOY_WEBHOOK_TOKEN: ${{ secrets.DOKPLOY_WEBHOOK_TOKEN }}
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          DOKPLOY_APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
           RELEASE_TAG: ${{ needs.prepare.outputs.image_tag }}
         run: |
           set -euo pipefail
 
-          if [[ -z "${DOKPLOY_WEBHOOK_URL}" ]]; then
-            echo "Missing secret DOKPLOY_WEBHOOK_URL." >&2
+          if [[ -z "${DOKPLOY_URL}" ]]; then
+            echo "Missing secret DOKPLOY_URL." >&2
             exit 1
           fi
 
-          curl_headers=(-H "Content-Type: application/json")
-          if [[ -n "${DOKPLOY_WEBHOOK_TOKEN}" ]]; then
-            curl_headers+=(-H "Authorization: Bearer ${DOKPLOY_WEBHOOK_TOKEN}" -H "X-Dokploy-Token: ${DOKPLOY_WEBHOOK_TOKEN}")
+          if [[ -z "${DOKPLOY_API_KEY}" ]]; then
+            echo "Missing secret DOKPLOY_API_KEY." >&2
+            exit 1
           fi
 
-          payload=$(printf '{"tag":"%s","sha":"%s","repository":"%s"}' "${RELEASE_TAG}" "${GITHUB_SHA}" "${GITHUB_REPOSITORY}")
+          dokploy_base_url="${DOKPLOY_URL%/}"
+          deploy_path=''
+          payload=''
 
-          curl --fail --silent --show-error \
-            --retry 3 \
-            --retry-all-errors \
-            --retry-delay 2 \
-            --retry-max-time 45 \
-            -X POST "${DOKPLOY_WEBHOOK_URL}" \
-            "${curl_headers[@]}" \
-            --data "${payload}"
+          if [[ -n "${DOKPLOY_COMPOSE_ID:-}" ]]; then
+            deploy_path='/api/compose.deploy'
+            payload=$(printf '{"composeId":"%s","title":"release %s","description":"%s@%s"}' "${DOKPLOY_COMPOSE_ID}" "${RELEASE_TAG}" "${GITHUB_REPOSITORY}" "${GITHUB_SHA}")
+          elif [[ -n "${DOKPLOY_APPLICATION_ID:-}" ]]; then
+            deploy_path='/api/application.deploy'
+            payload=$(printf '{"applicationId":"%s"}' "${DOKPLOY_APPLICATION_ID}")
+          else
+            echo "Missing secret DOKPLOY_COMPOSE_ID (recommended) or DOKPLOY_APPLICATION_ID." >&2
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+          http_code="$(
+            curl --silent --show-error --location \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              --retry-max-time 60 \
+              --connect-timeout 10 \
+              --max-time 120 \
+              -o "${response_file}" \
+              -w "%{http_code}" \
+              -X POST "${dokploy_base_url}${deploy_path}" \
+              -H "accept: application/json" \
+              -H "Content-Type: application/json" \
+              -H "x-api-key: ${DOKPLOY_API_KEY}" \
+              --data "${payload}"
+          )"
+
+          if [[ "${http_code}" -lt 200 || "${http_code}" -ge 300 ]]; then
+            echo "Dokploy API deploy failed (HTTP ${http_code})." >&2
+            echo "Response body:" >&2
+            cat "${response_file}" >&2
+            exit 1
+          fi
+
+          if grep -q 'Branch Not Match' "${response_file}"; then
+            echo "Dokploy returned Branch Not Match; this indicates a webhook/branch flow mismatch." >&2
+            echo "Response body:" >&2
+            cat "${response_file}" >&2
+            exit 1
+          fi
+
+          echo "Dokploy deployment triggered via ${deploy_path}."

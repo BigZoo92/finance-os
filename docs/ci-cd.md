@@ -45,7 +45,14 @@ Etapes sur tag:
    - `${tag}` (ex: `v1.2.3`)
    - `sha-${commit}`
    - `latest`
-4. Appel webhook Dokploy (retry x3 + backoff).
+4. Appel API Dokploy deploy (retry x3 + backoff).
+
+Pourquoi pas le webhook Dokploy classique:
+
+- Le webhook Git provider applique un filtre de branche.
+- Un run GitHub Actions declenche sur tag (`refs/tags/v*`) ne matche pas cette contrainte.
+- Resultat typique: `{"message":"Branch Not Match"}`.
+- En mode images GHCR + Compose, il faut declencher un deploy API (`compose.deploy` ou `application.deploy`), pas un webhook branch-based.
 
 Pourquoi `latest`:
 
@@ -73,7 +80,7 @@ git push origin v1.2.3
 ```
 
 3. Suivre le workflow `Release` dans GitHub Actions.
-4. Verifier que le job webhook Dokploy est `success`.
+4. Verifier que le job `Trigger Dokploy deployment API` est `success`.
 
 ## 5) Verification post-release
 
@@ -102,5 +109,48 @@ Option 2:
 - Echec CI: lint/typecheck/tests/build en erreur.
 - Echec build image: verifier `infra/docker/Dockerfile`, cache buildx, args.
 - Echec push GHCR: verifier permissions workflow (`packages: write`) et visibilite package GHCR.
-- Echec webhook: verifier `DOKPLOY_WEBHOOK_URL`/`DOKPLOY_WEBHOOK_TOKEN`.
+- Echec trigger Dokploy API: verifier `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID` (ou `DOKPLOY_APPLICATION_ID`).
 - Echec deploy runtime: verifier `docker-compose.prod.yml`, `GHCR_IMAGE_NAME`, `APP_IMAGE_TAG`, env runtime.
+
+## 8) Secrets GitHub pour Dokploy API
+
+- `DOKPLOY_URL` (Secret): URL base Dokploy, ex `https://dokploy.example.com`
+- `DOKPLOY_API_KEY` (Secret): API key Dokploy
+- `DOKPLOY_COMPOSE_ID` (Secret, recommande): ID du service Compose a deployer
+- `DOKPLOY_APPLICATION_ID` (Secret, fallback): ID de l'application si vous utilisez `application.deploy`
+
+Recuperation:
+
+1. API key:
+   - Dokploy UI -> profil utilisateur -> API Keys -> creer/copier la cle.
+2. IDs:
+   - Via API Dokploy `project.all`, puis lire `composeId` ou `applicationId` du service cible.
+   - Exemple:
+
+```bash
+curl -sS "$DOKPLOY_URL/api/project.all" \
+  -H "accept: application/json" \
+  -H "x-api-key: $DOKPLOY_API_KEY"
+```
+
+## 9) Test manuel d'un deploy API
+
+Compose (recommande pour ce repo):
+
+```bash
+curl -sS -X POST "$DOKPLOY_URL/api/compose.deploy" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $DOKPLOY_API_KEY" \
+  --data "{\"composeId\":\"$DOKPLOY_COMPOSE_ID\"}"
+```
+
+Application (fallback):
+
+```bash
+curl -sS -X POST "$DOKPLOY_URL/api/application.deploy" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $DOKPLOY_API_KEY" \
+  --data "{\"applicationId\":\"$DOKPLOY_APPLICATION_ID\"}"
+```

@@ -5,14 +5,14 @@
 - Le deploy production est declenche uniquement par un tag Git `v*` (ex: `v1.2.3`).
 - GitHub Actions build les images Docker (`web`, `api`, `worker`) et les push sur GHCR.
 - Dokploy ne build rien: il pull les images GHCR referencees dans `docker-compose.prod.yml`.
-- Une fois le push GHCR termine, le workflow release appelle le webhook Dokploy.
+- Une fois le push GHCR termine, le workflow release appelle l'API Dokploy de deploiement.
 
 Flux:
 
 ```text
 git tag v1.2.3 + git push origin v1.2.3
   -> GitHub Actions (CI + build images + push GHCR)
-  -> webhook Dokploy
+  -> API Dokploy deploy
   -> Dokploy pull images et redeploy
 ```
 
@@ -20,7 +20,7 @@ git tag v1.2.3 + git push origin v1.2.3
 
 - `docker-compose.prod.yml`: references d'images GHCR (pas de `build:`).
 - `infra/docker/Dockerfile`: build multi-target (`web`, `api`, `worker`) execute en CI.
-- `.github/workflows/release.yml`: pipeline release tag-only + webhook Dokploy.
+- `.github/workflows/release.yml`: pipeline release tag-only + appel API Dokploy.
 - `.env.prod.example`: variables runtime requises pour Dokploy.
 
 ## 3) Variables Dokploy requises
@@ -44,6 +44,11 @@ Note:
 2. Configurer les credentials registry GHCR dans Dokploy (pull prive).
 3. Verifier que Dokploy utilise `docker-compose.prod.yml`.
 4. Mettre `APP_IMAGE_TAG=latest` pour suivre automatiquement les releases tag.
+5. Configurer les secrets GitHub pour l'appel API:
+   - `DOKPLOY_URL`
+   - `DOKPLOY_API_KEY`
+   - `DOKPLOY_COMPOSE_ID` (recommande)
+   - `DOKPLOY_APPLICATION_ID` (fallback)
 
 ## 5) Commandes de verification locale (equivalent Dokploy)
 
@@ -78,7 +83,7 @@ Checks HTTP:
 Option recommandee:
 
 1. Dans Dokploy, changer `APP_IMAGE_TAG` vers un tag precedent (ex: `v1.2.2`).
-2. Redeployer (manuel ou webhook).
+2. Redeployer (manuel ou API).
 3. Verifier `ps`, logs et endpoints health.
 
 Option rapide:
@@ -89,6 +94,6 @@ Option rapide:
 ## 7) Debug rapide
 
 - Echec CI/release: verifier onglet GitHub Actions (`ci.yml`, `release.yml`).
-- Echec webhook: verifier secret `DOKPLOY_WEBHOOK_URL` et logs du job `trigger_dokploy`.
+- Echec trigger API: verifier `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID`/`DOKPLOY_APPLICATION_ID`.
 - Echec pull image: verifier `GHCR_IMAGE_NAME`, permissions `packages:write` du workflow et credentials registry Dokploy.
 - Echec runtime: verifier healthchecks `web/api/worker`, puis DB/Redis connectivite.
