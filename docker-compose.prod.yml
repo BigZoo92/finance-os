@@ -2,18 +2,23 @@ name: finance-os-prod
 
 services:
   web:
-    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:-latest}
+    image: ${GHCR_IMAGE_NAME:-ghcr.io/bigzoo92/finance-os}-web:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
     ports:
       - '${WEB_PORT:-3000}:3000'
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
-      APP_URL: ${APP_URL:?APP_URL is required}
-      WEB_URL: ${WEB_URL:?WEB_URL is required}
-      API_URL: ${API_URL:?API_URL is required}
+      APP_URL: ${APP_URL:-}
+      WEB_URL: ${WEB_URL:-}
+      API_URL: ${API_URL:-}
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: 3000
       PORT: 3000
@@ -33,10 +38,15 @@ services:
       - no-new-privileges:true
 
   api:
-    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:-latest}
+    image: ${GHCR_IMAGE_NAME:-ghcr.io/bigzoo92/finance-os}-api:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop:
+      - ALL
     expose:
       - '3001'
     environment:
@@ -44,28 +54,28 @@ services:
       TZ: ${TZ:-UTC}
       API_HOST: 0.0.0.0
       API_PORT: 3001
-      APP_URL: ${APP_URL:?APP_URL is required}
-      WEB_URL: ${WEB_URL:?WEB_URL is required}
-      API_URL: ${API_URL:?API_URL is required}
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      APP_URL: ${APP_URL:-}
+      WEB_URL: ${WEB_URL:-}
+      API_URL: ${API_URL:-}
+      DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: ${REDIS_URL:-}
       PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
       DEBUG_METRICS_TOKEN: ${DEBUG_METRICS_TOKEN:-}
       POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: ${POWENS_MANUAL_SYNC_COOLDOWN_SECONDS:-300}
-      AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:?AUTH_ADMIN_EMAIL is required}
-      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?AUTH_PASSWORD_HASH is required}
-      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:?AUTH_SESSION_SECRET is required}
+      AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL:-}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:-}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
       AUTH_SESSION_TTL_DAYS: ${AUTH_SESSION_TTL_DAYS:-30}
       AUTH_LOGIN_RATE_LIMIT_PER_MIN: ${AUTH_LOGIN_RATE_LIMIT_PER_MIN:-5}
-      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:?POWENS_CLIENT_ID is required}
-      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:?POWENS_CLIENT_SECRET is required}
-      POWENS_BASE_URL: ${POWENS_BASE_URL:?POWENS_BASE_URL is required}
-      POWENS_DOMAIN: ${POWENS_DOMAIN:?POWENS_DOMAIN is required}
-      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:?POWENS_REDIRECT_URI_DEV is required}
-      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:?POWENS_REDIRECT_URI_PROD is required}
+      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:-}
+      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:-}
+      POWENS_BASE_URL: ${POWENS_BASE_URL:-}
+      POWENS_DOMAIN: ${POWENS_DOMAIN:-}
+      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:-}
+      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:-}
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY is required}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
       RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
       DRIZZLE_MIGRATIONS_FOLDER: packages/db/drizzle
       HEALTHCHECK_URL: http://127.0.0.1:3001/health
@@ -86,29 +96,34 @@ services:
       - no-new-privileges:true
 
   worker:
-    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:-latest}
+    image: ${GHCR_IMAGE_NAME:-ghcr.io/bigzoo92/finance-os}-worker:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
     init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop:
+      - ALL
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: ${REDIS_URL:-}
       WORKER_HEARTBEAT_MS: ${WORKER_HEARTBEAT_MS:-30000}
       WORKER_HEALTHCHECK_FILE: /tmp/worker-heartbeat
       WORKER_HEALTHCHECK_MAX_AGE_MS: ${WORKER_HEALTHCHECK_MAX_AGE_MS:-120000}
       POWENS_SYNC_INTERVAL_MS: ${POWENS_SYNC_INTERVAL_MS:-43200000}
       POWENS_SYNC_MIN_INTERVAL_PROD_MS: ${POWENS_SYNC_MIN_INTERVAL_PROD_MS:-43200000}
-      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:?POWENS_CLIENT_ID is required}
-      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:?POWENS_CLIENT_SECRET is required}
-      POWENS_BASE_URL: ${POWENS_BASE_URL:?POWENS_BASE_URL is required}
-      POWENS_DOMAIN: ${POWENS_DOMAIN:?POWENS_DOMAIN is required}
-      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:?POWENS_REDIRECT_URI_DEV is required}
-      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:?POWENS_REDIRECT_URI_PROD is required}
+      POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:-}
+      POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:-}
+      POWENS_BASE_URL: ${POWENS_BASE_URL:-}
+      POWENS_DOMAIN: ${POWENS_DOMAIN:-}
+      POWENS_REDIRECT_URI_DEV: ${POWENS_REDIRECT_URI_DEV:-}
+      POWENS_REDIRECT_URI_PROD: ${POWENS_REDIRECT_URI_PROD:-}
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?APP_ENCRYPTION_KEY is required}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -131,9 +146,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-finance_os}
+      POSTGRES_USER: ${POSTGRES_USER:-finance_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       TZ: ${TZ:-UTC}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -145,6 +160,8 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     image: redis:7-alpine
@@ -160,6 +177,8 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   finance_os_internal:

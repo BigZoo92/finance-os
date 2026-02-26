@@ -22,16 +22,21 @@ git tag v1.2.3 + git push origin v1.2.3
 - `infra/docker/Dockerfile`: build multi-target (`web`, `api`, `worker`) execute en CI.
 - `.github/workflows/release.yml`: pipeline release tag-only + appel API Dokploy.
 - `.env.prod.example`: variables runtime requises pour Dokploy.
+- `docs/deploy-dokploy-env.md`: checklist exhaustive des variables Dokploy.
 
 ## 3) Variables Dokploy requises
 
 Variables compose importantes:
 
-- `GHCR_IMAGE_NAME` (ex: `ghcr.io/<owner>/finance-os`)
+- `GHCR_IMAGE_NAME` (optionnel, defaut `ghcr.io/bigzoo92/finance-os`)
 - `APP_IMAGE_TAG` (defaut recommande: `latest`)
 - `APP_URL`, `WEB_URL`, `API_URL`
 - `DATABASE_URL`, `POSTGRES_*`, `REDIS_URL`
 - `AUTH_*`, `POWENS_*`, `APP_ENCRYPTION_KEY`
+
+Reference complete:
+
+- Voir [docs/deploy-dokploy-env.md](./deploy-dokploy-env.md)
 
 Note:
 

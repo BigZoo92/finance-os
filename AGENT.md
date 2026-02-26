@@ -176,6 +176,7 @@ Read these in addition to this root file when touching those areas:
 - Production Dockerfile (multi-target): `infra/docker/Dockerfile`.
 - Production deployment guide: `docs/deploy-dokploy.md`.
 - CI/CD runbook: `docs/ci-cd.md`.
+- Dokploy env matrix: `docs/deploy-dokploy-env.md`.
 
 ### 10.2 Image strategy and targets
 
@@ -196,10 +197,12 @@ Read these in addition to this root file when touching those areas:
 - `API_URL` (public API URL, typically `${APP_URL}/api`)
 - Legacy `WEB_ORIGIN` remains supported for compatibility but do not use it for new production setup.
 - Image variables for production compose:
-- `GHCR_IMAGE_NAME` (example: `ghcr.io/<owner>/finance-os`)
+- `GHCR_IMAGE_NAME` (optional override, default `ghcr.io/bigzoo92/finance-os`)
 - `APP_IMAGE_TAG` (default `latest`, or pin to a release tag for rollback)
 - Build-time web variables (`API_INTERNAL_URL`, `VITE_API_BASE_URL`, `VITE_APP_TITLE`, optional `VITE_PRIVATE_ACCESS_TOKEN`) are set in GitHub Actions release workflow, not on Dokploy host.
 - All production required variables are documented in `.env.prod.example`.
+- Exhaustive Dokploy variable mapping is documented in `docs/deploy-dokploy-env.md`.
+- Compose interpolation should prefer safe defaults (`:-`) instead of strict `${VAR:?}` so Dokploy "Preview Compose" does not fail on missing values; runtime env validation remains the guardrail.
 
 ### 10.4 Migrations strategy
 
@@ -215,6 +218,12 @@ Read these in addition to this root file when touching those areas:
 - `worker` uses heartbeat-file healthcheck via `infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs`.
 - `depends_on` must use `condition: service_healthy` for startup ordering.
 - `api` must not expose host ports in production compose (internal network only).
+- Runtime hardening for app services (`web`, `api`, `worker`) should include:
+- `read_only: true`
+- `tmpfs` mount for `/tmp`
+- `cap_drop: [ALL]`
+- `security_opt: [no-new-privileges:true]`
+- Keep Postgres/Redis writable (volumes) and internal-only (no published ports).
 
 ### 10.6 Deployment and verification workflow
 
