@@ -110,7 +110,7 @@ const authSessionSecretSchema = z
 const authPasswordHashSchema = z
   .string()
   .min(1, 'AUTH_PASSWORD_HASH is required')
-  .refine(value => value.startsWith('$argon2'), 'AUTH_PASSWORD_HASH must be an Argon2 hash')
+  .refine(value => value.startsWith('$argon2'), `AUTH_PASSWORD_HASH must be an Argon2 hash`)
 
 const powensShape = {
   POWENS_CLIENT_ID: z.string().min(1, 'POWENS_CLIENT_ID is required'),
@@ -118,7 +118,10 @@ const powensShape = {
   POWENS_BASE_URL: z.string().url('POWENS_BASE_URL must be a valid URL'),
   POWENS_DOMAIN: z.string().min(1, 'POWENS_DOMAIN is required'),
   POWENS_REDIRECT_URI_DEV: z.string().url('POWENS_REDIRECT_URI_DEV must be a valid URL'),
-  POWENS_REDIRECT_URI_PROD: z.string().url('POWENS_REDIRECT_URI_PROD must be a valid URL').optional(),
+  POWENS_REDIRECT_URI_PROD: z
+    .string()
+    .url('POWENS_REDIRECT_URI_PROD must be a valid URL')
+    .optional(),
   POWENS_WEBVIEW_BASE_URL: z.string().url().default('https://webview.powens.com/connect'),
   POWENS_WEBVIEW_URL: z.string().url().optional(),
   APP_ENCRYPTION_KEY: encryptionKeySchema,
@@ -140,6 +143,12 @@ const assertProductionApiEnv = (values: {
 }
 
 export const getApiEnv = () => {
+  const raw = process.env.AUTH_PASSWORD_HASH
+  console.log('[env-debug] AUTH_PASSWORD_HASH exists?', raw != null)
+  console.log('[env-debug] AUTH_PASSWORD_HASH type:', typeof raw)
+  console.log('[env-debug] AUTH_PASSWORD_HASH prefix:', raw?.slice(0, 12))
+  console.log('[env-debug] AUTH_PASSWORD_HASH length:', raw?.length)
+  console.log('[env-debug] AUTH_PASSWORD_HASH hasWhitespaceEnds:', raw ? raw.trim() !== raw : null)
   const parsed = parseEnv({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     API_HOST: z.string().default('0.0.0.0'),
@@ -182,7 +191,11 @@ export const getWorkerEnv = () =>
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
     WORKER_HEARTBEAT_MS: z.coerce.number().int().positive().default(30000),
-    POWENS_SYNC_INTERVAL_MS: z.coerce.number().int().positive().default(12 * 60 * 60 * 1000),
+    POWENS_SYNC_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(12 * 60 * 60 * 1000),
     POWENS_SYNC_MIN_INTERVAL_PROD_MS: z.coerce
       .number()
       .int()
