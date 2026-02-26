@@ -110,7 +110,15 @@ const authSessionSecretSchema = z
 const authPasswordHashSchema = z
   .string()
   .min(1, 'AUTH_PASSWORD_HASH is required')
-  .refine(value => value.startsWith('$argon2'), `AUTH_PASSWORD_HASH must be an Argon2 hash`)
+  .superRefine((value, ctx) => {
+    console.log('[env-debug] refine prefix:', value.slice(0, 12))
+    if (!value.startsWith('$argon2')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `AUTH_PASSWORD_HASH must start with $argon2 (got prefix: ${value.slice(0, 12)})`,
+      })
+    }
+  })
 
 const powensShape = {
   POWENS_CLIENT_ID: z.string().min(1, 'POWENS_CLIENT_ID is required'),
