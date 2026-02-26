@@ -12,7 +12,7 @@ services:
     cap_drop:
       - ALL
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - "${WEB_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
@@ -23,13 +23,17 @@ services:
       NITRO_PORT: 3000
       PORT: 3000
       HEALTHCHECK_URL: http://127.0.0.1:3000
+      API_INTERNAL_URL: http://api:3001
+      VITE_API_BASE_URL: /api
+      VITE_APP_TITLE: ${VITE_APP_TITLE:-finance-os}
+      VITE_PRIVATE_ACCESS_TOKEN: ${VITE_PRIVATE_ACCESS_TOKEN:-}
     depends_on:
       api:
         condition: service_healthy
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'node', 'infra/docker/healthchecks/http-healthcheck.mjs']
+      test: ["CMD", "node", "infra/docker/healthchecks/http-healthcheck.mjs"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -48,7 +52,7 @@ services:
     cap_drop:
       - ALL
     expose:
-      - '3001'
+      - "3001"
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
@@ -87,7 +91,7 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'bun', 'infra/docker/healthchecks/http-healthcheck.mjs']
+      test: ["CMD", "bun", "infra/docker/healthchecks/http-healthcheck.mjs"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -134,7 +138,12 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'bun', 'infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs']
+      test:
+        [
+          "CMD",
+          "bun",
+          "infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs",
+        ]
       interval: 20s
       timeout: 5s
       retries: 10
@@ -155,7 +164,7 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -166,13 +175,23 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ['redis-server', '--appendonly', 'yes', '--save', '60', '1000', '--loglevel', 'warning']
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--save",
+        "60",
+        "1000",
+        "--loglevel",
+        "warning",
+      ]
     volumes:
       - redis_data:/data
     networks:
       - finance_os_internal
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 10
