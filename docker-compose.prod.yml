@@ -6,7 +6,8 @@ services:
     pull_policy: always
     restart: unless-stopped
     init: true
-    read_only: true
+    # TODO:: mettre à true quand le debug sera fini CODEX NE MODIFIE PAS CETTE LIGNE
+    read_only: false
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=64m
     cap_drop:
