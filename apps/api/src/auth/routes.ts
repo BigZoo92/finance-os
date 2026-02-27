@@ -7,6 +7,7 @@ import type { AuthRoutesDependencies } from './types'
 
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials'
 const RATE_LIMIT_MESSAGE = 'Too many login attempts'
+const AUTH_REQUIRED_MESSAGE = 'Authentication required'
 const RATE_LIMIT_WINDOW_SECONDS = 60
 const NO_STORE_CACHE_CONTROL = 'no-store'
 const BIGZOO_DISPLAY_NAME = 'BigZoo'
@@ -128,16 +129,23 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
       const auth = getAuth(context)
       const requestId = getRequestMeta(context).requestId
 
+      if (auth.mode !== 'admin') {
+        context.set.status = 401
+        return {
+          ok: false,
+          code: 'UNAUTHORIZED' as const,
+          message: AUTH_REQUIRED_MESSAGE,
+          requestId,
+        }
+      }
+
       return {
-        mode: auth.mode,
+        mode: 'admin' as const,
         requestId,
-        user:
-          auth.mode === 'admin'
-            ? {
-                email: env.AUTH_ADMIN_EMAIL,
-                displayName: BIGZOO_DISPLAY_NAME,
-              }
-            : null,
+        user: {
+          email: env.AUTH_ADMIN_EMAIL,
+          displayName: BIGZOO_DISPLAY_NAME,
+        },
       }
     })
 }

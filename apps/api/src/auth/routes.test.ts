@@ -26,17 +26,18 @@ const createAuthTestApp = (mode: 'admin' | 'demo') =>
     )
 
 describe('createAuthRoutes /auth/me', () => {
-  it('returns demo mode with user null when session is not admin', async () => {
+  it('returns 401 when session is not admin', async () => {
     const app = createAuthTestApp('demo')
     const response = await app.handle(new Request('http://finance-os.local/auth/me'))
     const payload = await response.json()
 
-    expect(response.status).toBe(200)
+    expect(response.status).toBe(401)
     expect(response.headers.get('cache-control')).toBe('no-store')
     expect(payload).toEqual({
-      mode: 'demo',
+      ok: false,
+      code: 'UNAUTHORIZED',
+      message: 'Authentication required',
       requestId: 'unknown',
-      user: null,
     })
   })
 

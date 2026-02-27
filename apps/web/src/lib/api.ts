@@ -35,6 +35,11 @@ type ApiErrorPayload = {
   details?: unknown
 }
 
+type ParsedApiErrorPayload = {
+  payload: ApiErrorPayload
+  bodyPreview?: string
+}
+
 export class ApiRequestError extends Error {
   readonly status: ApiRequestErrorStatus
   readonly url: string
@@ -42,6 +47,8 @@ export class ApiRequestError extends Error {
   readonly code?: string
   readonly requestId?: string
   readonly details?: unknown
+  readonly bodyPreview?: string
+  readonly hint?: string
 
   constructor({
     message,
@@ -51,6 +58,8 @@ export class ApiRequestError extends Error {
     code,
     requestId,
     details,
+    bodyPreview,
+    hint,
   }: {
     message: string
     status: ApiRequestErrorStatus
@@ -59,6 +68,8 @@ export class ApiRequestError extends Error {
     code?: string
     requestId?: string
     details?: unknown
+    bodyPreview?: string
+    hint?: string
   }) {
     super(message)
     this.name = 'ApiRequestError'
@@ -68,6 +79,8 @@ export class ApiRequestError extends Error {
     this.code = code
     this.requestId = requestId
     this.details = details
+    this.bodyPreview = bodyPreview
+    this.hint = hint
   }
 }
 
@@ -149,17 +162,70 @@ export const toApiUrl = (path: string, options?: ApiUrlOptions) => {
   return new URL(normalizedRelativePath, `${baseUrl.replace(/\/+$/, '')}/`).toString()
 }
 
-const toApiErrorPayload = async (response: Response): Promise<ApiErrorPayload> => {
+const truncate = (value: string, maxLength: number) => {
+  if (value.length <= maxLength) {
+    return value
+  }
+
+  return `${value.slice(0, maxLength)}...`
+}
+
+const toApiErrorPayload = async (response: Response): Promise<ParsedApiErrorPayload> => {
   try {
-    const payload = (await response.json()) as ApiErrorPayload
-    return payload
+    const rawText = await response.text()
+    const trimmed = rawText.trim()
+    if (!trimmed) {
+      return { payload: {} }
+    }
+
+    try {
+      return {
+        payload: JSON.parse(trimmed) as ApiErrorPayload,
+        bodyPreview: truncate(trimmed, 300),
+      }
+    } catch {
+      return {
+        payload: {},
+        bodyPreview: truncate(trimmed, 300),
+      }
+    }
   } catch {
-    return {}
+    return { payload: {} }
   }
 }
 
 const resolveMethod = (init?: RequestInit) => {
   return (init?.method ?? 'GET').toUpperCase()
+}
+
+const toHintFromStatus = ({
+  status,
+  code,
+}: {
+  status: ApiRequestErrorStatus
+  code?: string
+}) => {
+  if (status === 'network_error') {
+    return 'network_unreachable'
+  }
+
+  if (status === 404) {
+    if (code === 'ROUTE_NOT_FOUND') {
+      return 'route_missing_or_wrong_base_path'
+    }
+
+    return 'route_not_found'
+  }
+
+  if (status === 401 || status === 403) {
+    return 'unauthorized_or_missing_session'
+  }
+
+  if (typeof status === 'number' && status >= 500) {
+    return 'api_internal_error'
+  }
+
+  return undefined
 }
 
 const resolveServerInternalToken = () => {
@@ -206,108 +272,164 @@ export const apiRequest = async <TResponse>(
   init?: RequestInit
 ): Promise<ApiRequestResult<TResponse>> => {
   const requestContext = getSsrRequestContext()
-  const url = toApiUrl(path, { requestOrigin: requestContext?.requestOrigin })
   const method = resolveMethod(init)
-  const headers = createRequestHeaders({
-    init,
-    requestContext,
-  })
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const fallbackPath =
+    normalizedPath.startsWith('/api/')
+      ? normalizedPath.slice(4) || '/'
+      : `/api${normalizedPath}`
+  const candidatePaths =
+    requestContext && fallbackPath !== normalizedPath ? [normalizedPath, fallbackPath] : [normalizedPath]
 
-  let response: Response
-  try {
-    response = await fetch(url, {
-      credentials: 'include',
-      ...init,
-      headers,
+  let lastErrorResult: ApiRequestResult<TResponse> | null = null
+
+  for (let index = 0; index < candidatePaths.length; index += 1) {
+    const candidatePath = candidatePaths[index]
+    const url = toApiUrl(candidatePath, { requestOrigin: requestContext?.requestOrigin })
+    const headers = createRequestHeaders({
+      init,
+      requestContext,
     })
-  } catch (error) {
-    const apiError = new ApiRequestError({
-      message: error instanceof Error ? error.message : 'Network request failed',
-      status: 'network_error',
-      url,
-      path,
-      requestId: requestContext?.requestId,
-    })
+
+    let response: Response
+    try {
+      response = await fetch(url, {
+        credentials: 'include',
+        ...init,
+        headers,
+      })
+    } catch (error) {
+      const apiError = new ApiRequestError({
+        message: error instanceof Error ? error.message : 'Network request failed',
+        status: 'network_error',
+        url,
+        path: candidatePath,
+        requestId: requestContext?.requestId,
+        hint: toHintFromStatus({
+          status: 'network_error',
+        }),
+      })
+
+      logSsrApiCall({
+        method,
+        path: candidatePath,
+        url,
+        status: 'network_error',
+        requestId: requestContext?.requestId,
+        code: apiError.code,
+        hint: apiError.hint,
+      })
+
+      return {
+        ok: false,
+        error: apiError,
+        url,
+      }
+    }
+
+    if (!response.ok) {
+      const parsed = await toApiErrorPayload(response)
+      const payload = parsed.payload
+      const message =
+        typeof payload.message === 'string' && payload.message.length > 0
+          ? payload.message
+          : `HTTP ${response.status}`
+      const hint = toHintFromStatus({
+        status: response.status,
+        code: payload.code,
+      })
+      const apiError = new ApiRequestError({
+        message,
+        status: response.status,
+        url,
+        path: candidatePath,
+        code: payload.code,
+        requestId: payload.requestId ?? requestContext?.requestId,
+        details: payload.details,
+        bodyPreview: parsed.bodyPreview,
+        hint,
+      })
+
+      logSsrApiCall({
+        method,
+        path: candidatePath,
+        url,
+        status: response.status,
+        requestId: apiError.requestId,
+        code: apiError.code,
+        bodyPreview: apiError.bodyPreview,
+        hint: apiError.hint,
+      })
+
+      const isFirstCandidate = index === 0
+      const canRetryForRoutePrefix = isFirstCandidate && response.status === 404 && candidatePaths.length > 1
+      if (canRetryForRoutePrefix) {
+        lastErrorResult = {
+          ok: false,
+          error: apiError,
+          response,
+          url,
+        }
+        continue
+      }
+
+      return {
+        ok: false,
+        error: apiError,
+        response,
+        url,
+      }
+    }
 
     logSsrApiCall({
       method,
-      path,
-      url,
-      status: 'network_error',
-      requestId: requestContext?.requestId,
-      code: apiError.code,
-    })
-
-    return {
-      ok: false,
-      error: apiError,
-      url,
-    }
-  }
-
-  if (!response.ok) {
-    const payload = await toApiErrorPayload(response)
-    const message =
-      typeof payload.message === 'string' && payload.message.length > 0
-        ? payload.message
-        : `HTTP ${response.status}`
-    const apiError = new ApiRequestError({
-      message,
-      status: response.status,
-      url,
-      path,
-      code: payload.code,
-      requestId: payload.requestId ?? requestContext?.requestId,
-      details: payload.details,
-    })
-
-    logSsrApiCall({
-      method,
-      path,
+      path: candidatePath,
       url,
       status: response.status,
-      requestId: apiError.requestId,
-      code: apiError.code,
-    })
-
-    return {
-      ok: false,
-      error: apiError,
-      response,
-      url,
-    }
-  }
-
-  logSsrApiCall({
-    method,
-    path,
-    url,
-    status: response.status,
-    requestId: response.headers.get('x-request-id') ?? requestContext?.requestId,
-  })
-
-  try {
-    return {
-      ok: true,
-      data: (await response.json()) as TResponse,
-      response,
-      url,
-    }
-  } catch {
-    const apiError = new ApiRequestError({
-      message: `Invalid JSON response from ${url}`,
-      status: response.status,
-      url,
-      path,
       requestId: response.headers.get('x-request-id') ?? requestContext?.requestId,
     })
 
-    return {
-      ok: false,
-      error: apiError,
-      response,
-      url,
+    try {
+      return {
+        ok: true,
+        data: (await response.json()) as TResponse,
+        response,
+        url,
+      }
+    } catch {
+      const apiError = new ApiRequestError({
+        message: `Invalid JSON response from ${url}`,
+        status: response.status,
+        url,
+        path: candidatePath,
+        requestId: response.headers.get('x-request-id') ?? requestContext?.requestId,
+        hint: 'invalid_json_response',
+      })
+
+      return {
+        ok: false,
+        error: apiError,
+        response,
+        url,
+      }
     }
+  }
+
+  if (lastErrorResult) {
+    return lastErrorResult
+  }
+
+  const fallbackUrl = toApiUrl(path, { requestOrigin: requestContext?.requestOrigin })
+  return {
+    ok: false,
+    error: new ApiRequestError({
+      message: `HTTP 404`,
+      status: 404,
+      url: fallbackUrl,
+      path,
+      hint: 'route_not_found',
+    }),
+    url: fallbackUrl,
   }
 }
 

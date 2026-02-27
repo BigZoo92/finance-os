@@ -75,6 +75,11 @@ const canAccessRoutesDebug = (request: Request) => {
     return true
   }
 
+  const debugTokenHeader = request.headers.get('x-finance-os-debug-token')?.trim()
+  if (env.DEBUG_METRICS_TOKEN && debugTokenHeader === env.DEBUG_METRICS_TOKEN) {
+    return true
+  }
+
   const { token } = readInternalTokenFromRequest(request)
   return isInternalTokenValid({
     providedToken: token,
@@ -275,6 +280,7 @@ const app = new Elysia()
         'Content-Type',
         'authorization',
         'x-finance-os-access-token',
+        'x-finance-os-debug-token',
         'x-internal-token',
         'x-request-id',
       ],
@@ -381,7 +387,7 @@ const app = new Elysia()
       set.status = 403
       return {
         status: 'error',
-        message: 'Route debug endpoint is disabled in production without PRIVATE_ACCESS_TOKEN',
+        message: 'Route debug endpoint requires x-finance-os-debug-token or internal token',
       }
     }
 
@@ -396,7 +402,37 @@ const app = new Elysia()
       set.status = 403
       return {
         status: 'error',
-        message: 'Route debug endpoint is disabled in production without PRIVATE_ACCESS_TOKEN',
+        message: 'Route debug endpoint requires x-finance-os-debug-token or internal token',
+      }
+    }
+
+    const routes = listRegisteredRoutes(app)
+    return {
+      count: routes.length,
+      routes,
+    }
+  })
+  .get('/debug/routes', ({ request, set }) => {
+    if (!canAccessRoutesDebug(request)) {
+      set.status = 403
+      return {
+        status: 'error',
+        message: 'Route debug endpoint requires x-finance-os-debug-token or internal token',
+      }
+    }
+
+    const routes = listRegisteredRoutes(app)
+    return {
+      count: routes.length,
+      routes,
+    }
+  })
+  .get('/api/debug/routes', ({ request, set }) => {
+    if (!canAccessRoutesDebug(request)) {
+      set.status = 403
+      return {
+        status: 'error',
+        message: 'Route debug endpoint requires x-finance-os-debug-token or internal token',
       }
     }
 

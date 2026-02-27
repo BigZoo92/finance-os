@@ -301,6 +301,7 @@ export const getApiEnv = () => {
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
+    DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
     AUTH_PASSWORD_HASH: z.string().optional(),

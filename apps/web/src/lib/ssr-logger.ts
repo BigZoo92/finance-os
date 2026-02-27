@@ -43,7 +43,8 @@ const toEnvDebugSnapshot = () =>
         {
           present: Boolean(value),
           length: value?.length ?? 0,
-          prefix: value ? value.slice(0, isSensitive ? 3 : 20) : '',
+          // Never log token/secret fragments, even in debug mode.
+          prefix: value && !isSensitive ? value.slice(0, 20) : '',
         },
       ]
     })
@@ -63,6 +64,8 @@ type LogSsrApiCallOptions = {
   status: number | 'network_error'
   requestId?: string
   code?: string
+  bodyPreview?: string
+  hint?: string
 }
 
 export const logSsrApiCall = ({
@@ -72,6 +75,8 @@ export const logSsrApiCall = ({
   status,
   requestId,
   code,
+  bodyPreview,
+  hint,
 }: LogSsrApiCallOptions) => {
   if (typeof window !== 'undefined') {
     return
@@ -88,6 +93,8 @@ export const logSsrApiCall = ({
       url,
       status,
       code: code ?? null,
+      hint: hint ?? null,
+      bodyPreview: bodyPreview ?? null,
       method,
       path,
     })

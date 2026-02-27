@@ -132,4 +132,32 @@ describe('apiFetch', () => {
     expect(headers.get('x-request-id')).toBe('req-test-1')
     expect(headers.get('x-internal-token')).toBe('test-private-access-token')
   })
+
+  it('retries with /api prefix on SSR when first call returns 404', async () => {
+    getGlobalStartContextMock.mockReturnValue({
+      requestOrigin: 'http://127.0.0.1:3000',
+      requestCookieHeader: 'finance_os_session=session-token',
+      requestId: 'req-test-404',
+    })
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'ROUTE_NOT_FOUND', message: 'Route not found' }), {
+          status: 404,
+          headers: { 'content-type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ mode: 'admin' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      )
+
+    await apiFetch<{ mode: string }>('/auth/me')
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api:3001/auth/me')
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('http://api:3001/api/auth/me')
+  })
 })

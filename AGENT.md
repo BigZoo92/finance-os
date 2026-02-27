@@ -35,6 +35,16 @@ If a change affects architecture, boundaries, conventions, scripts, shared packa
 - Keep single-user assumptions. Do not introduce multi-user abstractions.
 - Add abstractions only when they reduce real coupling.
 
+### 3.1 Feature dual-path contract (mandatory)
+
+- Every new feature must implement two explicit paths:
+- demo path: no DB writes/reads, no Powens/provider calls, mocked deterministic payloads only.
+- admin path: real DB + Powens/provider integrations, guarded by admin session or approved internal token where needed.
+- Keep API behavior explicit for auth boundaries:
+- `/auth/me` must remain stable (`200` with admin payload, `401` when unauthenticated, never `404`).
+- Keep a protected route inventory endpoint available in production for diagnostics:
+- `GET /debug/routes` (requires `x-finance-os-debug-token` or valid internal token).
+
 ## 4) API rules (Elysia)
 
 Canonical pattern for backend features:
