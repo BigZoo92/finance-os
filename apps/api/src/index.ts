@@ -12,8 +12,20 @@ import { createPowensRoutes } from './routes/integrations/powens/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
-const ALWAYS_PUBLIC_PATHS = new Set(['/health', '/db/health'])
-const DEV_AUTH_PUBLIC_PATHS = new Set(['/auth/login', '/auth/logout', '/auth/me'])
+
+const withApiCompatibilityPaths = (paths: string[]) => {
+  const expanded = new Set<string>()
+
+  for (const path of paths) {
+    expanded.add(path)
+    expanded.add(`/api${path}`)
+  }
+
+  return expanded
+}
+
+const ALWAYS_PUBLIC_PATHS = withApiCompatibilityPaths(['/health', '/db/health'])
+const DEV_AUTH_PUBLIC_PATHS = withApiCompatibilityPaths(['/auth/login', '/auth/logout', '/auth/me'])
 
 const shouldBypassPrivateAccessGate = ({
   pathname,
@@ -27,6 +39,106 @@ const shouldBypassPrivateAccessGate = ({
   }
 
   return nodeEnv !== 'production' && DEV_AUTH_PUBLIC_PATHS.has(pathname)
+}
+
+const canAccessRoutesDebug = (request: Request) => {
+  if (env.NODE_ENV !== 'production') {
+    return true
+  }
+
+  if (!env.PRIVATE_ACCESS_TOKEN) {
+    return false
+  }
+
+  const provided = request.headers.get('x-finance-os-access-token')
+  return provided === env.PRIVATE_ACCESS_TOKEN
+}
+
+const listRegisteredRoutes = (app: { routes?: unknown[] }) => {
+  const routes = app.routes
+  if (!Array.isArray(routes)) {
+    return []
+  }
+
+  const seen = new Set<string>()
+  const normalized = routes
+    .map(route => {
+      const candidate = route as { method?: unknown; path?: unknown }
+      const methodValue = candidate.method
+      const method =
+        typeof methodValue === 'string'
+          ? methodValue.toUpperCase()
+          : Array.isArray(methodValue)
+            ? methodValue.map(value => String(value).toUpperCase()).join(',')
+            : 'UNKNOWN'
+      const path = typeof candidate.path === 'string' ? candidate.path : '/'
+      const key = `${method} ${path}`
+
+      if (seen.has(key)) {
+        return null
+      }
+
+      seen.add(key)
+      return { method, path }
+    })
+    .filter((route): route is { method: string; path: string } => route !== null)
+
+  return normalized.sort((a, b) => {
+    if (a.path === b.path) {
+      return a.method.localeCompare(b.method)
+    }
+
+    return a.path.localeCompare(b.path)
+  })
+}
+
+const registerAppRoutes = (app: Elysia<any>) => {
+  return app
+    .use(
+      createAuthRoutes({
+        env,
+        redisClient: redisClient.client,
+      })
+    )
+    .use(
+      createDashboardRoutes({
+        db,
+      })
+    )
+    .use(
+      createPowensRoutes({
+        db,
+        redisClient: redisClient.client,
+        env,
+      })
+    )
+    .use(
+      createDebugRoutes({
+        db,
+        redisClient: redisClient.client,
+        env,
+      })
+    )
+    .get('/health', () => {
+      return {
+        status: 'ok',
+        service: 'api',
+        timestamp: new Date().toISOString(),
+      }
+    })
+    .get('/db/health', async () => {
+      const result = await sql<{ now: string }[]>`
+        select now()::text as now
+      `
+
+      return {
+        status: 'ok',
+        service: 'api',
+        database: 'ok',
+        databaseTime: result[0]?.now ?? null,
+        timestamp: new Date().toISOString(),
+      }
+    })
 }
 
 await redisClient.connect()
@@ -89,49 +201,36 @@ const app = new Elysia()
   .onAfterHandle(({ set }) => {
     set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
   })
-  .use(
-    createAuthRoutes({
-      env,
-      redisClient: redisClient.client,
-    })
-  )
-  .use(
-    createDashboardRoutes({
-      db,
-    })
-  )
-  .use(
-    createPowensRoutes({
-      db,
-      redisClient: redisClient.client,
-      env,
-    })
-  )
-  .use(
-    createDebugRoutes({
-      db,
-      redisClient: redisClient.client,
-      env,
-    })
-  )
-  .get('/health', () => {
+  .use(registerAppRoutes(new Elysia()))
+  .use(registerAppRoutes(new Elysia({ prefix: '/api' })))
+  .get('/__routes', ({ request, set }) => {
+    if (!canAccessRoutesDebug(request)) {
+      set.status = 403
+      return {
+        status: 'error',
+        message: 'Route debug endpoint is disabled in production without PRIVATE_ACCESS_TOKEN',
+      }
+    }
+
+    const routes = listRegisteredRoutes(app)
     return {
-      status: 'ok',
-      service: 'api',
-      timestamp: new Date().toISOString(),
+      count: routes.length,
+      routes,
     }
   })
-  .get('/db/health', async () => {
-    const result = await sql<{ now: string }[]>`
-      select now()::text as now
-    `
+  .get('/api/__routes', ({ request, set }) => {
+    if (!canAccessRoutesDebug(request)) {
+      set.status = 403
+      return {
+        status: 'error',
+        message: 'Route debug endpoint is disabled in production without PRIVATE_ACCESS_TOKEN',
+      }
+    }
 
+    const routes = listRegisteredRoutes(app)
     return {
-      status: 'ok',
-      service: 'api',
-      database: 'ok',
-      databaseTime: result[0]?.now ?? null,
-      timestamp: new Date().toISOString(),
+      count: routes.length,
+      routes,
     }
   })
   .onError(({ code, error }) => {

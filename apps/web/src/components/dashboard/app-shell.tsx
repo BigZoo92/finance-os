@@ -256,6 +256,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               variant="outline"
               onClick={() => syncMutation.mutate()}
               disabled={!isAdmin || syncMutation.isPending}
+              title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
             >
               {syncMutation.isPending ? 'Sync...' : 'Sync now'}
             </Button>
@@ -265,6 +266,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               size="sm"
               onClick={() => connectMutation.mutate()}
               disabled={!isAdmin || connectMutation.isPending}
+              title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
             >
               {connectMutation.isPending ? 'Ouverture...' : 'Connect bank'}
             </Button>
@@ -292,6 +294,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         </header>
 
         {isDemo ? (
+          <p className="text-xs text-muted-foreground">
+            Actions sensibles bloquees en mode demo (sync Powens, connexion banque, callback).
+          </p>
+        ) : null}
+
+        {isDemo ? (
           <Card className="border-amber-500/40 bg-[linear-gradient(120deg,rgba(245,158,11,0.18),rgba(234,88,12,0.14),rgba(245,158,11,0.1))]">
             <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
@@ -300,8 +308,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   Mode demonstration active
                 </p>
                 <p className="text-sm text-amber-900/95 dark:text-amber-100/90">
-                  Tu es en mode demo. Seul le magnifique et tout-puissant BigZoo peut voir les
-                  vraies finances.
+                  Mode demo : donnees mockees. Connecte-toi BigZoo pour voir les vraies donnees.
                 </p>
                 {isAuthUnavailable ? (
                   <p className="text-xs text-amber-800/90 dark:text-amber-200/90">

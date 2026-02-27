@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const getGlobalStartContextMock = vi.fn<() => unknown>()
 const toApiUrlMock = vi.fn<(path: string, options?: { requestOrigin?: string }) => string>()
 const logSsrErrorMock = vi.fn<(payload: unknown) => void>()
+const logSsrApiCallMock = vi.fn<(payload: unknown) => void>()
 
 vi.mock('@tanstack/react-start', () => ({
   getGlobalStartContext: () => getGlobalStartContextMock(),
@@ -20,6 +21,7 @@ vi.mock('@/lib/api', () => ({
 
 vi.mock('@/lib/ssr-logger', () => ({
   logSsrError: (payload: unknown) => logSsrErrorMock(payload),
+  logSsrApiCall: (payload: unknown) => logSsrApiCallMock(payload),
 }))
 
 import { fetchAuthMeFromSsr } from './auth-ssr'
@@ -32,6 +34,7 @@ describe('fetchAuthMeFromSsr', () => {
     getGlobalStartContextMock.mockReset()
     toApiUrlMock.mockReset()
     logSsrErrorMock.mockReset()
+    logSsrApiCallMock.mockReset()
     toApiUrlMock.mockReturnValue('http://api:3001/auth/me')
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
   })

@@ -1,6 +1,6 @@
 # AGENT.md - `apps/web`
 
-Last updated: 2026-02-24.
+Last updated: 2026-02-27.
 
 This file defines implementation rules for the web workspace.
 
@@ -75,6 +75,10 @@ If API contracts were touched, also run:
 - SSR auth prefetch must never throw:
   - `404/401` from `/auth/me` => fallback demo state.
   - `5xx/network` from `/auth/me` => fallback demo state with server-side logging only.
+- Dashboard and Powens read queries must also be safe:
+  - `404/401/5xx/network` on `/dashboard/*` or `/integrations/powens/status` => fallback demo data.
+  - never let these query failures crash SSR route loaders.
+- Server-side API logging must include final URL + status for SSR calls, without leaking tokens/secrets.
 - Do not default UI to demo while auth is unresolved; render a neutral pending state.
 - In demo mode, UI must explicitly indicate demo state (banner and/or badges).
 - Sensitive actions (connect/sync/write flows) must be visibly disabled in demo mode.

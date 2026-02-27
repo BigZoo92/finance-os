@@ -56,6 +56,31 @@ type LogSsrErrorOptions = {
   method?: string
 }
 
+type LogSsrApiCallOptions = {
+  method: string
+  path: string
+  url: string
+  status: number | 'network_error'
+}
+
+export const logSsrApiCall = ({ method, path, url, status }: LogSsrApiCallOptions) => {
+  if (typeof window !== 'undefined') {
+    return
+  }
+
+  const shouldLog = status === 'network_error' || status >= 400 || isSsrDebugEnabled()
+  if (!shouldLog) {
+    return
+  }
+
+  console.info('[web:ssr] api call', {
+    method,
+    path,
+    url,
+    status,
+  })
+}
+
 export const logSsrError = ({ source, route, error, method }: LogSsrErrorOptions) => {
   const safeError = error instanceof Error ? error : new Error(String(error))
 

@@ -1,6 +1,6 @@
 # AGENT.md - `apps/api`
 
-Last updated: 2026-02-24.
+Last updated: 2026-02-27.
 
 This file defines implementation rules for the API workspace.
 
@@ -66,6 +66,8 @@ For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-
 ## 5) Debug and private mode
 
 - `GET /debug/metrics` must not expose secrets.
+- `GET /__routes` is a debug endpoint for runtime route introspection.
+- In production, `/__routes` must stay inaccessible unless `PRIVATE_ACCESS_TOKEN` is configured and provided.
 - Respect private token checks (`x-finance-os-access-token`) when enabled.
 - Respect optional debug token checks (`x-finance-os-debug-token`) for metrics endpoint.
 
@@ -98,6 +100,10 @@ For Powens/API changes run:
     - admin => `200 { mode: "admin", user: { email, displayName } }`
     - demo => `200 { mode: "demo", user: null }`
   - `/auth/me` must never read DB/Powens.
+- Core read endpoints:
+  - `GET /dashboard/summary` and `GET /dashboard/transactions` must always exist and keep one contract for admin+demo.
+  - demo branch must execute first and return mocks before any DB query.
+  - keep `/api/*` compatibility routes available in addition to root routes for proxy strip-path resilience.
 - Private access gate:
   - header `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
   - in development, `/auth/login`, `/auth/logout` and `/auth/me` remain accessible without this header.

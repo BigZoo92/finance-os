@@ -1,7 +1,48 @@
 import { env } from '@/env'
+import { logSsrApiCall } from '@/lib/ssr-logger'
 
 type ApiUrlOptions = {
   requestOrigin?: string
+}
+
+type ApiRequestErrorStatus = number | 'network_error'
+
+type ApiRequestResult<TResponse> =
+  | {
+      ok: true
+      data: TResponse
+      response: Response
+      url: string
+    }
+  | {
+      ok: false
+      error: ApiRequestError
+      response?: Response
+      url: string
+    }
+
+export class ApiRequestError extends Error {
+  readonly status: ApiRequestErrorStatus
+  readonly url: string
+  readonly path: string
+
+  constructor({
+    message,
+    status,
+    url,
+    path,
+  }: {
+    message: string
+    status: ApiRequestErrorStatus
+    url: string
+    path: string
+  }) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.status = status
+    this.url = url
+    this.path = path
+  }
 }
 
 const toOptionalEnv = (value: string | undefined) => {
@@ -70,7 +111,49 @@ export const toApiUrl = (path: string, options?: ApiUrlOptions) => {
   return new URL(normalizedRelativePath, `${baseUrl.replace(/\/+$/, '')}/`).toString()
 }
 
-export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {
+const toApiErrorMessage = async (response: Response) => {
+  let message = `HTTP ${response.status}`
+
+  try {
+    const payload = (await response.json()) as { message?: string }
+    if (typeof payload.message === 'string' && payload.message.length > 0) {
+      message = payload.message
+    }
+  } catch {
+    // Keep generic HTTP message when body is not JSON.
+  }
+
+  return message
+}
+
+const logApiCall = ({
+  method,
+  path,
+  url,
+  status,
+}: {
+  method: string
+  path: string
+  url: string
+  status: ApiRequestErrorStatus
+}) => {
+  if (typeof window !== 'undefined') {
+    return
+  }
+
+  logSsrApiCall({
+    method,
+    path,
+    url,
+    status,
+  })
+}
+
+const resolveMethod = (init?: RequestInit) => {
+  return (init?.method ?? 'GET').toUpperCase()
+}
+
+const createRequestHeaders = (init?: RequestInit) => {
   const headers = new Headers(init?.headers)
 
   headers.set('Accept', 'application/json')
@@ -82,26 +165,96 @@ export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(toApiUrl(path), {
-    credentials: 'include',
-    ...init,
-    headers,
+  return headers
+}
+
+export const apiRequest = async <TResponse>(path: string, init?: RequestInit): Promise<ApiRequestResult<TResponse>> => {
+  const url = toApiUrl(path)
+  const method = resolveMethod(init)
+  const headers = createRequestHeaders(init)
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      credentials: 'include',
+      ...init,
+      headers,
+    })
+  } catch (error) {
+    const apiError = new ApiRequestError({
+      message: error instanceof Error ? error.message : 'Network request failed',
+      status: 'network_error',
+      url,
+      path,
+    })
+
+    logApiCall({
+      method,
+      path,
+      url,
+      status: 'network_error',
+    })
+
+    return {
+      ok: false,
+      error: apiError,
+      url,
+    }
+  }
+
+  logApiCall({
+    method,
+    path,
+    url,
+    status: response.status,
   })
 
   if (!response.ok) {
-    let message = `HTTP ${response.status}`
+    const message = await toApiErrorMessage(response)
+    const apiError = new ApiRequestError({
+      message,
+      status: response.status,
+      url,
+      path,
+    })
 
-    try {
-      const payload = (await response.json()) as { message?: string }
-      if (typeof payload.message === 'string' && payload.message.length > 0) {
-        message = payload.message
-      }
-    } catch {
-      // Keep generic HTTP message when body is not JSON.
+    return {
+      ok: false,
+      error: apiError,
+      response,
+      url,
     }
-
-    throw new Error(message)
   }
 
-  return (await response.json()) as TResponse
+  try {
+    return {
+      ok: true,
+      data: (await response.json()) as TResponse,
+      response,
+      url,
+    }
+  } catch {
+    const apiError = new ApiRequestError({
+      message: `Invalid JSON response from ${url}`,
+      status: response.status,
+      url,
+      path,
+    })
+
+    return {
+      ok: false,
+      error: apiError,
+      response,
+      url,
+    }
+  }
+}
+
+export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {
+  const result = await apiRequest<TResponse>(path, init)
+  if (!result.ok) {
+    throw result.error
+  }
+
+  return result.data
 }

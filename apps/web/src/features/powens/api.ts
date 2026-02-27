@@ -1,8 +1,24 @@
-import { apiFetch } from '@/lib/api'
+import { apiFetch, ApiRequestError } from '@/lib/api'
+import { getDemoPowensStatus } from '../demo-data'
 import type { PowensStatusResponse } from './types'
 
-export const fetchPowensStatus = () => {
-  return apiFetch<PowensStatusResponse>('/integrations/powens/status')
+export const fetchPowensStatus = async () => {
+  try {
+    return await apiFetch<PowensStatusResponse>('/integrations/powens/status')
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (
+        error.status === 'network_error' ||
+        error.status === 401 ||
+        error.status === 404 ||
+        error.status >= 500
+      ) {
+        return getDemoPowensStatus()
+      }
+    }
+
+    return getDemoPowensStatus()
+  }
 }
 
 export const fetchPowensConnectUrl = () => {

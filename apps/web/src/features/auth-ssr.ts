@@ -1,7 +1,8 @@
 import { getGlobalStartContext } from '@tanstack/react-start'
 import { env } from '@/env'
+import { AUTH_UNAVAILABLE_RESPONSE, DEMO_AUTH_RESPONSE } from '@/features/demo-data'
 import { toApiUrl } from '@/lib/api'
-import { logSsrError } from '@/lib/ssr-logger'
+import { logSsrApiCall, logSsrError } from '@/lib/ssr-logger'
 import type { AuthMeResponse } from './auth-types'
 
 type RequestAuthContext = {
@@ -10,15 +11,6 @@ type RequestAuthContext = {
   requestCookieHeader?: string | null
 }
 
-const DEMO_AUTH_RESPONSE: AuthMeResponse = {
-  mode: 'demo',
-  user: null,
-}
-
-const AUTH_UNAVAILABLE_RESPONSE: AuthMeResponse = {
-  ...DEMO_AUTH_RESPONSE,
-  error: 'auth_unavailable',
-}
 const authMeSsrRequestCache = new WeakMap<object, Promise<AuthMeResponse>>()
 
 const getRequestAuthContext = () => {
@@ -83,11 +75,21 @@ export const fetchAuthMeFromSsr = async (): Promise<AuthMeResponse | null> => {
   }
 
   const authPromise = (async (): Promise<AuthMeResponse> => {
+    const requestPath = requestContext.requestPath ?? '/unknown'
+    const authUrl = resolveAuthMeSsrUrl(requestContext.requestOrigin)
+
     try {
-      const response = await fetch(resolveAuthMeSsrUrl(requestContext.requestOrigin), {
+      const response = await fetch(authUrl, {
         method: 'GET',
         credentials: 'include',
         headers,
+      })
+
+      logSsrApiCall({
+        method: 'GET',
+        path: '/auth/me',
+        url: authUrl,
+        status: response.status,
       })
 
       if (response.ok) {
@@ -98,7 +100,6 @@ export const fetchAuthMeFromSsr = async (): Promise<AuthMeResponse | null> => {
         return DEMO_AUTH_RESPONSE
       }
 
-      const requestPath = requestContext.requestPath ?? '/unknown'
       const message = await toApiErrorMessage(response)
 
       logSsrError({
@@ -109,7 +110,12 @@ export const fetchAuthMeFromSsr = async (): Promise<AuthMeResponse | null> => {
 
       return AUTH_UNAVAILABLE_RESPONSE
     } catch (error) {
-      const requestPath = requestContext.requestPath ?? '/unknown'
+      logSsrApiCall({
+        method: 'GET',
+        path: '/auth/me',
+        url: authUrl,
+        status: 'network_error',
+      })
 
       logSsrError({
         source: 'request',

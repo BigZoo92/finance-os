@@ -1,6 +1,6 @@
 # AGENT.md
 
-Last updated: 2026-02-25.
+Last updated: 2026-02-27.
 
 This file is the repository-wide source of truth for architecture and implementation rules for AI/code agents.
 
@@ -253,6 +253,12 @@ Read these in addition to this root file when touching those areas:
 - set `LOG_LEVEL=debug` and/or `APP_DEBUG=1` on `web`
 - redeploy and inspect `web` logs (SSR stack + route + sanitized env snapshot)
 - confirm `GET /healthz` returns `200 {"ok":true}` independently from `/`
+- Production route/debug checks from inside `web` container:
+- `wget -qO- http://127.0.0.1:3000/healthz`
+- `wget -qSO- http://api:3001/auth/me --header='x-finance-os-access-token: <PRIVATE_ACCESS_TOKEN>'`
+- `wget -qSO- 'http://api:3001/dashboard/summary?range=30d' --header='x-finance-os-access-token: <PRIVATE_ACCESS_TOKEN>'`
+- optional: `wget -qO- http://api:3001/__routes --header='x-finance-os-access-token: <PRIVATE_ACCESS_TOKEN>'`
+- API also exposes compatibility routes under `/api/*`; keep Dokploy `/api` strip-path enabled as the preferred routing mode.
 - Agents changing deployment/runtime/env contracts must update:
 - `docker-compose.prod.yml`
 - `.env.prod.example`
@@ -261,6 +267,10 @@ Read these in addition to this root file when touching those areas:
 
 ## 11) Auth and demo mode (single-user)
 
+- Demo version first rule (non-negotiable):
+- every feature must ship a working demo response by default.
+- if requester is not authenticated as BigZoo, backend returns mocks and must stop before DB/Powens calls.
+- frontend must never crash on missing/failed endpoints; fallback to demo data is required.
 - Auth model is single-user manual auth (no multi-user abstraction).
 - API auth state must be resolved via `ctx.auth.mode` (`admin` or `demo`).
 - API auth source of truth is the root auth derive (cookie -> `ctx.auth.mode`), not duplicated per feature.
@@ -270,6 +280,21 @@ Read these in addition to this root file when touching those areas:
 - Backend rule: in demo mode, return mock data only and stop before any DB query or Powens call.
 - Mock datasets live under `apps/api/src/mocks/*`.
 - Frontend rule: clearly show demo state (banner/badge), keep read-only flows available, and disable sensitive actions (connect/sync/write actions).
+- Core endpoint contracts (must always exist in admin + demo):
+  - `GET /auth/me`:
+    - admin => `200 { mode: "admin", user: { email, displayName: "BigZoo" } }`
+    - demo => `200 { mode: "demo", user: null }`
+    - no DB/Powens call
+  - `GET /dashboard/summary?range=7d|30d|90d`:
+    - admin => DB-backed summary
+    - demo => stable mock summary
+  - `GET /dashboard/transactions?range=...&limit=...&cursor=...`:
+    - admin => DB-backed paginated data
+    - demo => stable mock pagination
+  - `GET /integrations/powens/status`:
+    - admin => DB-backed statuses
+    - demo => stable mock statuses
+  - sensitive Powens writes (`/integrations/powens/connect-url`, `/callback`, `/sync`) are admin-only.
 - Private access barrier:
   - header is `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
   - in development, auth endpoints (`/auth/login`, `/auth/logout`, `/auth/me`) stay reachable without this header.
