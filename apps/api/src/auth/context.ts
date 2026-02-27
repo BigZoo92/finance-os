@@ -11,6 +11,7 @@ const defaultInternalAuth: InternalAuthState = {
 
 const defaultRequestMeta: RequestMetaState = {
   requestId: 'unknown',
+  startedAtMs: 0,
 }
 
 export const getAuth = <TContext extends object>(context: TContext): AuthState => {

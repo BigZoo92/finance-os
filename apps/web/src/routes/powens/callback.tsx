@@ -12,17 +12,14 @@ import type { ReactNode } from 'react'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { postPowensCallback, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys } from '@/features/powens/query-options'
+import { sanitizePowensConnectionId } from '@/features/powens/sanitize-connection-id'
 import { ApiRequestError } from '@/lib/api'
 
 type CallbackLoaderState =
   | { status: 'success'; connectionId: string }
   | { status: 'error'; message: string; requestId?: string; canRetryAsAdmin?: boolean }
 
-const sanitizeConnectionId = (rawValue: string) => {
-  return rawValue.trim().replace(/^"+|"+$/g, '').trim()
-}
-
-const toErrorMessage = (value: unknown) => {
+const toErrorState = (value: unknown) => {
   if (value instanceof ApiRequestError) {
     if (value.code === 'DEMO_MODE_FORBIDDEN') {
       return {
@@ -84,7 +81,7 @@ export const Route = createFileRoute('/powens/callback')({
   validateSearch: search => ({
     connection_id:
       typeof search.connection_id === 'string' || typeof search.connection_id === 'number'
-        ? sanitizeConnectionId(String(search.connection_id))
+        ? sanitizePowensConnectionId(String(search.connection_id))
         : '',
     code: typeof search.code === 'string' ? search.code : '',
     state: typeof search.state === 'string' ? search.state : '',
@@ -116,7 +113,7 @@ export const Route = createFileRoute('/powens/callback')({
         connectionId: deps.connectionId,
       }
     } catch (error) {
-      const normalizedError = toErrorMessage(error)
+      const normalizedError = toErrorState(error)
       return {
         status: 'error',
         message: normalizedError.message,
@@ -178,7 +175,7 @@ function PowensCallbackPage() {
     <>
       <p className="text-emerald-600 dark:text-emerald-400">Connexion OK.</p>
       {syncMutation.isError ? (
-        <p className="text-destructive">Erreur: {toErrorMessage(syncMutation.error)}</p>
+        <p className="text-destructive">Erreur: {toErrorState(syncMutation.error).message}</p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>

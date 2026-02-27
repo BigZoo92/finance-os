@@ -3,7 +3,7 @@ import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
 import { createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
-import { getRequestMeta } from './auth/context'
+import { getAuth, getInternalAuth, getRequestMeta } from './auth/context'
 import {
   demoAccessDeniedResponse,
   isDemoModeForbiddenError,
@@ -35,6 +35,7 @@ const withApiCompatibilityPaths = (paths: string[]) => {
 
 const ALWAYS_PUBLIC_PATHS = withApiCompatibilityPaths(['/health', '/db/health'])
 const DEV_AUTH_PUBLIC_PATHS = withApiCompatibilityPaths(['/auth/login', '/auth/logout', '/auth/me'])
+const DEV_DEBUG_PUBLIC_PATHS = withApiCompatibilityPaths(['/debug/auth'])
 const INTERNAL_TOKEN_PROTECTED_PATHS = withApiCompatibilityPaths([
   '/debug/metrics',
   '/debug/health',
@@ -54,6 +55,10 @@ const shouldBypassPrivateAccessGate = ({
   }
 
   if (nodeEnv !== 'production' && DEV_AUTH_PUBLIC_PATHS.has(pathname)) {
+    return true
+  }
+
+  if (nodeEnv !== 'production' && DEV_DEBUG_PUBLIC_PATHS.has(pathname)) {
     return true
   }
 
@@ -176,6 +181,21 @@ const resolveStatusCode = (value: unknown) => {
   return 200
 }
 
+const resolveUserMode = (context: object) => {
+  const auth = getAuth(context)
+  const internalAuth = getInternalAuth(context)
+
+  if (auth.mode === 'admin') {
+    return 'admin'
+  }
+
+  if (internalAuth.hasValidToken) {
+    return 'internal'
+  }
+
+  return 'demo'
+}
+
 const toValidationDetails = (error: unknown) => {
   if (!error || typeof error !== 'object') {
     return undefined
@@ -255,7 +275,6 @@ const app = new Elysia()
         'Content-Type',
         'authorization',
         'x-finance-os-access-token',
-        'x-finance-os-debug-token',
         'x-internal-token',
         'x-request-id',
       ],
@@ -281,6 +300,7 @@ const app = new Elysia()
     return {
       requestMeta: {
         requestId,
+        startedAtMs: Date.now(),
       },
       auth: { mode: session?.admin === true ? 'admin' : 'demo' } as const,
       internalAuth: {
@@ -334,20 +354,25 @@ const app = new Elysia()
   })
   .onAfterHandle(context => {
     const requestId = getRequestMeta(context).requestId
+    const startedAtMs = getRequestMeta(context).startedAtMs
+    const durationMs = startedAtMs > 0 ? Date.now() - startedAtMs : null
+    const status = resolveStatusCode(context.set.status)
+    const userMode = resolveUserMode(context)
+    const route = toPathname(context.request)
+    const method = context.request.method
     context.set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
     context.set.headers['x-request-id'] = requestId
 
-    const status = resolveStatusCode(context.set.status)
-    if (status >= 400) {
-      logApiEvent({
-        level: status >= 500 ? 'error' : 'warn',
-        msg: 'api request completed with error status',
-        route: toPathname(context.request),
-        method: context.request.method,
-        status,
-        correlationId: requestId,
-      })
-    }
+    logApiEvent({
+      level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+      msg: 'api request completed',
+      route,
+      method,
+      status,
+      durationMs,
+      userMode,
+      correlationId: requestId,
+    })
   })
   .use(registerAppRoutes(new Elysia()))
   .use(registerAppRoutes(new Elysia({ prefix: '/api' })))
@@ -383,6 +408,9 @@ const app = new Elysia()
   })
   .onError(context => {
     const requestId = getRequestMeta(context).requestId ?? resolveRequestId(context.request)
+    const startedAtMs = getRequestMeta(context).startedAtMs
+    const durationMs = startedAtMs > 0 ? Date.now() - startedAtMs : null
+    const userMode = resolveUserMode(context)
     context.set.headers['x-request-id'] = requestId
 
     let status = 500
@@ -421,6 +449,8 @@ const app = new Elysia()
       route: toPathname(context.request),
       method: context.request.method,
       status,
+      durationMs,
+      userMode,
       correlationId: requestId,
       ...errorFields,
     })

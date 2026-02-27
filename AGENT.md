@@ -350,6 +350,10 @@ Read these in addition to this root file when touching those areas:
 - Sensitive mutations are admin-only both in API and UI.
 - UI has an explicit demo state for the feature.
 - UI does not render demo as default while auth is unresolved; use pending state until auth query resolves.
+- Security criteria are explicit per feature:
+  - no secrets in logs/errors
+  - internal-only operations require admin session or internal token
+  - error payloads stay sanitized (`code`, `message`, `requestId`)
 
 ## 12) CI/CD release policy (GitHub Actions + GHCR + Dokploy)
 

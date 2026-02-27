@@ -22,6 +22,7 @@ export interface InternalAuthState {
 
 export interface RequestMetaState {
   requestId: string
+  startedAtMs: number
 }
 
 export interface AuthSessionPayload {

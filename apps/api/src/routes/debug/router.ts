@@ -54,6 +54,14 @@ const toEnvPresence = (env: PowensRoutesDependencies['env']) => {
 }
 
 export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependencies) => {
+  const ensureDebugAuthAccess = (context: Parameters<typeof requireInternalToken>[0]) => {
+    if (env.NODE_ENV !== 'production') {
+      return
+    }
+
+    requireInternalToken(context)
+  }
+
   return new Elysia({ prefix: '/debug' })
     .get('/health', context => {
       requireInternalToken(context)
@@ -68,7 +76,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
       }
     })
     .get('/auth', context => {
-      requireInternalToken(context)
+      ensureDebugAuthAccess(context)
 
       const auth = getAuth(context)
       const internalAuth = getInternalAuth(context)
@@ -77,6 +85,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
         ok: true,
         requestId: getRequestMeta(context).requestId,
         hasSession: auth.mode === 'admin',
+        isAdmin: auth.mode === 'admin',
         hasInternalToken: internalAuth.hasValidToken,
         internalTokenSource: internalAuth.tokenSource,
         mode: auth.mode,
