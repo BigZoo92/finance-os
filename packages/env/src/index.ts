@@ -111,7 +111,6 @@ const authPasswordHashSchema = z
   .string()
   .min(1, 'AUTH_PASSWORD_HASH is required')
   .superRefine((value, ctx) => {
-    console.log('[env-debug] refine prefix:', value.slice(0, 12))
     if (!value.startsWith('$argon2')) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -151,12 +150,6 @@ const assertProductionApiEnv = (values: {
 }
 
 export const getApiEnv = () => {
-  const raw = process.env.AUTH_PASSWORD_HASH
-  console.log('[env-debug] AUTH_PASSWORD_HASH exists?', raw != null)
-  console.log('[env-debug] AUTH_PASSWORD_HASH type:', typeof raw)
-  console.log('[env-debug] AUTH_PASSWORD_HASH prefix:', raw?.slice(0, 12))
-  console.log('[env-debug] AUTH_PASSWORD_HASH length:', raw?.length)
-  console.log('[env-debug] AUTH_PASSWORD_HASH hasWhitespaceEnds:', raw ? raw.trim() !== raw : null)
   const parsed = parseEnv({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     API_HOST: z.string().default('0.0.0.0'),

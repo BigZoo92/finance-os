@@ -9,6 +9,7 @@ const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials'
 const RATE_LIMIT_MESSAGE = 'Too many login attempts'
 const RATE_LIMIT_WINDOW_SECONDS = 60
 const NO_STORE_CACHE_CONTROL = 'no-store'
+const BIGZOO_DISPLAY_NAME = 'BigZoo'
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase()
 
@@ -107,8 +108,17 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
     })
     .get('/me', context => {
       setNoStoreResponse(context)
+      const auth = getAuth(context)
+
       return {
-        mode: getAuth(context).mode,
+        mode: auth.mode,
+        user:
+          auth.mode === 'admin'
+            ? {
+                email: env.AUTH_ADMIN_EMAIL,
+                displayName: BIGZOO_DISPLAY_NAME,
+              }
+            : null,
       }
     })
 }

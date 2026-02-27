@@ -93,7 +93,11 @@ For Powens/API changes run:
 - Auth endpoints:
   - `POST /auth/login` sets session cookie.
   - `POST /auth/logout` clears session cookie.
-  - `GET /auth/me` returns auth mode and must be `Cache-Control: no-store`.
+  - `GET /auth/me` returns auth mode + user payload and must be `Cache-Control: no-store`.
+  - `/auth/me` contract:
+    - admin => `200 { mode: "admin", user: { email, displayName } }`
+    - demo => `200 { mode: "demo", user: null }`
+  - `/auth/me` must never read DB/Powens.
 - Private access gate:
   - header `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
   - in development, `/auth/login`, `/auth/logout` and `/auth/me` remain accessible without this header.

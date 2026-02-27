@@ -275,7 +275,14 @@ Read these in addition to this root file when touching those areas:
   - in development, auth endpoints (`/auth/login`, `/auth/logout`, `/auth/me`) stay reachable without this header.
 - Auth cache/control:
   - `GET /auth/me` must be `Cache-Control: no-store`.
+  - `GET /auth/me` contract:
+    - admin session => `200 { mode: "admin", user: { email, displayName } }`
+    - no session/invalid session => `200 { mode: "demo", user: null }`
+    - endpoint must be safe (no DB/Powens reads).
   - route loaders should prefetch `auth.me` and SSR hydration should keep first render auth-consistent (no demo->admin flash).
+  - SSR auth fetch must never crash route rendering:
+    - `404/401` => fallback `{ mode: "demo", user: null }`
+    - `5xx/network` => fallback `{ mode: "demo", user: null, error: "auth_unavailable" }` with server-side log only.
 
 ### Feature checklist (required)
 

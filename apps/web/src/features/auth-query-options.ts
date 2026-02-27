@@ -11,4 +11,5 @@ export const authMeQueryOptions = () =>
     queryKey: authQueryKeys.me(),
     queryFn: fetchAuthMe,
     staleTime: 60_000,
+    retry: false,
   })

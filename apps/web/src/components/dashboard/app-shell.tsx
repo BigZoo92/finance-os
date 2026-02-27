@@ -121,6 +121,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const isAuthPending = authViewState === 'pending'
   const isAdmin = authViewState === 'admin'
   const isDemo = authViewState === 'demo'
+  const isAuthUnavailable = authQuery.data?.error === 'auth_unavailable'
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -274,7 +275,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               </Button>
             ) : isDemo ? (
               <Button type="button" size="sm" variant="secondary" onClick={() => navigate({ to: '/login' })}>
-                Se connecter
+                Se connecter BigZoo
               </Button>
             ) : (
               <Button
@@ -302,9 +303,14 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   Tu es en mode demo. Seul le magnifique et tout-puissant BigZoo peut voir les
                   vraies finances.
                 </p>
+                {isAuthUnavailable ? (
+                  <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
+                    Auth indisponible temporairement: fallback demo active.
+                  </p>
+                ) : null}
               </div>
               <Button type="button" onClick={() => navigate({ to: '/login' })}>
-                Se connecter
+                Se connecter BigZoo
               </Button>
             </CardContent>
           </Card>

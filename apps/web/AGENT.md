@@ -72,6 +72,9 @@ If API contracts were touched, also run:
 
 - Resolve auth state through `auth.me` query (`GET /auth/me`), not `useEffect` orchestration.
 - Route loaders should prefetch `auth.me` for auth-sensitive pages.
+- SSR auth prefetch must never throw:
+  - `404/401` from `/auth/me` => fallback demo state.
+  - `5xx/network` from `/auth/me` => fallback demo state with server-side logging only.
 - Do not default UI to demo while auth is unresolved; render a neutral pending state.
 - In demo mode, UI must explicitly indicate demo state (banner and/or badges).
 - Sensitive actions (connect/sync/write flows) must be visibly disabled in demo mode.
