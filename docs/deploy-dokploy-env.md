@@ -37,6 +37,8 @@ Important:
 | `APP_IMAGE_TAG` | web, api, worker | Optionnel | `latest` ou `vX.Y.Z` | `latest` | `latest` pour suivi auto des releases; `vX.Y.Z` pour pin rollback. |
 | `WEB_PORT` | web | Optionnel | entier TCP | `3000` | Changer seulement si conflit de port VPS. |
 | `TZ` | web, api, worker, postgres | Optionnel | timezone IANA | `Europe/Paris` | Ex: `Europe/Paris`, `UTC`, `America/New_York`. |
+| `APP_VERSION` | web, api | Optionnel | string | vide | Version affichee dans `/debug/health` si renseignee. |
+| `APP_COMMIT_SHA` | web, api | Optionnel | string | vide | Commit SHA affiche dans `/debug/health` si renseigne. |
 | `APP_URL` | web, api | Oui | URL HTTPS | `https://finance-os.enzogivernaud.fr` (si c'est ton domaine) | URL publique principale servie par Dokploy. |
 | `WEB_URL` | web, api | Optionnel | URL HTTPS | meme que `APP_URL` | Peut etre vide; l'API retombera sur `APP_URL`. |
 | `API_URL` | web, api | Optionnel | URL HTTPS | `${APP_URL}/api` | Peut etre vide; l'API le reconstruit depuis `APP_URL`. |
@@ -46,8 +48,7 @@ Important:
 | `POSTGRES_DB` | postgres | Optionnel (fortement recommande) | string | `finance_os` | Nom base Postgres locale. |
 | `POSTGRES_USER` | postgres | Optionnel (fortement recommande) | string | `finance_os` | Utilisateur Postgres local. |
 | `POSTGRES_PASSWORD` | postgres | Oui | secret fort | valeur aleatoire 24+ chars | `openssl rand -base64 32` (ou gestionnaire de mots de passe). |
-| `PRIVATE_ACCESS_TOKEN` | api | Optionnel | secret >= 12 chars | vide (desactive) | Si active, meme valeur doit etre injectee en build web (`VITE_PRIVATE_ACCESS_TOKEN`) dans release workflow. |
-| `DEBUG_METRICS_TOKEN` | api | Optionnel | secret >= 12 chars | vide | Token endpoint debug/metrics si utilise. |
+| `PRIVATE_ACCESS_TOKEN` | web, api | Optionnel | secret >= 12 chars | vide (desactive) | Si active, meme valeur doit etre presente en runtime sur `web` et `api` pour les appels SSR internes. |
 | `POWENS_MANUAL_SYNC_COOLDOWN_SECONDS` | api | Optionnel | entier positif | `300` | Cooldown sync manuel. |
 | `AUTH_ADMIN_EMAIL` | api | Oui | email valide | ton email admin | Compte unique admin de l'app perso. |
 | `AUTH_PASSWORD_HASH_B64` | api | Recommande | base64 UTF-8 du hash Argon2 PHC | hash base64 genere | `pnpm auth:hash-b64` puis copier `AUTH_PASSWORD_HASH_B64=...` dans Dokploy. |

@@ -35,6 +35,7 @@ describe('createAuthRoutes /auth/me', () => {
     expect(response.headers.get('cache-control')).toBe('no-store')
     expect(payload).toEqual({
       mode: 'demo',
+      requestId: 'unknown',
       user: null,
     })
   })
@@ -47,6 +48,7 @@ describe('createAuthRoutes /auth/me', () => {
     expect(response.status).toBe(200)
     expect(payload).toEqual({
       mode: 'admin',
+      requestId: 'unknown',
       user: {
         email: 'givernaudenzo@gmail.com',
         displayName: 'BigZoo',

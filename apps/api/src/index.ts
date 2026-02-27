@@ -1,11 +1,20 @@
+import { randomUUID } from 'node:crypto'
 import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
 import { createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
-import { demoAccessDeniedResponse, isAdminRequiredError } from './auth/guard'
+import { getRequestMeta } from './auth/context'
+import {
+  demoAccessDeniedResponse,
+  isDemoModeForbiddenError,
+  isInternalTokenRequiredError,
+  isInternalTokenValid,
+  readInternalTokenFromRequest,
+} from './auth/guard'
 import { createAuthRoutes } from './auth/routes'
 import { readSessionFromCookie } from './auth/session'
 import { env } from './env'
+import { logApiEvent, isApiDebugEnabled, toErrorLogFields } from './observability/logger'
 import { createDashboardRoutes } from './routes/dashboard/router'
 import { createDebugRoutes } from './routes/debug/router'
 import { createPowensRoutes } from './routes/integrations/powens/router'
@@ -26,6 +35,12 @@ const withApiCompatibilityPaths = (paths: string[]) => {
 
 const ALWAYS_PUBLIC_PATHS = withApiCompatibilityPaths(['/health', '/db/health'])
 const DEV_AUTH_PUBLIC_PATHS = withApiCompatibilityPaths(['/auth/login', '/auth/logout', '/auth/me'])
+const INTERNAL_TOKEN_PROTECTED_PATHS = withApiCompatibilityPaths([
+  '/debug/metrics',
+  '/debug/health',
+  '/debug/auth',
+  '/__routes',
+])
 
 const shouldBypassPrivateAccessGate = ({
   pathname,
@@ -38,7 +53,16 @@ const shouldBypassPrivateAccessGate = ({
     return true
   }
 
-  return nodeEnv !== 'production' && DEV_AUTH_PUBLIC_PATHS.has(pathname)
+  if (nodeEnv !== 'production' && DEV_AUTH_PUBLIC_PATHS.has(pathname)) {
+    return true
+  }
+
+  return !INTERNAL_TOKEN_PROTECTED_PATHS.has(pathname)
+}
+
+const resolveRequestId = (request: Request) => {
+  const provided = request.headers.get('x-request-id')?.trim()
+  return provided && provided.length > 0 ? provided : randomUUID()
 }
 
 const canAccessRoutesDebug = (request: Request) => {
@@ -46,12 +70,11 @@ const canAccessRoutesDebug = (request: Request) => {
     return true
   }
 
-  if (!env.PRIVATE_ACCESS_TOKEN) {
-    return false
-  }
-
-  const provided = request.headers.get('x-finance-os-access-token')
-  return provided === env.PRIVATE_ACCESS_TOKEN
+  const { token } = readInternalTokenFromRequest(request)
+  return isInternalTokenValid({
+    providedToken: token,
+    env,
+  })
 }
 
 const listRegisteredRoutes = (app: { routes?: unknown[] }) => {
@@ -141,6 +164,85 @@ const registerAppRoutes = (app: Elysia<any>) => {
     })
 }
 
+const toPathname = (request: Request) => {
+  return new URL(request.url).pathname
+}
+
+const resolveStatusCode = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  return 200
+}
+
+const toValidationDetails = (error: unknown) => {
+  if (!error || typeof error !== 'object') {
+    return undefined
+  }
+
+  const rawIssues = (error as { all?: unknown }).all
+  if (!Array.isArray(rawIssues)) {
+    return undefined
+  }
+
+  const details = rawIssues
+    .slice(0, 10)
+    .map(issue => {
+      if (!issue || typeof issue !== 'object') {
+        return {
+          path: 'unknown',
+          message: String(issue),
+        }
+      }
+
+      const source = issue as {
+        path?: string
+        schema?: { error?: string }
+        summary?: string
+        message?: string
+      }
+
+      return {
+        path: source.path ?? 'unknown',
+        message: source.message ?? source.summary ?? source.schema?.error ?? 'Invalid input',
+      }
+    })
+
+  return details.length > 0 ? details : undefined
+}
+
+const buildApiErrorResponse = ({
+  status,
+  code,
+  message,
+  requestId,
+  details,
+}: {
+  status: number
+  code: string
+  message: string
+  requestId: string
+  details?: unknown
+}) => {
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      code,
+      message,
+      requestId,
+      ...(details === undefined ? {} : { details }),
+    }),
+    {
+      status,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': requestId,
+      },
+    }
+  )
+}
+
 await redisClient.connect()
 
 const app = new Elysia()
@@ -151,33 +253,52 @@ const app = new Elysia()
       allowedHeaders: [
         'Accept',
         'Content-Type',
+        'authorization',
         'x-finance-os-access-token',
         'x-finance-os-debug-token',
+        'x-internal-token',
+        'x-request-id',
       ],
-      exposeHeaders: ['retry-after', 'x-robots-tag'],
+      exposeHeaders: ['retry-after', 'x-request-id', 'x-robots-tag'],
     })
   )
-  .derive(({ request }) => {
+  .derive(({ request, set }) => {
+    const requestId = resolveRequestId(request)
+    set.headers['x-request-id'] = requestId
+
     const session = readSessionFromCookie({
       cookieHeader: request.headers.get('cookie'),
       secret: env.AUTH_SESSION_SECRET,
       ttlDays: env.AUTH_SESSION_TTL_DAYS,
     })
 
+    const { token, source } = readInternalTokenFromRequest(request)
+    const hasValidToken = isInternalTokenValid({
+      providedToken: token,
+      env,
+    })
+
     return {
+      requestMeta: {
+        requestId,
+      },
       auth: { mode: session?.admin === true ? 'admin' : 'demo' } as const,
+      internalAuth: {
+        hasValidToken,
+        tokenSource: source,
+      } as const,
     }
   })
-  .onBeforeHandle(({ request, set }) => {
+  .onBeforeHandle(context => {
     if (!env.PRIVATE_ACCESS_TOKEN) {
       return
     }
 
-    if (request.method === 'OPTIONS') {
+    if (context.request.method === 'OPTIONS') {
       return
     }
 
-    const pathname = new URL(request.url).pathname
+    const pathname = toPathname(context.request)
     if (
       shouldBypassPrivateAccessGate({
         pathname,
@@ -187,19 +308,46 @@ const app = new Elysia()
       return
     }
 
-    const provided = request.headers.get('x-finance-os-access-token')
-    if (provided === env.PRIVATE_ACCESS_TOKEN) {
+    if (context.internalAuth.hasValidToken) {
       return
     }
 
-    set.status = 401
+    context.set.status = 401
+    const requestId = getRequestMeta(context).requestId
+    logApiEvent({
+      level: 'warn',
+      msg: 'api request denied by internal token gate',
+      route: pathname,
+      method: context.request.method,
+      status: 401,
+      correlationId: requestId,
+      errName: 'InternalTokenRequiredError',
+      errMessage: 'Internal token required',
+    })
+
     return {
-      status: 'error',
-      message: 'Unauthorized',
+      ok: false,
+      code: 'INTERNAL_TOKEN_REQUIRED',
+      message: 'Internal token required',
+      requestId,
     }
   })
-  .onAfterHandle(({ set }) => {
-    set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
+  .onAfterHandle(context => {
+    const requestId = getRequestMeta(context).requestId
+    context.set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
+    context.set.headers['x-request-id'] = requestId
+
+    const status = resolveStatusCode(context.set.status)
+    if (status >= 400) {
+      logApiEvent({
+        level: status >= 500 ? 'error' : 'warn',
+        msg: 'api request completed with error status',
+        route: toPathname(context.request),
+        method: context.request.method,
+        status,
+        correlationId: requestId,
+      })
+    }
   })
   .use(registerAppRoutes(new Elysia()))
   .use(registerAppRoutes(new Elysia({ prefix: '/api' })))
@@ -233,33 +381,57 @@ const app = new Elysia()
       routes,
     }
   })
-  .onError(({ code, error }) => {
-    if (isAdminRequiredError(error)) {
-      return new Response(JSON.stringify(demoAccessDeniedResponse), {
-        status: 401,
-        headers: { 'content-type': 'application/json' },
-      })
+  .onError(context => {
+    const requestId = getRequestMeta(context).requestId ?? resolveRequestId(context.request)
+    context.set.headers['x-request-id'] = requestId
+
+    let status = 500
+    let responseCode = 'INTERNAL_ERROR'
+    let message = 'Internal server error'
+    let details: unknown = undefined
+
+    if (isDemoModeForbiddenError(context.error)) {
+      status = 403
+      responseCode = context.error.code
+      message = demoAccessDeniedResponse.message
+    } else if (isInternalTokenRequiredError(context.error)) {
+      status = 401
+      responseCode = context.error.code
+      message = context.error.message
+    } else if (context.code === 'VALIDATION' || context.code === 'PARSE') {
+      status = 400
+      responseCode = 'INVALID_INPUT'
+      message = 'Invalid request payload'
+      details = toValidationDetails(context.error)
+    } else if (context.code === 'NOT_FOUND') {
+      status = 404
+      responseCode = 'ROUTE_NOT_FOUND'
+      message = 'Route not found'
     }
 
-    const status = code === 'VALIDATION' ? 400 : 500
-    const message =
-      status === 500
-        ? 'Internal server error'
-        : error instanceof Error
-          ? error.message
-          : String(error)
+    const includeStack = isApiDebugEnabled()
+    const errorFields = toErrorLogFields({
+      error: context.error,
+      includeStack,
+    })
 
-    return new Response(
-      JSON.stringify({
-        status: 'error',
-        code,
-        message,
-      }),
-      {
-        status,
-        headers: { 'content-type': 'application/json' },
-      }
-    )
+    logApiEvent({
+      level: status >= 500 ? 'error' : 'warn',
+      msg: 'api request failed',
+      route: toPathname(context.request),
+      method: context.request.method,
+      status,
+      correlationId: requestId,
+      ...errorFields,
+    })
+
+    return buildApiErrorResponse({
+      status,
+      code: responseCode,
+      message,
+      requestId,
+      details,
+    })
   })
 
 app.listen({
@@ -267,10 +439,19 @@ app.listen({
   port: env.API_PORT,
 })
 
-console.log(`[api] listening on http://${env.API_HOST}:${env.API_PORT}`)
+logApiEvent({
+  level: 'info',
+  msg: 'api listening',
+  host: env.API_HOST,
+  port: env.API_PORT,
+})
 
 const shutdown = async (signal: string) => {
-  console.log(`[api] received ${signal}, shutting down...`)
+  logApiEvent({
+    level: 'info',
+    msg: 'api shutdown signal received',
+    signal,
+  })
   await Promise.allSettled([close(), redisClient.close()])
   process.exit(0)
 }

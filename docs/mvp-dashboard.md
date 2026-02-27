@@ -71,8 +71,7 @@ All dashboard reads are DB-first (no direct Powens calls from web).
   - `robots.txt` disallow all
 - API:
   - `X-Robots-Tag: noindex, nofollow, noarchive`
-  - optional private header gate (`x-finance-os-access-token`)
-  - optional debug token gate (`x-finance-os-debug-token`)
+  - optional internal token gate (`x-internal-token` / `Authorization: Bearer`)
   - `GET /auth/me` responses are `Cache-Control: no-store`
   - in development, auth endpoints (`/auth/login`, `/auth/logout`, `/auth/me`) are reachable even when private gate is enabled
 
@@ -92,7 +91,6 @@ All dashboard reads are DB-first (no direct Powens calls from web).
 Added/used by this MVP:
 
 - `PRIVATE_ACCESS_TOKEN` (optional)
-- `DEBUG_METRICS_TOKEN` (optional)
 - `AUTH_ADMIN_EMAIL`
 - `AUTH_PASSWORD_HASH_B64` (recommended)
 - `AUTH_PASSWORD_HASH` (legacy fallback)
@@ -102,7 +100,7 @@ Added/used by this MVP:
 - `POWENS_MANUAL_SYNC_COOLDOWN_SECONDS` (default: `300`)
 - `POWENS_SYNC_MIN_INTERVAL_PROD_MS` (default: `43200000`)
 - `VITE_API_BASE_URL` (recommended: `/api`)
-- `VITE_PRIVATE_ACCESS_TOKEN` (optional, web -> API header)
+- `PRIVATE_ACCESS_TOKEN` (optional, web SSR + api runtime)
 
 ## Notes for next step (Trade Republic)
 

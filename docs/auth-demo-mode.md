@@ -14,7 +14,7 @@ La decision est faite cote API a partir du cookie session signe `finance_os_sess
 L'auth combine 2 mecanismes:
 
 1. Barriere d'acces optionnelle:
-   - Header `x-finance-os-access-token`
+   - Headers acceptes: `x-internal-token`, `Authorization: Bearer <token>`, compat `x-finance-os-access-token`
    - compare a `PRIVATE_ACCESS_TOKEN`
    - si invalide: `401 Unauthorized`
 2. Session admin:
@@ -26,7 +26,7 @@ L'auth combine 2 mecanismes:
 Important:
 
 - En `development`, `/auth/login`, `/auth/logout` et `/auth/me` restent accessibles sans la barriere header.
-- En `production`, si `PRIVATE_ACCESS_TOKEN` est defini, le header est attendu sur toutes les routes API non publiques.
+- En `production`, `PRIVATE_ACCESS_TOKEN` est reserve aux appels serveur-a-serveur (SSR/internal tooling), jamais au navigateur.
 
 ## 3) Endpoints auth
 
@@ -55,7 +55,7 @@ Variables API:
 Variables web:
 
 - `VITE_API_BASE_URL` (recommande: `/api`)
-- `VITE_PRIVATE_ACCESS_TOKEN` (optionnel, si barriere active)
+- `PRIVATE_ACCESS_TOKEN` (optionnel, runtime SSR uniquement; ne pas exposer en `VITE_*`)
 
 Voir aussi:
 

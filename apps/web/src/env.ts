@@ -23,7 +23,6 @@ export const env = createEnv({
     VITE_APP_TITLE: z.string().min(1).optional(),
     VITE_APP_ORIGIN: z.string().min(1).optional(),
     VITE_API_BASE_URL: apiBaseUrlSchema.optional(),
-    VITE_PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
   },
 
   /**

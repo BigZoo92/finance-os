@@ -290,6 +290,8 @@ export const getApiEnv = () => {
   const parsed = parseEnv({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     LOG_LEVEL: z.string().default('info'),
+    APP_VERSION: z.string().min(1).optional(),
+    APP_COMMIT_SHA: z.string().min(1).optional(),
     API_HOST: z.string().default('0.0.0.0'),
     API_PORT: z.coerce.number().int().positive().default(3001),
     APP_URL: z.string().url('APP_URL must be a valid URL'),
@@ -299,7 +301,6 @@ export const getApiEnv = () => {
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
-    DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
     AUTH_PASSWORD_HASH: z.string().optional(),

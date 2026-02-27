@@ -35,12 +35,13 @@ function RootNotFound() {
 export function RouteError({ error }: ErrorComponentProps) {
   const isProduction = import.meta.env.PROD
   const message = isProduction
-    ? 'Une erreur est survenue. Veuillez recharger la page.'
+    ? 'Erreur interne. Reessaie dans quelques secondes.'
     : String((error as unknown as { message?: string })?.message ?? error)
   const requestContext =
     typeof window === 'undefined'
-      ? (getGlobalStartContext() as { requestPath?: string } | undefined)
+      ? (getGlobalStartContext() as { requestPath?: string; requestId?: string } | undefined)
       : undefined
+  const requestId = requestContext?.requestId ?? 'n/a'
 
   if (typeof window === 'undefined') {
     logSsrError({
@@ -52,7 +53,8 @@ export function RouteError({ error }: ErrorComponentProps) {
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>Route error</h2>
+      <h2>Erreur interne</h2>
+      <p>Request ID: {requestId}</p>
       <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
       {!isProduction ? <ErrorComponent error={error} /> : null}
     </div>

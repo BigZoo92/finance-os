@@ -128,7 +128,8 @@ Required Elysia practices:
 - Treat callback query params as sensitive.
 - Keep API error payloads sanitized (`toSafeErrorMessage`).
 - Keep private deployments non-indexed (`robots` meta + `X-Robots-Tag` when applicable).
-- If private token mode is enabled, web requests must send `x-finance-os-access-token`.
+- If `PRIVATE_ACCESS_TOKEN` is enabled, only server-side calls may send it (`x-internal-token` or `Authorization: Bearer ...`).
+- Never expose private/internal tokens through `VITE_*` variables.
 
 ## 7) Prelude package usage
 
@@ -208,7 +209,7 @@ Read these in addition to this root file when touching those areas:
 - `VITE_API_BASE_URL=/api`
 - `VITE_APP_ORIGIN=${APP_URL}` (or `${WEB_URL}` when different)
 - optional debug: `LOG_LEVEL=debug` and/or `APP_DEBUG=1`
-- optional private gate header: `VITE_PRIVATE_ACCESS_TOKEN`
+- optional server-only internal token: `PRIVATE_ACCESS_TOKEN` (same value in `api` and `web` runtime env)
 - Dokploy runtime variables required for `api` auth hash:
 - preferred: `AUTH_PASSWORD_HASH_B64` (base64 UTF-8 of the Argon2 PHC hash)
 - fallback (legacy): `AUTH_PASSWORD_HASH`
@@ -259,9 +260,9 @@ Read these in addition to this root file when touching those areas:
 - confirm `GET /healthz` returns `200 {"ok":true}` independently from `/`
 - Production route/debug checks from inside `web` container:
 - `wget -qO- http://127.0.0.1:3000/healthz`
-- `wget -qSO- http://api:3001/auth/me --header='x-finance-os-access-token: <PRIVATE_ACCESS_TOKEN>'`
-- `wget -qSO- 'http://api:3001/dashboard/summary?range=30d' --header='x-finance-os-access-token: <PRIVATE_ACCESS_TOKEN>'`
-- optional: `wget -qO- http://api:3001/__routes --header='x-finance-os-access-token: <PRIVATE_ACCESS_TOKEN>'`
+- `wget -qSO- http://api:3001/auth/me --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
+- `wget -qSO- 'http://api:3001/dashboard/summary?range=30d' --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
+- optional: `wget -qO- http://api:3001/__routes --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
 - API also exposes compatibility routes under `/api/*`; keep Dokploy `/api` strip-path enabled as the preferred routing mode.
 - Agents changing deployment/runtime/env contracts must update:
 - `docker-compose.prod.yml`
@@ -273,6 +274,9 @@ Read these in addition to this root file when touching those areas:
 
 - Demo version first rule (non-negotiable):
 - every feature must ship a working demo response by default.
+- every feature must have two explicit paths:
+  - `demo`: no DB access, no Powens call, mock data only.
+  - `admin`: DB/Powens enabled.
 - if requester is not authenticated as BigZoo, backend returns mocks and must stop before DB/Powens calls.
 - frontend must never crash on missing/failed endpoints; fallback to demo data is required.
 - Auth hash env resolution:
@@ -307,8 +311,9 @@ Read these in addition to this root file when touching those areas:
     - demo => stable mock statuses
   - sensitive Powens writes (`/integrations/powens/connect-url`, `/callback`, `/sync`) are admin-only.
 - Private access barrier:
-  - header is `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
-  - in development, auth endpoints (`/auth/login`, `/auth/logout`, `/auth/me`) stay reachable without this header.
+  - accepted internal headers: `x-internal-token`, `Authorization: Bearer ...`, and compatibility `x-finance-os-access-token`.
+  - internal token is server-side only (`web` SSR and internal tooling); never exposed to browser bundles.
+  - in development, auth endpoints (`/auth/login`, `/auth/logout`, `/auth/me`) stay reachable without internal token.
 - Auth cache/control:
   - `GET /auth/me` must be `Cache-Control: no-store`.
   - `GET /auth/me` contract:
@@ -323,6 +328,10 @@ Read these in addition to this root file when touching those areas:
   - enabled only when `LOG_LEVEL=debug`
   - log only source (`AUTH_PASSWORD_HASH` or `AUTH_PASSWORD_HASH_B64`), final hash length, and max 10-char prefix
   - never log full hash or password
+- Minimal observability baseline (required):
+  - propagate `x-request-id` end-to-end (web SSR + API responses).
+  - API logs must be structured JSON to stdout/stderr with `level`, `msg`, `route`, `method`, `status`, `correlationId`.
+  - HTTP error payloads must be normalized (`code`, `message`, `requestId`, optional safe `details`).
 
 ### Dokploy auth hash generation (PowerShell)
 

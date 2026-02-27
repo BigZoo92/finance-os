@@ -5,7 +5,7 @@ const DEBUG_ENV_KEYS = [
   'API_INTERNAL_URL',
   'VITE_API_BASE_URL',
   'VITE_APP_ORIGIN',
-  'VITE_PRIVATE_ACCESS_TOKEN',
+  'PRIVATE_ACCESS_TOKEN',
 ] as const
 
 const SENSITIVE_ENV_KEY_PATTERN = /TOKEN|SECRET|PASSWORD|KEY/i
@@ -61,9 +61,18 @@ type LogSsrApiCallOptions = {
   path: string
   url: string
   status: number | 'network_error'
+  requestId?: string
+  code?: string
 }
 
-export const logSsrApiCall = ({ method, path, url, status }: LogSsrApiCallOptions) => {
+export const logSsrApiCall = ({
+  method,
+  path,
+  url,
+  status,
+  requestId,
+  code,
+}: LogSsrApiCallOptions) => {
   if (typeof window !== 'undefined') {
     return
   }
@@ -73,7 +82,20 @@ export const logSsrApiCall = ({ method, path, url, status }: LogSsrApiCallOption
     return
   }
 
+  if (status === 'network_error' || status >= 400) {
+    console.error('[web:ssr] request failed', {
+      requestId: requestId ?? null,
+      url,
+      status,
+      code: code ?? null,
+      method,
+      path,
+    })
+    return
+  }
+
   console.info('[web:ssr] api call', {
+    requestId: requestId ?? null,
     method,
     path,
     url,

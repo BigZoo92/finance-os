@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import { getAuth } from './context'
+import { getAuth, getRequestMeta } from './context'
 import { consumeRateLimitSlot } from './rate-limit'
 import { authLoginBodySchema } from './schemas'
 import { createSessionToken, serializeSessionCookie, serializeSessionCookieClear } from './session'
@@ -42,6 +42,7 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
       '/login',
       async context => {
         setNoStoreResponse(context)
+        const requestId = getRequestMeta(context).requestId
 
         const normalizedEmail = normalizeEmail(context.body.email)
         const rateLimit = await consumeRateLimitSlot({
@@ -56,21 +57,30 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
           context.set.headers['retry-after'] = String(rateLimit.retryAfterSeconds)
           return {
             ok: false,
+            code: 'RATE_LIMITED' as const,
             message: RATE_LIMIT_MESSAGE,
+            requestId,
           }
         }
 
-        const passwordMatches = await Bun.password.verify(
-          context.body.password,
-          env.AUTH_PASSWORD_HASH
-        )
+        let passwordMatches = false
+        try {
+          passwordMatches = await Bun.password.verify(context.body.password, env.AUTH_PASSWORD_HASH)
+        } catch (error) {
+          throw new Error(
+            `Password verification failed: ${error instanceof Error ? error.message : String(error)}`
+          )
+        }
+
         const credentialsValid = normalizedEmail === normalizedAdminEmail && passwordMatches
 
         if (!credentialsValid) {
           context.set.status = 401
           return {
             ok: false,
+            code: 'INVALID_CREDENTIALS' as const,
             message: INVALID_CREDENTIALS_MESSAGE,
+            requestId,
           }
         }
 
@@ -92,7 +102,10 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
             : [prev, sc]
           : sc
 
-        return { ok: true }
+        return {
+          ok: true as const,
+          requestId,
+        }
       },
       {
         body: authLoginBodySchema,
@@ -100,18 +113,24 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
     )
     .post('/logout', context => {
       setNoStoreResponse(context)
+      const requestId = getRequestMeta(context).requestId
       context.set.headers['set-cookie'] = serializeSessionCookieClear({
         secure: secureCookie,
       })
 
-      return { ok: true }
+      return {
+        ok: true as const,
+        requestId,
+      }
     })
     .get('/me', context => {
       setNoStoreResponse(context)
       const auth = getAuth(context)
+      const requestId = getRequestMeta(context).requestId
 
       return {
         mode: auth.mode,
+        requestId,
         user:
           auth.mode === 'admin'
             ? {

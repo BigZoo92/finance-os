@@ -30,6 +30,7 @@ export const fetchDashboardSummary = async (range: DashboardRange) => {
       if (
         error.status === 'network_error' ||
         error.status === 401 ||
+        error.status === 403 ||
         error.status === 404 ||
         error.status >= 500
       ) {
@@ -59,6 +60,7 @@ export const fetchDashboardTransactions = async (params: {
       if (
         error.status === 'network_error' ||
         error.status === 401 ||
+        error.status === 403 ||
         error.status === 404 ||
         error.status >= 500
       ) {

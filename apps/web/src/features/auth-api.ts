@@ -7,7 +7,7 @@ export const fetchAuthMe = async () => {
     return await apiFetch<AuthMeResponse>('/auth/me')
   } catch (error) {
     if (error instanceof ApiRequestError) {
-      if (error.status === 401 || error.status === 404) {
+      if (error.status === 401 || error.status === 403 || error.status === 404) {
         return DEMO_AUTH_RESPONSE
       }
 

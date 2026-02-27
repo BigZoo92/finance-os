@@ -126,7 +126,6 @@ jobs:
             API_INTERNAL_URL=${{ vars.API_INTERNAL_URL || 'http://api:3001' }}
             VITE_APP_TITLE=${{ vars.VITE_APP_TITLE || 'finance-os' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || '/api' }}
-            VITE_PRIVATE_ACCESS_TOKEN=${{ secrets.VITE_PRIVATE_ACCESS_TOKEN || '' }}
 
   trigger_dokploy:
     name: Trigger Dokploy deployment API

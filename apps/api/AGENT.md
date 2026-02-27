@@ -66,10 +66,10 @@ For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-
 ## 5) Debug and private mode
 
 - `GET /debug/metrics` must not expose secrets.
+- `GET /debug/health` and `GET /debug/auth` are internal diagnostics endpoints.
 - `GET /__routes` is a debug endpoint for runtime route introspection.
 - In production, `/__routes` must stay inaccessible unless `PRIVATE_ACCESS_TOKEN` is configured and provided.
-- Respect private token checks (`x-finance-os-access-token`) when enabled.
-- Respect optional debug token checks (`x-finance-os-debug-token`) for metrics endpoint.
+- Respect internal token checks (`x-internal-token` or `Authorization: Bearer ...`; `x-finance-os-access-token` remains compatibility).
 
 ## 6) DB and env boundaries
 
@@ -108,9 +108,13 @@ For Powens/API changes run:
   - demo branch must execute first and return mocks before any DB query.
   - keep `/api/*` compatibility routes available in addition to root routes for proxy strip-path resilience.
 - Private access gate:
-  - header `x-finance-os-access-token` when `PRIVATE_ACCESS_TOKEN` is enabled.
+  - accepted internal headers: `x-internal-token`, `Authorization: Bearer ...`, and compatibility `x-finance-os-access-token`.
   - in development, `/auth/login`, `/auth/logout` and `/auth/me` remain accessible without this header.
 - API errors must not leak internals: return sanitized `500` payloads.
+- API observability baseline:
+  - generate/propagate `x-request-id`.
+  - log structured JSON to stdout/stderr.
+  - normalize error payloads with `code`, `message`, `requestId`.
 
 ### Feature checklist
 

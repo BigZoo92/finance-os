@@ -50,7 +50,8 @@ This file defines implementation rules for the web workspace.
 - Keep private deployment non-indexed:
 - `meta` robots noindex
 - `public/robots.txt` disallow all
-- If API private token mode is enabled, web API fetch must send `x-finance-os-access-token`.
+- If `PRIVATE_ACCESS_TOKEN` is enabled, only SSR/internal web calls may send it (`x-internal-token`).
+- Never expose internal tokens via `VITE_*` variables.
 
 ## 5) Route file rules
 
