@@ -156,11 +156,11 @@ jobs:
           api_base="${dokploy_base_url}/api"
 
           if [[ -n "${DOKPLOY_COMPOSE_ID:-}" ]]; then
-            endpoint="${api_base}/compose.deploy"
+            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1""
             payload=$(printf '{"composeId":"%s","title":"release %s","description":"%s@%s"}' \
               "${DOKPLOY_COMPOSE_ID}" "${RELEASE_TAG}" "${GITHUB_REPOSITORY}" "${GITHUB_SHA}")
           elif [[ -n "${DOKPLOY_APPLICATION_ID:-}" ]]; then
-            endpoint="${api_base}/application.deploy"
+            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1""
             payload=$(printf '{"applicationId":"%s"}' "${DOKPLOY_APPLICATION_ID}")
           else
             echo "Missing secret DOKPLOY_COMPOSE_ID (recommended) or DOKPLOY_APPLICATION_ID." >&2
