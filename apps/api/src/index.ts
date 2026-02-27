@@ -125,6 +125,62 @@ const listRegisteredRoutes = (app: { routes?: unknown[] }) => {
   })
 }
 
+type RouteSignature = {
+  method: 'GET' | 'POST'
+  path: string
+}
+
+const REQUIRED_PRODUCTION_ROUTE_SIGNATURES: RouteSignature[] = [
+  { method: 'GET', path: '/auth/me' },
+  { method: 'GET', path: '/api/auth/me' },
+  { method: 'POST', path: '/integrations/powens/callback' },
+  { method: 'POST', path: '/api/integrations/powens/callback' },
+]
+
+const hasRouteSignature = ({
+  routes,
+  signature,
+}: {
+  routes: Array<{ method: string; path: string }>
+  signature: RouteSignature
+}) => {
+  return routes.some(route => {
+    if (route.path !== signature.path) {
+      return false
+    }
+
+    const methods = route.method
+      .split(',')
+      .map(value => value.trim().toUpperCase())
+      .filter(value => value.length > 0)
+
+    return methods.includes(signature.method)
+  })
+}
+
+const assertRequiredProductionRoutes = ({
+  routes,
+}: {
+  routes: Array<{ method: string; path: string }>
+}) => {
+  const missing = REQUIRED_PRODUCTION_ROUTE_SIGNATURES.filter(
+    signature => !hasRouteSignature({ routes, signature })
+  )
+
+  if (missing.length === 0) {
+    return
+  }
+
+  const missingRoutes = missing.map(signature => `${signature.method} ${signature.path}`)
+  logApiEvent({
+    level: 'error',
+    msg: 'api startup missing required routes',
+    missingRoutes,
+  })
+
+  throw new Error(`Missing required API routes: ${missingRoutes.join(', ')}`)
+}
+
 const registerAppRoutes = (app: Elysia<any>) => {
   return app
     .use(
@@ -473,7 +529,7 @@ const app = new Elysia()
       message = 'Route not found'
     }
 
-    const includeStack = isApiDebugEnabled()
+    const includeStack = status >= 500 || isApiDebugEnabled()
     const errorFields = toErrorLogFields({
       error: context.error,
       includeStack,
@@ -499,6 +555,47 @@ const app = new Elysia()
       details,
     })
   })
+
+const registeredRoutes = listRegisteredRoutes(app)
+if (env.NODE_ENV === 'production') {
+  assertRequiredProductionRoutes({
+    routes: registeredRoutes,
+  })
+}
+
+logApiEvent({
+  level: 'info',
+  msg: 'api routes mounted',
+  routeCount: registeredRoutes.length,
+  hasAuthMe: hasRouteSignature({
+    routes: registeredRoutes,
+    signature: {
+      method: 'GET',
+      path: '/auth/me',
+    },
+  }),
+  hasApiAuthMe: hasRouteSignature({
+    routes: registeredRoutes,
+    signature: {
+      method: 'GET',
+      path: '/api/auth/me',
+    },
+  }),
+  hasPowensCallback: hasRouteSignature({
+    routes: registeredRoutes,
+    signature: {
+      method: 'POST',
+      path: '/integrations/powens/callback',
+    },
+  }),
+  hasApiPowensCallback: hasRouteSignature({
+    routes: registeredRoutes,
+    signature: {
+      method: 'POST',
+      path: '/api/integrations/powens/callback',
+    },
+  }),
+})
 
 app.listen({
   hostname: env.API_HOST,
