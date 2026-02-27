@@ -209,6 +209,10 @@ Read these in addition to this root file when touching those areas:
 - `VITE_APP_ORIGIN=${APP_URL}` (or `${WEB_URL}` when different)
 - optional debug: `LOG_LEVEL=debug` and/or `APP_DEBUG=1`
 - optional private gate header: `VITE_PRIVATE_ACCESS_TOKEN`
+- Dokploy runtime variables required for `api` auth hash:
+- preferred: `AUTH_PASSWORD_HASH_B64` (base64 UTF-8 of the Argon2 PHC hash)
+- fallback (legacy): `AUTH_PASSWORD_HASH`
+- Why B64: avoids `$` interpolation/escaping issues in Dokploy/Compose env editors and keeps PHC hash intact at runtime.
 - All production required variables are documented in `.env.prod.example`.
 - Exhaustive Dokploy variable mapping is documented in `docs/deploy-dokploy-env.md`.
 - Compose interpolation should prefer safe defaults (`:-`) instead of strict `${VAR:?}` so Dokploy "Preview Compose" does not fail on missing values; runtime env validation remains the guardrail.
@@ -271,6 +275,13 @@ Read these in addition to this root file when touching those areas:
 - every feature must ship a working demo response by default.
 - if requester is not authenticated as BigZoo, backend returns mocks and must stop before DB/Powens calls.
 - frontend must never crash on missing/failed endpoints; fallback to demo data is required.
+- Auth hash env resolution:
+- if `AUTH_PASSWORD_HASH_B64` is present, decode it from base64 UTF-8 and use it as final hash.
+- else fallback to `AUTH_PASSWORD_HASH`.
+- decoded/fallback hash must start with `$argon2`.
+- Zod errors must stay actionable:
+  - `AUTH_PASSWORD_HASH_B64 is not valid base64`
+  - `Decoded hash must start with $argon2`
 - Auth model is single-user manual auth (no multi-user abstraction).
 - API auth state must be resolved via `ctx.auth.mode` (`admin` or `demo`).
 - API auth source of truth is the root auth derive (cookie -> `ctx.auth.mode`), not duplicated per feature.
@@ -308,6 +319,19 @@ Read these in addition to this root file when touching those areas:
   - SSR auth fetch must never crash route rendering:
     - `404/401` => fallback `{ mode: "demo", user: null }`
     - `5xx/network` => fallback `{ mode: "demo", user: null, error: "auth_unavailable" }` with server-side log only.
+- API env debug log policy for auth hash:
+  - enabled only when `LOG_LEVEL=debug`
+  - log only source (`AUTH_PASSWORD_HASH` or `AUTH_PASSWORD_HASH_B64`), final hash length, and max 10-char prefix
+  - never log full hash or password
+
+### Dokploy auth hash generation (PowerShell)
+
+- Generate hash + base64 with repo script:
+  - `pnpm auth:hash-b64`
+- Or encode an existing hash in PowerShell:
+  - `$hash = '$argon2id$...'; [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($hash))`
+- In Dokploy Environment, set `AUTH_PASSWORD_HASH_B64=<value>` on the Compose app.
+- Keep `AUTH_PASSWORD_HASH` empty unless you need temporary legacy fallback.
 
 ### Feature checklist (required)
 

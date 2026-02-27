@@ -96,6 +96,9 @@ For Powens/API changes run:
   - `POST /auth/login` sets session cookie.
   - `POST /auth/logout` clears session cookie.
   - `GET /auth/me` returns auth mode + user payload and must be `Cache-Control: no-store`.
+  - Auth hash source priority:
+    - `AUTH_PASSWORD_HASH_B64` (recommended, base64 UTF-8) when present
+    - fallback `AUTH_PASSWORD_HASH` for legacy compatibility
   - `/auth/me` contract:
     - admin => `200 { mode: "admin", user: { email, displayName } }`
     - demo => `200 { mode: "demo", user: null }`

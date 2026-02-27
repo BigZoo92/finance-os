@@ -41,6 +41,15 @@ const parseEnv = <T extends z.ZodRawShape>(shape: T) => {
   return parsed.data
 }
 
+const toOptionalEnv = (value: string | undefined) => {
+  if (!value) {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : undefined
+}
+
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '')
 
 const toDecodedBuffer = (value: string): Buffer | null => {
@@ -107,17 +116,145 @@ const authSessionSecretSchema = z
     'AUTH_SESSION_SECRET must be at least 32 bytes (raw, hex, base64, or base64url)'
   )
 
-const authPasswordHashSchema = z
-  .string()
-  .min(1, 'AUTH_PASSWORD_HASH is required')
-  .superRefine((value, ctx) => {
-    if (!value.startsWith('$argon2')) {
+const AUTH_PASSWORD_HASH_PREFIX = '$argon2'
+const AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH = 10
+
+type ResolvedAuthPasswordHashSource = 'AUTH_PASSWORD_HASH' | 'AUTH_PASSWORD_HASH_B64'
+
+type ResolvedAuthPasswordHash = {
+  hash: string
+  source: ResolvedAuthPasswordHashSource
+}
+
+const isDebugLogLevel = (value: string) => value.trim().toLowerCase() === 'debug'
+
+const base64ValuePattern = /^[A-Za-z0-9+/]+={0,2}$/
+
+const decodeBase64Utf8Strict = (value: string): string | null => {
+  const normalized = value.trim()
+  if (normalized.length === 0 || normalized.length % 4 !== 0 || !base64ValuePattern.test(normalized)) {
+    return null
+  }
+
+  try {
+    const decodedBuffer = Buffer.from(normalized, 'base64')
+    const normalizedInput = normalized.replace(/=+$/, '')
+    const normalizedOutput = decodedBuffer.toString('base64').replace(/=+$/, '')
+
+    if (normalizedInput !== normalizedOutput) {
+      return null
+    }
+
+    return new TextDecoder('utf-8', { fatal: true }).decode(decodedBuffer)
+  } catch {
+    return null
+  }
+}
+
+const authPasswordHashInputsSchema = z
+  .object({
+    AUTH_PASSWORD_HASH: z.string().optional(),
+    AUTH_PASSWORD_HASH_B64: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    const authPasswordHashB64 = toOptionalEnv(values.AUTH_PASSWORD_HASH_B64)
+    const authPasswordHash = toOptionalEnv(values.AUTH_PASSWORD_HASH)
+
+    if (authPasswordHashB64) {
+      const decoded = decodeBase64Utf8Strict(authPasswordHashB64)
+      if (!decoded) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['AUTH_PASSWORD_HASH_B64'],
+          message: 'AUTH_PASSWORD_HASH_B64 is not valid base64',
+        })
+        return
+      }
+
+      if (!decoded.startsWith(AUTH_PASSWORD_HASH_PREFIX)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['AUTH_PASSWORD_HASH_B64'],
+          message: 'Decoded hash must start with $argon2',
+        })
+      }
+
+      return
+    }
+
+    if (!authPasswordHash) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `AUTH_PASSWORD_HASH must start with $argon2 (got prefix: ${value.slice(0, 12)})`,
+        path: ['AUTH_PASSWORD_HASH'],
+        message: 'AUTH_PASSWORD_HASH is required when AUTH_PASSWORD_HASH_B64 is not set',
+      })
+      return
+    }
+
+    if (!authPasswordHash.startsWith(AUTH_PASSWORD_HASH_PREFIX)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['AUTH_PASSWORD_HASH'],
+        message: `AUTH_PASSWORD_HASH must start with $argon2 (got prefix: ${authPasswordHash.slice(0, 12)})`,
       })
     }
   })
+  .transform(values => {
+    const authPasswordHashB64 = toOptionalEnv(values.AUTH_PASSWORD_HASH_B64)
+    if (authPasswordHashB64) {
+      const decoded = decodeBase64Utf8Strict(authPasswordHashB64)
+      if (!decoded) {
+        throw new Error('AUTH_PASSWORD_HASH_B64 is not valid base64')
+      }
+
+      return {
+        hash: decoded,
+        source: 'AUTH_PASSWORD_HASH_B64',
+      } as const
+    }
+
+    const authPasswordHash = toOptionalEnv(values.AUTH_PASSWORD_HASH)
+    if (!authPasswordHash) {
+      throw new Error('AUTH_PASSWORD_HASH is required when AUTH_PASSWORD_HASH_B64 is not set')
+    }
+
+    return {
+      hash: authPasswordHash,
+      source: 'AUTH_PASSWORD_HASH',
+    } as const
+  })
+
+const resolveAuthPasswordHash = (values: {
+  AUTH_PASSWORD_HASH?: string | undefined
+  AUTH_PASSWORD_HASH_B64?: string | undefined
+}): ResolvedAuthPasswordHash => {
+  const parsed = authPasswordHashInputsSchema.safeParse(values)
+  if (!parsed.success) {
+    throw new Error(
+      `Invalid environment variables:\n${JSON.stringify(parsed.error.flatten().fieldErrors, null, 2)}`
+    )
+  }
+
+  return parsed.data
+}
+
+const logResolvedAuthPasswordHash = ({
+  logLevel,
+  resolvedAuthPasswordHash,
+}: {
+  logLevel: string
+  resolvedAuthPasswordHash: ResolvedAuthPasswordHash
+}) => {
+  if (!isDebugLogLevel(logLevel)) {
+    return
+  }
+
+  console.info('[api:env] auth password hash resolved', {
+    source: resolvedAuthPasswordHash.source,
+    hashLength: resolvedAuthPasswordHash.hash.length,
+    hashPrefix: resolvedAuthPasswordHash.hash.slice(0, AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH),
+  })
+}
 
 const powensShape = {
   POWENS_CLIENT_ID: z.string().min(1, 'POWENS_CLIENT_ID is required'),
@@ -152,6 +289,7 @@ const assertProductionApiEnv = (values: {
 export const getApiEnv = () => {
   const parsed = parseEnv({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    LOG_LEVEL: z.string().default('info'),
     API_HOST: z.string().default('0.0.0.0'),
     API_PORT: z.coerce.number().int().positive().default(3001),
     APP_URL: z.string().url('APP_URL must be a valid URL'),
@@ -164,11 +302,22 @@ export const getApiEnv = () => {
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
-    AUTH_PASSWORD_HASH: authPasswordHashSchema,
+    AUTH_PASSWORD_HASH: z.string().optional(),
+    AUTH_PASSWORD_HASH_B64: z.string().optional(),
     AUTH_SESSION_SECRET: authSessionSecretSchema,
     AUTH_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
     AUTH_LOGIN_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
     ...powensShape,
+  })
+
+  const resolvedAuthPasswordHash = resolveAuthPasswordHash({
+    AUTH_PASSWORD_HASH: parsed.AUTH_PASSWORD_HASH,
+    AUTH_PASSWORD_HASH_B64: parsed.AUTH_PASSWORD_HASH_B64,
+  })
+
+  logResolvedAuthPasswordHash({
+    logLevel: parsed.LOG_LEVEL,
+    resolvedAuthPasswordHash,
   })
 
   assertProductionApiEnv(parsed)
@@ -177,8 +326,12 @@ export const getApiEnv = () => {
   const appUrl = normalizeUrl(parsed.APP_URL ?? webUrl)
   const apiUrl = normalizeUrl(parsed.API_URL ?? `${appUrl}/api`)
 
+  const { AUTH_PASSWORD_HASH: _authPasswordHash, AUTH_PASSWORD_HASH_B64: _authPasswordHashB64, ...remainingParsed } = parsed
+
   return {
-    ...parsed,
+    ...remainingParsed,
+    AUTH_PASSWORD_HASH: resolvedAuthPasswordHash.hash,
+    AUTH_PASSWORD_HASH_SOURCE: resolvedAuthPasswordHash.source,
     APP_URL: appUrl,
     WEB_URL: webUrl,
     API_URL: apiUrl,

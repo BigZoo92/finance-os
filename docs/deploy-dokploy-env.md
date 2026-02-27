@@ -24,6 +24,7 @@ Important:
   - hash Argon2
   - `AUTH_SESSION_SECRET` >= 32 bytes
   - `APP_ENCRYPTION_KEY` = 32 bytes
+- Pour Dokploy/Compose, preferer `AUTH_PASSWORD_HASH_B64` pour eviter toute alteration des caracteres `$` du format PHC Argon2.
 - Le mode recommande est:
   - `APP_IMAGE_TAG=latest` pour suivre automatiquement les releases tag (`v*`)
   - pin temporaire `APP_IMAGE_TAG=vX.Y.Z` pour rollback
@@ -49,7 +50,8 @@ Important:
 | `DEBUG_METRICS_TOKEN` | api | Optionnel | secret >= 12 chars | vide | Token endpoint debug/metrics si utilise. |
 | `POWENS_MANUAL_SYNC_COOLDOWN_SECONDS` | api | Optionnel | entier positif | `300` | Cooldown sync manuel. |
 | `AUTH_ADMIN_EMAIL` | api | Oui | email valide | ton email admin | Compte unique admin de l'app perso. |
-| `AUTH_PASSWORD_HASH` | api | Oui | hash Argon2 (prefixe `$argon2`) | hash genere | `echo -n "ton-mot-de-passe" \| pnpm auth:hash` puis copier sortie. |
+| `AUTH_PASSWORD_HASH_B64` | api | Recommande | base64 UTF-8 du hash Argon2 PHC | hash base64 genere | `pnpm auth:hash-b64` puis copier `AUTH_PASSWORD_HASH_B64=...` dans Dokploy. |
+| `AUTH_PASSWORD_HASH` | api | Fallback | hash Argon2 (prefixe `$argon2`) | vide si `AUTH_PASSWORD_HASH_B64` est utilise | Compat legacy seulement; utilise quand `AUTH_PASSWORD_HASH_B64` est absent. |
 | `AUTH_SESSION_SECRET` | api | Oui | secret >= 32 bytes (raw/hex/base64/base64url) | secret fort | `openssl rand -base64 48` (ou `openssl rand -hex 32`). |
 | `AUTH_SESSION_TTL_DAYS` | api | Optionnel | entier positif | `30` | Duree cookie session. |
 | `AUTH_LOGIN_RATE_LIMIT_PER_MIN` | api | Optionnel | entier positif | `5` | Limite brute-force login. |
@@ -75,6 +77,30 @@ Ces variables ne vont pas dans Dokploy, mais dans GitHub (Actions release):
 - `DOKPLOY_API_KEY` (Secret)
 - `DOKPLOY_COMPOSE_ID` (Secret, recommande)
 - `DOKPLOY_APPLICATION_ID` (Secret, fallback)
+
+## 4.1) Windows PowerShell - generer `AUTH_PASSWORD_HASH_B64`
+
+Option script repo (recommandee):
+
+```powershell
+echo -n "VotreMotDePasse" | pnpm auth:hash-b64
+```
+
+Option manuelle depuis un hash PHC existant:
+
+```powershell
+$hash = '$argon2id$v=19$m=65536,t=3,p=1$...'
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($hash))
+```
+
+Validation rapide en logs API (safe):
+
+- definir `LOG_LEVEL=debug`
+- redeployer
+- verifier une ligne `[api:env] auth password hash resolved` avec:
+  - `source` (`AUTH_PASSWORD_HASH_B64` attendu)
+  - `hashLength`
+  - `hashPrefix` (10 chars max)
 
 ## 5) Checklist Dokploy (une seule fois)
 
