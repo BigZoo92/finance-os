@@ -1,8 +1,56 @@
 import { env } from '@/env'
 
-const FALLBACK_API_BASE_URL = 'http://127.0.0.1:3001'
+type ApiUrlOptions = {
+  requestOrigin?: string
+}
 
-export const getApiBaseUrl = () => env.VITE_API_BASE_URL ?? FALLBACK_API_BASE_URL
+const toOptionalEnv = (value: string | undefined) => {
+  if (!value) {
+    return undefined
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : undefined
+}
+
+const readServerRuntimeEnv = (key: string) => {
+  if (typeof process === 'undefined') {
+    return undefined
+  }
+
+  return toOptionalEnv(process.env?.[key])
+}
+
+const getClientApiBaseUrl = () => env.VITE_API_BASE_URL ?? '/api'
+
+export const getApiBaseUrl = (options?: ApiUrlOptions) => {
+  const clientBaseUrl = getClientApiBaseUrl()
+  if (typeof window !== 'undefined') {
+    return clientBaseUrl
+  }
+
+  const internalApiUrl = readServerRuntimeEnv('API_INTERNAL_URL')
+  if (internalApiUrl) {
+    return internalApiUrl
+  }
+
+  if (!clientBaseUrl.startsWith('/')) {
+    return clientBaseUrl
+  }
+
+  const appOrigin =
+    readServerRuntimeEnv('VITE_APP_ORIGIN') ??
+    toOptionalEnv(env.VITE_APP_ORIGIN) ??
+    toOptionalEnv(options?.requestOrigin)
+
+  if (!appOrigin) {
+    throw new Error(
+      'Unable to resolve server API URL: set API_INTERNAL_URL or VITE_APP_ORIGIN for SSR runtime.'
+    )
+  }
+
+  return new URL(toAbsolutePathPrefix(clientBaseUrl), `${appOrigin.replace(/\/+$/, '')}/`).toString()
+}
 
 const toAbsolutePathPrefix = (value: string) => {
   const normalized = value.startsWith('/') ? value : `/${value}`
@@ -10,20 +58,16 @@ const toAbsolutePathPrefix = (value: string) => {
 }
 
 //CODEX DON'T TOUCH THIS FUNCTION
-export const toApiUrl = (path: string) => {
+export const toApiUrl = (path: string, options?: ApiUrlOptions) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const baseUrl = getApiBaseUrl()
+  const baseUrl = getApiBaseUrl(options)
 
   if (baseUrl.startsWith('/')) {
-    if (typeof window !== 'undefined') {
-      return `${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`
-    }
-
-    const origin = env.VITE_APP_ORIGIN ?? 'http://localhost:3000'
-    return new URL(`${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`, origin).toString()
+    return `${toAbsolutePathPrefix(baseUrl)}${normalizedPath}`
   }
 
-  return new URL(normalizedPath, `${baseUrl.replace(/\/+$/, '')}/`).toString()
+  const normalizedRelativePath = normalizedPath.replace(/^\/+/, '')
+  return new URL(normalizedRelativePath, `${baseUrl.replace(/\/+$/, '')}/`).toString()
 }
 
 export const apiFetch = async <TResponse>(path: string, init?: RequestInit) => {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getGlobalStartContextMock = vi.fn<() => unknown>()
+const toApiUrlMock = vi.fn<(path: string, options?: { requestOrigin?: string }) => string>()
 
 vi.mock('@tanstack/react-start', () => ({
   getGlobalStartContext: () => getGlobalStartContextMock(),
@@ -13,7 +14,7 @@ vi.mock('@/env', () => ({
 }))
 
 vi.mock('@/lib/api', () => ({
-  getApiBaseUrl: () => '/api',
+  toApiUrl: (path: string, options?: { requestOrigin?: string }) => toApiUrlMock(path, options),
 }))
 
 import { fetchAuthMeFromSsr } from './auth-ssr'
@@ -24,6 +25,8 @@ describe('fetchAuthMeFromSsr', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     getGlobalStartContextMock.mockReset()
+    toApiUrlMock.mockReset()
+    toApiUrlMock.mockReturnValue('http://api:3001/auth/me')
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
   })
 
@@ -59,9 +62,12 @@ describe('fetchAuthMeFromSsr', () => {
 
     expect(result).toEqual({ mode: 'admin' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(toApiUrlMock).toHaveBeenCalledWith('/auth/me', {
+      requestOrigin: 'http://127.0.0.1:3000',
+    })
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe('http://127.0.0.1:3000/api/auth/me')
+    expect(url).toBe('http://api:3001/auth/me')
     expect(init.credentials).toBe('include')
 
     const headers = new Headers(init.headers)

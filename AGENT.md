@@ -196,10 +196,19 @@ Read these in addition to this root file when touching those areas:
 - `WEB_URL` (public web URL, usually same as `APP_URL`)
 - `API_URL` (public API URL, typically `${APP_URL}/api`)
 - Legacy `WEB_ORIGIN` remains supported for compatibility but do not use it for new production setup.
+- Web runtime API URL strategy (TanStack Start):
+- Browser requests must use `VITE_API_BASE_URL` (default `/api`).
+- Server SSR requests must use `API_INTERNAL_URL` first (example `http://api:3001`).
+- If `API_INTERNAL_URL` is missing, SSR falls back to `VITE_APP_ORIGIN` + `VITE_API_BASE_URL`.
 - Image variables for production compose:
 - `GHCR_IMAGE_NAME` (optional override, default `ghcr.io/bigzoo92/finance-os`)
 - `APP_IMAGE_TAG` (default `latest`, or pin to a release tag for rollback)
-- Build-time web variables (`API_INTERNAL_URL`, `VITE_API_BASE_URL`, `VITE_APP_TITLE`, optional `VITE_PRIVATE_ACCESS_TOKEN`) are set in GitHub Actions release workflow, not on Dokploy host.
+- Dokploy runtime variables required for `web`:
+- `API_INTERNAL_URL=http://api:3001`
+- `VITE_API_BASE_URL=/api`
+- `VITE_APP_ORIGIN=${APP_URL}` (or `${WEB_URL}` when different)
+- optional debug: `LOG_LEVEL=debug` and/or `APP_DEBUG=1`
+- optional private gate header: `VITE_PRIVATE_ACCESS_TOKEN`
 - All production required variables are documented in `.env.prod.example`.
 - Exhaustive Dokploy variable mapping is documented in `docs/deploy-dokploy-env.md`.
 - Compose interpolation should prefer safe defaults (`:-`) instead of strict `${VAR:?}` so Dokploy "Preview Compose" does not fail on missing values; runtime env validation remains the guardrail.
@@ -216,6 +225,8 @@ Read these in addition to this root file when touching those areas:
 
 - `web` and `api` use HTTP healthchecks via `infra/docker/healthchecks/http-healthcheck.mjs`.
 - `worker` uses heartbeat-file healthcheck via `infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs`.
+- `web` healthcheck target must be `/healthz` (never `/`) to avoid false-unhealthy on transient UI/SSR failures.
+- `http-healthcheck.mjs` defaults to `/healthz` when `HEALTHCHECK_URL` has no explicit path.
 - `depends_on` must use `condition: service_healthy` for startup ordering.
 - `api` must not expose host ports in production compose (internal network only).
 - Runtime hardening for app services (`web`, `api`, `worker`) should include:
@@ -235,6 +246,13 @@ Read these in addition to this root file when touching those areas:
 - Verify:
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml ps`
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml logs --no-color --tail=200 web api worker`
+- Dokploy routing must be:
+- host `finance-os.enzogivernaud.fr` path `/` -> `web:3000`
+- host `finance-os.enzogivernaud.fr` path `/api` -> `api:3001` with strip path enabled
+- Production 500 debug workflow:
+- set `LOG_LEVEL=debug` and/or `APP_DEBUG=1` on `web`
+- redeploy and inspect `web` logs (SSR stack + route + sanitized env snapshot)
+- confirm `GET /healthz` returns `200 {"ok":true}` independently from `/`
 - Agents changing deployment/runtime/env contracts must update:
 - `docker-compose.prod.yml`
 - `.env.prod.example`
@@ -248,6 +266,7 @@ Read these in addition to this root file when touching those areas:
 - API auth source of truth is the root auth derive (cookie -> `ctx.auth.mode`), not duplicated per feature.
 - Demo mode is the default when cookie is missing or invalid.
 - Any feature that reads or returns business data must support demo mode on the same route.
+- Any non-auth feature must return mocks in demo mode before any DB/Powens call.
 - Backend rule: in demo mode, return mock data only and stop before any DB query or Powens call.
 - Mock datasets live under `apps/api/src/mocks/*`.
 - Frontend rule: clearly show demo state (banner/badge), keep read-only flows available, and disable sensitive actions (connect/sync/write actions).

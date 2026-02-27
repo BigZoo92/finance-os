@@ -1,16 +1,11 @@
 import { getGlobalStartContext } from '@tanstack/react-start'
 import { env } from '@/env'
-import { getApiBaseUrl } from '@/lib/api'
+import { toApiUrl } from '@/lib/api'
 import type { AuthMeResponse } from './auth-types'
 
 type RequestAuthContext = {
   requestOrigin?: string
   requestCookieHeader?: string | null
-}
-
-const toAbsolutePathPrefix = (value: string) => {
-  const normalized = value.startsWith('/') ? value : `/${value}`
-  return normalized.endsWith('/') && normalized.length > 1 ? normalized.slice(0, -1) : normalized
 }
 
 const getRequestAuthContext = () => {
@@ -24,13 +19,7 @@ const getRequestAuthContext = () => {
 }
 
 const resolveAuthMeSsrUrl = (requestOrigin: string) => {
-  const baseUrl = getApiBaseUrl()
-
-  if (baseUrl.startsWith('/')) {
-    return new URL(`${toAbsolutePathPrefix(baseUrl)}/auth/me`, requestOrigin).toString()
-  }
-
-  return new URL('/auth/me', `${baseUrl.replace(/\/+$/, '')}/`).toString()
+  return toApiUrl('/auth/me', { requestOrigin })
 }
 
 const toApiErrorMessage = async (response: Response) => {

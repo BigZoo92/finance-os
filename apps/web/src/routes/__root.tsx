@@ -7,10 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from '@tanstack/react-router'
+import { getGlobalStartContext } from '@tanstack/react-start'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ToastViewport } from '@/components/toast-viewport'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
+import { logSsrError } from '@/lib/ssr-logger'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
@@ -31,13 +33,28 @@ function RootNotFound() {
 }
 
 export function RouteError({ error }: ErrorComponentProps) {
+  const isProduction = import.meta.env.PROD
+  const message = isProduction
+    ? 'Une erreur est survenue. Veuillez recharger la page.'
+    : String((error as unknown as { message?: string })?.message ?? error)
+  const requestContext =
+    typeof window === 'undefined'
+      ? (getGlobalStartContext() as { requestPath?: string } | undefined)
+      : undefined
+
+  if (typeof window === 'undefined') {
+    logSsrError({
+      source: 'route-error',
+      route: requestContext?.requestPath ?? 'unknown',
+      error,
+    })
+  }
+
   return (
     <div style={{ padding: 16 }}>
       <h2>Route error</h2>
-      <pre style={{ whiteSpace: 'pre-wrap' }}>
-        {String((error as unknown as { message?: string })?.message ?? error)}
-      </pre>
-      <ErrorComponent error={error} />
+      <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
+      {!isProduction ? <ErrorComponent error={error} /> : null}
     </div>
   )
 }
