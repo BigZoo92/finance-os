@@ -40,6 +40,7 @@ For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-
 ### 3.2 Callback flow
 
 - Route validates `connection_id` + `code`.
+- Route must accept callback only when admin session is valid OR signed Powens `state` is valid.
 - Use-case decodes code, exchanges token, encrypts token.
 - Repository upserts `powens_connection`.
 - Queue repository enqueues `powens.syncConnection`.
@@ -92,6 +93,7 @@ For Powens/API changes run:
 - In demo mode, return mocks and stop before any DB or Powens call.
 - Keep mocks in `apps/api/src/mocks/*`.
 - Sensitive endpoints (sync/connect/callback/write actions) must be admin-only.
+- Powens callback exception: signed short-lived `state` is an allowed fallback when admin cookie is missing after redirect.
 - Auth endpoints:
   - `POST /auth/login` sets session cookie.
   - `POST /auth/logout` clears session cookie.

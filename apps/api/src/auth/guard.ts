@@ -1,6 +1,7 @@
 import { getAuth, getInternalAuth, getRequestMeta } from './context'
 import type { ApiEnv, InternalTokenSource } from './types'
 
+const ADMIN_REQUIRED_MESSAGE = 'Admin session required'
 const ADMIN_OR_INTERNAL_REQUIRED_MESSAGE = 'Admin session or internal token required'
 const INTERNAL_TOKEN_REQUIRED_MESSAGE = 'Internal token required'
 
@@ -8,15 +9,15 @@ export const demoAccessDeniedResponse = {
   ok: false as const,
   code: 'DEMO_MODE_FORBIDDEN' as const,
   reason: 'demo' as const,
-  message: ADMIN_OR_INTERNAL_REQUIRED_MESSAGE,
+  message: ADMIN_REQUIRED_MESSAGE,
 }
 
 export class DemoModeForbiddenError extends Error {
   readonly code = 'DEMO_MODE_FORBIDDEN' as const
   readonly requestId: string
 
-  constructor(requestId: string) {
-    super(ADMIN_OR_INTERNAL_REQUIRED_MESSAGE)
+  constructor(requestId: string, message = ADMIN_REQUIRED_MESSAGE) {
+    super(message)
     this.name = 'DemoModeForbiddenError'
     this.requestId = requestId
   }
@@ -108,7 +109,7 @@ export const requireAdminOrInternalToken = <TContext extends object>(context: TC
     return
   }
 
-  throw new DemoModeForbiddenError(getRequestMeta(context).requestId)
+  throw new DemoModeForbiddenError(getRequestMeta(context).requestId, ADMIN_OR_INTERNAL_REQUIRED_MESSAGE)
 }
 
 export const requireInternalToken = <TContext extends object>(context: TContext) => {
@@ -120,5 +121,9 @@ export const requireInternalToken = <TContext extends object>(context: TContext)
 }
 
 export const requireAdmin = <TContext extends object>(context: TContext) => {
-  return requireAdminOrInternalToken(context)
+  if (getAuth(context).mode === 'admin') {
+    return
+  }
+
+  throw new DemoModeForbiddenError(getRequestMeta(context).requestId, ADMIN_REQUIRED_MESSAGE)
 }

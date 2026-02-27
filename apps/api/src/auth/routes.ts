@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
 import { getAuth, getRequestMeta } from './context'
+import { normalizeEmail, verifyPasswordHash } from './password'
 import { consumeRateLimitSlot } from './rate-limit'
 import { authLoginBodySchema } from './schemas'
 import { createSessionToken, serializeSessionCookie, serializeSessionCookieClear } from './session'
@@ -7,12 +8,9 @@ import type { AuthRoutesDependencies } from './types'
 
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials'
 const RATE_LIMIT_MESSAGE = 'Too many login attempts'
-const AUTH_REQUIRED_MESSAGE = 'Authentication required'
 const RATE_LIMIT_WINDOW_SECONDS = 60
 const NO_STORE_CACHE_CONTROL = 'no-store'
 const BIGZOO_DISPLAY_NAME = 'BigZoo'
-
-const normalizeEmail = (value: string) => value.trim().toLowerCase()
 
 const resolveClientIp = (request: Request) => {
   const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -34,7 +32,7 @@ const setNoStoreResponse = (context: { set: { headers: Record<string, unknown> }
   context.set.headers['cache-control'] = NO_STORE_CACHE_CONTROL
 }
 
-export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) => {
+export const createAuthRoutes = ({ env, redisClient, verifyPassword }: AuthRoutesDependencies) => {
   const normalizedAdminEmail = normalizeEmail(env.AUTH_ADMIN_EMAIL)
   const secureCookie = isSecureCookieEnvironment(env.NODE_ENV)
 
@@ -64,14 +62,11 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
           }
         }
 
-        let passwordMatches = false
-        try {
-          passwordMatches = await Bun.password.verify(context.body.password, env.AUTH_PASSWORD_HASH)
-        } catch (error) {
-          throw new Error(
-            `Password verification failed: ${error instanceof Error ? error.message : String(error)}`
-          )
-        }
+        const passwordMatches = await verifyPasswordHash({
+          password: context.body.password,
+          passwordHash: env.AUTH_PASSWORD_HASH,
+          ...(verifyPassword ? { verifyPassword } : {}),
+        })
 
         const credentialsValid = normalizedEmail === normalizedAdminEmail && passwordMatches
 
@@ -129,23 +124,21 @@ export const createAuthRoutes = ({ env, redisClient }: AuthRoutesDependencies) =
       const auth = getAuth(context)
       const requestId = getRequestMeta(context).requestId
 
-      if (auth.mode !== 'admin') {
-        context.set.status = 401
+      if (auth.mode === 'admin') {
         return {
-          ok: false,
-          code: 'UNAUTHORIZED' as const,
-          message: AUTH_REQUIRED_MESSAGE,
+          mode: 'admin' as const,
           requestId,
+          user: {
+            email: env.AUTH_ADMIN_EMAIL,
+            displayName: BIGZOO_DISPLAY_NAME,
+          },
         }
       }
 
       return {
-        mode: 'admin' as const,
+        mode: 'demo' as const,
         requestId,
-        user: {
-          email: env.AUTH_ADMIN_EMAIL,
-          displayName: BIGZOO_DISPLAY_NAME,
-        },
+        user: null,
       }
     })
 }

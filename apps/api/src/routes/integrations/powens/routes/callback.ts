@@ -1,8 +1,8 @@
 import { Elysia } from 'elysia'
 import { toSafeErrorMessage } from '@finance-os/prelude/errors'
-import { getAuth, getInternalAuth, getRequestMeta } from '../../../../auth/context'
+import { getAuth, getRequestMeta } from '../../../../auth/context'
+import { demoOrReal } from '../../../../auth/demo-mode'
 import { logApiEvent } from '../../../../observability/logger'
-import { requireAdminOrInternalToken } from '../../../../auth/guard'
 import { getPowensRuntime } from '../context'
 import { powensCallbackBodySchema } from '../schemas'
 
@@ -16,13 +16,12 @@ export const callbackRoute = new Elysia({
 }).post(
   '/callback',
   async context => {
-    requireAdminOrInternalToken(context)
-
     const requestId = getRequestMeta(context).requestId
     const auth = getAuth(context)
-    const internalAuth = getInternalAuth(context)
+    const powens = getPowensRuntime(context)
+    const hasValidState = powens.services.connectUrl.isCallbackStateValid(context.body.state)
     const sanitizedConnectionId = sanitizeConnectionId(context.body.connection_id)
-    const mode = auth.mode === 'admin' ? 'admin' : internalAuth.hasValidToken ? 'internal' : 'demo'
+    const mode = auth.mode === 'admin' ? 'admin' : hasValidState ? 'state' : 'demo'
 
     if (!sanitizedConnectionId) {
       context.set.status = 400
@@ -34,50 +33,61 @@ export const callbackRoute = new Elysia({
       }
     }
 
-    const powens = getPowensRuntime(context)
+    return demoOrReal({
+      context,
+      isDemoMode: () => auth.mode !== 'admin' && !hasValidState,
+      demo: () => {
+        context.set.status = 403
+        return {
+          ok: false,
+          code: 'POWENS_CALLBACK_FORBIDDEN' as const,
+          requestId,
+          message: 'Admin session or valid signed state is required',
+        }
+      },
+      real: async () => {
+        try {
+          await powens.useCases.handleCallback({
+            connectionId: sanitizedConnectionId,
+            encodedCode: context.body.code,
+          })
 
-    try {
-      await powens.useCases.handleCallback({
-        connectionId: sanitizedConnectionId,
-        encodedCode: context.body.code,
-      })
+          logApiEvent({
+            level: 'info',
+            msg: 'powens callback exchange success',
+            correlationId: requestId,
+            route: '/integrations/powens/callback',
+            hasSession: auth.mode === 'admin',
+            hasValidState,
+            mode,
+            connectionId: sanitizedConnectionId,
+          })
 
-      logApiEvent({
-        level: 'info',
-        msg: 'powens callback exchange success',
-        correlationId: requestId,
-        route: '/integrations/powens/callback',
-        hasSession: auth.mode === 'admin',
-        hasInternalToken: internalAuth.hasValidToken,
-        internalTokenSource: internalAuth.tokenSource,
-        mode,
-        connectionId: sanitizedConnectionId,
-      })
+          return { ok: true }
+        } catch (error) {
+          context.set.status = 502
+          logApiEvent({
+            level: 'error',
+            msg: 'powens callback exchange failure',
+            correlationId: requestId,
+            route: '/integrations/powens/callback',
+            hasSession: auth.mode === 'admin',
+            hasValidState,
+            mode,
+            connectionId: sanitizedConnectionId,
+            errName: error instanceof Error ? error.name : 'UnknownError',
+            errMessage: toSafeErrorMessage(error, 'Unexpected Powens error'),
+          })
 
-      return { ok: true }
-    } catch (error) {
-      context.set.status = 502
-      logApiEvent({
-        level: 'error',
-        msg: 'powens callback exchange failure',
-        correlationId: requestId,
-        route: '/integrations/powens/callback',
-        hasSession: auth.mode === 'admin',
-        hasInternalToken: internalAuth.hasValidToken,
-        internalTokenSource: internalAuth.tokenSource,
-        mode,
-        connectionId: sanitizedConnectionId,
-        errName: error instanceof Error ? error.name : 'UnknownError',
-        errMessage: toSafeErrorMessage(error, 'Unexpected Powens error'),
-      })
-
-      return {
-        ok: false,
-        code: 'POWENS_CALLBACK_FAILED' as const,
-        requestId,
-        message: toSafeErrorMessage(error, 'Unexpected Powens error'),
-      }
-    }
+          return {
+            ok: false,
+            code: 'POWENS_CALLBACK_FAILED' as const,
+            requestId,
+            message: toSafeErrorMessage(error, 'Unexpected Powens error'),
+          }
+        }
+      },
+    })
   },
   {
     body: powensCallbackBodySchema,

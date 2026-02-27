@@ -4,15 +4,14 @@ import { createDbClient } from '@finance-os/db'
 import { createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from './auth/context'
+import { deriveAuth } from './auth/derive'
 import {
-  demoAccessDeniedResponse,
   isDemoModeForbiddenError,
   isInternalTokenRequiredError,
   isInternalTokenValid,
   readInternalTokenFromRequest,
 } from './auth/guard'
 import { createAuthRoutes } from './auth/routes'
-import { readSessionFromCookie } from './auth/session'
 import { env } from './env'
 import { logApiEvent, isApiDebugEnabled, toErrorLogFields } from './observability/logger'
 import { createDashboardRoutes } from './routes/dashboard/router'
@@ -343,34 +342,7 @@ const app = new Elysia()
       exposeHeaders: ['retry-after', 'x-request-id', 'x-robots-tag'],
     })
   )
-  .derive(({ request, set }) => {
-    const requestId = resolveRequestId(request)
-    set.headers['x-request-id'] = requestId
-
-    const session = readSessionFromCookie({
-      cookieHeader: request.headers.get('cookie'),
-      secret: env.AUTH_SESSION_SECRET,
-      ttlDays: env.AUTH_SESSION_TTL_DAYS,
-    })
-
-    const { token, source } = readInternalTokenFromRequest(request)
-    const hasValidToken = isInternalTokenValid({
-      providedToken: token,
-      env,
-    })
-
-    return {
-      requestMeta: {
-        requestId,
-        startedAtMs: Date.now(),
-      },
-      auth: { mode: session?.admin === true ? 'admin' : 'demo' } as const,
-      internalAuth: {
-        hasValidToken,
-        tokenSource: source,
-      } as const,
-    }
-  })
+  .use(deriveAuth({ env }))
   .onBeforeHandle(context => {
     if (!env.PRIVATE_ACCESS_TOKEN) {
       return
@@ -390,7 +362,7 @@ const app = new Elysia()
       return
     }
 
-    if (context.internalAuth.hasValidToken) {
+    if (getInternalAuth(context).hasValidToken) {
       return
     }
 
@@ -513,7 +485,7 @@ const app = new Elysia()
     if (isDemoModeForbiddenError(context.error)) {
       status = 403
       responseCode = context.error.code
-      message = demoAccessDeniedResponse.message
+      message = context.error.message
     } else if (isInternalTokenRequiredError(context.error)) {
       status = 401
       responseCode = context.error.code

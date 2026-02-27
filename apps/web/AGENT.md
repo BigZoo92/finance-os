@@ -83,7 +83,7 @@ If API contracts were touched, also run:
 - Do not default UI to demo while auth is unresolved; render a neutral pending state.
 - In demo mode, UI must explicitly indicate demo state (banner and/or badges).
 - Sensitive actions (connect/sync/write flows) must be visibly disabled in demo mode.
-- Keep read-only queries active in demo mode; backend returns mocks for these routes.
+- In demo mode, disable "real data" API query functions and use deterministic demo datasets.
 - Show admin-only controls (for example logout or sync triggers) only when `mode === 'admin'`.
 
 ### Feature checklist

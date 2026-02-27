@@ -1,5 +1,6 @@
 import type { getApiEnv } from '@finance-os/env'
 import type { createRedisClient } from '@finance-os/redis'
+import type { PasswordVerifyFn } from './password'
 
 export type ApiEnv = ReturnType<typeof getApiEnv>
 export type RedisClient = ReturnType<typeof createRedisClient>['client']
@@ -33,4 +34,5 @@ export interface AuthSessionPayload {
 export interface AuthRoutesDependencies {
   env: ApiEnv
   redisClient: RedisClient
+  verifyPassword?: PasswordVerifyFn
 }

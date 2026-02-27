@@ -41,7 +41,7 @@ If a change affects architecture, boundaries, conventions, scripts, shared packa
 - demo path: no DB writes/reads, no Powens/provider calls, mocked deterministic payloads only.
 - admin path: real DB + Powens/provider integrations, guarded by admin session or approved internal token where needed.
 - Keep API behavior explicit for auth boundaries:
-- `/auth/me` must remain stable (`200` with admin payload, `401` when unauthenticated, never `404`).
+- `/auth/me` must remain stable (`200` with `{ mode: "admin"|"demo" }`, never `404`).
 - Keep a protected route inventory endpoint available in production for diagnostics:
 - `GET /debug/routes` (requires `x-finance-os-debug-token` or valid internal token).
 
@@ -101,6 +101,7 @@ Required Elysia practices:
 ### 6.1 Flow overview
 
 - Web gets connect URL from API `GET /integrations/powens/connect-url`.
+- API connect-url must inject a short-lived signed `state` (HMAC, `admin:true`, `exp:+10min`) in the Powens webview URL.
 - User completes Powens webview and lands on web callback route.
 - Web callback route posts to API callback endpoint.
 - API exchanges code for token, encrypts token, upserts connection, enqueues sync job.
@@ -111,6 +112,7 @@ Required Elysia practices:
 
 - `apps/web` callback route: parse URL params, call API callback, render success/error.
 - `apps/api` callback route: HTTP validation + status code mapping only.
+- callback auth rule: accept callback only if admin cookie is valid OR signed Powens `state` is valid.
 - `apps/api` callback use-case: decode code, exchange token, encrypt token, persist, enqueue.
 - `apps/api` repositories: DB upsert + Redis queue push.
 
@@ -319,7 +321,10 @@ Read these in addition to this root file when touching those areas:
   - `GET /integrations/powens/status`:
     - admin => DB-backed statuses
     - demo => stable mock statuses
-  - sensitive Powens writes (`/integrations/powens/connect-url`, `/callback`, `/sync`) are admin-only.
+  - sensitive Powens writes:
+    - `GET /integrations/powens/connect-url` => admin-only
+    - `POST /integrations/powens/sync` => admin-only
+    - `POST /integrations/powens/callback` => admin cookie OR valid signed `state`
 - Private access barrier:
   - accepted internal headers: `x-internal-token`, `Authorization: Bearer ...`, and compatibility `x-finance-os-access-token`.
   - internal token is server-side only (`web` SSR and internal tooling); never exposed to browser bundles.

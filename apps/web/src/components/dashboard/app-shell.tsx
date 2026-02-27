@@ -15,12 +15,12 @@ import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
   dashboardQueryKeys,
-  dashboardSummaryQueryOptions,
-  dashboardTransactionsInfiniteQueryOptions,
+  dashboardSummaryQueryOptionsWithMode,
+  dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
-import { powensQueryKeys, powensStatusQueryOptions } from '@/features/powens/query-options'
+import { powensQueryKeys, powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -106,14 +106,6 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const queryClient = useQueryClient()
 
   const authQuery = useQuery(authMeQueryOptions())
-  const summaryQuery = useQuery(dashboardSummaryQueryOptions(range))
-  const transactionsQuery = useInfiniteQuery(
-    dashboardTransactionsInfiniteQueryOptions({
-      range,
-      limit: 30,
-    })
-  )
-  const statusQuery = useQuery(powensStatusQueryOptions())
   const authViewState = resolveAuthViewState({
     mode: authQuery.data?.mode,
     isPending: authQuery.isPending,
@@ -121,7 +113,26 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const isAuthPending = authViewState === 'pending'
   const isAdmin = authViewState === 'admin'
   const isDemo = authViewState === 'demo'
+  const authMode = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
   const isAuthUnavailable = authQuery.data?.error === 'auth_unavailable'
+  const summaryQuery = useQuery(
+    dashboardSummaryQueryOptionsWithMode({
+      range,
+      mode: authMode,
+    })
+  )
+  const transactionsQuery = useInfiniteQuery(
+    dashboardTransactionsInfiniteQueryOptionsWithMode({
+      range,
+      limit: 30,
+      mode: authMode,
+    })
+  )
+  const statusQuery = useQuery(
+    powensStatusQueryOptionsWithMode({
+      mode: authMode,
+    })
+  )
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -308,7 +319,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   Mode demonstration active
                 </p>
                 <p className="text-sm text-amber-900/95 dark:text-amber-100/90">
-                  Mode demo : donnees mockees. Connecte-toi BigZoo pour voir les vraies donnees.
+                  Mode demo - seul BigZoo peut voir les vraies donnees.
                 </p>
                 {isAuthUnavailable ? (
                   <p className="text-xs text-amber-800/90 dark:text-amber-200/90">

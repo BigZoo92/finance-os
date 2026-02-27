@@ -59,6 +59,7 @@ export interface PowensSyncGuardRepository {
 
 export interface PowensConnectUrlService {
   getConnectUrl: () => string
+  isCallbackStateValid: (state: string | undefined) => boolean
 }
 
 export interface PowensUseCases {
