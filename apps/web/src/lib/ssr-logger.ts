@@ -61,6 +61,10 @@ type LogSsrApiCallOptions = {
   method: string
   path: string
   url: string
+  baseUrl?: string
+  baseUrlSource?: 'client' | 'internal' | 'origin_fallback'
+  cookiesForwarded?: boolean
+  internalTokenForwarded?: boolean
   status: number | 'network_error'
   requestId?: string
   code?: string
@@ -72,6 +76,10 @@ export const logSsrApiCall = ({
   method,
   path,
   url,
+  baseUrl,
+  baseUrlSource,
+  cookiesForwarded,
+  internalTokenForwarded,
   status,
   requestId,
   code,
@@ -95,6 +103,10 @@ export const logSsrApiCall = ({
       code: code ?? null,
       hint: hint ?? null,
       bodyPreview: bodyPreview ?? null,
+      baseUrl: baseUrl ?? null,
+      baseUrlSource: baseUrlSource ?? null,
+      cookiesForwarded: cookiesForwarded ?? null,
+      internalTokenForwarded: internalTokenForwarded ?? null,
       method,
       path,
     })
@@ -106,6 +118,10 @@ export const logSsrApiCall = ({
     method,
     path,
     url,
+    baseUrl: baseUrl ?? null,
+    baseUrlSource: baseUrlSource ?? null,
+    cookiesForwarded: cookiesForwarded ?? null,
+    internalTokenForwarded: internalTokenForwarded ?? null,
     status,
   })
 }

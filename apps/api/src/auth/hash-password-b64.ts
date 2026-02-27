@@ -1,7 +1,7 @@
 import {
   assertPasswordProvided,
   encodeAuthPasswordHashB64,
-  generateArgon2Hash,
+  generatePasswordHash,
   readPasswordInput,
 } from './hash-password-utils'
 
@@ -9,9 +9,11 @@ const main = async () => {
   const password = await readPasswordInput()
   assertPasswordProvided(password)
 
-  const hash = await generateArgon2Hash(password)
+  const hash = await generatePasswordHash(password)
   const hashB64 = encodeAuthPasswordHashB64(hash)
 
+  console.log(`AUTH_ADMIN_PASSWORD_HASH=${hash}`)
+  console.log(`AUTH_ADMIN_PASSWORD_HASH_B64=${hashB64}`)
   console.log(`AUTH_PASSWORD_HASH=${hash}`)
   console.log(`AUTH_PASSWORD_HASH_B64=${hashB64}`)
 }

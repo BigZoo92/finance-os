@@ -10,6 +10,7 @@ export const authMeQueryOptions = () =>
   queryOptions({
     queryKey: authQueryKeys.me(),
     queryFn: fetchAuthMe,
-    staleTime: 60_000,
-    retry: false,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    retry: typeof window === 'undefined' ? 0 : 1,
   })

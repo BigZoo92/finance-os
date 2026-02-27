@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from '@finance-os/ui/components'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { postPowensCallback, postPowensSync } from '@/features/powens/api'
@@ -91,7 +91,7 @@ export const Route = createFileRoute('/powens/callback')({
     code: search.code,
     state: search.state,
   }),
-  staleTime: Number.POSITIVE_INFINITY,
+  staleTime: 0,
   loader: async ({ deps }): Promise<CallbackLoaderState> => {
     if (!deps.connectionId || !deps.code) {
       return {
@@ -114,11 +114,20 @@ export const Route = createFileRoute('/powens/callback')({
       }
     } catch (error) {
       const normalizedError = toErrorState(error)
+      if (normalizedError.canRetryAsAdmin) {
+        throw redirect({
+          to: '/login',
+          search: {
+            reason: 'powens_admin_required',
+          },
+        })
+      }
+
       return {
         status: 'error',
         message: normalizedError.message,
         requestId: normalizedError.requestId,
-        canRetryAsAdmin: normalizedError.canRetryAsAdmin,
+        canRetryAsAdmin: false,
       }
     }
   },

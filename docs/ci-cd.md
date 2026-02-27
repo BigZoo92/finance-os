@@ -44,7 +44,6 @@ Etapes sur tag:
 3. Push GHCR:
    - `${tag}` (ex: `v1.2.3`)
    - `sha-${commit}`
-   - `latest`
 4. Appel API Dokploy deploy (retry x3 + backoff).
 
 Pourquoi pas le webhook Dokploy classique:
@@ -54,10 +53,10 @@ Pourquoi pas le webhook Dokploy classique:
 - Resultat typique: `{"message":"Branch Not Match"}`.
 - En mode images GHCR + Compose, il faut declencher un deploy API (`compose.deploy` ou `application.deploy`), pas un webhook branch-based.
 
-Pourquoi `latest`:
+Politique de tag:
 
-- Permet un deploy Dokploy simple avec `APP_IMAGE_TAG=latest`.
-- Les tags versionnes `vX.Y.Z` + `sha-*` restent disponibles pour rollback/pin.
+- Production utilise un tag immutable `APP_IMAGE_TAG=vX.Y.Z`.
+- `sha-*` reste disponible pour verification technique.
 
 ## 3) Nommage des images GHCR
 
@@ -90,7 +89,7 @@ git push origin v1.2.3
    - home page
    - `/api/health`
    - login/logout
-4. (Optionnel) verifier les tags GHCR publies (`vX.Y.Z`, `sha-*`, `latest`).
+4. (Optionnel) verifier les tags GHCR publies (`vX.Y.Z`, `sha-*`).
 
 ## 6) Rollback
 
@@ -102,7 +101,7 @@ Option 1 (recommandee):
 Option 2:
 
 1. Re-taguer une ancienne revision et re-lancer une release.
-2. `latest` pointera alors vers cette release.
+2. Reconfigurer explicitement `APP_IMAGE_TAG=vX.Y.Z`.
 
 ## 7) Diagnostic des echecs
 

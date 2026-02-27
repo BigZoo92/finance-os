@@ -58,7 +58,7 @@ const main = async () => {
   await runCheck({
     name: 'auth_me_without_cookie',
     path: '/auth/me',
-    expectedStatuses: [401],
+    expectedStatuses: [200],
   })
 
   if (debugToken) {

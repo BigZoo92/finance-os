@@ -25,6 +25,9 @@ const toErrorMessage = (value: unknown) => {
 }
 
 export const Route = createFileRoute('/login')({
+  validateSearch: search => ({
+    reason: search.reason === 'powens_admin_required' ? 'powens_admin_required' : undefined,
+  }),
   loader: async ({ context }) => {
     const auth = await context.queryClient.ensureQueryData(authMeQueryOptions())
 
@@ -38,6 +41,11 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const search = Route.useSearch()
+  const infoMessage =
+    search.reason === 'powens_admin_required'
+      ? 'Connexion admin requise pour finaliser le callback Powens.'
+      : null
 
   const loginMutation = useMutation({
     mutationFn: postAuthLogin,
@@ -102,6 +110,11 @@ function LoginPage() {
             <CardDescription>
               Acces admin single-user pour afficher les vraies donnees.
             </CardDescription>
+            {infoMessage ? (
+              <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100">
+                {infoMessage}
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>

@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VersionRouteImport } from './routes/version'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
 
+const VersionRoute = VersionRouteImport.update({
+  id: '/version',
+  path: '/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
+  '/version': typeof VersionRoute
   '/powens/callback': typeof PowensCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
+  '/version': typeof VersionRoute
   '/powens/callback': typeof PowensCallbackRoute
 }
 export interface FileRoutesById {
@@ -52,25 +60,34 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
+  '/version': typeof VersionRoute
   '/powens/callback': typeof PowensCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/healthz' | '/login' | '/powens/callback'
+  fullPaths: '/' | '/healthz' | '/login' | '/version' | '/powens/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/healthz' | '/login' | '/powens/callback'
-  id: '__root__' | '/' | '/healthz' | '/login' | '/powens/callback'
+  to: '/' | '/healthz' | '/login' | '/version' | '/powens/callback'
+  id: '__root__' | '/' | '/healthz' | '/login' | '/version' | '/powens/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HealthzRoute: typeof HealthzRoute
   LoginRoute: typeof LoginRoute
+  VersionRoute: typeof VersionRoute
   PowensCallbackRoute: typeof PowensCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/version': {
+      id: '/version'
+      path: '/version'
+      fullPath: '/version'
+      preLoaderRoute: typeof VersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HealthzRoute: HealthzRoute,
   LoginRoute: LoginRoute,
+  VersionRoute: VersionRoute,
   PowensCallbackRoute: PowensCallbackRoute,
 }
 export const routeTree = rootRouteImport

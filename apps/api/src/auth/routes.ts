@@ -43,7 +43,7 @@ export const createAuthRoutes = ({ env, redisClient, verifyPassword }: AuthRoute
         setNoStoreResponse(context)
         const requestId = getRequestMeta(context).requestId
 
-        const normalizedEmail = normalizeEmail(context.body.email)
+        const normalizedEmail = normalizeEmail(context.body.email ?? env.AUTH_ADMIN_EMAIL)
         const rateLimit = await consumeRateLimitSlot({
           redisClient,
           key: `auth:login:${resolveClientIp(context.request)}`,

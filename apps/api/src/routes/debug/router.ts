@@ -18,6 +18,7 @@ const DEBUG_ENV_PRESENCE_KEYS = [
   'PRIVATE_ACCESS_TOKEN',
   'DATABASE_URL',
   'REDIS_URL',
+  'AUTH_ADMIN_EMAIL',
   'AUTH_SESSION_SECRET',
   'AUTH_PASSWORD_HASH',
   'AUTH_PASSWORD_HASH_SOURCE',
@@ -43,6 +44,24 @@ const resolveCommitSha = (env: PowensRoutesDependencies['env']) => {
 
 const resolveVersion = (env: PowensRoutesDependencies['env']) => {
   return env.APP_VERSION ?? null
+}
+
+const toOptionalEnv = (value: string | undefined | null) => {
+  if (!value) {
+    return null
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : null
+}
+
+const resolveRuntimeVersion = (env: PowensRoutesDependencies['env']) => {
+  return {
+    GIT_SHA: toOptionalEnv(process.env.GIT_SHA) ?? toOptionalEnv(env.APP_COMMIT_SHA),
+    GIT_TAG: toOptionalEnv(process.env.GIT_TAG) ?? toOptionalEnv(env.APP_VERSION),
+    BUILD_TIME: toOptionalEnv(process.env.BUILD_TIME),
+    NODE_ENV: env.NODE_ENV,
+  }
 }
 
 const toEnvPresence = (env: PowensRoutesDependencies['env']) => {
@@ -71,6 +90,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
         requestId: getRequestMeta(context).requestId,
         version: resolveVersion(env),
         commitSha: resolveCommitSha(env),
+        runtimeVersion: resolveRuntimeVersion(env),
         environment: env.NODE_ENV,
         envPresence: toEnvPresence(env),
       }
@@ -89,6 +109,24 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
         hasInternalToken: internalAuth.hasValidToken,
         internalTokenSource: internalAuth.tokenSource,
         mode: auth.mode,
+      }
+    })
+    .get('/config', context => {
+      requireInternalToken(context)
+
+      return {
+        ok: true,
+        requestId: getRequestMeta(context).requestId,
+        version: resolveRuntimeVersion(env),
+        flags: {
+          nodeEnv: env.NODE_ENV,
+          privateAccessTokenEnabled: Boolean(env.PRIVATE_ACCESS_TOKEN),
+          debugMetricsTokenEnabled: Boolean(env.DEBUG_METRICS_TOKEN),
+          demoModeDefault: true,
+          authSessionTtlDays: env.AUTH_SESSION_TTL_DAYS,
+          authLoginRateLimitPerMin: env.AUTH_LOGIN_RATE_LIMIT_PER_MIN,
+        },
+        envPresence: toEnvPresence(env),
       }
     })
     .get('/metrics', async context => {
@@ -121,7 +159,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
       logApiEvent({
         level: 'info',
         msg: 'debug metrics snapshot generated',
-        correlationId: requestId,
+        requestId,
         connectionCount: connections.length,
       })
 

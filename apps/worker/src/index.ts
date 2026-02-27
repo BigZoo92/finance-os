@@ -571,6 +571,11 @@ const handleJob = async (job: PowensJob) => {
 }
 
 const startScheduler = () => {
+  if (!env.WORKER_AUTO_SYNC_ENABLED) {
+    console.log('[worker] auto scheduler disabled (WORKER_AUTO_SYNC_ENABLED=false)')
+    return
+  }
+
   const schedulerIntervalMs =
     env.NODE_ENV === 'production'
       ? Math.max(env.POWENS_SYNC_INTERVAL_MS, env.POWENS_SYNC_MIN_INTERVAL_PROD_MS)
@@ -628,6 +633,7 @@ const start = async () => {
   console.log('[worker] databaseTime:', databaseTime)
   console.log('[worker] heartbeat every', env.WORKER_HEARTBEAT_MS, 'ms')
   console.log('[worker] healthcheck file:', WORKER_HEALTHCHECK_FILE)
+  console.log('[worker] auto scheduler enabled:', env.WORKER_AUTO_SYNC_ENABLED)
   await updateHeartbeatFile()
 
   heartbeatTimer = setInterval(async () => {

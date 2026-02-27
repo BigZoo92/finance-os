@@ -1,26 +1,24 @@
-# Deployment production avec Dokploy (pull-only GHCR)
+# Deployment production avec Dokploy (Git provider, build on server)
 
 ## 1) Vue globale
 
-- Le deploy production est declenche uniquement par un tag Git `v*` (ex: `v1.2.3`).
-- GitHub Actions build les images Docker (`web`, `api`, `worker`) et les push sur GHCR.
-- Dokploy ne build rien: il pull les images GHCR referencees dans `docker-compose.prod.yml`.
-- Une fois le push GHCR termine, le workflow release appelle l'API Dokploy de deploiement.
+- Le deploy production est declenche par push sur `main` via le provider GitHub Dokploy.
+- Dokploy pull le repo puis build `web`, `api`, `worker` depuis `infra/docker/Dockerfile`.
+- Le compose prod utilise `build:` (pas de tags GHCR applicatifs).
 
 Flux:
 
 ```text
-git tag v1.2.3 + git push origin v1.2.3
-  -> GitHub Actions (CI + build images + push GHCR)
-  -> API Dokploy deploy
-  -> Dokploy pull images et redeploy
+git push origin main
+  -> Dokploy webhook/provider GitHub
+  -> Dokploy pull le repo
+  -> docker compose build + up -d
 ```
 
 ## 2) Fichiers source of truth
 
-- `docker-compose.prod.yml`: references d'images GHCR (pas de `build:`).
-- `infra/docker/Dockerfile`: build multi-target (`web`, `api`, `worker`) execute en CI.
-- `.github/workflows/release.yml`: pipeline release tag-only + appel API Dokploy.
+- `docker-compose.prod.yml`: build targets (`web`, `api`, `worker`).
+- `infra/docker/Dockerfile`: build multi-target utilise par Dokploy.
 - `.env.prod.example`: variables runtime requises pour Dokploy.
 - `docs/deploy-dokploy-env.md`: checklist exhaustive des variables Dokploy.
 
@@ -28,8 +26,7 @@ git tag v1.2.3 + git push origin v1.2.3
 
 Variables compose importantes:
 
-- `GHCR_IMAGE_NAME` (optionnel, defaut `ghcr.io/bigzoo92/finance-os`)
-- `APP_IMAGE_TAG` (defaut recommande: `latest`)
+- `NODE_VERSION`, `BUN_VERSION`, `PNPM_VERSION` (build args)
 - `APP_URL`, `WEB_URL`, `API_URL`
 - `DATABASE_URL`, `POSTGRES_*`, `REDIS_URL`
 - `AUTH_*`, `POWENS_*`, `APP_ENCRYPTION_KEY`
@@ -40,20 +37,14 @@ Reference complete:
 
 Note:
 
-- `APP_IMAGE_TAG=latest` est adapte au mode deploy automatique sur tag.
-- Pour pin/rollback explicite, definir `APP_IMAGE_TAG=vX.Y.Z` puis redeployer.
+- `APP_IMAGE_TAG` n'est pas necessaire dans ce mode Git provider.
 
 ## 4) Configuration Dokploy
 
 1. Creer le fichier d'env Dokploy a partir de `.env.prod.example`.
-2. Configurer les credentials registry GHCR dans Dokploy (pull prive).
-3. Verifier que Dokploy utilise `docker-compose.prod.yml`.
-4. Mettre `APP_IMAGE_TAG=latest` pour suivre automatiquement les releases tag.
-5. Configurer les secrets GitHub pour l'appel API:
-   - `DOKPLOY_URL`
-   - `DOKPLOY_API_KEY`
-   - `DOKPLOY_COMPOSE_ID` (recommande)
-   - `DOKPLOY_APPLICATION_ID` (fallback)
+2. Verifier que Dokploy utilise bien `docker-compose.prod.yml`.
+3. Verifier la branche source `main`.
+4. Push sur `main` pour declencher le redeploy.
 
 ## 5) Commandes de verification locale (equivalent Dokploy)
 
@@ -63,11 +54,11 @@ Validation compose:
 docker compose --env-file .env.prod -f docker-compose.prod.yml config
 ```
 
-Pull + update sans build:
+Build + update:
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml pull
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+docker compose --env-file .env.prod -f docker-compose.prod.yml build
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --remove-orphans
 ```
 
 Etat + logs:
@@ -87,18 +78,18 @@ Checks HTTP:
 
 Option recommandee:
 
-1. Dans Dokploy, changer `APP_IMAGE_TAG` vers un tag precedent (ex: `v1.2.2`).
-2. Redeployer (manuel ou API).
+1. Revenir a un commit `main` stable (git revert ou reset de branche selon ton flow).
+2. Push sur `main` pour reconstruire et redeployer.
 3. Verifier `ps`, logs et endpoints health.
 
 Option rapide:
 
-- Si `latest` est conserve, redeployer un ancien tag Git qui repousse `latest`.
-- Cette option est moins explicite qu'un pin `APP_IMAGE_TAG=vX.Y.Z`.
+- Declencher un redeploy manuel Dokploy sans changer de code (si incident transitoire).
 
 ## 7) Debug rapide
 
-- Echec CI/release: verifier onglet GitHub Actions (`ci.yml`, `release.yml`).
-- Echec trigger API: verifier `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_COMPOSE_ID`/`DOKPLOY_APPLICATION_ID`.
-- Echec pull image: verifier `GHCR_IMAGE_NAME`, permissions `packages:write` du workflow et credentials registry Dokploy.
+- Echec trigger provider: verifier webhook/provider GitHub dans Dokploy.
+- Echec build: verifier `docker-compose.prod.yml` + `infra/docker/Dockerfile` + logs build Dokploy.
 - Echec runtime: verifier healthchecks `web/api/worker`, puis DB/Redis connectivite.
+
+Voir aussi le runbook runtime detaille: `infra/dokploy/PROD_ENV.md`.

@@ -9,8 +9,6 @@ type RequestAuthContext = {
   requestPath?: string
 }
 
-const authMeSsrRequestCache = new WeakMap<object, Promise<AuthMeResponse>>()
-
 const getRequestAuthContext = () => {
   if (typeof window !== 'undefined') {
     return null
@@ -36,34 +34,24 @@ export const fetchAuthMeFromSsr = async (): Promise<AuthMeResponse | null> => {
     return null
   }
 
-  const cached = authMeSsrRequestCache.get(requestContext)
-  if (cached) {
-    return cached
+  const requestPath = requestContext.requestPath ?? '/unknown'
+  const result = await apiRequest<AuthMeResponse>('/auth/me')
+
+  if (result.ok) {
+    return result.data
   }
 
-  const authPromise = (async (): Promise<AuthMeResponse> => {
-    const requestPath = requestContext.requestPath ?? '/unknown'
-    const result = await apiRequest<AuthMeResponse>('/auth/me')
+  if (result.error.status === 401 || result.error.status === 403 || result.error.status === 404) {
+    return DEMO_AUTH_RESPONSE
+  }
 
-    if (result.ok) {
-      return result.data
-    }
+  logSsrError({
+    source: 'request',
+    route: requestPath,
+    error: new Error(
+      `Auth SSR unavailable (${String(result.error.status)}): ${result.error.message} [requestId=${result.error.requestId ?? 'n/a'}]`
+    ),
+  })
 
-    if (result.error.status === 401 || result.error.status === 403 || result.error.status === 404) {
-      return DEMO_AUTH_RESPONSE
-    }
-
-    logSsrError({
-      source: 'request',
-      route: requestPath,
-      error: new Error(
-        `Auth SSR unavailable (${String(result.error.status)}): ${result.error.message} [requestId=${result.error.requestId ?? 'n/a'}]`
-      ),
-    })
-
-    return AUTH_UNAVAILABLE_RESPONSE
-  })()
-
-  authMeSsrRequestCache.set(requestContext, authPromise)
-  return authPromise
+  return AUTH_UNAVAILABLE_RESPONSE
 }

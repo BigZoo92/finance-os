@@ -115,7 +115,7 @@ describe('fetchAuthMeFromSsr', () => {
     expect(logSsrErrorMock).toHaveBeenCalledTimes(1)
   })
 
-  it('returns cached auth result for the same SSR request context', async () => {
+  it('does not cache auth result across calls in SSR request context', async () => {
     const requestContext = {
       requestOrigin: 'http://127.0.0.1:3000',
       requestPath: '/',
@@ -137,6 +137,6 @@ describe('fetchAuthMeFromSsr', () => {
     const second = await fetchAuthMeFromSsr()
 
     expect(first).toEqual(second)
-    expect(apiRequestMock).toHaveBeenCalledTimes(1)
+    expect(apiRequestMock).toHaveBeenCalledTimes(2)
   })
 })

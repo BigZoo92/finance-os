@@ -34,6 +34,7 @@ jobs:
     outputs:
       image_base: ${{ steps.meta.outputs.image_base }}
       image_tag: ${{ steps.meta.outputs.image_tag }}
+      build_time: ${{ steps.meta.outputs.build_time }}
       push_images: ${{ steps.meta.outputs.push_images }}
       trigger_deploy: ${{ steps.meta.outputs.trigger_deploy }}
     steps:
@@ -50,6 +51,8 @@ jobs:
             exit 1
           fi
 
+          build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             image_tag="${GITHUB_REF_NAME}"
             push_images="true"
@@ -62,6 +65,7 @@ jobs:
 
           echo "image_base=${GHCR_IMAGE_NAME}" >> "${GITHUB_OUTPUT}"
           echo "image_tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+          echo "build_time=${build_time}" >> "${GITHUB_OUTPUT}"
           echo "push_images=${push_images}" >> "${GITHUB_OUTPUT}"
           echo "trigger_deploy=${trigger_deploy}" >> "${GITHUB_OUTPUT}"
 
@@ -106,7 +110,6 @@ jobs:
           tags: |
             type=raw,value=${{ env.IMAGE_TAG }}
             type=raw,value=sha-${{ github.sha }}
-            type=raw,value=latest,enable=${{ env.PUSH_IMAGES == 'true' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -126,6 +129,9 @@ jobs:
             API_INTERNAL_URL=${{ vars.API_INTERNAL_URL || 'http://api:3001' }}
             VITE_APP_TITLE=${{ vars.VITE_APP_TITLE || 'finance-os' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || '/api' }}
+            GIT_SHA=${{ github.sha }}
+            GIT_TAG=${{ needs.prepare.outputs.image_tag }}
+            BUILD_TIME=${{ needs.prepare.outputs.build_time }}
 
   trigger_dokploy:
     name: Trigger Dokploy deployment API
@@ -156,11 +162,11 @@ jobs:
           api_base="${dokploy_base_url}/api"
 
           if [[ -n "${DOKPLOY_COMPOSE_ID:-}" ]]; then
-            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1""
+            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1"
             payload=$(printf '{"composeId":"%s","title":"release %s","description":"%s@%s"}' \
               "${DOKPLOY_COMPOSE_ID}" "${RELEASE_TAG}" "${GITHUB_REPOSITORY}" "${GITHUB_SHA}")
           elif [[ -n "${DOKPLOY_APPLICATION_ID:-}" ]]; then
-            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1""
+            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1"
             payload=$(printf '{"applicationId":"%s"}' "${DOKPLOY_APPLICATION_ID}")
           else
             echo "Missing secret DOKPLOY_COMPOSE_ID (recommended) or DOKPLOY_APPLICATION_ID." >&2

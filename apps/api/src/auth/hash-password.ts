@@ -1,10 +1,10 @@
-import { assertPasswordProvided, generateArgon2Hash, readPasswordInput } from './hash-password-utils'
+import { assertPasswordProvided, generatePasswordHash, readPasswordInput } from './hash-password-utils'
 
 const main = async () => {
   const password = await readPasswordInput()
   assertPasswordProvided(password)
 
-  const hash = await generateArgon2Hash(password)
+  const hash = await generatePasswordHash(password)
   console.log(hash)
 }
 

@@ -213,9 +213,10 @@ Read these in addition to this root file when touching those areas:
 - Browser requests must use `VITE_API_BASE_URL` (default `/api`).
 - Server SSR requests must use `API_INTERNAL_URL` first (example `http://api:3001`).
 - If `API_INTERNAL_URL` is missing, SSR falls back to `VITE_APP_ORIGIN` + `VITE_API_BASE_URL`.
-- Image variables for production compose:
-- `GHCR_IMAGE_NAME` (optional override, default `ghcr.io/bigzoo92/finance-os`)
-- `APP_IMAGE_TAG` (default `latest`, or pin to a release tag for rollback)
+- Build variables for production compose (Dokploy Git provider mode):
+- `NODE_VERSION`
+- `BUN_VERSION`
+- `PNPM_VERSION`
 - Dokploy runtime variables required for `web`:
 - `API_INTERNAL_URL=http://api:3001`
 - `VITE_API_BASE_URL=/api`
@@ -223,12 +224,13 @@ Read these in addition to this root file when touching those areas:
 - optional debug: `LOG_LEVEL=debug` and/or `APP_DEBUG=1`
 - optional server-only internal token: `PRIVATE_ACCESS_TOKEN` (same value in `api` and `web` runtime env)
 - Dokploy runtime variables required for `api` auth hash:
-- preferred: `AUTH_PASSWORD_HASH_B64` (base64 UTF-8 of the Argon2 PHC hash)
-- fallback (legacy): `AUTH_PASSWORD_HASH`
-- Why B64: avoids `$` interpolation/escaping issues in Dokploy/Compose env editors and keeps PHC hash intact at runtime.
+- preferred: `AUTH_ADMIN_PASSWORD_HASH_B64` (base64 UTF-8 hash, recommended `pbkdf2$...`)
+- fallback: `AUTH_ADMIN_PASSWORD_HASH`, then legacy `AUTH_PASSWORD_HASH_B64`, then `AUTH_PASSWORD_HASH`
+- supported hash formats: `pbkdf2$...` (recommended) and legacy `$argon2...`
+- Why B64: avoids `$` interpolation/escaping issues in Dokploy/Compose env editors.
 - All production required variables are documented in `.env.prod.example`.
 - Exhaustive Dokploy variable mapping is documented in `docs/deploy-dokploy-env.md`.
-- Compose interpolation should prefer safe defaults (`:-`) instead of strict `${VAR:?}` so Dokploy "Preview Compose" does not fail on missing values; runtime env validation remains the guardrail.
+- `APP_IMAGE_TAG` is only relevant in GHCR image-pull mode (not in Git-provider build mode).
 
 ### 10.4 Migrations strategy
 
@@ -292,12 +294,11 @@ Read these in addition to this root file when touching those areas:
 - if requester is not authenticated as BigZoo, backend returns mocks and must stop before DB/Powens calls.
 - frontend must never crash on missing/failed endpoints; fallback to demo data is required.
 - Auth hash env resolution:
-- if `AUTH_PASSWORD_HASH_B64` is present, decode it from base64 UTF-8 and use it as final hash.
-- else fallback to `AUTH_PASSWORD_HASH`.
-- decoded/fallback hash must start with `$argon2`.
+- use priority: `AUTH_ADMIN_PASSWORD_HASH_B64` -> `AUTH_ADMIN_PASSWORD_HASH` -> `AUTH_PASSWORD_HASH_B64` -> `AUTH_PASSWORD_HASH`.
+- decoded/fallback hash must start with `pbkdf2$` or `$argon2`.
 - Zod errors must stay actionable:
-  - `AUTH_PASSWORD_HASH_B64 is not valid base64`
-  - `Decoded hash must start with $argon2`
+  - `<VAR> is not valid base64`
+  - `Decoded hash must start with $argon2 or pbkdf2$`
 - Auth model is single-user manual auth (no multi-user abstraction).
 - API auth state must be resolved via `ctx.auth.mode` (`admin` or `demo`).
 - API auth source of truth is the root auth derive (cookie -> `ctx.auth.mode`), not duplicated per feature.
@@ -341,11 +342,11 @@ Read these in addition to this root file when touching those areas:
     - `5xx/network` => fallback `{ mode: "demo", user: null, error: "auth_unavailable" }` with server-side log only.
 - API env debug log policy for auth hash:
   - enabled only when `LOG_LEVEL=debug`
-  - log only source (`AUTH_PASSWORD_HASH` or `AUTH_PASSWORD_HASH_B64`), final hash length, and max 10-char prefix
+  - log only source, final hash length, and short prefix
   - never log full hash or password
 - Minimal observability baseline (required):
   - propagate `x-request-id` end-to-end (web SSR + API responses).
-  - API logs must be structured JSON to stdout/stderr with `level`, `msg`, `route`, `method`, `status`, `correlationId`.
+  - API logs must be structured JSON to stdout/stderr with `level`, `msg`, `route`, `method`, `status`, `requestId`.
   - HTTP error payloads must be normalized (`code`, `message`, `requestId`, optional safe `details`).
 
 ### Dokploy auth hash generation (PowerShell)
@@ -353,9 +354,9 @@ Read these in addition to this root file when touching those areas:
 - Generate hash + base64 with repo script:
   - `pnpm auth:hash-b64`
 - Or encode an existing hash in PowerShell:
-  - `$hash = '$argon2id$...'; [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($hash))`
-- In Dokploy Environment, set `AUTH_PASSWORD_HASH_B64=<value>` on the Compose app.
-- Keep `AUTH_PASSWORD_HASH` empty unless you need temporary legacy fallback.
+  - `$hash = 'pbkdf2$sha256$...'; [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($hash))`
+- In Dokploy Environment, set `AUTH_ADMIN_PASSWORD_HASH_B64=<value>` on the Compose app.
+- Keep legacy `AUTH_PASSWORD_HASH*` empty unless needed for temporary fallback.
 
 ### Feature checklist (required)
 
@@ -380,7 +381,7 @@ Read these in addition to this root file when touching those areas:
 - Release workflow must:
 - run CI gates first (lint, typecheck, tests, build)
 - build/push GHCR images for `web`, `api`, `worker`
-- tag images with release tag + `sha-*` (+ `latest` for Dokploy auto-follow)
+- tag images with release tag + `sha-*` (no `latest`)
 - trigger Dokploy deploy via API only after successful push
 - prefer `compose.deploy` with `composeId` for Docker Compose deployments
 - keep `application.deploy` as fallback for application-mode setups
@@ -392,6 +393,7 @@ Read these in addition to this root file when touching those areas:
 - use GitHub `secrets.*` only
 - Keep deploy tag-only:
 - do not add deploy-on-branch or deploy-on-PR behavior
-- keep rollback path via `APP_IMAGE_TAG` pinning (`vX.Y.Z`) in Dokploy
+- if deployment mode is Dokploy Git-provider on `main`, rollback is done via git revert/reset on `main`
+- `APP_IMAGE_TAG` pinning applies only to GHCR image-pull mode
 - Do not use Dokploy branch webhook for tag releases:
 - tag refs (`refs/tags/v*`) do not satisfy webhook branch filters and can return `Branch Not Match`

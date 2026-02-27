@@ -39,8 +39,64 @@ const INTERNAL_TOKEN_PROTECTED_PATHS = withApiCompatibilityPaths([
   '/debug/metrics',
   '/debug/health',
   '/debug/auth',
+  '/debug/config',
   '/__routes',
 ])
+
+const NO_STORE_EXACT_PATHS = new Set([
+  '/auth/login',
+  '/auth/logout',
+  '/auth/me',
+  '/integrations/powens/callback',
+  '/debug/health',
+  '/debug/auth',
+  '/debug/metrics',
+  '/debug/config',
+  '/__routes',
+  '/debug/routes',
+  '/version',
+])
+
+const NO_STORE_PREFIX_PATHS = ['/auth/', '/integrations/powens/', '/debug/']
+
+const normalizeCompatibilityPath = (pathname: string) => {
+  if (pathname === '/api') {
+    return '/'
+  }
+
+  if (pathname.startsWith('/api/')) {
+    return pathname.slice(4)
+  }
+
+  return pathname
+}
+
+const shouldSetNoStore = (pathname: string) => {
+  const normalizedPath = normalizeCompatibilityPath(pathname)
+  if (NO_STORE_EXACT_PATHS.has(normalizedPath)) {
+    return true
+  }
+
+  return NO_STORE_PREFIX_PATHS.some(prefix => normalizedPath.startsWith(prefix))
+}
+
+const toOptionalEnv = (value: string | undefined | null) => {
+  if (!value) {
+    return null
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : null
+}
+
+const resolveRuntimeVersion = () => {
+  return {
+    GIT_SHA: toOptionalEnv(process.env.GIT_SHA) ?? toOptionalEnv(env.APP_COMMIT_SHA),
+    GIT_TAG: toOptionalEnv(process.env.GIT_TAG) ?? toOptionalEnv(env.APP_VERSION),
+    BUILD_TIME: toOptionalEnv(process.env.BUILD_TIME),
+    NODE_ENV: env.NODE_ENV,
+  }
+}
 
 const shouldBypassPrivateAccessGate = ({
   pathname,
@@ -130,6 +186,10 @@ type RouteSignature = {
 }
 
 const REQUIRED_PRODUCTION_ROUTE_SIGNATURES: RouteSignature[] = [
+  { method: 'GET', path: '/health' },
+  { method: 'GET', path: '/api/health' },
+  { method: 'GET', path: '/version' },
+  { method: 'GET', path: '/api/version' },
   { method: 'GET', path: '/auth/me' },
   { method: 'GET', path: '/api/auth/me' },
   { method: 'POST', path: '/integrations/powens/callback' },
@@ -227,6 +287,14 @@ const registerAppRoutes = (app: Elysia<any>) => {
         timestamp: new Date().toISOString(),
       }
     })
+    .get('/version', ({ set }) => {
+      set.headers['cache-control'] = 'no-store'
+
+      return {
+        service: 'api',
+        ...resolveRuntimeVersion(),
+      }
+    })
 }
 
 const toPathname = (request: Request) => {
@@ -317,6 +385,7 @@ const buildApiErrorResponse = ({
       status,
       headers: {
         'content-type': 'application/json',
+        'cache-control': 'no-store',
         'x-request-id': requestId,
       },
     }
@@ -374,7 +443,7 @@ const app = new Elysia()
       route: pathname,
       method: context.request.method,
       status: 401,
-      correlationId: requestId,
+      requestId,
       errName: 'InternalTokenRequiredError',
       errMessage: 'Internal token required',
     })
@@ -396,6 +465,9 @@ const app = new Elysia()
     const method = context.request.method
     context.set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
     context.set.headers['x-request-id'] = requestId
+    if (shouldSetNoStore(route)) {
+      context.set.headers['cache-control'] = 'no-store'
+    }
 
     logApiEvent({
       level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
@@ -405,7 +477,7 @@ const app = new Elysia()
       status,
       durationMs,
       userMode,
-      correlationId: requestId,
+      requestId,
     })
   })
   .use(registerAppRoutes(new Elysia()))
@@ -419,9 +491,11 @@ const app = new Elysia()
       }
     }
 
+    set.headers['cache-control'] = 'no-store'
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
+      version: resolveRuntimeVersion(),
       routes,
     }
   })
@@ -434,9 +508,11 @@ const app = new Elysia()
       }
     }
 
+    set.headers['cache-control'] = 'no-store'
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
+      version: resolveRuntimeVersion(),
       routes,
     }
   })
@@ -449,9 +525,11 @@ const app = new Elysia()
       }
     }
 
+    set.headers['cache-control'] = 'no-store'
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
+      version: resolveRuntimeVersion(),
       routes,
     }
   })
@@ -464,9 +542,11 @@ const app = new Elysia()
       }
     }
 
+    set.headers['cache-control'] = 'no-store'
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
+      version: resolveRuntimeVersion(),
       routes,
     }
   })
@@ -475,7 +555,11 @@ const app = new Elysia()
     const startedAtMs = getRequestMeta(context).startedAtMs
     const durationMs = startedAtMs > 0 ? Date.now() - startedAtMs : null
     const userMode = resolveUserMode(context)
+    const route = toPathname(context.request)
     context.set.headers['x-request-id'] = requestId
+    if (shouldSetNoStore(route)) {
+      context.set.headers['cache-control'] = 'no-store'
+    }
 
     let status = 500
     let responseCode = 'INTERNAL_ERROR'
@@ -510,12 +594,12 @@ const app = new Elysia()
     logApiEvent({
       level: status >= 500 ? 'error' : 'warn',
       msg: 'api request failed',
-      route: toPathname(context.request),
+      route,
       method: context.request.method,
       status,
       durationMs,
       userMode,
-      correlationId: requestId,
+      requestId,
       ...errorFields,
     })
 
@@ -567,6 +651,21 @@ logApiEvent({
       path: '/api/integrations/powens/callback',
     },
   }),
+  hasVersion: hasRouteSignature({
+    routes: registeredRoutes,
+    signature: {
+      method: 'GET',
+      path: '/version',
+    },
+  }),
+  hasApiVersion: hasRouteSignature({
+    routes: registeredRoutes,
+    signature: {
+      method: 'GET',
+      path: '/api/version',
+    },
+  }),
+  runtimeVersion: resolveRuntimeVersion(),
 })
 
 app.listen({

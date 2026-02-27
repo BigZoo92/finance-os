@@ -116,10 +116,15 @@ const authSessionSecretSchema = z
     'AUTH_SESSION_SECRET must be at least 32 bytes (raw, hex, base64, or base64url)'
   )
 
-const AUTH_PASSWORD_HASH_PREFIX = '$argon2'
-const AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH = 10
+const AUTH_PASSWORD_HASH_PREFIX_ARGON2 = '$argon2'
+const AUTH_PASSWORD_HASH_PREFIX_PBKDF2 = 'pbkdf2$'
+const AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH = 24
 
-type ResolvedAuthPasswordHashSource = 'AUTH_PASSWORD_HASH' | 'AUTH_PASSWORD_HASH_B64'
+type ResolvedAuthPasswordHashSource =
+  | 'AUTH_ADMIN_PASSWORD_HASH'
+  | 'AUTH_ADMIN_PASSWORD_HASH_B64'
+  | 'AUTH_PASSWORD_HASH'
+  | 'AUTH_PASSWORD_HASH_B64'
 
 type ResolvedAuthPasswordHash = {
   hash: string
@@ -151,80 +156,145 @@ const decodeBase64Utf8Strict = (value: string): string | null => {
   }
 }
 
+const hasSupportedAuthPasswordHashPrefix = (value: string) => {
+  return (
+    value.startsWith(AUTH_PASSWORD_HASH_PREFIX_ARGON2) ||
+    value.startsWith(AUTH_PASSWORD_HASH_PREFIX_PBKDF2)
+  )
+}
+
 const authPasswordHashInputsSchema = z
   .object({
+    AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
+    AUTH_ADMIN_PASSWORD_HASH_B64: z.string().optional(),
     AUTH_PASSWORD_HASH: z.string().optional(),
     AUTH_PASSWORD_HASH_B64: z.string().optional(),
   })
   .superRefine((values, ctx) => {
-    const authPasswordHashB64 = toOptionalEnv(values.AUTH_PASSWORD_HASH_B64)
-    const authPasswordHash = toOptionalEnv(values.AUTH_PASSWORD_HASH)
+    const hashInputsByPriority: Array<{
+      source: ResolvedAuthPasswordHashSource
+      value: string | undefined
+      encoded: boolean
+    }> = [
+      {
+        source: 'AUTH_ADMIN_PASSWORD_HASH_B64',
+        value: toOptionalEnv(values.AUTH_ADMIN_PASSWORD_HASH_B64),
+        encoded: true,
+      },
+      {
+        source: 'AUTH_ADMIN_PASSWORD_HASH',
+        value: toOptionalEnv(values.AUTH_ADMIN_PASSWORD_HASH),
+        encoded: false,
+      },
+      {
+        source: 'AUTH_PASSWORD_HASH_B64',
+        value: toOptionalEnv(values.AUTH_PASSWORD_HASH_B64),
+        encoded: true,
+      },
+      {
+        source: 'AUTH_PASSWORD_HASH',
+        value: toOptionalEnv(values.AUTH_PASSWORD_HASH),
+        encoded: false,
+      },
+    ]
 
-    if (authPasswordHashB64) {
-      const decoded = decodeBase64Utf8Strict(authPasswordHashB64)
+    const selected = hashInputsByPriority.find(item => item.value)
+    if (!selected || !selected.value) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['AUTH_ADMIN_PASSWORD_HASH'],
+        message:
+          'AUTH_ADMIN_PASSWORD_HASH_B64, AUTH_ADMIN_PASSWORD_HASH, AUTH_PASSWORD_HASH_B64 or AUTH_PASSWORD_HASH is required',
+      })
+      return
+    }
+
+    if (selected.encoded) {
+      const decoded = decodeBase64Utf8Strict(selected.value)
       if (!decoded) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['AUTH_PASSWORD_HASH_B64'],
-          message: 'AUTH_PASSWORD_HASH_B64 is not valid base64',
+          path: [selected.source],
+          message: `${selected.source} is not valid base64`,
         })
         return
       }
 
-      if (!decoded.startsWith(AUTH_PASSWORD_HASH_PREFIX)) {
+      if (!hasSupportedAuthPasswordHashPrefix(decoded)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['AUTH_PASSWORD_HASH_B64'],
-          message: 'Decoded hash must start with $argon2',
+          path: [selected.source],
+          message: 'Decoded hash must start with $argon2 or pbkdf2$',
         })
       }
 
       return
     }
 
-    if (!authPasswordHash) {
+    if (!hasSupportedAuthPasswordHashPrefix(selected.value)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['AUTH_PASSWORD_HASH'],
-        message: 'AUTH_PASSWORD_HASH is required when AUTH_PASSWORD_HASH_B64 is not set',
-      })
-      return
-    }
-
-    if (!authPasswordHash.startsWith(AUTH_PASSWORD_HASH_PREFIX)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['AUTH_PASSWORD_HASH'],
-        message: `AUTH_PASSWORD_HASH must start with $argon2 (got prefix: ${authPasswordHash.slice(0, 12)})`,
+        path: [selected.source],
+        message: `${selected.source} must start with $argon2 or pbkdf2$ (got prefix: ${selected.value.slice(0, 18)})`,
       })
     }
   })
   .transform(values => {
-    const authPasswordHashB64 = toOptionalEnv(values.AUTH_PASSWORD_HASH_B64)
-    if (authPasswordHashB64) {
-      const decoded = decodeBase64Utf8Strict(authPasswordHashB64)
+    const hashInputsByPriority: Array<{
+      source: ResolvedAuthPasswordHashSource
+      value: string | undefined
+      encoded: boolean
+    }> = [
+      {
+        source: 'AUTH_ADMIN_PASSWORD_HASH_B64',
+        value: toOptionalEnv(values.AUTH_ADMIN_PASSWORD_HASH_B64),
+        encoded: true,
+      },
+      {
+        source: 'AUTH_ADMIN_PASSWORD_HASH',
+        value: toOptionalEnv(values.AUTH_ADMIN_PASSWORD_HASH),
+        encoded: false,
+      },
+      {
+        source: 'AUTH_PASSWORD_HASH_B64',
+        value: toOptionalEnv(values.AUTH_PASSWORD_HASH_B64),
+        encoded: true,
+      },
+      {
+        source: 'AUTH_PASSWORD_HASH',
+        value: toOptionalEnv(values.AUTH_PASSWORD_HASH),
+        encoded: false,
+      },
+    ]
+
+    const selected = hashInputsByPriority.find(item => item.value)
+    if (!selected || !selected.value) {
+      throw new Error(
+        'AUTH_ADMIN_PASSWORD_HASH_B64, AUTH_ADMIN_PASSWORD_HASH, AUTH_PASSWORD_HASH_B64 or AUTH_PASSWORD_HASH is required'
+      )
+    }
+
+    if (selected.encoded) {
+      const decoded = decodeBase64Utf8Strict(selected.value)
       if (!decoded) {
-        throw new Error('AUTH_PASSWORD_HASH_B64 is not valid base64')
+        throw new Error(`${selected.source} is not valid base64`)
       }
 
       return {
         hash: decoded,
-        source: 'AUTH_PASSWORD_HASH_B64',
+        source: selected.source,
       } as const
     }
 
-    const authPasswordHash = toOptionalEnv(values.AUTH_PASSWORD_HASH)
-    if (!authPasswordHash) {
-      throw new Error('AUTH_PASSWORD_HASH is required when AUTH_PASSWORD_HASH_B64 is not set')
-    }
-
     return {
-      hash: authPasswordHash,
-      source: 'AUTH_PASSWORD_HASH',
+      hash: selected.value,
+      source: selected.source,
     } as const
   })
 
 const resolveAuthPasswordHash = (values: {
+  AUTH_ADMIN_PASSWORD_HASH?: string | undefined
+  AUTH_ADMIN_PASSWORD_HASH_B64?: string | undefined
   AUTH_PASSWORD_HASH?: string | undefined
   AUTH_PASSWORD_HASH_B64?: string | undefined
 }): ResolvedAuthPasswordHash => {
@@ -304,6 +374,8 @@ export const getApiEnv = () => {
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
+    AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
+    AUTH_ADMIN_PASSWORD_HASH_B64: z.string().optional(),
     AUTH_PASSWORD_HASH: z.string().optional(),
     AUTH_PASSWORD_HASH_B64: z.string().optional(),
     AUTH_SESSION_SECRET: authSessionSecretSchema,
@@ -313,6 +385,8 @@ export const getApiEnv = () => {
   })
 
   const resolvedAuthPasswordHash = resolveAuthPasswordHash({
+    AUTH_ADMIN_PASSWORD_HASH: parsed.AUTH_ADMIN_PASSWORD_HASH,
+    AUTH_ADMIN_PASSWORD_HASH_B64: parsed.AUTH_ADMIN_PASSWORD_HASH_B64,
     AUTH_PASSWORD_HASH: parsed.AUTH_PASSWORD_HASH,
     AUTH_PASSWORD_HASH_B64: parsed.AUTH_PASSWORD_HASH_B64,
   })
@@ -328,7 +402,13 @@ export const getApiEnv = () => {
   const appUrl = normalizeUrl(parsed.APP_URL ?? webUrl)
   const apiUrl = normalizeUrl(parsed.API_URL ?? `${appUrl}/api`)
 
-  const { AUTH_PASSWORD_HASH: _authPasswordHash, AUTH_PASSWORD_HASH_B64: _authPasswordHashB64, ...remainingParsed } = parsed
+  const {
+    AUTH_ADMIN_PASSWORD_HASH: _authAdminPasswordHash,
+    AUTH_ADMIN_PASSWORD_HASH_B64: _authAdminPasswordHashB64,
+    AUTH_PASSWORD_HASH: _authPasswordHash,
+    AUTH_PASSWORD_HASH_B64: _authPasswordHashB64,
+    ...remainingParsed
+  } = parsed
 
   return {
     ...remainingParsed,
@@ -357,5 +437,12 @@ export const getWorkerEnv = () =>
       .int()
       .positive()
       .default(12 * 60 * 60 * 1000),
+    WORKER_AUTO_SYNC_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => {
+        const normalized = toOptionalEnv(value)?.toLowerCase()
+        return normalized === '1' || normalized === 'true' || normalized === 'yes'
+      }),
     ...powensShape,
   })

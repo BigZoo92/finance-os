@@ -73,9 +73,14 @@ If API contracts were touched, also run:
 
 - Resolve auth state through `auth.me` query (`GET /auth/me`), not `useEffect` orchestration.
 - Route loaders should prefetch `auth.me` for auth-sensitive pages.
+- `auth.me` query options must stay non-cache-friendly for reliability:
+  - `staleTime: 0`
+  - bounded `gcTime`
+  - no SSR retry loops
 - SSR auth prefetch must never throw:
   - `404/401` from `/auth/me` => fallback demo state.
   - `5xx/network` from `/auth/me` => fallback demo state with server-side logging only.
+- Auth-sensitive pages (`/`, `/login`, `/powens/callback`) must be served with `Cache-Control: no-store`.
 - Dashboard and Powens read queries must also be safe:
   - `404/401/5xx/network` on `/dashboard/*` or `/integrations/powens/status` => fallback demo data.
   - never let these query failures crash SSR route loaders.

@@ -19,6 +19,7 @@
     "check": "biome check .",
     "check:write": "biome check --write .",
     "smoke:api": "node scripts/smoke-api.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
     "api:dev": "bun --watch apps/api/src/index.ts",
     "api:start": "pnpm --filter @finance-os/api start",
     "api:typecheck": "pnpm --filter @finance-os/api typecheck",

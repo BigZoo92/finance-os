@@ -99,8 +99,11 @@ For Powens/API changes run:
   - `POST /auth/logout` clears session cookie.
   - `GET /auth/me` returns auth mode + user payload and must be `Cache-Control: no-store`.
   - Auth hash source priority:
-    - `AUTH_PASSWORD_HASH_B64` (recommended, base64 UTF-8) when present
-    - fallback `AUTH_PASSWORD_HASH` for legacy compatibility
+    - `AUTH_ADMIN_PASSWORD_HASH_B64` (recommended, base64 UTF-8)
+    - fallback `AUTH_ADMIN_PASSWORD_HASH`
+    - then legacy `AUTH_PASSWORD_HASH_B64`
+    - then legacy `AUTH_PASSWORD_HASH`
+  - Supported hash formats: `pbkdf2$...` (recommended) and legacy `$argon2...`.
   - `/auth/me` contract:
     - admin => `200 { mode: "admin", user: { email, displayName } }`
     - demo => `200 { mode: "demo", user: null }`
