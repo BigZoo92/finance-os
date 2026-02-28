@@ -186,8 +186,9 @@ Read these in addition to this root file when touching those areas:
 ### 10.1 Source of truth
 
 - Production Compose file: `docker-compose.prod.yml`.
+- Local prod-like build override: `docker-compose.prod.build.yml`.
 - Production Dockerfile (multi-target): `infra/docker/Dockerfile`.
-- Production deployment guide: `docs/deploy-dokploy.md`.
+- Production deployment guide: `docs/deployment.md`.
 - CI/CD runbook: `docs/ci-cd.md`.
 - Dokploy env matrix: `docs/deploy-dokploy-env.md`.
 
@@ -214,10 +215,13 @@ Read these in addition to this root file when touching those areas:
 - Server SSR requests must use `API_INTERNAL_URL` first (example `http://api:3001`).
 - If `API_INTERNAL_URL` is missing, SSR falls back to `VITE_APP_ORIGIN` + `VITE_API_BASE_URL`.
 - Public production traffic should terminate on `web` only. The TanStack Start/Nitro runtime proxies `/api/*` to `API_INTERNAL_URL`, so a separate public Dokploy route to `api:3001` is unnecessary and can diverge from local behavior.
-- Build variables for production compose (Dokploy Git provider mode):
+- Build variables for image publishing in CI:
 - `NODE_VERSION`
 - `BUN_VERSION`
 - `PNPM_VERSION`
+- Dokploy runtime variables required for image selection:
+- `GHCR_IMAGE_NAME`
+- `APP_IMAGE_TAG` (immutable tag only, for example `v1.2.3`)
 - Dokploy runtime variables required for `web`:
 - `API_INTERNAL_URL=http://api:3001`
 - `VITE_API_BASE_URL=/api`
@@ -232,7 +236,7 @@ Read these in addition to this root file when touching those areas:
 - Why B64: avoids `$` interpolation/escaping issues in Dokploy/Compose env editors.
 - All production required variables are documented in `.env.prod.example`.
 - Exhaustive Dokploy variable mapping is documented in `docs/deploy-dokploy-env.md`.
-- `APP_IMAGE_TAG` is only relevant in GHCR image-pull mode (not in Git-provider build mode).
+- Production Dokploy source should be `raw` compose or an equivalent no-build mode managed by the release workflow.
 
 ### 10.4 Migrations strategy
 
@@ -264,6 +268,8 @@ Read these in addition to this root file when touching those areas:
 - Pull and start (no build):
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml pull`
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d`
+- Local prod-like rebuilds must use the build override:
+- `docker compose --env-file .env.prod.local -f docker-compose.prod.yml -f docker-compose.prod.build.yml up -d --build`
 - Verify:
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml ps`
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml logs --no-color --tail=200 web api worker`
@@ -279,11 +285,12 @@ Read these in addition to this root file when touching those areas:
 - `wget -qSO- http://api:3001/auth/me --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
 - `wget -qSO- 'http://api:3001/dashboard/summary?range=30d' --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
 - optional: `wget -qO- http://api:3001/__routes --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
-- API also exposes compatibility routes under `/api/*`; keep Dokploy `/api` strip-path enabled as the preferred routing mode.
+- API also exposes compatibility routes under `/api/*`, but the preferred public routing mode is a single Dokploy domain on `web`.
 - Agents changing deployment/runtime/env contracts must update:
 - `docker-compose.prod.yml`
+- `docker-compose.prod.build.yml`
 - `.env.prod.example`
-- `docs/deploy-dokploy.md`
+- `docs/deployment.md`
 - this `AGENT.md` section
 
 ## 11) Auth and demo mode (single-user)
@@ -379,14 +386,15 @@ Read these in addition to this root file when touching those areas:
 - `push` to `main`
 - `pull_request` to `main`
 - Release workflow (`.github/workflows/release.yml`) runs on tags `v*` only for real deploys.
-- `workflow_dispatch` in release workflow is dry-run only (image build validation without push/deploy).
+- `workflow_dispatch` in release workflow may redeploy an already published immutable tag (rollback or manual promotion).
 - Release workflow must:
 - run CI gates first (lint, typecheck, tests, build)
 - build/push GHCR images for `web`, `api`, `worker`
 - tag images with release tag + `sha-*` (no `latest`)
-- trigger Dokploy deploy via API only after successful push
+- sync Dokploy compose config via API before deploy
+- update `APP_IMAGE_TAG` in Dokploy env via API before deploy
+- trigger Dokploy deploy via API only after successful push/config sync
 - prefer `compose.deploy` with `composeId` for Docker Compose deployments
-- keep `application.deploy` as fallback for application-mode setups
 - Use minimum permissions:
 - CI: `contents: read`
 - Release build/push: `contents: read`, `packages: write`
@@ -395,7 +403,5 @@ Read these in addition to this root file when touching those areas:
 - use GitHub `secrets.*` only
 - Keep deploy tag-only:
 - do not add deploy-on-branch or deploy-on-PR behavior
-- if deployment mode is Dokploy Git-provider on `main`, rollback is done via git revert/reset on `main`
-- `APP_IMAGE_TAG` pinning applies only to GHCR image-pull mode
-- Do not use Dokploy branch webhook for tag releases:
-- tag refs (`refs/tags/v*`) do not satisfy webhook branch filters and can return `Branch Not Match`
+- use immutable `APP_IMAGE_TAG` values only (`vX.Y.Z` or `sha-...`)
+- do not use Dokploy branch webhooks for releases

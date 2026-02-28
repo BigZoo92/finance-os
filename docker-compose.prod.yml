@@ -2,21 +2,8 @@ name: finance-os-prod
 
 services:
   web:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile
-      target: web
-      args:
-        NODE_VERSION: ${NODE_VERSION:-22.15.0}
-        BUN_VERSION: ${BUN_VERSION:-1.2.22}
-        PNPM_VERSION: ${PNPM_VERSION:-10.15.0}
-        API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3001}
-        VITE_APP_TITLE: ${VITE_APP_TITLE:-finance-os}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-        GIT_SHA: ${GIT_SHA:-main}
-        GIT_TAG: ${GIT_TAG:-main}
-        BUILD_TIME: ${BUILD_TIME:-unknown}
-    image: finance-os-web:prod
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
     restart: unless-stopped
     init: true
     # TODO:: mettre à true quand le debug sera fini CODEX NE MODIFIE PAS CETTE LIGNE
@@ -38,16 +25,13 @@ services:
       API_URL: ${API_URL:-}
       APP_VERSION: ${APP_VERSION:-}
       APP_COMMIT_SHA: ${APP_COMMIT_SHA:-}
-      GIT_SHA: ${GIT_SHA:-}
-      GIT_TAG: ${GIT_TAG:-}
-      BUILD_TIME: ${BUILD_TIME:-}
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: 3000
       PORT: 3000
       HEALTHCHECK_URL: http://127.0.0.1:3000/healthz
-      API_INTERNAL_URL: http://api:3001
-      VITE_API_BASE_URL: /api
-      VITE_APP_ORIGIN: ${APP_URL:-}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3001}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_APP_ORIGIN: ${VITE_APP_ORIGIN:-}
       VITE_APP_TITLE: ${VITE_APP_TITLE:-finance-os}
       PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -67,18 +51,8 @@ services:
       - no-new-privileges:true
 
   api:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile
-      target: api
-      args:
-        NODE_VERSION: ${NODE_VERSION:-22.15.0}
-        BUN_VERSION: ${BUN_VERSION:-1.2.22}
-        PNPM_VERSION: ${PNPM_VERSION:-10.15.0}
-        GIT_SHA: ${GIT_SHA:-main}
-        GIT_TAG: ${GIT_TAG:-main}
-        BUILD_TIME: ${BUILD_TIME:-unknown}
-    image: finance-os-api:prod
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
     restart: unless-stopped
     init: true
     read_only: true
@@ -101,9 +75,6 @@ services:
       API_URL: ${API_URL:-}
       APP_VERSION: ${APP_VERSION:-}
       APP_COMMIT_SHA: ${APP_COMMIT_SHA:-}
-      GIT_SHA: ${GIT_SHA:-}
-      GIT_TAG: ${GIT_TAG:-}
-      BUILD_TIME: ${BUILD_TIME:-}
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: ${REDIS_URL:-}
       PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
@@ -147,18 +118,8 @@ services:
       - no-new-privileges:true
 
   worker:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile
-      target: worker
-      args:
-        NODE_VERSION: ${NODE_VERSION:-22.15.0}
-        BUN_VERSION: ${BUN_VERSION:-1.2.22}
-        PNPM_VERSION: ${PNPM_VERSION:-10.15.0}
-        GIT_SHA: ${GIT_SHA:-main}
-        GIT_TAG: ${GIT_TAG:-main}
-        BUILD_TIME: ${BUILD_TIME:-unknown}
-    image: finance-os-worker:prod
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
     restart: unless-stopped
     init: true
     read_only: true
@@ -177,9 +138,6 @@ services:
       WORKER_AUTO_SYNC_ENABLED: ${WORKER_AUTO_SYNC_ENABLED:-false}
       POWENS_SYNC_INTERVAL_MS: ${POWENS_SYNC_INTERVAL_MS:-43200000}
       POWENS_SYNC_MIN_INTERVAL_PROD_MS: ${POWENS_SYNC_MIN_INTERVAL_PROD_MS:-43200000}
-      GIT_SHA: ${GIT_SHA:-}
-      GIT_TAG: ${GIT_TAG:-}
-      BUILD_TIME: ${BUILD_TIME:-}
       POWENS_CLIENT_ID: ${POWENS_CLIENT_ID:-}
       POWENS_CLIENT_SECRET: ${POWENS_CLIENT_SECRET:-}
       POWENS_BASE_URL: ${POWENS_BASE_URL:-}

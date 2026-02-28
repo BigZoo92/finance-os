@@ -6,8 +6,8 @@ on:
       - v*
   workflow_dispatch:
     inputs:
-      image_tag:
-        description: Optional image tag override for dry-run builds
+      release_tag:
+        description: Optional immutable image tag to deploy manually
         required: false
         type: string
 
@@ -33,7 +33,8 @@ jobs:
       contents: read
     outputs:
       image_base: ${{ steps.meta.outputs.image_base }}
-      image_tag: ${{ steps.meta.outputs.image_tag }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      sha_tag: ${{ steps.meta.outputs.sha_tag }}
       build_time: ${{ steps.meta.outputs.build_time }}
       push_images: ${{ steps.meta.outputs.push_images }}
       trigger_deploy: ${{ steps.meta.outputs.trigger_deploy }}
@@ -42,7 +43,7 @@ jobs:
         id: meta
         env:
           GHCR_IMAGE_NAME: ${{ vars.GHCR_IMAGE_NAME }}
-          MANUAL_IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          MANUAL_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
         run: |
           set -euo pipefail
 
@@ -52,19 +53,25 @@ jobs:
           fi
 
           build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          sha_tag="sha-${GITHUB_SHA}"
 
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            image_tag="${GITHUB_REF_NAME}"
+            release_tag="${GITHUB_REF_NAME}"
             push_images="true"
             trigger_deploy="true"
           else
-            image_tag="${MANUAL_IMAGE_TAG:-dry-run-${GITHUB_SHA::7}}"
+            release_tag="${MANUAL_RELEASE_TAG:-${sha_tag}}"
             push_images="false"
-            trigger_deploy="false"
+            if [[ -n "${MANUAL_RELEASE_TAG}" ]]; then
+              trigger_deploy="true"
+            else
+              trigger_deploy="false"
+            fi
           fi
 
           echo "image_base=${GHCR_IMAGE_NAME}" >> "${GITHUB_OUTPUT}"
-          echo "image_tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "sha_tag=${sha_tag}" >> "${GITHUB_OUTPUT}"
           echo "build_time=${build_time}" >> "${GITHUB_OUTPUT}"
           echo "push_images=${push_images}" >> "${GITHUB_OUTPUT}"
           echo "trigger_deploy=${trigger_deploy}" >> "${GITHUB_OUTPUT}"
@@ -85,7 +92,8 @@ jobs:
           - worker
     env:
       IMAGE_NAME: ${{ needs.prepare.outputs.image_base }}-${{ matrix.target }}
-      IMAGE_TAG: ${{ needs.prepare.outputs.image_tag }}
+      RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+      SHA_TAG: ${{ needs.prepare.outputs.sha_tag }}
       PUSH_IMAGES: ${{ needs.prepare.outputs.push_images }}
     steps:
       - name: Checkout
@@ -108,8 +116,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.IMAGE_TAG }}
-            type=raw,value=sha-${{ github.sha }}
+            type=raw,value=${{ env.RELEASE_TAG }}
+            type=raw,value=${{ env.SHA_TAG }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -130,11 +138,11 @@ jobs:
             VITE_APP_TITLE=${{ vars.VITE_APP_TITLE || 'finance-os' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || '/api' }}
             GIT_SHA=${{ github.sha }}
-            GIT_TAG=${{ needs.prepare.outputs.image_tag }}
+            GIT_TAG=${{ needs.prepare.outputs.release_tag }}
             BUILD_TIME=${{ needs.prepare.outputs.build_time }}
 
-  trigger_dokploy:
-    name: Trigger Dokploy deployment API
+  sync_dokploy:
+    name: Sync Dokploy compose and env
     runs-on: ubuntu-latest
     needs:
       - prepare
@@ -143,37 +151,192 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Call Dokploy API deploy endpoint
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Dokploy compose file and APP_IMAGE_TAG
         env:
           DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
-          DOKPLOY_APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
-          RELEASE_TAG: ${{ needs.prepare.outputs.image_tag }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
         run: |
           set -euo pipefail
 
           : "${DOKPLOY_URL:?Missing secret DOKPLOY_URL}"
           : "${DOKPLOY_API_KEY:?Missing secret DOKPLOY_API_KEY}"
+          : "${DOKPLOY_COMPOSE_ID:?Missing secret DOKPLOY_COMPOSE_ID}"
 
           dokploy_base_url="${DOKPLOY_URL%/}"
-          # si quelqu'un a mis .../api dans le secret, on l'enlève
           dokploy_base_url="${dokploy_base_url%/api}"
           api_base="${dokploy_base_url}/api"
 
-          if [[ -n "${DOKPLOY_COMPOSE_ID:-}" ]]; then
-            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1"
-            payload=$(printf '{"composeId":"%s","title":"release %s","description":"%s@%s"}' \
-              "${DOKPLOY_COMPOSE_ID}" "${RELEASE_TAG}" "${GITHUB_REPOSITORY}" "${GITHUB_SHA}")
-          elif [[ -n "${DOKPLOY_APPLICATION_ID:-}" ]]; then
-            endpoint="${dokploy_base_url}/api/trpc/compose.deploy?batch=1"
-            payload=$(printf '{"applicationId":"%s"}' "${DOKPLOY_APPLICATION_ID}")
-          else
-            echo "Missing secret DOKPLOY_COMPOSE_ID (recommended) or DOKPLOY_APPLICATION_ID." >&2
+          compose_file_payload="$(jq -Rs . < docker-compose.prod.yml)"
+          compose_payload="$(jq -n \
+            --arg composeId "${DOKPLOY_COMPOSE_ID}" \
+            --argjson composeFile "${compose_file_payload}" \
+            '{
+              composeId: $composeId,
+              sourceType: "raw",
+              composeFile: $composeFile
+            }'
+          )"
+
+          compose_update_response="$(mktemp)"
+          compose_update_code="$(
+            curl --silent --show-error --location \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              --retry-max-time 60 \
+              --connect-timeout 10 \
+              --max-time 120 \
+              -o "${compose_update_response}" \
+              -w "%{http_code}" \
+              -X POST "${api_base}/compose/update" \
+              -H "accept: application/json" \
+              -H "Content-Type: application/json" \
+              -H "x-api-key: ${DOKPLOY_API_KEY}" \
+              --data "${compose_payload}"
+          )"
+
+          if [[ "${compose_update_code}" -lt 200 || "${compose_update_code}" -ge 300 ]]; then
+            echo "Dokploy compose.update failed (HTTP ${compose_update_code})." >&2
+            cat "${compose_update_response}" >&2
             exit 1
           fi
 
-          echo "Dokploy endpoint: ${endpoint}"
+          compose_one_response="$(mktemp)"
+          compose_one_code="$(
+            curl --silent --show-error --location \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              --retry-max-time 60 \
+              --connect-timeout 10 \
+              --max-time 120 \
+              -o "${compose_one_response}" \
+              -w "%{http_code}" \
+              -X GET "${api_base}/compose/one?composeId=${DOKPLOY_COMPOSE_ID}" \
+              -H "accept: application/json" \
+              -H "x-api-key: ${DOKPLOY_API_KEY}"
+          )"
+
+          if [[ "${compose_one_code}" -lt 200 || "${compose_one_code}" -ge 300 ]]; then
+            echo "Dokploy compose.one failed (HTTP ${compose_one_code})." >&2
+            cat "${compose_one_response}" >&2
+            exit 1
+          fi
+
+          environment_id="$(
+            jq -r 'first(.. | objects | select(has("environmentId")) | .environmentId) // empty' "${compose_one_response}"
+          )"
+          current_env="$(
+            jq -r 'first(.. | objects | select(has("env")) | .env) // ""' "${compose_one_response}"
+          )"
+
+          if [[ -z "${environment_id}" ]]; then
+            echo "Unable to resolve Dokploy environmentId from compose.one response." >&2
+            cat "${compose_one_response}" >&2
+            exit 1
+          fi
+
+          upsert_env_var() {
+            local content="$1"
+            local key="$2"
+            local value="$3"
+
+            if printf '%s\n' "${content}" | grep -qE "^${key}="; then
+              printf '%s\n' "${content}" | sed -E "s#^${key}=.*#${key}=${value}#"
+              return
+            fi
+
+            if [[ -z "${content}" ]]; then
+              printf '%s=%s\n' "${key}" "${value}"
+              return
+            fi
+
+            printf '%s\n%s=%s\n' "${content}" "${key}" "${value}"
+          }
+
+          updated_env="${current_env}"
+          updated_env="$(upsert_env_var "${updated_env}" "APP_IMAGE_TAG" "${RELEASE_TAG}")"
+          updated_env="$(upsert_env_var "${updated_env}" "APP_VERSION" "${RELEASE_TAG}")"
+          updated_env="$(upsert_env_var "${updated_env}" "APP_COMMIT_SHA" "${GITHUB_SHA}")"
+
+          env_payload="$(jq -n \
+            --arg environmentId "${environment_id}" \
+            --arg env "${updated_env}" \
+            '{
+              environmentId: $environmentId,
+              env: $env
+            }'
+          )"
+
+          environment_update_response="$(mktemp)"
+          environment_update_code="$(
+            curl --silent --show-error --location \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 2 \
+              --retry-max-time 60 \
+              --connect-timeout 10 \
+              --max-time 120 \
+              -o "${environment_update_response}" \
+              -w "%{http_code}" \
+              -X POST "${api_base}/environment/update" \
+              -H "accept: application/json" \
+              -H "Content-Type: application/json" \
+              -H "x-api-key: ${DOKPLOY_API_KEY}" \
+              --data "${env_payload}"
+          )"
+
+          if [[ "${environment_update_code}" -lt 200 || "${environment_update_code}" -ge 300 ]]; then
+            echo "Dokploy environment.update failed (HTTP ${environment_update_code})." >&2
+            cat "${environment_update_response}" >&2
+            exit 1
+          fi
+
+          echo "Dokploy compose and env synced for ${RELEASE_TAG}."
+
+  trigger_dokploy:
+    name: Trigger Dokploy deployment API
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - sync_dokploy
+    if: needs.prepare.outputs.trigger_deploy == 'true'
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy updated compose
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          : "${DOKPLOY_URL:?Missing secret DOKPLOY_URL}"
+          : "${DOKPLOY_API_KEY:?Missing secret DOKPLOY_API_KEY}"
+          : "${DOKPLOY_COMPOSE_ID:?Missing secret DOKPLOY_COMPOSE_ID}"
+
+          dokploy_base_url="${DOKPLOY_URL%/}"
+          dokploy_base_url="${dokploy_base_url%/api}"
+          api_base="${dokploy_base_url}/api"
+
+          deploy_payload="$(jq -n \
+            --arg composeId "${DOKPLOY_COMPOSE_ID}" \
+            --arg title "release ${RELEASE_TAG}" \
+            --arg description "${GITHUB_REPOSITORY}@${GITHUB_SHA}" \
+            '{
+              composeId: $composeId,
+              title: $title,
+              description: $description
+            }'
+          )"
 
           response_file="$(mktemp)"
           http_code="$(
@@ -186,25 +349,17 @@ jobs:
               --max-time 120 \
               -o "${response_file}" \
               -w "%{http_code}" \
-              -X POST "${endpoint}" \
+              -X POST "${api_base}/compose/deploy" \
               -H "accept: application/json" \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${DOKPLOY_API_KEY}" \
-              --data "${payload}"
+              --data "${deploy_payload}"
           )"
 
           if [[ "${http_code}" -lt 200 || "${http_code}" -ge 300 ]]; then
-            echo "Dokploy API deploy failed (HTTP ${http_code})." >&2
-            echo "Response body:" >&2
+            echo "Dokploy compose.deploy failed (HTTP ${http_code})." >&2
             cat "${response_file}" >&2
             exit 1
           fi
 
-          if grep -q 'Branch Not Match' "${response_file}"; then
-            echo "Dokploy returned Branch Not Match; this indicates a webhook/branch flow mismatch." >&2
-            echo "Response body:" >&2
-            cat "${response_file}" >&2
-            exit 1
-          fi
-
-          echo "Dokploy deployment triggered."
+          echo "Dokploy deployment triggered for ${RELEASE_TAG}."
