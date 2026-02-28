@@ -13,8 +13,8 @@ services:
     cap_drop:
       - ALL
     # Public entrypoint: browser traffic hits `web`, and Nitro proxies `/api/*`
-    # to `api` through `API_INTERNAL_URL`. Do not expose `api` publicly for the
-    # standard Dokploy setup.
+    # to the API through a unique internal DNS alias. Avoid the generic `api`
+    # hostname because Dokploy can attach multiple stacks to shared networks.
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
@@ -29,7 +29,7 @@ services:
       NITRO_PORT: 3000
       PORT: 3000
       HEALTHCHECK_URL: http://127.0.0.1:3000/healthz
-      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:3001}
+      API_INTERNAL_URL: http://finance-os-api:3001
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
       VITE_APP_ORIGIN: ${VITE_APP_ORIGIN:-}
       VITE_APP_TITLE: ${VITE_APP_TITLE:-finance-os}
@@ -107,7 +107,9 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - finance_os_internal
+      finance_os_internal:
+        aliases:
+          - finance-os-api
     healthcheck:
       test: ["CMD", "bun", "infra/docker/healthchecks/http-healthcheck.mjs"]
       interval: 15s

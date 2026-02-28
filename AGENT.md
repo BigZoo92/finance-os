@@ -212,7 +212,7 @@ Read these in addition to this root file when touching those areas:
 - Legacy `WEB_ORIGIN` remains supported for compatibility but do not use it for new production setup.
 - Web runtime API URL strategy (TanStack Start):
 - Browser requests must use `VITE_API_BASE_URL` (default `/api`).
-- Server SSR requests must use `API_INTERNAL_URL` first (example `http://api:3001`).
+- Server SSR requests must use `API_INTERNAL_URL` first (example `http://finance-os-api:3001`).
 - If `API_INTERNAL_URL` is missing, SSR falls back to `VITE_APP_ORIGIN` + `VITE_API_BASE_URL`.
 - Public production traffic should terminate on `web` only. The TanStack Start/Nitro runtime proxies `/api/*` to `API_INTERNAL_URL`, so a separate public Dokploy route to `api:3001` is unnecessary and can diverge from local behavior.
 - Build variables for image publishing in CI:
@@ -223,7 +223,7 @@ Read these in addition to this root file when touching those areas:
 - `GHCR_IMAGE_NAME`
 - `APP_IMAGE_TAG` (immutable tag only, for example `v1.2.3`)
 - Dokploy runtime variables required for `web`:
-- `API_INTERNAL_URL=http://api:3001`
+- `API_INTERNAL_URL=http://finance-os-api:3001`
 - `VITE_API_BASE_URL=/api`
 - `VITE_APP_ORIGIN=${APP_URL}` (or `${WEB_URL}` when different)
 - optional debug: `LOG_LEVEL=debug` and/or `APP_DEBUG=1`
@@ -282,9 +282,9 @@ Read these in addition to this root file when touching those areas:
 - confirm `GET /healthz` returns `200 {"ok":true}` independently from `/`
 - Production route/debug checks from inside `web` container:
 - `wget -qO- http://127.0.0.1:3000/healthz`
-- `wget -qSO- http://api:3001/auth/me --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
-- `wget -qSO- 'http://api:3001/dashboard/summary?range=30d' --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
-- optional: `wget -qO- http://api:3001/__routes --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
+- `wget -qSO- http://finance-os-api:3001/auth/me --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
+- `wget -qSO- 'http://finance-os-api:3001/dashboard/summary?range=30d' --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
+- optional: `wget -qO- http://finance-os-api:3001/__routes --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'`
 - API also exposes compatibility routes under `/api/*`, but the preferred public routing mode is a single Dokploy domain on `web`.
 - Agents changing deployment/runtime/env contracts must update:
 - `docker-compose.prod.yml`

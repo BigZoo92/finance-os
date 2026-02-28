@@ -14,7 +14,7 @@
 - `APP_URL=https://finance-os.enzogivernaud.fr`
 - `WEB_URL=https://finance-os.enzogivernaud.fr`
 - `API_URL=https://finance-os.enzogivernaud.fr/api`
-- `API_INTERNAL_URL=http://api:3001`
+- `API_INTERNAL_URL=http://finance-os-api:3001`
 - `VITE_API_BASE_URL=/api`
 - `VITE_APP_ORIGIN=https://finance-os.enzogivernaud.fr`
 
@@ -87,7 +87,7 @@ Utile seulement si tu gardes un trigger API externe Dokploy:
 
 - Host `finance-os.enzogivernaud.fr` path `/` -> `web:3000`
 - Pas de route publique separee vers `api:3001` dans le setup standard.
-- Le runtime `web` proxyfie deja `/api/*` vers `api` via `API_INTERNAL_URL=http://api:3001`.
+- Le runtime `web` proxyfie deja `/api/*` vers l'alias interne `finance-os-api` via `API_INTERNAL_URL=http://finance-os-api:3001`.
 - Exposer `/api` directement vers `api` dans Dokploy est inutile et peut diverger du comportement local.
 
 ## 5) Cloudflare anti-cache (obligatoire)

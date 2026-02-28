@@ -3,11 +3,16 @@
 ## Depuis le container `web`
 
 ```bash
-wget -qSO- http://api:3001/health
-wget -qSO- http://api:3001/auth/me
-wget -qSO- http://api:3001/debug/auth --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
-wget -qSO- http://api:3001/debug/routes --header='x-finance-os-debug-token: <DEBUG_METRICS_TOKEN>'
+wget -qSO- http://finance-os-api:3001/health
+wget -qSO- http://finance-os-api:3001/auth/me
+wget -qSO- http://finance-os-api:3001/debug/auth --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
+wget -qSO- http://finance-os-api:3001/debug/routes --header='x-finance-os-debug-token: <DEBUG_METRICS_TOKEN>'
 ```
+
+Notes:
+
+- En Dokploy, evite le hostname interne generique `api`.
+- Utilise `finance-os-api` pour eviter les collisions DNS entre plusieurs stacks ayant un service nomme `api`.
 
 ## Contrats attendus
 
@@ -35,7 +40,7 @@ wget -qSO- http://api:3001/debug/routes --header='x-finance-os-debug-token: <DEB
 ## Smoke test rapide
 
 ```bash
-pnpm smoke:api -- --base=http://api:3001 --internal-token=<PRIVATE_ACCESS_TOKEN>
+pnpm smoke:api -- --base=http://finance-os-api:3001 --internal-token=<PRIVATE_ACCESS_TOKEN>
 ```
 
 ## Local prod-like avec HTTPS

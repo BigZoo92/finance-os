@@ -95,14 +95,14 @@ Ne pas creer une route publique separee vers `api`.
 
 Pourquoi:
 
-- le runtime `web` TanStack Start/Nitro proxyfie deja `/api/*` vers `API_INTERNAL_URL=http://api:3001`
+- le runtime `web` TanStack Start/Nitro proxyfie deja `/api/*` vers `API_INTERNAL_URL=http://finance-os-api:3001`
 - cela conserve le routing externe `/api`
 - cela elimine une source frequente de `404`/`500` liee a un mauvais strip-path ou a un mauvais backend cible
 
 Resultat:
 
 - `https://finance-os.enzogivernaud.fr/` -> `web:3000`
-- `https://finance-os.enzogivernaud.fr/api/*` -> `web`, puis proxy interne vers `api:3001`
+- `https://finance-os.enzogivernaud.fr/api/*` -> `web`, puis proxy interne vers `finance-os-api:3001`
 
 ## Variables Dokploy
 
@@ -123,7 +123,7 @@ WEB_URL=https://finance-os.enzogivernaud.fr
 API_URL=https://finance-os.enzogivernaud.fr/api
 
 RUN_DB_MIGRATIONS=true
-API_INTERNAL_URL=http://api:3001
+API_INTERNAL_URL=http://finance-os-api:3001
 VITE_API_BASE_URL=/api
 VITE_APP_ORIGIN=https://finance-os.enzogivernaud.fr
 VITE_APP_TITLE=finance-os
@@ -188,7 +188,7 @@ GHCR_IMAGE_NAME=ghcr.io/bigzoo92/finance-os
 NODE_VERSION=22.15.0
 BUN_VERSION=1.2.22
 PNPM_VERSION=10.15.0
-API_INTERNAL_URL=http://api:3001
+API_INTERNAL_URL=http://finance-os-api:3001
 VITE_API_BASE_URL=/api
 VITE_APP_TITLE=finance-os
 ```
@@ -333,10 +333,10 @@ alors le domaine ne sert pas le bon runtime. Ce n'est pas un simple cache naviga
 
 ```bash
 wget -qSO- http://127.0.0.1:3000/healthz
-wget -qSO- http://api:3001/health
-wget -qSO- http://api:3001/version
-wget -qSO- http://api:3001/auth/me
-wget -qSO- http://api:3001/debug/config --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
+wget -qSO- http://finance-os-api:3001/health
+wget -qSO- http://finance-os-api:3001/version
+wget -qSO- http://finance-os-api:3001/auth/me
+wget -qSO- http://finance-os-api:3001/debug/config --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
 ```
 
 ### Logs utiles
