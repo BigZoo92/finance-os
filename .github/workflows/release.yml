@@ -194,7 +194,7 @@ jobs:
               --max-time 120 \
               -o "${compose_update_response}" \
               -w "%{http_code}" \
-              -X POST "${api_base}/compose/update" \
+              -X POST "${api_base}/compose.update" \
               -H "accept: application/json" \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${DOKPLOY_API_KEY}" \
@@ -218,7 +218,7 @@ jobs:
               --max-time 120 \
               -o "${compose_one_response}" \
               -w "%{http_code}" \
-              -X GET "${api_base}/compose/one?composeId=${DOKPLOY_COMPOSE_ID}" \
+              -X GET "${api_base}/compose.one?composeId=${DOKPLOY_COMPOSE_ID}" \
               -H "accept: application/json" \
               -H "x-api-key: ${DOKPLOY_API_KEY}"
           )"
@@ -285,7 +285,7 @@ jobs:
               --max-time 120 \
               -o "${environment_update_response}" \
               -w "%{http_code}" \
-              -X POST "${api_base}/environment/update" \
+              -X POST "${api_base}/environment.update" \
               -H "accept: application/json" \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${DOKPLOY_API_KEY}" \
@@ -349,7 +349,7 @@ jobs:
               --max-time 120 \
               -o "${response_file}" \
               -w "%{http_code}" \
-              -X POST "${api_base}/compose/deploy" \
+              -X POST "${api_base}/compose.deploy" \
               -H "accept: application/json" \
               -H "Content-Type: application/json" \
               -H "x-api-key: ${DOKPLOY_API_KEY}" \
