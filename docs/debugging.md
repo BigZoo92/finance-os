@@ -37,3 +37,24 @@ wget -qSO- http://api:3001/debug/routes --header='x-finance-os-debug-token: <DEB
 ```bash
 pnpm smoke:api -- --base=http://api:3001 --internal-token=<PRIVATE_ACCESS_TOKEN>
 ```
+
+## Local prod-like avec HTTPS
+
+Pour reproduire le comportement prod du cookie admin en local:
+
+```bash
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml -f docker-compose.prod.https.yml up -d --build
+```
+
+Puis ouvrir:
+
+```text
+https://localhost:3443
+```
+
+Notes:
+
+- le proxy TLS local est defini dans `docker-compose.prod.https.yml`
+- le certificat est emis par Caddy en local (`tls internal`), donc le navigateur peut afficher un avertissement la premiere fois
+- sur Windows, `localhost` est plus fiable que `finance-os.localhost` pour la resolution DNS locale
+- si tu veux rester en `http://localhost:3000` pour un debug rapide, mets `AUTH_ALLOW_INSECURE_COOKIE_IN_PROD=true` dans `.env.prod.local`

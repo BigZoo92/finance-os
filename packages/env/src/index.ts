@@ -50,6 +50,11 @@ const toOptionalEnv = (value: string | undefined) => {
   return normalized.length > 0 ? normalized : undefined
 }
 
+const toBooleanEnv = (value: string | undefined) => {
+  const normalized = toOptionalEnv(value)?.toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'yes'
+}
+
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '')
 
 const toDecodedBuffer = (value: string): Buffer | null => {
@@ -381,6 +386,10 @@ export const getApiEnv = () => {
     AUTH_SESSION_SECRET: authSessionSecretSchema,
     AUTH_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
     AUTH_LOGIN_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
+    AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: z
+      .string()
+      .optional()
+      .transform(value => toBooleanEnv(value)),
     ...powensShape,
   })
 

@@ -23,7 +23,7 @@ export const Route = createFileRoute('/')({
     range: resolveRange(search.range),
   }),
   loader: async ({ context, deps }) => {
-    const auth = await context.queryClient.ensureQueryData(authMeQueryOptions())
+    const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
 
     await Promise.all([
       context.queryClient.ensureQueryData(

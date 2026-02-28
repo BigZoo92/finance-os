@@ -1,0 +1,13 @@
+{
+	auto_https disable_redirects
+	admin off
+}
+
+http://localhost:{$PROXY_HTTP_PORT} {
+	redir https://localhost:{$PROXY_HTTPS_PORT}{uri}
+}
+
+https://localhost:{$PROXY_HTTPS_PORT} {
+	tls internal
+	reverse_proxy web:3000
+}

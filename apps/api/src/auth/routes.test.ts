@@ -4,14 +4,18 @@ import { AUTH_SESSION_COOKIE_NAME } from './session'
 import { createAuthRoutes } from './routes'
 import type { AuthRoutesDependencies } from './types'
 
-const createAuthTestEnv = () =>
+const createAuthTestEnv = (
+  overrides?: Partial<AuthRoutesDependencies['env']>
+) =>
   ({
     NODE_ENV: 'test',
     AUTH_ADMIN_EMAIL: 'givernaudenzo@gmail.com',
     AUTH_LOGIN_RATE_LIMIT_PER_MIN: 5,
     AUTH_PASSWORD_HASH: '$argon2id$v=19$m=65536,t=2,p=1$test$test',
+    AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: false,
     AUTH_SESSION_SECRET: 'x'.repeat(32),
     AUTH_SESSION_TTL_DAYS: 30,
+    ...overrides,
   }) as unknown as AuthRoutesDependencies['env']
 
 const createRedisClientMock = () => {
@@ -37,9 +41,11 @@ const createRedisClientMock = () => {
 const createAuthTestApp = ({
   mode,
   verifyPassword,
+  envOverrides,
 }: {
   mode: 'admin' | 'demo'
   verifyPassword?: AuthRoutesDependencies['verifyPassword']
+  envOverrides?: Partial<AuthRoutesDependencies['env']>
 }) =>
   new Elysia()
     .derive(() => ({
@@ -51,7 +57,7 @@ const createAuthTestApp = ({
     }))
     .use(
       createAuthRoutes({
-        env: createAuthTestEnv(),
+        env: createAuthTestEnv(envOverrides),
         redisClient: createRedisClientMock(),
         ...(verifyPassword ? { verifyPassword } : {}),
       })
@@ -154,6 +160,61 @@ describe('createAuthRoutes /auth/me', () => {
       message: 'Invalid credentials',
       requestId: 'req-test',
     })
+  })
+
+  it('adds Secure to the session cookie in production by default', async () => {
+    const app = createAuthTestApp({
+      mode: 'demo',
+      verifyPassword: async password => password === 'valid-password',
+      envOverrides: {
+        NODE_ENV: 'production',
+      } as Partial<AuthRoutesDependencies['env']>,
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/auth/login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-real-ip': '127.0.0.1',
+        },
+        body: JSON.stringify({
+          email: 'givernaudenzo@gmail.com',
+          password: 'valid-password',
+        }),
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('set-cookie')).toContain('Secure')
+  })
+
+  it('can omit Secure in production when local debug override is enabled', async () => {
+    const app = createAuthTestApp({
+      mode: 'demo',
+      verifyPassword: async password => password === 'valid-password',
+      envOverrides: {
+        NODE_ENV: 'production',
+        AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: true,
+      } as Partial<AuthRoutesDependencies['env']>,
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/auth/login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-real-ip': '127.0.0.1',
+        },
+        body: JSON.stringify({
+          email: 'givernaudenzo@gmail.com',
+          password: 'valid-password',
+        }),
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('set-cookie')).not.toContain('Secure')
   })
 
   it('clears session cookie on logout', async () => {

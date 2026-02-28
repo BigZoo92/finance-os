@@ -29,7 +29,7 @@ export const Route = createFileRoute('/login')({
     reason: search.reason === 'powens_admin_required' ? 'powens_admin_required' : undefined,
   }),
   loader: async ({ context }) => {
-    const auth = await context.queryClient.ensureQueryData(authMeQueryOptions())
+    const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
 
     if (auth.mode === 'admin') {
       throw redirect({ to: '/' })
@@ -50,17 +50,13 @@ function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: postAuthLogin,
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: authQueryKeys.me(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: dashboardQueryKeys.all,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: powensQueryKeys.all,
-        }),
-      ])
+      await queryClient.fetchQuery(authMeQueryOptions())
+      queryClient.removeQueries({
+        queryKey: dashboardQueryKeys.all,
+      })
+      queryClient.removeQueries({
+        queryKey: powensQueryKeys.all,
+      })
 
       pushToast({
         title: 'Connexion reussie',

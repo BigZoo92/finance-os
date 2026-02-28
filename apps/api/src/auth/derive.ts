@@ -17,7 +17,7 @@ export const deriveAuth = ({
     'AUTH_SESSION_SECRET' | 'AUTH_SESSION_TTL_DAYS' | 'PRIVATE_ACCESS_TOKEN'
   >
 }) => {
-  return new Elysia({ name: 'auth.derive' }).derive(({ request, set }) => {
+  return new Elysia({ name: 'auth.derive' }).derive({ as: 'global' }, ({ request, set }) => {
     const requestId = resolveRequestId(request)
     set.headers['x-request-id'] = requestId
 

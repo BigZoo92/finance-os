@@ -123,6 +123,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
           privateAccessTokenEnabled: Boolean(env.PRIVATE_ACCESS_TOKEN),
           debugMetricsTokenEnabled: Boolean(env.DEBUG_METRICS_TOKEN),
           demoModeDefault: true,
+          allowInsecureCookieInProd: env.AUTH_ALLOW_INSECURE_COOKIE_IN_PROD,
           authSessionTtlDays: env.AUTH_SESSION_TTL_DAYS,
           authLoginRateLimitPerMin: env.AUTH_LOGIN_RATE_LIMIT_PER_MIN,
         },

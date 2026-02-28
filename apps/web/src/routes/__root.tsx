@@ -94,7 +94,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       return ssrAuth
     }
 
-    return context.queryClient.ensureQueryData(authMeQueryOptions())
+    return context.queryClient.fetchQuery(authMeQueryOptions())
   },
   shellComponent: RootDocument,
   notFoundComponent: RootNotFound,

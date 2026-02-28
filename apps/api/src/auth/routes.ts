@@ -26,7 +26,13 @@ const resolveClientIp = (request: Request) => {
   return 'unknown'
 }
 
-const isSecureCookieEnvironment = (nodeEnv: string) => nodeEnv === 'production'
+const shouldUseSecureCookie = ({
+  nodeEnv,
+  allowInsecureCookieInProd,
+}: {
+  nodeEnv: string
+  allowInsecureCookieInProd: boolean
+}) => nodeEnv === 'production' && !allowInsecureCookieInProd
 
 const setNoStoreResponse = (context: { set: { headers: Record<string, unknown> } }) => {
   context.set.headers['cache-control'] = NO_STORE_CACHE_CONTROL
@@ -34,7 +40,10 @@ const setNoStoreResponse = (context: { set: { headers: Record<string, unknown> }
 
 export const createAuthRoutes = ({ env, redisClient, verifyPassword }: AuthRoutesDependencies) => {
   const normalizedAdminEmail = normalizeEmail(env.AUTH_ADMIN_EMAIL)
-  const secureCookie = isSecureCookieEnvironment(env.NODE_ENV)
+  const secureCookie = shouldUseSecureCookie({
+    nodeEnv: env.NODE_ENV,
+    allowInsecureCookieInProd: env.AUTH_ALLOW_INSECURE_COOKIE_IN_PROD,
+  })
 
   return new Elysia({ prefix: '/auth' })
     .post(
