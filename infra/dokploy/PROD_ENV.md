@@ -86,9 +86,9 @@ Utile seulement si tu gardes un trigger API externe Dokploy:
 ## 4) Dokploy routing attendu
 
 - Host `finance-os.enzogivernaud.fr` path `/` -> `web:3000`
-- Host `finance-os.enzogivernaud.fr` path `/api` -> `api:3001` (strip path active)
-
-L'API supporte aussi les routes `/api/*` en compatibilite.
+- Pas de route publique separee vers `api:3001` dans le setup standard.
+- Le runtime `web` proxyfie deja `/api/*` vers `api` via `API_INTERNAL_URL=http://api:3001`.
+- Exposer `/api` directement vers `api` dans Dokploy est inutile et peut diverger du comportement local.
 
 ## 5) Cloudflare anti-cache (obligatoire)
 

@@ -25,6 +25,9 @@ services:
       - /tmp:rw,nosuid,nodev,size=64m
     cap_drop:
       - ALL
+    # Public entrypoint: browser traffic hits `web`, and Nitro proxies `/api/*`
+    # to `api` through `API_INTERNAL_URL`. Do not expose `api` publicly for the
+    # standard Dokploy setup.
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
@@ -83,6 +86,8 @@ services:
       - /tmp:rw,nosuid,nodev,size=128m
     cap_drop:
       - ALL
+    # Internal-only service. Public `/api/*` requests are expected to go
+    # through `web:3000`, which proxies them to this container.
     expose:
       - "3001"
     environment:

@@ -15,6 +15,7 @@ Important:
 - Le compose prod build localement les services (`web`, `api`, `worker`) via `build:`.
 - La validation runtime reste strictement appliquee dans `@finance-os/env`.
 - `APP_IMAGE_TAG`/`GHCR_IMAGE_NAME` ne sont pas necessaires en mode Dokploy Git provider.
+- En production standard, seul `web` doit etre expose publiquement. Le runtime `web` proxifie `/api/*` vers `api` en interne.
 
 ## 2) Explication technique
 
@@ -50,6 +51,7 @@ Important:
 | `POSTGRES_USER` | postgres | Optionnel (fortement recommande) | string | `finance_os` | Utilisateur Postgres local. |
 | `POSTGRES_PASSWORD` | postgres | Oui | secret fort | valeur aleatoire 24+ chars | `openssl rand -base64 32` (ou gestionnaire de mots de passe). |
 | `PRIVATE_ACCESS_TOKEN` | web, api | Optionnel | secret >= 12 chars | vide (desactive) | Si active, meme valeur doit etre presente en runtime sur `web` et `api` pour les appels SSR internes. |
+| `VITE_PRIVATE_ACCESS_TOKEN` | aucun | Non | ne pas definir | vide | Variable interdite: ne jamais exposer le token interne via `VITE_*`. |
 | `POWENS_MANUAL_SYNC_COOLDOWN_SECONDS` | api | Optionnel | entier positif | `300` | Cooldown sync manuel. |
 | `AUTH_ADMIN_EMAIL` | api | Oui | email valide | ton email admin | Compte unique admin de l'app perso. |
 | `AUTH_ADMIN_PASSWORD_HASH_B64` | api | Recommande | base64 UTF-8 du hash admin | hash base64 genere | `pnpm auth:hash-b64` puis copier `AUTH_ADMIN_PASSWORD_HASH_B64=...` dans Dokploy. |
@@ -115,6 +117,7 @@ Validation rapide en logs API (safe):
 5. Deployer et verifier:
    - `web`, `api`, `worker` en `healthy`
    - `GET /`, `GET /api/health`, `GET /api/db/health`
+6. Verifier que le routage public Dokploy pointe uniquement vers `web:3000`.
 
 ## 6) Strategie de rollback
 

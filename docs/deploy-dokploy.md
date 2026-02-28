@@ -43,8 +43,16 @@ Note:
 
 1. Creer le fichier d'env Dokploy a partir de `.env.prod.example`.
 2. Verifier que Dokploy utilise bien `docker-compose.prod.yml`.
-3. Verifier la branche source `main`.
-4. Push sur `main` pour declencher le redeploy.
+3. Configurer le routage public Dokploy vers `web:3000` uniquement.
+4. Ne pas exposer `api:3001` publiquement: le runtime `web` proxifie deja `/api/*` vers `api` en interne.
+5. Verifier la branche source `main`.
+6. Push sur `main` pour declencher le redeploy.
+
+Points d'attention:
+
+- Ne pas definir `VITE_PRIVATE_ACCESS_TOKEN` dans Dokploy.
+- Preferer `AUTH_ADMIN_PASSWORD_HASH_B64` a `AUTH_PASSWORD_HASH_B64`.
+- Si tu exposes `/api` directement sur `api:3001`, ta prod ne ressemble plus a la stack locale du compose, ce qui peut produire des `404` ou `500` difficiles a interpreter.
 
 ## 5) Commandes de verification locale (equivalent Dokploy)
 

@@ -213,6 +213,7 @@ Read these in addition to this root file when touching those areas:
 - Browser requests must use `VITE_API_BASE_URL` (default `/api`).
 - Server SSR requests must use `API_INTERNAL_URL` first (example `http://api:3001`).
 - If `API_INTERNAL_URL` is missing, SSR falls back to `VITE_APP_ORIGIN` + `VITE_API_BASE_URL`.
+- Public production traffic should terminate on `web` only. The TanStack Start/Nitro runtime proxies `/api/*` to `API_INTERNAL_URL`, so a separate public Dokploy route to `api:3001` is unnecessary and can diverge from local behavior.
 - Build variables for production compose (Dokploy Git provider mode):
 - `NODE_VERSION`
 - `BUN_VERSION`
@@ -223,6 +224,7 @@ Read these in addition to this root file when touching those areas:
 - `VITE_APP_ORIGIN=${APP_URL}` (or `${WEB_URL}` when different)
 - optional debug: `LOG_LEVEL=debug` and/or `APP_DEBUG=1`
 - optional server-only internal token: `PRIVATE_ACCESS_TOKEN` (same value in `api` and `web` runtime env)
+- never define `VITE_PRIVATE_ACCESS_TOKEN`
 - Dokploy runtime variables required for `api` auth hash:
 - preferred: `AUTH_ADMIN_PASSWORD_HASH_B64` (base64 UTF-8 hash, recommended `pbkdf2$...`)
 - fallback: `AUTH_ADMIN_PASSWORD_HASH`, then legacy `AUTH_PASSWORD_HASH_B64`, then `AUTH_PASSWORD_HASH`
@@ -267,7 +269,7 @@ Read these in addition to this root file when touching those areas:
 - `docker compose --env-file .env.prod -f docker-compose.prod.yml logs --no-color --tail=200 web api worker`
 - Dokploy routing must be:
 - host `finance-os.enzogivernaud.fr` path `/` -> `web:3000`
-- host `finance-os.enzogivernaud.fr` path `/api` -> `api:3001` with strip path enabled
+- no separate public route to `api:3001` in the standard setup; `web` proxies `/api/*` internally
 - Production 500 debug workflow:
 - set `LOG_LEVEL=debug` and/or `APP_DEBUG=1` on `web`
 - redeploy and inspect `web` logs (SSR stack + route + sanitized env snapshot)
