@@ -83,11 +83,11 @@ export class ApiRequestError extends Error {
     this.status = status
     this.url = url
     this.path = path
-    this.code = code
-    this.requestId = requestId
+    this.code = code ?? ''
+    this.requestId = requestId ?? ''
     this.details = details
-    this.bodyPreview = bodyPreview
-    this.hint = hint
+    this.bodyPreview = bodyPreview ?? ''
+    this.hint = hint ?? ''
   }
 }
 
@@ -158,7 +158,10 @@ const resolveApiBaseUrl = (options?: ApiUrlOptions): ApiBaseUrlResolution => {
   }
 
   return {
-    baseUrl: new URL(toAbsolutePathPrefix(clientBaseUrl), `${appOrigin.replace(/\/+$/, '')}/`).toString(),
+    baseUrl: new URL(
+      toAbsolutePathPrefix(clientBaseUrl),
+      `${appOrigin.replace(/\/+$/, '')}/`
+    ).toString(),
     source: 'origin_fallback',
   }
 }
@@ -221,13 +224,7 @@ const resolveMethod = (init?: RequestInit) => {
   return (init?.method ?? 'GET').toUpperCase()
 }
 
-const toHintFromStatus = ({
-  status,
-  code,
-}: {
-  status: ApiRequestErrorStatus
-  code?: string
-}) => {
+const toHintFromStatus = ({ status, code }: { status: ApiRequestErrorStatus; code?: string }) => {
   if (status === 'network_error') {
     return 'network_unreachable'
   }
@@ -312,12 +309,13 @@ export const apiRequest = async <TResponse>(
   const baseResolution = resolveApiBaseUrl({
     requestOrigin: requestContext?.requestOrigin,
   })
-  const fallbackPath =
-    normalizedPath.startsWith('/api/')
-      ? normalizedPath.slice(4) || '/'
-      : `/api${normalizedPath}`
+  const fallbackPath = normalizedPath.startsWith('/api/')
+    ? normalizedPath.slice(4) || '/'
+    : `/api${normalizedPath}`
   const candidatePaths =
-    requestContext && fallbackPath !== normalizedPath ? [normalizedPath, fallbackPath] : [normalizedPath]
+    requestContext && fallbackPath !== normalizedPath
+      ? [normalizedPath, fallbackPath]
+      : [normalizedPath]
 
   const requestHeaders = createRequestHeaders({
     init,
