@@ -2,11 +2,9 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_call:
 
 permissions:
@@ -20,6 +18,7 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       CI: true
     steps:
@@ -41,15 +40,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Lint
-        run: pnpm lint
+        run: pnpm -r --if-present lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm -r --if-present typecheck
 
       - name: Test
         run: pnpm -r --if-present test
 
       - name: Build
-        run: pnpm build
+        run: pnpm -r --if-present build
