@@ -1,0 +1,69 @@
+name: Implement
+description: Implementation task for delivery by the dev agent.
+title: "implement: "
+labels:
+  - "agent:dev"
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What exactly should be delivered?
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What must not be included in this implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Done conditions required for merge.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dual_path
+    attributes:
+      label: Demo/Admin dual-path
+      description: Required behavior for demo and admin execution paths.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability
+      description: Required logs, metrics, traces, alerts, request IDs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: uiux
+    attributes:
+      label: UI/UX notes
+      description: UI states, accessibility notes, screenshot expectations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Delivery/security/runtime risks and rollback plan.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_change_request
+    attributes:
+      label: ENV CHANGE REQUEST
+      description: Mandatory. If no new key/API/variable, write `None`.
+    validations:
+      required: true

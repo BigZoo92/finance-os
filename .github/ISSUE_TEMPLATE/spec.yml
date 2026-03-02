@@ -1,0 +1,78 @@
+name: Spec
+description: Define a feature/problem spec for the agentic workflow.
+title: "spec: "
+labels:
+  - "agent:pm"
+  - "breakpoint"
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What outcome do we need?
+      placeholder: Describe the target outcome and business/user value.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What is explicitly out of scope?
+      placeholder: List what this work will not include.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Measurable conditions to accept this work.
+      placeholder: Given/When/Then or bullet criteria.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dual_path
+    attributes:
+      label: Demo/Admin dual-path
+      description: Define expected behavior for both demo and admin paths.
+      placeholder: Demo path behavior... Admin path behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability
+      description: Logs, metrics, traces, dashboards, alerts.
+      placeholder: What signals confirm success/failure in production?
+    validations:
+      required: true
+
+  - type: textarea
+    id: uiux
+    attributes:
+      label: UI/UX notes
+      description: UX details, edge states, empty/error/loading behavior.
+      placeholder: Include notes for copy, accessibility, and screenshots needs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Main product/tech/security risks and mitigations.
+      placeholder: Risk + mitigation + rollback expectations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_change_request
+    attributes:
+      label: ENV CHANGE REQUEST
+      description: Mandatory. If no new key/API/variable, write `None`.
+      placeholder: List new env vars, API keys, secret rotation, migration steps, owner.
+    validations:
+      required: true

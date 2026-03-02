@@ -1,0 +1,69 @@
+name: Improve
+description: Propose an improvement/challenge to an existing capability.
+title: "improve: "
+labels:
+  - "agent:challenger"
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What improvement is targeted and why now?
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What this improvement does not attempt.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Specific measurable outcomes for this improvement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dual_path
+    attributes:
+      label: Demo/Admin dual-path
+      description: Expected impact on demo path and admin path.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability
+      description: How to measure impact (logs/metrics/traces/alerts).
+    validations:
+      required: true
+
+  - type: textarea
+    id: uiux
+    attributes:
+      label: UI/UX notes
+      description: UX implications including states and usability details.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Risks, trade-offs, and mitigation plan.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_change_request
+    attributes:
+      label: ENV CHANGE REQUEST
+      description: Mandatory. If no new key/API/variable, write `None`.
+    validations:
+      required: true
