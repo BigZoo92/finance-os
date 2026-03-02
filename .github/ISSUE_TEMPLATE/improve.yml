@@ -1,0 +1,79 @@
+name: Improve
+description: Challenge specs and propose improvements/pivots.
+title: "improve: "
+labels:
+  - "agent:challenger"
+body:
+  - type: dropdown
+    id: cost_impact
+    attributes:
+      label: Cost impact
+      description: Prefer free. If paid, justify clearly.
+      options:
+        - free
+        - paid (justify)
+        - unknown yet
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What improvement is targeted and why now?
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: Options (max 3) + recommendation
+      description: Provide up to 3 options, then recommend one with rationale.
+      placeholder: |
+        Option A: ...
+        Option B: ...
+        Option C: ...
+        Recommendation: ...
+        Why: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: dual_path
+    attributes:
+      label: Demo/Admin dual-path
+      description: Expected impact on demo path and admin path.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability
+      description: How to measure impact (logs/metrics/traces/alerts).
+    validations:
+      required: true
+
+  - type: textarea
+    id: uiux
+    attributes:
+      label: UI/UX notes
+      description: UX implications including states, copy, accessibility.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Risks, trade-offs, mitigation, rollback/kill-switch if relevant.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_change_request
+    attributes:
+      label: ENV CHANGE REQUEST
+      description: Mandatory. If no new key/API/variable, write `None`.
+    validations:
+      required: true

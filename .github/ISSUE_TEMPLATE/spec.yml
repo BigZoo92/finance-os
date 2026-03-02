@@ -1,0 +1,133 @@
+name: Spec
+description: Define a feature/problem spec for the agentic workflow.
+title: "spec: "
+labels:
+  - "agent:pm"
+  - "breakpoint"
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - api
+        - web
+        - worker
+        - powens
+        - db
+        - infra
+        - ui-ux
+        - docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - p0 (urgent / blocks)
+        - p1 (important)
+        - p2 (nice to have)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cost_impact
+    attributes:
+      label: Cost impact
+      description: Prefer free. If paid, justify clearly.
+      options:
+        - free
+        - paid (justify)
+        - unknown yet
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What outcome do we need?
+      placeholder: Target outcome + personal value + why now.
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What is explicitly out of scope?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Measurable conditions to accept this work.
+      placeholder: Given/When/Then or bullets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: breakpoints
+    attributes:
+      label: Breakpoints (BP1/BP2/BP3)
+      description: Max 3 gates where the agent must stop and request your approval.
+      placeholder: |
+        BP1: approach/plan/contracts approved
+        BP2: PR ready (CI green, tests, screenshots if UI)
+        BP3: ready to ship (flags/monitoring/notes)
+    validations:
+      required: true
+
+  - type: textarea
+    id: dual_path
+    attributes:
+      label: Demo/Admin dual-path
+      description: Define expected behavior for both demo and admin paths.
+      placeholder: Demo path behavior... Admin path behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability
+      description: Logs, metrics, traces, dashboards, alerts.
+      placeholder: Signals that prove success/failure in prod.
+    validations:
+      required: true
+
+  - type: textarea
+    id: uiux
+    attributes:
+      label: UI/UX notes
+      description: UX details, edge states, empty/error/loading behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Main product/tech/security risks + mitigations + rollback expectations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_change_request
+    attributes:
+      label: ENV CHANGE REQUEST
+      description: Mandatory. If no new key/API/variable, write `None`.
+      placeholder: |
+        Provider: ...
+        Env vars: ...
+        Where used: api/web-ssr/worker
+        How to obtain keys: ...
+        Prod placement (Dokploy): ...
+        Rotation plan: ...
+        Failure mode/fallback: ...
+    validations:
+      required: true

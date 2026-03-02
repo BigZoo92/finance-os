@@ -1,0 +1,93 @@
+name: Implement
+description: Implementation task for delivery by the dev agent.
+title: "implement: "
+labels:
+  - "agent:dev"
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - api
+        - web
+        - worker
+        - powens
+        - db
+        - infra
+        - ui-ux
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What exactly should be delivered?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+      description: Done conditions required for merge.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dual_path
+    attributes:
+      label: Demo/Admin dual-path
+      description: Required behavior for demo and admin execution paths.
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_notes
+    attributes:
+      label: Implementation notes
+      description: Constraints (no-refactor), file locations, expected modules, flags/kill-switch, rollout notes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Test plan
+      description: What tests must be added/updated? How to verify manually?
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability
+      description: Required logs, metrics, traces, request IDs, alerts if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: uiux
+    attributes:
+      label: UI/UX notes
+      description: States (loading/empty/error), accessibility, screenshot expectations.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Delivery/security/runtime risks and rollback plan.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env_change_request
+    attributes:
+      label: ENV CHANGE REQUEST
+      description: Mandatory. If no new key/API/variable, write `None`.
+    validations:
+      required: true
