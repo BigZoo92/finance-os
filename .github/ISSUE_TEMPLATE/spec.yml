@@ -5,12 +5,51 @@ labels:
   - "agent:pm"
   - "breakpoint"
 body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - api
+        - web
+        - worker
+        - powens
+        - db
+        - infra
+        - ui-ux
+        - docs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - p0 (urgent / blocks)
+        - p1 (important)
+        - p2 (nice to have)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cost_impact
+    attributes:
+      label: Cost impact
+      description: Prefer free. If paid, justify clearly.
+      options:
+        - free
+        - paid (justify)
+        - unknown yet
+    validations:
+      required: true
+
   - type: textarea
     id: goal
     attributes:
       label: Goal
       description: What outcome do we need?
-      placeholder: Describe the target outcome and business/user value.
+      placeholder: Target outcome + personal value + why now.
     validations:
       required: true
 
@@ -19,7 +58,6 @@ body:
     attributes:
       label: Non-goals
       description: What is explicitly out of scope?
-      placeholder: List what this work will not include.
     validations:
       required: true
 
@@ -28,7 +66,19 @@ body:
     attributes:
       label: Acceptance criteria
       description: Measurable conditions to accept this work.
-      placeholder: Given/When/Then or bullet criteria.
+      placeholder: Given/When/Then or bullets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: breakpoints
+    attributes:
+      label: Breakpoints (BP1/BP2/BP3)
+      description: Max 3 gates where the agent must stop and request your approval.
+      placeholder: |
+        BP1: approach/plan/contracts approved
+        BP2: PR ready (CI green, tests, screenshots if UI)
+        BP3: ready to ship (flags/monitoring/notes)
     validations:
       required: true
 
@@ -46,7 +96,7 @@ body:
     attributes:
       label: Observability
       description: Logs, metrics, traces, dashboards, alerts.
-      placeholder: What signals confirm success/failure in production?
+      placeholder: Signals that prove success/failure in prod.
     validations:
       required: true
 
@@ -55,7 +105,6 @@ body:
     attributes:
       label: UI/UX notes
       description: UX details, edge states, empty/error/loading behavior.
-      placeholder: Include notes for copy, accessibility, and screenshots needs.
     validations:
       required: true
 
@@ -63,8 +112,7 @@ body:
     id: risks
     attributes:
       label: Risks
-      description: Main product/tech/security risks and mitigations.
-      placeholder: Risk + mitigation + rollback expectations.
+      description: Main product/tech/security risks + mitigations + rollback expectations.
     validations:
       required: true
 
@@ -73,6 +121,13 @@ body:
     attributes:
       label: ENV CHANGE REQUEST
       description: Mandatory. If no new key/API/variable, write `None`.
-      placeholder: List new env vars, API keys, secret rotation, migration steps, owner.
+      placeholder: |
+        Provider: ...
+        Env vars: ...
+        Where used: api/web-ssr/worker
+        How to obtain keys: ...
+        Prod placement (Dokploy): ...
+        Rotation plan: ...
+        Failure mode/fallback: ...
     validations:
       required: true

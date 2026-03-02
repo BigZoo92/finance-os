@@ -1,9 +1,21 @@
 name: Improve
-description: Propose an improvement/challenge to an existing capability.
+description: Challenge specs and propose improvements/pivots.
 title: "improve: "
 labels:
   - "agent:challenger"
 body:
+  - type: dropdown
+    id: cost_impact
+    attributes:
+      label: Cost impact
+      description: Prefer free. If paid, justify clearly.
+      options:
+        - free
+        - paid (justify)
+        - unknown yet
+    validations:
+      required: true
+
   - type: textarea
     id: goal
     attributes:
@@ -13,18 +25,16 @@ body:
       required: true
 
   - type: textarea
-    id: non_goals
+    id: options
     attributes:
-      label: Non-goals
-      description: What this improvement does not attempt.
-    validations:
-      required: true
-
-  - type: textarea
-    id: acceptance_criteria
-    attributes:
-      label: Acceptance criteria
-      description: Specific measurable outcomes for this improvement.
+      label: Options (max 3) + recommendation
+      description: Provide up to 3 options, then recommend one with rationale.
+      placeholder: |
+        Option A: ...
+        Option B: ...
+        Option C: ...
+        Recommendation: ...
+        Why: ...
     validations:
       required: true
 
@@ -48,7 +58,7 @@ body:
     id: uiux
     attributes:
       label: UI/UX notes
-      description: UX implications including states and usability details.
+      description: UX implications including states, copy, accessibility.
     validations:
       required: true
 
@@ -56,7 +66,7 @@ body:
     id: risks
     attributes:
       label: Risks
-      description: Risks, trade-offs, and mitigation plan.
+      description: Risks, trade-offs, mitigation, rollback/kill-switch if relevant.
     validations:
       required: true
 

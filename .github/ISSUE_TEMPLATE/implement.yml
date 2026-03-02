@@ -4,19 +4,27 @@ title: "implement: "
 labels:
   - "agent:dev"
 body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - api
+        - web
+        - worker
+        - powens
+        - db
+        - infra
+        - ui-ux
+        - docs
+    validations:
+      required: true
+
   - type: textarea
     id: goal
     attributes:
       label: Goal
       description: What exactly should be delivered?
-    validations:
-      required: true
-
-  - type: textarea
-    id: non_goals
-    attributes:
-      label: Non-goals
-      description: What must not be included in this implementation.
     validations:
       required: true
 
@@ -37,10 +45,26 @@ body:
       required: true
 
   - type: textarea
+    id: implementation_notes
+    attributes:
+      label: Implementation notes
+      description: Constraints (no-refactor), file locations, expected modules, flags/kill-switch, rollout notes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Test plan
+      description: What tests must be added/updated? How to verify manually?
+    validations:
+      required: true
+
+  - type: textarea
     id: observability
     attributes:
       label: Observability
-      description: Required logs, metrics, traces, alerts, request IDs.
+      description: Required logs, metrics, traces, request IDs, alerts if applicable.
     validations:
       required: true
 
@@ -48,7 +72,7 @@ body:
     id: uiux
     attributes:
       label: UI/UX notes
-      description: UI states, accessibility notes, screenshot expectations.
+      description: States (loading/empty/error), accessibility, screenshot expectations.
     validations:
       required: true
 
