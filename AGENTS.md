@@ -1,136 +1,166 @@
-# AGENTS.md — Finance-OS (Source of Truth for Coding Agents)
+# AGENTS.md — Finance-OS (Single Source of Truth)
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
-This file is the repository-wide source of truth for architecture, workflow, and non-negotiable rules for AI/code agents working on Finance-OS.
-
-> Progressive disclosure rule:
->
-> - Read this file first.
-> - Also read local AGENTS/AGENT files when touching those areas:
->   - ./AGENT.md
->   - apps/api/AGENT.md
->   - apps/web/AGENT.md
->   - apps/worker/AGENT.md (if exists)
->   - packages/\*/AGENT.md (when present)
+Codex reads `AGENTS.md` before doing any work and applies the closest instructions for each file. This repo intentionally uses a SINGLE root `AGENTS.md` for now.
 
 ---
 
-0. Mission & product guardrails (non-negotiable)
+## 0) Mission (non-negotiable)
 
----
+Finance-OS is a strictly personal, single-user “finance cockpit”.
+Every feature must work in **two explicit execution paths**:
 
-Finance-OS is strictly personal, single-user, with a mandatory dual-path on almost every feature:
+- **demo (default):** no DB reads/writes, no Powens/provider calls, deterministic mocks only
+- **admin:** DB + providers enabled, guarded by admin session cookie and/or signed internal state
 
-- demo path (default): no DB reads/writes, no Powens/provider calls, deterministic mocks only.
-- admin path: DB + providers enabled, guarded by admin session (cookie) and/or signed internal state.
+Fail-soft is mandatory:
 
-Fail-soft:
-
-- If an external integration breaks (Powens/news/crypto), the app stays usable with graceful fallback and clear messaging.
+- if any integration breaks (Powens/news/crypto/etc.), the app remains usable (fallback + clear messaging).
 
 Privacy by design:
 
-- No secrets in browser builds, no token leaks in logs/errors, encrypt sensitive tokens at rest.
+- never expose secrets to browser bundles (`VITE_*`), never log tokens/codes, encrypt sensitive tokens at rest.
 
-Observability first:
-
-- No feature ships without minimal logs/metrics/trace hooks.
-
-Experimental stack bias:
-
-- Prefer modern/beta/alpha tech if it gives leverage (Bun/Elysia/TanStack), BUT:
-  - wrap risky parts behind feature flags / kill-switches,
-  - provide fallback behavior,
-  - keep rollback simple.
-
-If a change affects architecture, boundaries, conventions, scripts, shared packages, or Powens flows:
-✅ update this file in the same patch/PR.
+If a change affects architecture, contracts, env, CI/CD, or Powens flows:
+✅ update this file in the same PR.
 
 ---
 
-1. Repo map (monorepo)
-
----
-
-pnpm TypeScript monorepo `finance-os`:
+## 1) Repo map (pnpm TypeScript monorepo)
 
 Apps:
 
-- apps/api : Elysia HTTP API (Bun runtime)
-- apps/web : TanStack Start web app (SSR)
-- apps/worker : background jobs (Powens sync)
+- `apps/api` Elysia HTTP API (Bun runtime)
+- `apps/web` TanStack Start (SSR)
+- `apps/worker` background jobs (Powens sync)
 
 Packages:
 
-- packages/db : Drizzle schema/client/migrations
-- packages/env : env parsing + validation (single source of truth)
-- packages/powens : Powens client + crypto + queue payloads
-- packages/redis : Redis client factory
-- packages/ui : UI components/styles (shadcn present, not sufficient alone)
-- packages/prelude : low-level shared utilities (errors/format/etc.)
+- `packages/db` Drizzle schema + migrations
+- `packages/env` env parsing/validation (single source of truth)
+- `packages/powens` Powens client + crypto + queue payloads
+- `packages/redis` Redis client factory
+- `packages/ui` shared UI components (shadcn baseline)
+- `packages/prelude` low-level utilities (errors/format/etc.)
 
-Never invent scripts/commands:
+Golden rule:
 
-- Always open package.json and docs to find the canonical commands for dev/test/build/migrate.
-
----
-
-2. Non-breakable API contracts (must always exist, demo + admin)
+- Never invent scripts/commands. Always read `package.json` + docs to find canonical commands.
 
 ---
 
-These endpoints must NEVER “404 surprise” in production:
+## 2) Non-breakable API contracts (must always exist)
 
-- GET /auth/me -> 200 { mode: "admin"|"demo", user }
+These endpoints must NEVER “404 surprise” in production (demo + admin):
 
-  - must be Cache-Control: no-store
+- `GET /auth/me` -> `200 { mode: "admin"|"demo", user }`
+
+  - must be `Cache-Control: no-store`
   - must not call DB or Powens
 
-- GET /dashboard/summary?range=7d|30d|90d
-- GET /dashboard/transactions?... (paginated)
-- GET /integrations/powens/status
+- `GET /dashboard/summary?range=7d|30d|90d`
+- `GET /dashboard/transactions?...` (paginated)
+- `GET /integrations/powens/status`
 
 Admin-only sensitive routes:
 
-- GET /integrations/powens/connect-url
-- POST /integrations/powens/sync
-- POST /integrations/powens/callback (admin cookie OR valid signed state)
+- `GET /integrations/powens/connect-url`
+- `POST /integrations/powens/sync`
+- `POST /integrations/powens/callback` (admin cookie OR valid signed state)
 
-Routing principle (prod):
+Prod routing principle:
 
-- Public traffic terminates on web (SSR) only.
-- web proxies /api/\* internally to API_INTERNAL_URL.
+- Public traffic terminates on **web** only.
+- web proxies `/api/*` internally to `API_INTERNAL_URL`.
 - api should not need a public route.
 
 ---
 
-3. Agentic team workflow (roles, boundaries, comms)
+## 3) Architecture rules (backend)
+
+Layering is mandatory:
+
+- `routes/` HTTP parsing, validation, status codes, response shaping only
+- `domain/` use-cases orchestration (no HTTP framework coupling)
+- `repositories/` DB/Redis persistence + queue writes
+- `services/` external providers + deterministic helpers
+- `runtime.ts` composition root
+- `plugin.ts` Elysia plugin that decorates runtime into ctx
+
+Demo-first enforcement:
+
+- In handlers/use-cases, the demo branch MUST short-circuit BEFORE any DB/Powens call.
 
 ---
 
-We run a 4-agent pipeline:
+## 4) Frontend rules (TanStack Start + Query)
 
-1. PM/Orchestrator
-2. Challenger (product improvement)
-3. Dev/Implementer
-4. Reviewer
+Loader-first:
 
-Hard boundaries:
+- Route-critical data comes from loader.
+- Use `ensureQueryData` to prewarm cache.
+- Avoid `useEffect` for request orchestration.
 
-- Challenger does NOT code.
-- Dev does NOT change product scope (must follow spec + accepted clarifications).
-- Reviewer does NOT implement features; reviewer asks for changes.
+Auth consistency (no demo->admin flash):
 
-  3.1 Breakpoints (max 3 per feature)
-  Agents must stop and request approval using label `needs:you` (or explicit ping) at:
+- loaders should prefetch `/auth/me`
+- SSR must keep first render auth-consistent
+- on auth failure/network: fallback to demo, do not crash SSR
 
-- BP1: Approach approved (plan + contracts + risks)
-- BP2: PR ready (CI green, tests done, screenshots/notes if UI)
-- BP3: Release ready (changelog, flags/rollbacks, deploy notes)
+Query rules:
 
-  3.2 Mandatory concise status format (every ping)
-  When requesting validation, respond exactly with:
+- server state uses Query/Mutation (no mirrored local state).
+- define query keys/options in feature modules.
+- mutations invalidate/refetch coherently.
+- dashboard filters live in URL search params (no duplicate local state).
+
+---
+
+## 5) Powens integration (flow + security + boundaries)
+
+Flow:
+
+1. web -> `GET /integrations/powens/connect-url` (admin only)
+2. api returns webview URL with short-lived signed state (HMAC, admin:true, exp:+10min)
+3. user finishes Powens -> lands on web callback route
+4. web callback POSTs to api callback
+5. api exchanges code -> token, encrypts (AES-GCM `APP_ENCRYPTION_KEY`), upserts connection, enqueues job
+6. worker syncs, updates status
+7. dashboard reads `/integrations/powens/status`
+
+Security:
+
+- NEVER log Powens code/tokens
+- persist only encrypted tokens
+- sanitize error payloads
+
+Worker boundaries:
+
+- isolate failures per connection
+- per-connection lock in Redis
+- idempotent upserts
+- maintain operational metrics
+- never expose tokens in logs
+
+---
+
+## 6) Agentic team workflow (roles + breakpoints)
+
+Roles:
+
+1. **PM/Orchestrator**: turns specs into scoped implementation issues; owns priorities + acceptance criteria.
+2. **Challenger**: proposes improvements/pivots; does NOT code.
+3. **Dev/Implementer**: codes exactly the accepted scope; does NOT change product scope.
+4. **Reviewer**: review only; does NOT implement features.
+
+Breakpoints (max 3 per feature):
+
+- **BP1 (Approach):** plan + contracts + risks + kill-switch/rollback approved
+- **BP2 (PR ready):** CI green, tests done, UI screenshots if relevant
+- **BP3 (Release ready):** changelog, flags, monitoring, deploy notes
+
+Mandatory concise status format (every approval request):
 
 - Status: (WAITING_YOU / BLOCKED / READY)
 - What changed: (max 3 bullets)
@@ -138,237 +168,97 @@ Hard boundaries:
 - Needs you: (one decision/question)
 - Next: (one next step)
 
----
+Label expectations:
 
-4. PR rules (quality, scope, safety)
-
----
-
-- Small PRs preferred (avoid “god PR” refactors).
-- No refactor unless explicitly requested by spec/issue.
-- Tests required when behavior changes:
-  - unit/integration where relevant,
-  - SSR boundary checks for auth/demo,
-  - worker job idempotency when touching sync.
-- Docs required when contracts change:
-  - .env examples, docs/\*, and this AGENTS.md if needed.
-- Never commit secrets.
-- Never expose internal tokens via VITE\_\*.
-
-Definition of Done (DoD) for any feature:
-
-- demo path works and is deterministic
-- admin path works (guarded)
-- UI has explicit demo state (banner/badge + disable sensitive actions)
-- CI green + tests
-- logs/errors sanitized (no tokens, no codes)
-- feature flags / kill-switch if integration-risky or beta tech
+- `agent:pm`, `agent:challenger`, `agent:dev`, `agent:review`
+- `breakpoint`, `needs:you`, `ready`, `blocked`
+- `area:*` and `prio:*` must be set on issues/PRs.
 
 ---
 
-5. Architecture rules (backend)
+## 7) ENV / API keys playbook (MANDATORY)
 
----
+If work requires a new external service / API key:
 
-Layering is mandatory:
+1. Add an **ENV CHANGE REQUEST** in the issue/PR:
 
-- routes/ : HTTP parsing, validation, status codes, response shaping only
-- domain/ : use-cases (orchestration), no HTTP framework coupling
-- repositories/: DB/Redis persistence and queue writes
-- services/ : external providers + deterministic helpers
-- runtime.ts : composition root for dependencies
-- plugin.ts : Elysia plugin that decorates runtime into ctx
-
-Elysia practices:
-
-- Use plugin system for DI.
-- Type decorated context for route modules.
-- Keep route registration modular (.use(routePlugin)).
-- Keep set.status and response shaping in route layer only.
-- Validate ranges/pagination at boundary (7d|30d|90d).
-
-Demo-first enforcement:
-
-- In handlers/use-cases, demo branch must short-circuit BEFORE any DB/Powens call.
-
----
-
-6. Frontend rules (TanStack Start + Query)
-
----
-
-Loader-first strategy:
-
-- Route-critical data comes from loader.
-- Use ensureQueryData in loaders to prewarm cache.
-- Avoid useEffect for data orchestration; prefer loaders + Query.
-
-Auth consistency (no demo -> admin flash):
-
-- loaders should prefetch auth/me
-- SSR should keep first render auth-consistent
-- On auth failure/network: fallback to demo, do not crash SSR
-
-Query rules:
-
-- Server state uses Query/Mutation (no “mirrored” local state).
-- Define query keys/options in feature modules.
-- Mutations invalidate/refetch keys coherently.
-- Search params for dashboard filters (avoid duplicate local state).
-
-TanStack DB:
-
-- Only if it provides clear relational/cache value beyond Query.
-
----
-
-7. Powens integration (flow, security, responsibilities)
-
----
-
-Flow:
-
-1. web -> GET /integrations/powens/connect-url (admin only)
-2. api returns webview URL with short-lived signed state (HMAC, admin:true, exp:+10min)
-3. user finishes Powens -> lands on web callback route
-4. web callback POSTs to api callback
-5. api exchanges code -> token, encrypts (AES-GCM APP_ENCRYPTION_KEY), upserts connection, enqueues job
-6. worker syncs, updates status
-7. dashboard reads /integrations/powens/status
-
-Security:
-
-- Never log Powens code or tokens.
-- Persist only encrypted tokens.
-- Sanitize error payloads (toSafeErrorMessage).
-
-Worker boundaries:
-
-- isolate failures per connection
-- per-connection lock in Redis
-- idempotent upserts
-- maintain operational metrics (counts, last sync start/end)
-- never expose tokens in logs
-
----
-
-8. Observability baseline (required)
-
----
-
-- Propagate x-request-id end-to-end (web SSR -> api -> worker)
-- API logs structured JSON to stdout/stderr:
-  level, msg, route, method, status, requestId
-- Error payloads normalized:
-  code, message, requestId, optional safe details
-- Sampling/redaction:
-  - redact secrets automatically
-  - do not log sensitive query params (callback)
-
-When adding monitoring/alerts integrations:
-
-- must be admin-only surfaces
-- must support “incident mode” kill-switch to disable providers
-
----
-
-9. Environment variables & “New API key” playbook (MANDATORY)
-
----
-
-Agents MUST handle env changes explicitly and safely.
-
-If a feature needs a new external service/API key:
-
-1. Create an “ENV CHANGE REQUEST” comment in the issue/PR:
-   - Provider name + purpose
-   - Free vs paid plan (prefer free; justify paid)
+   - Provider + purpose
+   - Free vs paid (prefer free; justify paid)
    - Exact env var names (server-only unless explicitly safe)
-   - Where used (apps/api, apps/web SSR, worker)
-   - Rotation plan (how to change without breaking)
-   - Failure mode (what happens if missing)
-2. Update:
-   - packages/env validation schema
-   - .env.prod.example (and other env examples)
-   - docs/deploy-dokploy-env.md (or relevant deploy docs)
-3. Production placement rules:
-   - Put secrets only in Dokploy runtime env for api/worker (and web SSR if required).
-   - Never expose secrets in VITE\_\*.
-   - If web SSR needs internal auth, use PRIVATE_ACCESS_TOKEN server-side only (never VITE).
+   - Where used (api / web-SSR / worker)
+   - How to obtain the key (steps)
+   - Prod placement (Dokploy: which service)
+   - Rotation plan
+   - Failure mode + fallback
 
-If the env var is missing:
+2. Update in the same PR:
+   - `packages/env` schema
+   - `.env.prod.example`
+   - relevant deploy docs
 
-- feature must fail-soft and keep app usable (demo remains available).
+Hard rule:
 
----
-
-10. Deployment (Dokploy + GHCR + Docker) — condensed rules
+- secrets NEVER go into `VITE_*`.
 
 ---
 
-Source of truth:
+## 8) Observability baseline (required)
 
-- docker-compose.prod.yml (no build)
-- infra/docker/Dockerfile (multi-target)
-- docs/deployment.md, docs/ci-cd.md, docs/deploy-dokploy-env.md
-
-Image strategy:
-
-- CI builds and pushes GHCR images for web/api/worker.
-- Prod compose references image: only (no build).
-- Use immutable tags (vX.Y.Z or sha-\*), no latest.
-
-Runtime hardening (when possible):
-
-- run as non-root
-- read_only + tmpfs /tmp
-- cap_drop ALL + no-new-privileges
-
-Migrations:
-
-- API bootstrap migration via RUN_DB_MIGRATIONS (Drizzle migrations)
-- do not bypass migration history with manual SQL scripts
+- propagate `x-request-id` end-to-end (web SSR -> api -> worker)
+- API logs structured JSON: level, msg, route, method, status, requestId
+- error payload normalized: code, message, requestId, optional safe details
+- redact secrets; do not log sensitive callback query params
 
 ---
 
-11. UI/UX quality bar (beyond shadcn)
+## 9) UI/UX quality bar (premium cockpit)
 
----
+Shadcn is a baseline, not the finish line.
 
-We want “premium cockpit” UX. Shadcn is a baseline, not the finish line.
+Must-have states on any UI work:
 
-UI quality checklist:
+- loading (skeletons matching layout, not generic spinners)
+- empty (beautiful, instructive)
+- error (clear + recoverable)
+- success (tactile feedback)
 
-- clear hierarchy (spacing, typography, rhythm)
-- states: loading/empty/error/success (no jank)
-- micro-interactions: hover, pressed, focus, skeletons
-- accessibility: keyboard, ARIA, contrast
+Design discipline:
+
+- consistent spacing rhythm
+- clear hierarchy (typography, weight, contrast)
+- accessibility (keyboard, ARIA, contrast)
 - performance: heavy graphs lazy-loaded; SSR stable
 
-High-agency UI guidance:
+Anti-slop rules:
 
-- avoid “generic dashboard slop”
-- prefer cohesive layouts, proper spacing, tasteful motion
-- when building new UI modules, include a short “UI rationale” in PR:
-  - what changed visually
-  - screenshots (before/after) if relevant
-  - why it improves daily usability
+- do not ship “generic 3 equal cards” layouts by default
+- verify dependencies before importing new libs (check `package.json`)
+- avoid gratuitous neon/glow/over-gradients; keep one accent color
 
----
+When UI changes:
 
-12. Local instructions & directory overrides
+- include a short “UI rationale” in PR + before/after screenshots.
 
 ---
 
-Always read local AGENT(S).md files when present:
+## 10) Review guidelines (for Codex GitHub reviews)
 
-- apps/api/AGENT.md
-- apps/web/AGENT.md
-- packages/\*/AGENT.md
+Severity:
 
-If local rules conflict with root rules:
+- **P0:** security issue, secret leak risk, data loss, auth/demo dual-path broken, Powens token/code exposure
+- **P1:** contract regression, missing demo path, missing tests for behavior change, SSR auth flash regression, unsafe logging
+- **P2:** style/nit (do not block unless requested)
 
-- local rules win for that directory,
-- but root non-negotiables still apply (demo/admin dual-path, no secrets, contracts).
+Review focus (always):
+
+- demo/admin dual-path correctness
+- no secret exposure (`VITE_*`, logs, error payloads)
+- endpoint contracts preserved
+- tests + CI green
+- rollback/kill-switch present for risky integrations
+
+Docs rule:
+
+- treat typos in docs as P1 only if the PR is “docs-only”.
 
 END.
