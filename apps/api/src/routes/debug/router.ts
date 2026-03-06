@@ -82,6 +82,16 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
   }
 
   return new Elysia({ prefix: '/debug' })
+    .get('/ping', context => {
+      ensureDebugAuthAccess(context)
+
+      return {
+        ok: true,
+        message: 'pong',
+        mode: getAuth(context).mode,
+        requestId: getRequestMeta(context).requestId,
+      }
+    })
     .get('/health', context => {
       requireInternalToken(context)
 
