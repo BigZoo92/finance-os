@@ -61,6 +61,12 @@ const main = async () => {
     expectedStatuses: [200],
   })
 
+  await runCheck({
+    name: 'debug_ping',
+    path: '/debug/ping',
+    expectedStatuses: [200],
+  })
+
   if (debugToken) {
     await runCheck({
       name: 'debug_routes_with_debug_token',
