@@ -47,32 +47,28 @@ const createDebugTestApp = ({
     .use(createDebugRoutes(dependencies))
 }
 
-describe('createDebugRoutes /debug/ping', () => {
-  it('returns pong in demo mode', async () => {
+describe('createDebugRoutes', () => {
+  it('does not expose /debug/ping', async () => {
     const app = createDebugTestApp({ mode: 'demo' })
     const response = await app.handle(new Request('http://finance-os.local/debug/ping'))
-    const payload = await response.json()
 
-    expect(response.status).toBe(200)
-    expect(payload).toEqual({
-      ok: true,
-      message: 'pong',
-      mode: 'demo',
-      requestId: 'req-test',
-    })
+    expect(response.status).toBe(404)
   })
 
-  it('returns pong in admin mode', async () => {
+  it('keeps /debug/auth available', async () => {
     const app = createDebugTestApp({ mode: 'admin' })
-    const response = await app.handle(new Request('http://finance-os.local/debug/ping'))
+    const response = await app.handle(new Request('http://finance-os.local/debug/auth'))
     const payload = await response.json()
 
     expect(response.status).toBe(200)
     expect(payload).toEqual({
       ok: true,
-      message: 'pong',
-      mode: 'admin',
       requestId: 'req-test',
+      hasSession: true,
+      isAdmin: true,
+      hasInternalToken: false,
+      internalTokenSource: null,
+      mode: 'admin',
     })
   })
 })
