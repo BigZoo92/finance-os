@@ -24,7 +24,11 @@ jobs:
 
             const labels = (issue.labels || []).map(l => l.name);
             const has = (n) => labels.includes(n);
+            const title = String(issue.title || "").toLowerCase();
 
+            // Safety rail: keep batch/spec pipelines strictly separated to avoid batch issues entering improve pipelines.
+            if (has("batch:spec")) return;
+            if (!title.startsWith("improve:")) return;
             if (!has("agent:challenger")) return;
             if (!has("autopilot")) return;
 
