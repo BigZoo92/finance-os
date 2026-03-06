@@ -1,0 +1,106 @@
+name: Implement -> Draft PR (spawn)
+
+on:
+    issues:
+        types: [labeled]
+
+permissions:
+    contents: write
+    pull-requests: write
+    issues: write
+
+jobs:
+    spawn_draft_pr:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/github-script@v7
+              with:
+                  script: |
+                      const issue = context.payload.issue;
+                      const addedLabel = context.payload.label?.name ?? null;
+
+                      if (issue.pull_request) return;
+                      if (addedLabel !== "ready") return;
+
+                      const labels = (issue.labels || []).map(l => l.name);
+                      const has = (name) => labels.includes(name);
+
+                      // Only for dev issues
+                      if (!has("agent:dev")) return;
+                      if (has("pr:draft")) return;
+                      if (has("blocked")) return;
+
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const issueNumber = issue.number;
+
+                      // Get default branch + SHA
+                      const repoInfo = await github.rest.repos.get({ owner, repo });
+                      const baseBranch = repoInfo.data.default_branch;
+
+                      const baseRef = await github.rest.git.getRef({
+                        owner, repo, ref: `heads/${baseBranch}`
+                      });
+                      const baseSha = baseRef.data.object.sha;
+
+                      // Branch name
+                      const rawTitle = (issue.title || "implement").toLowerCase()
+                        .replace(/^implement:\s*/i, "")
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/^-+|-+$/g, "")
+                        .slice(0, 40);
+
+                      const branchName = `agent/impl-${issueNumber}-${rawTitle || "task"}`;
+
+                      // Create branch if missing
+                      try {
+                        await github.rest.git.getRef({ owner, repo, ref: `heads/${branchName}` });
+                      } catch (e) {
+                        await github.rest.git.createRef({
+                          owner, repo,
+                          ref: `refs/heads/${branchName}`,
+                          sha: baseSha
+                        });
+                      }
+
+                      // Create draft PR
+                      const prTitle = issue.title || `implement: #${issueNumber}`;
+                      const prBody = [
+                        `Closes #${issueNumber}`,
+                        ``,
+                        `Auto-created draft PR for agent work.`,
+                        `Follow AGENTS.md strictly.`,
+                      ].join("\n");
+
+                      const pr = await github.rest.pulls.create({
+                        owner, repo,
+                        title: prTitle,
+                        head: branchName,
+                        base: baseBranch,
+                        body: prBody,
+                        draft: true
+                      });
+
+                      // Label the issue + comment with next action (human-trigger)
+                      await github.rest.issues.addLabels({
+                        owner, repo, issue_number: issueNumber, labels: ["pr:draft"]
+                      });
+
+                      const copyPaste = [
+                        `Draft PR created: #${pr.data.number}`,
+                        ``,
+                        `Next (1 action): open the PR and paste this comment to start Codex:`,
+                        "```",
+                        "@codex implement this PR following repo AGENTS.md. Keep scope small. Add/adjust tests. No unrelated refactor.",
+                        "```",
+                      ].join("\n");
+
+                      await github.rest.issues.createComment({
+                        owner, repo, issue_number: issueNumber, body: copyPaste
+                      });
+
+                      // Also comment on the PR to give context (without @codex to avoid bot-trigger issues)
+                      await github.rest.issues.createComment({
+                        owner, repo, issue_number: pr.data.number,
+                        body: `Context: closes #${issueNumber}. Start Codex by commenting @codex (human comment required).`
+                      });
