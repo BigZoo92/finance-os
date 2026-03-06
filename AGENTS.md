@@ -62,8 +62,6 @@ These endpoints must NEVER “404 surprise” in production (demo + admin):
 - `GET /dashboard/summary?range=7d|30d|90d`
 - `GET /dashboard/transactions?...` (paginated)
 - `GET /integrations/powens/status`
-- `GET /debug/ping` -> `200 { ok: true, message: "pong", mode: "admin"|"demo", requestId }`
-
 Admin-only sensitive routes:
 
 - `GET /integrations/powens/connect-url`
