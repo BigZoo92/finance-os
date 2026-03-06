@@ -1,0 +1,17 @@
+name: Block agent stub files
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+    no_stubs:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Fail if agent stubs exist in PR diff
+              run: |
+                  if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^\.github/agent-stubs/'; then
+                    echo "Agent stub file(s) present. Must be deleted before merge."
+                    exit 1
+                  fi

@@ -1,0 +1,54 @@
+name: Batch Spec (Epic)
+description: One issue = many specs. Codex will refine and spawn child spec issues.
+title: "batch: "
+labels:
+  - "agent:pm"
+  - "batch:spec"
+  - "autopilot"
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area (dominant)
+      options:
+        - api
+        - web
+        - worker
+        - powens
+        - db
+        - infra
+        - ui-ux
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Big goal / motivation / constraints.
+    validations:
+      required: true
+
+  - type: textarea
+    id: raw_specs
+    attributes:
+      label: Raw specs list (one bullet per spec)
+      description: |
+        Write rough items. Codex will rewrite into proper spec issues and may add missing classics.
+      placeholder: |
+        - Monitoring: ops dashboard (admin only)
+        - Alerting: disk space low
+        - ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cost_bias
+    attributes:
+      label: Cost bias
+      options:
+        - prefer free
+        - ok paid if justified
+    validations:
+      required: true
