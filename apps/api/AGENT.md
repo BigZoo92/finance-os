@@ -67,6 +67,7 @@ For dashboard read-model endpoints, keep DB reads in dedicated repositories/use-
 ## 5) Debug and private mode
 
 - `GET /debug/metrics` must not expose secrets.
+- `GET /debug/ping` is a cross-mode liveness endpoint (`demo` + `admin`) and must not touch DB/providers.
 - `GET /debug/health` and `GET /debug/auth` are internal diagnostics endpoints.
 - `GET /__routes` is a debug endpoint for runtime route introspection.
 - In production, `/__routes` must stay inaccessible unless `PRIVATE_ACCESS_TOKEN` is configured and provided.

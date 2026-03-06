@@ -5,6 +5,7 @@
 ```bash
 wget -qSO- http://finance-os-api:3001/health
 wget -qSO- http://finance-os-api:3001/auth/me
+wget -qSO- http://finance-os-api:3001/debug/ping
 wget -qSO- http://finance-os-api:3001/debug/auth --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
 wget -qSO- http://finance-os-api:3001/debug/routes --header='x-finance-os-debug-token: <DEBUG_METRICS_TOKEN>'
 ```
@@ -34,6 +35,8 @@ Notes:
 
 ## Verifier mode demo/admin
 
+- `GET /debug/ping`:
+  - `200 { ok: true, message: "pong", mode: "demo"|"admin", requestId }`
 - `GET /debug/auth` (token interne requis en prod):
   - `hasSession`, `isAdmin`, `hasInternalToken`, `mode`, `requestId`
 
