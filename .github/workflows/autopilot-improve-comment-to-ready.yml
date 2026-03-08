@@ -1,0 +1,79 @@
+name: Autopilot - Improve Codex reply to ready
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: autopilot-improve-comment-ready-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const payloadIssue = context.payload.issue;
+            const comment = context.payload.comment;
+
+            if (payloadIssue.pull_request) return;
+
+            function isCodexAuthor(login) {
+              const value = String(login || "").toLowerCase();
+              return (
+                value === "codex" ||
+                value === "codex[bot]" ||
+                value === "chatgpt-codex-connector" ||
+                value === "chatgpt-codex-connector[bot]"
+              );
+            }
+
+            if (!isCodexAuthor(comment?.user?.login)) return;
+
+            const live = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: payloadIssue.number,
+            });
+
+            const issue = live.data;
+            const labels = (issue.labels || []).map((l) =>
+              typeof l === "string" ? l : l.name
+            );
+            const has = (n) => labels.includes(n);
+            const title = String(issue.title || "").toLowerCase();
+
+            if (has("batch:spec")) return;
+            if (!title.startsWith("improve:")) return;
+            if (!has("agent:challenger")) return;
+            if (!has("autopilot")) return;
+            if (has("ready")) return;
+
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: "ready" });
+            } catch (e) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: "ready",
+                  color: "0e8a16",
+                  description: "Ready for next stage",
+                });
+              } catch {}
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issue.number,
+              labels: ["ready"],
+            });

@@ -1,114 +1,110 @@
-name: Autopilot - Batch spec -> Codex plan
+name: Autopilot - Batch to Codex
 
 on:
-    issues:
-        types: [labeled]
+  issues:
+    types: [labeled]
 
 permissions:
-    issues: write
+  issues: write
+
+concurrency:
+  group: autopilot-batch-to-codex-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
-    ping_codex:
-        if: github.event.label.name == 'ready'
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/github-script@v7
-              with:
-                  github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
-                  script: |
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const issue = context.payload.issue;
-                      if (issue.pull_request) return;
+  ping_codex:
+    if: github.event.label.name == 'ready'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const payloadIssue = context.payload.issue;
 
-                      const labels = (issue.labels || []).map(l => l.name);
-                      const has = (n) => labels.includes(n);
+            if (payloadIssue.pull_request) return;
 
-                      if (!has("batch:spec")) return;
-                      if (!has("autopilot")) return;
+            const live = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: payloadIssue.number,
+            });
 
-                      // Idempotency guards
-                      if (has("autopilot:waiting-json")) return;
-                      if (has("autopilot:spawned-specs")) return;
+            const issue = live.data;
+            const labels = (issue.labels || []).map((l) =>
+              typeof l === "string" ? l : l.name
+            );
+            const has = (n) => labels.includes(n);
+            const title = String(issue.title || "").toLowerCase();
 
-                      async function ensureLabel(name, color, description) {
-                        try {
-                          await github.rest.issues.getLabel({ owner, repo, name });
-                        } catch (e) {
-                          // create if missing
-                          try {
-                            await github.rest.issues.createLabel({
-                              owner, repo, name, color, description
-                            });
-                          } catch (err) {
-                            // ignore if race (already created)
-                          }
-                        }
-                      }
+            if (!has("batch:spec")) return;
+            if (!has("autopilot")) return;
 
-                      // Ensure internal labels exist (no manual setup needed)
-                      await ensureLabel("autopilot:waiting-json", "d4c5f9", "Batch: waiting for Codex JSON response");
-                      await ensureLabel("autopilot:spawned-specs", "c8f2c2", "Batch: spec issues have been spawned");
-                      await ensureLabel("autopilot:retried", "ffe8a3", "Batch: Codex JSON retry already requested");
+            // Never run this on non-batch tracks.
+            if (title.startsWith("spec:")) return;
+            if (title.startsWith("improve:")) return;
+            if (title.startsWith("implement:")) return;
 
-                      // Build a stable nonce so we can match the right reply if needed later.
-                      const nonce = `BATCH-${issue.number}-${Date.now()}`;
+            // Idempotency: skip if a request is already in flight or completed.
+            if (has("autopilot:waiting-json")) return;
+            if (has("autopilot:spawned-specs")) return;
 
-                      const body = [
-                        "@codex",
-                        "You are the PM/Orchestrator for Finance-OS.",
-                        "",
-                        `AUTOPILOT_BATCH_NONCE: ${nonce}`,
-                        "",
-                        "Task:",
-                        "- Read this batch issue containing rough specs (bullets).",
-                        "- Rewrite them into clean child issues of type `spec:` using our spec template fields.",
-                        "- CHALLENGE + improve each spec: better scope, better acceptance criteria, better risks/rollback, better observability, better UI/UX states.",
-                        "- Prefer free; if paid, justify clearly.",
-                        "",
-                        "CRITICAL OUTPUT RULES:",
-                        "1) Output STRICT JSON only, inside exactly ONE fenced block: ```json ... ```",
-                        "2) No text outside the JSON fence.",
-                        "3) JSON MUST be a top-level array.",
-                        "",
-                        "CARDINALITY RULE (super important):",
-                        "- For EACH bullet in the batch raw list, produce EXACTLY 1 spec item (1:1), same order.",
-                        "- Do NOT merge bullets together; do NOT split one bullet into multiple requested items.",
-                        "- After that, you MAY add extra specs at the end (classic/important), but mark them as origin='extra'.",
-                        "",
-                        "Each item MUST include these fields:",
-                        `{
-                          "title": "spec: <short title>",
-                          "area": "api|web|worker|powens|db|infra|ui-ux|docs",
-                          "priority": "p0|p1|p2",
-                          "cost_impact": "free|paid (justify)|unknown yet",
-                          "origin": "requested|extra",
-                          "source_bullet": 1,
-                          "goal": "...",
-                          "non_goals": "...",
-                          "acceptance_criteria": ["..."],
-                          "breakpoints": ["BP1 ...", "BP2 ...", "BP3 ..."],
-                          "dual_path": "Demo: ... Admin: ...",
-                          "observability": "...",
-                          "uiux": "...",
-                          "risks": "...",
-                          "env_change_request": "None OR provider + vars + where + how-to-get + rotation + failure mode"
-                        }`,
-                        "",
-                        "Hard rules:",
-                        "- Keep each spec SMALL and shippable (no mega-refactors).",
-                        "- Respect demo/admin dual-path (demo must short-circuit before DB/providers).",
-                        "- Single-user only. No multi-user abstractions.",
-                        "- Do not include secrets; env vars must be server-only unless explicitly safe.",
-                        "",
-                        "Now read the batch issue body and produce the JSON.",
-                      ].join("\n");
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                } catch {}
+              }
+            }
 
-                      await github.rest.issues.createComment({
-                        owner, repo, issue_number: issue.number, body
-                      });
+            await ensureLabel("autopilot:waiting-json", "d4c5f9", "Batch: waiting for Codex JSON response");
+            await ensureLabel("autopilot:spawned-specs", "c8f2c2", "Batch: spec issues have been spawned");
+            await ensureLabel("autopilot:retried", "ffe8a3", "Batch: Codex JSON retry already requested");
+            await ensureLabel("autopilot:batched", "bfd4f2", "Batch was dispatched to Codex");
 
-                      // Mark state as waiting for JSON so the spawn workflow knows what to do
-                      await github.rest.issues.addLabels({
-                        owner, repo, issue_number: issue.number, labels: ["autopilot:waiting-json", "autopilot:batched"]
-                      });
+            const nonce = `BATCH-${issue.number}-${Date.now()}`;
+
+            const body = [
+              "@codex",
+              "AUTOPILOT_BATCH_NONCE: " + nonce,
+              "",
+              "Return STRICT JSON ONLY in exactly ONE ```json``` fence.",
+              "Top-level value must be an array.",
+              "No text outside the JSON fence.",
+              "",
+              "Create one spec object per raw bullet (1:1, same order).",
+              "Optional extra items are allowed only at the end with origin='extra'.",
+              "",
+              "Each item must include:",
+              "- title (starts with 'spec:')",
+              "- area (api|web|worker|powens|db|infra|ui-ux|docs)",
+              "- priority (p0|p1|p2)",
+              "- origin (requested|extra)",
+              "- source_bullet (number)",
+              "- goal, non_goals, acceptance_criteria[], breakpoints[]",
+              "- dual_path, observability, uiux, risks, env_change_request",
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issue.number,
+              body,
+            });
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issue.number,
+              labels: ["autopilot:waiting-json", "autopilot:batched"],
+            });
