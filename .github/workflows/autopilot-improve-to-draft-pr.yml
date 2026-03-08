@@ -1,8 +1,8 @@
-name: Autopilot - Improve -> Draft PR + ping Codex
+name: Autopilot - Apply Codex diff to PR branch
 
 on:
-    issues:
-        types: [labeled]
+    issue_comment:
+        types: [created]
 
 permissions:
     contents: write
@@ -10,142 +10,133 @@ permissions:
     issues: write
 
 jobs:
-    spawn:
-        if: github.event.label.name == 'ready'
+    apply_patch:
         runs-on: ubuntu-latest
         steps:
-            - name: Create branch + stub + PR
-              id: pr
+            - name: Guard - only PR comments with patch marker
+              id: guard
               uses: actions/github-script@v7
               with:
                   script: |
                       const issue = context.payload.issue;
-                      if (issue.pull_request) return;
+                      const comment = context.payload.comment;
 
-                      const labels = (issue.labels || []).map(l => l.name);
-                      const has = (n) => labels.includes(n);
-
-                      // HARD guards: only improve issues, never batch
-                      const title = String(issue.title || "").toLowerCase();
-                      if (has("batch:spec")) return;
-                      if (!title.startsWith("improve:")) return;
-
-                      if (!has("agent:challenger") || !has("autopilot")) return;
-                      if (has("pr:draft")) return;
-
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const issueNumber = issue.number;
-
-                      const repoInfo = await github.rest.repos.get({ owner, repo });
-                      const baseBranch = repoInfo.data.default_branch;
-
-                      const baseRef = await github.rest.git.getRef({ owner, repo, ref: `heads/${baseBranch}` });
-                      const baseSha = baseRef.data.object.sha;
-
-                      const rawTitle = (issue.title || "improve").toLowerCase()
-                        .replace(/^improve:\s*/i, "")
-                        .replace(/[^a-z0-9]+/g, "-")
-                        .replace(/^-+|-+$/g, "")
-                        .slice(0, 40);
-
-                      const branchName = `agent/impl-${issueNumber}-${rawTitle || "task"}`;
-
-                      // Create branch if missing
-                      try {
-                        await github.rest.git.getRef({ owner, repo, ref: `heads/${branchName}` });
-                      } catch {
-                        await github.rest.git.createRef({ owner, repo, ref: `refs/heads/${branchName}`, sha: baseSha });
+                      if (!issue.pull_request) {
+                        core.setOutput("run", "false");
+                        return;
                       }
 
-                      // Stub commit so PR can exist (GitHub requires commits between branches)
-                      const stubPath = `.github/agent-stubs/improve-${issueNumber}.md`;
-                      const now = new Date().toISOString();
+                      const body = comment.body || "";
+                      if (!body.includes("AUTOPILOT_PATCH_V1")) {
+                        core.setOutput("run", "false");
+                        return;
+                      }
 
-                      const baseCommit = await github.rest.git.getCommit({ owner, repo, commit_sha: baseSha });
-                      const baseTreeSha = baseCommit.data.tree.sha;
+                      core.setOutput("run", "true");
+                      core.setOutput("prNumber", String(issue.number));
+                      core.setOutput("commentId", String(comment.id));
 
-                      const stubContent =
-                        `# Agent stub for improve #${issueNumber}\n\n` +
-                        `Created automatically to allow a PR to exist.\n\n` +
-                        `- Created at: ${now}\n` +
-                        `- Branch: ${branchName}\n\n` +
-                        `Delete this file in the first real commit.\n`;
+            - name: Stop if not eligible
+              if: steps.guard.outputs.run != 'true'
+              run: exit 0
 
-                      const newTree = await github.rest.git.createTree({
-                        owner, repo, base_tree: baseTreeSha,
-                        tree: [{ path: stubPath, mode: "100644", type: "blob", content: stubContent }]
-                      });
-
-                      const newCommit = await github.rest.git.createCommit({
-                        owner, repo,
-                        message: `chore(agent): stub for improve #${issueNumber}`,
-                        tree: newTree.data.sha,
-                        parents: [baseSha]
-                      });
-
-                      await github.rest.git.updateRef({
-                        owner, repo, ref: `heads/${branchName}`, sha: newCommit.data.sha, force: true
-                      });
-
-                      // IMPORTANT: draft:false => enables true 0-click merge-on-green
-                      const pr = await github.rest.pulls.create({
-                        owner, repo,
-                        title: issue.title.replace(/^improve:\s*/i, "implement: "),
-                        head: branchName,
-                        base: baseBranch,
-                        body: `From improve issue: #${issueNumber}\n\nAutopilot PR.\n\nStub file to delete: ${stubPath}`,
-                        draft: false
-                      });
-
-                      await github.rest.issues.addLabels({
-                        owner, repo, issue_number: issueNumber, labels: ["pr:draft"]
-                      });
-
-                      core.setOutput("prNumber", String(pr.data.number));
-                      core.setOutput("stubPath", stubPath);
-
-            - name: Ping Codex in PR (as YOU via PAT) -> DIFF PATCH MODE
-              if: steps.pr.outputs.prNumber != ''
+            - name: Fetch PR info
+              id: pr
               uses: actions/github-script@v7
               with:
-                  github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
                   script: |
                       const owner = context.repo.owner;
                       const repo = context.repo.repo;
-                      const prNumber = Number("${{ steps.pr.outputs.prNumber }}");
-                      const stubPath = "${{ steps.pr.outputs.stubPath }}";
+                      const pull_number = Number("${{ steps.guard.outputs.prNumber }}");
+                      const pr = await github.rest.pulls.get({ owner, repo, pull_number });
 
-                      const body = [
-                        "@codex",
-                        "",
-                        "You are the Dev/Implementer. Work ONLY by replying with a patch we can apply automatically.",
-                        "",
-                        "CRITICAL:",
-                        "- Do NOT create PRs in Codex UI.",
-                        "- Do NOT ask for extraction/export.",
-                        "- Reply ONLY in this PR thread.",
-                        "- Your output MUST include AUTOPILOT_PATCH_V1 and exactly ONE ```diff``` block.",
-                        "",
-                        "Task:",
-                        "- Implement this PR based on the improve issue discussion.",
-                        "- Follow repo AGENTS.md strictly.",
-                        `- First real change MUST delete \`${stubPath}\`.`,
-                        "- Keep scope small. Add/adjust tests. No unrelated refactor.",
-                        "",
-                        "OUTPUT FORMAT (exact):",
-                        "AUTOPILOT_PATCH_V1",
-                        "```diff",
-                        "<unified diff patch here>",
-                        "```",
-                        "",
-                        "Then add:",
-                        "Status: READY",
-                        "What changed: (max 3 bullets)",
-                        "Risk: (low/med/high + why)",
-                        "Next: (one next step)"
-                      ].join("\n");
+                      if (pr.data.head.repo.full_name !== `${owner}/${repo}`) {
+                        core.setFailed("PR head is a fork; cannot push safely.");
+                        return;
+                      }
+
+                      core.setOutput("headRef", pr.data.head.ref);
+
+            - name: Skip if this comment was already applied
+              id: seen
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
+                      const commentId = "${{ steps.guard.outputs.commentId }}";
+                      const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
+
+                      const comments = await github.paginate(github.rest.issues.listComments, {
+                        owner,
+                        repo,
+                        issue_number: prNumber,
+                        per_page: 100,
+                      });
+
+                      const already = comments.some(c => (c.body || "").includes(marker));
+                      core.setOutput("skip", already ? "true" : "false");
+
+            - name: Stop if already applied
+              if: steps.seen.outputs.skip == 'true'
+              run: exit 0
+
+            - name: Checkout PR head branch (with PAT)
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ steps.pr.outputs.headRef }}
+                  fetch-depth: 0
+                  token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+
+            - name: Extract diff from comment into codex.patch
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const fs = require("fs");
+                      const body = context.payload.comment.body || "";
+                      const m = body.match(/```diff\s*([\s\S]*?)\s*```/i);
+                      if (!m) {
+                        core.setFailed("No ```diff``` block found in Codex comment.");
+                        return;
+                      }
+                      fs.writeFileSync("codex.patch", m[1], "utf8");
+
+            - name: Apply patch (3-way)
+              run: |
+                  git apply --3way --whitespace=nowarn codex.patch
+
+            - name: Commit & push
+              run: |
+                  if [ -z "$(git status --porcelain)" ]; then
+                    echo "No changes after applying patch."
+                    exit 1
+                  fi
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                  git add -A
+                  git commit -m "chore(autopilot): apply codex patch (#${{ steps.guard.outputs.prNumber }})"
+                  git push origin HEAD:${{ steps.pr.outputs.headRef }}
+
+            - name: Comment success
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
+                      const commentId = "${{ steps.guard.outputs.commentId }}";
+                      const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
 
                       await github.rest.issues.createComment({
-                        owner, repo, issue_number: prNumber, body
+                        owner,
+                        repo,
+                        issue_number: prNumber,
+                        body: [
+                          "✅ Autopilot applied Codex patch and pushed commits to this PR branch.",
+                          "",
+                          marker
+                        ].join("\n")
                       });
