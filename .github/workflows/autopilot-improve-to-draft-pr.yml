@@ -14,7 +14,7 @@ jobs:
         if: github.event.label.name == 'ready'
         runs-on: ubuntu-latest
         steps:
-            - name: Create branch + stub + draft PR
+            - name: Create branch + stub + PR
               id: pr
               uses: actions/github-script@v7
               with:
@@ -24,6 +24,11 @@ jobs:
 
                       const labels = (issue.labels || []).map(l => l.name);
                       const has = (n) => labels.includes(n);
+
+                      // HARD guards: only improve issues, never batch
+                      const title = String(issue.title || "").toLowerCase();
+                      if (has("batch:spec")) return;
+                      if (!title.startsWith("improve:")) return;
 
                       if (!has("agent:challenger") || !has("autopilot")) return;
                       if (has("pr:draft")) return;
@@ -46,7 +51,7 @@ jobs:
 
                       const branchName = `agent/impl-${issueNumber}-${rawTitle || "task"}`;
 
-                      // Create branch
+                      // Create branch if missing
                       try {
                         await github.rest.git.getRef({ owner, repo, ref: `heads/${branchName}` });
                       } catch {
@@ -62,7 +67,7 @@ jobs:
 
                       const stubContent =
                         `# Agent stub for improve #${issueNumber}\n\n` +
-                        `Created automatically to allow a draft PR to exist.\n\n` +
+                        `Created automatically to allow a PR to exist.\n\n` +
                         `- Created at: ${now}\n` +
                         `- Branch: ${branchName}\n\n` +
                         `Delete this file in the first real commit.\n`;
@@ -83,13 +88,14 @@ jobs:
                         owner, repo, ref: `heads/${branchName}`, sha: newCommit.data.sha, force: true
                       });
 
+                      // IMPORTANT: draft:false => enables true 0-click merge-on-green
                       const pr = await github.rest.pulls.create({
                         owner, repo,
                         title: issue.title.replace(/^improve:\s*/i, "implement: "),
                         head: branchName,
                         base: baseBranch,
-                        body: `From improve issue: #${issueNumber}\n\nAutopilot PR.`,
-                        draft: true
+                        body: `From improve issue: #${issueNumber}\n\nAutopilot PR.\n\nStub file to delete: ${stubPath}`,
+                        draft: false
                       });
 
                       await github.rest.issues.addLabels({
@@ -99,7 +105,7 @@ jobs:
                       core.setOutput("prNumber", String(pr.data.number));
                       core.setOutput("stubPath", stubPath);
 
-            - name: Ping Codex in PR (as YOU via PAT)
+            - name: Ping Codex in PR (as YOU via PAT) -> DIFF PATCH MODE
               if: steps.pr.outputs.prNumber != ''
               uses: actions/github-script@v7
               with:
@@ -112,19 +118,32 @@ jobs:
 
                       const body = [
                         "@codex",
-                        "You are the Dev/Implementer.",
+                        "",
+                        "You are the Dev/Implementer. Work ONLY by replying with a patch we can apply automatically.",
+                        "",
+                        "CRITICAL:",
+                        "- Do NOT create PRs in Codex UI.",
+                        "- Do NOT ask for extraction/export.",
+                        "- Reply ONLY in this PR thread.",
+                        "- Your output MUST include AUTOPILOT_PATCH_V1 and exactly ONE ```diff``` block.",
                         "",
                         "Task:",
                         "- Implement this PR based on the improve issue discussion.",
                         "- Follow repo AGENTS.md strictly.",
-                        `- First real commit: delete \`${stubPath}\`.`,
+                        `- First real change MUST delete \`${stubPath}\`.`,
                         "- Keep scope small. Add/adjust tests. No unrelated refactor.",
                         "",
-                        "When done, comment:",
+                        "OUTPUT FORMAT (exact):",
+                        "AUTOPILOT_PATCH_V1",
+                        "```diff",
+                        "<unified diff patch here>",
+                        "```",
+                        "",
+                        "Then add:",
                         "Status: READY",
                         "What changed: (max 3 bullets)",
                         "Risk: (low/med/high + why)",
-                        "Next: (one next step)",
+                        "Next: (one next step)"
                       ].join("\n");
 
                       await github.rest.issues.createComment({
