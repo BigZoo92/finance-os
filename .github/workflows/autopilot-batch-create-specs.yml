@@ -7,33 +7,50 @@ on:
 permissions:
     issues: write
 
+concurrency:
+    group: autopilot-batch-spawn-specs-${{ github.event.issue.number }}
+    cancel-in-progress: false
+
 jobs:
     spawn_specs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/github-script@v7
               with:
-                  # Use your PAT so the automation acts "like you"
                   github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
                   script: |
                       const owner = context.repo.owner;
                       const repo = context.repo.repo;
 
-                      const issue = context.payload.issue;   // batch issue
+                      const payloadIssue = context.payload.issue;
                       const comment = context.payload.comment;
 
-                      if (issue.pull_request) return;
+                      if (payloadIssue.pull_request) return;
 
-                      const labels = (issue.labels || []).map(l => l.name);
+                      // Only react to Codex replies, never to our own automation comments.
+                      const login = String(comment.user?.login || "").toLowerCase();
+                      if (!login.includes("codex")) return;
+
+                      // Always re-fetch the live issue to avoid stale label decisions.
+                      const live = await github.rest.issues.get({
+                        owner,
+                        repo,
+                        issue_number: payloadIssue.number,
+                      });
+
+                      const issue = live.data;
+                      const labels = (issue.labels || []).map((l) =>
+                        typeof l === "string" ? l : l.name
+                      );
                       const has = (n) => labels.includes(n);
 
-                      if (!has("batch:spec")) return;
-                      if (!has("autopilot")) return;
+                      if (has("batch:spec") === false) return;
+                      if (has("autopilot") === false) return;
 
-                      // Only process when we are explicitly waiting for JSON (prevents random triggers)
-                      if (!has("autopilot:waiting-json")) return;
+                      // Only process when we are explicitly waiting for JSON.
+                      if (has("autopilot:waiting-json") === false) return;
 
-                      // Idempotency: do nothing if already spawned
+                      // Idempotency: do nothing if already spawned.
                       if (has("autopilot:spawned-specs")) return;
 
                       async function ensureLabel(name, color, description) {
@@ -41,7 +58,13 @@ jobs:
                           await github.rest.issues.getLabel({ owner, repo, name });
                         } catch (e) {
                           try {
-                            await github.rest.issues.createLabel({ owner, repo, name, color, description });
+                            await github.rest.issues.createLabel({
+                              owner,
+                              repo,
+                              name,
+                              color,
+                              description,
+                            });
                           } catch {}
                         }
                       }
@@ -51,19 +74,15 @@ jobs:
                       await ensureLabel("autopilot:retried", "ffe8a3", "Batch: Codex JSON retry already requested");
                       await ensureLabel("needs:you", "d93f0b", "Human attention required");
 
-                      // --- JSON extraction (robust) ---
                       const text = comment.body || "";
 
                       function extractJsonBlock(s) {
-                        // 1) Prefer ```json ... ```
                         let m = s.match(/```json\s*([\s\S]*?)\s*```/i);
                         if (m?.[1]) return m[1].trim();
 
-                        // 2) Fallback: any fenced block ``` ... ```
                         m = s.match(/```\s*([\s\S]*?)\s*```/);
                         if (m?.[1]) return m[1].trim();
 
-                        // 3) Last resort: substring from first [ to last ]
                         const i = s.indexOf("[");
                         const j = s.lastIndexOf("]");
                         if (i !== -1 && j !== -1 && j > i) return s.slice(i, j + 1).trim();
@@ -74,26 +93,50 @@ jobs:
                       const jsonText = extractJsonBlock(text);
 
                       async function requestRetry(reason) {
-                        // One automatic retry, then stop
                         if (has("autopilot:retried")) {
                           await github.rest.issues.createComment({
-                            owner, repo, issue_number: issue.number,
-                            body: `❌ ${reason}\n\nI already requested one retry. Marking needs:you.`
+                            owner,
+                            repo,
+                            issue_number: issue.number,
+                            body: `❌ ${reason}\n\nI already requested one retry. Marking needs:you.`,
                           });
-                          await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: ["needs:you"] });
+
+                          await github.rest.issues.addLabels({
+                            owner,
+                            repo,
+                            issue_number: issue.number,
+                            labels: ["needs:you"],
+                          });
+
+                          try {
+                            await github.rest.issues.removeLabel({
+                              owner,
+                              repo,
+                              issue_number: issue.number,
+                              name: "autopilot:waiting-json",
+                            });
+                          } catch {}
+
                           return;
                         }
 
-                        await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: ["autopilot:retried"] });
+                        await github.rest.issues.addLabels({
+                          owner,
+                          repo,
+                          issue_number: issue.number,
+                          labels: ["autopilot:retried"],
+                        });
 
                         await github.rest.issues.createComment({
-                          owner, repo, issue_number: issue.number,
+                          owner,
+                          repo,
+                          issue_number: issue.number,
                           body: [
                             "@codex",
                             "Your previous reply could not be parsed as STRICT JSON.",
                             "Please re-output ONLY one single ```json``` fenced block containing a top-level JSON array matching the required schema.",
                             "No text outside the code fence.",
-                          ].join("\n")
+                          ].join("\n"),
                         });
                       }
 
@@ -105,18 +148,18 @@ jobs:
                       let items;
                       try {
                         items = JSON.parse(jsonText);
-                        if (!Array.isArray(items)) throw new Error("JSON is not a top-level array");
+                        if (!Array.isArray(items)) {
+                          throw new Error("JSON is not a top-level array");
+                        }
                       } catch (e) {
                         await requestRetry(`JSON parse failed: ${String(e)}`);
                         return;
                       }
 
-                      // Hard cap (raised)
                       const MAX = 100;
                       const originalCount = items.length;
                       if (items.length > MAX) items = items.slice(0, MAX);
 
-                      // Default area fallback from batch issue body (issue form usually contains "### Area")
                       const batchBody = issue.body || "";
                       const areaMatch = batchBody.match(/###\s*Area[\s\S]*?\n([a-z-]+)/i);
                       const defaultArea = (areaMatch?.[1] || "web").trim();
@@ -130,7 +173,7 @@ jobs:
 
                       function normalizeArea(a) {
                         const s = String(a || "").trim().toLowerCase();
-                        const allowed = new Set(["api","web","worker","powens","db","infra","ui-ux","docs"]);
+                        const allowed = new Set(["api", "web", "worker", "powens", "db", "infra", "ui-ux", "docs"]);
                         return allowed.has(s) ? s : defaultArea;
                       }
 
@@ -140,33 +183,82 @@ jobs:
                         return base.toLowerCase().startsWith("spec:") ? base : `spec: ${base}`;
                       }
 
-                      // Sort: requested items first by source_bullet, then extras
                       items.sort((a, b) => {
-                        const ao = (a?.origin === "extra") ? 1 : 0;
-                        const bo = (b?.origin === "extra") ? 1 : 0;
+                        const ao = a?.origin === "extra" ? 1 : 0;
+                        const bo = b?.origin === "extra" ? 1 : 0;
                         if (ao !== bo) return ao - bo;
+
                         const as = Number(a?.source_bullet ?? 1e9);
                         const bs = Number(b?.source_bullet ?? 1e9);
                         return as - bs;
                       });
 
-                      // Create spec issues
+                      // Build an index of existing spec issues for this batch to avoid duplicates on reruns.
+                      const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+                        owner,
+                        repo,
+                        state: "open",
+                        per_page: 100,
+                      });
+
+                      function existingKeyFromIssue(i) {
+                        if (i.pull_request) return null;
+                        if (!String(i.title || "").toLowerCase().startsWith("spec:")) return null;
+                        const body = i.body || "";
+                        if (!body.includes(`Parent batch: #${issue.number}`)) return null;
+
+                        const meta = body.match(/Origin:\s*(.+?)\s*\|\s*Source bullet:\s*(.+)/i);
+                        const origin = meta?.[1]?.trim() || "unknown";
+                        const sourceBullet = meta?.[2]?.trim() || "n/a";
+
+                        return `${String(i.title || "").toLowerCase()}::${origin}::${sourceBullet}`;
+                      }
+
+                      const existingMap = new Map();
+                      for (const i of openIssues) {
+                        const key = existingKeyFromIssue(i);
+                        if (key) existingMap.set(key, i);
+                      }
+
                       const created = [];
                       const skipped = [];
+
                       for (const it of items) {
                         const area = normalizeArea(it.area);
                         const prio = normalizePriority(it.priority);
-
                         const title = safeTitle(
                           it.title,
-                          (it.goal ? it.goal.slice(0, 60) : `batch item ${created.length + 1}`)
+                          it.goal ? it.goal.slice(0, 60) : `batch item ${created.length + 1}`
                         );
+
+                        const origin = String(it.origin || "unknown");
+                        const sourceBullet = String(it.source_bullet ?? "n/a");
+                        const dedupeKey = `${title.toLowerCase()}::${origin}::${sourceBullet}`;
+
+                        const existing = existingMap.get(dedupeKey);
+                        if (existing) {
+                          try {
+                            await github.rest.issues.addLabels({
+                              owner,
+                              repo,
+                              issue_number: existing.number,
+                              labels: ["ready"],
+                            });
+                          } catch {}
+
+                          created.push(`#${existing.number} (existing)`);
+                          continue;
+                        }
 
                         const body = [
                           it.goal ? `### Goal\n${it.goal}\n` : "",
                           it.non_goals ? `### Non-goals\n${it.non_goals}\n` : "",
-                          it.acceptance_criteria?.length ? `### Acceptance criteria\n${it.acceptance_criteria.map(x => `- ${x}`).join("\n")}\n` : "",
-                          it.breakpoints?.length ? `### Breakpoints (BP1/BP2/BP3)\n${it.breakpoints.map(x => `- ${x}`).join("\n")}\n` : "",
+                          it.acceptance_criteria?.length
+                            ? `### Acceptance criteria\n${it.acceptance_criteria.map((x) => `- ${x}`).join("\n")}\n`
+                            : "",
+                          it.breakpoints?.length
+                            ? `### Breakpoints (BP1/BP2/BP3)\n${it.breakpoints.map((x) => `- ${x}`).join("\n")}\n`
+                            : "",
                           it.dual_path ? `### Demo/Admin dual-path\n${it.dual_path}\n` : "",
                           it.observability ? `### Observability\n${it.observability}\n` : "",
                           it.uiux ? `### UI/UX notes\n${it.uiux}\n` : "",
@@ -174,8 +266,10 @@ jobs:
                           `### ENV CHANGE REQUEST\n${it.env_change_request || "None"}\n`,
                           `---`,
                           `Parent batch: #${issue.number}`,
-                          `Origin: ${it.origin || "unknown"} | Source bullet: ${it.source_bullet ?? "n/a"}`,
-                        ].filter(Boolean).join("\n");
+                          `Origin: ${origin} | Source bullet: ${sourceBullet}`,
+                        ]
+                          .filter(Boolean)
+                          .join("\n");
 
                         const specLabels = [
                           "agent:pm",
@@ -187,15 +281,18 @@ jobs:
 
                         try {
                           const res = await github.rest.issues.create({
-                            owner, repo,
+                            owner,
+                            repo,
                             title,
                             body,
                             labels: specLabels,
                           });
 
-                          // Auto-start downstream pipeline
                           await github.rest.issues.addLabels({
-                            owner, repo, issue_number: res.data.number, labels: ["ready"]
+                            owner,
+                            repo,
+                            issue_number: res.data.number,
+                            labels: ["ready"],
                           });
 
                           created.push(`#${res.data.number}`);
@@ -204,25 +301,35 @@ jobs:
                         }
                       }
 
-                      // Mark batch as done (idempotent)
                       await github.rest.issues.addLabels({
-                        owner, repo, issue_number: issue.number, labels: ["autopilot:spawned-specs"]
+                        owner,
+                        repo,
+                        issue_number: issue.number,
+                        labels: ["autopilot:spawned-specs"],
                       });
 
-                      // Remove waiting label so further comments don't retrigger
                       try {
                         await github.rest.issues.removeLabel({
-                          owner, repo, issue_number: issue.number, name: "autopilot:waiting-json"
+                          owner,
+                          repo,
+                          issue_number: issue.number,
+                          name: "autopilot:waiting-json",
                         });
                       } catch {}
 
                       const summary = [
                         `✅ Spawned spec issues (auto-started): ${created.join(", ") || "_none_"}`,
                         originalCount > MAX ? `⚠️ Truncated from ${originalCount} to ${MAX}.` : "",
-                        skipped.length ? `⚠️ Failed to create some issues: ${skipped.slice(0, 5).join(" | ")}${skipped.length > 5 ? " ..." : ""}` : "",
-                      ].filter(Boolean).join("\n");
+                        skipped.length
+                          ? `⚠️ Failed to create some issues: ${skipped.slice(0, 5).join(" | ")}${skipped.length > 5 ? " ..." : ""}`
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join("\n");
 
                       await github.rest.issues.createComment({
-                        owner, repo, issue_number: issue.number,
-                        body: summary
+                        owner,
+                        repo,
+                        issue_number: issue.number,
+                        body: summary,
                       });

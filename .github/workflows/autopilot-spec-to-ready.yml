@@ -7,12 +7,17 @@ on:
 permissions:
   issues: write
 
+concurrency:
+  group: autopilot-${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -26,20 +31,16 @@ jobs:
             const has = (n) => labels.includes(n);
             const title = String(issue.title || "").toLowerCase();
 
-            // Safety rail: keep batch/spec pipelines strictly separated to avoid batch issues entering improve pipelines.
             if (has("batch:spec")) return;
             if (!title.startsWith("improve:")) return;
             if (!has("agent:challenger")) return;
             if (!has("autopilot")) return;
 
-            // Detect Codex author (best-effort)
             const login = (comment.user?.login || "").toLowerCase();
             if (!login.includes("codex")) return;
 
-            // Only proceed once
             if (has("ready")) return;
 
-            // Add ready label to trigger PR creation workflow
             await github.rest.issues.addLabels({
               owner, repo, issue_number: issue.number, labels: ["ready"]
             });

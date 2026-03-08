@@ -1,154 +1,158 @@
-name: Autopilot - Improve -> Draft PR + ping Codex
+name: Autopilot - Spec -> Improve + ping Codex
 
 on:
     issues:
         types: [labeled]
 
 permissions:
-    contents: write
-    pull-requests: write
     issues: write
 
+concurrency:
+    group: autopilot-spec-to-improve-${{ github.event.issue.number }}
+    cancel-in-progress: false
+
 jobs:
-    spawn:
+    run:
         if: github.event.label.name == 'ready'
         runs-on: ubuntu-latest
         steps:
-            - name: Create branch + stub + PR
-              id: pr
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const issue = context.payload.issue;
-                      if (issue.pull_request) return;
-
-                      const labels = (issue.labels || []).map(l => l.name);
-                      const has = (n) => labels.includes(n);
-                      const title = String(issue.title || "").toLowerCase();
-
-                      // Safety rail: keep batch/spec pipelines strictly separated
-                      if (has("batch:spec")) return;
-
-                      // Only improve issues should create PRs
-                      if (!title.startsWith("improve:")) return;
-
-                      if (!has("agent:challenger") || !has("autopilot")) return;
-                      if (has("pr:created")) return; // stronger idempotency than pr:draft
-
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const issueNumber = issue.number;
-
-                      const repoInfo = await github.rest.repos.get({ owner, repo });
-                      const baseBranch = repoInfo.data.default_branch;
-
-                      const baseRef = await github.rest.git.getRef({ owner, repo, ref: `heads/${baseBranch}` });
-                      const baseSha = baseRef.data.object.sha;
-
-                      const rawTitle = (issue.title || "improve").toLowerCase()
-                        .replace(/^improve:\s*/i, "")
-                        .replace(/[^a-z0-9]+/g, "-")
-                        .replace(/^-+|-+$/g, "")
-                        .slice(0, 40);
-
-                      const branchName = `agent/impl-${issueNumber}-${rawTitle || "task"}`;
-
-                      // Create branch if missing
-                      try {
-                        await github.rest.git.getRef({ owner, repo, ref: `heads/${branchName}` });
-                      } catch {
-                        await github.rest.git.createRef({ owner, repo, ref: `refs/heads/${branchName}`, sha: baseSha });
-                      }
-
-                      // Stub commit so PR can exist (GitHub requires commits between branches)
-                      const stubPath = `.github/agent-stubs/improve-${issueNumber}.md`;
-                      const now = new Date().toISOString();
-
-                      const baseCommit = await github.rest.git.getCommit({ owner, repo, commit_sha: baseSha });
-                      const baseTreeSha = baseCommit.data.tree.sha;
-
-                      const stubContent =
-                        `# Agent stub for improve #${issueNumber}\n\n` +
-                        `Created automatically to allow a PR to exist.\n\n` +
-                        `- Created at: ${now}\n` +
-                        `- Branch: ${branchName}\n\n` +
-                        `Delete this file in the first real commit.\n`;
-
-                      const newTree = await github.rest.git.createTree({
-                        owner, repo, base_tree: baseTreeSha,
-                        tree: [{ path: stubPath, mode: "100644", type: "blob", content: stubContent }]
-                      });
-
-                      const newCommit = await github.rest.git.createCommit({
-                        owner, repo,
-                        message: `chore(agent): stub for improve #${issueNumber}`,
-                        tree: newTree.data.sha,
-                        parents: [baseSha]
-                      });
-
-                      await github.rest.git.updateRef({
-                        owner, repo, ref: `heads/${branchName}`, sha: newCommit.data.sha, force: true
-                      });
-
-                      // IMPORTANT: draft:false => enables true 0-click merge-on-green
-                      const pr = await github.rest.pulls.create({
-                        owner, repo,
-                        title: issue.title.replace(/^improve:\s*/i, "implement: "),
-                        head: branchName,
-                        base: baseBranch,
-                        body: `From improve issue: #${issueNumber}\n\nAutopilot PR.\n\nStub file to delete: ${stubPath}`,
-                        draft: false
-                      });
-
-                      // Mark improve issue as having a PR created (idempotent)
-                      await github.rest.issues.addLabels({
-                        owner, repo, issue_number: issueNumber, labels: ["pr:created"]
-                      });
-
-                      core.setOutput("prNumber", String(pr.data.number));
-                      core.setOutput("stubPath", stubPath);
-
-            - name: Ping Codex in PR (as YOU via PAT) -> DIFF PATCH MODE
-              if: steps.pr.outputs.prNumber != ''
+            - name: Create improve issue
+              id: create
               uses: actions/github-script@v7
               with:
                   github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
                   script: |
                       const owner = context.repo.owner;
                       const repo = context.repo.repo;
-                      const prNumber = Number("${{ steps.pr.outputs.prNumber }}");
-                      const stubPath = "${{ steps.pr.outputs.stubPath }}";
+
+                      const payloadIssue = context.payload.issue;
+                      if (payloadIssue.pull_request) return;
+
+                      // Always re-fetch the live issue to avoid stale label decisions.
+                      const live = await github.rest.issues.get({
+                        owner,
+                        repo,
+                        issue_number: payloadIssue.number,
+                      });
+
+                      const issue = live.data;
+                      const labels = (issue.labels || []).map((l) =>
+                        typeof l === "string" ? l : l.name
+                      );
+                      const has = (n) => labels.includes(n);
+                      const title = String(issue.title || "").toLowerCase();
+
+                      // Safety rail: keep batch/spec pipelines strictly separated.
+                      if (has("batch:spec")) return;
+                      if (!title.startsWith("spec:")) return;
+                      if (!has("autopilot")) return;
+                      if (!has("agent:pm")) return;
+                      if (has("blocked") || has("wontfix") || has("won't fix")) return;
+
+                      const carry = labels.filter(
+                        (n) => n.startsWith("area:") || n.startsWith("prio:")
+                      );
+
+                      const improveTitle = issue.title.replace(/^spec:\s*/i, "improve: ");
+
+                      // Strong idempotency: if an improve issue already exists for this spec, reuse it.
+                      const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+                        owner,
+                        repo,
+                        state: "open",
+                        per_page: 100,
+                      });
+
+                      const existingImprove = openIssues.find((i) => {
+                        if (i.pull_request) return false;
+                        if (i.title !== improveTitle) return false;
+                        return (i.body || "").includes(`Parent spec: #${issue.number}`);
+                      });
+
+                      if (existingImprove) {
+                        if (!has("autopilot:dispatched")) {
+                          await github.rest.issues.addLabels({
+                            owner,
+                            repo,
+                            issue_number: issue.number,
+                            labels: ["autopilot:dispatched"],
+                          });
+                        }
+
+                        core.setOutput("improveNumber", String(existingImprove.number));
+                        return;
+                      }
+
+                      const improve = await github.rest.issues.create({
+                        owner,
+                        repo,
+                        title: improveTitle,
+                        body: [
+                          `Parent spec: #${issue.number}`,
+                          ``,
+                          `Codex will propose up to 3 options + a recommendation.`,
+                          `This is autopilot: when Codex replies, the pipeline continues automatically.`,
+                        ].join("\n"),
+                        labels: ["agent:challenger", "autopilot", ...carry],
+                      });
+
+                      await github.rest.issues.addLabels({
+                        owner,
+                        repo,
+                        issue_number: issue.number,
+                        labels: ["autopilot:dispatched"],
+                      });
+
+                      await github.rest.issues.createComment({
+                        owner,
+                        repo,
+                        issue_number: issue.number,
+                        body: `✅ Improve issue created: #${improve.data.number}`,
+                      });
+
+                      core.setOutput("improveNumber", String(improve.data.number));
+
+            - name: Ping Codex on improve issue (as YOU via PAT)
+              if: steps.create.outputs.improveNumber != ''
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+                  script: |
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const improveNumber = Number("${{ steps.create.outputs.improveNumber }}");
+
+                      const payloadIssue = context.payload.issue;
+                      const live = await github.rest.issues.get({
+                        owner,
+                        repo,
+                        issue_number: payloadIssue.number,
+                      });
+
+                      const spec = live.data;
 
                       const body = [
                         "@codex",
-                        "",
-                        "You are the Dev/Implementer. Work ONLY by replying with a patch we can apply automatically.",
-                        "",
-                        "CRITICAL:",
-                        "- Do NOT create PRs in Codex UI.",
-                        "- Do NOT ask for extraction/export.",
-                        "- Reply ONLY in this PR thread.",
-                        "- Your output MUST include AUTOPILOT_PATCH_V1 and exactly ONE ```diff``` block.",
+                        "You are the Challenger.",
                         "",
                         "Task:",
-                        "- Implement this PR based on the improve issue discussion.",
-                        "- Follow repo AGENTS.md strictly.",
-                        `- First real change MUST delete \`${stubPath}\`.`,
-                        "- Keep scope small. Add/adjust tests. No unrelated refactor.",
+                        "- Propose max 3 options + recommendation for the parent spec.",
+                        "- Cover demo/admin dual-path, observability, UI/UX states, risks + rollback/kill-switch.",
+                        "- Prefer free; if paid, justify.",
                         "",
-                        "OUTPUT FORMAT (exact):",
-                        "AUTOPILOT_PATCH_V1",
-                        "```diff",
-                        "<unified diff patch here>",
-                        "```",
-                        "",
-                        "Then add:",
+                        "End with:",
                         "Status: READY",
                         "What changed: (max 3 bullets)",
                         "Risk: (low/med/high + why)",
-                        "Next: (one next step)"
+                        "Next: (one next step)",
+                        "",
+                        "Parent spec context:",
+                        `- #${spec.number} ${spec.title}`,
                       ].join("\n");
 
                       await github.rest.issues.createComment({
-                        owner, repo, issue_number: prNumber, body
+                        owner,
+                        repo,
+                        issue_number: improveNumber,
+                        body,
                       });
