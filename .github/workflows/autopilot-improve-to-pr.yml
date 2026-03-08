@@ -1,0 +1,267 @@
+name: Autopilot - Improve ready to PR
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: autopilot-improve-to-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: github.event.label.name == 'ready'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const payloadIssue = context.payload.issue;
+
+            if (payloadIssue.pull_request) return;
+
+            const live = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: payloadIssue.number,
+            });
+
+            const issue = live.data;
+            const labels = (issue.labels || []).map((l) =>
+              typeof l === "string" ? l : l.name
+            );
+            const has = (n) => labels.includes(n);
+            const title = String(issue.title || "").toLowerCase();
+
+            if (has("batch:spec")) return;
+            if (!title.startsWith("improve:")) return;
+            if (!has("agent:challenger")) return;
+            if (!has("autopilot")) return;
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                } catch {}
+              }
+            }
+
+            await ensureLabel("pr:created", "0e8a16", "Autopilot PR created for improve issue");
+            await ensureLabel("ready", "0e8a16", "Ready for next stage");
+
+            const repoInfo = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repoInfo.data.default_branch;
+            const rawSlug = String(issue.title || "")
+              .replace(/^improve:\s*/i, "")
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "");
+            const slug = (rawSlug || "task").slice(0, 32);
+            const branch = `agent/impl-${issue.number}-${slug}`;
+            const marker = `Parent improve issue: #${issue.number}`;
+            const issueLink = `https://github.com/${owner}/${repo}/issues/${issue.number}`;
+
+            let pull = null;
+            const prsForHead = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head: `${owner}:${branch}`,
+            });
+            if (prsForHead.data.length > 0) {
+              pull = prsForHead.data[0];
+            }
+
+            if (!pull) {
+              let branchExists = true;
+              try {
+                await github.rest.git.getRef({
+                  owner,
+                  repo,
+                  ref: `heads/${branch}`,
+                });
+              } catch (e) {
+                if (e.status === 404) {
+                  branchExists = false;
+                } else {
+                  throw e;
+                }
+              }
+
+              if (!branchExists) {
+                const baseRef = await github.rest.git.getRef({
+                  owner,
+                  repo,
+                  ref: `heads/${defaultBranch}`,
+                });
+
+                await github.rest.git.createRef({
+                  owner,
+                  repo,
+                  ref: `refs/heads/${branch}`,
+                  sha: baseRef.data.object.sha,
+                });
+              }
+
+              const stubPath = `.github/agent-stubs/improve-${issue.number}.md`;
+              const stubBody = [
+                `# Autopilot stub for improve #${issue.number}`,
+                "",
+                `Source improve issue: ${issueLink}`,
+                "",
+                "This file is a temporary bootstrap marker for branch/PR creation.",
+                "Delete this file in the first real implementation patch.",
+              ].join("\n");
+
+              let stubSha = null;
+              try {
+                const existingStub = await github.rest.repos.getContent({
+                  owner,
+                  repo,
+                  path: stubPath,
+                  ref: branch,
+                });
+                if (!Array.isArray(existingStub.data)) {
+                  stubSha = existingStub.data.sha;
+                }
+              } catch (e) {
+                if (e.status !== 404) throw e;
+              }
+
+              if (!stubSha) {
+                await github.rest.repos.createOrUpdateFileContents({
+                  owner,
+                  repo,
+                  path: stubPath,
+                  branch,
+                  message: `chore(autopilot): bootstrap improve #${issue.number}`,
+                  content: Buffer.from(stubBody, "utf8").toString("base64"),
+                });
+              }
+
+              const openPrs = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: "open",
+                per_page: 100,
+              });
+
+              pull = openPrs.find(
+                (p) =>
+                  p.head?.ref === branch || String(p.body || "").includes(marker)
+              );
+
+              if (!pull) {
+                const pr = await github.rest.pulls.create({
+                  owner,
+                  repo,
+                  title: `implement: ${issue.title.replace(/^improve:\s*/i, "").trim() || `improve #${issue.number}`}`,
+                  head: branch,
+                  base: defaultBranch,
+                  draft: false,
+                  body: [
+                    marker,
+                    "",
+                    `Source improve issue: ${issueLink}`,
+                    "",
+                    "Autopilot mode: Codex must reply on this PR with unified diff only.",
+                  ].join("\n"),
+                });
+                pull = pr.data;
+              }
+            }
+
+            if (pull.draft) {
+              await github.rest.pulls.readyForReview({
+                owner,
+                repo,
+                pull_number: pull.number,
+              });
+              const refreshed = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: pull.number,
+              });
+              pull = refreshed.data;
+            }
+
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issue.number,
+              labels: ["pr:created"],
+            });
+
+            const improveComments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: issue.number,
+              per_page: 100,
+            });
+            const linked = improveComments.some((c) =>
+              String(c.body || "").includes(`AUTOPILOT_PR_CREATED:${pull.number}`)
+            );
+            if (!linked) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `AUTOPILOT_PR_CREATED:${pull.number}\nImplementation PR: #${pull.number}`,
+              });
+            }
+
+            const pingMarker = `AUTOPILOT_DIFF_MODE_REQUEST_V1:${issue.number}`;
+            const prComments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pull.number,
+              per_page: 100,
+            });
+            const alreadyPinged = prComments.some((c) =>
+              String(c.body || "").includes(pingMarker)
+            );
+            if (alreadyPinged) return;
+
+            const body = [
+              pingMarker,
+              "@codex",
+              "",
+              "DIFF PATCH MODE (MANDATORY)",
+              "Reply ONLY on this PR with:",
+              "AUTOPILOT_PATCH_V1",
+              "```diff",
+              "<unified diff>",
+              "```",
+              "Status: READY",
+              "What changed: (max 3 bullets)",
+              "Risk: (low/med/high + why)",
+              "Next: (one next step)",
+              "",
+              "Rules:",
+              "- Do not create PRs in Codex UI.",
+              "- Do not require extraction from Codex UI.",
+              "- Post patch reply only on this PR thread.",
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pull.number,
+              body,
+            });

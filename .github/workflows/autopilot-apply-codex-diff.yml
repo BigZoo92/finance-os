@@ -1,142 +1,183 @@
 name: Autopilot - Apply Codex diff to PR branch
 
 on:
-    issue_comment:
-        types: [created]
+  issue_comment:
+    types: [created]
 
 permissions:
-    contents: write
-    pull-requests: write
-    issues: write
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: autopilot-apply-diff-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
-    apply_patch:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Guard - only PR comments with patch marker
-              id: guard
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const issue = context.payload.issue;
-                      const comment = context.payload.comment;
+  apply_patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard (PR comment + patch marker + diff + codex author)
+        id: guard
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const comment = context.payload.comment;
 
-                      if (!issue.pull_request) {
-                        core.setOutput("run", "false");
-                        return;
-                      }
+            if (!issue || !issue.pull_request) {
+              core.setOutput("run", "false");
+              return;
+            }
 
-                      const body = comment.body || "";
-                      if (!body.includes("AUTOPILOT_PATCH_V1")) {
-                        core.setOutput("run", "false");
-                        return;
-                      }
+            const prNumber = Number(issue.number);
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              core.setOutput("run", "false");
+              return;
+            }
 
-                      core.setOutput("run", "true");
-                      core.setOutput("prNumber", String(issue.number));
-                      core.setOutput("commentId", String(comment.id));
+            function isCodexAuthor(login) {
+              const value = String(login || "").toLowerCase();
+              return (
+                value === "codex" ||
+                value === "codex[bot]" ||
+                value === "chatgpt-codex-connector" ||
+                value === "chatgpt-codex-connector[bot]"
+              );
+            }
 
-            - name: Stop if not eligible
-              if: steps.guard.outputs.run != 'true'
-              run: exit 0
+            if (!isCodexAuthor(comment?.user?.login)) {
+              core.setOutput("run", "false");
+              return;
+            }
 
-            - name: Fetch PR info
-              id: pr
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const pull_number = Number("${{ steps.guard.outputs.prNumber }}");
-                      const pr = await github.rest.pulls.get({ owner, repo, pull_number });
+            const body = String(comment?.body || "");
+            if (!body.includes("AUTOPILOT_PATCH_V1")) {
+              core.setOutput("run", "false");
+              return;
+            }
 
-                      if (pr.data.head.repo.full_name !== `${owner}/${repo}`) {
-                        core.setFailed("PR head is a fork; cannot push safely.");
-                        return;
-                      }
+            const hasDiff = /```diff\s*[\s\S]*?\s*```/i.test(body);
+            if (!hasDiff) {
+              core.setOutput("run", "false");
+              return;
+            }
 
-                      core.setOutput("headRef", pr.data.head.ref);
+            core.setOutput("run", "true");
+            core.setOutput("prNumber", String(prNumber));
+            core.setOutput("commentId", String(comment.id));
 
-            - name: Skip if this comment was already applied
-              id: seen
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
-                      const commentId = "${{ steps.guard.outputs.commentId }}";
-                      const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
+      - name: Stop if not eligible
+        if: steps.guard.outputs.run != 'true'
+        run: exit 0
 
-                      const comments = await github.paginate(github.rest.issues.listComments, {
-                        owner,
-                        repo,
-                        issue_number: prNumber,
-                        per_page: 100,
-                      });
+      - name: Skip if this comment was already applied
+        id: seen
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
+            const commentId = "${{ steps.guard.outputs.commentId }}";
+            const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
 
-                      const already = comments.some(c => (c.body || "").includes(marker));
-                      core.setOutput("skip", already ? "true" : "false");
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
 
-            - name: Stop if already applied
-              if: steps.seen.outputs.skip == 'true'
-              run: exit 0
+            const already = comments.some((c) =>
+              String(c.body || "").includes(marker)
+            );
+            core.setOutput("skip", already ? "true" : "false");
 
-            - name: Checkout PR head branch (with PAT)
-              uses: actions/checkout@v4
-              with:
-                  ref: ${{ steps.pr.outputs.headRef }}
-                  fetch-depth: 0
-                  token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+      - name: Stop if already applied
+        if: steps.seen.outputs.skip == 'true'
+        run: exit 0
 
-            - name: Extract diff from comment into codex.patch
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const fs = require("fs");
-                      const body = context.payload.comment.body || "";
-                      const m = body.match(/```diff\s*([\s\S]*?)\s*```/i);
-                      if (!m) {
-                        core.setFailed("No ```diff``` block found in Codex comment.");
-                        return;
-                      }
-                      fs.writeFileSync("codex.patch", m[1], "utf8");
+      - name: Fetch PR info
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = Number("${{ steps.guard.outputs.prNumber }}");
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number });
 
-            - name: Apply patch (3-way)
-              run: |
-                  git apply --3way --whitespace=nowarn codex.patch
+            if (pr.data.head.repo.full_name !== `${owner}/${repo}`) {
+              core.setFailed("PR head is a fork; cannot push safely.");
+              return;
+            }
 
-            - name: Commit & push
-              run: |
-                  if [ -z "$(git status --porcelain)" ]; then
-                    echo "No changes after applying patch."
-                    exit 1
-                  fi
+            core.setOutput("headRef", pr.data.head.ref);
 
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Checkout PR head branch (with PAT)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.headRef }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
 
-                  git add -A
-                  git commit -m "chore(autopilot): apply codex patch (#${{ steps.guard.outputs.prNumber }})"
-                  git push origin HEAD:${{ steps.pr.outputs.headRef }}
+      - name: Extract diff from comment into codex.patch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const body = String(context.payload.comment.body || "");
+            const match = body.match(/```diff\s*([\s\S]*?)\s*```/i);
+            if (!match) {
+              core.setFailed("No ```diff``` block found in Codex comment.");
+              return;
+            }
+            fs.writeFileSync("codex.patch", match[1], "utf8");
 
-            - name: Comment success
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
-                      const commentId = "${{ steps.guard.outputs.commentId }}";
-                      const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
+      - name: Apply patch (3-way)
+        run: git apply --3way --whitespace=nowarn codex.patch
 
-                      await github.rest.issues.createComment({
-                        owner,
-                        repo,
-                        issue_number: prNumber,
-                        body: [
-                          "✅ Autopilot applied Codex patch and pushed commits to this PR branch.",
-                          "",
-                          marker
-                        ].join("\n")
-                      });
+      - name: Commit and push if changed
+        id: push
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(autopilot): apply codex patch (#${{ steps.guard.outputs.prNumber }})"
+          git push origin HEAD:${{ steps.pr.outputs.headRef }}
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Comment success marker
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
+            const commentId = "${{ steps.guard.outputs.commentId }}";
+            const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
+            const changed = "${{ steps.push.outputs.changed }}" === "true";
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: [
+                changed
+                  ? "Autopilot applied Codex patch and pushed commits to this PR branch."
+                  : "Autopilot processed Codex patch but no file changes were detected.",
+                "",
+                marker,
+              ].join("\n"),
+            });
