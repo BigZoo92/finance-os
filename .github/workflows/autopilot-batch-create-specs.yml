@@ -80,6 +80,7 @@ jobs:
               "breakpoint": ["5319e7", "Requires staged approvals"],
               "autopilot": ["1d76db", "Autopilot-managed issue"],
               "ready": ["0e8a16", "Ready for next stage"],
+              "autopilot:queued": ["fbca04", "Queued until autopilot has capacity"],
               "prio:p0": ["b60205", "Critical priority"],
               "prio:p1": ["d93f0b", "Important priority"],
               "prio:p2": ["fbca04", "Nice to have"],
@@ -244,10 +245,14 @@ jobs:
               if (key) existingMap.set(key, itemIssue);
             }
 
+            const AUTO_START_LIMIT = 3;
             const created = [];
+            const autoStarted = [];
+            const queued = [];
             const failed = [];
 
-            for (const item of items) {
+            for (const [index, item] of items.entries()) {
+              const stageLabel = index < AUTO_START_LIMIT ? "ready" : "autopilot:queued";
               const area = normalizeArea(item?.area);
               const prio = normalizePriority(item?.priority);
               const title = safeTitle(
@@ -265,10 +270,15 @@ jobs:
                     owner,
                     repo,
                     issue_number: existing.number,
-                    labels: ["ready"],
+                    labels: [stageLabel],
                   });
                 } catch {}
                 created.push(`#${existing.number} (existing)`);
+                if (stageLabel === "ready") {
+                  autoStarted.push(`#${existing.number} (existing)`);
+                } else {
+                  queued.push(`#${existing.number} (existing)`);
+                }
                 continue;
               }
 
@@ -305,17 +315,16 @@ jobs:
                     "autopilot",
                     `prio:${prio}`,
                     `area:${area}`,
+                    stageLabel,
                   ],
                 });
 
-                await github.rest.issues.addLabels({
-                  owner,
-                  repo,
-                  issue_number: createdIssue.data.number,
-                  labels: ["ready"],
-                });
-
                 created.push(`#${createdIssue.data.number}`);
+                if (stageLabel === "ready") {
+                  autoStarted.push(`#${createdIssue.data.number}`);
+                } else {
+                  queued.push(`#${createdIssue.data.number}`);
+                }
               } catch (e) {
                 failed.push(`${title} (${String(e.message || e)})`);
               }
@@ -348,6 +357,10 @@ jobs:
 
             const summary = [
               `Spawned spec issues: ${created.join(", ") || "none"}`,
+              `Auto-started ready (limit ${AUTO_START_LIMIT}): ${autoStarted.join(", ") || "none"}`,
+              queued.length
+                ? `Queued for later promotion: ${queued.join(", ")}`
+                : "",
               originalCount > MAX_ITEMS
                 ? `Truncated from ${originalCount} to ${MAX_ITEMS} items.`
                 : "",

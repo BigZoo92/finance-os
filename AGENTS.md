@@ -1,6 +1,6 @@
 # AGENTS.md — Finance-OS (Single Source of Truth)
 
-Last updated: 2026-03-03
+Last updated: 2026-03-13
 
 Codex reads `AGENTS.md` before doing any work and applies the closest instructions for each file. This repo intentionally uses a SINGLE root `AGENTS.md` for now.
 
@@ -172,6 +172,13 @@ Label expectations:
 - `agent:pm`, `agent:challenger`, `agent:dev`, `agent:review`
 - `breakpoint`, `needs:you`, `ready`, `blocked`
 - `area:*` and `prio:*` must be set on issues/PRs.
+
+Autopilot workflow guardrails:
+
+- PR patch apply runs only on PR-thread comments from Codex-like authors that include `AUTOPILOT_PATCH_V1` and exactly one diff code fence; it must never call GitHub APIs with PR number `0`.
+- `autopilot:patch-applied` is mandatory before merge-on-green may squash-merge any `agent/*` PR, and draft PRs must still be skipped.
+- Batch spawn creates all spec issues, auto-labels only the first 3 as `ready`, and queues the rest with `autopilot:queued`.
+- Queue promotion must stay capacity-based: only promote the oldest queued spec when fewer than 3 `agent/*` PRs are open.
 
 ---
 

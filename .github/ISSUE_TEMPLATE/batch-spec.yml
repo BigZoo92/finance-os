@@ -1,5 +1,5 @@
 name: Batch Spec (Epic)
-description: One issue = many specs. Codex will refine and spawn child spec issues.
+description: One issue = many specs. Codex will refine and spawn child spec issues. Autopilot auto-starts only the first 3 specs; the rest are queued.
 title: "batch: "
 labels:
   - "agent:pm"
@@ -35,7 +35,8 @@ body:
     attributes:
       label: Raw specs list (one bullet per spec)
       description: |
-        Write rough items. Codex will rewrite into proper spec issues and may add missing classics.
+        Write rough items. Codex will rewrite them into proper spec issues and may add missing classics.
+        Autopilot auto-starts only the first 3 spawned specs; the remainder stay queued until capacity frees up.
       placeholder: |
         - Monitoring: ops dashboard (admin only)
         - Alerting: disk space low
