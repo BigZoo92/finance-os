@@ -175,12 +175,12 @@ Label expectations:
 
 Autopilot workflow guardrails:
 
-- PR patch apply runs only on PR-thread comments from Codex-like authors that include `AUTOPILOT_PATCH_V1` and exactly one fenced `diff` block; it must never call GitHub APIs with PR number `0`, and patch extraction must use only the contents inside that fence.
+- PR patch apply runs only on PR-thread comments from Codex-like authors whose first non-empty line is `AUTOPILOT_PATCH_V1`, with exactly one fenced `diff` block containing a real `diff --git` patch and no placeholders or status footer inside the fence; it must never call GitHub APIs with PR number `0`, and patch extraction must use only the contents inside that fence.
 - `autopilot:patch-applied` is mandatory before merge-on-green may squash-merge any `agent/*` PR, and draft PRs must still be skipped.
 - Batch spawn creates all spec issues, auto-labels only the first 3 as `ready`, and queues the rest with `autopilot:queued`.
 - Queue promotion must stay capacity-based: only promote the oldest queued spec when fewer than 3 `agent/*` PRs are open.
-- Improve -> PR creates a draft PR with `.github/agent-stubs/**` bootstrap content and labels `autopilot` + `autopilot:waiting-patch` + `pr:draft`; the PR-thread ping must instruct Codex to reply with `AUTOPILOT_PATCH_V1` on line 1 and exactly one fenced `diff` block that starts with `diff --git`, never via Codex UI PR creation.
-- Patch-apply must safe-stop on invalid PR metadata, comment `needs:you` on malformed or failed patch application, and move a PR out of draft only after a real patch commit lands through GraphQL `markPullRequestReadyForReview`.
+- Improve -> PR creates a draft PR with `.github/agent-stubs/**` bootstrap content and labels `autopilot` + `autopilot:waiting-patch` + `pr:draft`; the PR-thread ping must instruct Codex to reply with `AUTOPILOT_PATCH_V1` on line 1 and exactly one fenced `diff` block that starts with `diff --git`, and the instruction comment itself must not include an example diff fence; never via Codex UI PR creation.
+- Patch-apply must safe-stop on invalid PR metadata, ask Codex to repost on malformed patch format without adding `needs:you`, add `needs:you` only for non-format patch failures, and move a PR out of draft only after a real patch commit lands through GraphQL `markPullRequestReadyForReview`.
 - Merge-on-green must refuse stub-only PRs, leave a comment, and never auto-merge drafts or PRs missing `autopilot:patch-applied`.
 
 ---
