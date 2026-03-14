@@ -23,79 +23,26 @@ jobs:
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
             const issue = context.payload.issue;
             const comment = context.payload.comment;
             const body = String(comment?.body || "");
-            const hasMarker = body.includes("AUTOPILOT_PATCH_V1");
+            const authorLogin = String(comment?.user?.login || "").toLowerCase();
             const commentId = Number(comment?.id);
             const issueNumber = Number(issue?.number);
-            const prUrl = String(issue?.pull_request?.url || "");
-            const prNumberFromUrl = Number((prUrl.match(/\/pulls\/(\d+)$/) || [])[1]);
-            const prNumber =
-              Number.isInteger(issueNumber) && issueNumber > 0
-                ? issueNumber
-                : Number.isInteger(prNumberFromUrl) && prNumberFromUrl > 0
-                  ? prNumberFromUrl
-                  : null;
-
-            async function ensureLabel(name, color, description) {
-              try {
-                await github.rest.issues.getLabel({ owner, repo, name });
-              } catch (error) {
-                try {
-                  await github.rest.issues.createLabel({
-                    owner,
-                    repo,
-                    name,
-                    color,
-                    description,
-                  });
-                } catch (innerError) {
-                  core.warning(`Could not create label ${name}: ${innerError.message}`);
-                }
-              }
-            }
-
-            async function commentNeedsYou(reason) {
-              if (!Number.isInteger(prNumber) || prNumber <= 0) {
-                core.warning(`Autopilot stopped safely without a PR number: ${reason}`);
-                return;
-              }
-
-              await ensureLabel("needs:you", "d93f0b", "Human attention required");
-
-              try {
-                await github.rest.issues.addLabels({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  labels: ["needs:you"],
-                });
-              } catch (error) {
-                core.warning(`Could not add needs:you to PR #${prNumber}: ${error.message}`);
-              }
-
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: prNumber,
-                body: [
-                  "Autopilot stopped before patch apply.",
-                  "",
-                  `Reason: ${reason}`,
-                  "",
-                  "Status: WAITING_YOU",
-                  "What changed: safe-stop before any GitHub API call with pull_number=0",
-                  "Risk: low because no branch changes were pushed",
-                  "Needs you: inspect the Codex patch comment format or workflow payload",
-                  "Next: post a new PR-thread patch comment with AUTOPILOT_PATCH_V1 and exactly one ```diff``` fence",
-                ].join("\n"),
-              });
-            }
+            const prNumber = Number.isInteger(issueNumber) && issueNumber > 0 ? issueNumber : null;
+            const hasMarker = body.includes("AUTOPILOT_PATCH_V1");
+            const fencedBlocks = [...body.matchAll(/```[a-zA-Z0-9_-]*\s*[\r\n][\s\S]*?```/g)];
+            const diffBlocks = [...body.matchAll(/```diff\s*[\r\n]([\s\S]*?)```/gi)];
+            const isCodexAuthor =
+              authorLogin.includes("codex") ||
+              authorLogin === "chatgpt-codex-connector";
 
             if (!issue?.pull_request) {
+              core.setOutput("run", "false");
+              return;
+            }
+
+            if (!isCodexAuthor) {
               core.setOutput("run", "false");
               return;
             }
@@ -105,27 +52,17 @@ jobs:
               return;
             }
 
-            if (!Number.isInteger(prNumber) || prNumber <= 0) {
-              await commentNeedsYou("Could not determine the PR number from issue_comment payload.");
+            if (diffBlocks.length !== 1 || fencedBlocks.length !== 1) {
               core.setOutput("run", "false");
               return;
             }
 
             if (!Number.isInteger(commentId) || commentId <= 0) {
-              await commentNeedsYou("Could not determine the GitHub comment id for the patch reply.");
               core.setOutput("run", "false");
               return;
             }
 
-            const diffBlocks = [...body.matchAll(/```diff\s*([\s\S]*?)```/gi)];
-            if (diffBlocks.length !== 1) {
-              await commentNeedsYou(`Expected exactly one \`\`\`diff\`\`\` fence, found ${diffBlocks.length}.`);
-              core.setOutput("run", "false");
-              return;
-            }
-
-            if (!String(diffBlocks[0][1] || "").trim()) {
-              await commentNeedsYou("The AUTOPILOT_PATCH_V1 comment contained an empty diff block.");
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
               core.setOutput("run", "false");
               return;
             }
@@ -138,7 +75,7 @@ jobs:
         if: steps.guard.outputs.run != 'true'
         run: exit 0
 
-      - name: Skip if this comment was already applied
+      - name: Skip already-processed comments
         id: seen
         if: steps.guard.outputs.run == 'true'
         uses: actions/github-script@v7
@@ -151,17 +88,17 @@ jobs:
             const commentId = Number("${{ steps.guard.outputs.commentId }}");
 
             if (!Number.isInteger(prNumber) || prNumber <= 0) {
-              core.setFailed("Refusing to query comments for an invalid PR number.");
+              core.setOutput("skip", "true");
               return;
             }
 
             if (!Number.isInteger(commentId) || commentId <= 0) {
-              core.setFailed("Refusing to query comments for an invalid comment id.");
+              core.setOutput("skip", "true");
               return;
             }
 
-            const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
-
+            const successMarker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
+            const failureMarker = `AUTOPILOT_PATCH_FAILED_FROM_COMMENT:${commentId}`;
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -169,12 +106,14 @@ jobs:
               per_page: 100,
             });
 
-            const already = comments.some((c) =>
-              String(c.body || "").includes(marker)
-            );
-            core.setOutput("skip", already ? "true" : "false");
+            const alreadyProcessed = comments.some((existingComment) => {
+              const text = String(existingComment.body || "");
+              return text.includes(successMarker) || text.includes(failureMarker);
+            });
 
-      - name: Skip already-applied comments
+            core.setOutput("skip", alreadyProcessed ? "true" : "false");
+
+      - name: Skip already-processed comment
         if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip == 'true'
         run: exit 0
 
@@ -187,60 +126,104 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const pull_number = Number("${{ steps.guard.outputs.prNumber }}");
+            const pullNumber = Number("${{ steps.guard.outputs.prNumber }}");
 
-            if (!Number.isInteger(pull_number) || pull_number <= 0) {
-              core.setFailed("Refusing to fetch an invalid PR number.");
+            if (!Number.isInteger(pullNumber) || pullNumber <= 0) {
+              core.setOutput("valid", "false");
+              core.setOutput("reason", "The PR number from the issue_comment payload was invalid.");
               return;
             }
 
-            const pr = await github.rest.pulls.get({ owner, repo, pull_number });
+            const pr = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pullNumber,
+            });
 
             if (pr.data.head.repo.full_name !== `${owner}/${repo}`) {
-              core.setFailed("PR head is a fork; cannot push safely.");
+              core.setOutput("valid", "false");
+              core.setOutput("reason", "PR head is a fork; autopilot will not push to it.");
               return;
             }
 
+            core.setOutput("valid", "true");
             core.setOutput("headRef", pr.data.head.ref);
+            core.setOutput("nodeId", pr.data.node_id);
+            core.setOutput("isDraft", pr.data.draft ? "true" : "false");
 
-      - name: Checkout PR head branch (with PAT)
-        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true'
+      - name: Checkout PR head branch
+        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.pr.outputs.valid == 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr.outputs.headRef }}
           fetch-depth: 0
           token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
 
-      - name: Extract diff from comment into codex.patch
-        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true'
+      - name: Extract and validate diff block
+        id: extract
+        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.pr.outputs.valid == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
             const fs = require("fs");
             const body = String(context.payload.comment?.body || "");
-            const diffBlocks = [...body.matchAll(/```diff\s*([\s\S]*?)```/gi)];
+            const diffBlocks = [...body.matchAll(/```diff\s*[\r\n]([\s\S]*?)```/gi)];
 
             if (diffBlocks.length !== 1) {
-              core.setFailed(`Expected exactly one diff block, found ${diffBlocks.length}.`);
+              core.setOutput("valid", "false");
+              core.setOutput("reason", "Expected exactly one ```diff``` block.");
               return;
             }
 
-            const patchText = String(diffBlocks[0][1] || "");
-            if (!patchText.trim()) {
-              core.setFailed("Diff block is empty.");
+            let patchText = String(diffBlocks[0][1] || "");
+            patchText = patchText
+              .replace(/\r\n/g, "\n")
+              .replace(/\r/g, "\n")
+              .replace(/^\n+/, "")
+              .replace(/\n*$/, "\n");
+
+            if (patchText.includes("AUTOPILOT_PATCH_V1")) {
+              core.setOutput("valid", "false");
+              core.setOutput("reason", "The patch marker must stay outside the diff fence.");
+              return;
+            }
+
+            const firstMeaningfulLine =
+              patchText
+                .split("\n")
+                .find((line) => line.trim().length > 0) || "";
+
+            if (!firstMeaningfulLine.startsWith("diff --git ")) {
+              core.setOutput("valid", "false");
+              core.setOutput("reason", "The diff block must start with diff --git.");
+              return;
+            }
+
+            if (!patchText.includes("\ndiff --git ") && !patchText.startsWith("diff --git ")) {
+              core.setOutput("valid", "false");
+              core.setOutput("reason", "The extracted patch does not contain a unified diff header.");
               return;
             }
 
             fs.writeFileSync("codex.patch", patchText, "utf8");
+            core.setOutput("valid", "true");
 
-      - name: Apply patch (3-way)
-        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true'
-        run: git apply --3way --whitespace=nowarn codex.patch
+      - name: Apply patch
+        id: apply
+        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.pr.outputs.valid == 'true' && steps.extract.outputs.valid == 'true'
+        shell: bash
+        run: |
+          set +e
+          git apply --3way --whitespace=nowarn codex.patch >apply.stdout 2>apply.stderr
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Commit and push if changed
         id: push
-        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true'
+        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.pr.outputs.valid == 'true' && steps.extract.outputs.valid == 'true' && steps.apply.outputs.status == '0'
+        shell: bash
         run: |
           if [ -z "$(git status --porcelain)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -254,18 +237,28 @@ jobs:
           git push origin HEAD:${{ steps.pr.outputs.headRef }}
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Mark empty patch as needs-you
-        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.push.outputs.changed == 'false'
+      - name: Comment patch failure and label needs-you
+        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && (steps.pr.outputs.valid != 'true' || steps.extract.outputs.valid != 'true' || steps.apply.outputs.status != '0' || steps.push.outputs.changed == 'false')
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
+            const fs = require("fs");
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
+            const commentId = Number("${{ steps.guard.outputs.commentId }}");
+            const prValid = "${{ steps.pr.outputs.valid }}" === "true";
+            const extractValid = "${{ steps.extract.outputs.valid }}" === "true";
+            const applyStatusRaw = String("${{ steps.apply.outputs.status }}");
+            const applyStatus = applyStatusRaw ? Number(applyStatusRaw) : 0;
+            const changed = "${{ steps.push.outputs.changed }}" === "true";
 
             if (!Number.isInteger(prNumber) || prNumber <= 0) {
-              core.warning("Skipping empty-patch comment because the PR number is invalid.");
+              return;
+            }
+
+            if (!Number.isInteger(commentId) || commentId <= 0) {
               return;
             }
 
@@ -287,36 +280,67 @@ jobs:
               }
             }
 
+            const failureMarker = `AUTOPILOT_PATCH_FAILED_FROM_COMMENT:${commentId}`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+            const alreadyCommented = comments.some((existingComment) =>
+              String(existingComment.body || "").includes(failureMarker)
+            );
+            if (alreadyCommented) return;
+
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
 
             try {
               await github.rest.issues.addLabels({
                 owner,
                 repo,
                 issue_number: prNumber,
-                labels: ["needs:you"],
+                labels: ["needs:you", "autopilot:waiting-patch"],
               });
             } catch (error) {
-              core.warning(`Could not add needs:you to PR #${prNumber}: ${error.message}`);
+              core.warning(`Could not label PR #${prNumber}: ${error.message}`);
             }
+
+            let reason = "";
+            if (!prValid) {
+              reason = String("${{ steps.pr.outputs.reason }}");
+            } else if (!extractValid) {
+              reason = String("${{ steps.extract.outputs.reason }}");
+            } else if (applyStatus !== 0) {
+              const stderr = fs.existsSync("apply.stderr")
+                ? fs.readFileSync("apply.stderr", "utf8").replace(/\r\n/g, "\n").trim()
+                : "";
+              reason = stderr || `git apply exited with status ${applyStatus}.`;
+            } else if (!changed) {
+              reason = "The diff parsed and applied cleanly, but it produced no file changes.";
+            } else {
+              reason = "Unknown patch failure.";
+            }
+
+            const shortReason = reason.split("\n").slice(0, 8).join("\n");
 
             await github.rest.issues.createComment({
               owner,
               repo,
               issue_number: prNumber,
               body: [
-                "Autopilot parsed the patch comment but no file changes were produced.",
+                "Autopilot could not apply the Codex patch for this PR comment.",
                 "",
-                "Status: WAITING_YOU",
-                "What changed: patch comment was read, but the branch tree stayed unchanged",
-                "Risk: medium because the PR remains draft and cannot advance automatically",
-                "Needs you: ask Codex to post a fresh AUTOPILOT_PATCH_V1 comment with a real unified diff",
-                "Next: retry the PR-thread patch comment",
+                `Reason: ${shortReason}`,
+                "",
+                "Hint to Codex: reply with ONE ```diff``` block only; no other fences; start with diff --git.",
+                "",
+                failureMarker,
               ].join("\n"),
             });
 
       - name: Finalize PR after patch apply
-        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.push.outputs.changed == 'true'
+        if: steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true' && steps.pr.outputs.valid == 'true' && steps.extract.outputs.valid == 'true' && steps.apply.outputs.status == '0' && steps.push.outputs.changed == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
@@ -325,6 +349,8 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
             const commentId = Number("${{ steps.guard.outputs.commentId }}");
+            const prNodeId = String("${{ steps.pr.outputs.nodeId }}");
+            const wasDraft = "${{ steps.pr.outputs.isDraft }}" === "true";
 
             if (!Number.isInteger(prNumber) || prNumber <= 0) {
               core.setFailed("Refusing to finalize an invalid PR number.");
@@ -349,36 +375,26 @@ jobs:
               }
             }
 
-            await ensureLabel(
-              "autopilot",
-              "1d76db",
-              "Autopilot-managed issue or pull request"
-            );
+            await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "Codex patch comment was applied to this PR branch");
+            await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
+            await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
 
-            await ensureLabel(
-              "autopilot:awaiting-patch",
-              "fbca04",
-              "Draft PR is waiting for a Codex patch comment"
-            );
-
-            await ensureLabel(
-              "autopilot:patch-applied",
-              "0e8a16",
-              "Autopilot applied a Codex patch to this PR branch"
-            );
-
-            const pr = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: prNumber,
-            });
-
-            if (pr.data.draft) {
-              await github.rest.pulls.readyForReview({
-                owner,
-                repo,
-                pull_number: prNumber,
-              });
+            if (wasDraft && prNodeId) {
+              await github.graphql(
+                `
+                  mutation MarkPullRequestReadyForReview($pullRequestId: ID!) {
+                    markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
+                      pullRequest {
+                        id
+                        isDraft
+                      }
+                    }
+                  }
+                `,
+                { pullRequestId: prNodeId }
+              );
             }
 
             try {
@@ -386,97 +402,24 @@ jobs:
                 owner,
                 repo,
                 issue_number: prNumber,
-                labels: ["autopilot", "autopilot:patch-applied"],
+                labels: ["autopilot", "autopilot:patch-applied", "autopilot:ready-to-merge"],
               });
             } catch (error) {
-              core.warning(`Could not add autopilot:patch-applied to PR #${prNumber}: ${error.message}`);
+              core.warning(`Could not add success labels to PR #${prNumber}: ${error.message}`);
             }
 
-            try {
-              await github.rest.issues.removeLabel({
-                owner,
-                repo,
-                issue_number: prNumber,
-                name: "autopilot:awaiting-patch",
-              });
-            } catch {}
-
-            const marker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number: prNumber,
-              per_page: 100,
-            });
-            const alreadyCommented = comments.some((existingComment) =>
-              String(existingComment.body || "").includes(marker)
-            );
-            if (alreadyCommented) return;
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body: [
-                "Autopilot applied the Codex patch, pushed commits, removed the waiting label, and moved this PR out of draft.",
-                "",
-                marker,
-              ].join("\n"),
-            });
-
-      - name: Comment failure and add needs-you
-        if: failure() && steps.guard.outputs.run == 'true' && steps.seen.outputs.skip != 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
-            const commentId = Number("${{ steps.guard.outputs.commentId }}");
-
-            if (!Number.isInteger(prNumber) || prNumber <= 0) {
-              core.warning("Skipping failure comment because the PR number is invalid.");
-              return;
-            }
-
-            if (!Number.isInteger(commentId) || commentId <= 0) {
-              core.warning("Skipping failure comment because the comment id is invalid.");
-              return;
-            }
-
-            async function ensureLabel(name, color, description) {
+            for (const name of ["autopilot:waiting-patch", "autopilot:awaiting-patch", "pr:draft"]) {
               try {
-                await github.rest.issues.getLabel({ owner, repo, name });
-              } catch (error) {
-                try {
-                  await github.rest.issues.createLabel({
-                    owner,
-                    repo,
-                    name,
-                    color,
-                    description,
-                  });
-                } catch (innerError) {
-                  core.warning(`Could not create label ${name}: ${innerError.message}`);
-                }
-              }
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  name,
+                });
+              } catch {}
             }
 
-            await ensureLabel("needs:you", "d93f0b", "Human attention required");
-
-            try {
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: prNumber,
-                labels: ["needs:you"],
-              });
-            } catch (error) {
-              core.warning(`Could not add needs:you to PR #${prNumber}: ${error.message}`);
-            }
-
-            const marker = `AUTOPILOT_PATCH_FAILURE_FROM_COMMENT:${commentId}`;
+            const successMarker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -484,7 +427,7 @@ jobs:
               per_page: 100,
             });
             const alreadyCommented = comments.some((existingComment) =>
-              String(existingComment.body || "").includes(marker)
+              String(existingComment.body || "").includes(successMarker)
             );
             if (alreadyCommented) return;
 
@@ -493,10 +436,8 @@ jobs:
               repo,
               issue_number: prNumber,
               body: [
-                "Autopilot failed while applying the Codex patch comment. The PR stays draft and now needs attention.",
+                "\u2705 applied patch",
                 "",
-                marker,
-                "",
-                `Run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+                successMarker,
               ].join("\n"),
             });
