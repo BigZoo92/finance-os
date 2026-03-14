@@ -56,6 +56,7 @@ jobs:
             if (!has("agent:challenger")) return;
             if (!has("autopilot")) return;
             if (has("ready")) return;
+            if (!/^\s*status:\s*ready\b/im.test(String(comment?.body || ""))) return;
 
             try {
               await github.rest.issues.getLabel({ owner, repo, name: "ready" });

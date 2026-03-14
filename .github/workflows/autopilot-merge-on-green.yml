@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write
-  issues: read
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -37,6 +37,45 @@ jobs:
             });
             const pr = prs.data[0];
             if (!pr) return;
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const filenames = files.map((file) => String(file.filename || ""));
+            const stubOnly =
+              filenames.length > 0 &&
+              filenames.every((filename) => filename.startsWith(".github/agent-stubs/"));
+
+            if (stubOnly) {
+              const marker = "AUTOPILOT_STUB_ONLY_WAITING_FOR_PATCH";
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pr.number,
+                per_page: 100,
+              });
+              const alreadyCommented = comments.some((comment) =>
+                String(comment.body || "").includes(marker)
+              );
+
+              if (!alreadyCommented) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: [
+                    marker,
+                    "Autopilot will not merge this PR because it is still stub-only, waiting for a real patch.",
+                  ].join("\n"),
+                });
+              }
+
+              core.info(`Skipping PR #${pr.number} because only .github/agent-stubs/** files changed.`);
+              return;
+            }
 
             if (pr.draft) return;
 

@@ -1,4 +1,4 @@
-name: Autopilot - Improve ready to PR
+name: Autopilot - Improve ready to draft PR
 
 on:
   issues:
@@ -10,7 +10,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: autopilot-improve-to-pr-${{ github.event.issue.number }}
+  group: autopilot-improve-to-draft-pr-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
@@ -64,6 +64,18 @@ jobs:
 
             await ensureLabel("pr:created", "0e8a16", "Autopilot PR created for improve issue");
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
+            await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
+            await ensureLabel(
+              "autopilot:awaiting-patch",
+              "fbca04",
+              "Draft PR is waiting for a Codex patch comment"
+            );
+            await ensureLabel(
+              "autopilot:patch-applied",
+              "0e8a16",
+              "Codex patch comment was applied to this PR branch"
+            );
+            await ensureLabel("needs:you", "d93f0b", "Human attention required");
 
             const repoInfo = await github.rest.repos.get({ owner, repo });
             const defaultBranch = repoInfo.data.default_branch;
@@ -174,25 +186,48 @@ jobs:
                   title: `implement: ${issue.title.replace(/^improve:\s*/i, "").trim() || `improve #${issue.number}`}`,
                   head: branch,
                   base: defaultBranch,
-                  draft: false,
+                  draft: true,
                   body: [
                     marker,
                     "",
                     `Source improve issue: ${issueLink}`,
                     "",
-                    "Autopilot mode: Codex must reply on this PR with unified diff only.",
+                    "Autopilot mode: Codex must reply on this PR thread with a single unified diff comment.",
                   ].join("\n"),
                 });
                 pull = pr.data;
               }
             }
 
-            if (pull.draft) {
-              await github.rest.pulls.readyForReview({
-                owner,
-                repo,
-                pull_number: pull.number,
-              });
+            const pullIssue = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: pull.number,
+            });
+            const pullLabels = (pullIssue.data.labels || []).map((label) =>
+              typeof label === "string" ? label : label.name
+            );
+            const pullHas = (name) => pullLabels.includes(name);
+
+            if (!pullHas("autopilot:patch-applied") && !pull.draft) {
+              try {
+                await github.graphql(
+                  `
+                    mutation ConvertPullRequestToDraft($pullRequestId: ID!) {
+                      convertPullRequestToDraft(input: { pullRequestId: $pullRequestId }) {
+                        pullRequest {
+                          id
+                          isDraft
+                        }
+                      }
+                    }
+                  `,
+                  { pullRequestId: pull.node_id }
+                );
+              } catch (error) {
+                core.warning(`Could not convert PR #${pull.number} to draft: ${error.message}`);
+              }
+
               const refreshed = await github.rest.pulls.get({
                 owner,
                 repo,
@@ -207,6 +242,32 @@ jobs:
               issue_number: issue.number,
               labels: ["pr:created"],
             });
+
+            try {
+              const prLabels = pullHas("autopilot:patch-applied")
+                ? ["autopilot"]
+                : ["autopilot", "autopilot:awaiting-patch"];
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pull.number,
+                labels: prLabels,
+              });
+            } catch (error) {
+              core.warning(`Could not label PR #${pull.number}: ${error.message}`);
+            }
+
+            if (pullHas("autopilot:patch-applied")) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pull.number,
+                  name: "autopilot:awaiting-patch",
+                });
+              } catch {}
+            }
 
             const improveComments = await github.paginate(github.rest.issues.listComments, {
               owner,
@@ -236,14 +297,16 @@ jobs:
             const alreadyPinged = prComments.some((c) =>
               String(c.body || "").includes(pingMarker)
             );
-            if (alreadyPinged) return;
+            if (alreadyPinged || pullHas("autopilot:patch-applied")) return;
 
             const body = [
               pingMarker,
               "@codex",
               "",
-              "DIFF PATCH MODE (MANDATORY)",
-              "Reply ONLY on this PR thread with exactly one patch comment in this format:",
+              "Patch mode is mandatory for this PR.",
+              "You may inspect the repo, checkout the branch, and run local checks, but the final implementation output must be a PR comment on this thread.",
+              "",
+              "Reply with exactly one patch comment in this format:",
               "AUTOPILOT_PATCH_V1",
               "```diff",
               "<unified diff>",
@@ -255,12 +318,14 @@ jobs:
               "Risk: (low/med/high + why)",
               "Next: (one next step)",
               "",
-              "Rules:",
+              "Mandatory rules:",
               "- Include exactly one ```diff fenced block and no other code fences.",
               "- Keep AUTOPILOT_PATCH_V1 in the same comment as the diff.",
-              "- Do not create PRs in Codex UI.",
-              "- Do not require extraction from Codex UI.",
-              "- Post patch reply only on this PR thread.",
+              "- Post the patch reply only on this PR thread.",
+              "- Do not create a PR in Codex UI.",
+              "- Do not use make_pr.",
+              "- Do not ask a human to extract, copy, or apply anything manually.",
+              `- Delete \`.github/agent-stubs/improve-${issue.number}.md\` in the first real patch unless the patch is truly docs-only elsewhere.`,
             ].join("\n");
 
             await github.rest.issues.createComment({
