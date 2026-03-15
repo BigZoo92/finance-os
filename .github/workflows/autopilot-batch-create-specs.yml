@@ -13,6 +13,13 @@ concurrency:
 
 jobs:
   spawn_specs:
+    if: >
+      github.event.issue.pull_request == null &&
+      (
+        contains(github.event.comment.user.login, 'codex') ||
+        github.event.comment.user.login == 'chatgpt-codex-connector' ||
+        github.event.comment.user.login == 'chatgpt-codex-connector[bot]'
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
@@ -24,19 +31,35 @@ jobs:
             const payloadIssue = context.payload.issue;
             const comment = context.payload.comment;
 
-            if (payloadIssue.pull_request) return;
-
-            function isCodexAuthor(login) {
-              const value = String(login || "").toLowerCase();
-              return (
-                value === "codex" ||
-                value === "codex[bot]" ||
-                value === "chatgpt-codex-connector" ||
-                value === "chatgpt-codex-connector[bot]"
-              );
+            function normalizeText(value) {
+              return String(value || "")
+                .replace(/\r\n/g, "\n")
+                .replace(/\r/g, "\n");
             }
 
-            if (!isCodexAuthor(comment?.user?.login)) return;
+            function extractSection(body, heading) {
+              const lines = normalizeText(body).split("\n");
+              const headingText = `### ${heading}`.toLowerCase();
+              const startIndex = lines.findIndex((line) => line.trim().toLowerCase() === headingText);
+              if (startIndex === -1) return "";
+
+              const collected = [];
+              for (let index = startIndex + 1; index < lines.length; index += 1) {
+                const line = lines[index];
+                if (line.trim().startsWith("### ")) break;
+                collected.push(line);
+              }
+              return collected.join("\n").trim();
+            }
+
+            function extractRawBullets(body) {
+              return extractSection(body, "Raw specs list (one bullet per spec)")
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => /^[*-]\s+/.test(line))
+                .map((line) => line.replace(/^[*-]\s+/, "").trim())
+                .filter(Boolean);
+            }
 
             const live = await github.rest.issues.get({
               owner,
@@ -48,7 +71,7 @@ jobs:
             const labels = (issue.labels || []).map((l) =>
               typeof l === "string" ? l : l.name
             );
-            const has = (n) => labels.includes(n);
+            const has = (name) => labels.includes(name);
 
             if (!has("batch:spec")) return;
             if (!has("autopilot")) return;
@@ -58,7 +81,7 @@ jobs:
             async function ensureLabel(name, color, description) {
               try {
                 await github.rest.issues.getLabel({ owner, repo, name });
-              } catch (e) {
+              } catch {
                 try {
                   await github.rest.issues.createLabel({
                     owner,
@@ -97,6 +120,8 @@ jobs:
             for (const [name, [color, description]] of Object.entries(labelMeta)) {
               await ensureLabel(name, color, description);
             }
+
+            const rawBullets = extractRawBullets(issue.body || "");
 
             async function requestRetry(reason) {
               if (has("autopilot:retried")) {
@@ -144,9 +169,15 @@ jobs:
                   "@codex",
                   `FAILED to parse your previous reply: ${reason}`,
                   "Please retry with EXACTLY one ```json``` fenced block and a top-level JSON array.",
-                  "No text outside that code fence.",
+                  `Return exactly ${rawBullets.length} items, all with origin='requested' and source_bullet values 1..${rawBullets.length} in order.`,
+                  "No text outside that code fence and no extra items.",
                 ].join("\n"),
               });
+            }
+
+            if (rawBullets.length === 0) {
+              await requestRetry("Could not parse any raw spec bullets from the issue body.");
+              return;
             }
 
             const text = String(comment.body || "");
@@ -169,14 +200,38 @@ jobs:
               if (!Array.isArray(items)) {
                 throw new Error("Top-level JSON value is not an array.");
               }
-            } catch (e) {
-              await requestRetry(String(e.message || e));
+            } catch (error) {
+              await requestRetry(String(error.message || error));
               return;
             }
 
-            const MAX_ITEMS = 100;
-            const originalCount = items.length;
-            if (items.length > MAX_ITEMS) items = items.slice(0, MAX_ITEMS);
+            if (items.length !== rawBullets.length) {
+              await requestRetry(`Expected exactly ${rawBullets.length} items, found ${items.length}.`);
+              return;
+            }
+
+            const sortedItems = [...items].sort((a, b) => {
+              const aSource = Number(a?.source_bullet ?? 1e9);
+              const bSource = Number(b?.source_bullet ?? 1e9);
+              return aSource - bSource;
+            });
+
+            const invalidOrigin = sortedItems.find((item) => String(item?.origin || "").trim().toLowerCase() !== "requested");
+            if (invalidOrigin) {
+              await requestRetry("Every item must set origin='requested'.");
+              return;
+            }
+
+            const expectedSources = rawBullets.map((_, index) => index + 1);
+            const actualSources = sortedItems.map((item) => Number(item?.source_bullet));
+            const validSources =
+              actualSources.length === expectedSources.length &&
+              actualSources.every((value, index) => Number.isInteger(value) && value === expectedSources[index]);
+
+            if (!validSources) {
+              await requestRetry(`source_bullet must be exactly 1..${rawBullets.length} in order with no gaps or duplicates.`);
+              return;
+            }
 
             const batchBody = String(issue.body || "");
             const areaMatch = batchBody.match(/###\s*Area[\s\S]*?\n([a-z-]+)/i);
@@ -212,15 +267,6 @@ jobs:
               return `spec: ${base}`;
             }
 
-            items.sort((a, b) => {
-              const aExtra = a?.origin === "extra" ? 1 : 0;
-              const bExtra = b?.origin === "extra" ? 1 : 0;
-              if (aExtra !== bExtra) return aExtra - bExtra;
-              const aSource = Number(a?.source_bullet ?? 1e9);
-              const bSource = Number(b?.source_bullet ?? 1e9);
-              return aSource - bSource;
-            });
-
             const allIssues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
               repo,
@@ -245,21 +291,21 @@ jobs:
               if (key) existingMap.set(key, itemIssue);
             }
 
-            const AUTO_START_LIMIT = 3;
+            const AUTO_START_LIMIT = 1;
             const created = [];
             const autoStarted = [];
             const queued = [];
             const failed = [];
 
-            for (const [index, item] of items.entries()) {
+            for (const [index, item] of sortedItems.entries()) {
               const stageLabel = index < AUTO_START_LIMIT ? "ready" : "autopilot:queued";
               const area = normalizeArea(item?.area);
               const prio = normalizePriority(item?.priority);
               const title = safeTitle(
                 item?.title,
-                item?.goal ? String(item.goal).slice(0, 60) : `batch item ${created.length + 1}`
+                rawBullets[index] || `batch item ${index + 1}`
               );
-              const origin = String(item?.origin || "unknown").trim();
+              const origin = "requested";
               const sourceBullet = String(item?.source_bullet ?? "n/a").trim();
               const dedupeKey = `${title.toLowerCase()}::${origin.toLowerCase()}::${sourceBullet.toLowerCase()}`;
 
@@ -286,10 +332,10 @@ jobs:
                 item?.goal ? `### Goal\n${item.goal}\n` : "",
                 item?.non_goals ? `### Non-goals\n${item.non_goals}\n` : "",
                 Array.isArray(item?.acceptance_criteria) && item.acceptance_criteria.length
-                  ? `### Acceptance criteria\n${item.acceptance_criteria.map((x) => `- ${x}`).join("\n")}\n`
+                  ? `### Acceptance criteria\n${item.acceptance_criteria.map((value) => `- ${value}`).join("\n")}\n`
                   : "",
                 Array.isArray(item?.breakpoints) && item.breakpoints.length
-                  ? `### Breakpoints (BP1/BP2/BP3)\n${item.breakpoints.map((x) => `- ${x}`).join("\n")}\n`
+                  ? `### Breakpoints (BP1/BP2/BP3)\n${item.breakpoints.map((value) => `- ${value}`).join("\n")}\n`
                   : "",
                 item?.dual_path ? `### Demo/Admin dual-path\n${item.dual_path}\n` : "",
                 item?.observability ? `### Observability\n${item.observability}\n` : "",
@@ -325,8 +371,8 @@ jobs:
                 } else {
                   queued.push(`#${createdIssue.data.number}`);
                 }
-              } catch (e) {
-                failed.push(`${title} (${String(e.message || e)})`);
+              } catch (error) {
+                failed.push(`${title} (${String(error.message || error)})`);
               }
             }
 
@@ -355,14 +401,20 @@ jobs:
               });
             } catch {}
 
+            try {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number: issue.number,
+                name: "needs:you",
+              });
+            } catch {}
+
             const summary = [
               `Spawned spec issues: ${created.join(", ") || "none"}`,
               `Auto-started ready (limit ${AUTO_START_LIMIT}): ${autoStarted.join(", ") || "none"}`,
               queued.length
                 ? `Queued for later promotion: ${queued.join(", ")}`
-                : "",
-              originalCount > MAX_ITEMS
-                ? `Truncated from ${originalCount} to ${MAX_ITEMS} items.`
                 : "",
               failed.length
                 ? `Failed to create some issues: ${failed.slice(0, 5).join(" | ")}${failed.length > 5 ? " ..." : ""}`

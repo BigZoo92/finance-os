@@ -15,6 +15,13 @@ concurrency:
 
 jobs:
   apply_patch:
+    if: >
+      github.event.issue.pull_request != null &&
+      (
+        contains(github.event.comment.user.login, 'codex') ||
+        github.event.comment.user.login == 'chatgpt-codex-connector' ||
+        github.event.comment.user.login == 'chatgpt-codex-connector[bot]'
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Guard and prepare patch metadata
@@ -29,167 +36,27 @@ jobs:
                 .replace(/\r/g, "\n");
             }
 
-            function getFencedBlocks(text) {
-              return [...text.matchAll(/```[a-zA-Z0-9_-]*[^\n]*\n[\s\S]*?```/g)];
-            }
-
-            function getDiffBlocks(text) {
-              return [...text.matchAll(/```diff[^\n]*\n([\s\S]*?)```/gi)];
-            }
-
-            function getFirstNonEmptyLine(text) {
-              for (const line of text.split("\n")) {
-                const trimmed = line.trim();
-                if (trimmed.length > 0) return trimmed;
-              }
-              return "";
-            }
-
-            function getPlaceholderReason(text) {
-              if (/<unified diff>/i.test(text)) {
-                return "The diff fence still contains the <unified diff> placeholder.";
-              }
-              if (/^\s*\.\.\.\s*$/m.test(text)) {
-                return "The diff fence still contains a placeholder line with ...";
-              }
-              return "";
-            }
-
-            function getFooterReason(text) {
-              // Strict: footer keywords should not be inside the diff fence
-              const footerMatch = text.match(/^(Status|What changed|Risk|Next):/m);
-              if (!footerMatch) return "";
-              return `Move the status footer outside the diff fence. Found ${footerMatch[1]}: inside the diff block.`;
-            }
-
-            function markSkip(reason = "") {
-              core.setOutput("run", "false");
-              core.setOutput("notify", "false");
-              core.setOutput("reason", reason);
-            }
-
-            function markFormatIssue(reason) {
-              core.setOutput("run", "false");
-              core.setOutput("notify", "true");
-              core.setOutput("reason", reason);
-            }
-
             const issue = context.payload.issue;
             const comment = context.payload.comment;
-
             const body = normalizeText(comment?.body || "");
-            const authorLogin = String(comment?.user?.login || "").toLowerCase();
             const commentId = Number(comment?.id);
             const issueNumber = Number(issue?.number);
 
-            const prNumber = Number.isInteger(issueNumber) && issueNumber > 0 ? issueNumber : null;
-            const diffBlocks = getDiffBlocks(body);
-            const fencedBlocks = getFencedBlocks(body);
-            const firstNonEmptyLine = getFirstNonEmptyLine(body);
-
             const looksLikePatchAttempt =
               body.includes("AUTOPILOT_PATCH_V1") ||
-              diffBlocks.length > 0 ||
-              body.includes("diff --git ");
+              body.includes("diff --git ") ||
+              body.includes("```");
 
-            const isCodexAuthor =
-              authorLogin.includes("codex") ||
-              authorLogin === "chatgpt-codex-connector";
-
-            markSkip();
-
-            if (Number.isInteger(prNumber) && prNumber > 0) {
-              core.setOutput("prNumber", String(prNumber));
-            }
-            if (Number.isInteger(commentId) && commentId > 0) {
-              core.setOutput("commentId", String(commentId));
-            }
+            core.setOutput("run", "false");
 
             if (!issue?.pull_request) return;
-            if (!Number.isInteger(commentId) || commentId <= 0) {
-              markSkip("The PR comment metadata was invalid.");
-              return;
-            }
-            if (!Number.isInteger(prNumber) || prNumber <= 0) {
-              markSkip("The PR number from the issue_comment payload was invalid.");
-              return;
-            }
-
-            // Only Codex (or connector) comments
-            if (!isCodexAuthor) return;
-
-            // If it doesn't even look like a patch attempt, ignore silently
+            if (!Number.isInteger(commentId) || commentId <= 0) return;
+            if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
             if (!looksLikePatchAttempt) return;
 
-            // Hard format gate
-            if (firstNonEmptyLine !== "AUTOPILOT_PATCH_V1") {
-              markFormatIssue("The first non-empty line must be exactly AUTOPILOT_PATCH_V1.");
-              return;
-            }
-
-            // Exactly one diff fence and exactly one fence total
-            if (diffBlocks.length !== 1 || fencedBlocks.length !== 1) {
-              markFormatIssue("Reply with exactly one fenced ```diff``` block and no other code fences.");
-              return;
-            }
-
-            const diffText = normalizeText(diffBlocks[0][1] || "");
-
-            if (!/^diff --git /m.test(diffText)) {
-              markFormatIssue("The diff fence must contain at least one diff --git header.");
-              return;
-            }
-
-            const placeholderReason = getPlaceholderReason(diffText);
-            if (placeholderReason) {
-              markFormatIssue(placeholderReason);
-              return;
-            }
-
-            const footerReason = getFooterReason(diffText);
-            if (footerReason) {
-              markFormatIssue(footerReason);
-              return;
-            }
-
+            core.setOutput("commentId", String(commentId));
+            core.setOutput("prNumber", String(issueNumber));
             core.setOutput("run", "true");
-
-      - name: Comment invalid patch format
-        if: steps.guard.outputs.notify == 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
-            const commentId = Number("${{ steps.guard.outputs.commentId }}");
-            const reason = String("${{ steps.guard.outputs.reason }}");
-
-            if (!Number.isInteger(prNumber) || prNumber <= 0) return;
-            if (!Number.isInteger(commentId) || commentId <= 0) return;
-
-            const formatMarker = `AUTOPILOT_PATCH_FORMAT_ISSUE_FROM_COMMENT:${commentId}`;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number: prNumber, per_page: 100
-            });
-
-            if (comments.some(c => String(c.body || "").includes(formatMarker))) return;
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body: [
-                "Autopilot skipped this Codex patch comment because the format was invalid.",
-                "",
-                `Reason: ${reason}`,
-                "",
-                "Codex: repost with AUTOPILOT_PATCH_V1 as the first non-empty line, exactly one fenced diff block, and only the real unified diff inside that fence.",
-                "",
-                formatMarker,
-              ].join("\n"),
-            });
 
       - name: Skip non-eligible comments
         if: steps.guard.outputs.run != 'true'
@@ -217,17 +84,20 @@ jobs:
 
             const markers = [
               `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`,
-              `AUTOPILOT_PATCH_FAILED_FROM_COMMENT:${commentId}`,
-              `AUTOPILOT_PATCH_FORMAT_ISSUE_FROM_COMMENT:${commentId}`,
+              `AUTOPILOT_PATCH_RETRY_SCHEDULED_FROM_COMMENT:${commentId}`,
+              `AUTOPILOT_PATCH_HUMAN_ATTENTION_FROM_COMMENT:${commentId}`,
             ];
 
             const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number: prNumber, per_page: 100
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
             });
 
-            const already = comments.some(c => {
-              const text = String(c.body || "");
-              return markers.some(m => text.includes(m));
+            const already = comments.some((comment) => {
+              const text = String(comment.body || "");
+              return markers.some((marker) => text.includes(marker));
             });
 
             core.setOutput("skip", already ? "true" : "false");
@@ -236,7 +106,7 @@ jobs:
         if: steps.seen.outputs.skip == 'true'
         run: exit 0
 
-      - name: Fetch PR info
+      - name: Fetch PR context
         id: pr
         uses: actions/github-script@v7
         with:
@@ -246,24 +116,60 @@ jobs:
             const repo = context.repo.repo;
             const pullNumber = Number("${{ steps.guard.outputs.prNumber }}");
 
+            function setFailure(reason) {
+              core.setOutput("valid", "false");
+              core.setOutput("failureType", "pr-lookup");
+              core.setOutput("reason", reason);
+            }
+
             if (!Number.isInteger(pullNumber) || pullNumber <= 0) {
-              core.setOutput("valid", "false");
-              core.setOutput("reason", "Invalid PR number.");
+              setFailure("Invalid PR number.");
               return;
             }
 
-            const pr = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
-
-            if (pr.data.head.repo.full_name !== `${owner}/${repo}`) {
-              core.setOutput("valid", "false");
-              core.setOutput("reason", "PR head is a fork; autopilot will not push to it.");
+            let issueBody = "";
+            try {
+              const prIssue = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number: pullNumber,
+              });
+              issueBody = String(prIssue.data.body || "");
+            } catch (error) {
+              setFailure(`PR issue lookup failed: ${String(error.message || error)}`);
               return;
             }
 
-            core.setOutput("valid", "true");
-            core.setOutput("headRef", pr.data.head.ref);
-            core.setOutput("nodeId", pr.data.node_id);
-            core.setOutput("isDraft", pr.data.draft ? "true" : "false");
+            const improveIssueMatch = issueBody.match(/^Parent improve issue:\s*#(\d+)$/m);
+            const retryAttemptMatch = issueBody.match(/^Autopilot retry attempt:\s*(\d+)$/m);
+
+            if (improveIssueMatch) {
+              core.setOutput("improveIssueNumber", improveIssueMatch[1]);
+            }
+            if (retryAttemptMatch) {
+              core.setOutput("retryAttempt", retryAttemptMatch[1]);
+            } else {
+              core.setOutput("retryAttempt", "0");
+            }
+
+            try {
+              const pr = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+
+              if (pr.data.head.repo.full_name !== `${owner}/${repo}`) {
+                setFailure("PR head is a fork; autopilot will not push to it.");
+                return;
+              }
+
+              core.setOutput("valid", "true");
+              core.setOutput("failureType", "none");
+              core.setOutput("reason", "");
+              core.setOutput("headRef", pr.data.head.ref);
+              core.setOutput("nodeId", pr.data.node_id);
+              core.setOutput("isDraft", pr.data.draft ? "true" : "false");
+            } catch (error) {
+              const details = error?.status ? `HTTP ${error.status}` : String(error.message || error);
+              setFailure(`PR lookup failed: ${details}`);
+            }
 
       - name: Checkout PR head branch
         if: steps.pr.outputs.valid == 'true'
@@ -273,7 +179,7 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
 
-      - name: Extract and validate diff block (write to RUNNER_TEMP)
+      - name: Extract and validate patch
         id: extract
         uses: actions/github-script@v7
         with:
@@ -288,91 +194,152 @@ jobs:
                 .replace(/\r/g, "\n");
             }
 
+            function getFirstNonEmptyLine(text) {
+              for (const line of text.split("\n")) {
+                const trimmed = line.trim();
+                if (trimmed.length > 0) return trimmed;
+              }
+              return "";
+            }
+
             function getPlaceholderReason(text) {
-              if (/<unified diff>/i.test(text)) return "The diff fence still contains the <unified diff> placeholder.";
-              if (/^\s*\.\.\.\s*$/m.test(text)) return "The diff fence still contains a placeholder line with ...";
+              if (/<unified diff>/i.test(text)) {
+                return "The patch still contains the <unified diff> placeholder.";
+              }
+              if (/^\s*\.\.\.\s*$/m.test(text)) {
+                return "The patch still contains a placeholder line with ...";
+              }
               return "";
             }
 
             function getFooterReason(text) {
               const footerMatch = text.match(/^(Status|What changed|Risk|Next):/m);
               if (!footerMatch) return "";
-              return `Move the status footer outside the diff fence. Found ${footerMatch[1]}: inside the diff block.`;
+              return `Move the status footer outside the patch block. Found ${footerMatch[1]}: inside the patch content.`;
+            }
+
+            function getCodeFences(text) {
+              return [...text.matchAll(/```([a-zA-Z0-9_-]*)[^\n]*\n([\s\S]*?)```/g)].map((match) => ({
+                language: String(match[1] || "").trim().toLowerCase(),
+                content: normalizeText(match[2] || ""),
+              }));
+            }
+
+            function extractPatchFromRawBody(text) {
+              const lines = normalizeText(text).split("\n");
+              const markerIndex = lines.findIndex((line) => line.trim() === "AUTOPILOT_PATCH_V1");
+              if (markerIndex === -1) {
+                return { error: "The first non-empty line must be exactly AUTOPILOT_PATCH_V1." };
+              }
+
+              const remainingLines = lines.slice(markerIndex + 1);
+              const footerIndex = remainingLines.findIndex((line) => /^(Status|What changed|Risk|Next):/.test(line.trim()));
+              const candidate = (footerIndex === -1 ? remainingLines : remainingLines.slice(0, footerIndex))
+                .join("\n")
+                .trim();
+
+              if (!candidate) {
+                return { error: "No unified diff content was found after AUTOPILOT_PATCH_V1." };
+              }
+
+              return { patchText: candidate, extractionMode: "raw" };
             }
 
             if ("${{ steps.pr.outputs.valid }}" !== "true") {
               core.setOutput("valid", "false");
+              core.setOutput("failureType", "pr-lookup");
               core.setOutput("reason", String("${{ steps.pr.outputs.reason }}") || "Invalid PR metadata.");
-              core.setOutput("failureType", "needs-human");
               return;
             }
 
             const commentId = Number("${{ steps.guard.outputs.commentId }}");
             const body = normalizeText(context.payload.comment?.body || "");
-            const diffBlocks = [...body.matchAll(/```diff[^\n]*\n([\s\S]*?)```/gi)];
 
-            if (diffBlocks.length !== 1) {
+            if (getFirstNonEmptyLine(body) !== "AUTOPILOT_PATCH_V1") {
               core.setOutput("valid", "false");
-              core.setOutput("reason", "Expected exactly one ```diff``` block.");
               core.setOutput("failureType", "format");
+              core.setOutput("reason", "The first non-empty line must be exactly AUTOPILOT_PATCH_V1.");
               return;
             }
 
-            const rawDiffText = normalizeText(diffBlocks[0][1] || "");
+            const fences = getCodeFences(body);
+            let candidate = null;
 
-            const footerReason = getFooterReason(rawDiffText);
+            if (fences.length > 1) {
+              core.setOutput("valid", "false");
+              core.setOutput("failureType", "format");
+              core.setOutput("reason", "Reply with exactly one fenced code block and no other code fences.");
+              return;
+            }
+
+            if (fences.length === 1) {
+              const fenceBody = normalizeText(fences[0].content || "").trim();
+              if (!fenceBody.startsWith("diff --git ")) {
+                core.setOutput("valid", "false");
+                core.setOutput("failureType", "format");
+                core.setOutput("reason", "The fenced patch block must start with diff --git.");
+                return;
+              }
+              candidate = {
+                patchText: fenceBody,
+                extractionMode: fences[0].language ? `fence:${fences[0].language}` : "fence:plain",
+              };
+            } else {
+              candidate = extractPatchFromRawBody(body);
+            }
+
+            if (!candidate || candidate.error) {
+              core.setOutput("valid", "false");
+              core.setOutput("failureType", "format");
+              core.setOutput("reason", String(candidate?.error || "Could not extract a unified diff from the comment."));
+              return;
+            }
+
+            const patchText = normalizeText(candidate.patchText || "").trim();
+            const footerReason = getFooterReason(patchText);
             if (footerReason) {
               core.setOutput("valid", "false");
-              core.setOutput("reason", footerReason);
               core.setOutput("failureType", "format");
+              core.setOutput("reason", footerReason);
               return;
             }
 
-            const placeholderReason = getPlaceholderReason(rawDiffText);
+            const placeholderReason = getPlaceholderReason(patchText);
             if (placeholderReason) {
               core.setOutput("valid", "false");
+              core.setOutput("failureType", "format");
               core.setOutput("reason", placeholderReason);
-              core.setOutput("failureType", "format");
               return;
             }
 
-            const headerIndex = rawDiffText.search(/^diff --git /m);
-            if (headerIndex === -1) {
-              core.setOutput("valid", "false");
-              core.setOutput("reason", "The extracted patch does not contain a unified diff header (diff --git).");
-              core.setOutput("failureType", "format");
-              return;
-            }
-
-            let patchText = rawDiffText.slice(headerIndex).trim();
             if (!patchText.startsWith("diff --git ")) {
               core.setOutput("valid", "false");
-              core.setOutput("reason", "The diff block must start with diff --git.");
               core.setOutput("failureType", "format");
+              core.setOutput("reason", "The extracted patch must start with diff --git.");
               return;
             }
 
-            // Now enforce: no marker AFTER the header (marker before header is tolerated)
             if (patchText.includes("AUTOPILOT_PATCH_V1")) {
               core.setOutput("valid", "false");
-              core.setOutput("reason", "Remove AUTOPILOT_PATCH_V1 from inside the diff fence (after diff --git).");
               core.setOutput("failureType", "format");
+              core.setOutput("reason", "Remove AUTOPILOT_PATCH_V1 from inside the patch content.");
               return;
             }
-
-            patchText = patchText.replace(/\n*$/, "\n");
 
             const tmpDir = process.env.RUNNER_TEMP || "/tmp";
             const safeId = Number.isInteger(commentId) && commentId > 0 ? commentId : Date.now();
             const patchPath = path.join(tmpDir, `autopilot-codex-${safeId}.patch`);
 
-            fs.writeFileSync(patchPath, patchText, "utf8");
+            fs.writeFileSync(patchPath, `${patchText}\n`, "utf8");
 
+            core.info(`patch extraction mode=${candidate.extractionMode} comment=${safeId}`);
             core.setOutput("valid", "true");
             core.setOutput("failureType", "none");
+            core.setOutput("reason", "");
             core.setOutput("patchPath", patchPath);
+            core.setOutput("mode", candidate.extractionMode);
 
-      - name: Apply patch (logs to RUNNER_TEMP)
+      - name: Apply patch
         id: apply
         if: steps.extract.outputs.valid == 'true'
         shell: bash
@@ -391,28 +358,34 @@ jobs:
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Commit and push if changed (no artifacts in repo)
-        id: push
+      - name: Inspect applied change set
+        id: inspect
         if: steps.extract.outputs.valid == 'true' && steps.apply.outputs.status == '0'
         shell: bash
         run: |
-          if [ -z "$(git status --porcelain)" ]; then
+          CHANGED_FILES="$(git diff --name-only)"
+
+          if [ -z "$CHANGED_FILES" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "stubOnly=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Safe now because we never wrote patch/log files inside the repo.
-          git add -A
-          git commit -m "chore(autopilot): apply codex patch (#${{ steps.guard.outputs.prNumber }})"
-          git push origin HEAD:${{ steps.pr.outputs.headRef }}
+          stub_only=true
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            if [[ "$path" != .github/agent-stubs/* ]]; then
+              stub_only=false
+            fi
+          done <<EOF
+          $CHANGED_FILES
+          EOF
 
           echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "stubOnly=$stub_only" >> "$GITHUB_OUTPUT"
 
-      - name: Comment patch failure
-        if: steps.pr.outputs.valid != 'true' || steps.extract.outputs.valid != 'true' || steps.apply.outputs.status != '0' || steps.push.outputs.changed == 'false'
+      - name: Schedule retry or request human attention
+        if: steps.pr.outputs.valid != 'true' || steps.extract.outputs.valid != 'true' || steps.apply.outputs.status != '0' || steps.inspect.outputs.changed != 'true' || steps.inspect.outputs.stubOnly == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
@@ -423,41 +396,25 @@ jobs:
             const repo = context.repo.repo;
             const prNumber = Number("${{ steps.guard.outputs.prNumber }}");
             const commentId = Number("${{ steps.guard.outputs.commentId }}");
-
-            if (!Number.isInteger(prNumber) || prNumber <= 0) return;
-            if (!Number.isInteger(commentId) || commentId <= 0) return;
+            const improveIssueNumberRaw = String("${{ steps.pr.outputs.improveIssueNumber }}");
+            const improveIssueNumber = improveIssueNumberRaw ? Number(improveIssueNumberRaw) : null;
+            const currentAttemptRaw = String("${{ steps.pr.outputs.retryAttempt }}");
+            const currentAttempt = currentAttemptRaw ? Number(currentAttemptRaw) : 0;
 
             const prValid = "${{ steps.pr.outputs.valid }}" === "true";
+            const prReason = String("${{ steps.pr.outputs.reason }}");
             const extractValid = "${{ steps.extract.outputs.valid }}" === "true";
+            const extractReason = String("${{ steps.extract.outputs.reason }}");
             const extractFailureType = String("${{ steps.extract.outputs.failureType }}");
             const applyStatusRaw = String("${{ steps.apply.outputs.status }}");
             const applyStatus = applyStatusRaw ? Number(applyStatusRaw) : 0;
-            const changed = "${{ steps.push.outputs.changed }}" === "true";
+            const changed = "${{ steps.inspect.outputs.changed }}" === "true";
+            const stubOnly = "${{ steps.inspect.outputs.stubOnly }}" === "true";
 
             const stderrPath = String("${{ steps.apply.outputs.stderrPath }}");
             const stdoutPath = String("${{ steps.apply.outputs.stdoutPath }}");
 
-            function isFormatReason(value) {
-              const text = String(value || "").toLowerCase();
-              if (!text) return false;
-              return [
-                "format",
-                "first non-empty line must be exactly autopilot_patch_v1",
-                "exactly one fenced",
-                "expected exactly one",
-                "must contain at least one diff --git",
-                "must start with diff --git",
-                "unified diff header",
-                "placeholder",
-                "<unified diff>",
-                "status footer outside the diff fence",
-                "remove autopilot_patch_v1",
-                "corrupt patch",
-                "patch fragment without header",
-                "unrecognized input",
-                "no valid patches in input",
-              ].some((token) => text.includes(token));
-            }
+            const MAX_RETRIES = 2;
 
             async function ensureLabel(name, color, description) {
               try {
@@ -469,80 +426,190 @@ jobs:
               }
             }
 
+            function truncateReason(value) {
+              return String(value || "").replace(/\s+/g, " ").trim().slice(0, 280);
+            }
+
+            async function addLabels(issueNumber, labels) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels,
+                });
+              } catch {}
+            }
+
+            async function removeLabel(issueNumber, name) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch {}
+            }
+
+            async function createCommentOnce(issueNumber, marker, bodyLines) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return false;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+
+              if (comments.some((comment) => String(comment.body || "").includes(marker))) {
+                return false;
+              }
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: bodyLines.join("\n"),
+              });
+              return true;
+            }
+
+            async function closePullIfPossible() {
+              if (!prValid) return;
+              try {
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number: prNumber,
+                  state: "closed",
+                });
+              } catch {}
+            }
+
             let reason = "";
-            let failureKind = "needs-human";
+            let failureKind = "apply";
 
             if (!prValid) {
-              reason = String("${{ steps.pr.outputs.reason }}") || "Invalid PR metadata.";
+              failureKind = "pr-lookup";
+              reason = prReason || "Invalid PR metadata.";
             } else if (!extractValid) {
-              reason = String("${{ steps.extract.outputs.reason }}") || "Invalid diff block.";
-              failureKind = (extractFailureType === "format" || isFormatReason(reason)) ? "format" : "needs-human";
+              failureKind = extractFailureType || "format";
+              reason = extractReason || "Invalid patch comment.";
             } else if (applyStatus !== 0) {
               let stderr = "";
               if (stderrPath && fs.existsSync(stderrPath)) {
                 stderr = fs.readFileSync(stderrPath, "utf8").replace(/\r\n/g, "\n").trim();
               }
-              reason = stderr || `git apply exited with status ${applyStatus}.`;
-              failureKind = isFormatReason(reason) ? "format" : "needs-human";
+              let stdout = "";
+              if (!stderr && stdoutPath && fs.existsSync(stdoutPath)) {
+                stdout = fs.readFileSync(stdoutPath, "utf8").replace(/\r\n/g, "\n").trim();
+              }
+              failureKind = "apply";
+              reason = stderr || stdout || `git apply exited with status ${applyStatus}.`;
+            } else if (stubOnly) {
+              failureKind = "stub-only";
+              reason = "The patch only touched .github/agent-stubs/**. The first implementation patch must also change at least one non-stub path.";
             } else if (!changed) {
-              reason = "The diff parsed and applied cleanly, but it produced no file changes.";
+              failureKind = "apply";
+              reason = "The patch parsed and applied cleanly, but it produced no file changes.";
             } else {
               reason = "Unknown patch failure.";
             }
 
-            const marker =
-              failureKind === "format"
-                ? `AUTOPILOT_PATCH_FORMAT_ISSUE_FROM_COMMENT:${commentId}`
-                : `AUTOPILOT_PATCH_FAILED_FROM_COMMENT:${commentId}`;
+            const normalizedReason = `${failureKind}: ${truncateReason(reason)}`;
+            const nextAttempt = currentAttempt + 1;
 
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number: prNumber, per_page: 100
-            });
+            await ensureLabel("autopilot:retry-pr", "fbca04", "Improve issue should reopen implementation as a retry PR");
+            await ensureLabel("needs:you", "d93f0b", "Human attention required");
 
-            if (comments.some(c => String(c.body || "").includes(marker))) return;
+            if (Number.isInteger(improveIssueNumber) && improveIssueNumber > 0 && nextAttempt <= MAX_RETRIES) {
+              const retryMarker = `AUTOPILOT_RETRY_REQUEST:${nextAttempt}`;
+              await createCommentOnce(
+                improveIssueNumber,
+                retryMarker,
+                [
+                  retryMarker,
+                  `Failed PR: #${prNumber}`,
+                  `Failed comment: ${commentId}`,
+                  `Failure kind: ${failureKind}`,
+                  `Normalized reason: ${normalizedReason}`,
+                  `Next action: reopen implementation PR as retry attempt ${nextAttempt}.`,
+                ]
+              );
 
-            if (failureKind !== "format") {
-              await ensureLabel("needs:you", "d93f0b", "Human attention required");
-              await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
-              try {
-                await github.rest.issues.addLabels({
-                  owner, repo, issue_number: prNumber, labels: ["needs:you", "autopilot:waiting-patch"]
-                });
-              } catch {}
+              await addLabels(improveIssueNumber, ["autopilot:retry-pr"]);
+              await removeLabel(improveIssueNumber, "needs:you");
+
+              const prMarker = `AUTOPILOT_PATCH_RETRY_SCHEDULED_FROM_COMMENT:${commentId}`;
+              await createCommentOnce(
+                prNumber,
+                prMarker,
+                [
+                  "Autopilot is closing this PR and opening a retry PR for the same improve issue.",
+                  "",
+                  `Reason: ${normalizedReason}`,
+                  `Next retry attempt: ${nextAttempt}`,
+                  "",
+                  prMarker,
+                ]
+              );
+
+              await closePullIfPossible();
+              return;
             }
 
-            const shortReason = reason.split("\n").slice(0, 12).join("\n");
-            const title =
-              failureKind === "format"
-                ? "Autopilot skipped this Codex patch comment because the format was invalid."
-                : "Autopilot could not apply the Codex patch for this PR comment.";
+            if (Number.isInteger(improveIssueNumber) && improveIssueNumber > 0) {
+              await addLabels(improveIssueNumber, ["needs:you"]);
+              await removeLabel(improveIssueNumber, "autopilot:retry-pr");
 
-            const hint =
-              failureKind === "format"
-                ? "Codex: repost with AUTOPILOT_PATCH_V1 as the first non-empty line, exactly one fenced diff block, and only the real unified diff inside that fence."
-                : "Hint to Codex: repost with ONE fenced ```diff``` block only (no other fences), and start the patch with diff --git.";
+              const exhaustedMarker = `AUTOPILOT_RETRY_EXHAUSTED:${currentAttempt}`;
+              await createCommentOnce(
+                improveIssueNumber,
+                exhaustedMarker,
+                [
+                  exhaustedMarker,
+                  `Failed PR: #${prNumber}`,
+                  `Failure kind: ${failureKind}`,
+                  `Normalized reason: ${normalizedReason}`,
+                  "Retry limit reached. Human action is required.",
+                ]
+              );
+            }
 
-            const logHint = (stdoutPath || stderrPath)
-              ? `\n\n(Logs are in runner temp. stdout=${stdoutPath || "n/a"} stderr=${stderrPath || "n/a"})`
-              : "";
+            await addLabels(prNumber, ["needs:you"]);
 
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body: [
-                title,
+            const humanMarker = `AUTOPILOT_PATCH_HUMAN_ATTENTION_FROM_COMMENT:${commentId}`;
+            await createCommentOnce(
+              prNumber,
+              humanMarker,
+              [
+                "Autopilot could not recover this Codex patch automatically.",
                 "",
-                `Reason: ${shortReason}${logHint}`,
+                `Reason: ${normalizedReason}`,
+                "Retry limit reached or the parent improve issue could not be recovered automatically.",
                 "",
-                hint,
-                "",
-                marker,
-              ].join("\n"),
-            });
+                humanMarker,
+              ]
+            );
+
+      - name: Commit and push if changed
+        id: push
+        if: steps.extract.outputs.valid == 'true' && steps.apply.outputs.status == '0' && steps.inspect.outputs.changed == 'true' && steps.inspect.outputs.stubOnly != 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "chore(autopilot): apply codex patch (#${{ steps.guard.outputs.prNumber }})"
+          git push origin HEAD:${{ steps.pr.outputs.headRef }}
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
       - name: Finalize PR after patch apply
-        if: steps.extract.outputs.valid == 'true' && steps.apply.outputs.status == '0' && steps.push.outputs.changed == 'true'
+        if: steps.extract.outputs.valid == 'true' && steps.apply.outputs.status == '0' && steps.inspect.outputs.changed == 'true' && steps.inspect.outputs.stubOnly != 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
@@ -553,6 +620,8 @@ jobs:
             const commentId = Number("${{ steps.guard.outputs.commentId }}");
             const prNodeId = String("${{ steps.pr.outputs.nodeId }}");
             const wasDraft = "${{ steps.pr.outputs.isDraft }}" === "true";
+            const improveIssueNumberRaw = String("${{ steps.pr.outputs.improveIssueNumber }}");
+            const improveIssueNumber = improveIssueNumberRaw ? Number(improveIssueNumberRaw) : null;
 
             if (!Number.isInteger(prNumber) || prNumber <= 0) {
               core.setFailed("Refusing to finalize an invalid PR number.");
@@ -569,11 +638,25 @@ jobs:
               }
             }
 
+            async function removeLabel(issueNumber, name) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch {}
+            }
+
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
+            await ensureLabel("autopilot:retry-pr", "fbca04", "Improve issue should reopen implementation as a retry PR");
             await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
             await ensureLabel("autopilot:patch-applied", "0e8a16", "Codex patch comment was applied to this PR branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
+            await ensureLabel("needs:you", "d93f0b", "Human attention required");
 
             if (wasDraft && prNodeId) {
               await github.graphql(
@@ -598,21 +681,27 @@ jobs:
             } catch {}
 
             for (const name of ["autopilot:waiting-patch", "autopilot:awaiting-patch", "pr:draft", "needs:you"]) {
-              try {
-                await github.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name });
-              } catch {}
+              await removeLabel(prNumber, name);
+            }
+
+            if (Number.isInteger(improveIssueNumber) && improveIssueNumber > 0) {
+              await removeLabel(improveIssueNumber, "autopilot:retry-pr");
+              await removeLabel(improveIssueNumber, "needs:you");
             }
 
             const successMarker = `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`;
             const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number: prNumber, per_page: 100
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
             });
 
-            if (comments.some(c => String(c.body || "").includes(successMarker))) return;
+            if (comments.some((comment) => String(comment.body || "").includes(successMarker))) return;
 
             await github.rest.issues.createComment({
               owner,
               repo,
               issue_number: prNumber,
-              body: ["✅ applied patch", "", successMarker].join("\n"),
+              body: ["applied patch", "", successMarker].join("\n"),
             });

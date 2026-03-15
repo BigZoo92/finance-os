@@ -8,7 +8,10 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Release: [../../.github/workflows/release.yml](../../.github/workflows/release.yml)
 - Stub guard: [../../.github/workflows/no-agent-stubs.yml](../../.github/workflows/no-agent-stubs.yml)
 - Autopilot patch apply: [../../.github/workflows/autopilot-apply-codex-diff.yml](../../.github/workflows/autopilot-apply-codex-diff.yml)
+- Autopilot batch to Codex: [../../.github/workflows/autopilot-batch-to-codex.yml](../../.github/workflows/autopilot-batch-to-codex.yml)
+- Autopilot batch reply to specs: [../../.github/workflows/autopilot-batch-create-specs.yml](../../.github/workflows/autopilot-batch-create-specs.yml)
 - Autopilot improve to draft PR: [../../.github/workflows/autopilot-improve-to-draft-pr.yml](../../.github/workflows/autopilot-improve-to-draft-pr.yml)
+- Autopilot improve reply to ready: [../../.github/workflows/autopilot-improve-comment-to-ready.yml](../../.github/workflows/autopilot-improve-comment-to-ready.yml)
 - Autopilot merge on green: [../../.github/workflows/autopilot-merge-on-green.yml](../../.github/workflows/autopilot-merge-on-green.yml)
 
 ## Deployment and Runtime Docs
@@ -25,6 +28,8 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Do not rebuild on Dokploy.
 - Keep public traffic on `web`; `/api/*` continues to proxy internally to the API runtime.
 - Do not alter autopilot, CI, release, or PR automation unless that work is explicitly scoped.
+- Autopilot batch intake is strict 1:1 with the raw bullet list and only one spawned spec may auto-start at a time.
+- Autopilot patch apply accepts a single fenced unified diff, rejects stub-only patches, and reopens at most two retry PRs before `needs:you`.
 
 ## Smoke and Manual Checks
 

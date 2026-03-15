@@ -25,6 +25,7 @@ Reference glossary for labels used by the agentic/autopilot workflow.
 
 - `autopilot`: item is managed by autopilot automation.
 - `autopilot:queued`: spec exists but is waiting for available PR capacity.
+- `autopilot:retry-pr`: improve issue should reopen implementation as a retry PR.
 - `autopilot:waiting-patch`: draft PR is waiting for Codex patch reply.
 - `autopilot:patch-applied`: a valid Codex patch was applied to the PR branch.
 
@@ -34,6 +35,6 @@ Reference glossary for labels used by the agentic/autopilot workflow.
 
 ## Operational notes
 
-- Improve batch creation should label only the first three spec issues as `ready`; the rest should be `autopilot:queued`.
+- Improve batch creation should label only the first spawned spec issue as `ready`; the rest should be `autopilot:queued`.
 - Merge-on-green automation should only merge autopilot PRs when `autopilot:patch-applied` is present and the PR is not draft.
-- Patch-apply automation should add `needs:you` only for non-format patch failures.
+- Patch-apply automation should reject stub-only patches, schedule at most two retry PRs, then stop with `needs:you`.

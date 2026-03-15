@@ -1,6 +1,6 @@
 # AGENTS.md - Finance-OS
 
-Last updated: 2026-03-15
+Last updated: 2026-03-16
 
 Use the nearest `AGENTS.md` before editing. Keep this root file small and durable; push local detail into nested `AGENTS.md`, `.agents/skills/`, and `docs/agentic/`.
 
@@ -20,6 +20,11 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - keep API logs structured and secret-safe
   - keep error payloads normalized and safe to expose
 - Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
+- Autopilot workflow invariants:
+  - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs
+  - only one implementation lane may auto-start from a batch at a time; the rest stay queued
+  - `issue_comment` workflows must gate on Codex-authored comments before doing work
+  - implementation patch failures must either schedule a bounded retry PR or stop with `needs:you`; they must not loop indefinitely on one broken PR
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
 
 ## Global Verification

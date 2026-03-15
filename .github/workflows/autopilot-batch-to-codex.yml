@@ -39,6 +39,37 @@ jobs:
             const has = (n) => labels.includes(n);
             const title = String(issue.title || "").toLowerCase();
 
+            function normalizeText(value) {
+              return String(value || "")
+                .replace(/\r\n/g, "\n")
+                .replace(/\r/g, "\n");
+            }
+
+            function extractSection(body, heading) {
+              const lines = normalizeText(body).split("\n");
+              const headingText = `### ${heading}`.toLowerCase();
+              const startIndex = lines.findIndex((line) => line.trim().toLowerCase() === headingText);
+              if (startIndex === -1) return "";
+
+              const collected = [];
+              for (let index = startIndex + 1; index < lines.length; index += 1) {
+                const line = lines[index];
+                if (line.trim().startsWith("### ")) break;
+                collected.push(line);
+              }
+              return collected.join("\n").trim();
+            }
+
+            function extractRawBullets(body) {
+              const section = extractSection(body, "Raw specs list (one bullet per spec)");
+              return section
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => /^[*-]\s+/.test(line))
+                .map((line) => line.replace(/^[*-]\s+/, "").trim())
+                .filter(Boolean);
+            }
+
             if (!has("batch:spec")) return;
             if (!has("autopilot")) return;
 
@@ -71,6 +102,30 @@ jobs:
             await ensureLabel("autopilot:spawned-specs", "c8f2c2", "Batch: spec issues have been spawned");
             await ensureLabel("autopilot:retried", "ffe8a3", "Batch: Codex JSON retry already requested");
             await ensureLabel("autopilot:batched", "bfd4f2", "Batch was dispatched to Codex");
+            await ensureLabel("needs:you", "d93f0b", "Human attention required");
+
+            const rawBullets = extractRawBullets(issue.body || "");
+            if (rawBullets.length === 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issue.number,
+                labels: ["needs:you"],
+              });
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: [
+                  "Autopilot could not dispatch this batch to Codex.",
+                  "",
+                  "Reason: could not parse any raw spec bullets from the issue body.",
+                  "Fix the `Raw specs list` section and relabel the issue `ready`.",
+                ].join("\n"),
+              });
+              return;
+            }
 
             const nonce = `BATCH-${issue.number}-${Date.now()}`;
 
@@ -79,20 +134,25 @@ jobs:
               "AUTOPILOT_BATCH_NONCE: " + nonce,
               "",
               "Return STRICT JSON ONLY in exactly ONE ```json``` fence.",
-              "Top-level value must be an array.",
+              `Top-level value must be an array of exactly ${rawBullets.length} items.`,
               "No text outside the JSON fence.",
               "",
-              "Create one spec object per raw bullet (1:1, same order).",
-              "Optional extra items are allowed only at the end with origin='extra'.",
+              `Create exactly one requested spec object per raw bullet (1:1, same order, count ${rawBullets.length}).`,
+              "Do NOT add extra items.",
+              "Every item must set origin='requested'.",
+              `source_bullet must be 1..${rawBullets.length} exactly once, in order.`,
               "",
               "Each item must include:",
               "- title (starts with 'spec:')",
               "- area (api|web|worker|powens|db|infra|ui-ux|docs)",
               "- priority (p0|p1|p2)",
-              "- origin (requested|extra)",
+              "- origin (must be requested)",
               "- source_bullet (number)",
               "- goal, non_goals, acceptance_criteria[], breakpoints[]",
               "- dual_path, observability, uiux, risks, env_change_request",
+              "",
+              "Raw bullets to convert:",
+              ...rawBullets.map((bullet, index) => `${index + 1}. ${bullet}`),
             ].join("\n");
 
             await github.rest.issues.createComment({
@@ -108,3 +168,12 @@ jobs:
               issue_number: issue.number,
               labels: ["autopilot:waiting-json", "autopilot:batched"],
             });
+
+            try {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number: issue.number,
+                name: "needs:you",
+              });
+            } catch {}
