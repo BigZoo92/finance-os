@@ -65,33 +65,29 @@ jobs:
             await ensureLabel("pr:created", "0e8a16", "Autopilot PR created for improve issue");
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
-            await ensureLabel(
-              "autopilot:waiting-patch",
-              "fbca04",
-              "PR is waiting for a Codex patch comment"
-            );
-            await ensureLabel(
-              "autopilot:patch-applied",
-              "0e8a16",
-              "Codex patch comment was applied to this PR branch"
-            );
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "Codex patch comment was applied to this PR branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
 
             const repoInfo = await github.rest.repos.get({ owner, repo });
             const defaultBranch = repoInfo.data.default_branch;
+
             const rawSlug = String(issue.title || "")
               .replace(/^improve:\s*/i, "")
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, "-")
               .replace(/^-+|-+$/g, "");
             const slug = (rawSlug || "task").slice(0, 32);
+
             const branch = `agent/impl-${issue.number}-${slug}`;
             const marker = `Parent improve issue: #${issue.number}`;
             const issueLink = `https://github.com/${owner}/${repo}/issues/${issue.number}`;
 
             let pull = null;
+
+            // Prefer PR from exact head branch if present
             const prsForHead = await github.rest.pulls.list({
               owner,
               repo,
@@ -103,19 +99,13 @@ jobs:
             }
 
             if (!pull) {
+              // Ensure branch exists
               let branchExists = true;
               try {
-                await github.rest.git.getRef({
-                  owner,
-                  repo,
-                  ref: `heads/${branch}`,
-                });
+                await github.rest.git.getRef({ owner, repo, ref: `heads/${branch}` });
               } catch (e) {
-                if (e.status === 404) {
-                  branchExists = false;
-                } else {
-                  throw e;
-                }
+                if (e.status === 404) branchExists = false;
+                else throw e;
               }
 
               if (!branchExists) {
@@ -133,6 +123,7 @@ jobs:
                 });
               }
 
+              // Create stub commit so PR can exist
               const stubPath = `.github/agent-stubs/improve-${issue.number}.md`;
               const stubBody = [
                 `# Autopilot stub for improve #${issue.number}`,
@@ -151,9 +142,7 @@ jobs:
                   path: stubPath,
                   ref: branch,
                 });
-                if (!Array.isArray(existingStub.data)) {
-                  stubSha = existingStub.data.sha;
-                }
+                if (!Array.isArray(existingStub.data)) stubSha = existingStub.data.sha;
               } catch (e) {
                 if (e.status !== 404) throw e;
               }
@@ -169,19 +158,16 @@ jobs:
                 });
               }
 
-              const openPrs = await github.paginate(github.rest.pulls.list, {
+              // Try again to find PR (by head branch), else create it
+              const prsForHead2 = await github.rest.pulls.list({
                 owner,
                 repo,
                 state: "open",
-                per_page: 100,
+                head: `${owner}:${branch}`,
               });
-
-              pull = openPrs.find(
-                (p) =>
-                  p.head?.ref === branch || String(p.body || "").includes(marker)
-              );
-
-              if (!pull) {
+              if (prsForHead2.data.length > 0) {
+                pull = prsForHead2.data[0];
+              } else {
                 const pr = await github.rest.pulls.create({
                   owner,
                   repo,
@@ -201,6 +187,7 @@ jobs:
               }
             }
 
+            // Fetch PR issue/labels
             const pullIssue = await github.rest.issues.get({
               owner,
               repo,
@@ -211,16 +198,14 @@ jobs:
             );
             const pullHas = (name) => pullLabels.includes(name);
 
+            // Ensure PR is draft until patch applied
             if (!pullHas("autopilot:patch-applied") && !pull.draft) {
               try {
                 await github.graphql(
                   `
                     mutation ConvertPullRequestToDraft($pullRequestId: ID!) {
                       convertPullRequestToDraft(input: { pullRequestId: $pullRequestId }) {
-                        pullRequest {
-                          id
-                          isDraft
-                        }
+                        pullRequest { id isDraft }
                       }
                     }
                   `,
@@ -238,6 +223,7 @@ jobs:
               pull = refreshed.data;
             }
 
+            // Mark improve -> PR created
             await github.rest.issues.addLabels({
               owner,
               repo,
@@ -245,6 +231,7 @@ jobs:
               labels: ["pr:created"],
             });
 
+            // Label PR state
             try {
               const prLabels = pullHas("autopilot:patch-applied")
                 ? ["autopilot"]
@@ -260,6 +247,7 @@ jobs:
               core.warning(`Could not label PR #${pull.number}: ${error.message}`);
             }
 
+            // Cleanup conflicting labels
             for (const name of ["autopilot:awaiting-patch", "autopilot:ready-to-merge"]) {
               try {
                 await github.rest.issues.removeLabel({
@@ -284,6 +272,7 @@ jobs:
               }
             }
 
+            // Link improve issue -> PR
             const improveComments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -302,6 +291,7 @@ jobs:
               });
             }
 
+            // Ping Codex on PR (only once per improve issue) unless patch already applied
             const pingMarker = `AUTOPILOT_DIFF_MODE_REQUEST_V1:${issue.number}`;
             const prComments = await github.paginate(github.rest.issues.listComments, {
               owner,
@@ -314,34 +304,42 @@ jobs:
             );
             if (alreadyPinged || pullHas("autopilot:patch-applied")) return;
 
+            const mustDeleteStub = `.github/agent-stubs/improve-${issue.number}.md`;
+
             const body = [
               pingMarker,
               "@codex",
               "",
-              "Patch mode is mandatory for this PR.",
-              "You may inspect the repo, checkout the branch, and run local checks, but the final implementation output must be a PR comment on this thread.",
+              "PATCH MODE (MANDATORY).",
               "",
-              "Reply with EXACTLY ONE comment in this format:",
-              "1. The first non-empty line must be exactly: AUTOPILOT_PATCH_V1",
-              "2. After that, include exactly one fenced diff block whose first meaningful line is diff --git.",
-              "3. After the closing diff fence, append a short plain-text status footer.",
+              "Your output MUST be a single PR comment on THIS thread.",
+              "Do NOT create PRs in Codex UI. Do NOT use make_pr.",
               "",
+              "⚠️ CRITICAL: Your reply must NOT start with '@codex', must NOT include this ping marker, and must NOT include any other preface line.",
+              "",
+              "Reply with EXACTLY ONE comment matching this structure:",
+              "",
+              "Line 1 (first non-empty line) MUST be exactly:",
+              "AUTOPILOT_PATCH_V1",
+              "",
+              "Then include EXACTLY ONE fenced diff block (and NO other code fences anywhere):",
+              "- The fenced block language MUST be 'diff' (```diff).",
+              "- Inside the fence, the first meaningful line MUST be: diff --git ...",
+              "- The diff must be REAL (no placeholders like ... or <unified diff>).",
+              "",
+              "After the closing diff fence, append a plain-text footer (NO fences):",
               "Status: READY",
               "What changed: (max 3 bullets)",
               "Risk: (low/med/high + why)",
               "Next: (one next step)",
               "",
-              "Mandatory rules:",
-              "- Include exactly one fenced diff block and no other code fences.",
-              "- The diff block must start with diff --git.",
-              "- Keep AUTOPILOT_PATCH_V1 in the same comment as the diff.",
-              "- Do not include placeholder text such as ... or <unified diff> anywhere inside the diff fence.",
-              "- Keep the status footer outside the diff fence.",
-              "- Post the patch reply only on this PR thread.",
-              "- Do not create a PR in Codex UI.",
-              "- Do not use make_pr.",
-              "- Do not ask a human to extract, copy, or apply anything manually.",
-              `- Delete \`.github/agent-stubs/improve-${issue.number}.md\` in the first real patch unless the patch is truly docs-only elsewhere.`,
+              "Mandatory rules (if you break one, autopilot will reject):",
+              "- Do not include '@codex' anywhere in your reply.",
+              "- Do not include AUTOPILOT_DIFF_MODE_REQUEST_V1 anywhere in your reply.",
+              "- Exactly ONE ```diff``` fence, and ZERO other fences.",
+              "- Keep 'AUTOPILOT_PATCH_V1' OUTSIDE the diff fence.",
+              "- Keep the footer OUTSIDE the diff fence.",
+              `- In your first real patch, delete ${mustDeleteStub} (unless the PR is truly docs-only and does not need the stub removal).`,
             ].join("\n");
 
             await github.rest.issues.createComment({

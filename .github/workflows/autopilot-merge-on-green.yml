@@ -88,10 +88,8 @@ jobs:
               typeof label === "string" ? label : label.name
             );
 
-            if (!labels.includes("autopilot:patch-applied")) {
-              core.info(`Skipping PR #${pr.number} because autopilot:patch-applied is missing.`);
-              return;
-            }
+            const ok = labels.includes("autopilot:patch-applied") && labels.includes("autopilot:ready-to-merge");
+            if (!ok) return;
 
             await github.rest.pulls.merge({
               owner,
