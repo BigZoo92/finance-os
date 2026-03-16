@@ -24,7 +24,8 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs
   - only one implementation lane may auto-start from a batch at a time; the rest stay queued
   - `issue_comment` workflows must gate on Codex-authored comments before doing work
-  - implementation patch failures must either schedule a bounded retry PR or stop with `needs:you`; they must not loop indefinitely on one broken PR
+  - implementation PRs must support the real GitHub Codex path first: Codex may update the PR branch directly, with patch comments kept only as fallback
+  - implementation patch failures must either nudge direct PR updates or schedule a bounded retry for true apply conflicts; they must not loop indefinitely on one broken PR
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
 
 ## Global Verification

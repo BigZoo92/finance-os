@@ -29,7 +29,7 @@ description: Validate whether a Finance-OS change can affect CI, release, deploy
 1. Read [../../../docs/agentic/release-map.md](../../../docs/agentic/release-map.md) first.
 2. Trace whether the change affects CI, GHCR images, Dokploy, web-only public routing, or autopilot patch flow assumptions.
 3. When `issue_comment` workflows are in scope, verify that Codex-author gating happens before side effects and that comment failures cannot create retry storms.
-4. When autopilot patch flow is in scope, verify retry caps, stub-only rejection, and merge-on-green assumptions together.
+4. When autopilot patch flow is in scope, verify direct-PR-update handling, retry caps for true apply conflicts, stub-only rejection, and merge-on-green assumptions together.
 5. Prefer validation and documentation over redesign; do not expand scope into workflow rewrites unless asked.
 6. Call out any smoke checks from [../../../scripts/smoke-api.mjs](../../../scripts/smoke-api.mjs) or [../../../scripts/smoke-prod.mjs](../../../scripts/smoke-prod.mjs) that should run.
 

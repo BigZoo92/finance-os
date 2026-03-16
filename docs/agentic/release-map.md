@@ -29,7 +29,9 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Keep public traffic on `web`; `/api/*` continues to proxy internally to the API runtime.
 - Do not alter autopilot, CI, release, or PR automation unless that work is explicitly scoped.
 - Autopilot batch intake is strict 1:1 with the raw bullet list and only one spawned spec may auto-start at a time.
-- Autopilot patch apply accepts a single fenced unified diff, rejects stub-only patches, and reopens at most two retry PRs before `needs:you`.
+- Autopilot implementation PRs now prefer direct Codex branch updates; fenced unified diff comments remain a fallback path only.
+- Autopilot patch apply rejects stub-only or no-op replies, nudges direct PR updates first, and only reopens retry PRs for true apply conflicts.
+- Merge-on-green must recognize a real direct implementation on the branch, promote the PR out of draft, and only merge once no stub file remains.
 
 ## Smoke and Manual Checks
 

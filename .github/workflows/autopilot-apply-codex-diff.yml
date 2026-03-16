@@ -86,6 +86,7 @@ jobs:
               `AUTOPILOT_APPLIED_FROM_COMMENT:${commentId}`,
               `AUTOPILOT_PATCH_RETRY_SCHEDULED_FROM_COMMENT:${commentId}`,
               `AUTOPILOT_PATCH_HUMAN_ATTENTION_FROM_COMMENT:${commentId}`,
+              `AUTOPILOT_DIRECT_UPDATE_NUDGE_FROM_COMMENT:${commentId}`,
             ];
 
             const comments = await github.paginate(github.rest.issues.listComments, {
@@ -415,6 +416,7 @@ jobs:
             const stdoutPath = String("${{ steps.apply.outputs.stdoutPath }}");
 
             const MAX_RETRIES = 2;
+            const MAX_DIRECT_UPDATE_NUDGES = 2;
 
             async function ensureLabel(name, color, description) {
               try {
@@ -454,14 +456,19 @@ jobs:
               } catch {}
             }
 
-            async function createCommentOnce(issueNumber, marker, bodyLines) {
-              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return false;
-              const comments = await github.paginate(github.rest.issues.listComments, {
+            async function listComments(issueNumber) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return [];
+              return github.paginate(github.rest.issues.listComments, {
                 owner,
                 repo,
                 issue_number: issueNumber,
                 per_page: 100,
               });
+            }
+
+            async function createCommentOnce(issueNumber, marker, bodyLines, existingComments = null) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return false;
+              const comments = existingComments || await listComments(issueNumber);
 
               if (comments.some((comment) => String(comment.body || "").includes(marker))) {
                 return false;
@@ -490,6 +497,11 @@ jobs:
 
             let reason = "";
             let failureKind = "apply";
+            const isNoChangeFailure =
+              prValid &&
+              extractValid &&
+              applyStatus === 0 &&
+              !changed;
 
             if (!prValid) {
               failureKind = "pr-lookup";
@@ -523,8 +535,80 @@ jobs:
 
             await ensureLabel("autopilot:retry-pr", "fbca04", "Improve issue should reopen implementation as a retry PR");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation update or fallback patch comment");
 
-            if (Number.isInteger(improveIssueNumber) && improveIssueNumber > 0 && nextAttempt <= MAX_RETRIES) {
+            const prComments = await listComments(prNumber);
+
+            const shouldNudgeDirectUpdate =
+              prValid &&
+              (
+                failureKind === "format" ||
+                failureKind === "stub-only" ||
+                isNoChangeFailure
+              );
+
+            if (shouldNudgeDirectUpdate) {
+              const nudgeCount = prComments.filter((comment) =>
+                String(comment.body || "").includes("AUTOPILOT_DIRECT_UPDATE_NUDGE:")
+              ).length;
+
+              if (nudgeCount < MAX_DIRECT_UPDATE_NUDGES) {
+                const nextNudge = nudgeCount + 1;
+                const marker = `AUTOPILOT_DIRECT_UPDATE_NUDGE_FROM_COMMENT:${commentId}`;
+                await createCommentOnce(
+                  prNumber,
+                  marker,
+                  [
+                    `AUTOPILOT_DIRECT_UPDATE_NUDGE:${nextNudge}`,
+                    "@codex",
+                    "",
+                    "Autopilot did not get a usable implementation patch from your last reply.",
+                    `Reason: ${normalizedReason}`,
+                    "Address that feedback by updating THIS PR directly on its branch.",
+                    "Do not open a new PR. Do not leave review-only feedback.",
+                    "Delete any remaining .github/agent-stubs/** file from this PR diff and implement the requested feature in real non-stub files.",
+                    "If direct branch update is unavailable, you may fall back to one AUTOPILOT_PATCH_V1 comment on this PR thread.",
+                    "",
+                    marker,
+                  ],
+                  prComments
+                );
+
+                await addLabels(prNumber, ["autopilot:waiting-patch"]);
+                await removeLabel(prNumber, "needs:you");
+
+                if (Number.isInteger(improveIssueNumber) && improveIssueNumber > 0) {
+                  await removeLabel(improveIssueNumber, "autopilot:retry-pr");
+                  await removeLabel(improveIssueNumber, "needs:you");
+                }
+                return;
+              }
+
+              if (Number.isInteger(improveIssueNumber) && improveIssueNumber > 0) {
+                await addLabels(improveIssueNumber, ["needs:you"]);
+                await removeLabel(improveIssueNumber, "autopilot:retry-pr");
+              }
+
+              await addLabels(prNumber, ["needs:you"]);
+
+              const exhaustedDirectMarker = `AUTOPILOT_DIRECT_UPDATE_EXHAUSTED_FROM_COMMENT:${commentId}`;
+              await createCommentOnce(
+                prNumber,
+                exhaustedDirectMarker,
+                [
+                  "Autopilot could not turn Codex review output into a real implementation automatically.",
+                  "",
+                  `Reason: ${normalizedReason}`,
+                  "Direct-update nudges are exhausted for this PR. Human action is required.",
+                  "",
+                  exhaustedDirectMarker,
+                ],
+                prComments
+              );
+              return;
+            }
+
+            if (failureKind === "apply" && applyStatus !== 0 && Number.isInteger(improveIssueNumber) && improveIssueNumber > 0 && nextAttempt <= MAX_RETRIES) {
               const retryMarker = `AUTOPILOT_RETRY_REQUEST:${nextAttempt}`;
               await createCommentOnce(
                 improveIssueNumber,
@@ -652,8 +736,8 @@ jobs:
 
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
             await ensureLabel("autopilot:retry-pr", "fbca04", "Improve issue should reopen implementation as a retry PR");
-            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
-            await ensureLabel("autopilot:patch-applied", "0e8a16", "Codex patch comment was applied to this PR branch");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation update or fallback patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A real Codex implementation landed on this PR branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");

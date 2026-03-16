@@ -29,6 +29,33 @@ jobs:
 
             if (!headBranch.startsWith("agent/")) return;
 
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                } catch {}
+              }
+            }
+
+            async function removeLabel(issueNumber, name) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch {}
+            }
+
             const prs = await github.rest.pulls.list({
               owner,
               repo,
@@ -45,18 +72,30 @@ jobs:
               per_page: 100,
             });
             const filenames = files.map((file) => String(file.filename || ""));
-            const stubOnly =
-              filenames.length > 0 &&
-              filenames.every((filename) => filename.startsWith(".github/agent-stubs/"));
+            const hasStub = filenames.some((filename) => filename.startsWith(".github/agent-stubs/"));
+            const hasNonStub = filenames.some((filename) => !filename.startsWith(".github/agent-stubs/"));
 
-            if (stubOnly) {
-              const marker = "AUTOPILOT_STUB_ONLY_WAITING_FOR_PATCH";
-              const comments = await github.paginate(github.rest.issues.listComments, {
-                owner,
-                repo,
-                issue_number: pr.number,
-                per_page: 100,
-              });
+            const issue = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: pr.number,
+            });
+            const labels = (issue.data.labels || []).map((label) =>
+              typeof label === "string" ? label : label.name
+            );
+            const labelSet = new Set(labels);
+
+            if (!labelSet.has("autopilot")) return;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+
+            if (!hasNonStub) {
+              const marker = "AUTOPILOT_STUB_ONLY_WAITING_FOR_DIRECT_UPDATE_V2";
               const alreadyCommented = comments.some((comment) =>
                 String(comment.body || "").includes(marker)
               );
@@ -68,7 +107,12 @@ jobs:
                   issue_number: pr.number,
                   body: [
                     marker,
-                    "Autopilot will not merge this PR because it is still stub-only, waiting for a real patch.",
+                    "Autopilot will not merge this PR because it is still stub-only.",
+                    "",
+                    "@codex address that feedback by updating THIS PR directly on its branch.",
+                    "Delete the .github/agent-stubs/** bootstrap file from the PR diff and implement the requested feature in real non-stub files.",
+                    "Do not open a new PR. Do not leave review-only feedback.",
+                    "If direct branch update is unavailable, you may fall back to one AUTOPILOT_PATCH_V1 comment on this PR thread.",
                   ].join("\n"),
                 });
               }
@@ -77,18 +121,94 @@ jobs:
               return;
             }
 
-            if (pr.draft) return;
+            if (hasStub) {
+              const marker = "AUTOPILOT_REMOVE_STUB_REQUIRED_V1";
+              const alreadyCommented = comments.some((comment) =>
+                String(comment.body || "").includes(marker)
+              );
 
-            const issue = await github.rest.issues.get({
-              owner,
-              repo,
-              issue_number: pr.number,
-            });
-            const labels = (issue.data.labels || []).map((label) =>
-              typeof label === "string" ? label : label.name
-            );
+              if (!alreadyCommented) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: [
+                    marker,
+                    "Autopilot found real implementation changes on this PR, but the bootstrap stub file is still present in the PR diff.",
+                    "",
+                    "@codex remove every .github/agent-stubs/** file from this PR diff and keep the real implementation changes.",
+                    "Do not leave the PR with any stub file remaining.",
+                  ].join("\n"),
+                });
+              }
 
-            const ok = labels.includes("autopilot:patch-applied") && labels.includes("autopilot:ready-to-merge");
+              core.info(`Skipping PR #${pr.number} because stub files still remain in the diff.`);
+              return;
+            }
+
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation update or fallback patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A real Codex implementation landed on this PR branch");
+            await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
+            await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
+            await ensureLabel("needs:you", "d93f0b", "Human attention required");
+
+            let isDraft = Boolean(pr.draft);
+
+            if (isDraft && labelSet.has("autopilot:waiting-patch")) {
+              if (pr.node_id) {
+                try {
+                  await github.graphql(
+                    `
+                      mutation MarkPullRequestReadyForReview($pullRequestId: ID!) {
+                        markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
+                          pullRequest { id isDraft }
+                        }
+                      }
+                    `,
+                    { pullRequestId: pr.node_id }
+                  );
+                  isDraft = false;
+                } catch (error) {
+                  core.warning(`Could not mark PR #${pr.number} ready for review: ${error.message}`);
+                }
+              }
+
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  labels: ["autopilot:patch-applied", "autopilot:ready-to-merge"],
+                });
+                labelSet.add("autopilot:patch-applied");
+                labelSet.add("autopilot:ready-to-merge");
+              } catch {}
+
+              for (const name of ["autopilot:waiting-patch", "autopilot:awaiting-patch", "pr:draft", "needs:you"]) {
+                await removeLabel(pr.number, name);
+                labelSet.delete(name);
+              }
+
+              const marker = "AUTOPILOT_DIRECT_IMPLEMENTATION_DETECTED_V1";
+              const alreadyCommented = comments.some((comment) =>
+                String(comment.body || "").includes(marker)
+              );
+              if (!alreadyCommented) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  body: [
+                    marker,
+                    "Autopilot detected a real non-stub implementation on this PR branch and promoted the PR out of draft.",
+                  ].join("\n"),
+                });
+              }
+            }
+
+            if (isDraft) return;
+
+            const ok = labelSet.has("autopilot:patch-applied") && labelSet.has("autopilot:ready-to-merge");
             if (!ok) return;
 
             await github.rest.pulls.merge({

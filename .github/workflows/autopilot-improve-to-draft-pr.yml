@@ -110,8 +110,8 @@ jobs:
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
             await ensureLabel("autopilot:retry-pr", "fbca04", "Improve issue should reopen implementation as a retry PR");
-            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex patch comment");
-            await ensureLabel("autopilot:patch-applied", "0e8a16", "Codex patch comment was applied to this PR branch");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation update or fallback patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A real Codex implementation landed on this PR branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
@@ -279,7 +279,7 @@ jobs:
                   `Autopilot retry attempt: ${retryAttempt}`,
                   retryReason ? `Retry reason: ${retryReason}` : "",
                   "",
-                  "Autopilot mode: Codex must reply on this PR thread with a single unified diff comment.",
+                  "Autopilot mode: Codex should update this PR branch directly when possible; AUTOPILOT_PATCH_V1 comments are fallback only.",
                 ].filter(Boolean).join("\n"),
               });
               pull = createdPull.data;
@@ -392,7 +392,8 @@ jobs:
               });
             }
 
-            const pingMarker = `AUTOPILOT_DIFF_MODE_REQUEST_V1:${issue.number}`;
+            const pingMarker = `AUTOPILOT_IMPLEMENTATION_REQUEST_V2:${issue.number}`;
+            const legacyPingMarker = `AUTOPILOT_DIFF_MODE_REQUEST_V1:${issue.number}`;
             const prComments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
@@ -400,7 +401,8 @@ jobs:
               per_page: 100,
             });
             const alreadyPinged = prComments.some((comment) =>
-              String(comment.body || "").includes(pingMarker)
+              String(comment.body || "").includes(pingMarker) ||
+              String(comment.body || "").includes(legacyPingMarker)
             );
             if (alreadyPinged || pullHas("autopilot:patch-applied")) return;
 
@@ -410,17 +412,19 @@ jobs:
               pingMarker,
               "@codex",
               "",
-              "PATCH MODE (MANDATORY).",
+              "PRIMARY MODE: update THIS PR directly on its branch.",
               "",
-              "Your output MUST be a single PR comment on THIS thread.",
-              "Do NOT create PRs in Codex UI. Do NOT use make_pr.",
+              "Stay on THIS PR. Do NOT open another PR in Codex UI. Do NOT use make_pr.",
+              `Delete ${mustDeleteStub} and implement the requested feature in real non-stub files on this branch.`,
+              "If you already reviewed this PR, address that feedback by updating the branch.",
               "",
-              "CRITICAL:",
-              "- Your reply must NOT start with @codex.",
-              "- Your reply must NOT include this ping marker.",
-              "- Your reply must NOT include any preface line before AUTOPILOT_PATCH_V1.",
+              "Fallback mode only if direct branch update is unavailable:",
+              "- Post EXACTLY ONE issue comment on THIS PR thread.",
+              "- The first non-empty line must be AUTOPILOT_PATCH_V1.",
+              "- Include exactly one fenced unified diff block.",
+              "- Append the status footer outside the fence.",
               "",
-              "Reply with EXACTLY ONE comment matching this structure:",
+              "Fallback comment structure:",
               "",
               "Line 1 (first non-empty line) MUST be exactly:",
               "AUTOPILOT_PATCH_V1",
@@ -436,12 +440,12 @@ jobs:
               "Risk: (low/med/high + why)",
               "Next: (one next step)",
               "",
-              "Mandatory rules (autopilot rejects the patch if any rule is broken):",
-              "- Exactly ONE fenced code block, and ZERO other code fences.",
-              "- Keep AUTOPILOT_PATCH_V1 outside the fence.",
-              "- Keep the footer outside the fence.",
-              `- The first implementation patch MUST delete ${mustDeleteStub} AND modify at least one non-stub path.`,
-              "- Do NOT reply with a stub-only patch.",
+              "Mandatory rules:",
+              `- Whether you update the branch directly or use the fallback patch comment, you MUST delete ${mustDeleteStub} AND modify at least one non-stub path.`,
+              "- Do NOT leave the PR stub-only.",
+              "- Do NOT reply with review-only feedback when implementation work is required.",
+              "- For fallback comments only: keep AUTOPILOT_PATCH_V1 and the footer outside the code fence.",
+              "- For fallback comments only: use exactly ONE fenced code block and ZERO other code fences.",
               retryReason ? `- Previous attempt failed for this reason: ${retryReason}` : "",
               retryReason ? "- Do NOT repeat that failure." : "",
             ].filter(Boolean).join("\n");
