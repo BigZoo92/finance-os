@@ -1,0 +1,223 @@
+name: Autopilot - CI failure to Codex
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: autopilot-ci-failure-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect autopilot PR state
+        id: inspect
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run = context.payload.workflow_run;
+            const headBranch = String(run?.head_branch || "");
+            const runHeadSha = String(run?.head_sha || "");
+
+            core.setOutput("eligible", "false");
+
+            if (!headBranch.startsWith("agent/")) return;
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head: `${owner}:${headBranch}`,
+            });
+            const pr = prs.data[0];
+            if (!pr) return;
+
+            if (runHeadSha && pr.head.sha !== runHeadSha) {
+              core.info(`Skipping stale failed CI result for PR #${pr.number}: workflow head ${runHeadSha} != current head ${pr.head.sha}.`);
+              return;
+            }
+
+            const issue = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: pr.number,
+            });
+            const labels = (issue.data.labels || []).map((label) =>
+              typeof label === "string" ? label : label.name
+            );
+
+            if (!labels.includes("autopilot")) return;
+
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner,
+              repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+
+            const failedJobs = jobs
+              .filter((job) => job.conclusion === "failure")
+              .map((job) => {
+                const failedSteps = (job.steps || [])
+                  .filter((step) => step.conclusion === "failure")
+                  .map((step) => step.name)
+                  .filter(Boolean);
+
+                if (failedSteps.length === 0) return `- ${job.name}`;
+                return `- ${job.name}: ${failedSteps.join(", ")}`;
+              });
+
+            core.setOutput("eligible", "true");
+            core.setOutput("prNumber", String(pr.number));
+            core.setOutput("runId", String(run.id));
+            core.setOutput("runUrl", String(run.html_url || ""));
+            core.setOutput("headRef", String(pr.head.ref || ""));
+            core.setOutput("failedJobs", failedJobs.join("\n"));
+
+      - name: Collect failed log excerpt
+        id: logs
+        if: steps.inspect.outputs.eligible == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ steps.inspect.outputs.runId }}
+        run: |
+          set +e
+
+          gh run view "$RUN_ID" --repo "$GH_REPO" --log-failed > failed.log 2>&1
+
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          text = pathlib.Path("failed.log").read_text(encoding="utf-8", errors="ignore")
+          text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
+          lines = [line.rstrip() for line in text.splitlines()]
+
+          patterns = [
+              r"error TS\d+:",
+              r"Error:",
+              r"ERR_",
+              r"failed",
+              r"exit status",
+              r"exit code",
+              r"not assignable",
+          ]
+
+          excerpt = []
+          carry = 0
+          for line in lines:
+              if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns):
+                  carry = 3
+              if carry > 0:
+                  if line.strip():
+                      excerpt.append(line)
+                  carry -= 1
+
+          if not excerpt:
+              excerpt = [line for line in lines if line.strip()][-80:]
+
+          snippet = "\n".join(excerpt[-80:]).strip()
+          if len(snippet) > 12000:
+              snippet = snippet[-12000:]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("excerpt<<EOF\n")
+              output.write(snippet)
+              output.write("\nEOF\n")
+          PY
+
+      - name: Comment CI failure for Codex
+        if: steps.inspect.outputs.eligible == 'true'
+        uses: actions/github-script@v7
+        env:
+          FAILED_JOBS: ${{ steps.inspect.outputs.failedJobs }}
+          LOG_EXCERPT: ${{ steps.logs.outputs.excerpt }}
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.inspect.outputs.prNumber }}");
+            const runId = String("${{ steps.inspect.outputs.runId }}");
+            const runUrl = String("${{ steps.inspect.outputs.runUrl }}");
+            const failedJobs = String(process.env.FAILED_JOBS || "").trim();
+            const logExcerpt = String(process.env.LOG_EXCERPT || "").trim();
+
+            if (!Number.isInteger(prNumber) || prNumber <= 0) return;
+
+            async function addLabels(issueNumber, labels) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0 || labels.length === 0) return;
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels,
+                });
+              } catch {}
+            }
+
+            async function removeLabel(issueNumber, name) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch {}
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+            const marker = `AUTOPILOT_CI_FAILURE_V1:${runId}`;
+            if (comments.some((comment) => String(comment.body || "").includes(marker))) return;
+
+            await addLabels(prNumber, ["autopilot:waiting-codex"]);
+            await removeLabel(prNumber, "autopilot:ready-to-merge");
+
+            const body = [
+              marker,
+              "@codex",
+              "",
+              "CI failed on this PR branch.",
+              "Fix these errors on THIS branch. Do NOT open a new PR. Do NOT use make_pr.",
+              "CI is the source of truth for this PR; do not treat partial local checks as success if CI disagrees.",
+              runUrl ? `Workflow run: ${runUrl}` : "",
+              failedJobs ? "" : "",
+              failedJobs ? "Failed jobs/steps:" : "",
+              failedJobs || "",
+              logExcerpt ? "" : "",
+              logExcerpt ? "Failure excerpt:" : "",
+              logExcerpt ? "```text" : "",
+              logExcerpt || "",
+              logExcerpt ? "```" : "",
+              "",
+              "Push the fix on the same branch. When CI turns green, autopilot will continue automatically.",
+            ].filter(Boolean);
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: body.join("\n"),
+            });

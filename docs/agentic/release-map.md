@@ -9,6 +9,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Stub guard: [../../.github/workflows/no-agent-stubs.yml](../../.github/workflows/no-agent-stubs.yml)
 - Autopilot batch to Codex: [../../.github/workflows/autopilot-batch-to-codex.yml](../../.github/workflows/autopilot-batch-to-codex.yml)
 - Autopilot batch reply to specs: [../../.github/workflows/autopilot-batch-create-specs.yml](../../.github/workflows/autopilot-batch-create-specs.yml)
+- Autopilot CI failure to Codex: [../../.github/workflows/autopilot-ci-failure-to-codex.yml](../../.github/workflows/autopilot-ci-failure-to-codex.yml)
 - Autopilot improve to draft PR: [../../.github/workflows/autopilot-improve-to-draft-pr.yml](../../.github/workflows/autopilot-improve-to-draft-pr.yml)
 - Autopilot improve reply to ready: [../../.github/workflows/autopilot-improve-comment-to-ready.yml](../../.github/workflows/autopilot-improve-comment-to-ready.yml)
 - Autopilot queue pump: [../../.github/workflows/autopilot-queue-pump.yml](../../.github/workflows/autopilot-queue-pump.yml)
@@ -29,8 +30,11 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Keep public traffic on `web`; `/api/*` continues to proxy internally to the API runtime.
 - Do not alter autopilot, CI, release, or PR automation unless that work is explicitly scoped.
 - Autopilot batch intake is strict 1:1 with the raw bullet list and only one spawned spec may auto-start at a time.
+- Autopilot challenge completes only when Codex posts a `Status: READY` comment on the `improve:` issue.
 - Autopilot implementation now stops at a draft PR handoff: GitHub creates the branch and PR, then a human must extract the task manually in Codex and push commits on that same branch.
+- Manual Codex extraction must start from the `implement:` draft PR only, never from the `batch:`, `spec:`, or `improve:` issue tasks.
 - Only one autopilot implementation PR should be open at a time. Additional improve issues queue under `autopilot:queued-pr` until the active lane closes.
+- When CI fails on an autopilot implementation PR, autopilot must comment the failing job summary and log excerpt back onto the PR thread so Codex can continue from the real runner error.
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
 
 ## Smoke and Manual Checks

@@ -93,6 +93,8 @@ jobs:
                   "",
                   "This improve issue was created automatically from a ready spec.",
                   "Codex (challenger) should propose options and a recommendation.",
+                  "Do NOT extract this issue manually in Codex.",
+                  "Wait for the later `implement:` draft PR before doing any manual Codex extraction.",
                 ].join("\n"),
                 labels: ["agent:challenger", "autopilot", ...carry],
               });
@@ -132,6 +134,9 @@ jobs:
               pingMarker,
               "@codex",
               "Role: Challenger.",
+              "Do NOT open a PR from this improve issue.",
+              "Do NOT treat this issue as the manual extraction entrypoint.",
+              "A human must wait for the later `implement:` draft PR before extracting anything in Codex.",
               "",
               "Provide max 3 options and one recommendation for this parent spec.",
               "Cover demo/admin dual-path, observability, UI/UX states, risks, and rollback/kill-switch.",

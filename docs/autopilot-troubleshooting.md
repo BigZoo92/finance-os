@@ -20,6 +20,13 @@
 - If CI reports the PR is still stub-only, autopilot should leave the PR open and post a manual Codex handoff reminder instead of opening retry PRs.
 - A PR is only promoted out of draft when CI succeeds and the PR diff contains real non-stub changes with no `.github/agent-stubs/**` files left.
 
+## Improve issue did not become ready
+
+- An `improve:` issue becomes `ready` only when Codex replies directly on the issue with a comment ending in `Status: READY`.
+- If neither happened, no `implement:` draft PR will be created yet.
+- Do not extract `improve:` issues manually in Codex. They are challenger prompts, not implementation entrypoints.
+- If you extract an `improve:` issue manually, Codex may open a docs-only `codex/...` PR that is outside the autopilot implementation flow.
+
 ## PR stays draft
 
 - `Autopilot - Merge on green CI` is now the workflow that promotes a draft PR once it detects real non-stub files on the branch and green CI.
@@ -33,6 +40,13 @@
 - If the rebase succeeds and pushes a new commit, the workflow intentionally stops and waits for the new CI run on the rebased branch.
 - If automatic rebase hits a conflict, the PR gets `needs:you` and an `AUTOPILOT_REBASE_CONFLICT_V1` comment.
 - If branch protection or stale status still blocks the merge, autopilot comments `AUTOPILOT_AUTO_MERGE_BLOCKED_V1` and stops.
+
+## CI failed but Codex summary was misleading
+
+- Local Codex summaries can be incomplete when the execution environment misses workspace dependencies or runner-only context.
+- `Autopilot - CI failure to Codex` now comments the failing job names and a log excerpt back onto the implementation PR thread.
+- Treat that CI comment as the source of truth, not the optimistic local summary inside Codex.
+- The common failure pattern is TypeScript passing locally in a narrow scope while repo CI fails under `pnpm -r --if-present typecheck`.
 
 ## Issue-comment workflow runs on my own comment
 
