@@ -4,9 +4,11 @@ export type PowensJob =
   | {
       type: 'powens.syncConnection'
       connectionId: string
+      requestId?: string
     }
   | {
       type: 'powens.syncAll'
+      requestId?: string
     }
 
 export const serializePowensJob = (job: PowensJob) => {
@@ -18,13 +20,18 @@ export const parsePowensJob = (value: string): PowensJob | null => {
     const parsed = JSON.parse(value) as PowensJob
 
     if (parsed.type === 'powens.syncAll') {
+      if (parsed.requestId !== undefined && typeof parsed.requestId !== 'string') {
+        return null
+      }
+
       return parsed
     }
 
     if (
       parsed.type === 'powens.syncConnection' &&
       typeof parsed.connectionId === 'string' &&
-      parsed.connectionId.length > 0
+      parsed.connectionId.length > 0 &&
+      (parsed.requestId === undefined || typeof parsed.requestId === 'string')
     ) {
       return parsed
     }

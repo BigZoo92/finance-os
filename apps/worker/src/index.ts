@@ -408,7 +408,7 @@ const buildTransactionInsert = (params: {
   }
 }
 
-const syncConnection = async (connectionId: string) => {
+const syncConnection = async (connectionId: string, requestId?: string) => {
   const lock = await acquireConnectionLock(connectionId)
   if (!lock) {
     return
@@ -534,13 +534,13 @@ const syncConnection = async (connectionId: string) => {
       result: failureStatus,
     })
 
-    console.error('[worker] connection sync failed for', connectionId, '-', toSafeErrorMessage(error))
+    console.error('[worker] connection sync failed for', connectionId, '-', toSafeErrorMessage(error), '- requestId:', requestId ?? 'n/a')
   } finally {
     await releaseConnectionLock(lock)
   }
 }
 
-const syncAllConnections = async () => {
+const syncAllConnections = async (requestId?: string) => {
   const connections = await dbClient.db
     .select({
       powensConnectionId: schema.powensConnection.powensConnectionId,
@@ -554,20 +554,20 @@ const syncAllConnections = async () => {
     }
 
     try {
-      await syncConnection(connection.powensConnectionId)
+      await syncConnection(connection.powensConnectionId, requestId)
     } catch (error) {
-      console.error('[worker] syncAll isolated failure:', toSafeErrorMessage(error))
+      console.error('[worker] syncAll isolated failure:', toSafeErrorMessage(error), '- requestId:', requestId ?? 'n/a')
     }
   }
 }
 
 const handleJob = async (job: PowensJob) => {
   if (job.type === 'powens.syncAll') {
-    await syncAllConnections()
+    await syncAllConnections(job.requestId)
     return
   }
 
-  await syncConnection(job.connectionId)
+  await syncConnection(job.connectionId, job.requestId)
 }
 
 const startScheduler = () => {
@@ -587,6 +587,7 @@ const startScheduler = () => {
         POWENS_JOB_QUEUE_KEY,
         serializePowensJob({
           type: 'powens.syncAll',
+          requestId: `wrk-${randomUUID()}`,
         })
       )
     } catch (error) {
@@ -611,6 +612,7 @@ const consumeJobs = async () => {
         continue
       }
 
+      console.log('[worker] processing job', job.type, '- requestId:', job.requestId ?? 'n/a')
       await handleJob(job)
     } catch (error) {
       if (!keepRunning) {

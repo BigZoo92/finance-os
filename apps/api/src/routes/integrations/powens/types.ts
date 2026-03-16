@@ -46,8 +46,8 @@ export interface PowensConnectionRepository {
 }
 
 export interface PowensJobQueueRepository {
-  enqueueConnectionSync: (connectionId: string) => Promise<void>
-  enqueueAllConnectionsSync: () => Promise<void>
+  enqueueConnectionSync: (params: { connectionId: string; requestId?: string }) => Promise<void>
+  enqueueAllConnectionsSync: (params?: { requestId?: string }) => Promise<void>
 }
 
 export interface PowensSyncGuardRepository {
@@ -63,8 +63,8 @@ export interface PowensConnectUrlService {
 }
 
 export interface PowensUseCases {
-  handleCallback: (input: { connectionId: string; encodedCode: string }) => Promise<void>
-  requestSync: (connectionId?: string) => Promise<void>
+  handleCallback: (input: { connectionId: string; encodedCode: string; requestId?: string }) => Promise<void>
+  requestSync: (connectionId?: string, options?: { requestId?: string }) => Promise<void>
   listStatuses: () => Promise<PowensConnectionStatusView[]>
 }
 

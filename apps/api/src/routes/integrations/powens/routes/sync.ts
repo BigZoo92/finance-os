@@ -30,7 +30,7 @@ export const createSyncRoute = () =>
             context.body?.connectionId === undefined ? undefined : String(context.body.connectionId)
 
           try {
-            await powens.useCases.requestSync(connectionId)
+            await powens.useCases.requestSync(connectionId, { requestId })
           } catch (error) {
             if (error instanceof PowensManualSyncRateLimitError) {
               context.set.status = 429
