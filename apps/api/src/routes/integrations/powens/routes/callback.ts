@@ -49,6 +49,7 @@ export const createCallbackRoute = () =>
             await powens.useCases.handleCallback({
               connectionId: sanitizedConnectionId,
               encodedCode: context.body.code,
+              requestId,
             })
 
             logApiEvent({

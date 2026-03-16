@@ -9,7 +9,7 @@ interface CreateHandlePowensCallbackUseCaseDependencies {
     encryptedAccessToken: string
     now: Date
   }) => Promise<void>
-  enqueueConnectionSync: (connectionId: string) => Promise<void>
+  enqueueConnectionSync: (params: { connectionId: string; requestId?: string }) => Promise<void>
   encryptionKey: string
 }
 
@@ -19,7 +19,7 @@ export const createHandlePowensCallbackUseCase = ({
   enqueueConnectionSync,
   encryptionKey,
 }: CreateHandlePowensCallbackUseCaseDependencies): PowensUseCases['handleCallback'] => {
-  return async ({ connectionId, encodedCode }) => {
+  return async ({ connectionId, encodedCode, requestId }) => {
     const decodedCode = decodePowensCode(encodedCode)
     const token = await exchangeCodeForToken(decodedCode)
     const encryptedToken = encryptString(token.access_token, encryptionKey)
@@ -31,6 +31,6 @@ export const createHandlePowensCallbackUseCase = ({
       now,
     })
 
-    await enqueueConnectionSync(connectionId)
+    await enqueueConnectionSync({ connectionId, requestId })
   }
 }
