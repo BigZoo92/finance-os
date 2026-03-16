@@ -83,6 +83,7 @@ jobs:
             core.setOutput("runId", String(run.id));
             core.setOutput("runUrl", String(run.html_url || ""));
             core.setOutput("headRef", String(pr.head.ref || ""));
+            core.setOutput("headSha", String(pr.head.sha || ""));
             core.setOutput("failedJobs", failedJobs.join("\n"));
 
       - name: Collect failed log excerpt
@@ -154,6 +155,7 @@ jobs:
             const prNumber = Number("${{ steps.inspect.outputs.prNumber }}");
             const runId = String("${{ steps.inspect.outputs.runId }}");
             const runUrl = String("${{ steps.inspect.outputs.runUrl }}");
+            const headSha = String("${{ steps.inspect.outputs.headSha }}");
             const failedJobs = String(process.env.FAILED_JOBS || "").trim();
             const logExcerpt = String(process.env.LOG_EXCERPT || "").trim();
 
@@ -189,7 +191,7 @@ jobs:
               issue_number: prNumber,
               per_page: 100,
             });
-            const marker = `AUTOPILOT_CI_FAILURE_V1:${runId}`;
+            const marker = `AUTOPILOT_CI_FAILURE_V1:${headSha || runId}`;
             if (comments.some((comment) => String(comment.body || "").includes(marker))) return;
 
             await addLabels(prNumber, ["autopilot:waiting-codex"]);
@@ -201,7 +203,9 @@ jobs:
               "",
               "CI failed on this PR branch.",
               "Fix these errors on THIS branch. Do NOT open a new PR. Do NOT use make_pr.",
+              "If a manual Codex task for this PR already exists, reuse that PR branch context instead of starting from the issue again.",
               "CI is the source of truth for this PR; do not treat partial local checks as success if CI disagrees.",
+              "Repo TypeScript note: exactOptionalPropertyTypes is enabled. If an optional field is absent, omit the key entirely instead of passing undefined.",
               runUrl ? `Workflow run: ${runUrl}` : "",
               failedJobs ? "" : "",
               failedJobs ? "Failed jobs/steps:" : "",

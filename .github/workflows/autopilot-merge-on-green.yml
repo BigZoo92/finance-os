@@ -149,9 +149,9 @@ jobs:
                   "AUTOPILOT_STUB_ONLY_WAITING_FOR_MANUAL_CODEX_V1",
                   "Autopilot will not merge this PR because it is still stub-only.",
                   "",
-                  "@codex this PR is waiting for manual extraction in Codex.",
+                  "The manual Codex handoff already exists earlier in this PR thread.",
                   "Delete the .github/agent-stubs/** bootstrap file from the PR diff and implement the requested feature in real non-stub files.",
-                  "No GitHub reply is required; push commits on this branch instead.",
+                  "Do not open a new extraction request from this reminder. Push commits on this branch instead.",
                 ],
                 comments
               );
@@ -166,8 +166,9 @@ jobs:
                   "AUTOPILOT_REMOVE_STUB_REQUIRED_V2",
                   "Autopilot found real implementation changes on this PR, but the bootstrap stub file is still present in the PR diff.",
                   "",
-                  "@codex remove every .github/agent-stubs/** file from this PR diff and keep the real implementation changes.",
-                  "No GitHub reply is required; push commits on this branch instead.",
+                  "Reuse the existing manual Codex handoff for this PR.",
+                  "Remove every .github/agent-stubs/** file from this PR diff and keep the real implementation changes.",
+                  "Do not open a new extraction request from this reminder. Push commits on this branch instead.",
                 ],
                 comments
               );

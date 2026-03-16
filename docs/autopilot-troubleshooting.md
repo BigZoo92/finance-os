@@ -20,6 +20,13 @@
 - If CI reports the PR is still stub-only, autopilot should leave the PR open and post a manual Codex handoff reminder instead of opening retry PRs.
 - A PR is only promoted out of draft when CI succeeds and the PR diff contains real non-stub changes with no `.github/agent-stubs/**` files left.
 
+## Why do I see two Codex tasks?
+
+- A challenger `improve:` task and an implementation `implement:` PR task are different stages. Seeing one of each is expected.
+- The only valid manual extraction entrypoint is the `implement:` draft PR on an `agent/impl-*` branch.
+- Do not extract `batch:`, `spec:`, `improve:`, or reminder comments on the PR thread.
+- Stub-only reminder comments on the PR are informational only; they should not be treated as a second extraction request.
+
 ## Improve issue did not become ready
 
 - An `improve:` issue becomes `ready` only when Codex replies directly on the issue with a comment ending in `Status: READY`.
@@ -47,6 +54,18 @@
 - `Autopilot - CI failure to Codex` now comments the failing job names and a log excerpt back onto the implementation PR thread.
 - Treat that CI comment as the source of truth, not the optimistic local summary inside Codex.
 - The common failure pattern is TypeScript passing locally in a narrow scope while repo CI fails under `pnpm -r --if-present typecheck`.
+- A recurring Finance-OS-specific failure pattern is `exactOptionalPropertyTypes`: optional fields must be omitted when absent, not passed as `undefined`.
+
+## Codex says `missing bun-types` or `install state prevented full typecheck`
+
+- If repo CI fails with real TypeScript errors while local `pnpm api:typecheck` or `pnpm worker:typecheck` pass on your machine, the repo is usually fine and the Codex environment is the weak link.
+- The common causes are a stale post-configuration cache, a workspace install that did not complete in the Codex environment, or disabled agent internet on a cold cache.
+- `apps/api` legitimately depends on `bun-types`; that package is already present in the workspace lockfile and local installs should resolve it.
+- Reset the Codex environment cache when lockfiles or workspace dependencies changed.
+- If possible, allow agent internet during environment setup so `pnpm -w install --frozen-lockfile` can refill a cold cache.
+- Prefer using the repo script [../scripts/codex-env-setup.sh](../scripts/codex-env-setup.sh) as the Codex environment setup command so install semantics match CI and missing workspace dependencies are caught early.
+- The setup now runs [../scripts/verify-workspace-install.mjs](../scripts/verify-workspace-install.mjs), which resolves declared dependencies across the repo generically instead of maintaining a hand-written package allowlist.
+- The install command itself is not the real problem. From the repo root, `pnpm install --frozen-lockfile` is the canonical form; `pnpm -w install --frozen-lockfile` is redundant but not harmful.
 
 ## Issue-comment workflow runs on my own comment
 

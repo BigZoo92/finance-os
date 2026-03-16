@@ -19,6 +19,8 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - propagate `x-request-id` end to end
   - keep API logs structured and secret-safe
   - keep error payloads normalized and safe to expose
+- TypeScript optional-property invariant:
+  - `exactOptionalPropertyTypes` is enabled; when an optional field is absent, omit the key entirely instead of passing `undefined`
 - Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
 - Autopilot workflow invariants:
   - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs

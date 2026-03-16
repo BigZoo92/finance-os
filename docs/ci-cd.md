@@ -26,6 +26,11 @@ Etapes:
 4. `pnpm -r --if-present test`
 5. `pnpm build`
 
+### Codex environment parity
+
+- To keep manual Codex extraction close to CI, use [../scripts/codex-env-setup.sh](/c:/Users/giver/dev/finance-os/scripts/codex-env-setup.sh) as the Codex environment setup script.
+- It runs the same frozen-lockfile install as CI and then executes [../scripts/verify-workspace-install.mjs](/c:/Users/giver/dev/finance-os/scripts/verify-workspace-install.mjs) to fail early if declared workspace dependencies are missing from the environment cache.
+
 ### Release
 
 - fichier: `.github/workflows/release.yml`
