@@ -34,6 +34,12 @@
 - Do not extract `improve:` issues manually in Codex. They are challenger prompts, not implementation entrypoints.
 - If you extract an `improve:` issue manually, Codex may open a docs-only `codex/...` PR that is outside the autopilot implementation flow.
 
+## My spec or improve issue disappeared
+
+- Once autopilot creates the `implement:` PR, it now closes the linked `spec:` and `improve:` issues as completed.
+- That is expected: implementation work has moved onto the PR branch.
+- If the implementation PR is closed without merge, autopilot reopens and requeues the linked work automatically.
+
 ## PR stays draft
 
 - `Autopilot - Merge on green CI` is now the workflow that promotes a draft PR once it detects real non-stub files on the branch and green CI.

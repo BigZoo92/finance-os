@@ -91,6 +91,30 @@ jobs:
               return true;
             }
 
+            async function closeIssueCompleted(issueNumber, marker, bodyLines) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+
+              const liveIssue = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number: issueNumber,
+              });
+
+              if (liveIssue.data.pull_request) return;
+
+              await createCommentOnce(issueNumber, marker, bodyLines);
+
+              if (String(liveIssue.data.state || "") === "closed") return;
+
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }
+
             await ensureLabel("pr:created", "0e8a16", "Autopilot PR created for improve issue");
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
@@ -133,6 +157,8 @@ jobs:
             const marker = `Parent improve issue: #${issue.number}`;
             const issueLink = `https://github.com/${owner}/${repo}/issues/${issue.number}`;
             const stubPath = `.github/agent-stubs/improve-${issue.number}.md`;
+            const parentSpecMatch = String(issue.body || "").match(/Parent spec:\s*#(\d+)/i);
+            const parentSpecNumber = Number(parentSpecMatch?.[1] || "0");
 
             const openPulls = await github.paginate(github.rest.pulls.list, {
               owner,
@@ -314,3 +340,28 @@ jobs:
                 "After you extract manually and push commits on this branch, autopilot will update the branch if needed and merge automatically once CI is green.",
               ]
             );
+
+            const completeMarker = `AUTOPILOT_COMPLETED_ON_PR_CREATE_V1:${pull.number}`;
+            await closeIssueCompleted(
+              issue.number,
+              completeMarker,
+              [
+                completeMarker,
+                `Implementation PR created: #${pull.number}`,
+                "Autopilot marked this improve issue completed because implementation work now continues on the PR branch.",
+                "If that PR is closed without merge, autopilot will reopen and requeue this issue automatically.",
+              ]
+            );
+
+            if (Number.isInteger(parentSpecNumber) && parentSpecNumber > 0) {
+              await closeIssueCompleted(
+                parentSpecNumber,
+                completeMarker,
+                [
+                  completeMarker,
+                  `Implementation PR created: #${pull.number}`,
+                  "Autopilot marked this spec issue completed because implementation work now continues on the linked PR branch.",
+                  "If that PR is closed without merge, autopilot will reopen the linked work automatically.",
+                ]
+              );
+            }

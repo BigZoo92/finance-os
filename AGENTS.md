@@ -27,6 +27,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - only one implementation lane may auto-start from a batch at a time; the rest stay queued
   - `issue_comment` workflows must gate on Codex-authored comments before doing work
   - implementation PRs are created automatically as draft handoff branches, then pause in `autopilot:waiting-codex` until a human extracts the task manually in Codex and pushes real branch commits
+  - once an implementation PR is created, the linked `spec:` and `improve:` issues are closed as `completed`; if that PR is closed without merge, autopilot reopens and requeues the linked work
   - only one autopilot implementation PR may stay open at a time; extra improve issues wait in `autopilot:queued-pr`
   - merge-on-green may only promote and merge an autopilot PR after real non-stub files land on the branch, all `.github/agent-stubs/**` files are gone from the PR diff, and the branch is up to date with green CI
   - failed CI on an autopilot implementation PR must be summarized back onto the PR thread so Codex sees the runner error instead of relying on partial local checks

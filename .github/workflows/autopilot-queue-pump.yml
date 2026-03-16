@@ -25,9 +25,112 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
+            async function addLabels(issueNumber, labels) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0 || labels.length === 0) return;
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels,
+                });
+              } catch {}
+            }
+
+            async function removeLabel(issueNumber, name) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch {}
+            }
+
+            async function createCommentOnce(issueNumber, marker, bodyLines) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return false;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+
+              if (comments.some((comment) => String(comment.body || "").includes(marker))) return false;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: bodyLines.join("\n"),
+              });
+              return true;
+            }
+
+            async function reopenIssue(issueNumber) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return null;
+              const live = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number: issueNumber,
+              });
+              if (live.data.pull_request) return live.data;
+
+              if (String(live.data.state || "") === "closed") {
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  state: "open",
+                });
+              }
+
+              return live.data;
+            }
+
             if (context.eventName === "pull_request") {
               const pull = context.payload.pull_request;
               if (!String(pull.head?.ref || "").startsWith("agent/")) return;
+
+              const improveMatch = String(pull.body || "").match(/Parent improve issue:\s*#(\d+)/i);
+              const improveNumber = Number(improveMatch?.[1] || "0");
+
+              if (!pull.merged && Number.isInteger(improveNumber) && improveNumber > 0) {
+                const reopenedImprove = await reopenIssue(improveNumber);
+                if (reopenedImprove) {
+                  const specMatch = String(reopenedImprove.body || "").match(/Parent spec:\s*#(\d+)/i);
+                  const specNumber = Number(specMatch?.[1] || "0");
+                  const marker = `AUTOPILOT_PR_CLOSED_UNMERGED_REOPENED_V1:${pull.number}`;
+
+                  await removeLabel(improveNumber, "pr:created");
+                  await removeLabel(improveNumber, "ready");
+                  await addLabels(improveNumber, ["autopilot:queued-pr"]);
+                  await createCommentOnce(
+                    improveNumber,
+                    marker,
+                    [
+                      marker,
+                      `Implementation PR #${pull.number} was closed without merge.`,
+                      "Autopilot reopened this improve issue and requeued it for a future implementation PR slot.",
+                    ]
+                  );
+
+                  if (Number.isInteger(specNumber) && specNumber > 0) {
+                    await reopenIssue(specNumber);
+                    await createCommentOnce(
+                      specNumber,
+                      marker,
+                      [
+                        marker,
+                        `Implementation PR #${pull.number} was closed without merge.`,
+                        "Autopilot reopened this spec issue because the linked implementation PR did not merge.",
+                      ]
+                    );
+                  }
+                }
+              }
             }
 
             async function ensureLabel(name, color, description) {
