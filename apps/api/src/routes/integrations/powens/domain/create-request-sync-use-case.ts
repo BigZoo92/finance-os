@@ -23,10 +23,17 @@ export const createRequestSyncUseCase = ({
     }
 
     if (connectionId) {
-      await enqueueConnectionSync({ connectionId, requestId: options?.requestId })
+      const payload = {
+        connectionId,
+        ...(options?.requestId !== undefined ? { requestId: options.requestId } : {}),
+      }
+      await enqueueConnectionSync(payload)
       return
     }
 
-    await enqueueAllConnectionsSync({ requestId: options?.requestId })
+    const payload = {
+      ...(options?.requestId !== undefined ? { requestId: options.requestId } : {}),
+    }
+    await enqueueAllConnectionsSync(payload)
   }
 }

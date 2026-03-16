@@ -31,6 +31,9 @@ export const createHandlePowensCallbackUseCase = ({
       now,
     })
 
-    await enqueueConnectionSync({ connectionId, requestId })
+    await enqueueConnectionSync({
+      connectionId,
+      ...(requestId !== undefined ? { requestId } : {}),
+    })
   }
 }
