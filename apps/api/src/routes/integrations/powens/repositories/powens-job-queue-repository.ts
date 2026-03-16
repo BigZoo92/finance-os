@@ -5,23 +5,23 @@ export const createPowensJobQueueRepository = (
   redisClient: RedisClient
 ): PowensJobQueueRepository => {
   return {
-    async enqueueConnectionSync(connectionId) {
-      await redisClient.rPush(
-        POWENS_JOB_QUEUE_KEY,
-        serializePowensJob({
-          type: 'powens.syncConnection',
-          connectionId,
-        })
-      )
+    async enqueueConnectionSync({ connectionId, requestId }) {
+      const payload = {
+        type: 'powens.syncConnection' as const,
+        connectionId,
+        ...(requestId !== undefined ? { requestId } : {}),
+      }
+
+      await redisClient.rPush(POWENS_JOB_QUEUE_KEY, serializePowensJob(payload))
     },
 
-    async enqueueAllConnectionsSync() {
-      await redisClient.rPush(
-        POWENS_JOB_QUEUE_KEY,
-        serializePowensJob({
-          type: 'powens.syncAll',
-        })
-      )
+    async enqueueAllConnectionsSync(params = {}) {
+      const payload = {
+        type: 'powens.syncAll' as const,
+        ...(params.requestId !== undefined ? { requestId: params.requestId } : {}),
+      }
+
+      await redisClient.rPush(POWENS_JOB_QUEUE_KEY, serializePowensJob(payload))
     },
   }
 }

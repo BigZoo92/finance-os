@@ -2,8 +2,8 @@ import type { PowensUseCases } from '../types'
 import { PowensManualSyncRateLimitError } from './powens-sync-errors'
 
 interface CreateRequestSyncUseCaseDependencies {
-  enqueueConnectionSync: (connectionId: string) => Promise<void>
-  enqueueAllConnectionsSync: () => Promise<void>
+  enqueueConnectionSync: (params: { connectionId: string; requestId?: string }) => Promise<void>
+  enqueueAllConnectionsSync: (params?: { requestId?: string }) => Promise<void>
   acquireManualSyncSlot: () => Promise<{
     allowed: boolean
     retryAfterSeconds: number
@@ -15,7 +15,7 @@ export const createRequestSyncUseCase = ({
   enqueueAllConnectionsSync,
   acquireManualSyncSlot,
 }: CreateRequestSyncUseCaseDependencies): PowensUseCases['requestSync'] => {
-  return async connectionId => {
+  return async (connectionId, options) => {
     const slot = await acquireManualSyncSlot()
 
     if (!slot.allowed) {
@@ -23,10 +23,17 @@ export const createRequestSyncUseCase = ({
     }
 
     if (connectionId) {
-      await enqueueConnectionSync(connectionId)
+      const payload = {
+        connectionId,
+        ...(options?.requestId !== undefined ? { requestId: options.requestId } : {}),
+      }
+      await enqueueConnectionSync(payload)
       return
     }
 
-    await enqueueAllConnectionsSync()
+    const payload = {
+      ...(options?.requestId !== undefined ? { requestId: options.requestId } : {}),
+    }
+    await enqueueAllConnectionsSync(payload)
   }
 }
