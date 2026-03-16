@@ -6,6 +6,7 @@ import { createStatusRoute } from './routes/status'
 import { createSyncRoute } from './routes/sync'
 import { createSyncRunsRoute } from './routes/sync-runs'
 import { createPowensRouteRuntime } from './runtime'
+import { createBacklogRoute } from './routes/backlog'
 import type { PowensRoutesDependencies } from './types'
 
 export const createPowensRoutes = ({ db, redisClient, env }: PowensRoutesDependencies) => {
@@ -14,6 +15,7 @@ export const createPowensRoutes = ({ db, redisClient, env }: PowensRoutesDepende
   return new Elysia({ prefix: '/integrations/powens' })
     .use(createPowensRuntimePlugin(runtime))
     .use(createConnectUrlRoute())
+    .use(createBacklogRoute())
     .use(createCallbackRoute())
     .use(createSyncRoute())
     .use(createStatusRoute())

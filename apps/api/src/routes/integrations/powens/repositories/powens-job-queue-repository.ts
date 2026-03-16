@@ -23,5 +23,10 @@ export const createPowensJobQueueRepository = (
 
       await redisClient.rPush(POWENS_JOB_QUEUE_KEY, serializePowensJob(payload))
     },
+
+    async getSyncBacklogCount() {
+      const backlogSize = await redisClient.lLen(POWENS_JOB_QUEUE_KEY)
+      return Number.isFinite(backlogSize) ? backlogSize : 0
+    },
   }
 }
