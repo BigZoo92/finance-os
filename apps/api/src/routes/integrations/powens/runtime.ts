@@ -1,5 +1,6 @@
 import { createHandlePowensCallbackUseCase } from './domain/create-handle-callback-use-case'
 import { createListStatusesUseCase } from './domain/create-list-statuses-use-case'
+import { createListSyncRunsUseCase } from './domain/create-list-sync-runs-use-case'
 import { createRequestSyncUseCase } from './domain/create-request-sync-use-case'
 import { createPowensConnectionRepository } from './repositories/powens-connection-repository'
 import { createPowensJobQueueRepository } from './repositories/powens-job-queue-repository'
@@ -16,7 +17,7 @@ export const createPowensRouteRuntime = ({
   const client = createPowensClientService(env)
   const connectUrl = createPowensConnectUrlService(env)
 
-  const connection = createPowensConnectionRepository(db)
+  const connection = createPowensConnectionRepository(db, redisClient)
   const jobs = createPowensJobQueueRepository(redisClient)
   const syncGuard = createPowensSyncGuardRepository(redisClient, env.POWENS_MANUAL_SYNC_COOLDOWN_SECONDS)
 
@@ -37,6 +38,10 @@ export const createPowensRouteRuntime = ({
     listConnectionStatuses: connection.listConnectionStatuses,
   })
 
+  const listSyncRuns = createListSyncRunsUseCase({
+    listConnectionSyncRuns: connection.listSyncRuns,
+  })
+
   return {
     services: {
       client,
@@ -51,6 +56,7 @@ export const createPowensRouteRuntime = ({
       handleCallback,
       requestSync,
       listStatuses,
+      listSyncRuns,
     },
   }
 }

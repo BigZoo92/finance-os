@@ -39,6 +39,10 @@ const LAST_SYNC_STARTED_CONNECTION_KEY = 'powens:metrics:sync:last_started_conne
 const LAST_SYNC_ENDED_AT_KEY = 'powens:metrics:sync:last_ended_at'
 const LAST_SYNC_ENDED_CONNECTION_KEY = 'powens:metrics:sync:last_ended_connection'
 const LAST_SYNC_RESULT_KEY = 'powens:metrics:sync:last_result'
+const SYNC_RUNS_LIST_KEY = 'powens:metrics:sync:runs'
+const SYNC_RUN_KEY_PREFIX = 'powens:metrics:sync:run:'
+const SYNC_RUN_RETENTION_SECONDS = 30 * 24 * 60 * 60
+const SYNC_RUN_MAX_ITEMS = 40
 const WORKER_HEALTHCHECK_FILE = process.env.WORKER_HEALTHCHECK_FILE ?? '/tmp/worker-heartbeat'
 
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
@@ -246,6 +250,65 @@ const recordLastSyncEnded = async (params: {
   ])
 }
 
+type SyncRunResult = 'success' | 'error' | 'reconnect_required'
+
+type StoredSyncRun = {
+  id: string
+  requestId: string | null
+  connectionId: string
+  startedAt: string
+  endedAt: string | null
+  result: SyncRunResult | 'running'
+}
+
+const syncRunKey = (runId: string) => `${SYNC_RUN_KEY_PREFIX}${runId}`
+
+const recordSyncRunStarted = async (params: { connectionId: string; requestId?: string }) => {
+  const run: StoredSyncRun = {
+    id: randomUUID(),
+    requestId: params.requestId ?? null,
+    connectionId: params.connectionId,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    result: 'running',
+  }
+
+  const runKey = syncRunKey(run.id)
+  await Promise.all([
+    redisClient.client.set(runKey, JSON.stringify(run), {
+      EX: SYNC_RUN_RETENTION_SECONDS,
+    }),
+    redisClient.client.lPush(SYNC_RUNS_LIST_KEY, run.id),
+    redisClient.client.lTrim(SYNC_RUNS_LIST_KEY, 0, SYNC_RUN_MAX_ITEMS - 1),
+    redisClient.client.expire(SYNC_RUNS_LIST_KEY, SYNC_RUN_RETENTION_SECONDS),
+  ])
+
+  return run.id
+}
+
+const recordSyncRunEnded = async (params: { runId: string; result: SyncRunResult }) => {
+  const runKey = syncRunKey(params.runId)
+  const raw = await redisClient.client.get(runKey)
+  if (!raw) {
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as StoredSyncRun
+    const updatedRun: StoredSyncRun = {
+      ...parsed,
+      endedAt: new Date().toISOString(),
+      result: params.result,
+    }
+
+    await redisClient.client.set(runKey, JSON.stringify(updatedRun), {
+      EX: SYNC_RUN_RETENTION_SECONDS,
+    })
+  } catch {
+    // Ignore malformed metric payloads.
+  }
+}
+
 const recordPowensCall = async () => {
   await incrementDailyMetric(POWENS_CALLS_METRIC_PREFIX)
 }
@@ -415,6 +478,10 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
   }
 
   const syncStart = new Date()
+  const runId = await recordSyncRunStarted({
+    connectionId,
+    requestId,
+  })
 
   try {
     const [connection] = await dbClient.db
@@ -515,6 +582,10 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
       connectionId,
       result: 'success',
     })
+    await recordSyncRunEnded({
+      runId,
+      result: 'success',
+    })
   } catch (error) {
     const failedAt = new Date()
     const failureStatus = toConnectionStatus(error)
@@ -531,6 +602,10 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
 
     await recordLastSyncEnded({
       connectionId,
+      result: failureStatus,
+    })
+    await recordSyncRunEnded({
+      runId,
       result: failureStatus,
     })
 
