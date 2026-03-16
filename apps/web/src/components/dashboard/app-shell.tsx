@@ -23,6 +23,7 @@ import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
   powensQueryKeys,
   powensStatusQueryOptionsWithMode,
+  powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
@@ -155,6 +156,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       mode: authMode,
     })
   )
+  const syncBacklogQuery = useQuery(
+    powensSyncBacklogQueryOptionsWithMode({
+      mode: authMode,
+    })
+  )
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -193,6 +199,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           queryKey: powensQueryKeys.syncRuns(),
         }),
         queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.syncBacklog(),
+        }),
+        queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
         }),
       ])
@@ -226,6 +235,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           queryKey: powensQueryKeys.syncRuns(),
         }),
         queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.syncBacklog(),
+        }),
+        queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
         }),
       ])
@@ -257,6 +269,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const latestSyncAt = pickLatestDate(statusConnections.map(connection => connection.lastSyncAt))
   const latestSuccessAt = pickLatestDate(statusConnections.map(connection => connection.lastSuccessAt))
   const syncRuns = syncRunsQuery.data?.runs ?? []
+  const syncBacklogCount = syncBacklogQuery.data?.syncBacklogCount ?? 0
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map(connection => [connection.powensConnectionId, connection.balance])
   )
@@ -362,7 +375,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-md border border-border/70 px-3 py-2">
                   <p className="text-xs text-muted-foreground">Session</p>
                   <p className="font-medium">{isAdmin ? 'Admin active' : isAuthPending ? 'Verification...' : 'Mode demo'}</p>
@@ -381,6 +394,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 <div className="rounded-md border border-border/70 px-3 py-2">
                   <p className="text-xs text-muted-foreground">Dernier succes</p>
                   <p className="font-medium">{formatDateTime(latestSuccessAt)}</p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Queue backlog</p>
+                  <p className="font-medium">{syncBacklogCount}</p>
                 </div>
               </div>
 

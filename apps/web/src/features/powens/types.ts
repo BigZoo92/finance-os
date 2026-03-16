@@ -25,3 +25,7 @@ export type PowensSyncRun = {
 export type PowensSyncRunsResponse = {
   runs: PowensSyncRun[]
 }
+
+export type PowensSyncBacklogResponse = {
+  syncBacklogCount: number
+}
