@@ -1,5 +1,63 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
+const REDACTED_VALUE = '[REDACTED]'
+const SENSITIVE_KEY_PATTERN =
+  /token|secret|password|authorization|cookie|api[_-]?key|x-internal-token|x-finance-os-access-token|code/i
+const SENSITIVE_QUERY_PATTERN =
+  /([?&]\s*(?:token|access_token|refresh_token|secret|password|api[_-]?key|code)=)[^&#\s]*/gi
+const SENSITIVE_JSON_PATTERN =
+  /(\"(?:token|access_token|refresh_token|secret|password|authorization|cookie|api[_-]?key|code)\"\s*:\s*\")[^\"]*(\")/gi
+const BEARER_PATTERN = /(Bearer\s+)[^\s,;]+/gi
+const SENSITIVE_KV_PATTERN =
+  /(\b(?:token|access_token|refresh_token|secret|password|api[_-]?key|code)\s*=\s*)[^\s,;)&}]+/gi
+
+const redactString = (value: string) => {
+  return value
+    .replace(SENSITIVE_QUERY_PATTERN, `$1${REDACTED_VALUE}`)
+    .replace(SENSITIVE_JSON_PATTERN, `$1${REDACTED_VALUE}$2`)
+    .replace(BEARER_PATTERN, `$1${REDACTED_VALUE}`)
+    .replace(SENSITIVE_KV_PATTERN, `$1${REDACTED_VALUE}`)
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+const redactByKey = ({ key, value }: { key?: string; value: unknown }): unknown => {
+  if (key && SENSITIVE_KEY_PATTERN.test(key)) {
+    return REDACTED_VALUE
+  }
+
+  if (typeof value === 'string') {
+    return redactString(value)
+  }
+
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: redactString(value.message),
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(entry => redactByKey({ value: entry }))
+  }
+
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        entryKey,
+        redactByKey({
+          key: entryKey,
+          value: entryValue,
+        }),
+      ])
+    )
+  }
+
+  return value
+}
+
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 10,
   info: 20,
@@ -28,7 +86,7 @@ const toSerializableValue = (value: unknown): unknown => {
   if (value instanceof Error) {
     return {
       name: value.name,
-      message: value.message,
+      message: redactString(value.message),
     }
   }
 
@@ -36,7 +94,7 @@ const toSerializableValue = (value: unknown): unknown => {
     return value.toString()
   }
 
-  return value
+  return redactByKey({ value })
 }
 
 export const logApiEvent = ({
@@ -56,7 +114,9 @@ export const logApiEvent = ({
     timestamp: new Date().toISOString(),
     level,
     msg,
-    ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, toSerializableValue(value)])),
+    ...Object.fromEntries(
+      Object.entries(fields).map(([key, value]) => [key, redactByKey({ key, value: toSerializableValue(value) })])
+    ),
   }
 
   const line = JSON.stringify(payload)
@@ -82,9 +142,17 @@ export const toErrorLogFields = ({
 }) => {
   const err = error instanceof Error ? error : new Error(String(error))
 
-  return {
+  const fields = {
     errName: err.name,
-    errMessage: err.message,
-    stack: includeStack ? err.stack : undefined,
+    errMessage: redactString(err.message),
+  }
+
+  if (!includeStack || !err.stack) {
+    return fields
+  }
+
+  return {
+    ...fields,
+    stack: redactString(err.stack),
   }
 }
