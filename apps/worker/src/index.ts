@@ -1,19 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { writeFile } from 'node:fs/promises'
-import { eq, sql } from 'drizzle-orm'
 import { createDbClient, schema } from '@finance-os/db'
 import {
   createPowensClient,
   decryptString,
-  parsePowensJob,
-  PowensApiError,
   POWENS_JOB_QUEUE_KEY,
-  serializePowensJob,
   type PowensAccount,
+  PowensApiError,
   type PowensJob,
   type PowensTransaction,
+  parsePowensJob,
+  serializePowensJob,
 } from '@finance-os/powens'
 import { createRedisClient } from '@finance-os/redis'
+import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
 
 const dbClient = createDbClient(env.DATABASE_URL)
@@ -480,7 +480,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
   const syncStart = new Date()
   const runId = await recordSyncRunStarted({
     connectionId,
-    requestId,
+    ...(requestId !== undefined ? { requestId } : {}),
   })
 
   try {
@@ -609,7 +609,14 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
       result: failureStatus,
     })
 
-    console.error('[worker] connection sync failed for', connectionId, '-', toSafeErrorMessage(error), '- requestId:', requestId ?? 'n/a')
+    console.error(
+      '[worker] connection sync failed for',
+      connectionId,
+      '-',
+      toSafeErrorMessage(error),
+      '- requestId:',
+      requestId ?? 'n/a'
+    )
   } finally {
     await releaseConnectionLock(lock)
   }
@@ -631,7 +638,12 @@ const syncAllConnections = async (requestId?: string) => {
     try {
       await syncConnection(connection.powensConnectionId, requestId)
     } catch (error) {
-      console.error('[worker] syncAll isolated failure:', toSafeErrorMessage(error), '- requestId:', requestId ?? 'n/a')
+      console.error(
+        '[worker] syncAll isolated failure:',
+        toSafeErrorMessage(error),
+        '- requestId:',
+        requestId ?? 'n/a'
+      )
     }
   }
 }
