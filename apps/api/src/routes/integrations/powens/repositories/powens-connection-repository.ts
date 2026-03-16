@@ -1,8 +1,35 @@
 import { schema } from '@finance-os/db'
 import { desc } from 'drizzle-orm'
-import type { ApiDb, PowensConnectionRepository } from '../types'
+import type { ApiDb, PowensConnectionRepository, PowensSyncRunView, RedisClient } from '../types'
 
-export const createPowensConnectionRepository = (db: ApiDb): PowensConnectionRepository => {
+const SYNC_RUNS_LIST_KEY = 'powens:metrics:sync:runs'
+const SYNC_RUN_KEY_PREFIX = 'powens:metrics:sync:run:'
+
+const syncRunKey = (runId: string) => `${SYNC_RUN_KEY_PREFIX}${runId}`
+
+const isPowensSyncRun = (value: unknown): value is PowensSyncRunView => {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const run = value as Partial<PowensSyncRunView>
+  const allowed = new Set(['running', 'success', 'error', 'reconnect_required'])
+
+  return (
+    typeof run.id === 'string' &&
+    typeof run.connectionId === 'string' &&
+    typeof run.startedAt === 'string' &&
+    (run.requestId === null || typeof run.requestId === 'string') &&
+    (run.endedAt === null || typeof run.endedAt === 'string') &&
+    typeof run.result === 'string' &&
+    allowed.has(run.result)
+  )
+}
+
+export const createPowensConnectionRepository = (
+  db: ApiDb,
+  redisClient: RedisClient
+): PowensConnectionRepository => {
   return {
     async upsertConnectedConnection({ connectionId, encryptedAccessToken, now }) {
       await db
@@ -39,6 +66,39 @@ export const createPowensConnectionRepository = (db: ApiDb): PowensConnectionRep
         })
         .from(schema.powensConnection)
         .orderBy(desc(schema.powensConnection.createdAt))
+    },
+
+    async listSyncRuns(limit = 20) {
+      const boundedLimit = Math.max(1, Math.min(limit, 100))
+      const runIds = await redisClient.lRange(SYNC_RUNS_LIST_KEY, 0, boundedLimit - 1)
+
+      if (runIds.length === 0) {
+        return []
+      }
+
+      const payloads = await redisClient.mGet(runIds.map(runId => syncRunKey(runId)))
+      const runs: PowensSyncRunView[] = []
+
+      for (const raw of payloads) {
+        if (!raw) {
+          continue
+        }
+
+        try {
+          const parsed = JSON.parse(raw) as unknown
+          if (!isPowensSyncRun(parsed)) {
+            continue
+          }
+
+          runs.push(parsed)
+        } catch {
+          continue
+        }
+      }
+
+      return runs.sort((a, b) => {
+        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+      })
     },
   }
 }

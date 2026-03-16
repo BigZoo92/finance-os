@@ -12,3 +12,16 @@ export type PowensConnectionStatus = {
 export type PowensStatusResponse = {
   connections: PowensConnectionStatus[]
 }
+
+export type PowensSyncRun = {
+  id: string
+  requestId: string | null
+  connectionId: string
+  startedAt: string
+  endedAt: string | null
+  result: 'running' | 'success' | 'error' | 'reconnect_required'
+}
+
+export type PowensSyncRunsResponse = {
+  runs: PowensSyncRun[]
+}

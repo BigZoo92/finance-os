@@ -20,7 +20,11 @@ import {
 } from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
-import { powensQueryKeys, powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
+import {
+  powensQueryKeys,
+  powensStatusQueryOptionsWithMode,
+  powensSyncRunsQueryOptionsWithMode,
+} from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -146,6 +150,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       mode: authMode,
     })
   )
+  const syncRunsQuery = useQuery(
+    powensSyncRunsQueryOptionsWithMode({
+      mode: authMode,
+    })
+  )
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -181,6 +190,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           queryKey: powensQueryKeys.status(),
         }),
         queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.syncRuns(),
+        }),
+        queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
         }),
       ])
@@ -209,6 +221,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         }),
         queryClient.invalidateQueries({
           queryKey: powensQueryKeys.status(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.syncRuns(),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
@@ -241,6 +256,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   }
   const latestSyncAt = pickLatestDate(statusConnections.map(connection => connection.lastSyncAt))
   const latestSuccessAt = pickLatestDate(statusConnections.map(connection => connection.lastSuccessAt))
+  const syncRuns = syncRunsQuery.data?.runs ?? []
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map(connection => [connection.powensConnectionId, connection.balance])
   )
@@ -448,6 +464,36 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               ) : (
                 <p className="text-muted-foreground">Aucune depense sur cette periode.</p>
               )}
+            </CardContent>
+          </Card>
+
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Derniers runs de sync
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>Historique recent des synchronisations worker.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {syncRunsQuery.isPending ? <p className="text-muted-foreground">Chargement...</p> : null}
+              {syncRunsQuery.isError ? <p className="text-destructive">{toErrorMessage(syncRunsQuery.error)}</p> : null}
+              {!syncRunsQuery.isPending && syncRuns.length === 0 ? (
+                <p className="text-muted-foreground">Aucun run de sync recent.</p>
+              ) : null}
+              {syncRuns.slice(0, 6).map(run => (
+                <div key={run.id} className="rounded-md border border-border/80 bg-muted/20 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">Connection #{run.connectionId}</p>
+                    <Badge variant={run.result === 'success' ? 'secondary' : run.result === 'running' ? 'outline' : 'destructive'}>
+                      {run.result}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Start: {formatDateTime(run.startedAt)}</p>
+                  <p className="text-xs text-muted-foreground">End: {formatDateTime(run.endedAt)}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
 

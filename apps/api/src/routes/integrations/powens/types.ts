@@ -36,6 +36,15 @@ export interface PowensConnectionStatusView {
   updatedAt: Date
 }
 
+export interface PowensSyncRunView {
+  id: string
+  requestId: string | null
+  connectionId: string
+  startedAt: string
+  endedAt: string | null
+  result: 'running' | 'success' | 'error' | 'reconnect_required'
+}
+
 export interface PowensConnectionRepository {
   upsertConnectedConnection: (params: {
     connectionId: string
@@ -43,6 +52,7 @@ export interface PowensConnectionRepository {
     now: Date
   }) => Promise<void>
   listConnectionStatuses: () => Promise<PowensConnectionStatusView[]>
+  listSyncRuns: (limit?: number) => Promise<PowensSyncRunView[]>
 }
 
 export interface PowensJobQueueRepository {
@@ -66,6 +76,7 @@ export interface PowensUseCases {
   handleCallback: (input: { connectionId: string; encodedCode: string; requestId?: string }) => Promise<void>
   requestSync: (connectionId?: string, options?: { requestId?: string }) => Promise<void>
   listStatuses: () => Promise<PowensConnectionStatusView[]>
+  listSyncRuns: (limit?: number) => Promise<PowensSyncRunView[]>
 }
 
 export interface PowensRouteRuntime {
