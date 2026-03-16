@@ -60,6 +60,19 @@ const formatDateTime = (value: string | null) => {
   return parsed.toLocaleString('fr-FR')
 }
 
+const pickLatestDate = (values: Array<string | null>) => {
+  const timestamps = values
+    .filter((value): value is string => Boolean(value))
+    .map(value => new Date(value).getTime())
+    .filter(timestamp => Number.isFinite(timestamp))
+
+  if (!timestamps.length) {
+    return null
+  }
+
+  return new Date(Math.max(...timestamps)).toISOString()
+}
+
 const formatDate = (value: string) => {
   const parsed = new Date(`${value}T00:00:00Z`)
   if (Number.isNaN(parsed.getTime())) {
@@ -220,6 +233,14 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const summary = summaryQuery.data
   const statusConnections = statusQuery.data?.connections ?? []
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
+  const statusCounts = {
+    connected: statusConnections.filter(connection => connection.status === 'connected').length,
+    syncing: statusConnections.filter(connection => connection.status === 'syncing').length,
+    failing: statusConnections.filter(connection => connection.status === 'error' || connection.status === 'reconnect_required')
+      .length,
+  }
+  const latestSyncAt = pickLatestDate(statusConnections.map(connection => connection.lastSyncAt))
+  const latestSuccessAt = pickLatestDate(statusConnections.map(connection => connection.lastSuccessAt))
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map(connection => [connection.powensConnectionId, connection.balance])
   )
@@ -260,27 +281,6 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 </Button>
               ))}
             </div>
-
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => syncMutation.mutate()}
-              disabled={!isAdmin || syncMutation.isPending}
-              title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
-            >
-              {syncMutation.isPending ? 'Sync...' : 'Sync now'}
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => connectMutation.mutate()}
-              disabled={!isAdmin || connectMutation.isPending}
-              title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
-            >
-              {connectMutation.isPending ? 'Ouverture...' : 'Connect bank'}
-            </Button>
 
             {isAuthPending ? (
               <Button type="button" size="sm" variant="ghost" disabled>
@@ -333,6 +333,63 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
             </CardContent>
           </Card>
         ) : null}
+
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Ops overview
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>
+                Vue admin unifiee pour la session, Powens et les operations de sync.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Session</p>
+                  <p className="font-medium">{isAdmin ? 'Admin active' : isAuthPending ? 'Verification...' : 'Mode demo'}</p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Connexions Powens</p>
+                  <p className="font-medium">{statusConnections.length}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {statusCounts.connected} OK · {statusCounts.syncing} sync · {statusCounts.failing} a corriger
+                  </p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Dernier sync</p>
+                  <p className="font-medium">{formatDateTime(latestSyncAt)}</p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Dernier succes</p>
+                  <p className="font-medium">{formatDateTime(latestSuccessAt)}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => syncMutation.mutate()}
+                  disabled={!isAdmin || syncMutation.isPending}
+                  title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
+                >
+                  {syncMutation.isPending ? 'Sync...' : 'Lancer une sync'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => connectMutation.mutate()}
+                  disabled={!isAdmin || connectMutation.isPending}
+                  title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
+                >
+                  {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
           <Card>
