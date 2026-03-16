@@ -23,6 +23,16 @@ export const createConnectUrlRoute = () =>
         requireAdmin(context)
         const powens = getPowensRuntime(context)
 
+        if (powens.env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
+          context.set.status = 503
+          return {
+            ok: false,
+            code: 'INTEGRATIONS_SAFE_MODE_ENABLED' as const,
+            message: 'External integrations are temporarily disabled by safe mode',
+            requestId,
+          }
+        }
+
         return {
           url: powens.services.connectUrl.getConnectUrl(),
         }

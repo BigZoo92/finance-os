@@ -649,6 +649,11 @@ const syncAllConnections = async (requestId?: string) => {
 }
 
 const handleJob = async (job: PowensJob) => {
+  if (env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
+    console.log('[worker] skipping job because EXTERNAL_INTEGRATIONS_SAFE_MODE=true', job.type)
+    return
+  }
+
   if (job.type === 'powens.syncAll') {
     await syncAllConnections(job.requestId)
     return
@@ -658,6 +663,11 @@ const handleJob = async (job: PowensJob) => {
 }
 
 const startScheduler = () => {
+  if (env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
+    console.log('[worker] auto scheduler disabled (EXTERNAL_INTEGRATIONS_SAFE_MODE=true)')
+    return
+  }
+
   if (!env.WORKER_AUTO_SYNC_ENABLED) {
     console.log('[worker] auto scheduler disabled (WORKER_AUTO_SYNC_ENABLED=false)')
     return
@@ -722,6 +732,7 @@ const start = async () => {
   console.log('[worker] databaseTime:', databaseTime)
   console.log('[worker] heartbeat every', env.WORKER_HEARTBEAT_MS, 'ms')
   console.log('[worker] healthcheck file:', WORKER_HEALTHCHECK_FILE)
+  console.log('[worker] external integrations safe mode:', env.EXTERNAL_INTEGRATIONS_SAFE_MODE)
   console.log('[worker] auto scheduler enabled:', env.WORKER_AUTO_SYNC_ENABLED)
   await updateHeartbeatFile()
 

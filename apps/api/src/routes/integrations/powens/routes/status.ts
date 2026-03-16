@@ -12,6 +12,14 @@ export const createStatusRoute = () =>
       }),
       real: async () => {
         const powens = getPowensRuntime(context)
+
+        if (powens.env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
+          return {
+            connections: getPowensConnectionsStatusMock(),
+            fallback: 'safe_mode',
+          }
+        }
+
         const connections = await powens.useCases.listStatuses()
         return { connections }
       },
