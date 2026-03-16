@@ -7,11 +7,11 @@ This repo already has a working automation model. Treat this map as an entry poi
 - CI: [../../.github/workflows/ci.yml](../../.github/workflows/ci.yml)
 - Release: [../../.github/workflows/release.yml](../../.github/workflows/release.yml)
 - Stub guard: [../../.github/workflows/no-agent-stubs.yml](../../.github/workflows/no-agent-stubs.yml)
-- Autopilot patch apply: [../../.github/workflows/autopilot-apply-codex-diff.yml](../../.github/workflows/autopilot-apply-codex-diff.yml)
 - Autopilot batch to Codex: [../../.github/workflows/autopilot-batch-to-codex.yml](../../.github/workflows/autopilot-batch-to-codex.yml)
 - Autopilot batch reply to specs: [../../.github/workflows/autopilot-batch-create-specs.yml](../../.github/workflows/autopilot-batch-create-specs.yml)
 - Autopilot improve to draft PR: [../../.github/workflows/autopilot-improve-to-draft-pr.yml](../../.github/workflows/autopilot-improve-to-draft-pr.yml)
 - Autopilot improve reply to ready: [../../.github/workflows/autopilot-improve-comment-to-ready.yml](../../.github/workflows/autopilot-improve-comment-to-ready.yml)
+- Autopilot queue pump: [../../.github/workflows/autopilot-queue-pump.yml](../../.github/workflows/autopilot-queue-pump.yml)
 - Autopilot merge on green: [../../.github/workflows/autopilot-merge-on-green.yml](../../.github/workflows/autopilot-merge-on-green.yml)
 
 ## Deployment and Runtime Docs
@@ -29,9 +29,9 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Keep public traffic on `web`; `/api/*` continues to proxy internally to the API runtime.
 - Do not alter autopilot, CI, release, or PR automation unless that work is explicitly scoped.
 - Autopilot batch intake is strict 1:1 with the raw bullet list and only one spawned spec may auto-start at a time.
-- Autopilot implementation PRs now prefer direct Codex branch updates; fenced unified diff comments remain a fallback path only.
-- Autopilot patch apply rejects stub-only or no-op replies, nudges direct PR updates first, and only reopens retry PRs for true apply conflicts.
-- Merge-on-green must recognize a real direct implementation on the branch, promote the PR out of draft, and only merge once no stub file remains.
+- Autopilot implementation now stops at a draft PR handoff: GitHub creates the branch and PR, then a human must extract the task manually in Codex and push commits on that same branch.
+- Only one autopilot implementation PR should be open at a time. Additional improve issues queue under `autopilot:queued-pr` until the active lane closes.
+- Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
 
 ## Smoke and Manual Checks
 

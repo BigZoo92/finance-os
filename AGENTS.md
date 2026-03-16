@@ -24,8 +24,9 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs
   - only one implementation lane may auto-start from a batch at a time; the rest stay queued
   - `issue_comment` workflows must gate on Codex-authored comments before doing work
-  - implementation PRs must support the real GitHub Codex path first: Codex may update the PR branch directly, with patch comments kept only as fallback
-  - implementation patch failures must either nudge direct PR updates or schedule a bounded retry for true apply conflicts; they must not loop indefinitely on one broken PR
+  - implementation PRs are created automatically as draft handoff branches, then pause in `autopilot:waiting-codex` until a human extracts the task manually in Codex and pushes real branch commits
+  - only one autopilot implementation PR may stay open at a time; extra improve issues wait in `autopilot:queued-pr`
+  - merge-on-green may only promote and merge an autopilot PR after real non-stub files land on the branch, all `.github/agent-stubs/**` files are gone from the PR diff, and the branch is up to date with green CI
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
 
 ## Global Verification

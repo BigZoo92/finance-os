@@ -19,15 +19,16 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v7
+      - name: Inspect autopilot PR state
+        id: inspect
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const headBranch = String(context.payload.workflow_run?.head_branch || "");
-
-            if (!headBranch.startsWith("agent/")) return;
+            const runHeadSha = String(context.payload.workflow_run?.head_sha || "");
 
             async function ensureLabel(name, color, description) {
               try {
@@ -45,7 +46,20 @@ jobs:
               }
             }
 
+            async function addLabels(issueNumber, labels) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0 || labels.length === 0) return;
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  labels,
+                });
+              } catch {}
+            }
+
             async function removeLabel(issueNumber, name) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
               try {
                 await github.rest.issues.removeLabel({
                   owner,
@@ -56,6 +70,34 @@ jobs:
               } catch {}
             }
 
+            async function createCommentOnce(issueNumber, marker, bodyLines, comments = null) {
+              const issueComments = comments || await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+
+              if (issueComments.some((comment) => String(comment.body || "").includes(marker))) return false;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: bodyLines.join("\n"),
+              });
+              return true;
+            }
+
+            core.setOutput("eligible", "false");
+
+            if (!headBranch.startsWith("agent/")) return;
+
+            await ensureLabel("autopilot:waiting-codex", "fbca04", "Draft PR is waiting for manual Codex extraction on its branch");
+            await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
+            await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
+            await ensureLabel("needs:you", "d93f0b", "Human attention required");
+
             const prs = await github.rest.pulls.list({
               owner,
               repo,
@@ -65,15 +107,10 @@ jobs:
             const pr = prs.data[0];
             if (!pr) return;
 
-            const files = await github.paginate(github.rest.pulls.listFiles, {
-              owner,
-              repo,
-              pull_number: pr.number,
-              per_page: 100,
-            });
-            const filenames = files.map((file) => String(file.filename || ""));
-            const hasStub = filenames.some((filename) => filename.startsWith(".github/agent-stubs/"));
-            const hasNonStub = filenames.some((filename) => !filename.startsWith(".github/agent-stubs/"));
+            if (runHeadSha && pr.head.sha !== runHeadSha) {
+              core.info(`Skipping stale CI result for PR #${pr.number}: workflow head ${runHeadSha} != current head ${pr.head.sha}.`);
+              return;
+            }
 
             const issue = await github.rest.issues.get({
               owner,
@@ -94,68 +131,53 @@ jobs:
               per_page: 100,
             });
 
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const filenames = files.map((file) => String(file.filename || ""));
+            const hasStub = filenames.some((filename) => filename.startsWith(".github/agent-stubs/"));
+            const hasNonStub = filenames.some((filename) => !filename.startsWith(".github/agent-stubs/"));
+
             if (!hasNonStub) {
-              const marker = "AUTOPILOT_STUB_ONLY_WAITING_FOR_DIRECT_UPDATE_V2";
-              const alreadyCommented = comments.some((comment) =>
-                String(comment.body || "").includes(marker)
+              await createCommentOnce(
+                pr.number,
+                "AUTOPILOT_STUB_ONLY_WAITING_FOR_MANUAL_CODEX_V1",
+                [
+                  "AUTOPILOT_STUB_ONLY_WAITING_FOR_MANUAL_CODEX_V1",
+                  "Autopilot will not merge this PR because it is still stub-only.",
+                  "",
+                  "@codex this PR is waiting for manual extraction in Codex.",
+                  "Delete the .github/agent-stubs/** bootstrap file from the PR diff and implement the requested feature in real non-stub files.",
+                  "No GitHub reply is required; push commits on this branch instead.",
+                ],
+                comments
               );
-
-              if (!alreadyCommented) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: pr.number,
-                  body: [
-                    marker,
-                    "Autopilot will not merge this PR because it is still stub-only.",
-                    "",
-                    "@codex address that feedback by updating THIS PR directly on its branch.",
-                    "Delete the .github/agent-stubs/** bootstrap file from the PR diff and implement the requested feature in real non-stub files.",
-                    "Do not open a new PR. Do not leave review-only feedback.",
-                    "If direct branch update is unavailable, you may fall back to one AUTOPILOT_PATCH_V1 comment on this PR thread.",
-                  ].join("\n"),
-                });
-              }
-
-              core.info(`Skipping PR #${pr.number} because only .github/agent-stubs/** files changed.`);
               return;
             }
 
             if (hasStub) {
-              const marker = "AUTOPILOT_REMOVE_STUB_REQUIRED_V1";
-              const alreadyCommented = comments.some((comment) =>
-                String(comment.body || "").includes(marker)
+              await createCommentOnce(
+                pr.number,
+                "AUTOPILOT_REMOVE_STUB_REQUIRED_V2",
+                [
+                  "AUTOPILOT_REMOVE_STUB_REQUIRED_V2",
+                  "Autopilot found real implementation changes on this PR, but the bootstrap stub file is still present in the PR diff.",
+                  "",
+                  "@codex remove every .github/agent-stubs/** file from this PR diff and keep the real implementation changes.",
+                  "No GitHub reply is required; push commits on this branch instead.",
+                ],
+                comments
               );
-
-              if (!alreadyCommented) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: pr.number,
-                  body: [
-                    marker,
-                    "Autopilot found real implementation changes on this PR, but the bootstrap stub file is still present in the PR diff.",
-                    "",
-                    "@codex remove every .github/agent-stubs/** file from this PR diff and keep the real implementation changes.",
-                    "Do not leave the PR with any stub file remaining.",
-                  ].join("\n"),
-                });
-              }
-
-              core.info(`Skipping PR #${pr.number} because stub files still remain in the diff.`);
               return;
             }
 
-            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation update or fallback patch comment");
-            await ensureLabel("autopilot:patch-applied", "0e8a16", "A real Codex implementation landed on this PR branch");
-            await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
-            await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
-            await ensureLabel("needs:you", "d93f0b", "Human attention required");
-
             let isDraft = Boolean(pr.draft);
 
-            if (isDraft && labelSet.has("autopilot:waiting-patch")) {
-              if (pr.node_id) {
+            if (isDraft || labelSet.has("autopilot:waiting-codex")) {
+              if (isDraft && pr.node_id) {
                 try {
                   await github.graphql(
                     `
@@ -173,47 +195,184 @@ jobs:
                 }
               }
 
-              try {
-                await github.rest.issues.addLabels({
-                  owner,
-                  repo,
-                  issue_number: pr.number,
-                  labels: ["autopilot:patch-applied", "autopilot:ready-to-merge"],
-                });
-                labelSet.add("autopilot:patch-applied");
-                labelSet.add("autopilot:ready-to-merge");
-              } catch {}
-
-              for (const name of ["autopilot:waiting-patch", "autopilot:awaiting-patch", "pr:draft", "needs:you"]) {
+              await addLabels(pr.number, ["autopilot:ready-to-merge"]);
+              for (const name of ["autopilot:waiting-codex", "autopilot:waiting-patch", "autopilot:patch-applied", "pr:draft", "needs:you"]) {
                 await removeLabel(pr.number, name);
-                labelSet.delete(name);
               }
 
-              const marker = "AUTOPILOT_DIRECT_IMPLEMENTATION_DETECTED_V1";
-              const alreadyCommented = comments.some((comment) =>
-                String(comment.body || "").includes(marker)
+              await createCommentOnce(
+                pr.number,
+                "AUTOPILOT_MANUAL_CODEX_IMPLEMENTATION_DETECTED_V1",
+                [
+                  "AUTOPILOT_MANUAL_CODEX_IMPLEMENTATION_DETECTED_V1",
+                  "Autopilot detected a real non-stub implementation on this PR branch and promoted the PR out of draft.",
+                ],
+                comments
               );
-              if (!alreadyCommented) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: pr.number,
-                  body: [
-                    marker,
-                    "Autopilot detected a real non-stub implementation on this PR branch and promoted the PR out of draft.",
-                  ].join("\n"),
-                });
-              }
             }
 
             if (isDraft) return;
 
-            const ok = labelSet.has("autopilot:patch-applied") && labelSet.has("autopilot:ready-to-merge");
-            if (!ok) return;
+            core.setOutput("eligible", "true");
+            core.setOutput("prNumber", String(pr.number));
+            core.setOutput("headRef", String(pr.head.ref || ""));
+            core.setOutput("headSha", String(pr.head.sha || ""));
+            core.setOutput("baseRef", String(pr.base.ref || ""));
+            core.setOutput("runHeadSha", runHeadSha);
 
-            await github.rest.pulls.merge({
+      - name: Checkout PR head branch
+        if: steps.inspect.outputs.eligible == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.inspect.outputs.headRef }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+
+      - name: Rebase branch onto latest base
+        id: rebase
+        if: steps.inspect.outputs.eligible == 'true'
+        shell: bash
+        run: |
+          set +e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BASE_REF="${{ steps.inspect.outputs.baseRef }}"
+          HEAD_REF="${{ steps.inspect.outputs.headRef }}"
+          BEFORE_SHA="$(git rev-parse HEAD)"
+
+          git fetch origin "$BASE_REF" --depth=200
+
+          if git merge-base --is-ancestor "origin/$BASE_REF" HEAD; then
+            echo "rebased=false" >> "$GITHUB_OUTPUT"
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git rebase "origin/$BASE_REF"
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            git rebase --abort || true
+            echo "rebased=false" >> "$GITHUB_OUTPUT"
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          AFTER_SHA="$(git rev-parse HEAD)"
+          if [ "$AFTER_SHA" != "$BEFORE_SHA" ]; then
+            git push --force-with-lease origin HEAD:"$HEAD_REF"
+            echo "rebased=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rebased=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "conflict=false" >> "$GITHUB_OUTPUT"
+
+      - name: Flag manual action on rebase conflict
+        if: steps.inspect.outputs.eligible == 'true' && steps.rebase.outputs.conflict == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.inspect.outputs.prNumber }}");
+
+            if (!Number.isInteger(prNumber) || prNumber <= 0) return;
+
+            try {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: prNumber,
+                labels: ["needs:you"],
+              });
+            } catch {}
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
               repo,
-              pull_number: pr.number,
-              merge_method: "squash",
+              issue_number: prNumber,
+              per_page: 100,
             });
+            const marker = "AUTOPILOT_REBASE_CONFLICT_V1";
+            if (comments.some((comment) => String(comment.body || "").includes(marker))) return;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: [
+                marker,
+                "Autopilot could not automatically rebase this PR onto the latest base branch.",
+                "Resolve the branch manually, rerun CI, and autopilot will attempt the merge again.",
+              ].join("\n"),
+            });
+
+      - name: Stop after successful rebase push
+        if: steps.inspect.outputs.eligible == 'true' && steps.rebase.outputs.rebased == 'true'
+        run: exit 0
+
+      - name: Merge PR
+        if: steps.inspect.outputs.eligible == 'true' && steps.rebase.outputs.conflict != 'true' && steps.rebase.outputs.rebased != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.inspect.outputs.prNumber }}");
+            const expectedHeadSha = String("${{ steps.inspect.outputs.runHeadSha }}");
+
+            if (!Number.isInteger(prNumber) || prNumber <= 0) return;
+
+            const pr = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            if (pr.data.draft) return;
+            if (expectedHeadSha && pr.data.head.sha !== expectedHeadSha) {
+              core.info(`Skipping merge for PR #${prNumber} because the head SHA changed after CI completed.`);
+              return;
+            }
+
+            try {
+              await github.rest.pulls.merge({
+                owner,
+                repo,
+                pull_number: prNumber,
+                merge_method: "squash",
+              });
+            } catch (error) {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: prNumber,
+                per_page: 100,
+              });
+              const marker = "AUTOPILOT_AUTO_MERGE_BLOCKED_V1";
+              if (!comments.some((comment) => String(comment.body || "").includes(marker))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  body: [
+                    marker,
+                    `Autopilot could not merge this PR automatically: ${String(error.message || error)}`,
+                    "Check whether the base branch changed, branch protection blocked the merge, or CI status is stale.",
+                  ].join("\n"),
+                });
+              }
+
+              try {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  labels: ["needs:you"],
+                });
+              } catch {}
+            }

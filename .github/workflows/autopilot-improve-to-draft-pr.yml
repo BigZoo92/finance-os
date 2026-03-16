@@ -10,12 +10,12 @@ permissions:
   issues: write
 
 concurrency:
-  group: autopilot-improve-to-draft-pr-${{ github.event.issue.number }}
+  group: autopilot-improve-to-draft-pr
   cancel-in-progress: false
 
 jobs:
   run:
-    if: github.event.label.name == 'ready' || github.event.label.name == 'autopilot:retry-pr'
+    if: github.event.label.name == 'ready'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
@@ -25,15 +25,8 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const payloadIssue = context.payload.issue;
-            const triggerLabel = String(context.payload.label?.name || "");
 
             if (payloadIssue.pull_request) return;
-
-            function normalizeText(value) {
-              return String(value || "")
-                .replace(/\r\n/g, "\n")
-                .replace(/\r/g, "\n");
-            }
 
             async function ensureLabel(name, color, description) {
               try {
@@ -51,67 +44,58 @@ jobs:
               }
             }
 
-            function parseLatestRetryRequest(comments) {
-              let latest = { attempt: 0, reason: "", failedPr: null };
-
-              for (const comment of comments) {
-                const body = normalizeText(comment.body || "");
-                const attemptMatch = body.match(/^AUTOPILOT_RETRY_REQUEST:(\d+)$/m);
-                if (!attemptMatch) continue;
-
-                const attempt = Number(attemptMatch[1]);
-                if (!Number.isInteger(attempt) || attempt < latest.attempt) continue;
-
-                const reasonMatch = body.match(/^Normalized reason:\s*(.+)$/m);
-                const failedPrMatch = body.match(/^Failed PR:\s*#(\d+)$/m);
-                latest = {
-                  attempt,
-                  reason: String(reasonMatch?.[1] || "").trim(),
-                  failedPr: failedPrMatch ? Number(failedPrMatch[1]) : null,
-                };
-              }
-
-              return latest;
-            }
-
-            async function closePullWithSummary(pull, attempt, retryReason, improveIssueNumber) {
-              const closeMarker = `AUTOPILOT_PR_RETRIED_BY_ATTEMPT:${attempt}`;
-              const comments = await github.paginate(github.rest.issues.listComments, {
-                owner,
-                repo,
-                issue_number: pull.number,
-                per_page: 100,
-              });
-
-              if (!comments.some((comment) => String(comment.body || "").includes(closeMarker))) {
-                await github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: pull.number,
-                  body: [
-                    closeMarker,
-                    `This PR is being closed because autopilot is reopening improve #${improveIssueNumber} as retry attempt ${attempt}.`,
-                    retryReason ? `Retry reason: ${retryReason}` : "",
-                  ].filter(Boolean).join("\n"),
-                });
-              }
-
+            async function addLabels(issueNumber, labels) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0 || labels.length === 0) return;
               try {
-                await github.rest.pulls.update({
+                await github.rest.issues.addLabels({
                   owner,
                   repo,
-                  pull_number: pull.number,
-                  state: "closed",
+                  issue_number: issueNumber,
+                  labels,
                 });
               } catch {}
+            }
+
+            async function removeLabel(issueNumber, name) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  name,
+                });
+              } catch {}
+            }
+
+            async function listComments(issueNumber) {
+              if (!Number.isInteger(issueNumber) || issueNumber <= 0) return [];
+              return github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+            }
+
+            async function createCommentOnce(issueNumber, marker, bodyLines) {
+              const comments = await listComments(issueNumber);
+              if (comments.some((comment) => String(comment.body || "").includes(marker))) return false;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: bodyLines.join("\n"),
+              });
+              return true;
             }
 
             await ensureLabel("pr:created", "0e8a16", "Autopilot PR created for improve issue");
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
-            await ensureLabel("autopilot:retry-pr", "fbca04", "Improve issue should reopen implementation as a retry PR");
-            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation update or fallback patch comment");
-            await ensureLabel("autopilot:patch-applied", "0e8a16", "A real Codex implementation landed on this PR branch");
+            await ensureLabel("autopilot:queued-pr", "fbca04", "Improve issue is waiting for the next implementation PR slot");
+            await ensureLabel("autopilot:waiting-codex", "fbca04", "Draft PR is waiting for manual Codex extraction on its branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
@@ -133,43 +117,7 @@ jobs:
             if (!title.startsWith("improve:")) return;
             if (!has("agent:challenger")) return;
             if (!has("autopilot")) return;
-
-            const improveComments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number: issue.number,
-              per_page: 100,
-            });
-
-            const latestRetry = parseLatestRetryRequest(improveComments);
-            const triggeredByRetry = triggerLabel === "autopilot:retry-pr";
-            const retryAttempt =
-              triggeredByRetry
-                ? (latestRetry.attempt > 0 ? latestRetry.attempt : 1)
-                : 0;
-            const retryReason =
-              triggeredByRetry
-                ? (latestRetry.reason || "manual retry requested")
-                : "";
-
-            if (retryAttempt > 2) {
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: issue.number,
-                labels: ["needs:you"],
-              });
-
-              try {
-                await github.rest.issues.removeLabel({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  name: "autopilot:retry-pr",
-                });
-              } catch {}
-              return;
-            }
+            if (!has("ready")) return;
 
             const repoInfo = await github.rest.repos.get({ owner, repo });
             const defaultBranch = repoInfo.data.default_branch;
@@ -181,10 +129,10 @@ jobs:
               .replace(/^-+|-+$/g, "");
             const slug = (rawSlug || "task").slice(0, 28);
 
-            const branchBase = `agent/impl-${issue.number}-${slug}`;
-            const branch = retryAttempt > 0 ? `${branchBase}-r${retryAttempt}` : branchBase;
+            const branch = `agent/impl-${issue.number}-${slug}`;
             const marker = `Parent improve issue: #${issue.number}`;
             const issueLink = `https://github.com/${owner}/${repo}/issues/${issue.number}`;
+            const stubPath = `.github/agent-stubs/improve-${issue.number}.md`;
 
             const openPulls = await github.paginate(github.rest.pulls.list, {
               owner,
@@ -193,18 +141,28 @@ jobs:
               per_page: 100,
             });
 
-            const relatedPulls = openPulls.filter((pull) =>
-              String(pull.body || "").includes(marker)
+            const activeAgentPulls = openPulls.filter((pull) =>
+              String(pull.head?.ref || "").startsWith("agent/")
             );
 
-            let pull = relatedPulls.find((item) => String(item.head?.ref || "") === branch) || null;
-            if (!pull && !triggeredByRetry && relatedPulls.length > 0) {
-              pull = relatedPulls[0];
-            }
+            let pull = openPulls.find((item) =>
+              String(item.body || "").includes(marker)
+            ) || null;
 
-            for (const relatedPull of relatedPulls) {
-              if (pull && relatedPull.number === pull.number) continue;
-              await closePullWithSummary(relatedPull, retryAttempt, retryReason, issue.number);
+            if (!pull && activeAgentPulls.length >= 1) {
+              const queueMarker = `AUTOPILOT_WAITING_FOR_PR_SLOT_V1:${issue.number}`;
+              await addLabels(issue.number, ["autopilot:queued-pr"]);
+              await removeLabel(issue.number, "ready");
+              await createCommentOnce(
+                issue.number,
+                queueMarker,
+                [
+                  queueMarker,
+                  "Autopilot did not open an implementation PR yet because another agent PR is already active.",
+                  "This improve issue stays queued until the current implementation lane is merged or closed.",
+                ]
+              );
+              return;
             }
 
             if (!pull) {
@@ -231,16 +189,6 @@ jobs:
                 });
               }
 
-              const stubPath = `.github/agent-stubs/improve-${issue.number}.md`;
-              const stubBody = [
-                `# Autopilot stub for improve #${issue.number}`,
-                "",
-                `Source improve issue: ${issueLink}`,
-                "",
-                "This file is a temporary bootstrap marker for branch/PR creation.",
-                "Delete this file in the first real implementation patch.",
-              ].join("\n");
-
               let stubSha = null;
               try {
                 const existingStub = await github.rest.repos.getContent({
@@ -255,12 +203,21 @@ jobs:
               }
 
               if (!stubSha) {
+                const stubBody = [
+                  `# Autopilot stub for improve #${issue.number}`,
+                  "",
+                  `Source improve issue: ${issueLink}`,
+                  "",
+                  "This file is a temporary bootstrap marker for branch/PR creation.",
+                  "Delete this file in the first real implementation patch.",
+                ].join("\n");
+
                 await github.rest.repos.createOrUpdateFileContents({
                   owner,
                   repo,
                   path: stubPath,
                   branch,
-                  message: `chore(autopilot): bootstrap improve #${issue.number}${retryAttempt > 0 ? ` retry ${retryAttempt}` : ""}`,
+                  message: `chore(autopilot): bootstrap improve #${issue.number}`,
                   content: Buffer.from(stubBody, "utf8").toString("base64"),
                 });
               }
@@ -268,7 +225,7 @@ jobs:
               const createdPull = await github.rest.pulls.create({
                 owner,
                 repo,
-                title: `implement: ${issue.title.replace(/^improve:\s*/i, "").trim() || `improve #${issue.number}`}${retryAttempt > 0 ? ` (retry ${retryAttempt})` : ""}`,
+                title: `implement: ${issue.title.replace(/^improve:\s*/i, "").trim() || `improve #${issue.number}`}`,
                 head: branch,
                 base: defaultBranch,
                 draft: true,
@@ -276,11 +233,11 @@ jobs:
                   marker,
                   "",
                   `Source improve issue: ${issueLink}`,
-                  `Autopilot retry attempt: ${retryAttempt}`,
-                  retryReason ? `Retry reason: ${retryReason}` : "",
                   "",
-                  "Autopilot mode: Codex should update this PR branch directly when possible; AUTOPILOT_PATCH_V1 comments are fallback only.",
-                ].filter(Boolean).join("\n"),
+                  "Autopilot mode: manual Codex handoff.",
+                  "Open this PR task in Codex and extract the implementation manually onto this branch.",
+                  "Autopilot will merge automatically once the branch is real, green, and up to date.",
+                ].join("\n"),
               });
               pull = createdPull.data;
             }
@@ -295,7 +252,7 @@ jobs:
             );
             const pullHas = (name) => pullLabels.includes(name);
 
-            if (!pullHas("autopilot:patch-applied") && !pull.draft) {
+            if (!pullHas("autopilot:ready-to-merge") && !pull.draft) {
               try {
                 await github.graphql(
                   `
@@ -312,147 +269,46 @@ jobs:
               }
             }
 
-            await github.rest.issues.addLabels({
-              owner,
-              repo,
-              issue_number: issue.number,
-              labels: ["pr:created"],
-            });
+            await addLabels(issue.number, ["pr:created"]);
+            await removeLabel(issue.number, "autopilot:queued-pr");
+            await removeLabel(issue.number, "needs:you");
 
-            try {
-              if (triggeredByRetry) {
-                await github.rest.issues.removeLabel({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  name: "autopilot:retry-pr",
-                });
-              }
-            } catch {}
+            const desiredPrLabels = ["autopilot"];
+            if (pull.draft && !pullHas("autopilot:ready-to-merge")) {
+              desiredPrLabels.push("autopilot:waiting-codex", "pr:draft");
+            }
+            await addLabels(pull.number, desiredPrLabels);
 
-            try {
-              if (triggeredByRetry) {
-                await github.rest.issues.removeLabel({
-                  owner,
-                  repo,
-                  issue_number: issue.number,
-                  name: "needs:you",
-                });
-              }
-            } catch {}
-
-            try {
-              const prLabels = pullHas("autopilot:patch-applied")
-                ? ["autopilot"]
-                : ["autopilot", "autopilot:waiting-patch", "pr:draft"];
-
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number: pull.number,
-                labels: prLabels,
-              });
-            } catch (error) {
-              core.warning(`Could not label PR #${pull.number}: ${error.message}`);
+            for (const name of ["autopilot:waiting-patch", "autopilot:patch-applied", "autopilot:retry-pr", "needs:you"]) {
+              await removeLabel(pull.number, name);
             }
 
-            for (const name of ["autopilot:awaiting-patch", "autopilot:ready-to-merge"]) {
-              try {
-                await github.rest.issues.removeLabel({
-                  owner,
-                  repo,
-                  issue_number: pull.number,
-                  name,
-                });
-              } catch {}
-            }
-
-            if (pullHas("autopilot:patch-applied")) {
-              for (const name of ["autopilot:waiting-patch", "pr:draft"]) {
-                try {
-                  await github.rest.issues.removeLabel({
-                    owner,
-                    repo,
-                    issue_number: pull.number,
-                    name,
-                  });
-                } catch {}
-              }
-            }
-
-            const linked = improveComments.some((comment) =>
-              String(comment.body || "").includes(`AUTOPILOT_PR_CREATED:${pull.number}`)
+            const linkedMarker = `AUTOPILOT_PR_CREATED:${pull.number}`;
+            await createCommentOnce(
+              issue.number,
+              linkedMarker,
+              [linkedMarker, `Implementation PR: #${pull.number}`]
             );
-            if (!linked) {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: issue.number,
-                body: `AUTOPILOT_PR_CREATED:${pull.number}\nImplementation PR: #${pull.number}`,
-              });
-            }
 
-            const pingMarker = `AUTOPILOT_IMPLEMENTATION_REQUEST_V2:${issue.number}`;
-            const legacyPingMarker = `AUTOPILOT_DIFF_MODE_REQUEST_V1:${issue.number}`;
-            const prComments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number: pull.number,
-              per_page: 100,
-            });
-            const alreadyPinged = prComments.some((comment) =>
-              String(comment.body || "").includes(pingMarker) ||
-              String(comment.body || "").includes(legacyPingMarker)
+            const handoffMarker = `AUTOPILOT_MANUAL_CODEX_HANDOFF_V1:${issue.number}`;
+            if (pullHas("autopilot:ready-to-merge")) return;
+
+            await createCommentOnce(
+              pull.number,
+              handoffMarker,
+              [
+                handoffMarker,
+                "@codex",
+                "",
+                "MANUAL CODEX HANDOFF ONLY.",
+                "",
+                "This PR is intentionally paused for manual extraction in Codex.",
+                "No GitHub reply is required. This comment exists so the task appears in Codex.",
+                "Stay on THIS PR branch. Do NOT open another PR in Codex UI. Do NOT use make_pr.",
+                `Delete ${stubPath} and implement the requested feature in real non-stub files on this branch.`,
+                `Parent improve issue: #${issue.number}`,
+                `Source improve issue: ${issueLink}`,
+                "",
+                "After you extract manually and push commits on this branch, autopilot will update the branch if needed and merge automatically once CI is green.",
+              ]
             );
-            if (alreadyPinged || pullHas("autopilot:patch-applied")) return;
-
-            const mustDeleteStub = `.github/agent-stubs/improve-${issue.number}.md`;
-
-            const body = [
-              pingMarker,
-              "@codex",
-              "",
-              "PRIMARY MODE: update THIS PR directly on its branch.",
-              "",
-              "Stay on THIS PR. Do NOT open another PR in Codex UI. Do NOT use make_pr.",
-              `Delete ${mustDeleteStub} and implement the requested feature in real non-stub files on this branch.`,
-              "If you already reviewed this PR, address that feedback by updating the branch.",
-              "",
-              "Fallback mode only if direct branch update is unavailable:",
-              "- Post EXACTLY ONE issue comment on THIS PR thread.",
-              "- The first non-empty line must be AUTOPILOT_PATCH_V1.",
-              "- Include exactly one fenced unified diff block.",
-              "- Append the status footer outside the fence.",
-              "",
-              "Fallback comment structure:",
-              "",
-              "Line 1 (first non-empty line) MUST be exactly:",
-              "AUTOPILOT_PATCH_V1",
-              "",
-              "Then include EXACTLY ONE fenced code block:",
-              "- Prefer a ```diff``` fence.",
-              "- A plain triple-backtick fence is also acceptable if the first meaningful line inside is diff --git ...",
-              "- The patch must be a real unified diff with no placeholders.",
-              "",
-              "After the closing fence, append a plain-text footer (no fences):",
-              "Status: READY",
-              "What changed: (max 3 bullets)",
-              "Risk: (low/med/high + why)",
-              "Next: (one next step)",
-              "",
-              "Mandatory rules:",
-              `- Whether you update the branch directly or use the fallback patch comment, you MUST delete ${mustDeleteStub} AND modify at least one non-stub path.`,
-              "- Do NOT leave the PR stub-only.",
-              "- Do NOT reply with review-only feedback when implementation work is required.",
-              "- For fallback comments only: keep AUTOPILOT_PATCH_V1 and the footer outside the code fence.",
-              "- For fallback comments only: use exactly ONE fenced code block and ZERO other code fences.",
-              retryReason ? `- Previous attempt failed for this reason: ${retryReason}` : "",
-              retryReason ? "- Do NOT repeat that failure." : "",
-            ].filter(Boolean).join("\n");
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: pull.number,
-              body,
-            });

@@ -25,16 +25,18 @@ Reference glossary for labels used by the agentic/autopilot workflow.
 
 - `autopilot`: item is managed by autopilot automation.
 - `autopilot:queued`: spec exists but is waiting for available PR capacity.
-- `autopilot:retry-pr`: improve issue should reopen implementation as a retry PR.
-- `autopilot:waiting-patch`: draft PR is waiting for Codex to land implementation, either by direct PR update or by fallback patch comment.
-- `autopilot:patch-applied`: a real implementation landed on the PR branch and autopilot can continue toward merge.
+- `autopilot:queued-pr`: improve issue is ready in principle but must wait for the single active implementation PR slot.
+- `autopilot:waiting-codex`: draft PR exists and is waiting for a human to extract the task in Codex and push commits on that branch.
+- `autopilot:ready-to-merge`: a real non-stub implementation landed on the PR branch and autopilot can continue toward merge.
 
 ## PR state labels (autopilot usage)
 
 - `pr:draft`: PR is draft and must not be merged.
+- `pr:created`: an improve issue already has its implementation PR.
 
 ## Operational notes
 
 - Improve batch creation should label only the first spawned spec issue as `ready`; the rest should be `autopilot:queued`.
-- Merge-on-green automation should only merge autopilot PRs when `autopilot:patch-applied` is present, the PR is not draft, and no stub file remains in the PR diff.
-- Patch-apply automation should reject stub-only or no-op patch replies, nudge direct PR updates first, and only retry PR creation for true apply conflicts.
+- Improve-to-PR automation should open at most one agent implementation PR at a time; additional improve issues move to `autopilot:queued-pr`.
+- Merge-on-green automation should only merge autopilot PRs when real non-stub files landed on the branch, the PR is no longer draft, and no stub file remains in the PR diff.
+- The implementation step is now a manual Codex handoff on the PR branch. GitHub comments can surface the handoff in Codex, but autopilot no longer depends on patch-comment apply.
