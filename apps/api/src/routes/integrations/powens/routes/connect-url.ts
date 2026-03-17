@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Elysia } from 'elysia'
 import { getRequestMeta } from '../../../../auth/context'
 import { demoOrReal } from '../../../../auth/demo-mode'
@@ -24,6 +25,15 @@ export const createConnectUrlRoute = () =>
         const powens = getPowensRuntime(context)
 
         if (powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()) {
+          void powens.services.adminAudit.recordEvent({
+            id: randomUUID(),
+            action: 'connect_url',
+            result: 'blocked',
+            actorMode: 'admin',
+            at: new Date().toISOString(),
+            requestId,
+            details: 'safe_mode_enabled',
+          })
           context.set.status = 503
           return {
             ok: false,
@@ -33,9 +43,20 @@ export const createConnectUrlRoute = () =>
           }
         }
 
-        return {
+        const payload = {
           url: powens.services.connectUrl.getConnectUrl(),
         }
+
+        void powens.services.adminAudit.recordEvent({
+          id: randomUUID(),
+          action: 'connect_url',
+          result: 'allowed',
+          actorMode: 'admin',
+          at: new Date().toISOString(),
+          requestId,
+        })
+
+        return payload
       },
     })
   })

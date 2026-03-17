@@ -8,6 +8,7 @@ import { createPowensJobQueueRepository } from './repositories/powens-job-queue-
 import { createPowensSyncGuardRepository } from './repositories/powens-sync-guard-repository'
 import { createPowensClientService } from './services/create-powens-client-service'
 import { createPowensConnectUrlService } from './services/create-powens-connect-url-service'
+import { createPowensAdminAuditService } from './services/create-powens-admin-audit-service'
 import type { PowensRouteRuntime, PowensRoutesDependencies } from './types'
 
 export const createPowensRouteRuntime = ({
@@ -17,6 +18,7 @@ export const createPowensRouteRuntime = ({
 }: PowensRoutesDependencies): PowensRouteRuntime => {
   const client = createPowensClientService(env)
   const connectUrl = createPowensConnectUrlService(env)
+  const adminAudit = createPowensAdminAuditService(redisClient)
 
   const connection = createPowensConnectionRepository(db, redisClient)
   const jobs = createPowensJobQueueRepository(redisClient)
@@ -51,6 +53,7 @@ export const createPowensRouteRuntime = ({
     services: {
       client,
       connectUrl,
+      adminAudit,
     },
     repositories: {
       connection,

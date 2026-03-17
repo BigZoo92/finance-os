@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Elysia } from 'elysia'
 import { toSafeErrorMessage } from '@finance-os/prelude/errors'
 import { getAuth, getRequestMeta } from '../../../../auth/context'
@@ -23,6 +24,16 @@ export const createCallbackRoute = () =>
       const mode = auth.mode === 'admin' ? 'admin' : hasValidState ? 'state' : 'demo'
 
       if (powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()) {
+        void powens.services.adminAudit.recordEvent({
+          id: randomUUID(),
+          action: 'callback',
+          result: 'blocked',
+          actorMode: auth.mode === 'admin' ? 'admin' : 'state',
+          at: new Date().toISOString(),
+          requestId,
+          connectionId: sanitizedConnectionId || 'unknown',
+          details: 'safe_mode_enabled',
+        })
         context.set.status = 503
         return {
           ok: false,
@@ -46,6 +57,16 @@ export const createCallbackRoute = () =>
         context,
         isDemoMode: () => auth.mode !== 'admin' && !hasValidState,
         demo: () => {
+          void powens.services.adminAudit.recordEvent({
+            id: randomUUID(),
+            action: 'callback',
+            result: 'blocked',
+            actorMode: 'state',
+            at: new Date().toISOString(),
+            requestId,
+            connectionId: sanitizedConnectionId,
+            details: 'missing_admin_or_valid_state',
+          })
           context.set.status = 403
           return {
             ok: false,
@@ -62,6 +83,16 @@ export const createCallbackRoute = () =>
               requestId,
             })
 
+            void powens.services.adminAudit.recordEvent({
+              id: randomUUID(),
+              action: 'callback',
+              result: 'allowed',
+              actorMode: auth.mode === 'admin' ? 'admin' : 'state',
+              at: new Date().toISOString(),
+              requestId,
+              connectionId: sanitizedConnectionId,
+            })
+
             logApiEvent({
               level: 'info',
               msg: 'powens callback exchange success',
@@ -76,6 +107,17 @@ export const createCallbackRoute = () =>
             return { ok: true }
           } catch (error) {
             context.set.status = 502
+            void powens.services.adminAudit.recordEvent({
+              id: randomUUID(),
+              action: 'callback',
+              result: 'failed',
+              actorMode: auth.mode === 'admin' ? 'admin' : 'state',
+              at: new Date().toISOString(),
+              requestId,
+              connectionId: sanitizedConnectionId,
+              details: 'exchange_failed',
+            })
+
             logApiEvent({
               level: 'error',
               msg: 'powens callback exchange failure',
