@@ -259,6 +259,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
   const summary = summaryQuery.data
   const statusConnections = statusQuery.data?.connections ?? []
+  const isIntegrationsSafeMode = statusQuery.data?.fallback === 'safe_mode'
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
   const statusCounts = {
     connected: statusConnections.filter(connection => connection.status === 'connected').length,
@@ -406,20 +407,26 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   type="button"
                   variant="outline"
                   onClick={() => syncMutation.mutate()}
-                  disabled={!isAdmin || syncMutation.isPending}
-                  title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
+                  disabled={!isAdmin || isIntegrationsSafeMode || syncMutation.isPending}
+                  title={!isAdmin ? 'Action reservee au compte BigZoo' : isIntegrationsSafeMode ? 'Safe mode actif: integration externe desactivee' : undefined}
                 >
                   {syncMutation.isPending ? 'Sync...' : 'Lancer une sync'}
                 </Button>
                 <Button
                   type="button"
                   onClick={() => connectMutation.mutate()}
-                  disabled={!isAdmin || connectMutation.isPending}
-                  title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
+                  disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
+                  title={!isAdmin ? 'Action reservee au compte BigZoo' : isIntegrationsSafeMode ? 'Safe mode actif: integration externe desactivee' : undefined}
                 >
                   {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
                 </Button>
               </div>
+
+              {isIntegrationsSafeMode ? (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Safe mode integrations externes actif: connexions/sync Powens temporairement bloquees.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </section>

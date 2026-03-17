@@ -390,6 +390,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => toBooleanEnv(value)),
+    EXTERNAL_INTEGRATIONS_SAFE_MODE: z
+      .string()
+      .optional()
+      .transform(value => toBooleanEnv(value)),
     ...powensShape,
   })
 
@@ -449,9 +453,10 @@ export const getWorkerEnv = () =>
     WORKER_AUTO_SYNC_ENABLED: z
       .string()
       .optional()
-      .transform(value => {
-        const normalized = toOptionalEnv(value)?.toLowerCase()
-        return normalized === '1' || normalized === 'true' || normalized === 'yes'
-      }),
+      .transform(value => toBooleanEnv(value)),
+    EXTERNAL_INTEGRATIONS_SAFE_MODE: z
+      .string()
+      .optional()
+      .transform(value => toBooleanEnv(value)),
     ...powensShape,
   })
