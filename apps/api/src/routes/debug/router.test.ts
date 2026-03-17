@@ -5,12 +5,22 @@ import type { PowensRoutesDependencies } from '../integrations/powens/types'
 
 const createDebugTestApp = ({
   mode,
+  dbExecute,
+  redisPing,
+  hasInternalToken = false,
 }: {
   mode: 'admin' | 'demo'
+  dbExecute?: () => Promise<unknown>
+  redisPing?: () => Promise<string>
+  hasInternalToken?: boolean
 }) => {
   const dependencies = {
-    db: {} as PowensRoutesDependencies['db'],
-    redisClient: {} as PowensRoutesDependencies['redisClient'],
+    db: {
+      execute: dbExecute ?? (async () => [{ ok: true }]),
+    } as unknown as PowensRoutesDependencies['db'],
+    redisClient: {
+      ping: redisPing ?? (async () => 'PONG'),
+    } as PowensRoutesDependencies['redisClient'],
     env: ({
       NODE_ENV: 'test',
       APP_COMMIT_SHA: null,
@@ -36,8 +46,8 @@ const createDebugTestApp = ({
     .derive(() => ({
       auth: { mode } as const,
       internalAuth: {
-        hasValidToken: false,
-        tokenSource: null,
+        hasValidToken: hasInternalToken,
+        tokenSource: hasInternalToken ? 'header' : null,
       },
       requestMeta: {
         requestId: 'req-test',
@@ -70,5 +80,37 @@ describe('createDebugRoutes', () => {
       internalTokenSource: null,
       mode: 'admin',
     })
+  })
+
+  it('returns explicit database and redis health checks', async () => {
+    const app = createDebugTestApp({ mode: 'admin', hasInternalToken: true })
+    const response = await app.handle(new Request('http://finance-os.local/debug/health'))
+    const payload = (await response.json()) as Record<string, any>
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(true)
+    expect(payload.checks).toEqual({
+      database: expect.objectContaining({ status: 'ok', latencyMs: expect.any(Number) }),
+      redis: expect.objectContaining({ status: 'ok', latencyMs: expect.any(Number) }),
+    })
+  })
+
+  it('surfaces degraded state when a dependency health check fails', async () => {
+    const app = createDebugTestApp({
+      mode: 'admin',
+      hasInternalToken: true,
+      dbExecute: async () => {
+        throw new Error('database unavailable')
+      },
+    })
+    const response = await app.handle(new Request('http://finance-os.local/debug/health'))
+    const payload = (await response.json()) as Record<string, any>
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(false)
+    expect(payload.checks.database).toEqual(
+      expect.objectContaining({ status: 'error', details: 'database unavailable' })
+    )
+    expect(payload.checks.redis).toEqual(expect.objectContaining({ status: 'ok' }))
   })
 })
