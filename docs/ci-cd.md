@@ -21,15 +21,21 @@ Le workflow de release est tag-only et immuable.
 Etapes:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm lint`
-3. `pnpm typecheck`
+2. `pnpm -r --if-present lint`
+3. `pnpm -r --if-present typecheck`
 4. `pnpm -r --if-present test`
-5. `pnpm build`
+5. `pnpm -r --if-present build`
+
+Commande locale equivalente:
+
+- `pnpm check:ci`
+- ce script force `CI=true` puis rejoue exactement le meme ordre et les memes commandes que `.github/workflows/ci.yml`
 
 ### Codex environment parity
 
 - To keep manual Codex extraction close to CI, use [../scripts/codex-env-setup.sh](/c:/Users/giver/dev/finance-os/scripts/codex-env-setup.sh) as the Codex environment setup script.
 - It runs the same frozen-lockfile install as CI and then executes [../scripts/verify-workspace-install.mjs](/c:/Users/giver/dev/finance-os/scripts/verify-workspace-install.mjs) to fail early if declared workspace dependencies are missing from the environment cache.
+- Once the environment setup succeeds, manual Codex extraction on an `implement:` PR should run `pnpm check:ci` before claiming the branch is ready.
 
 ### Release
 

@@ -11,6 +11,7 @@
     "dev:apps": "concurrently -k -n api,worker,web \"pnpm api:dev\" \"pnpm worker:dev\" \"pnpm web:dev\"",
     "dev:all": "pnpm infra:up && pnpm dev:apps",
     "build": "pnpm -r --if-present build",
+    "check:ci": "node scripts/check-ci.mjs",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",

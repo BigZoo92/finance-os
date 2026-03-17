@@ -36,6 +36,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Manual Codex extraction must start from the `implement:` draft PR only, never from the `batch:`, `spec:`, or `improve:` issue tasks.
 - Only one autopilot implementation PR should be open at a time. Additional improve issues queue under `autopilot:queued-pr` until the active lane closes.
 - When CI fails on an autopilot implementation PR, autopilot must comment the failing job summary and log excerpt back onto the PR thread so Codex can continue from the real runner error.
+- Manual Codex extraction on an `implement:` PR should validate with `pnpm check:ci`, which mirrors the current GitHub CI order with `CI=true`.
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
 
 ## Smoke and Manual Checks

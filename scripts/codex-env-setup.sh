@@ -11,6 +11,10 @@ corepack prepare pnpm@10.15.0 --activate
 pnpm install --frozen-lockfile
 
 # Fail early if the Codex environment missed workspace dependencies.
-node scripts/verify-workspace-install.mjs
+if [ -f scripts/verify-workspace-install.mjs ]; then
+  node scripts/verify-workspace-install.mjs
+else
+  echo "verify-workspace-install.mjs not present on this branch yet; skipping workspace verification"
+fi
 
 echo "Codex environment setup complete: workspace dependencies resolved."

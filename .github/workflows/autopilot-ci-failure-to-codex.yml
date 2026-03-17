@@ -206,6 +206,7 @@ jobs:
               "If a manual Codex task for this PR already exists, reuse that PR branch context instead of starting from the issue again.",
               "CI is the source of truth for this PR; do not treat partial local checks as success if CI disagrees.",
               "Repo TypeScript note: exactOptionalPropertyTypes is enabled. If an optional field is absent, omit the key entirely instead of passing undefined.",
+              "Before pushing the fix, rerun `pnpm check:ci` from the repo root if the environment setup is healthy enough to install dependencies.",
               runUrl ? `Workflow run: ${runUrl}` : "",
               failedJobs ? "" : "",
               failedJobs ? "Failed jobs/steps:" : "",

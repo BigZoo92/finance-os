@@ -37,6 +37,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 
 - Start with the smallest checks that match the changed scope.
 - Use canonical repo-wide commands from [package.json](package.json):
+  - `pnpm check:ci`
   - `pnpm lint`
   - `pnpm typecheck`
   - `pnpm -r --if-present test`

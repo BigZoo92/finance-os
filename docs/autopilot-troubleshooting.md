@@ -59,6 +59,7 @@
 - Local Codex summaries can be incomplete when the execution environment misses workspace dependencies or runner-only context.
 - `Autopilot - CI failure to Codex` now comments the failing job names and a log excerpt back onto the implementation PR thread.
 - Treat that CI comment as the source of truth, not the optimistic local summary inside Codex.
+- Ask Codex to rerun `pnpm check:ci` before pushing a fix whenever the environment setup completed successfully.
 - The common failure pattern is TypeScript passing locally in a narrow scope while repo CI fails under `pnpm -r --if-present typecheck`.
 - A recurring Finance-OS-specific failure pattern is `exactOptionalPropertyTypes`: optional fields must be omitted when absent, not passed as `undefined`.
 
