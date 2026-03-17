@@ -22,7 +22,7 @@ export const createCallbackRoute = () =>
       const sanitizedConnectionId = sanitizeConnectionId(context.body.connection_id)
       const mode = auth.mode === 'admin' ? 'admin' : hasValidState ? 'state' : 'demo'
 
-      if (powens.env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
+      if (powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()) {
         context.set.status = 503
         return {
           ok: false,

@@ -47,5 +47,8 @@ export const createPowensConnectUrlService = (env: ApiEnv): PowensConnectUrlServ
         }) !== null
       )
     },
+    isExternalIntegrationsSafeModeEnabled() {
+      return env.EXTERNAL_INTEGRATIONS_SAFE_MODE
+    },
   }
 }

@@ -71,6 +71,7 @@ export interface PowensSyncGuardRepository {
 export interface PowensConnectUrlService {
   getConnectUrl: () => string
   isCallbackStateValid: (state: string | undefined) => boolean
+  isExternalIntegrationsSafeModeEnabled: () => boolean
 }
 
 export interface PowensUseCases {

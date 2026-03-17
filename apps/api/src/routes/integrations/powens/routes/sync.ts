@@ -27,7 +27,7 @@ export const createSyncRoute = () =>
           requireAdmin(context)
           const powens = getPowensRuntime(context)
 
-          if (powens.env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
+          if (powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()) {
             context.set.status = 503
             return {
               ok: false,
