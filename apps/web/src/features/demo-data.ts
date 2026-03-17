@@ -277,6 +277,8 @@ export const getDemoPowensSyncRuns = (): PowensSyncRunsResponse => {
         startedAt: '2026-02-22T18:44:00.000Z',
         endedAt: '2026-02-22T18:45:00.000Z',
         result: 'error',
+      errorMessage: 'Powens timeout while fetching transactions',
+      errorFingerprint: 'powens timeout while fetching transactions',
       },
       {
         id: 'demo-sync-run-3',

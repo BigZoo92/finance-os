@@ -22,7 +22,9 @@ const isPowensSyncRun = (value: unknown): value is PowensSyncRunView => {
     (run.requestId === null || typeof run.requestId === 'string') &&
     (run.endedAt === null || typeof run.endedAt === 'string') &&
     typeof run.result === 'string' &&
-    allowed.has(run.result)
+    allowed.has(run.result) &&
+    (run.errorMessage === undefined || typeof run.errorMessage === 'string') &&
+    (run.errorFingerprint === undefined || typeof run.errorFingerprint === 'string')
   )
 }
 

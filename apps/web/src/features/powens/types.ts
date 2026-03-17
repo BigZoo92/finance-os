@@ -21,6 +21,8 @@ export type PowensSyncRun = {
   startedAt: string
   endedAt: string | null
   result: 'running' | 'success' | 'error' | 'reconnect_required'
+  errorMessage?: string
+  errorFingerprint?: string
 }
 
 export type PowensSyncRunsResponse = {

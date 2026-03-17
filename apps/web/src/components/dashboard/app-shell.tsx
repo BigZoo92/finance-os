@@ -270,6 +270,34 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const latestSyncAt = pickLatestDate(statusConnections.map(connection => connection.lastSyncAt))
   const latestSuccessAt = pickLatestDate(statusConnections.map(connection => connection.lastSuccessAt))
   const syncRuns = syncRunsQuery.data?.runs ?? []
+  const recentErrorsByFingerprint = syncRuns
+    .filter(run => run.result === 'error' || run.result === 'reconnect_required')
+    .filter(run => run.errorFingerprint && run.errorMessage)
+    .reduce<Array<{ fingerprint: string; message: string; count: number; latestAt: string }>>((acc, run) => {
+      const fingerprint = run.errorFingerprint
+      const message = run.errorMessage
+
+      if (!fingerprint || !message) {
+        return acc
+      }
+
+      const existing = acc.find(entry => entry.fingerprint === fingerprint)
+      const latestAt = run.endedAt ?? run.startedAt
+
+      if (!existing) {
+        acc.push({ fingerprint, message, count: 1, latestAt })
+        return acc
+      }
+
+      existing.count += 1
+      if (new Date(latestAt).getTime() > new Date(existing.latestAt).getTime()) {
+        existing.latestAt = latestAt
+      }
+
+      return acc
+    }, [])
+    .sort((a, b) => b.count - a.count || new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime())
+    .slice(0, 6)
   const syncBacklogCount = syncBacklogQuery.data?.syncBacklogCount ?? 0
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map(connection => [connection.powensConnectionId, connection.balance])
@@ -516,6 +544,33 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   </div>
                   <p className="text-xs text-muted-foreground">Start: {formatDateTime(run.startedAt)}</p>
                   <p className="text-xs text-muted-foreground">End: {formatDateTime(run.endedAt)}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Erreurs recentes par fingerprint
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>Regroupement des echecs de sync par signature d'erreur.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {syncRunsQuery.isPending ? <p className="text-muted-foreground">Chargement...</p> : null}
+              {syncRunsQuery.isError ? <p className="text-destructive">{toErrorMessage(syncRunsQuery.error)}</p> : null}
+              {!syncRunsQuery.isPending && recentErrorsByFingerprint.length === 0 ? (
+                <p className="text-muted-foreground">Aucune erreur recente avec fingerprint.</p>
+              ) : null}
+              {recentErrorsByFingerprint.map(entry => (
+                <div key={entry.fingerprint} className="rounded-md border border-border/80 bg-muted/20 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate font-medium">{entry.fingerprint}</p>
+                    <Badge variant="destructive">{entry.count}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Derniere occurrence: {formatDateTime(entry.latestAt)}</p>
+                  <p className="text-xs text-destructive">{entry.message}</p>
                 </div>
               ))}
             </CardContent>
