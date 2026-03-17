@@ -214,6 +214,21 @@ const toSafeErrorMessage = (error: unknown) => {
   return raw.length > 2000 ? raw.slice(0, 2000) : raw
 }
 
+const toErrorFingerprint = (message: string) => {
+  const normalized = message
+    .toLowerCase()
+    .replace(/\b\d+\b/g, '#')
+    .replace(/[a-f0-9]{8,}/g, '#')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!normalized) {
+    return 'unknown_error'
+  }
+
+  return normalized.slice(0, 120)
+}
+
 const updateHeartbeatFile = async () => {
   try {
     await writeFile(WORKER_HEALTHCHECK_FILE, String(Date.now()), 'utf8')
@@ -259,6 +274,8 @@ type StoredSyncRun = {
   startedAt: string
   endedAt: string | null
   result: SyncRunResult | 'running'
+  errorMessage?: string
+  errorFingerprint?: string
 }
 
 const syncRunKey = (runId: string) => `${SYNC_RUN_KEY_PREFIX}${runId}`
@@ -286,7 +303,12 @@ const recordSyncRunStarted = async (params: { connectionId: string; requestId?: 
   return run.id
 }
 
-const recordSyncRunEnded = async (params: { runId: string; result: SyncRunResult }) => {
+const recordSyncRunEnded = async (params: {
+  runId: string
+  result: SyncRunResult
+  errorMessage?: string
+  errorFingerprint?: string
+}) => {
   const runKey = syncRunKey(params.runId)
   const raw = await redisClient.client.get(runKey)
   if (!raw) {
@@ -299,6 +321,8 @@ const recordSyncRunEnded = async (params: { runId: string; result: SyncRunResult
       ...parsed,
       endedAt: new Date().toISOString(),
       result: params.result,
+      ...(params.errorMessage ? { errorMessage: params.errorMessage } : {}),
+      ...(params.errorFingerprint ? { errorFingerprint: params.errorFingerprint } : {}),
     }
 
     await redisClient.client.set(runKey, JSON.stringify(updatedRun), {
@@ -589,13 +613,14 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
   } catch (error) {
     const failedAt = new Date()
     const failureStatus = toConnectionStatus(error)
+    const errorMessage = toSafeErrorMessage(error)
 
     await dbClient.db
       .update(schema.powensConnection)
       .set({
         status: failureStatus,
         lastSyncAt: failedAt,
-        lastError: toSafeErrorMessage(error),
+        lastError: errorMessage,
         updatedAt: failedAt,
       })
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
@@ -607,13 +632,15 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     await recordSyncRunEnded({
       runId,
       result: failureStatus,
+      errorMessage,
+      errorFingerprint: toErrorFingerprint(errorMessage),
     })
 
     console.error(
       '[worker] connection sync failed for',
       connectionId,
       '-',
-      toSafeErrorMessage(error),
+      errorMessage,
       '- requestId:',
       requestId ?? 'n/a'
     )

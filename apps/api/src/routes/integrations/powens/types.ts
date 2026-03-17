@@ -43,6 +43,8 @@ export interface PowensSyncRunView {
   startedAt: string
   endedAt: string | null
   result: 'running' | 'success' | 'error' | 'reconnect_required'
+  errorMessage?: string
+  errorFingerprint?: string
 }
 
 export interface PowensConnectionRepository {
