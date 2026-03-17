@@ -2,6 +2,7 @@ import { createHandlePowensCallbackUseCase } from './domain/create-handle-callba
 import { createListStatusesUseCase } from './domain/create-list-statuses-use-case'
 import { createListSyncRunsUseCase } from './domain/create-list-sync-runs-use-case'
 import { createRequestSyncUseCase } from './domain/create-request-sync-use-case'
+import { createGetSyncBacklogCountUseCase } from './domain/create-get-sync-backlog-count-use-case'
 import { createPowensConnectionRepository } from './repositories/powens-connection-repository'
 import { createPowensJobQueueRepository } from './repositories/powens-job-queue-repository'
 import { createPowensSyncGuardRepository } from './repositories/powens-sync-guard-repository'
@@ -42,6 +43,10 @@ export const createPowensRouteRuntime = ({
     listConnectionSyncRuns: connection.listSyncRuns,
   })
 
+  const getSyncBacklogCount = createGetSyncBacklogCountUseCase({
+    getSyncBacklogCount: jobs.getSyncBacklogCount,
+  })
+
   return {
     services: {
       client,
@@ -57,6 +62,7 @@ export const createPowensRouteRuntime = ({
       requestSync,
       listStatuses,
       listSyncRuns,
+      getSyncBacklogCount,
     },
   }
 }

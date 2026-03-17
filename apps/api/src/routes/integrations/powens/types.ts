@@ -58,6 +58,7 @@ export interface PowensConnectionRepository {
 export interface PowensJobQueueRepository {
   enqueueConnectionSync: (params: { connectionId: string; requestId?: string }) => Promise<void>
   enqueueAllConnectionsSync: (params?: { requestId?: string }) => Promise<void>
+  getSyncBacklogCount: () => Promise<number>
 }
 
 export interface PowensSyncGuardRepository {
@@ -77,6 +78,7 @@ export interface PowensUseCases {
   requestSync: (connectionId?: string, options?: { requestId?: string }) => Promise<void>
   listStatuses: () => Promise<PowensConnectionStatusView[]>
   listSyncRuns: (limit?: number) => Promise<PowensSyncRunView[]>
+  getSyncBacklogCount: () => Promise<number>
 }
 
 export interface PowensRouteRuntime {
