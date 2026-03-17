@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { desc } from 'drizzle-orm'
+import { desc, sql } from 'drizzle-orm'
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../auth/context'
 import { requireInternalToken } from '../../auth/guard'
@@ -73,6 +73,53 @@ const toEnvPresence = (env: PowensRoutesDependencies['env']) => {
 }
 
 export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependencies) => {
+  const checkRedisHealth = async () => {
+    const startedAt = Date.now()
+
+    try {
+      const ping = (redisClient as never as { ping?: () => Promise<string> }).ping
+      if (typeof ping !== 'function') {
+        return {
+          status: 'error' as const,
+          latencyMs: Date.now() - startedAt,
+          details: 'redis ping command unavailable',
+        }
+      }
+
+      await ping()
+
+      return {
+        status: 'ok' as const,
+        latencyMs: Date.now() - startedAt,
+      }
+    } catch (error) {
+      return {
+        status: 'error' as const,
+        latencyMs: Date.now() - startedAt,
+        details: error instanceof Error ? error.message : 'redis check failed',
+      }
+    }
+  }
+
+  const checkDbHealth = async () => {
+    const startedAt = Date.now()
+
+    try {
+      await db.execute(sql`select 1`)
+
+      return {
+        status: 'ok' as const,
+        latencyMs: Date.now() - startedAt,
+      }
+    } catch (error) {
+      return {
+        status: 'error' as const,
+        latencyMs: Date.now() - startedAt,
+        details: error instanceof Error ? error.message : 'database check failed',
+      }
+    }
+  }
+
   const ensureDebugAuthAccess = (context: Parameters<typeof requireInternalToken>[0]) => {
     if (env.NODE_ENV !== 'production') {
       return
@@ -82,17 +129,42 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
   }
 
   return new Elysia({ prefix: '/debug' })
-    .get('/health', context => {
+    .get('/health', async context => {
       requireInternalToken(context)
 
+      const [dbHealth, redisHealth] = await Promise.all([checkDbHealth(), checkRedisHealth()])
+      const ok = dbHealth.status === 'ok' && redisHealth.status === 'ok'
+
+      if (!ok) {
+        logApiEvent({
+          level: 'warn',
+          msg: 'debug health check degraded',
+          requestId: getRequestMeta(context).requestId,
+          databaseStatus: dbHealth.status,
+          redisStatus: redisHealth.status,
+        })
+      }
+
       return {
-        ok: true,
+        ok,
         requestId: getRequestMeta(context).requestId,
         version: resolveVersion(env),
         commitSha: resolveCommitSha(env),
         runtimeVersion: resolveRuntimeVersion(env),
         environment: env.NODE_ENV,
         envPresence: toEnvPresence(env),
+        checks: {
+          database: {
+            status: dbHealth.status,
+            latencyMs: dbHealth.latencyMs,
+            ...(dbHealth.status === 'error' ? { details: dbHealth.details } : {}),
+          },
+          redis: {
+            status: redisHealth.status,
+            latencyMs: redisHealth.latencyMs,
+            ...(redisHealth.status === 'error' ? { details: redisHealth.details } : {}),
+          },
+        },
       }
     })
     .get('/auth', context => {
