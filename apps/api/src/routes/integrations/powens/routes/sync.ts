@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Elysia } from 'elysia'
 import { getRequestMeta } from '../../../../auth/context'
 import { demoOrReal } from '../../../../auth/demo-mode'
@@ -28,6 +29,15 @@ export const createSyncRoute = () =>
           const powens = getPowensRuntime(context)
 
           if (powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()) {
+            void powens.services.adminAudit.recordEvent({
+              id: randomUUID(),
+              action: 'manual_sync',
+              result: 'blocked',
+              actorMode: 'admin',
+              at: new Date().toISOString(),
+              requestId,
+              details: 'safe_mode_enabled',
+            })
             context.set.status = 503
             return {
               ok: false,
@@ -44,6 +54,16 @@ export const createSyncRoute = () =>
             await powens.useCases.requestSync(connectionId, { requestId })
           } catch (error) {
             if (error instanceof PowensManualSyncRateLimitError) {
+              void powens.services.adminAudit.recordEvent({
+                id: randomUUID(),
+                action: 'manual_sync',
+                result: 'blocked',
+                actorMode: 'admin',
+                at: new Date().toISOString(),
+                requestId,
+                details: 'rate_limit',
+                ...(connectionId ? { connectionId } : {}),
+              })
               context.set.status = 429
               context.set.headers['retry-after'] = String(error.retryAfterSeconds)
               return {
@@ -53,8 +73,28 @@ export const createSyncRoute = () =>
               }
             }
 
+            void powens.services.adminAudit.recordEvent({
+              id: randomUUID(),
+              action: 'manual_sync',
+              result: 'failed',
+              actorMode: 'admin',
+              at: new Date().toISOString(),
+              requestId,
+              details: 'unexpected_error',
+              ...(connectionId ? { connectionId } : {}),
+            })
             throw error
           }
+
+          void powens.services.adminAudit.recordEvent({
+            id: randomUUID(),
+            action: 'manual_sync',
+            result: 'allowed',
+            actorMode: 'admin',
+            at: new Date().toISOString(),
+            requestId,
+            ...(connectionId ? { connectionId } : {}),
+          })
 
           return { ok: true }
         },

@@ -84,10 +84,30 @@ export interface PowensUseCases {
   getSyncBacklogCount: () => Promise<number>
 }
 
+export type PowensAdminAuditAction = 'connect_url' | 'manual_sync' | 'callback'
+export type PowensAdminAuditResult = 'allowed' | 'blocked' | 'failed'
+
+export interface PowensAdminAuditEvent {
+  id: string
+  action: PowensAdminAuditAction
+  result: PowensAdminAuditResult
+  actorMode: 'admin' | 'state'
+  at: string
+  requestId: string
+  details?: string
+  connectionId?: string
+}
+
+export interface PowensAdminAuditService {
+  recordEvent: (event: PowensAdminAuditEvent) => Promise<void>
+  listRecentEvents: (limit?: number) => Promise<PowensAdminAuditEvent[]>
+}
+
 export interface PowensRouteRuntime {
   services: {
     client: PowensClient
     connectUrl: PowensConnectUrlService
+    adminAudit: PowensAdminAuditService
   }
   repositories: {
     connection: PowensConnectionRepository

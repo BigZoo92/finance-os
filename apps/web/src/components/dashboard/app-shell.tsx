@@ -22,6 +22,7 @@ import type { DashboardRange } from '@/features/dashboard-types'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
   powensQueryKeys,
+  powensAuditTrailQueryOptionsWithMode,
   powensStatusQueryOptionsWithMode,
   powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
@@ -161,6 +162,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       mode: authMode,
     })
   )
+  const auditTrailQuery = useQuery(
+    powensAuditTrailQueryOptionsWithMode({
+      mode: authMode,
+    })
+  )
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -202,6 +208,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           queryKey: powensQueryKeys.syncBacklog(),
         }),
         queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.auditTrail(),
+        }),
+        queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
         }),
       ])
@@ -236,6 +245,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         }),
         queryClient.invalidateQueries({
           queryKey: powensQueryKeys.syncBacklog(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.auditTrail(),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
@@ -299,6 +311,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     .sort((a, b) => b.count - a.count || new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime())
     .slice(0, 6)
   const syncBacklogCount = syncBacklogQuery.data?.syncBacklogCount ?? 0
+  const auditEvents = auditTrailQuery.data?.events ?? []
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map(connection => [connection.powensConnectionId, connection.balance])
   )
@@ -575,6 +588,40 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               ))}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Audit trail admin
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>Historique des actions critiques (connect URL, sync, callback).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {auditTrailQuery.isPending ? <p className="text-muted-foreground">Chargement...</p> : null}
+              {auditTrailQuery.isError ? (
+                <p className="text-destructive">{toErrorMessage(auditTrailQuery.error)}</p>
+              ) : null}
+              {!auditTrailQuery.isPending && auditEvents.length === 0 ? (
+                <p className="text-muted-foreground">Aucun evenement critique recent.</p>
+              ) : null}
+              {auditEvents.slice(0, 10).map(event => (
+                <div key={event.id} className="rounded-md border border-border/80 bg-muted/20 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{event.action} · {event.actorMode}</p>
+                    <Badge variant={event.result === 'allowed' ? 'secondary' : 'destructive'}>{event.result}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">At: {formatDateTime(event.at)}</p>
+                  <p className="text-xs text-muted-foreground">Request: {event.requestId}</p>
+                  {event.connectionId ? (
+                    <p className="text-xs text-muted-foreground">Connection: {event.connectionId}</p>
+                  ) : null}
+                  {event.details ? <p className="text-xs text-muted-foreground">Detail: {event.details}</p> : null}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
 
           <Card>
             <CardHeader>

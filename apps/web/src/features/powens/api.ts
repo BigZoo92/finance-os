@@ -1,6 +1,6 @@
 import { apiFetch, ApiRequestError } from '@/lib/api'
 import { getDemoPowensStatus, getDemoPowensSyncRuns } from '../demo-data'
-import type { PowensStatusResponse, PowensSyncBacklogResponse, PowensSyncRunsResponse } from './types'
+import type { PowensAuditTrailResponse, PowensStatusResponse, PowensSyncBacklogResponse, PowensSyncRunsResponse } from './types'
 
 export const fetchPowensStatus = async () => {
   try {
@@ -93,3 +93,25 @@ export const fetchPowensSyncBacklog = async () => {
     return { syncBacklogCount: 0 }
   }
 }
+
+
+export const fetchPowensAuditTrail = async () => {
+  try {
+    return await apiFetch<PowensAuditTrailResponse>('/integrations/powens/audit-trail?limit=20')
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (
+        error.status === 'network_error' ||
+        error.status === 401 ||
+        error.status === 403 ||
+        error.status === 404 ||
+        error.status >= 500
+      ) {
+        return { events: [], requestId: 'demo-audit' }
+      }
+    }
+
+    return { events: [], requestId: 'demo-audit' }
+  }
+}
+

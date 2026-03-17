@@ -1,13 +1,14 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { AuthMode } from '../auth-types'
 import { getDemoPowensStatus, getDemoPowensSyncRuns } from '../demo-data'
-import { fetchPowensStatus, fetchPowensSyncBacklog, fetchPowensSyncRuns } from './api'
+import { fetchPowensAuditTrail, fetchPowensStatus, fetchPowensSyncBacklog, fetchPowensSyncRuns } from './api'
 
 export const powensQueryKeys = {
   all: ['powens'] as const,
   status: () => [...powensQueryKeys.all, 'status'] as const,
   syncRuns: () => [...powensQueryKeys.all, 'sync-runs'] as const,
   syncBacklog: () => [...powensQueryKeys.all, 'sync-backlog'] as const,
+  auditTrail: () => [...powensQueryKeys.all, 'audit-trail'] as const,
 }
 
 export const powensStatusQueryOptions = () =>
@@ -53,6 +54,21 @@ export const powensSyncBacklogQueryOptionsWithMode = ({ mode }: { mode?: AuthMod
       }
 
       return fetchPowensSyncBacklog()
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
+  })
+
+
+export const powensAuditTrailQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
+  queryOptions({
+    queryKey: powensQueryKeys.auditTrail(),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return { events: [], requestId: 'demo-audit' }
+      }
+
+      return fetchPowensAuditTrail()
     },
     enabled: mode !== undefined,
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
