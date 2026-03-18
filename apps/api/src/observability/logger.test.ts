@@ -25,8 +25,13 @@ describe('logApiEvent redaction', () => {
     }
 
     expect(lines).toHaveLength(1)
-    const payload = JSON.parse(lines[0]!) as Record<string, unknown>
+    const [line] = lines
+    if (!line) {
+      throw new Error('expected a log line')
+    }
+    const payload = JSON.parse(line) as Record<string, unknown>
 
+    expect(payload.service).toBe('api')
     expect(payload.authorization).toBe('[REDACTED]')
     expect(payload.url).toBe('https://api.local/powens/callback?code=[REDACTED]&state=ok')
     expect(payload.nested).toEqual({
@@ -47,7 +52,7 @@ describe('toErrorLogFields redaction', () => {
     expect(fields.errName).toBe('Error')
     expect(fields.errMessage).toContain('code=[REDACTED]')
     expect(fields.errMessage).toContain('Bearer [REDACTED]')
-    expect(Object.prototype.hasOwnProperty.call(fields, 'stack')).toBe(false)
+    expect(Object.hasOwn(fields, 'stack')).toBe(false)
   })
 
   it('includes redacted stack when includeStack is true', () => {
