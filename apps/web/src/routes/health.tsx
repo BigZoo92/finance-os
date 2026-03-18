@@ -6,7 +6,7 @@ const HEALTH_HEADERS = {
   'cache-control': 'no-store',
 } as const
 
-export const Route = createFileRoute('/healthz')({
+export const Route = createFileRoute('/health')({
   server: {
     handlers: {
       GET: () =>

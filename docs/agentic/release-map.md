@@ -44,6 +44,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - API smoke: [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs)
 - Prod smoke: [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs)
 - Required production route assertions live in [../../apps/api/src/index.ts](../../apps/api/src/index.ts)
+- The shared system contract is `GET /health` and `GET /version` across runtimes, with web retaining `GET /healthz` as a compatibility alias and worker exposing those routes on localhost only.
 
 ## When to Read This First
 

@@ -1,5 +1,6 @@
 import { schema } from '@finance-os/db'
 import { desc, sql } from 'drizzle-orm'
+import { resolveRuntimeVersion } from '@finance-os/prelude'
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../auth/context'
 import { requireInternalToken } from '../../auth/guard'
@@ -46,22 +47,16 @@ const resolveVersion = (env: PowensRoutesDependencies['env']) => {
   return env.APP_VERSION ?? null
 }
 
-const toOptionalEnv = (value: string | undefined | null) => {
-  if (!value) {
-    return null
-  }
-
-  const normalized = value.trim()
-  return normalized.length > 0 ? normalized : null
-}
-
-const resolveRuntimeVersion = (env: PowensRoutesDependencies['env']) => {
-  return {
-    GIT_SHA: toOptionalEnv(process.env.GIT_SHA) ?? toOptionalEnv(env.APP_COMMIT_SHA),
-    GIT_TAG: toOptionalEnv(process.env.GIT_TAG) ?? toOptionalEnv(env.APP_VERSION),
-    BUILD_TIME: toOptionalEnv(process.env.BUILD_TIME),
-    NODE_ENV: env.NODE_ENV,
-  }
+const resolveDebugRuntimeVersion = (env: PowensRoutesDependencies['env']) => {
+  return resolveRuntimeVersion({
+    service: 'api',
+    nodeEnv: env.NODE_ENV,
+    gitSha: process.env.GIT_SHA,
+    gitTag: process.env.GIT_TAG,
+    buildTime: process.env.BUILD_TIME,
+    appCommitSha: env.APP_COMMIT_SHA,
+    appVersion: env.APP_VERSION,
+  })
 }
 
 const toEnvPresence = (env: PowensRoutesDependencies['env']) => {
@@ -150,7 +145,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
         requestId: getRequestMeta(context).requestId,
         version: resolveVersion(env),
         commitSha: resolveCommitSha(env),
-        runtimeVersion: resolveRuntimeVersion(env),
+        runtimeVersion: resolveDebugRuntimeVersion(env),
         environment: env.NODE_ENV,
         envPresence: toEnvPresence(env),
         checks: {
@@ -189,7 +184,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
       return {
         ok: true,
         requestId: getRequestMeta(context).requestId,
-        version: resolveRuntimeVersion(env),
+        version: resolveDebugRuntimeVersion(env),
         flags: {
           nodeEnv: env.NODE_ENV,
           privateAccessTokenEnabled: Boolean(env.PRIVATE_ACCESS_TOKEN),

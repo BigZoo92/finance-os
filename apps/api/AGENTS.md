@@ -5,6 +5,7 @@ Scope: `apps/api/**`
 ## Local Rules
 
 - Keep [src/index.ts](src/index.ts) as the API composition root. Preserve both bare and `/api` compatibility mounts, request-id propagation, and startup route assertions.
+- Keep public `GET /health` and `GET /version` aligned with the shared system contract used by web and worker.
 - Keep HTTP parsing, validation, status codes, and response shaping in route files such as [src/routes/dashboard/routes/summary.ts](src/routes/dashboard/routes/summary.ts) and [src/routes/integrations/powens/routes/callback.ts](src/routes/integrations/powens/routes/callback.ts).
 - Keep orchestration in `domain/`, persistence in `repositories/`, provider and deterministic helpers in `services/`, and wiring in `runtime.ts` plus `plugin.ts`.
 - Demo must short-circuit before any DB, Redis, or Powens access. `GET /auth/me` must stay `200`, `Cache-Control: no-store`, and must never hit DB or Powens.
