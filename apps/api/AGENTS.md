@@ -11,6 +11,7 @@ Scope: `apps/api/**`
 - Demo must short-circuit before any DB, Redis, or Powens access. `GET /auth/me` must stay `200`, `Cache-Control: no-store`, and must never hit DB or Powens.
 - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
 - Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
+- Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
 
 ## Verify
 

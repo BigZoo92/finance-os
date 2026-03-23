@@ -17,6 +17,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 - Worker runtime: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
   - local rules: [../../apps/worker/AGENTS.md](../../apps/worker/AGENTS.md)
   - localhost-only system status endpoints: `GET /health` and `GET /version` from the worker runtime
+- Production deploy and observability rules: [../../infra/docker/AGENTS.md](../../infra/docker/AGENTS.md)
 - Production ops alerting sidecar: [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs)
   - wired from [../../docker-compose.prod.yml](../../docker-compose.prod.yml) using the existing API image
   - monitors 5xx bursts, healthcheck failures, worker heartbeat freshness, and low disk free percent via a webhook channel

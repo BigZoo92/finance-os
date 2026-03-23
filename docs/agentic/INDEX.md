@@ -17,6 +17,7 @@ Use these files as markdown-first entry points before re-exploring the repo.
 - API rules: [../../apps/api/AGENTS.md](../../apps/api/AGENTS.md)
 - Web rules: [../../apps/web/AGENTS.md](../../apps/web/AGENTS.md)
 - Worker rules: [../../apps/worker/AGENTS.md](../../apps/worker/AGENTS.md)
+- Docker/deploy rules: [../../infra/docker/AGENTS.md](../../infra/docker/AGENTS.md)
 - Package rules: [../../packages/db/AGENTS.md](../../packages/db/AGENTS.md), [../../packages/env/AGENTS.md](../../packages/env/AGENTS.md), [../../packages/powens/AGENTS.md](../../packages/powens/AGENTS.md), [../../packages/redis/AGENTS.md](../../packages/redis/AGENTS.md), [../../packages/ui/AGENTS.md](../../packages/ui/AGENTS.md), [../../packages/prelude/AGENTS.md](../../packages/prelude/AGENTS.md)
 
 ## Repo-Local Skills

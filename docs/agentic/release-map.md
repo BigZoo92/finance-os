@@ -21,6 +21,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Deployment reference: [../deployment.md](../deployment.md)
 - Dokploy notes: [../deploy-dokploy.md](../deploy-dokploy.md)
 - Debugging and prod checks: [../debugging.md](../debugging.md)
+- Docker/deploy local rules: [../../infra/docker/AGENTS.md](../../infra/docker/AGENTS.md)
 
 ## Release Guardrails
 
@@ -40,6 +41,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
 - Release automation now waits for the public `/health` endpoint after `compose/deploy` and runs `scripts/smoke-prod.mjs`; the smoke must cover `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` on both root and `/api` compatibility paths, with demo/admin-aware assertions and GitHub step-summary plus `::error` output on failure.
 - Production Compose now includes an `ops-alerts` sidecar driven by [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs); keep its webhook env, shared worker heartbeat volume, and readonly volume mounts aligned when changing deploy topology.
+- Treat observability wiring as release-sensitive: `x-request-id` visibility, smoke coverage, healthcheck targets, and alert probe URLs must continue to match the public `web` entrypoint and the internal API/worker topology.
 
 ## Smoke and Manual Checks
 

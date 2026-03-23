@@ -27,7 +27,7 @@ description: Validate whether a Finance-OS change can affect CI, release, deploy
 ## Workflow
 
 1. Read [../../../docs/agentic/release-map.md](../../../docs/agentic/release-map.md) first.
-2. Trace whether the change affects CI, GHCR images, Dokploy, web-only public routing, or autopilot manual-Codex-handoff assumptions.
+2. Trace whether the change affects CI, GHCR images, Dokploy, web-only public routing, the local deploy rules in [../../../infra/docker/AGENTS.md](../../../infra/docker/AGENTS.md), or autopilot manual-Codex-handoff assumptions.
 3. When `issue_comment` workflows are in scope, verify that Codex-author gating happens before side effects and that comment failures cannot create retry storms.
 4. When autopilot implementation flow is in scope, verify the draft PR handoff, single active PR lane, stub-only rejection, and merge-on-green rebase/merge assumptions together.
 5. Prefer validation and documentation over redesign; do not expand scope into workflow rewrites unless asked.
@@ -40,5 +40,5 @@ description: Validate whether a Finance-OS change can affect CI, release, deploy
 
 ## Verification
 
-- Use [../../../docs/ci-cd.md](../../../docs/ci-cd.md), [../../../docs/deployment.md](../../../docs/deployment.md), and [../../../docs/debugging.md](../../../docs/debugging.md) as the source docs.
+- Use [../../../docs/ci-cd.md](../../../docs/ci-cd.md), [../../../docs/deployment.md](../../../docs/deployment.md), [../../../docs/debugging.md](../../../docs/debugging.md), and [../../../infra/docker/AGENTS.md](../../../infra/docker/AGENTS.md) as the source docs.
 - Re-read [../../../.github/workflows/release.yml](../../../.github/workflows/release.yml) and [../../../.github/workflows/ci.yml](../../../.github/workflows/ci.yml) when workflow impact is possible.

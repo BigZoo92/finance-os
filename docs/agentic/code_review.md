@@ -15,6 +15,7 @@ Use this guide for reviews in this repo.
 - No unsafe logging or raw provider payload leakage
 - Required HTTP contracts still exist and still return the expected auth-safe shape
 - Verification matches the changed scope
+- Observability contracts still line up: `x-request-id` propagation, structured/safe logs, smoke checks, healthcheck targets, and alert probe wiring
 
 ## UI-Specific Checks
 
