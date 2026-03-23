@@ -6,15 +6,23 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
     Array<{
       powensAccountId: string
       powensConnectionId: string
+      source: string | null
+      provider: string | null
+      providerConnectionId: string | null
+      providerInstitutionId: string | null
+      providerInstitutionName: string | null
       accountName: string
       accountCurrency: string
       accountType: string | null
       enabled: boolean
       accountRaw: unknown
       connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
+      lastSyncAttemptAt: Date | null
       lastSyncAt: Date | null
       lastSuccessAt: Date | null
+      lastFailedAt: Date | null
       lastError: string | null
+      syncMetadata: Record<string, unknown> | null
     }>
   >
   getFlowTotals: (fromDate: string) => Promise<{ income: string; expenses: string }>
@@ -119,10 +127,18 @@ export const createGetDashboardSummaryUseCase = ({
       string,
       {
         powensConnectionId: string
+        source: string
+        provider: string
+        providerConnectionId: string
+        providerInstitutionId: string | null
+        providerInstitutionName: string | null
         status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+        lastSyncAttemptAt: string | null
         lastSyncAt: string | null
         lastSuccessAt: string | null
+        lastFailedAt: string | null
         lastError: string | null
+        syncMetadata: Record<string, unknown> | null
         balance: number
         accountCount: number
       }
@@ -156,16 +172,27 @@ export const createGetDashboardSummaryUseCase = ({
 
       perConnection.set(account.powensConnectionId, {
         powensConnectionId: account.powensConnectionId,
+        source: account.source ?? 'banking',
+        provider: account.provider ?? 'powens',
+        providerConnectionId: account.providerConnectionId ?? account.powensConnectionId,
+        providerInstitutionId: account.providerInstitutionId,
+        providerInstitutionName: account.providerInstitutionName,
         status: account.connectionStatus ?? 'connected',
+        lastSyncAttemptAt: toIsoString(account.lastSyncAttemptAt),
         lastSyncAt: toIsoString(account.lastSyncAt),
         lastSuccessAt: toIsoString(account.lastSuccessAt),
+        lastFailedAt: toIsoString(account.lastFailedAt),
         lastError: account.lastError,
+        syncMetadata: account.syncMetadata,
         balance,
         accountCount: 1,
       })
     }
 
-    const totalBalance = accountSummaries.reduce((sum, account) => toMoney(sum + account.balance), 0)
+    const totalBalance = accountSummaries.reduce(
+      (sum, account) => toMoney(sum + account.balance),
+      0
+    )
 
     return {
       range,

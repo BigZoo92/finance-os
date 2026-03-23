@@ -9,10 +9,18 @@ export type DashboardSummaryResponse = {
   }
   connections: Array<{
     powensConnectionId: string
+    source: string
+    provider: string
+    providerConnectionId: string
+    providerInstitutionId: string | null
+    providerInstitutionName: string | null
     status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+    lastSyncAttemptAt: string | null
     lastSyncAt: string | null
     lastSuccessAt: string | null
+    lastFailedAt: string | null
     lastError: string | null
+    syncMetadata: Record<string, unknown> | null
     balance: number
     accountCount: number
   }>

@@ -24,16 +24,30 @@ export const powensConnection = pgTable(
   'powens_connection',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    source: text('source').notNull().default('banking'),
+    provider: text('provider').notNull().default('powens'),
     powensConnectionId: text('powens_connection_id').notNull(),
+    providerConnectionId: text('provider_connection_id').notNull(),
+    providerInstitutionId: text('provider_institution_id'),
+    providerInstitutionName: text('provider_institution_name'),
     accessTokenEncrypted: text('access_token_encrypted').notNull(),
     status: powensConnectionStatusEnum('status').notNull().default('connected'),
+    lastSyncAttemptAt: timestamp('last_sync_attempt_at', { withTimezone: true }),
     lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
     lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+    lastFailedAt: timestamp('last_failed_at', { withTimezone: true }),
     lastError: text('last_error'),
+    syncMetadata: jsonb('sync_metadata').$type<Record<string, unknown> | null>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  table => [uniqueIndex('powens_connection_powens_connection_id_unique').on(table.powensConnectionId)]
+  table => [
+    uniqueIndex('powens_connection_powens_connection_id_unique').on(table.powensConnectionId),
+    uniqueIndex('powens_connection_provider_connection_unique').on(
+      table.provider,
+      table.providerConnectionId
+    ),
+  ]
 )
 
 export const bankAccount = pgTable(

@@ -12,15 +12,23 @@ export interface DashboardTransactionCursor {
 export interface AccountWithConnectionRow {
   powensAccountId: string
   powensConnectionId: string
+  source: string | null
+  provider: string | null
+  providerConnectionId: string | null
+  providerInstitutionId: string | null
+  providerInstitutionName: string | null
   accountName: string
   accountCurrency: string
   accountType: string | null
   enabled: boolean
   accountRaw: unknown
   connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
+  lastSyncAttemptAt: Date | null
   lastSyncAt: Date | null
   lastSuccessAt: Date | null
+  lastFailedAt: Date | null
   lastError: string | null
+  syncMetadata: Record<string, unknown> | null
 }
 
 export interface DashboardFlowTotals {
@@ -55,10 +63,18 @@ export interface DashboardSummaryResponse {
   }
   connections: Array<{
     powensConnectionId: string
+    source: string
+    provider: string
+    providerConnectionId: string
+    providerInstitutionId: string | null
+    providerInstitutionName: string | null
     status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+    lastSyncAttemptAt: string | null
     lastSyncAt: string | null
     lastSuccessAt: string | null
+    lastFailedAt: string | null
     lastError: string | null
+    syncMetadata: Record<string, unknown> | null
     balance: number
     accountCount: number
   }>

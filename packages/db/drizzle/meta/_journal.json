@@ -29,6 +29,13 @@
       "when": 1771765800000,
       "tag": "0003_dashboard_perf_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774301007663,
+      "tag": "0004_windy_secret_warriors",
+      "breakpoints": true
     }
   ]
 }
