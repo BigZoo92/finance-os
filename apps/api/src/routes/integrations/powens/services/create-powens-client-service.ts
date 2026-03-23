@@ -7,7 +7,6 @@ export const createPowensClientService = (env: ApiEnv): PowensClient => {
     clientId: env.POWENS_CLIENT_ID,
     clientSecret: env.POWENS_CLIENT_SECRET,
     userAgent: 'finance-os-api/1.0',
-    timeoutMs: 12_000,
     maxRetries: 2,
   })
 }

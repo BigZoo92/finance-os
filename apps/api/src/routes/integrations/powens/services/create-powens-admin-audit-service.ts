@@ -23,7 +23,8 @@ const safeParseEvent = (value: string): PowensAdminAuditEvent | null => {
   }
 };
 
-const asRedisFunction = <TArgs extends unknown[], TResult>(
+const bindRedisFunction = <TArgs extends unknown[], TResult>(
+  redisClient: RedisClient,
   candidate: ((...args: TArgs) => TResult) | undefined,
   name: string,
 ) => {
@@ -31,11 +32,13 @@ const asRedisFunction = <TArgs extends unknown[], TResult>(
     throw new Error(`Redis client is missing ${name}`);
   }
 
-  return candidate;
+  return (...args: TArgs) =>
+    Reflect.apply(candidate as (...args: TArgs) => TResult, redisClient, args);
 };
 
 export const createPowensAdminAuditService = (redisClient: RedisClient) => {
-  const lPush = asRedisFunction(
+  const lPush = bindRedisFunction(
+    redisClient,
     (
       redisClient as never as {
         lPush?: (...args: [string, string]) => Promise<unknown>;
@@ -43,7 +46,8 @@ export const createPowensAdminAuditService = (redisClient: RedisClient) => {
     ).lPush,
     "lPush",
   );
-  const lTrim = asRedisFunction(
+  const lTrim = bindRedisFunction(
+    redisClient,
     (
       redisClient as never as {
         lTrim?: (...args: [string, number, number]) => Promise<unknown>;
@@ -51,7 +55,8 @@ export const createPowensAdminAuditService = (redisClient: RedisClient) => {
     ).lTrim,
     "lTrim",
   );
-  const lRange = asRedisFunction(
+  const lRange = bindRedisFunction(
+    redisClient,
     (
       redisClient as never as {
         lRange?: (...args: [string, number, number]) => Promise<unknown>;

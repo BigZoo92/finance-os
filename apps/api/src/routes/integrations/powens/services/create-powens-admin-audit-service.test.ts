@@ -6,15 +6,16 @@ const createRedisListMock = () => {
 
   return {
     client: {
-      lPush: async (_key: string, value: string) => {
-        storage.unshift(value);
+      storage,
+      lPush: async function (this: { storage: string[] }, _key: string, value: string) {
+        this.storage.unshift(value);
       },
-      lTrim: async (_key: string, start: number, stop: number) => {
-        const next = storage.slice(start, stop + 1);
-        storage.splice(0, storage.length, ...next);
+      lTrim: async function (this: { storage: string[] }, _key: string, start: number, stop: number) {
+        const next = this.storage.slice(start, stop + 1);
+        this.storage.splice(0, this.storage.length, ...next);
       },
-      lRange: async (_key: string, start: number, stop: number) => {
-        return storage.slice(start, stop + 1);
+      lRange: async function (this: { storage: string[] }, _key: string, start: number, stop: number) {
+        return this.storage.slice(start, stop + 1);
       },
     },
     storage,

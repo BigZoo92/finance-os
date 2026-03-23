@@ -29,11 +29,11 @@ const powensClient = createPowensClient({
   clientId: env.POWENS_CLIENT_ID,
   clientSecret: env.POWENS_CLIENT_SECRET,
   userAgent: 'finance-os-worker/1.0',
-  timeoutMs: 12_000,
   maxRetries: 2,
 })
 
 const TRANSACTION_BATCH_SIZE = 800
+const POWENS_TRANSACTION_PAGE_LIMIT = 250
 const LOCK_TTL_SECONDS = 15 * 60
 const CONNECTION_LOCK_PREFIX = 'powens:lock:connection:'
 const RECONNECT_REQUIRED_STATUS_CODES = new Set([401, 403])
@@ -629,7 +629,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
         accountId: account.powensAccountId,
         minDate: fromDate,
         maxDate,
-        limit: 1000,
+        limit: POWENS_TRANSACTION_PAGE_LIMIT,
       })
 
       const fallbackCurrency = accountCurrencyById.get(account.powensAccountId) ?? 'EUR'

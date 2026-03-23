@@ -58,7 +58,7 @@ interface PowensAccountResponse {
   accounts?: PowensAccount[]
 }
 
-const DEFAULT_TIMEOUT_MS = 12_000
+const DEFAULT_TIMEOUT_MS = 30_000
 const DEFAULT_MAX_RETRIES = 2
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504])
 
@@ -214,6 +214,10 @@ export const createPowensClient = (config: PowensClientConfig) => {
 
         if (error instanceof PowensApiError) {
           throw error
+        }
+
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new PowensApiError(`Powens request timed out after ${timeoutMs}ms`, null, null)
         }
 
         const message = error instanceof Error ? error.message : 'Unknown Powens network error'
