@@ -39,6 +39,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Manual Codex extraction on an `implement:` PR should validate with `pnpm check:ci`, which mirrors the current GitHub CI order with `CI=true`.
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
 - Release automation now waits for the public `/health` endpoint after `compose/deploy` and runs `scripts/smoke-prod.mjs`; the smoke must cover `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` on both root and `/api` compatibility paths, with demo/admin-aware assertions and GitHub step-summary plus `::error` output on failure.
+- Production Compose now includes an `ops-alerts` sidecar driven by [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs); keep its webhook env, shared worker heartbeat volume, and readonly volume mounts aligned when changing deploy topology.
 
 ## Smoke and Manual Checks
 

@@ -1,6 +1,6 @@
 # AGENTS.md - Finance-OS
 
-Last updated: 2026-03-16
+Last updated: 2026-03-23
 
 Use the nearest `AGENTS.md` before editing. Keep this root file small and durable; push local detail into nested `AGENTS.md`, `.agents/skills/`, and `docs/agentic/`.
 
@@ -43,6 +43,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - `pnpm -r --if-present test`
   - `pnpm -r --if-present build`
 - Use [scripts/smoke-api.mjs](scripts/smoke-api.mjs) and [scripts/smoke-prod.mjs](scripts/smoke-prod.mjs) when route, proxy, or deploy behavior changes.
+- For production Compose alerting or health-monitor changes, run `node --test infra/docker/ops-alerts/monitor.test.mjs` in addition to the relevant runtime checks.
 - Validate the agentic foundation after changing `AGENTS.md`, `.agents/skills/`, or `docs/agentic/`:
   - `node .agents/skills/scripts/validate-agent-foundation.mjs`
 

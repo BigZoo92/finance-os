@@ -153,6 +153,20 @@ WORKER_AUTO_SYNC_ENABLED=false
 POWENS_SYNC_INTERVAL_MS=43200000
 POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000
 
+ALERTS_ENABLED=true
+ALERTS_WEBHOOK_URL=<webhook-ops>
+ALERTS_WEBHOOK_HEADERS_JSON={"Authorization":"Bearer <token>"}
+ALERTS_POLL_INTERVAL_MS=30000
+ALERTS_HTTP_TIMEOUT_MS=5000
+ALERTS_5XX_THRESHOLD=3
+ALERTS_5XX_WINDOW_MS=300000
+ALERTS_5XX_PROBE_URLS=http://web:3000/api/auth/me,http://web:3000/api/dashboard/summary?range=30d
+ALERTS_HEALTHCHECK_FAILURE_THRESHOLD=2
+ALERTS_HEALTHCHECK_URLS=http://web:3000/healthz,http://finance-os-api:3001/health
+ALERTS_WORKER_STALE_AFTER_MS=120000
+ALERTS_DISK_FREE_PERCENT_THRESHOLD=10
+ALERTS_DISK_PATHS=/mnt/postgres,/mnt/redis
+
 POWENS_CLIENT_ID=<powens-client-id>
 POWENS_CLIENT_SECRET=<powens-client-secret>
 POWENS_BASE_URL=https://<tenant>.biapi.pro
@@ -178,6 +192,8 @@ Ne pas mettre dans Dokploy:
 - `APP_IMAGE_TAG` est la cle du systeme: chaque deploy doit pointer vers un tag immuable, par exemple `v1.2.3`
 - `AUTH_ADMIN_PASSWORD_HASH_B64` est la variable canonique
 - `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
+- `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure
+- `ALERTS_WEBHOOK_HEADERS_JSON` peut rester vide pour un canal type ntfy, ou contenir un petit objet JSON pour des entetes de type `Authorization`
 
 ## GitHub
 
@@ -234,6 +250,60 @@ Secrets GitHub a supprimer si encore presents mais inutiles pour ce flux:
 - `API_INTERNAL_URL` en secret GitHub
 
 Ces valeurs doivent vivre soit dans les repo variables GitHub non sensibles, soit dans l'env Dokploy runtime.
+
+## Alerting minimal en production
+
+Le compose de production embarque maintenant un sidecar `ops-alerts` qui reutilise l'image `api` existante pour lancer [infra/docker/ops-alerts/monitor.mjs](../infra/docker/ops-alerts/monitor.mjs).
+
+Ce sidecar couvre les 4 familles d'alertes demandees sans stack d'observabilite supplementaire:
+
+- **Burst 5xx**: alerte `warning` si au moins `ALERTS_5XX_THRESHOLD` reponses `>=500` sont observees sur `ALERTS_5XX_PROBE_URLS` pendant `ALERTS_5XX_WINDOW_MS`.
+- **Healthcheck en echec**: alerte `critical` apres `ALERTS_HEALTHCHECK_FAILURE_THRESHOLD` echecs consecutifs sur `ALERTS_HEALTHCHECK_URLS`.
+- **Worker bloque**: alerte `critical` si le heartbeat partage du worker est absent ou plus vieux que `ALERTS_WORKER_STALE_AFTER_MS`.
+- **Disque faible**: alerte `critical` si l'espace libre d'un chemin de `ALERTS_DISK_PATHS` descend sous `ALERTS_DISK_FREE_PERCENT_THRESHOLD`.
+
+### Canal d'alerte recommande
+
+Le sidecar envoie un POST JSON generique vers `ALERTS_WEBHOOK_URL`. Cela permet un canal minimal et peu couteux, par exemple:
+
+- **ntfy**: `ALERTS_WEBHOOK_URL=https://ntfy.sh/<topic>` sans entete supplementaire.
+- **Slack / Mattermost / Discord**: webhook entrant dedie.
+- **Webhook prive**: renseigner `ALERTS_WEBHOOK_HEADERS_JSON` avec un petit objet JSON d'entetes.
+
+Exemple de payload envoye:
+
+```json
+{
+  "source": "finance-os",
+  "status": "triggered",
+  "family": "worker_stalled",
+  "severity": "critical",
+  "summary": "Heartbeat worker stale ou introuvable",
+  "details": {
+    "staleAfterMs": 120000
+  },
+  "timestamp": "2026-03-23T00:00:00.000Z"
+}
+```
+
+### Runbook minimal
+
+- **5xx burst**
+  1. verifier `web` puis `api` dans `docker compose ps`
+  2. regarder les logs `web` et `api` avec le meme `x-request-id` si disponible
+  3. si la cause est Powens ou un provider externe, garder l'app utilisable et activer temporairement `EXTERNAL_INTEGRATIONS_SAFE_MODE=true` si necessaire
+- **Healthcheck failure**
+  1. verifier `curl https://<host>/health` et `curl https://<host>/api/health`
+  2. confirmer que la route publique pointe toujours vers `web` puis proxy interne vers `api`
+  3. si seul le sidecar alerte, comparer avec `docker inspect --format='{{json .State.Health}}' <container>`
+- **Worker stalled**
+  1. verifier l'etat du conteneur `worker`
+  2. verifier le heartbeat partage et les logs `worker`
+  3. relancer le worker si le heartbeat ne bouge plus et ouvrir l'incident Powens/Redis/DB associe
+- **Disk low**
+  1. verifier l'espace libre de l'hote et des volumes Docker
+  2. nettoyer images/volumes obsoletes puis relancer si besoin
+  3. si l'alerte vise `postgres_data`, prioriser backup puis extension de capacite
 
 ## Workflow GitHub Actions
 
@@ -311,6 +381,47 @@ Option manuelle:
 
 1. changer `APP_IMAGE_TAG` dans Dokploy
 2. relancer le deploy Compose
+
+## Simulation / validation controlee des alertes
+
+Ces simulations permettent de valider le cablage sans provoquer d'incident reel durable.
+
+### 1. Verifier le sidecar
+
+```bash
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml ps ops-alerts
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml logs --tail=100 ops-alerts
+```
+
+### 2. Simuler un healthcheck en echec
+
+```bash
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml stop api
+# attendre deux cycles de polling puis verifier la notification
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml start api
+```
+
+### 3. Simuler un worker bloque
+
+```bash
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml exec worker sh -lc 'rm -f /var/run/finance-os/worker-heartbeat && sleep 150'
+# verifier l'alerte puis redemarrer le worker pour la resolution
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml restart worker
+```
+
+### 4. Simuler un seuil disque agressif
+
+```bash
+docker compose --env-file .env.prod.local -f docker-compose.prod.yml run --rm \
+  -e ALERTS_ENABLED=true \
+  -e ALERTS_WEBHOOK_URL=https://ntfy.sh/<topic> \
+  -e ALERTS_DISK_FREE_PERCENT_THRESHOLD=99 \
+  ops-alerts bun infra/docker/ops-alerts/monitor.mjs
+```
+
+### 5. Simuler un burst 5xx
+
+Pointer temporairement `ALERTS_5XX_PROBE_URLS` vers un endpoint de test qui renvoie `500`, ou lancer un conteneur jetable du sidecar avec un seuil bas (`ALERTS_5XX_THRESHOLD=1`) contre une URL volontairement en erreur.
 
 ## Verifications post-deploy
 
