@@ -45,10 +45,12 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
     }>
   >
   getFlowTotals: (fromDate: string) => Promise<{ income: string; expenses: string }>
+  listDailyNetFlows: (fromDate: string) => Promise<Array<{ bookingDate: string; netAmount: string }>>
   listTopExpenseGroups: (
     fromDate: string,
     limit: number
   ) => Promise<Array<{ category: string; merchant: string; total: string; count: number }>>
+  now?: () => Date
 }
 
 const toNumber = (value: string | number | null | undefined) => {
@@ -71,6 +73,7 @@ const toMoney = (value: number) => {
 }
 
 const toIsoString = (value: Date | null) => value?.toISOString() ?? null
+const toDateOnly = (value: Date) => value.toISOString().slice(0, 10)
 
 const makeGroupLabel = (category: string, merchant: string) => {
   if (category !== 'Unknown') {
@@ -86,19 +89,68 @@ const makeGroupLabel = (category: string, merchant: string) => {
   return `Unknown - ${clipped}`
 }
 
+const listDatesInRange = ({ fromDate, toDate }: { fromDate: string; toDate: string }) => {
+  const dates: string[] = []
+  const cursor = new Date(`${fromDate}T00:00:00.000Z`)
+  const end = new Date(`${toDate}T00:00:00.000Z`)
+
+  while (cursor.getTime() <= end.getTime()) {
+    dates.push(toDateOnly(cursor))
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+
+  return dates
+}
+
+const buildDailyWealthSnapshots = ({
+  fromDate,
+  toDate,
+  totalBalance,
+  dailyNetFlows,
+}: {
+  fromDate: string
+  toDate: string
+  totalBalance: number
+  dailyNetFlows: Array<{ bookingDate: string; netAmount: string }>
+}): DashboardSummaryResponse['dailyWealthSnapshots'] => {
+  const dates = listDatesInRange({ fromDate, toDate })
+  const netFlowByDate = new Map(
+    dailyNetFlows.map(flow => [flow.bookingDate, toMoney(toNumber(flow.netAmount))])
+  )
+
+  let runningBalance = totalBalance
+  const snapshotsDescending: DashboardSummaryResponse['dailyWealthSnapshots'] = []
+
+  for (const date of [...dates].reverse()) {
+    snapshotsDescending.push({
+      date,
+      balance: toMoney(runningBalance),
+    })
+
+    runningBalance = toMoney(runningBalance - (netFlowByDate.get(date) ?? 0))
+  }
+
+  return snapshotsDescending.reverse()
+}
+
 export const createGetDashboardSummaryUseCase = ({
   listAccountsWithConnections,
   listAssets,
   getFlowTotals,
+  listDailyNetFlows,
   listTopExpenseGroups,
+  now = () => new Date(),
 }: CreateGetDashboardSummaryUseCaseDependencies): DashboardUseCases['getSummary'] => {
   return async range => {
-    const fromDate = getRangeStartDate(range)
+    const currentDate = now()
+    const fromDate = getRangeStartDate(range, currentDate)
+    const toDate = toDateOnly(currentDate)
 
-    const [accounts, assets, flowTotals, topExpenseGroups] = await Promise.all([
+    const [accounts, assets, flowTotals, dailyNetFlows, topExpenseGroups] = await Promise.all([
       listAccountsWithConnections(),
       listAssets(),
       getFlowTotals(fromDate),
+      listDailyNetFlows(fromDate),
       listTopExpenseGroups(fromDate, 5),
     ])
 
@@ -188,6 +240,12 @@ export const createGetDashboardSummaryUseCase = ({
     }
 
     const totalBalance = assetSummaries.reduce((sum, asset) => toMoney(sum + asset.valuation), 0)
+    const dailyWealthSnapshots = buildDailyWealthSnapshots({
+      fromDate,
+      toDate,
+      totalBalance,
+      dailyNetFlows,
+    })
 
     return {
       range,
@@ -199,6 +257,7 @@ export const createGetDashboardSummaryUseCase = ({
       connections: Array.from(perConnection.values()),
       accounts: accountSummaries,
       assets: assetSummaries,
+      dailyWealthSnapshots,
       topExpenseGroups: topExpenseGroups.map(group => ({
         label: makeGroupLabel(group.category, group.merchant),
         category: group.category,

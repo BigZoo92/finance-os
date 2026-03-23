@@ -10,6 +10,7 @@ export const createDashboardRouteRuntime = ({ db }: { db: ApiDb }): DashboardRou
     listAccountsWithConnections: readModel.listAccountsWithConnections,
     listAssets: readModel.listAssets,
     getFlowTotals: readModel.getFlowTotals,
+    listDailyNetFlows: readModel.listDailyNetFlows,
     listTopExpenseGroups: readModel.listTopExpenseGroups,
   })
 

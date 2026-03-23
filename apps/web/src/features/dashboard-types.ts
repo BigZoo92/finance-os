@@ -50,6 +50,10 @@ export type DashboardSummaryResponse = {
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
+  dailyWealthSnapshots: Array<{
+    date: string
+    balance: number
+  }>
   topExpenseGroups: Array<{
     label: string
     category: string

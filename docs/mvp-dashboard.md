@@ -21,6 +21,7 @@ All dashboard reads are DB-first (no direct Powens calls from web).
   - total balance
   - per-connection balances
   - per-account balances
+  - reconstructed daily patrimoine snapshots for the selected range
   - incomes/expenses in range
   - top 5 expense groups (category fallback: `Unknown - <merchant>`)
 - `GET /dashboard/transactions?range=7d|30d|90d&limit=30&cursor=...`

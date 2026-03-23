@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { createGetDashboardSummaryUseCase } from './create-get-dashboard-summary-use-case'
 
 describe('createGetDashboardSummaryUseCase', () => {
-  it('uses normalized balance/category fields instead of provider raw payloads', async () => {
+  it('uses normalized balance/category fields and reconstructs daily wealth snapshots', async () => {
     const getSummary = createGetDashboardSummaryUseCase({
       listAccountsWithConnections: async () => [
         {
@@ -69,6 +69,16 @@ describe('createGetDashboardSummaryUseCase', () => {
         income: '100.00',
         expenses: '25.40',
       }),
+      listDailyNetFlows: async () => [
+        {
+          bookingDate: '2026-03-22',
+          netAmount: '-2.00',
+        },
+        {
+          bookingDate: '2026-03-23',
+          netAmount: '5.00',
+        },
+      ],
       listTopExpenseGroups: async () => [
         {
           category: 'Unknown',
@@ -77,10 +87,11 @@ describe('createGetDashboardSummaryUseCase', () => {
           count: 2,
         },
       ],
+      now: () => new Date('2026-03-23T12:00:00.000Z'),
     })
 
-    await expect(getSummary('30d')).resolves.toEqual({
-      range: '30d',
+    await expect(getSummary('7d')).resolves.toEqual({
+      range: '7d',
       totals: {
         balance: 52.5,
         incomes: 100,
@@ -152,6 +163,36 @@ describe('createGetDashboardSummaryUseCase', () => {
           metadata: {
             note: 'Static manual asset',
           },
+        },
+      ],
+      dailyWealthSnapshots: [
+        {
+          date: '2026-03-17',
+          balance: 49.5,
+        },
+        {
+          date: '2026-03-18',
+          balance: 49.5,
+        },
+        {
+          date: '2026-03-19',
+          balance: 49.5,
+        },
+        {
+          date: '2026-03-20',
+          balance: 49.5,
+        },
+        {
+          date: '2026-03-21',
+          balance: 49.5,
+        },
+        {
+          date: '2026-03-22',
+          balance: 47.5,
+        },
+        {
+          date: '2026-03-23',
+          balance: 52.5,
         },
       ],
       topExpenseGroups: [

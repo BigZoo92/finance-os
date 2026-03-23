@@ -14,6 +14,8 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/system.test.ts](../../apps/api/src/routes/system.test.ts)
 - API dashboard normalization:
   - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
+- Web dashboard presentation helpers:
+  - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
 - Web auth and API client behavior:
   - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
@@ -57,6 +59,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm web:typecheck`
   - `pnpm web:test`
   - `pnpm web:build`
+  - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts` when the UI depends on a changed dashboard summary contract
 - DB, env, Powens, Redis, or prelude package changes:
   - `pnpm --filter <package> typecheck`
   - package-specific follow-up such as `pnpm db:generate` when schema changes

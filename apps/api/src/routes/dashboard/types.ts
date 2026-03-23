@@ -61,6 +61,11 @@ export interface DashboardExpenseGroupRow {
   count: number
 }
 
+export interface DashboardDailyNetFlowRow {
+  bookingDate: string
+  netAmount: string
+}
+
 export interface DashboardTransactionRow {
   id: number
   bookingDate: string
@@ -122,6 +127,10 @@ export interface DashboardSummaryResponse {
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
+  dailyWealthSnapshots: Array<{
+    date: string
+    balance: number
+  }>
   topExpenseGroups: Array<{
     label: string
     category: string
@@ -152,6 +161,7 @@ export interface DashboardReadRepository {
   listAccountsWithConnections: () => Promise<AccountWithConnectionRow[]>
   listAssets: () => Promise<AssetRow[]>
   getFlowTotals: (fromDate: string) => Promise<DashboardFlowTotals>
+  listDailyNetFlows: (fromDate: string) => Promise<DashboardDailyNetFlowRow[]>
   listTopExpenseGroups: (fromDate: string, limit: number) => Promise<DashboardExpenseGroupRow[]>
   listTransactions: (params: {
     fromDate: string
