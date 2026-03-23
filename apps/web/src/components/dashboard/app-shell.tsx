@@ -75,6 +75,40 @@ const formatDateTime = (value: string | null) => {
   return parsed.toLocaleString("fr-FR");
 };
 
+const formatRelativeDateTime = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const diffMs = parsed.getTime() - Date.now();
+  const formatter = new Intl.RelativeTimeFormat("fr-FR", {
+    numeric: "auto",
+  });
+
+  const units = [
+    [60_000, "minute"],
+    [3_600_000, "hour"],
+    [86_400_000, "day"],
+  ] as const;
+
+  for (const [unitMs, unit] of units) {
+    const delta = diffMs / unitMs;
+    if (
+      Math.abs(delta) <
+      (unit === "minute" ? 60 : unit === "hour" ? 24 : Infinity)
+    ) {
+      return formatter.format(Math.round(delta), unit);
+    }
+  }
+
+  return formatDateTime(value);
+};
+
 const pickLatestDate = (values: Array<string | null>) => {
   const timestamps = values
     .filter((value): value is string => Boolean(value))
@@ -352,6 +386,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     .slice(0, 6);
   const syncBacklogCount = syncBacklogQuery.data?.syncBacklogCount ?? 0;
   const auditEvents = auditTrailQuery.data?.events ?? [];
+  const latestCallback = statusQuery.data?.lastCallback ?? null;
+  const latestCallbackFreshness = formatRelativeDateTime(
+    latestCallback?.receivedAt ?? null,
+  );
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map((connection) => [
       connection.powensConnectionId,
@@ -529,6 +567,31 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   </p>
                   <p className="font-medium">
                     {formatDateTime(latestSuccessAt)}
+                  </p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    Dernier callback
+                  </p>
+                  <p className="font-medium">
+                    {latestCallbackFreshness ??
+                      formatDateTime(latestCallback?.receivedAt ?? null)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {latestCallback
+                      ? `${latestCallback.status} · ${formatDateTime(latestCallback.receivedAt)}`
+                      : "Aucun callback recu"}
+                  </p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Etat securite</p>
+                  <p className="font-medium">
+                    {isIntegrationsSafeMode ? "Safe mode actif" : "Normal"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {latestCallback
+                      ? `Request ${latestCallback.requestId}`
+                      : "Aucune reception tracee"}
                   </p>
                 </div>
                 <div className="rounded-md border border-border/70 px-3 py-2">
