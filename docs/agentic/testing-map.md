@@ -35,6 +35,11 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm worker:typecheck`
   - `bun test apps/worker/src/raw-import.test.ts`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
+- Dashboard asset-model changes:
+  - `pnpm api:typecheck`
+  - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
+  - `pnpm worker:typecheck` when provider cash assets are refreshed from sync
+  - `pnpm web:typecheck`
 - Shared health/version contract changes across runtimes:
   - `pnpm api:typecheck`
   - `bun test apps/api/src/routes/system.test.ts`

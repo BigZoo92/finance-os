@@ -49,6 +49,33 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .orderBy(desc(schema.bankAccount.updatedAt), desc(schema.bankAccount.id))
     },
 
+    async listAssets() {
+      return db
+        .select({
+          assetId: schema.asset.id,
+          assetType: schema.asset.assetType,
+          origin: schema.asset.origin,
+          source: schema.asset.source,
+          provider: schema.asset.provider,
+          providerConnectionId: schema.asset.providerConnectionId,
+          providerInstitutionName: schema.powensConnection.providerInstitutionName,
+          powensConnectionId: schema.asset.powensConnectionId,
+          powensAccountId: schema.asset.powensAccountId,
+          name: schema.asset.name,
+          currency: schema.asset.currency,
+          valuation: schema.asset.valuation,
+          valuationAsOf: schema.asset.valuationAsOf,
+          enabled: schema.asset.enabled,
+          metadata: schema.asset.metadata,
+        })
+        .from(schema.asset)
+        .leftJoin(
+          schema.powensConnection,
+          eq(schema.asset.powensConnectionId, schema.powensConnection.powensConnectionId)
+        )
+        .orderBy(desc(schema.asset.updatedAt), desc(schema.asset.id))
+    },
+
     async getFlowTotals(fromDate) {
       const [row] = await db
         .select({
