@@ -156,6 +156,17 @@ const DemoWidgetBadge = ({ demo }: { demo: boolean }) => {
   )
 }
 
+const ASSET_TYPE_LABEL: Record<'cash' | 'investment' | 'manual', string> = {
+  cash: 'Cash',
+  investment: 'Investment',
+  manual: 'Manual',
+}
+
+const ASSET_ORIGIN_LABEL: Record<'provider' | 'manual', string> = {
+  provider: 'Provider',
+  manual: 'Manual',
+}
+
 export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -874,29 +885,45 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                Balance by account
+                Assets overview
                 <DemoWidgetBadge demo={isDemo} />
               </CardTitle>
-              <CardDescription>All active accounts and current balances.</CardDescription>
+              <CardDescription>
+                Unified assets across provider cash, investment snapshots, and manual holdings.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {summary?.accounts.length ? (
-                summary.accounts.map(account => (
+              {summary?.assets.length ? (
+                summary.assets.map(asset => (
                   <div
-                    key={account.powensAccountId}
-                    className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+                    key={asset.assetId}
+                    className="flex items-start justify-between gap-3 rounded-md border border-border/70 px-3 py-2"
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{account.name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium">{asset.name}</p>
+                        <Badge variant="outline">{ASSET_TYPE_LABEL[asset.type]}</Badge>
+                        <Badge variant="secondary">{ASSET_ORIGIN_LABEL[asset.origin]}</Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        #{account.powensConnectionId} {account.type ? `- ${account.type}` : ''}
+                        {asset.providerInstitutionName ??
+                          asset.providerConnectionId ??
+                          (asset.origin === 'manual' ? 'Manual entry' : asset.source)}
+                        {asset.powensAccountId ? ` • #${asset.powensAccountId}` : ''}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {asset.valuationAsOf
+                          ? `Valuation: ${formatDateTime(asset.valuationAsOf)}`
+                          : 'Valuation: snapshot manuel'}
                       </p>
                     </div>
-                    <p className="font-medium">{formatMoney(account.balance, account.currency)}</p>
+                    <p className="whitespace-nowrap font-medium">
+                      {formatMoney(asset.valuation, asset.currency)}
+                    </p>
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground">Aucun compte actif.</p>
+                <p className="text-muted-foreground">Aucun asset actif.</p>
               )}
             </CardContent>
           </Card>

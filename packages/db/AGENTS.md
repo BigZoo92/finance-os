@@ -7,6 +7,7 @@ Scope: `packages/db/**`
 - Keep this package as the source of truth for schema and DB client exports.
 - Add new migrations for shipped schema changes; do not rewrite existing migrations casually.
 - Preserve Powens uniqueness and indexing guarantees in [src/schema/powens.ts](src/schema/powens.ts); these are part of sync idempotence and dashboard performance.
+- Keep the unified asset model in [src/schema/assets.ts](src/schema/assets.ts) aligned with dashboard read models and worker upserts whenever asset provenance or valuation fields change.
 - Keep exported schema names stable unless the whole call chain is updated in the same change.
 
 ## Verify

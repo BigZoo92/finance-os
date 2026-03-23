@@ -8,6 +8,7 @@ export const createDashboardRouteRuntime = ({ db }: { db: ApiDb }): DashboardRou
 
   const getSummary = createGetDashboardSummaryUseCase({
     listAccountsWithConnections: readModel.listAccountsWithConnections,
+    listAssets: readModel.listAssets,
     getFlowTotals: readModel.getFlowTotals,
     listTopExpenseGroups: readModel.listTopExpenseGroups,
   })

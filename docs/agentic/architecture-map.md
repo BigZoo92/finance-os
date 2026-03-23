@@ -25,8 +25,9 @@ Start here when you need the shortest path to the right runtime entrypoint.
 
 ## Package Anchors
 
-- DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts)
+- DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts), [../../packages/db/src/schema/assets.ts](../../packages/db/src/schema/assets.ts)
   - raw provider import staging now lives beside the normalized Powens tables in the DB schema and is filled from the worker sync loop before/alongside business upserts
+  - unified patrimoine-style assets live in the asset schema and are refreshed from worker cash-account syncs plus future manual/provider-specific writers
 - Env parsing: [../../packages/env/src/index.ts](../../packages/env/src/index.ts)
 - Powens client and crypto: [../../packages/powens/src/client.ts](../../packages/powens/src/client.ts), [../../packages/powens/src/crypto.ts](../../packages/powens/src/crypto.ts)
 - Redis factory: [../../packages/redis/src/index.ts](../../packages/redis/src/index.ts)
@@ -44,6 +45,6 @@ Start here when you need the shortest path to the right runtime entrypoint.
 ## First Reads By Change Type
 
 - Auth or session change: [../../apps/api/src/auth/routes.ts](../../apps/api/src/auth/routes.ts), [../../apps/api/src/auth/derive.ts](../../apps/api/src/auth/derive.ts), [../../apps/web/src/features/auth-ssr.ts](../../apps/web/src/features/auth-ssr.ts)
-- Dashboard read-model change: [../../apps/api/src/routes/dashboard/routes/summary.ts](../../apps/api/src/routes/dashboard/routes/summary.ts), [../../apps/api/src/routes/dashboard/routes/transactions.ts](../../apps/api/src/routes/dashboard/routes/transactions.ts), [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts)
+- Dashboard read-model change: [../../apps/api/src/routes/dashboard/routes/summary.ts](../../apps/api/src/routes/dashboard/routes/summary.ts), [../../apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts](../../apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts), [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts)
 - Powens flow change: [../../apps/api/src/routes/integrations/powens/runtime.ts](../../apps/api/src/routes/integrations/powens/runtime.ts), [../../apps/api/src/routes/integrations/powens/routes/callback.ts](../../apps/api/src/routes/integrations/powens/routes/callback.ts), [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx), [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
 - Release or deploy change: [release-map.md](release-map.md)

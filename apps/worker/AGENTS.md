@@ -6,6 +6,7 @@ Scope: `apps/worker/**`
 
 - [src/index.ts](src/index.ts) is the worker entrypoint and operational contract. Keep connection-level failure isolation, Redis locks, idempotent upserts, and metric updates intact.
 - Treat worker code as provider-facing and secret-sensitive. Never log Powens codes, tokens, decrypted access tokens, or raw provider payloads.
+- Keep provider cash account upserts and unified asset upserts in sync so dashboard patrimoine reads do not drift from normalized banking data.
 - Preserve the current safety model:
   - per-connection Redis lock
   - reconnect-required handling on auth failures

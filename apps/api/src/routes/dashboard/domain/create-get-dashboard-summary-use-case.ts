@@ -25,6 +25,25 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
       syncMetadata: Record<string, unknown> | null
     }>
   >
+  listAssets: () => Promise<
+    Array<{
+      assetId: number
+      assetType: 'cash' | 'investment' | 'manual'
+      origin: 'provider' | 'manual'
+      source: string
+      provider: string | null
+      providerConnectionId: string | null
+      providerInstitutionName: string | null
+      powensConnectionId: string | null
+      powensAccountId: string | null
+      name: string
+      currency: string
+      valuation: string | null
+      valuationAsOf: Date | null
+      enabled: boolean
+      metadata: Record<string, unknown> | null
+    }>
+  >
   getFlowTotals: (fromDate: string) => Promise<{ income: string; expenses: string }>
   listTopExpenseGroups: (
     fromDate: string,
@@ -69,14 +88,16 @@ const makeGroupLabel = (category: string, merchant: string) => {
 
 export const createGetDashboardSummaryUseCase = ({
   listAccountsWithConnections,
+  listAssets,
   getFlowTotals,
   listTopExpenseGroups,
 }: CreateGetDashboardSummaryUseCaseDependencies): DashboardUseCases['getSummary'] => {
   return async range => {
     const fromDate = getRangeStartDate(range)
 
-    const [accounts, flowTotals, topExpenseGroups] = await Promise.all([
+    const [accounts, assets, flowTotals, topExpenseGroups] = await Promise.all([
       listAccountsWithConnections(),
+      listAssets(),
       getFlowTotals(fromDate),
       listTopExpenseGroups(fromDate, 5),
     ])
@@ -103,6 +124,25 @@ export const createGetDashboardSummaryUseCase = ({
     >()
 
     const accountSummaries: DashboardSummaryResponse['accounts'] = []
+    const assetSummaries: DashboardSummaryResponse['assets'] = assets
+      .filter(asset => asset.enabled)
+      .map(asset => ({
+        assetId: asset.assetId,
+        type: asset.assetType,
+        origin: asset.origin,
+        source: asset.source,
+        provider: asset.provider,
+        providerConnectionId: asset.providerConnectionId,
+        providerInstitutionName: asset.providerInstitutionName,
+        powensConnectionId: asset.powensConnectionId,
+        powensAccountId: asset.powensAccountId,
+        name: asset.name,
+        currency: asset.currency,
+        valuation: toMoney(toNumber(asset.valuation)),
+        valuationAsOf: toIsoString(asset.valuationAsOf),
+        enabled: asset.enabled,
+        metadata: asset.metadata,
+      }))
 
     for (const account of accounts) {
       if (!account.enabled) {
@@ -147,10 +187,7 @@ export const createGetDashboardSummaryUseCase = ({
       })
     }
 
-    const totalBalance = accountSummaries.reduce(
-      (sum, account) => toMoney(sum + account.balance),
-      0
-    )
+    const totalBalance = assetSummaries.reduce((sum, asset) => toMoney(sum + asset.valuation), 0)
 
     return {
       range,
@@ -161,6 +198,7 @@ export const createGetDashboardSummaryUseCase = ({
       },
       connections: Array.from(perConnection.values()),
       accounts: accountSummaries,
+      assets: assetSummaries,
       topExpenseGroups: topExpenseGroups.map(group => ({
         label: makeGroupLabel(group.category, group.merchant),
         category: group.category,

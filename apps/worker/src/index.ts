@@ -489,6 +489,47 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
       },
     })
 
+  await dbClient.db
+    .insert(schema.asset)
+    .values(
+      values.map(account => ({
+        assetType: 'cash' as const,
+        origin: 'provider' as const,
+        source: 'banking',
+        provider: 'powens',
+        providerConnectionId: connectionId,
+        providerExternalAssetId: account.powensAccountId,
+        powensConnectionId: connectionId,
+        powensAccountId: account.powensAccountId,
+        name: account.name,
+        currency: account.currency,
+        valuation: account.balance,
+        valuationAsOf: now,
+        enabled: account.enabled,
+        raw: account.raw,
+        updatedAt: now,
+      }))
+    )
+    .onConflictDoUpdate({
+      target: [
+        schema.asset.provider,
+        schema.asset.providerConnectionId,
+        schema.asset.providerExternalAssetId,
+      ],
+      set: {
+        source: sql`excluded.source`,
+        powensConnectionId: sql`excluded.powens_connection_id`,
+        powensAccountId: sql`excluded.powens_account_id`,
+        name: sql`excluded.name`,
+        currency: sql`excluded.currency`,
+        valuation: sql`excluded.valuation`,
+        valuationAsOf: sql`excluded.valuation_as_of`,
+        enabled: sql`excluded.enabled`,
+        raw: sql`excluded.raw`,
+        updatedAt: now,
+      },
+    })
+
   return values
 }
 

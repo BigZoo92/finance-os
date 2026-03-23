@@ -31,6 +31,24 @@ export interface AccountWithConnectionRow {
   syncMetadata: Record<string, unknown> | null
 }
 
+export interface AssetRow {
+  assetId: number
+  assetType: 'cash' | 'investment' | 'manual'
+  origin: 'provider' | 'manual'
+  source: string
+  provider: string | null
+  providerConnectionId: string | null
+  providerInstitutionName: string | null
+  powensConnectionId: string | null
+  powensAccountId: string | null
+  name: string
+  currency: string
+  valuation: string | null
+  valuationAsOf: Date | null
+  enabled: boolean
+  metadata: Record<string, unknown> | null
+}
+
 export interface DashboardFlowTotals {
   income: string
   expenses: string
@@ -87,6 +105,23 @@ export interface DashboardSummaryResponse {
     enabled: boolean
     balance: number
   }>
+  assets: Array<{
+    assetId: number
+    type: 'cash' | 'investment' | 'manual'
+    origin: 'provider' | 'manual'
+    source: string
+    provider: string | null
+    providerConnectionId: string | null
+    providerInstitutionName: string | null
+    powensConnectionId: string | null
+    powensAccountId: string | null
+    name: string
+    currency: string
+    valuation: number
+    valuationAsOf: string | null
+    enabled: boolean
+    metadata: Record<string, unknown> | null
+  }>
   topExpenseGroups: Array<{
     label: string
     category: string
@@ -115,6 +150,7 @@ export interface DashboardTransactionsResponse {
 
 export interface DashboardReadRepository {
   listAccountsWithConnections: () => Promise<AccountWithConnectionRow[]>
+  listAssets: () => Promise<AssetRow[]>
   getFlowTotals: (fromDate: string) => Promise<DashboardFlowTotals>
   listTopExpenseGroups: (fromDate: string, limit: number) => Promise<DashboardExpenseGroupRow[]>
   listTransactions: (params: {

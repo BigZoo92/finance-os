@@ -33,6 +33,23 @@ export type DashboardSummaryResponse = {
     enabled: boolean
     balance: number
   }>
+  assets: Array<{
+    assetId: number
+    type: 'cash' | 'investment' | 'manual'
+    origin: 'provider' | 'manual'
+    source: string
+    provider: string | null
+    providerConnectionId: string | null
+    providerInstitutionName: string | null
+    powensConnectionId: string | null
+    powensAccountId: string | null
+    name: string
+    currency: string
+    valuation: number
+    valuationAsOf: string | null
+    enabled: boolean
+    metadata: Record<string, unknown> | null
+  }>
   topExpenseGroups: Array<{
     label: string
     category: string
