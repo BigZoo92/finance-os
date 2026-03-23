@@ -37,6 +37,7 @@ import {
   powensSyncRunsQueryOptionsWithMode,
 } from "@/features/powens/query-options";
 import { pushToast } from "@/lib/toast-store";
+import { getLatestSyncStatus } from "./latest-sync-status";
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
   { label: "7j", value: "7d" },
@@ -385,6 +386,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     )
     .slice(0, 6);
   const syncBacklogCount = syncBacklogQuery.data?.syncBacklogCount ?? 0;
+  const latestSyncStatus = getLatestSyncStatus(syncRuns);
   const auditEvents = auditTrailQuery.data?.events ?? [];
   const latestCallback = statusQuery.data?.lastCallback ?? null;
   const latestCallbackFreshness = formatRelativeDateTime(
@@ -558,8 +560,22 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   </p>
                 </div>
                 <div className="rounded-md border border-border/70 px-3 py-2">
-                  <p className="text-xs text-muted-foreground">Dernier sync</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">Dernier sync</p>
+                    <Badge
+                      variant={latestSyncStatus.badgeVariant}
+                      className={latestSyncStatus.badgeClassName}
+                    >
+                      {latestSyncStatus.badgeLabel}
+                    </Badge>
+                  </div>
                   <p className="font-medium">{formatDateTime(latestSyncAt)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {latestSyncStatus.summary}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {latestSyncStatus.details}
+                  </p>
                 </div>
                 <div className="rounded-md border border-border/70 px-3 py-2">
                   <p className="text-xs text-muted-foreground">
