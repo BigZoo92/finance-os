@@ -207,6 +207,15 @@ Configurer dans GitHub Actions Secrets:
 DOKPLOY_URL
 DOKPLOY_API_KEY
 DOKPLOY_COMPOSE_ID
+SMOKE_ADMIN_EMAIL      # optionnel, pour un smoke cible admin
+SMOKE_ADMIN_PASSWORD   # optionnel, pour un smoke cible admin
+```
+
+Variables GitHub optionnelles pour le smoke post-deploy:
+
+```text
+SMOKE_AUTH_MODE=demo|admin|auto
+SMOKE_SUMMARY_RANGE=7d|30d|90d
 ```
 
 Utilisation:
@@ -234,6 +243,7 @@ Le workflow release fait maintenant trois choses:
 2. mise a jour du `docker-compose.prod.yml` et de l'env du Compose dans Dokploy via `compose/update`
 3. verification via `compose/one` que `APP_IMAGE_TAG` correspond bien au tag release
 4. deploy Dokploy via `compose/deploy`
+5. attendre `GET /health` puis lancer le smoke post-deploy sur `/health`, `/auth/me`, `/dashboard/summary`, `/integrations/powens/status` (racine et compat `/api`)
 
 Tags pushes:
 
