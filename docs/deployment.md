@@ -47,7 +47,7 @@ References officielles Dokploy utilisees pour cette strategie:
 
 - Docker Compose deployments
 - Docker tags / immutable images
-- API endpoints `compose/update`, `compose/one`, `compose/deploy`
+- API endpoints `compose.update`, `compose.one`, `compose.deploy`
 
 ## Dokploy
 
@@ -64,9 +64,9 @@ Configuration recommandee:
 Pourquoi `Raw`:
 
 - Dokploy n'a pas a relire une branche Git ou a rebuild
-- GitHub Actions pousse le `docker-compose.prod.yml` du tag exact via `compose/update`
-- GitHub Actions met a jour `APP_IMAGE_TAG`, `APP_VERSION` et `APP_COMMIT_SHA` directement dans l'env du Compose via `compose/update`
-- GitHub Actions relit `compose/one` et echoue si `APP_IMAGE_TAG` n'a pas persiste
+- GitHub Actions pousse le `docker-compose.prod.yml` du tag exact via `compose.update`
+- GitHub Actions met a jour `APP_IMAGE_TAG`, `APP_VERSION` et `APP_COMMIT_SHA` directement dans l'env du Compose via `compose.update`
+- GitHub Actions relit `compose.one` et echoue si `APP_IMAGE_TAG` n'a pas persiste
 - le deploy reste aligne sur le commit tague, pas sur l'etat mouvant de `main`
 
 ### Registry GHCR
@@ -312,9 +312,9 @@ Exemple de payload envoye:
 Le workflow release fait maintenant trois choses:
 
 1. build + push des images GHCR sur tag `v*`
-2. mise a jour du `docker-compose.prod.yml` et de l'env du Compose dans Dokploy via `compose/update`
-3. verification via `compose/one` que `APP_IMAGE_TAG` correspond bien au tag release
-4. deploy Dokploy via `compose/deploy`
+2. mise a jour du `docker-compose.prod.yml` et de l'env du Compose dans Dokploy via `compose.update`
+3. verification via `compose.one` que `APP_IMAGE_TAG` correspond bien au tag release
+4. deploy Dokploy via `compose.deploy`
 5. attendre `GET /health` puis lancer le smoke post-deploy sur `/health`, `/auth/me`, `/dashboard/summary`, `/integrations/powens/status` (racine et compat `/api`)
 
 Tags pushes:

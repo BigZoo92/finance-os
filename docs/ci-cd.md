@@ -7,7 +7,7 @@ Le workflow de release est tag-only et immuable.
 - `main` valide le code
 - un tag `vX.Y.Z` publie les images GHCR
 - Dokploy ne build rien
-- GitHub Actions met a jour `APP_IMAGE_TAG` dans l'env du Compose Dokploy via `compose/update`, verifie la persistence du tag, puis declenche `compose/deploy`
+- GitHub Actions met a jour `APP_IMAGE_TAG` dans l'env du Compose Dokploy via `compose.update`, verifie la persistence du tag, puis declenche `compose.deploy`
 
 ## Workflows
 
@@ -51,14 +51,14 @@ Etapes sur tag:
 3. push les tags:
    - `vX.Y.Z`
    - `sha-<commit>`
-4. pousse `docker-compose.prod.yml` et l'env du Compose vers Dokploy via `compose/update`
+4. pousse `docker-compose.prod.yml` et l'env du Compose vers Dokploy via `compose.update`
 5. met a jour l'env Dokploy:
    - `APP_IMAGE_TAG=vX.Y.Z`
    - `APP_VERSION=vX.Y.Z`
    - `APP_COMMIT_SHA=<commit>`
    - `BUILD_TIME=<timestamp>`
-6. verifie via `compose/one` que `APP_IMAGE_TAG` a bien ete persiste
-7. declenche `compose/deploy`
+6. verifie via `compose.one` que `APP_IMAGE_TAG` a bien ete persiste
+7. declenche `compose.deploy`
 8. attend que `GET /health` reponde publiquement
 9. execute `node scripts/smoke-prod.mjs --base=https://finance-os.enzogivernaud.fr`
    - verifie au minimum `/health`, `/auth/me`, `/dashboard/summary`, `/integrations/powens/status` (racine et compat `/api`)
