@@ -1,69 +1,80 @@
-import { queryOptions } from '@tanstack/react-query'
-import type { AuthMode } from '../auth-types'
-import { getDemoPowensSyncRuns } from '../demo-data'
-import { fetchPowensAuditTrail, fetchPowensStatus, fetchPowensSyncBacklog, fetchPowensSyncRuns } from './api'
+import { queryOptions } from "@tanstack/react-query";
+import type { AuthMode } from "../auth-types";
+import { getDemoPowensAuditTrail, getDemoPowensSyncRuns } from "../demo-data";
+import {
+  fetchPowensAuditTrail,
+  fetchPowensStatus,
+  fetchPowensSyncBacklog,
+  fetchPowensSyncRuns,
+} from "./api";
 
 export const powensQueryKeys = {
-  all: ['powens'] as const,
-  status: () => [...powensQueryKeys.all, 'status'] as const,
-  syncRuns: () => [...powensQueryKeys.all, 'sync-runs'] as const,
-  syncBacklog: () => [...powensQueryKeys.all, 'sync-backlog'] as const,
-  auditTrail: () => [...powensQueryKeys.all, 'audit-trail'] as const,
-}
+  all: ["powens"] as const,
+  status: () => [...powensQueryKeys.all, "status"] as const,
+  syncRuns: () => [...powensQueryKeys.all, "sync-runs"] as const,
+  syncBacklog: () => [...powensQueryKeys.all, "sync-backlog"] as const,
+  auditTrail: () => [...powensQueryKeys.all, "audit-trail"] as const,
+};
 
 export const powensStatusQueryOptions = () =>
   powensStatusQueryOptionsWithMode({
-    mode: 'admin',
-  })
+    mode: "admin",
+  });
 
-export const powensStatusQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
+export const powensStatusQueryOptionsWithMode = ({
+  mode,
+}: { mode?: AuthMode } = {}) =>
   queryOptions({
     queryKey: powensQueryKeys.status(),
     queryFn: () => fetchPowensStatus(),
     enabled: mode !== undefined,
     staleTime: 10_000,
-  })
+  });
 
-
-export const powensSyncRunsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
+export const powensSyncRunsQueryOptionsWithMode = ({
+  mode,
+}: { mode?: AuthMode } = {}) =>
   queryOptions({
     queryKey: powensQueryKeys.syncRuns(),
     queryFn: () => {
-      if (mode === 'demo') {
-        return getDemoPowensSyncRuns()
+      if (mode === "demo") {
+        return getDemoPowensSyncRuns();
       }
 
-      return fetchPowensSyncRuns()
+      return fetchPowensSyncRuns();
     },
     enabled: mode !== undefined,
-    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
-  })
+    staleTime: mode === "demo" ? Number.POSITIVE_INFINITY : 10_000,
+  });
 
-export const powensSyncBacklogQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
+export const powensSyncBacklogQueryOptionsWithMode = ({
+  mode,
+}: { mode?: AuthMode } = {}) =>
   queryOptions({
     queryKey: powensQueryKeys.syncBacklog(),
     queryFn: () => {
-      if (mode === 'demo') {
-        return { syncBacklogCount: 0 }
+      if (mode === "demo") {
+        return { syncBacklogCount: 0 };
       }
 
-      return fetchPowensSyncBacklog()
+      return fetchPowensSyncBacklog();
     },
     enabled: mode !== undefined,
-    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
-  })
+    staleTime: mode === "demo" ? Number.POSITIVE_INFINITY : 10_000,
+  });
 
-
-export const powensAuditTrailQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
+export const powensAuditTrailQueryOptionsWithMode = ({
+  mode,
+}: { mode?: AuthMode } = {}) =>
   queryOptions({
     queryKey: powensQueryKeys.auditTrail(),
     queryFn: () => {
-      if (mode === 'demo') {
-        return { events: [], requestId: 'demo-audit' }
+      if (mode === "demo") {
+        return getDemoPowensAuditTrail();
       }
 
-      return fetchPowensAuditTrail()
+      return fetchPowensAuditTrail();
     },
     enabled: mode !== undefined,
-    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
-  })
+    staleTime: mode === "demo" ? Number.POSITIVE_INFINITY : 10_000,
+  });

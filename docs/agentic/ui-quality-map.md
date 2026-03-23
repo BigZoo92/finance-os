@@ -25,6 +25,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 
 - Demo mode banner and disabled sensitive actions still read correctly.
 - Admin mode still exposes Powens connect/sync affordances without layout regressions.
+- Ops overview should keep Powens callback observability compact: show freshness plus safe-mode state without exposing callback payload contents.
 - Empty and error states remain actionable and legible.
 - Tables, cards, and buttons stay keyboard accessible.
 - Mobile and desktop layouts still load without overflow surprises.
