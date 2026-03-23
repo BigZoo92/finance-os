@@ -88,6 +88,7 @@ COPY apps/worker apps/worker
 COPY packages/db packages/db
 COPY packages/env packages/env
 COPY packages/powens packages/powens
+COPY packages/prelude packages/prelude
 COPY packages/redis packages/redis
 COPY infra/docker infra/docker
 
@@ -108,6 +109,7 @@ COPY --from=bundle-worker --chown=app:app /app/apps/worker ./apps/worker
 COPY --from=bundle-worker --chown=app:app /app/packages/db ./packages/db
 COPY --from=bundle-worker --chown=app:app /app/packages/env ./packages/env
 COPY --from=bundle-worker --chown=app:app /app/packages/powens ./packages/powens
+COPY --from=bundle-worker --chown=app:app /app/packages/prelude ./packages/prelude
 COPY --from=bundle-worker --chown=app:app /app/packages/redis ./packages/redis
 COPY --from=bundle-worker --chown=app:app /app/infra/docker ./infra/docker
 RUN chmod +x ./infra/docker/entrypoints/worker-entrypoint.sh

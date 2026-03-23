@@ -16,7 +16,7 @@ import {
 import {
   buildRuntimeHealthWithFlags,
   resolveRuntimeVersion,
-} from '../../../packages/prelude/src/runtime'
+} from '@finance-os/prelude'
 import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'

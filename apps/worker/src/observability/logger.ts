@@ -2,7 +2,7 @@ import {
   createJsonLogger,
   type JsonLogLevel,
   toErrorLogFields,
-} from '../../../../packages/prelude/src/index'
+} from '@finance-os/prelude'
 
 const workerLogger = createJsonLogger({ service: 'worker' })
 
