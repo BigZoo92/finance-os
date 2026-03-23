@@ -5,23 +5,29 @@ import { getPowensRuntime } from '../context'
 
 export const createStatusRoute = () =>
   new Elysia().get('/status', async context => {
+    const powens = getPowensRuntime(context)
+    const safeModeActive = powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()
+
     return demoOrReal({
       context,
       demo: () => ({
         connections: getPowensConnectionsStatusMock(),
+        safeModeActive,
       }),
       real: async () => {
-        const powens = getPowensRuntime(context)
-
-        if (powens.services.connectUrl.isExternalIntegrationsSafeModeEnabled()) {
+        if (safeModeActive) {
           return {
             connections: getPowensConnectionsStatusMock(),
+            safeModeActive: true,
             fallback: 'safe_mode',
           }
         }
 
         const connections = await powens.useCases.listStatuses()
-        return { connections }
+        return {
+          connections,
+          safeModeActive: false,
+        }
       },
     })
   })

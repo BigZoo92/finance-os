@@ -11,6 +11,7 @@ export type PowensConnectionStatus = {
 
 export type PowensStatusResponse = {
   connections: PowensConnectionStatus[]
+  safeModeActive: boolean
   fallback?: 'safe_mode'
 }
 

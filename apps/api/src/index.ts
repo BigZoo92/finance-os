@@ -647,6 +647,7 @@ logApiEvent({
     },
   }),
   runtimeVersion: getRuntimeVersion(),
+  externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
 })
 
 app.listen({
@@ -659,6 +660,7 @@ logApiEvent({
   msg: 'api listening',
   host: env.API_HOST,
   port: env.API_PORT,
+  externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
 })
 
 const shutdown = async (signal: string) => {

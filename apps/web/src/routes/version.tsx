@@ -6,6 +6,10 @@ const VERSION_HEADERS = {
   'cache-control': 'no-store',
 } as const
 
+const isExternalIntegrationsSafeModeEnabled = () => {
+  return process.env.EXTERNAL_INTEGRATIONS_SAFE_MODE === 'true'
+}
+
 const buildVersionPayload = () => {
   return resolveRuntimeVersion({
     service: 'web',
@@ -15,6 +19,7 @@ const buildVersionPayload = () => {
     buildTime: process.env.BUILD_TIME,
     appCommitSha: process.env.APP_COMMIT_SHA,
     appVersion: process.env.APP_VERSION,
+    safeModeActive: isExternalIntegrationsSafeModeEnabled(),
   })
 }
 

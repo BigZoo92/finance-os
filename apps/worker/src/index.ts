@@ -13,7 +13,10 @@ import {
   parsePowensJob,
   serializePowensJob,
 } from '@finance-os/powens'
-import { buildRuntimeHealth, resolveRuntimeVersion } from '../../../packages/prelude/src/runtime'
+import {
+  buildRuntimeHealthWithFlags,
+  resolveRuntimeVersion,
+} from '../../../packages/prelude/src/runtime'
 import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
@@ -72,6 +75,7 @@ const resolveWorkerVersion = () =>
     buildTime: process.env.BUILD_TIME,
     appCommitSha: process.env.APP_COMMIT_SHA ?? null,
     appVersion: process.env.APP_VERSION ?? null,
+    safeModeActive: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
   })
 
 const sendJson = (
@@ -93,7 +97,13 @@ const startStatusServer = () => {
       : '/'
 
     if (pathname === '/health') {
-      sendJson(response, 200, buildRuntimeHealth('worker'))
+      sendJson(
+        response,
+        200,
+        buildRuntimeHealthWithFlags('worker', {
+          safeModeActive: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+        })
+      )
       return
     }
 

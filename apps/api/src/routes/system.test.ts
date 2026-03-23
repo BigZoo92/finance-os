@@ -16,6 +16,7 @@ const createApp = () =>
     NODE_ENV: process.env.NODE_ENV ?? 'test',
     APP_COMMIT_SHA: process.env.APP_COMMIT_SHA,
     APP_VERSION: process.env.APP_VERSION,
+    EXTERNAL_INTEGRATIONS_SAFE_MODE: process.env.EXTERNAL_INTEGRATIONS_SAFE_MODE === 'true',
   })
 
 describe('registerSystemRoutes', () => {
@@ -24,6 +25,7 @@ describe('registerSystemRoutes', () => {
     process.env.GIT_SHA = 'git-sha-123'
     process.env.GIT_TAG = 'v1.2.3'
     process.env.BUILD_TIME = '2026-03-18T00:00:00.000Z'
+    process.env.EXTERNAL_INTEGRATIONS_SAFE_MODE = 'true'
     delete process.env.APP_COMMIT_SHA
     delete process.env.APP_VERSION
   })
@@ -45,6 +47,9 @@ describe('registerSystemRoutes', () => {
     expect(await response.json()).toEqual({
       ok: true,
       service: 'api',
+      runtimeFlags: {
+        safeModeActive: true,
+      },
     })
   })
 
@@ -59,6 +64,9 @@ describe('registerSystemRoutes', () => {
       GIT_TAG: 'v1.2.3',
       BUILD_TIME: '2026-03-18T00:00:00.000Z',
       NODE_ENV: 'test',
+      runtimeFlags: {
+        safeModeActive: true,
+      },
     })
   })
 })
