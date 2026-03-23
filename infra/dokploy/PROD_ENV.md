@@ -60,6 +60,21 @@ Notes:
 - `POWENS_SYNC_INTERVAL_MS=43200000`
 - `POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000`
 
+### Alerting minimal
+- `ALERTS_ENABLED=true` (laisser `false` tant que le webhook n'est pas configure)
+- `ALERTS_WEBHOOK_URL=<webhook>`
+- `ALERTS_WEBHOOK_HEADERS_JSON={"Authorization":"Bearer <token>"}` (optionnel)
+- `ALERTS_POLL_INTERVAL_MS=30000`
+- `ALERTS_HTTP_TIMEOUT_MS=5000`
+- `ALERTS_5XX_THRESHOLD=3`
+- `ALERTS_5XX_WINDOW_MS=300000`
+- `ALERTS_5XX_PROBE_URLS=http://web:3000/api/auth/me,http://web:3000/api/dashboard/summary?range=30d`
+- `ALERTS_HEALTHCHECK_FAILURE_THRESHOLD=2`
+- `ALERTS_HEALTHCHECK_URLS=http://web:3000/healthz,http://finance-os-api:3001/health`
+- `ALERTS_WORKER_STALE_AFTER_MS=120000`
+- `ALERTS_DISK_FREE_PERCENT_THRESHOLD=10`
+- `ALERTS_DISK_PATHS=/mnt/postgres,/mnt/redis`
+
 ## 2) Variables GitHub (optionnel)
 
 Utile seulement si tu gardes un trigger API externe Dokploy:

@@ -135,7 +135,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: ${REDIS_URL:-}
       WORKER_HEARTBEAT_MS: ${WORKER_HEARTBEAT_MS:-30000}
-      WORKER_HEALTHCHECK_FILE: /tmp/worker-heartbeat
+      WORKER_HEALTHCHECK_FILE: /var/run/finance-os/worker-heartbeat
       WORKER_HEALTHCHECK_MAX_AGE_MS: ${WORKER_HEALTHCHECK_MAX_AGE_MS:-120000}
       WORKER_AUTO_SYNC_ENABLED: ${WORKER_AUTO_SYNC_ENABLED:-false}
       POWENS_SYNC_INTERVAL_MS: ${POWENS_SYNC_INTERVAL_MS:-43200000}
@@ -158,6 +158,8 @@ services:
         condition: service_healthy
     networks:
       - finance_os_internal
+    volumes:
+      - worker_run:/var/run/finance-os
     healthcheck:
       test:
         [
@@ -169,6 +171,54 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+
+  ops-alerts:
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    command: ["bun", "infra/docker/ops-alerts/monitor.mjs"]
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-UTC}
+      ALERTS_ENABLED: ${ALERTS_ENABLED:-false}
+      ALERTS_WEBHOOK_URL: ${ALERTS_WEBHOOK_URL:-}
+      ALERTS_WEBHOOK_HEADERS_JSON: ${ALERTS_WEBHOOK_HEADERS_JSON:-}
+      ALERTS_POLL_INTERVAL_MS: ${ALERTS_POLL_INTERVAL_MS:-30000}
+      ALERTS_HTTP_TIMEOUT_MS: ${ALERTS_HTTP_TIMEOUT_MS:-5000}
+      ALERTS_5XX_THRESHOLD: ${ALERTS_5XX_THRESHOLD:-3}
+      ALERTS_5XX_WINDOW_MS: ${ALERTS_5XX_WINDOW_MS:-300000}
+      ALERTS_5XX_PROBE_URLS: ${ALERTS_5XX_PROBE_URLS:-http://web:3000/api/auth/me,http://web:3000/api/dashboard/summary?range=30d}
+      ALERTS_HEALTHCHECK_FAILURE_THRESHOLD: ${ALERTS_HEALTHCHECK_FAILURE_THRESHOLD:-2}
+      ALERTS_HEALTHCHECK_URLS: ${ALERTS_HEALTHCHECK_URLS:-http://web:3000/healthz,http://finance-os-api:3001/health}
+      ALERTS_WORKER_HEARTBEAT_FILE: /var/run/finance-os/worker-heartbeat
+      ALERTS_WORKER_STALE_AFTER_MS: ${ALERTS_WORKER_STALE_AFTER_MS:-120000}
+      ALERTS_DISK_FREE_PERCENT_THRESHOLD: ${ALERTS_DISK_FREE_PERCENT_THRESHOLD:-10}
+      ALERTS_DISK_PATHS: ${ALERTS_DISK_PATHS:-/mnt/postgres,/mnt/redis}
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - finance_os_internal
+    volumes:
+      - worker_run:/var/run/finance-os:ro
+      - postgres_data:/mnt/postgres:ro
+      - redis_data:/mnt/redis:ro
     security_opt:
       - no-new-privileges:true
 
@@ -227,3 +277,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  worker_run:
