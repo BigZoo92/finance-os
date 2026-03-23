@@ -26,6 +26,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 ## Package Anchors
 
 - DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts)
+  - raw provider import staging now lives beside the normalized Powens tables in the DB schema and is filled from the worker sync loop before/alongside business upserts
 - Env parsing: [../../packages/env/src/index.ts](../../packages/env/src/index.ts)
 - Powens client and crypto: [../../packages/powens/src/client.ts](../../packages/powens/src/client.ts), [../../packages/powens/src/crypto.ts](../../packages/powens/src/crypto.ts)
 - Redis factory: [../../packages/redis/src/index.ts](../../packages/redis/src/index.ts)
@@ -38,7 +39,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 
 - API route files parse and shape HTTP only. Domain files orchestrate. Repository files persist. Service files talk to providers or deterministic helpers. Runtime and plugin files wire dependencies.
 - Web route loaders prewarm Query and keep SSR auth-consistent. Feature modules own query keys and request functions.
-- Worker owns provider sync loops, locks, metrics, and a localhost-only system status surface; it should not become a second public API layer.
+- Worker owns provider sync loops, raw provider import staging, locks, metrics, and a localhost-only system status surface; it should not become a second public API layer.
 
 ## First Reads By Change Type
 

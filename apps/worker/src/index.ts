@@ -18,6 +18,14 @@ import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
 import { logWorkerEvent } from './observability/logger'
+import {
+  buildProviderRawImportRow,
+  deriveAccountBalance,
+  deriveTransactionCategory,
+  deriveTransactionMerchant,
+  deriveTransactionProviderObjectAt,
+  type ProviderRawImportInsert,
+} from './raw-import'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -452,6 +460,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
         currency: parseCurrency(account.currency, 'EUR'),
         type: parseAccountType(account.type),
         enabled: parseEnabledFlag(account.disabled),
+        balance: deriveAccountBalance(account),
         raw: account,
         updatedAt: now,
       }
@@ -474,6 +483,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
         currency: sql`excluded.currency`,
         type: sql`excluded.type`,
         enabled: sql`excluded.enabled`,
+        balance: sql`excluded.balance`,
         raw: sql`excluded.raw`,
         updatedAt: now,
       },
@@ -483,6 +493,34 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
 }
 
 type TransactionInsert = typeof schema.transaction.$inferInsert
+
+const upsertProviderRawImports = async (rows: ProviderRawImportInsert[]) => {
+  if (rows.length === 0) {
+    return
+  }
+
+  await dbClient.db
+    .insert(schema.providerRawImport)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [
+        schema.providerRawImport.provider,
+        schema.providerRawImport.providerConnectionId,
+        schema.providerRawImport.objectType,
+        schema.providerRawImport.externalObjectId,
+      ],
+      set: {
+        source: sql`excluded.source`,
+        parentExternalObjectId: sql`excluded.parent_external_object_id`,
+        importStatus: sql`excluded.import_status`,
+        providerObjectAt: sql`excluded.provider_object_at`,
+        lastSeenAt: sql`excluded.last_seen_at`,
+        requestId: sql`excluded.request_id`,
+        payload: sql`excluded.payload`,
+        payloadChecksum: sql`excluded.payload_checksum`,
+      },
+    })
+}
 
 const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
   if (rows.length === 0) {
@@ -505,6 +543,8 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
           currency: sql`excluded.currency`,
           label: sql`excluded.label`,
           labelHash: sql`excluded.label_hash`,
+          category: sql`excluded.category`,
+          merchant: sql`excluded.merchant`,
           raw: sql`excluded.raw`,
         },
       })
@@ -525,6 +565,8 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
         set: {
           currency: sql`excluded.currency`,
           label: sql`excluded.label`,
+          category: sql`excluded.category`,
+          merchant: sql`excluded.merchant`,
           raw: sql`excluded.raw`,
         },
       })
@@ -556,6 +598,8 @@ const buildTransactionInsert = (params: {
     currency: parseCurrency(params.transaction.currency, params.accountCurrency),
     label,
     labelHash: hashLabel(label),
+    category: deriveTransactionCategory(params.transaction),
+    merchant: deriveTransactionMerchant(params.transaction, label),
     raw: params.transaction,
   }
 }
@@ -572,13 +616,17 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     ...(requestId !== undefined ? { requestId } : {}),
   })
   let connectionProvider = 'powens'
+  let connectionSource = 'banking'
+  let providerConnectionId = connectionId
   let previousLastSyncAt: Date | null = null
 
   try {
     const [connection] = await dbClient.db
       .select({
+        source: schema.powensConnection.source,
         provider: schema.powensConnection.provider,
         powensConnectionId: schema.powensConnection.powensConnectionId,
+        providerConnectionId: schema.powensConnection.providerConnectionId,
         accessTokenEncrypted: schema.powensConnection.accessTokenEncrypted,
         lastSyncAt: schema.powensConnection.lastSyncAt,
       })
@@ -591,6 +639,8 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     }
 
     connectionProvider = connection.provider
+    connectionSource = connection.source
+    providerConnectionId = connection.providerConnectionId
     previousLastSyncAt = connection.lastSyncAt
 
     await Promise.all([
@@ -613,6 +663,24 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     await recordPowensCall()
     const accounts = await powensClient.listConnectionAccounts(connectionId, accessToken)
     const upsertedAccounts = await upsertAccounts(connectionId, accounts)
+    const normalizedAccountIds = new Set(upsertedAccounts.map(account => account.powensAccountId))
+    const rawAccountImports = accounts.map(account =>
+      buildProviderRawImportRow({
+        source: connectionSource,
+        provider: connectionProvider,
+        providerConnectionId,
+        objectType: 'account',
+        externalObjectId: toStringValue(account.id),
+        importStatus: normalizedAccountIds.has(toStringValue(account.id) ?? '')
+          ? 'normalized'
+          : 'failed',
+        payload: account,
+        importedAt: syncStart,
+        lastSeenAt: syncStart,
+        ...(requestId ? { requestId } : {}),
+      })
+    )
+    await upsertProviderRawImports(rawAccountImports)
 
     const fromDate = connection.lastSyncAt
       ? formatDate(subtractDays(connection.lastSyncAt, 3))
@@ -625,7 +693,10 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     }
 
     const batchBuffer: TransactionInsert[] = []
+    const rawImportBatchBuffer: ProviderRawImportInsert[] = []
     let importedTransactionCount = 0
+    let failedRawImportCount = rawAccountImports.filter(row => row.importStatus === 'failed').length
+    let normalizedRawImportCount = rawAccountImports.length - failedRawImportCount
 
     for (const account of upsertedAccounts) {
       await recordPowensCall()
@@ -647,21 +718,53 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
           transaction,
         })
 
+        rawImportBatchBuffer.push(
+          buildProviderRawImportRow({
+            source: connectionSource,
+            provider: connectionProvider,
+            providerConnectionId,
+            objectType: 'transaction',
+            externalObjectId: row?.powensTransactionId ?? toStringValue(transaction.id),
+            parentExternalObjectId: account.powensAccountId,
+            importStatus: row ? 'normalized' : 'failed',
+            payload: transaction,
+            providerObjectAt: deriveTransactionProviderObjectAt(transaction),
+            importedAt: syncStart,
+            lastSeenAt: syncStart,
+            ...(requestId ? { requestId } : {}),
+          })
+        )
+
         if (!row) {
+          failedRawImportCount += 1
+
+          if (rawImportBatchBuffer.length >= TRANSACTION_BATCH_SIZE) {
+            await upsertProviderRawImports(rawImportBatchBuffer.splice(0, TRANSACTION_BATCH_SIZE))
+          }
+
           continue
         }
 
         batchBuffer.push(row)
         importedTransactionCount += 1
+        normalizedRawImportCount += 1
 
         if (batchBuffer.length >= TRANSACTION_BATCH_SIZE) {
           await upsertTransactionsBatch(batchBuffer.splice(0, TRANSACTION_BATCH_SIZE))
+        }
+
+        if (rawImportBatchBuffer.length >= TRANSACTION_BATCH_SIZE) {
+          await upsertProviderRawImports(rawImportBatchBuffer.splice(0, TRANSACTION_BATCH_SIZE))
         }
       }
     }
 
     if (batchBuffer.length > 0) {
       await upsertTransactionsBatch(batchBuffer)
+    }
+
+    if (rawImportBatchBuffer.length > 0) {
+      await upsertProviderRawImports(rawImportBatchBuffer)
     }
 
     const successAt = new Date()
@@ -675,6 +778,9 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
         syncMetadata: {
           accountCount: upsertedAccounts.length,
           importedTransactionCount,
+          rawImportCount: normalizedRawImportCount + failedRawImportCount,
+          rawImportFailedCount: failedRawImportCount,
+          rawImportNormalizedCount: normalizedRawImportCount,
           transactionWindow: {
             fromDate,
             maxDate,
@@ -693,6 +799,18 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     await recordSyncRunEnded({
       runId,
       result: 'success',
+    })
+    logWorkerEvent({
+      level: 'info',
+      msg: 'worker connection sync succeeded',
+      source: connectionSource,
+      provider: connectionProvider,
+      connectionId,
+      requestId: requestId ?? 'n/a',
+      importedAccountCount: upsertedAccounts.length,
+      importedTransactionCount,
+      rawImportCount: normalizedRawImportCount + failedRawImportCount,
+      rawImportFailedCount: failedRawImportCount,
     })
   } catch (error) {
     const failedAt = new Date()
@@ -734,6 +852,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     logWorkerEvent({
       level: 'error',
       msg: 'worker connection sync failed',
+      source: connectionSource,
       provider: connectionProvider,
       connectionId,
       requestId: requestId ?? 'n/a',

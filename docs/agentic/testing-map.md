@@ -12,12 +12,16 @@ Use this map to choose the smallest verification set that still matches the risk
 - API debug and system routing:
   - [../../apps/api/src/routes/debug/router.test.ts](../../apps/api/src/routes/debug/router.test.ts)
   - [../../apps/api/src/routes/system.test.ts](../../apps/api/src/routes/system.test.ts)
+- API dashboard normalization:
+  - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
 - Web auth and API client behavior:
   - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
   - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
   - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
   - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
+- Worker import normalization:
+  - [../../apps/worker/src/raw-import.test.ts](../../apps/worker/src/raw-import.test.ts)
 
 ## Scope-Based Verification
 
@@ -27,6 +31,10 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm api:typecheck`
   - `bun test <changed-api-test-file>`
   - `pnpm smoke:api` when route or proxy behavior changed
+- Worker sync, import staging, or provider normalization changes:
+  - `pnpm worker:typecheck`
+  - `bun test apps/worker/src/raw-import.test.ts`
+  - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
 - Shared health/version contract changes across runtimes:
   - `pnpm api:typecheck`
   - `bun test apps/api/src/routes/system.test.ts`

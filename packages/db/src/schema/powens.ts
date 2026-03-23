@@ -20,6 +20,12 @@ export const powensConnectionStatusEnum = pgEnum('powens_connection_status', [
   'reconnect_required',
 ])
 
+export const providerRawImportStatusEnum = pgEnum('provider_raw_import_status', [
+  'imported',
+  'normalized',
+  'failed',
+])
+
 export const powensConnection = pgTable(
   'powens_connection',
   {
@@ -61,6 +67,7 @@ export const bankAccount = pgTable(
     currency: text('currency').notNull(),
     type: text('type'),
     enabled: boolean('enabled').notNull().default(true),
+    balance: numeric('balance', { precision: 18, scale: 2 }),
     raw: jsonb('raw'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -83,6 +90,8 @@ export const transaction = pgTable(
     currency: text('currency').notNull(),
     label: text('label').notNull(),
     labelHash: text('label_hash').notNull(),
+    category: text('category'),
+    merchant: text('merchant'),
     raw: jsonb('raw'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -103,5 +112,39 @@ export const transaction = pgTable(
         table.labelHash
       )
       .where(sql`${table.powensTransactionId} is null`),
+  ]
+)
+
+export const providerRawImport = pgTable(
+  'provider_raw_import',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    source: text('source').notNull(),
+    provider: text('provider').notNull(),
+    providerConnectionId: text('provider_connection_id').notNull(),
+    objectType: text('object_type').notNull(),
+    externalObjectId: text('external_object_id').notNull(),
+    parentExternalObjectId: text('parent_external_object_id'),
+    importStatus: providerRawImportStatusEnum('import_status').notNull().default('imported'),
+    providerObjectAt: timestamp('provider_object_at', { withTimezone: true }),
+    importedAt: timestamp('imported_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    requestId: text('request_id'),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    payloadChecksum: text('payload_checksum').notNull(),
+  },
+  table => [
+    uniqueIndex('provider_raw_import_provider_object_unique').on(
+      table.provider,
+      table.providerConnectionId,
+      table.objectType,
+      table.externalObjectId
+    ),
+    index('provider_raw_import_provider_connection_idx').on(
+      table.provider,
+      table.providerConnectionId
+    ),
+    index('provider_raw_import_object_type_idx').on(table.objectType),
+    index('provider_raw_import_last_seen_at_idx').on(table.lastSeenAt),
   ]
 )

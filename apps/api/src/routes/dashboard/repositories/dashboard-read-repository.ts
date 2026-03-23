@@ -32,7 +32,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           accountCurrency: schema.bankAccount.currency,
           accountType: schema.bankAccount.type,
           enabled: schema.bankAccount.enabled,
-          accountRaw: schema.bankAccount.raw,
+          accountBalance: schema.bankAccount.balance,
           connectionStatus: schema.powensConnection.status,
           lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
           lastSyncAt: schema.powensConnection.lastSyncAt,
@@ -65,16 +65,8 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
     },
 
     async listTopExpenseGroups(fromDate, limit) {
-      const categoryExpr = sql<string>`coalesce(
-        nullif(${schema.transaction.raw} ->> 'category', ''),
-        nullif(${schema.transaction.raw} ->> 'category_name', ''),
-        'Unknown'
-      )`
-      const merchantExpr = sql<string>`coalesce(
-        nullif(${schema.transaction.raw} ->> 'original_wording', ''),
-        nullif(${schema.transaction.raw} ->> 'wording', ''),
-        ${schema.transaction.label}
-      )`
+      const categoryExpr = sql<string>`coalesce(nullif(${schema.transaction.category}, ''), 'Unknown')`
+      const merchantExpr = sql<string>`coalesce(nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`
       const totalExpr = sql<string>`sum(abs(${schema.transaction.amount}))::text`
       const countExpr = sql<number>`count(*)::int`
 

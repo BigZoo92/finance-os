@@ -21,7 +21,7 @@ export interface AccountWithConnectionRow {
   accountCurrency: string
   accountType: string | null
   enabled: boolean
-  accountRaw: unknown
+  accountBalance: string | null
   connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
   lastSyncAttemptAt: Date | null
   lastSyncAt: Date | null
