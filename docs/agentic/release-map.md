@@ -38,6 +38,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - When CI fails on an autopilot implementation PR, autopilot must comment the failing job summary and log excerpt back onto the PR thread so Codex can continue from the real runner error.
 - Manual Codex extraction on an `implement:` PR should validate with `pnpm check:ci`, which mirrors the current GitHub CI order with `CI=true`.
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
+- Release automation now waits for the public `/health` endpoint after `compose/deploy` and runs `scripts/smoke-prod.mjs`; smoke failures must surface as an explicit failing job with step-summary details and GitHub error annotations.
 
 ## Smoke and Manual Checks
 
