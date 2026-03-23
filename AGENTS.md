@@ -19,6 +19,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - propagate `x-request-id` end to end
   - keep API logs structured and secret-safe
   - keep error payloads normalized and safe to expose
+  - keep deploy-time probes, smoke checks, and ops alerting aligned with the live route topology
 - TypeScript optional-property invariant:
   - `exactOptionalPropertyTypes` is enabled; when an optional field is absent, omit the key entirely instead of passing `undefined`
 - Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
@@ -50,9 +51,9 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 ## Global Review
 
 - `P0`: security issue, secret leak, Powens token/code exposure, data loss, or broken demo/admin split
-- `P1`: contract regression, missing demo path, missing behavior-change tests, SSR auth flash regression, unsafe logging
+- `P1`: contract regression, missing demo path, missing behavior-change tests, SSR auth flash regression, unsafe logging, or broken observability wiring
 - `P2`: local cleanup or style feedback
-- Always check dual-path correctness, `VITE_*` safety, logging safety, and test evidence for behavior changes.
+- Always check dual-path correctness, `VITE_*` safety, logging safety, observability wiring, and test evidence for behavior changes.
 - UI changes require rationale plus screenshot notes; see [docs/agentic/code_review.md](docs/agentic/code_review.md).
 
 ## Local Guides
@@ -60,6 +61,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 - [apps/api/AGENTS.md](apps/api/AGENTS.md)
 - [apps/web/AGENTS.md](apps/web/AGENTS.md)
 - [apps/worker/AGENTS.md](apps/worker/AGENTS.md)
+- [infra/docker/AGENTS.md](infra/docker/AGENTS.md)
 - [packages/db/AGENTS.md](packages/db/AGENTS.md)
 - [packages/env/AGENTS.md](packages/env/AGENTS.md)
 - [packages/powens/AGENTS.md](packages/powens/AGENTS.md)

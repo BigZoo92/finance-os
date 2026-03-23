@@ -36,6 +36,7 @@ Use this map to choose the smallest verification set that still matches the risk
 - Production Compose alerting or health-monitoring changes:
   - `node --test infra/docker/ops-alerts/monitor.test.mjs`
   - `pnpm worker:typecheck` when heartbeat wiring or worker env changed
+  - `pnpm smoke:api` when healthcheck URLs, proxy routing, or probe targets changed
   - `pnpm check:ci` when the environment can install and run the full repo suite
 - Web loader, auth, or UI changes:
   - `pnpm web:typecheck`
