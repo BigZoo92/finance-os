@@ -413,4 +413,8 @@ jobs:
       - name: Run production smoke checks
         env:
           SMOKE_BASE_URL: https://finance-os.enzogivernaud.fr
+          SMOKE_AUTH_MODE: ${{ vars.SMOKE_AUTH_MODE }}
+          SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+          SMOKE_SUMMARY_RANGE: ${{ vars.SMOKE_SUMMARY_RANGE }}
         run: node scripts/smoke-prod.mjs --base="${SMOKE_BASE_URL}"

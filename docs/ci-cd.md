@@ -61,6 +61,9 @@ Etapes sur tag:
 7. declenche `compose/deploy`
 8. attend que `GET /health` reponde publiquement
 9. execute `node scripts/smoke-prod.mjs --base=https://finance-os.enzogivernaud.fr`
+   - verifie au minimum `/health`, `/auth/me`, `/dashboard/summary`, `/integrations/powens/status` (racine et compat `/api`)
+   - adapte les assertions au contexte `demo` ou `admin` selon `SMOKE_AUTH_MODE`
+   - peut ouvrir une session admin via `SMOKE_ADMIN_EMAIL` + `SMOKE_ADMIN_PASSWORD` si necessaire
 10. en cas d'echec smoke, le job `Post-deploy smoke` echoue explicitement avec un resume GitHub Actions et des annotations `::error`
 
 ## Variables GitHub
@@ -83,6 +86,15 @@ Repository secrets:
 DOKPLOY_URL
 DOKPLOY_API_KEY
 DOKPLOY_COMPOSE_ID
+SMOKE_ADMIN_EMAIL        # optional, only for admin-targeted smoke
+SMOKE_ADMIN_PASSWORD     # optional, only for admin-targeted smoke
+```
+
+Repository variables (optional smoke tuning):
+
+```text
+SMOKE_AUTH_MODE=demo|admin|auto
+SMOKE_SUMMARY_RANGE=7d|30d|90d
 ```
 
 ## Rollback

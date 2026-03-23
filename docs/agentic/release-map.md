@@ -38,12 +38,12 @@ This repo already has a working automation model. Treat this map as an entry poi
 - When CI fails on an autopilot implementation PR, autopilot must comment the failing job summary and log excerpt back onto the PR thread so Codex can continue from the real runner error.
 - Manual Codex extraction on an `implement:` PR should validate with `pnpm check:ci`, which mirrors the current GitHub CI order with `CI=true`.
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
-- Release automation now waits for the public `/health` endpoint after `compose/deploy` and runs `scripts/smoke-prod.mjs`; smoke failures must surface as an explicit failing job with step-summary details and GitHub error annotations.
+- Release automation now waits for the public `/health` endpoint after `compose/deploy` and runs `scripts/smoke-prod.mjs`; the smoke must cover `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` on both root and `/api` compatibility paths, with demo/admin-aware assertions and GitHub step-summary plus `::error` output on failure.
 
 ## Smoke and Manual Checks
 
 - API smoke: [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs)
-- Prod smoke: [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs)
+- Prod smoke: [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) (`SMOKE_AUTH_MODE`, optional `SMOKE_ADMIN_EMAIL` / `SMOKE_ADMIN_PASSWORD`, optional `SMOKE_SUMMARY_RANGE`)
 - Required production route assertions live in [../../apps/api/src/index.ts](../../apps/api/src/index.ts)
 - The shared system contract is `GET /health` and `GET /version` across runtimes, with web retaining `GET /healthz` as a compatibility alias and worker exposing those routes on localhost only.
 
