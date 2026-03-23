@@ -111,12 +111,36 @@ const main = async () => {
     name: 'health_root',
     path: '/health',
     expectedStatuses: [200],
+    assert: ({ rawBody }) => {
+      const parsed = asJson(rawBody)
+      if (!parsed || typeof parsed !== 'object') {
+        return 'health payload is not JSON'
+      }
+
+      if (parsed.ok !== true || parsed.service !== 'web') {
+        return 'health payload must contain ok=true and service=web'
+      }
+
+      return true
+    },
   })
 
   await runCheck({
     name: 'health_api_prefix',
     path: '/api/health',
     expectedStatuses: [200],
+    assert: ({ rawBody }) => {
+      const parsed = asJson(rawBody)
+      if (!parsed || typeof parsed !== 'object') {
+        return 'api health payload is not JSON'
+      }
+
+      if (parsed.ok !== true || parsed.service !== 'api') {
+        return 'api health payload must contain ok=true and service=api'
+      }
+
+      return true
+    },
   })
 
   await runCheck({
@@ -127,6 +151,10 @@ const main = async () => {
       const parsed = asJson(rawBody)
       if (!parsed || typeof parsed !== 'object') {
         return 'version payload is not JSON'
+      }
+
+      if (parsed.service !== 'web') {
+        return 'version payload missing service=web'
       }
 
       if (!('NODE_ENV' in parsed)) {
@@ -141,6 +169,18 @@ const main = async () => {
     name: 'version_api_prefix',
     path: '/api/version',
     expectedStatuses: [200],
+    assert: ({ rawBody }) => {
+      const parsed = asJson(rawBody)
+      if (!parsed || typeof parsed !== 'object') {
+        return 'api version payload is not JSON'
+      }
+
+      if (parsed.service !== 'api' || !('NODE_ENV' in parsed)) {
+        return 'api version payload must contain service=api and NODE_ENV'
+      }
+
+      return true
+    },
   })
 
   await runCheck({

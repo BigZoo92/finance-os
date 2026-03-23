@@ -16,6 +16,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
   - Powens callback route: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Worker runtime: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
   - local rules: [../../apps/worker/AGENTS.md](../../apps/worker/AGENTS.md)
+  - localhost-only system status endpoints: `GET /health` and `GET /version` from the worker runtime
 
 ## Package Anchors
 
@@ -32,7 +33,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 
 - API route files parse and shape HTTP only. Domain files orchestrate. Repository files persist. Service files talk to providers or deterministic helpers. Runtime and plugin files wire dependencies.
 - Web route loaders prewarm Query and keep SSR auth-consistent. Feature modules own query keys and request functions.
-- Worker owns provider sync loops, locks, and metrics; it should not become a second API layer.
+- Worker owns provider sync loops, locks, metrics, and a localhost-only system status surface; it should not become a second public API layer.
 
 ## First Reads By Change Type
 

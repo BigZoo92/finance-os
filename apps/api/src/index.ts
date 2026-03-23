@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
+import { resolveRuntimeVersion } from '@finance-os/prelude'
 import { createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from './auth/context'
@@ -16,6 +17,7 @@ import { env } from './env'
 import { logApiEvent, isApiDebugEnabled, toErrorLogFields } from './observability/logger'
 import { createDashboardRoutes } from './routes/dashboard/router'
 import { createDebugRoutes } from './routes/debug/router'
+import { registerSystemRoutes } from './routes/system'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
@@ -80,23 +82,16 @@ const shouldSetNoStore = (pathname: string) => {
   return NO_STORE_PREFIX_PATHS.some(prefix => normalizedPath.startsWith(prefix))
 }
 
-const toOptionalEnv = (value: string | undefined | null) => {
-  if (!value) {
-    return null
-  }
-
-  const normalized = value.trim()
-  return normalized.length > 0 ? normalized : null
-}
-
-const resolveRuntimeVersion = () => {
-  return {
-    GIT_SHA: toOptionalEnv(process.env.GIT_SHA) ?? toOptionalEnv(env.APP_COMMIT_SHA),
-    GIT_TAG: toOptionalEnv(process.env.GIT_TAG) ?? toOptionalEnv(env.APP_VERSION),
-    BUILD_TIME: toOptionalEnv(process.env.BUILD_TIME),
-    NODE_ENV: env.NODE_ENV,
-  }
-}
+const getRuntimeVersion = () =>
+  resolveRuntimeVersion({
+    service: 'api',
+    nodeEnv: env.NODE_ENV,
+    gitSha: process.env.GIT_SHA,
+    gitTag: process.env.GIT_TAG,
+    buildTime: process.env.BUILD_TIME,
+    appCommitSha: env.APP_COMMIT_SHA,
+    appVersion: env.APP_VERSION,
+  })
 
 const shouldBypassPrivateAccessGate = ({
   pathname,
@@ -241,7 +236,7 @@ const assertRequiredProductionRoutes = ({
 }
 
 const registerAppRoutes = (app: Elysia<any>) => {
-  return app
+  const withFeatureRoutes = app
     .use(
       createAuthRoutes({
         env,
@@ -267,34 +262,22 @@ const registerAppRoutes = (app: Elysia<any>) => {
         env,
       })
     )
-    .get('/health', () => {
-      return {
-        status: 'ok',
-        service: 'api',
-        timestamp: new Date().toISOString(),
-      }
-    })
-    .get('/db/health', async () => {
-      const result = await sql<{ now: string }[]>`
+
+  const withSystemRoutes = registerSystemRoutes(withFeatureRoutes, env)
+
+  return withSystemRoutes.get('/db/health', async () => {
+    const result = await sql<{ now: string }[]>`
         select now()::text as now
       `
 
-      return {
-        status: 'ok',
-        service: 'api',
-        database: 'ok',
-        databaseTime: result[0]?.now ?? null,
-        timestamp: new Date().toISOString(),
-      }
-    })
-    .get('/version', ({ set }) => {
-      set.headers['cache-control'] = 'no-store'
-
-      return {
-        service: 'api',
-        ...resolveRuntimeVersion(),
-      }
-    })
+    return {
+      status: 'ok',
+      service: 'api',
+      database: 'ok',
+      databaseTime: result[0]?.now ?? null,
+      timestamp: new Date().toISOString(),
+    }
+  })
 }
 
 const toPathname = (request: Request) => {
@@ -334,28 +317,26 @@ const toValidationDetails = (error: unknown) => {
     return undefined
   }
 
-  const details = rawIssues
-    .slice(0, 10)
-    .map(issue => {
-      if (!issue || typeof issue !== 'object') {
-        return {
-          path: 'unknown',
-          message: String(issue),
-        }
-      }
-
-      const source = issue as {
-        path?: string
-        schema?: { error?: string }
-        summary?: string
-        message?: string
-      }
-
+  const details = rawIssues.slice(0, 10).map(issue => {
+    if (!issue || typeof issue !== 'object') {
       return {
-        path: source.path ?? 'unknown',
-        message: source.message ?? source.summary ?? source.schema?.error ?? 'Invalid input',
+        path: 'unknown',
+        message: String(issue),
       }
-    })
+    }
+
+    const source = issue as {
+      path?: string
+      schema?: { error?: string }
+      summary?: string
+      message?: string
+    }
+
+    return {
+      path: source.path ?? 'unknown',
+      message: source.message ?? source.summary ?? source.schema?.error ?? 'Invalid input',
+    }
+  })
 
   return details.length > 0 ? details : undefined
 }
@@ -495,7 +476,7 @@ const app = new Elysia()
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
-      version: resolveRuntimeVersion(),
+      version: getRuntimeVersion(),
       routes,
     }
   })
@@ -512,7 +493,7 @@ const app = new Elysia()
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
-      version: resolveRuntimeVersion(),
+      version: getRuntimeVersion(),
       routes,
     }
   })
@@ -529,7 +510,7 @@ const app = new Elysia()
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
-      version: resolveRuntimeVersion(),
+      version: getRuntimeVersion(),
       routes,
     }
   })
@@ -546,7 +527,7 @@ const app = new Elysia()
     const routes = listRegisteredRoutes(app)
     return {
       count: routes.length,
-      version: resolveRuntimeVersion(),
+      version: getRuntimeVersion(),
       routes,
     }
   })
@@ -665,7 +646,7 @@ logApiEvent({
       path: '/api/version',
     },
   }),
-  runtimeVersion: resolveRuntimeVersion(),
+  runtimeVersion: getRuntimeVersion(),
 })
 
 app.listen({

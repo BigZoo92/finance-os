@@ -9,8 +9,9 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/auth/guard.test.ts](../../apps/api/src/auth/guard.test.ts)
   - [../../apps/api/src/auth/session.test.ts](../../apps/api/src/auth/session.test.ts)
   - [../../apps/api/src/auth/powens-state.test.ts](../../apps/api/src/auth/powens-state.test.ts)
-- API debug routing:
+- API debug and system routing:
   - [../../apps/api/src/routes/debug/router.test.ts](../../apps/api/src/routes/debug/router.test.ts)
+  - [../../apps/api/src/routes/system.test.ts](../../apps/api/src/routes/system.test.ts)
 - Web auth and API client behavior:
   - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
@@ -25,6 +26,13 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm api:typecheck`
   - `bun test <changed-api-test-file>`
   - `pnpm smoke:api` when route or proxy behavior changed
+- Shared health/version contract changes across runtimes:
+  - `pnpm api:typecheck`
+  - `bun test apps/api/src/routes/system.test.ts`
+  - `pnpm web:test`
+  - `pnpm web:build`
+  - `pnpm worker:typecheck`
+  - `pnpm smoke:api` and/or `node scripts/smoke-prod.mjs --base=<url>` for deployed verification
 - Web loader, auth, or UI changes:
   - `pnpm web:typecheck`
   - `pnpm web:test`

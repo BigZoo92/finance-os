@@ -307,7 +307,7 @@ Option manuelle:
 Checks minimum:
 
 ```bash
-curl -i https://finance-os.enzogivernaud.fr/healthz
+curl -i https://finance-os.enzogivernaud.fr/health
 curl -i https://finance-os.enzogivernaud.fr/api/health
 curl -i https://finance-os.enzogivernaud.fr/api/version
 curl -i https://finance-os.enzogivernaud.fr/api/auth/me
@@ -315,7 +315,7 @@ curl -i https://finance-os.enzogivernaud.fr/api/auth/me
 
 Attendu:
 
-- `/healthz` repond depuis `web`
+- `/health` repond depuis `web` (`/healthz` reste un alias de compatibilite)
 - `/api/health` repond depuis `api`
 - `/api/version` existe
 - `/api/auth/me` existe et ne doit jamais renvoyer `404`
@@ -334,9 +334,11 @@ alors le domaine ne sert pas le bon runtime. Ce n'est pas un simple cache naviga
 ### Depuis le conteneur web
 
 ```bash
-wget -qSO- http://127.0.0.1:3000/healthz
+wget -qSO- http://127.0.0.1:3000/health
 wget -qSO- http://finance-os-api:3001/health
 wget -qSO- http://finance-os-api:3001/version
+wget -qSO- http://127.0.0.1:3002/health
+wget -qSO- http://127.0.0.1:3002/version
 wget -qSO- http://finance-os-api:3001/auth/me
 wget -qSO- http://finance-os-api:3001/debug/config --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
 ```

@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { createServer, type Server } from 'node:http'
 import { writeFile } from 'node:fs/promises'
 import { createDbClient, schema } from '@finance-os/db'
 import {
@@ -12,6 +13,7 @@ import {
   parsePowensJob,
   serializePowensJob,
 } from '@finance-os/powens'
+import { buildRuntimeHealth, resolveRuntimeVersion } from '../../../packages/prelude/src/runtime'
 import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
@@ -45,9 +47,12 @@ const SYNC_RUN_KEY_PREFIX = 'powens:metrics:sync:run:'
 const SYNC_RUN_RETENTION_SECONDS = 30 * 24 * 60 * 60
 const SYNC_RUN_MAX_ITEMS = 40
 const WORKER_HEALTHCHECK_FILE = process.env.WORKER_HEALTHCHECK_FILE ?? '/tmp/worker-heartbeat'
+const WORKER_STATUS_HOST = '127.0.0.1'
+const WORKER_STATUS_PORT = 3002
 
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let schedulerTimer: ReturnType<typeof setInterval> | null = null
+let statusServer: Server | null = null
 let keepRunning = true
 
 const pingDatabase = async () => {
@@ -56,6 +61,53 @@ const pingDatabase = async () => {
   `
 
   return result[0]?.now ?? null
+}
+
+const resolveWorkerVersion = () =>
+  resolveRuntimeVersion({
+    service: 'worker',
+    nodeEnv: env.NODE_ENV,
+    gitSha: process.env.GIT_SHA,
+    gitTag: process.env.GIT_TAG,
+    buildTime: process.env.BUILD_TIME,
+    appCommitSha: process.env.APP_COMMIT_SHA ?? null,
+    appVersion: process.env.APP_VERSION ?? null,
+  })
+
+const sendJson = (
+  response: import('node:http').ServerResponse,
+  statusCode: number,
+  body: unknown
+) => {
+  response.writeHead(statusCode, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  })
+  response.end(JSON.stringify(body))
+}
+
+const startStatusServer = () => {
+  statusServer = createServer((request, response) => {
+    const pathname = request.url
+      ? new URL(request.url, `http://${WORKER_STATUS_HOST}:${WORKER_STATUS_PORT}`).pathname
+      : '/'
+
+    if (pathname === '/health') {
+      sendJson(response, 200, buildRuntimeHealth('worker'))
+      return
+    }
+
+    if (pathname === '/version') {
+      sendJson(response, 200, resolveWorkerVersion())
+      return
+    }
+
+    response.writeHead(404)
+    response.end('Not Found')
+  })
+
+  statusServer.listen(WORKER_STATUS_PORT, WORKER_STATUS_HOST)
+  console.log(`[worker] status server: http://${WORKER_STATUS_HOST}:${WORKER_STATUS_PORT}`)
 }
 
 const formatDate = (value: Date) => value.toISOString().slice(0, 10)
@@ -786,6 +838,8 @@ const consumeJobs = async () => {
 }
 
 const start = async () => {
+  startStatusServer()
+
   await redisClient.connect()
 
   const [databaseTime, redisPong] = await Promise.all([pingDatabase(), redisClient.ping()])
@@ -843,6 +897,9 @@ const shutdown = async (signal: string) => {
     clearInterval(schedulerTimer)
     schedulerTimer = null
   }
+
+  statusServer?.close()
+  statusServer = null
 
   await Promise.allSettled([dbClient.close(), redisClient.close()])
   process.exit(0)

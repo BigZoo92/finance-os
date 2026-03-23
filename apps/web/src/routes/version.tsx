@@ -1,3 +1,4 @@
+import { resolveRuntimeVersion } from '../../../../packages/prelude/src/runtime'
 import { createFileRoute } from '@tanstack/react-router'
 
 const VERSION_HEADERS = {
@@ -5,23 +6,16 @@ const VERSION_HEADERS = {
   'cache-control': 'no-store',
 } as const
 
-const toOptionalEnv = (value: string | undefined) => {
-  if (!value) {
-    return null
-  }
-
-  const normalized = value.trim()
-  return normalized.length > 0 ? normalized : null
-}
-
 const buildVersionPayload = () => {
-  return {
+  return resolveRuntimeVersion({
     service: 'web',
-    GIT_SHA: toOptionalEnv(process.env.GIT_SHA) ?? toOptionalEnv(process.env.APP_COMMIT_SHA),
-    GIT_TAG: toOptionalEnv(process.env.GIT_TAG) ?? toOptionalEnv(process.env.APP_VERSION),
-    BUILD_TIME: toOptionalEnv(process.env.BUILD_TIME),
-    NODE_ENV: process.env.NODE_ENV ?? null,
-  }
+    nodeEnv: process.env.NODE_ENV ?? 'development',
+    gitSha: process.env.GIT_SHA,
+    gitTag: process.env.GIT_TAG,
+    buildTime: process.env.BUILD_TIME,
+    appCommitSha: process.env.APP_COMMIT_SHA,
+    appVersion: process.env.APP_VERSION,
+  })
 }
 
 export const Route = createFileRoute('/version')({

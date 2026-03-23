@@ -22,7 +22,15 @@ const baseUrl = (getArg('--base', process.env.API_BASE_URL ?? 'http://127.0.0.1:
 const debugToken = getArg('--debug-token', process.env.DEBUG_METRICS_TOKEN ?? '').trim()
 const internalToken = getArg('--internal-token', process.env.PRIVATE_ACCESS_TOKEN ?? '').trim()
 
-const runCheck = async ({ name, path, expectedStatuses, headers = {} }) => {
+const asJson = raw => {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+const runCheck = async ({ name, path, expectedStatuses, headers = {}, assert }) => {
   const url = `${baseUrl}${path}`
   const response = await fetch(url, {
     method: 'GET',
@@ -30,7 +38,19 @@ const runCheck = async ({ name, path, expectedStatuses, headers = {} }) => {
   })
   const text = await response.text()
   const bodyPreview = text.trim().slice(0, 250)
-  const ok = expectedStatuses.includes(response.status)
+  const statusOk = expectedStatuses.includes(response.status)
+
+  let assertOk = true
+  let assertMessage = null
+  if (typeof assert === 'function') {
+    const result = await assert({ response, rawBody: text })
+    if (result !== true) {
+      assertOk = false
+      assertMessage = typeof result === 'string' ? result : 'custom assertion failed'
+    }
+  }
+
+  const ok = statusOk && assertOk
 
   console.log(
     JSON.stringify({
@@ -39,6 +59,7 @@ const runCheck = async ({ name, path, expectedStatuses, headers = {} }) => {
       status: response.status,
       expectedStatuses,
       ok,
+      assertMessage,
       bodyPreview,
     })
   )
@@ -53,6 +74,36 @@ const main = async () => {
     name: 'health',
     path: '/health',
     expectedStatuses: [200],
+    assert: ({ rawBody }) => {
+      const parsed = asJson(rawBody)
+      if (!parsed || typeof parsed !== 'object') {
+        return 'health payload is not JSON'
+      }
+
+      if (parsed.ok !== true || parsed.service !== 'api') {
+        return 'health payload must contain ok=true and service=api'
+      }
+
+      return true
+    },
+  })
+
+  await runCheck({
+    name: 'version',
+    path: '/version',
+    expectedStatuses: [200],
+    assert: ({ rawBody }) => {
+      const parsed = asJson(rawBody)
+      if (!parsed || typeof parsed !== 'object') {
+        return 'version payload is not JSON'
+      }
+
+      if (parsed.service !== 'api' || !('NODE_ENV' in parsed)) {
+        return 'version payload must contain service=api and NODE_ENV'
+      }
+
+      return true
+    },
   })
 
   await runCheck({

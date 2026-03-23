@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VersionRouteImport } from './routes/version'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
 
@@ -30,6 +31,11 @@ const HealthzRoute = HealthzRouteImport.update({
   path: '/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,6 +49,7 @@ const PowensCallbackRoute = PowensCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
   '/version': typeof VersionRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
   '/version': typeof VersionRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/health': typeof HealthRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
   '/version': typeof VersionRoute
@@ -65,14 +74,28 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/healthz' | '/login' | '/version' | '/powens/callback'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/healthz'
+    | '/login'
+    | '/version'
+    | '/powens/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/healthz' | '/login' | '/version' | '/powens/callback'
-  id: '__root__' | '/' | '/healthz' | '/login' | '/version' | '/powens/callback'
+  to: '/' | '/health' | '/healthz' | '/login' | '/version' | '/powens/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/health'
+    | '/healthz'
+    | '/login'
+    | '/version'
+    | '/powens/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HealthRoute: typeof HealthRoute
   HealthzRoute: typeof HealthzRoute
   LoginRoute: typeof LoginRoute
   VersionRoute: typeof VersionRoute
@@ -102,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -121,6 +151,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HealthRoute: HealthRoute,
   HealthzRoute: HealthzRoute,
   LoginRoute: LoginRoute,
   VersionRoute: VersionRoute,

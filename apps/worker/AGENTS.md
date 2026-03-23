@@ -12,6 +12,7 @@ Scope: `apps/worker/**`
   - heartbeat and scheduler behavior
   - graceful shutdown of DB and Redis clients
 - Worker changes must not degrade the fail-soft behavior of the web or API runtimes.
+- Keep the worker's localhost-only `GET /health` and `GET /version` contract aligned with the shared system contract used by api and web.
 
 ## Verify
 
