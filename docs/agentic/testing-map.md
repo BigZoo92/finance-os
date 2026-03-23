@@ -16,6 +16,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
   - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
+  - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
   - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
 
 ## Scope-Based Verification

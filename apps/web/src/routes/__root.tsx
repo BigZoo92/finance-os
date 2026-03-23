@@ -12,6 +12,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ToastViewport } from '@/components/toast-viewport'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
+import { getPublicRuntimeEnvScript, readPublicRuntimeEnv } from '@/lib/public-runtime-env'
 import { logSsrError } from '@/lib/ssr-logger'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
@@ -62,30 +63,34 @@ export function RouteError({ error }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  head: () => ({
-    meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      {
-        title: 'Finance OS',
-      },
-      {
-        name: 'robots',
-        content: 'noindex, nofollow, noarchive',
-      },
-    ],
-    links: [
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
-    ],
-  }),
+  head: () => {
+    const appTitle = readPublicRuntimeEnv('VITE_APP_TITLE') ?? 'Finance OS'
+
+    return {
+      meta: [
+        {
+          charSet: 'utf-8',
+        },
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1',
+        },
+        {
+          title: appTitle,
+        },
+        {
+          name: 'robots',
+          content: 'noindex, nofollow, noarchive',
+        },
+      ],
+      links: [
+        {
+          rel: 'stylesheet',
+          href: appCss,
+        },
+      ],
+    }
+  },
   loader: async ({ context }) => {
     const ssrAuth = await fetchAuthMeFromSsr()
 
@@ -106,6 +111,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" className="dark">
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: getPublicRuntimeEnvScript(),
+          }}
+        />
       </head>
       <body>
         {children}
