@@ -17,6 +17,7 @@ import { buildRuntimeHealth, resolveRuntimeVersion } from '../../../packages/pre
 import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
+import { logWorkerEvent } from './observability/logger'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -285,7 +286,12 @@ const updateHeartbeatFile = async () => {
   try {
     await writeFile(WORKER_HEALTHCHECK_FILE, String(Date.now()), 'utf8')
   } catch (error) {
-    console.error('[worker] failed to update heartbeat file:', toSafeErrorMessage(error))
+    logWorkerEvent({
+      level: 'error',
+      msg: 'worker heartbeat file update failed',
+      healthcheckFile: WORKER_HEALTHCHECK_FILE,
+      errMessage: toSafeErrorMessage(error),
+    })
   }
 }
 
@@ -688,14 +694,14 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
       errorFingerprint: toErrorFingerprint(errorMessage),
     })
 
-    console.error(
-      '[worker] connection sync failed for',
+    logWorkerEvent({
+      level: 'error',
+      msg: 'worker connection sync failed',
       connectionId,
-      '-',
-      errorMessage,
-      '- requestId:',
-      requestId ?? 'n/a'
-    )
+      requestId: requestId ?? 'n/a',
+      errMessage: errorMessage,
+      failureStatus,
+    })
   } finally {
     await releaseConnectionLock(lock)
   }
@@ -717,19 +723,24 @@ const syncAllConnections = async (requestId?: string) => {
     try {
       await syncConnection(connection.powensConnectionId, requestId)
     } catch (error) {
-      console.error(
-        '[worker] syncAll isolated failure:',
-        toSafeErrorMessage(error),
-        '- requestId:',
-        requestId ?? 'n/a'
-      )
+      logWorkerEvent({
+        level: 'error',
+        msg: 'worker syncAll isolated failure',
+        requestId: requestId ?? 'n/a',
+        errMessage: toSafeErrorMessage(error),
+      })
     }
   }
 }
 
 const handleJob = async (job: PowensJob) => {
   if (env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
-    console.log('[worker] skipping job because EXTERNAL_INTEGRATIONS_SAFE_MODE=true', job.type)
+    logWorkerEvent({
+      level: 'warn',
+      msg: 'worker job skipped because external integrations safe mode is enabled',
+      jobType: job.type,
+      requestId: job.requestId ?? 'n/a',
+    })
     return
   }
 
@@ -743,12 +754,20 @@ const handleJob = async (job: PowensJob) => {
 
 const startScheduler = () => {
   if (env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
-    console.log('[worker] auto scheduler disabled (EXTERNAL_INTEGRATIONS_SAFE_MODE=true)')
+    logWorkerEvent({
+      level: 'warn',
+      msg: 'worker scheduler disabled',
+      reason: 'EXTERNAL_INTEGRATIONS_SAFE_MODE=true',
+    })
     return
   }
 
   if (!env.WORKER_AUTO_SYNC_ENABLED) {
-    console.log('[worker] auto scheduler disabled (WORKER_AUTO_SYNC_ENABLED=false)')
+    logWorkerEvent({
+      level: 'warn',
+      msg: 'worker scheduler disabled',
+      reason: 'WORKER_AUTO_SYNC_ENABLED=false',
+    })
     return
   }
 
@@ -767,11 +786,19 @@ const startScheduler = () => {
         })
       )
     } catch (error) {
-      console.error('[worker] failed to enqueue scheduled sync:', toSafeErrorMessage(error))
+      logWorkerEvent({
+        level: 'error',
+        msg: 'worker failed to enqueue scheduled sync',
+        errMessage: toSafeErrorMessage(error),
+      })
     }
   }, schedulerIntervalMs)
 
-  console.log('[worker] scheduler every', schedulerIntervalMs, 'ms')
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker scheduler started',
+    schedulerIntervalMs,
+  })
 }
 
 const consumeJobs = async () => {
@@ -788,14 +815,24 @@ const consumeJobs = async () => {
         continue
       }
 
-      console.log('[worker] processing job', job.type, '- requestId:', job.requestId ?? 'n/a')
+      logWorkerEvent({
+        level: 'info',
+        msg: 'worker processing job',
+        jobType: job.type,
+        requestId: job.requestId ?? 'n/a',
+        ...(job.type === 'powens.syncConnection' ? { connectionId: job.connectionId } : {}),
+      })
       await handleJob(job)
     } catch (error) {
       if (!keepRunning) {
         return
       }
 
-      console.error('[worker] job loop error:', toSafeErrorMessage(error))
+      logWorkerEvent({
+        level: 'error',
+        msg: 'worker job loop error',
+        errMessage: toSafeErrorMessage(error),
+      })
     }
   }
 }
@@ -807,23 +844,35 @@ const start = async () => {
 
   const [databaseTime, redisPong] = await Promise.all([pingDatabase(), redisClient.ping()])
 
-  console.log('[worker] started')
-  console.log('[worker] database: ok')
-  console.log('[worker] redis:', redisPong)
-  console.log('[worker] databaseTime:', databaseTime)
-  console.log('[worker] heartbeat every', env.WORKER_HEARTBEAT_MS, 'ms')
-  console.log('[worker] healthcheck file:', WORKER_HEALTHCHECK_FILE)
-  console.log('[worker] external integrations safe mode:', env.EXTERNAL_INTEGRATIONS_SAFE_MODE)
-  console.log('[worker] auto scheduler enabled:', env.WORKER_AUTO_SYNC_ENABLED)
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker started',
+    databaseStatus: 'ok',
+    redisStatus: redisPong,
+    databaseTime,
+    heartbeatIntervalMs: env.WORKER_HEARTBEAT_MS,
+    healthcheckFile: WORKER_HEALTHCHECK_FILE,
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    autoSchedulerEnabled: env.WORKER_AUTO_SYNC_ENABLED,
+  })
   await updateHeartbeatFile()
 
   heartbeatTimer = setInterval(async () => {
     try {
       const [dbNow, pong] = await Promise.all([pingDatabase(), redisClient.ping()])
-      console.log('[worker] heartbeat ok - db:', dbNow, '- redis:', pong)
+      logWorkerEvent({
+        level: 'info',
+        msg: 'worker heartbeat ok',
+        databaseTime: dbNow,
+        redisStatus: pong,
+      })
       await updateHeartbeatFile()
     } catch (error) {
-      console.error('[worker] heartbeat failed:', toSafeErrorMessage(error))
+      logWorkerEvent({
+        level: 'error',
+        msg: 'worker heartbeat failed',
+        errMessage: toSafeErrorMessage(error),
+      })
     }
   }, env.WORKER_HEARTBEAT_MS)
 
@@ -832,7 +881,11 @@ const start = async () => {
 }
 
 const shutdown = async (signal: string) => {
-  console.log(`[worker] received ${signal}, shutting down...`)
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker shutdown signal received',
+    signal,
+  })
   keepRunning = false
 
   if (heartbeatTimer) {
@@ -856,9 +909,11 @@ process.on('SIGINT', () => void shutdown('SIGINT'))
 process.on('SIGTERM', () => void shutdown('SIGTERM'))
 
 void start().catch(async error => {
-  console.error('[worker] fatal error:', toSafeErrorMessage(error))
-  statusServer?.close()
-  statusServer = null
+  logWorkerEvent({
+    level: 'error',
+    msg: 'worker fatal error',
+    errMessage: toSafeErrorMessage(error),
+  })
   await Promise.allSettled([dbClient.close(), redisClient.close()])
   process.exit(1)
 })
