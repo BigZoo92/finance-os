@@ -104,6 +104,9 @@ ENV NODE_ENV=production \
     BUILD_TIME=${BUILD_TIME}
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
+RUN mkdir -p /var/run/finance-os \
+    && touch /var/run/finance-os/.keep \
+    && chown -R app:app /var/run/finance-os
 COPY --from=bundle-worker --chown=app:app /app/node_modules ./node_modules
 COPY --from=bundle-worker --chown=app:app /app/apps/worker ./apps/worker
 COPY --from=bundle-worker --chown=app:app /app/packages/db ./packages/db

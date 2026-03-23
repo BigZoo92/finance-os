@@ -159,7 +159,7 @@ services:
     networks:
       - finance_os_internal
     volumes:
-      - worker_run:/var/run/finance-os
+      - worker_run_v2:/var/run/finance-os
     healthcheck:
       test:
         [
@@ -216,7 +216,7 @@ services:
     networks:
       - finance_os_internal
     volumes:
-      - worker_run:/var/run/finance-os:ro
+      - worker_run_v2:/var/run/finance-os:ro
       - postgres_data:/mnt/postgres:ro
       - redis_data:/mnt/redis:ro
     security_opt:
@@ -277,4 +277,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  worker_run:
+  worker_run_v2:
