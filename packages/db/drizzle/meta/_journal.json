@@ -57,6 +57,13 @@
       "when": 1774304564933,
       "tag": "0007_wakeful_william_stryker",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774305724057,
+      "tag": "0008_unified_financial_account",
+      "breakpoints": true
     }
   ]
 }

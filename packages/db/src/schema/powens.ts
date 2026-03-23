@@ -56,10 +56,14 @@ export const powensConnection = pgTable(
   ]
 )
 
-export const bankAccount = pgTable(
-  'bank_account',
+export const financialAccount = pgTable(
+  'financial_account',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    source: text('source').notNull().default('banking'),
+    provider: text('provider').notNull().default('powens'),
+    providerConnectionId: text('provider_connection_id').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
     powensAccountId: text('powens_account_id').notNull(),
     powensConnectionId: text('powens_connection_id').notNull(),
     name: text('name').notNull(),
@@ -73,8 +77,17 @@ export const bankAccount = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [
-    uniqueIndex('bank_account_powens_account_id_unique').on(table.powensAccountId),
-    index('bank_account_powens_connection_id_idx').on(table.powensConnectionId),
+    uniqueIndex('financial_account_provider_account_unique').on(
+      table.provider,
+      table.providerConnectionId,
+      table.providerAccountId
+    ),
+    uniqueIndex('financial_account_powens_account_id_unique').on(table.powensAccountId),
+    index('financial_account_powens_connection_id_idx').on(table.powensConnectionId),
+    index('financial_account_provider_connection_id_idx').on(
+      table.provider,
+      table.providerConnectionId
+    ),
   ]
 )
 

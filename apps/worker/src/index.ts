@@ -453,6 +453,10 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
       }
 
       return {
+        source: 'banking',
+        provider: 'powens',
+        providerConnectionId: connectionId,
+        providerAccountId: accountId,
         powensAccountId: accountId,
         powensConnectionId: connectionId,
         name: safeString(account.name, `Compte ${accountId}`),
@@ -472,11 +476,15 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
   }
 
   await dbClient.db
-    .insert(schema.bankAccount)
+    .insert(schema.financialAccount)
     .values(values)
     .onConflictDoUpdate({
-      target: schema.bankAccount.powensAccountId,
+      target: schema.financialAccount.powensAccountId,
       set: {
+        source: sql`excluded.source`,
+        provider: sql`excluded.provider`,
+        providerConnectionId: sql`excluded.provider_connection_id`,
+        providerAccountId: sql`excluded.provider_account_id`,
         powensConnectionId: sql`excluded.powens_connection_id`,
         name: sql`excluded.name`,
         iban: sql`excluded.iban`,
