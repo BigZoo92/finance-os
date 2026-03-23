@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { appendFile } from 'node:fs/promises'
+
 const args = process.argv.slice(2)
 
 const readArg = (name, fallback) => {
@@ -28,6 +30,27 @@ const baseUrl = normalizeBaseUrl(
 )
 
 const internalToken = readArg('--internal-token', process.env.PRIVATE_ACCESS_TOKEN ?? '').trim()
+const results = []
+
+const escapeAnnotationValue = value =>
+  String(value ?? '')
+    .replace(/%/g, '%25')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A')
+
+const writeSummary = async lines => {
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY
+  if (!summaryPath) {
+    return
+  }
+
+  try {
+    const summary = `${lines.join('\n')}\n`
+    await appendFile(summaryPath, summary)
+  } catch {
+    // Summary output is best-effort only.
+  }
+}
 
 if (!baseUrl) {
   console.error('Missing base URL. Use --base=<url> or API_SMOKE_BASE_URL.')
@@ -55,14 +78,49 @@ const runCheck = async ({
   assert,
 }) => {
   const url = `${baseUrl}${path}`
-  const response = await fetch(url, {
-    method,
-    headers,
-    ...(typeof body === 'undefined' ? {} : { body }),
-  })
-  const rawBody = await response.text()
-  const bodyPreview = rawBody.trim().slice(0, 300)
-  const statusOk = expectedStatuses.includes(response.status)
+  let response
+  let rawBody = ''
+  let bodyPreview = ''
+  let statusOk = false
+
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      ...(typeof body === 'undefined' ? {} : { body }),
+    })
+    rawBody = await response.text()
+    bodyPreview = rawBody.trim().slice(0, 300)
+    statusOk = expectedStatuses.includes(response.status)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    results.push({
+      name,
+      method,
+      url,
+      status: 'fetch_error',
+      expectedStatuses,
+      ok: false,
+      assertMessage: message,
+      bodyPreview: '',
+      requestId: null,
+    })
+    console.log(
+      JSON.stringify({
+        name,
+        method,
+        url,
+        status: 'fetch_error',
+        expectedStatuses,
+        ok: false,
+        assertMessage: message,
+        requestId: null,
+        bodyPreview: '',
+      })
+    )
+    process.exitCode = 1
+    return
+  }
 
   let assertOk = true
   let assertMessage = null
@@ -78,6 +136,17 @@ const runCheck = async ({
   }
 
   const ok = statusOk && assertOk
+  results.push({
+    name,
+    method,
+    url,
+    status: response.status,
+    expectedStatuses,
+    ok,
+    assertMessage,
+    bodyPreview,
+    requestId: response.headers.get('x-request-id'),
+  })
 
   console.log(
     JSON.stringify({
@@ -104,6 +173,49 @@ const asJson = raw => {
   } catch {
     return null
   }
+}
+
+const finalize = async () => {
+  const failed = results.filter(result => !result.ok)
+  const total = results.length
+
+  if (failed.length === 0) {
+    const message = `Smoke prod checks passed (${total}/${total}).`
+    console.log(message)
+    await writeSummary([
+      '## Production smoke checks',
+      '',
+      `- ✅ Passed: ${total}/${total}`,
+    ])
+    return
+  }
+
+  console.error(`Smoke prod checks failed (${failed.length}/${total}).`)
+  for (const failure of failed) {
+    const detail = `${failure.name} returned ${failure.status} (expected ${failure.expectedStatuses.join(', ')})${failure.assertMessage ? `; ${failure.assertMessage}` : ''}`
+    console.error(`- ${detail}`)
+    console.error(`  method: ${failure.method}`)
+    console.error(`  url: ${failure.url}`)
+    if (failure.requestId) {
+      console.error(`  requestId: ${failure.requestId}`)
+    }
+    if (failure.bodyPreview) {
+      console.error(`  body: ${failure.bodyPreview}`)
+    }
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      console.error(`::error title=Prod smoke failed::${escapeAnnotationValue(detail)}`)
+    }
+  }
+
+  await writeSummary([
+    '## Production smoke checks',
+    '',
+    `- ❌ Failed: ${failed.length}/${total}`,
+    ...failed.flatMap(failure => {
+      const detail = `${failure.name} returned ${failure.status} (expected ${failure.expectedStatuses.join(', ')})${failure.assertMessage ? `; ${failure.assertMessage}` : ''}`
+      return [`  - ${detail}`]
+    }),
+  ])
 }
 
 const main = async () => {
@@ -267,6 +379,8 @@ const main = async () => {
       return true
     },
   })
+
+  await finalize()
 }
 
 await main()

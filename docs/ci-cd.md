@@ -59,6 +59,9 @@ Etapes sur tag:
    - `BUILD_TIME=<timestamp>`
 6. verifie via `compose/one` que `APP_IMAGE_TAG` a bien ete persiste
 7. declenche `compose/deploy`
+8. attend que `GET /health` reponde publiquement
+9. execute `node scripts/smoke-prod.mjs --base=https://finance-os.enzogivernaud.fr`
+10. en cas d'echec smoke, le job `Post-deploy smoke` echoue explicitement avec un resume GitHub Actions et des annotations `::error`
 
 ## Variables GitHub
 
