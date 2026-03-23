@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { AuthMode } from '../auth-types'
-import { getDemoPowensStatus, getDemoPowensSyncRuns } from '../demo-data'
+import { getDemoPowensSyncRuns } from '../demo-data'
 import { fetchPowensAuditTrail, fetchPowensStatus, fetchPowensSyncBacklog, fetchPowensSyncRuns } from './api'
 
 export const powensQueryKeys = {
@@ -19,15 +19,9 @@ export const powensStatusQueryOptions = () =>
 export const powensStatusQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
   queryOptions({
     queryKey: powensQueryKeys.status(),
-    queryFn: () => {
-      if (mode === 'demo') {
-        return getDemoPowensStatus()
-      }
-
-      return fetchPowensStatus()
-    },
+    queryFn: () => fetchPowensStatus(),
     enabled: mode !== undefined,
-    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
+    staleTime: 10_000,
   })
 
 

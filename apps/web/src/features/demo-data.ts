@@ -294,6 +294,7 @@ export const getDemoPowensSyncRuns = (): PowensSyncRunsResponse => {
 
 export const getDemoPowensStatus = (): PowensStatusResponse => {
   return {
+    safeModeActive: false,
     connections: [
       {
         id: 1,

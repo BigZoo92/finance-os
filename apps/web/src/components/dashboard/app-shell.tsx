@@ -282,7 +282,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
   const summary = summaryQuery.data;
   const statusConnections = statusQuery.data?.connections ?? [];
-  const isIntegrationsSafeMode = statusQuery.data?.fallback === "safe_mode";
+  const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false;
+  const isIntegrationsSafeModeFallback =
+    statusQuery.data?.fallback === "safe_mode";
   const transactions =
     transactionsQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const statusCounts = {
@@ -476,7 +478,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                 <div className="rounded-md border border-border/70 px-3 py-2">
                   <p className="text-xs text-muted-foreground">Session</p>
                   <p className="font-medium">
@@ -486,6 +488,26 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                         ? "Verification..."
                         : "Mode demo"}
                   </p>
+                </div>
+                <div className="rounded-md border border-border/70 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">Safe mode</p>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={isIntegrationsSafeMode ? "secondary" : "outline"}
+                      className={
+                        isIntegrationsSafeMode
+                          ? "border-amber-500/60 bg-amber-400/15 text-amber-700 dark:text-amber-300"
+                          : undefined
+                      }
+                    >
+                      {isIntegrationsSafeMode ? "ON" : "OFF"}
+                    </Badge>
+                    {isIntegrationsSafeModeFallback ? (
+                      <span className="text-xs text-muted-foreground">
+                        mock status fallback
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="rounded-md border border-border/70 px-3 py-2">
                   <p className="text-xs text-muted-foreground">
@@ -559,6 +581,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   Safe mode integrations externes actif: connexions/sync Powens
                   temporairement bloquees.
+                  {isIntegrationsSafeModeFallback
+                    ? " Les statuts affiches utilisent le fallback mock runtime."
+                    : ""}
                 </p>
               ) : null}
             </CardContent>

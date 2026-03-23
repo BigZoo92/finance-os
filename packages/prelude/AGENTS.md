@@ -7,6 +7,7 @@ Scope: `packages/prelude/**`
 - Keep helpers here low-level, side-effect light, and reusable across apps and packages.
 - Do not move app-specific finance rules, Powens knowledge, or UI concerns into this package.
 - Favor small, predictable utilities such as [src/errors/index.ts](src/errors/index.ts), [src/format/index.ts](src/format/index.ts), and shared runtime/system payload builders.
+- Preserve shared runtime payload contracts deliberately: if health/version fields change, update every consumer and the repo docs in the same patch.
 
 ## Verify
 

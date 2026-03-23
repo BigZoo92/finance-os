@@ -9,7 +9,7 @@ Scope: `apps/web/**`
 - Keep server state in Query options under `src/features/**`; do not mirror server state into local component state.
 - Keep dashboard filters in URL search params. Do not introduce duplicate local filter state for route-owned data.
 - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.
-- Keep public `GET /health`, legacy `GET /healthz`, and `GET /version` aligned with the shared system contract used by api and worker.
+- Keep public `GET /health`, legacy `GET /healthz`, and `GET /version` aligned with the shared system contract used by api and worker, including runtime flags such as `safeModeActive`.
 - UI work must cover loading, empty, error, and success states. Avoid generic equal-card layouts when touching dashboard surfaces such as [src/components/dashboard/app-shell.tsx](src/components/dashboard/app-shell.tsx).
 
 ## Verify

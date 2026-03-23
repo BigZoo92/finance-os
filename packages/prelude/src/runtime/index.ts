@@ -1,5 +1,6 @@
-export { buildRuntimeHealth, resolveRuntimeVersion } from './system'
+export { buildRuntimeHealth, buildRuntimeHealthWithFlags, resolveRuntimeVersion } from './system'
 export type {
+  RuntimeFlagsPayload,
   RuntimeHealthPayload,
   RuntimeServiceName,
   RuntimeVersionPayload,
