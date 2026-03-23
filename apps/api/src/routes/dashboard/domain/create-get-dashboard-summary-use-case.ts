@@ -15,7 +15,7 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
       accountCurrency: string
       accountType: string | null
       enabled: boolean
-      accountRaw: unknown
+      accountBalance: string | null
       connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
       lastSyncAttemptAt: Date | null
       lastSyncAt: Date | null
@@ -49,48 +49,6 @@ const toNumber = (value: string | number | null | undefined) => {
 
 const toMoney = (value: number) => {
   return Math.round(value * 100) / 100
-}
-
-const extractBalanceFromRaw = (raw: unknown) => {
-  if (!raw || typeof raw !== 'object') {
-    return 0
-  }
-
-  const source = raw as Record<string, unknown>
-  const candidates = ['balance', 'current_balance', 'available_balance']
-
-  for (const key of candidates) {
-    const candidate = source[key]
-
-    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
-      return candidate
-    }
-
-    if (typeof candidate === 'string') {
-      const parsed = Number(candidate)
-      if (Number.isFinite(parsed)) {
-        return parsed
-      }
-    }
-
-    const nestedValue =
-      typeof candidate === 'object' && candidate && 'value' in candidate
-        ? (candidate as { value?: number | string }).value
-        : undefined
-
-    if (typeof nestedValue === 'number' && Number.isFinite(nestedValue)) {
-      return nestedValue
-    }
-
-    if (typeof nestedValue === 'string') {
-      const parsed = Number(nestedValue)
-      if (Number.isFinite(parsed)) {
-        return parsed
-      }
-    }
-  }
-
-  return 0
 }
 
 const toIsoString = (value: Date | null) => value?.toISOString() ?? null
@@ -151,7 +109,7 @@ export const createGetDashboardSummaryUseCase = ({
         continue
       }
 
-      const balance = toMoney(extractBalanceFromRaw(account.accountRaw))
+      const balance = toMoney(toNumber(account.accountBalance))
 
       accountSummaries.push({
         powensAccountId: account.powensAccountId,
