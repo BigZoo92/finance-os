@@ -21,18 +21,18 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
     async listAccountsWithConnections() {
       return db
         .select({
-          powensAccountId: schema.bankAccount.powensAccountId,
-          powensConnectionId: schema.bankAccount.powensConnectionId,
+          powensAccountId: schema.financialAccount.powensAccountId,
+          powensConnectionId: schema.financialAccount.powensConnectionId,
           source: schema.powensConnection.source,
           provider: schema.powensConnection.provider,
           providerConnectionId: schema.powensConnection.providerConnectionId,
           providerInstitutionId: schema.powensConnection.providerInstitutionId,
           providerInstitutionName: schema.powensConnection.providerInstitutionName,
-          accountName: schema.bankAccount.name,
-          accountCurrency: schema.bankAccount.currency,
-          accountType: schema.bankAccount.type,
-          enabled: schema.bankAccount.enabled,
-          accountBalance: schema.bankAccount.balance,
+          accountName: schema.financialAccount.name,
+          accountCurrency: schema.financialAccount.currency,
+          accountType: schema.financialAccount.type,
+          enabled: schema.financialAccount.enabled,
+          accountBalance: schema.financialAccount.balance,
           connectionStatus: schema.powensConnection.status,
           lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
           lastSyncAt: schema.powensConnection.lastSyncAt,
@@ -41,12 +41,12 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           lastError: schema.powensConnection.lastError,
           syncMetadata: schema.powensConnection.syncMetadata,
         })
-        .from(schema.bankAccount)
+        .from(schema.financialAccount)
         .leftJoin(
           schema.powensConnection,
-          eq(schema.bankAccount.powensConnectionId, schema.powensConnection.powensConnectionId)
+          eq(schema.financialAccount.powensConnectionId, schema.powensConnection.powensConnectionId)
         )
-        .orderBy(desc(schema.bankAccount.updatedAt), desc(schema.bankAccount.id))
+        .orderBy(desc(schema.financialAccount.updatedAt), desc(schema.financialAccount.id))
     },
 
     async listAssets() {
@@ -128,12 +128,12 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           label: schema.transaction.label,
           powensConnectionId: schema.transaction.powensConnectionId,
           powensAccountId: schema.transaction.powensAccountId,
-          accountName: schema.bankAccount.name,
+          accountName: schema.financialAccount.name,
         })
         .from(schema.transaction)
         .leftJoin(
-          schema.bankAccount,
-          eq(schema.transaction.powensAccountId, schema.bankAccount.powensAccountId)
+          schema.financialAccount,
+          eq(schema.transaction.powensAccountId, schema.financialAccount.powensAccountId)
         )
         .where(whereClause)
         .orderBy(desc(schema.transaction.bookingDate), desc(schema.transaction.id))
