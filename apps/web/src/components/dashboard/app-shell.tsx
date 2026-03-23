@@ -30,6 +30,7 @@ import {
 } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
 import { getLatestSyncStatus } from './latest-sync-status'
+import { WealthHistory } from './wealth-history'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
   { label: '7j', value: '7d' },
@@ -600,7 +601,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           </Card>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -634,6 +635,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               ) : null}
             </CardContent>
           </Card>
+
+          <WealthHistory
+            range={range}
+            snapshots={summary?.dailyWealthSnapshots ?? []}
+            demo={isDemo}
+          />
 
           <Card>
             <CardHeader>

@@ -91,6 +91,20 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
       }
     },
 
+    async listDailyNetFlows(fromDate) {
+      const netAmountExpr = sql<string>`coalesce(sum(${schema.transaction.amount}), 0)::text`
+
+      return db
+        .select({
+          bookingDate: schema.transaction.bookingDate,
+          netAmount: netAmountExpr,
+        })
+        .from(schema.transaction)
+        .where(gte(schema.transaction.bookingDate, fromDate))
+        .groupBy(schema.transaction.bookingDate)
+        .orderBy(desc(schema.transaction.bookingDate))
+    },
+
     async listTopExpenseGroups(fromDate, limit) {
       const categoryExpr = sql<string>`coalesce(nullif(${schema.transaction.category}, ''), 'Unknown')`
       const merchantExpr = sql<string>`coalesce(nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`

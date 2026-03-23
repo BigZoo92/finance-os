@@ -1,5 +1,62 @@
 import type { DashboardRange, DashboardSummaryResponse } from '../routes/dashboard/types'
 
+const RANGE_TO_DAYS: Record<DashboardRange, number> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+}
+
+const MOCK_TODAY = '2026-02-22'
+const MOCK_DAILY_NET_FLOW_BY_DATE = new Map<string, number>([
+  ['2026-02-16', -150.5],
+  ['2026-02-18', 280],
+  ['2026-02-19', -86.9],
+  ['2026-02-21', -124.3],
+  ['2026-02-22', 96.2],
+])
+
+const toMoney = (value: number) => Math.round(value * 100) / 100
+
+const toDateOnly = (value: Date) => value.toISOString().slice(0, 10)
+
+const getRangeStartDate = (range: DashboardRange) => {
+  const start = new Date(`${MOCK_TODAY}T00:00:00.000Z`)
+  start.setUTCDate(start.getUTCDate() - (RANGE_TO_DAYS[range] - 1))
+  return toDateOnly(start)
+}
+
+const listDatesInRange = (range: DashboardRange) => {
+  const dates: string[] = []
+  const cursor = new Date(`${getRangeStartDate(range)}T00:00:00.000Z`)
+  const end = new Date(`${MOCK_TODAY}T00:00:00.000Z`)
+
+  while (cursor.getTime() <= end.getTime()) {
+    dates.push(toDateOnly(cursor))
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+
+  return dates
+}
+
+const buildDailyWealthSnapshots = (
+  range: DashboardRange,
+  totalBalance: number
+): DashboardSummaryResponse['dailyWealthSnapshots'] => {
+  let runningBalance = totalBalance
+  const snapshotsDescending: DashboardSummaryResponse['dailyWealthSnapshots'] = []
+
+  for (const date of [...listDatesInRange(range)].reverse()) {
+    snapshotsDescending.push({
+      date,
+      balance: toMoney(runningBalance),
+    })
+
+    runningBalance = toMoney(runningBalance - (MOCK_DAILY_NET_FLOW_BY_DATE.get(date) ?? 0))
+  }
+
+  return snapshotsDescending.reverse()
+}
+
 export const getDashboardSummaryMock = (range: DashboardRange): DashboardSummaryResponse => {
   return {
     range,
@@ -172,6 +229,7 @@ export const getDashboardSummaryMock = (range: DashboardRange): DashboardSummary
         },
       },
     ],
+    dailyWealthSnapshots: buildDailyWealthSnapshots(range, 67070.44),
     topExpenseGroups: [
       {
         label: 'Courses',
