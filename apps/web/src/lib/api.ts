@@ -1,5 +1,6 @@
 import { getGlobalStartContext } from "@tanstack/react-start";
 import { env } from "@/env";
+import { readPublicRuntimeEnv } from "@/lib/public-runtime-env";
 import { logSsrApiCall } from "@/lib/ssr-logger";
 
 type ApiUrlOptions = {
@@ -133,7 +134,8 @@ const getSsrRequestContext = (): SsrRequestContext | null => {
   }
 };
 
-const getClientApiBaseUrl = () => env.VITE_API_BASE_URL ?? "/api";
+const getClientApiBaseUrl = () =>
+  readPublicRuntimeEnv("VITE_API_BASE_URL") ?? env.VITE_API_BASE_URL ?? "/api";
 
 const resolveApiBaseUrl = (options?: ApiUrlOptions): ApiBaseUrlResolution => {
   const clientBaseUrl = getClientApiBaseUrl();
@@ -161,6 +163,7 @@ const resolveApiBaseUrl = (options?: ApiUrlOptions): ApiBaseUrlResolution => {
 
   const appOrigin =
     readServerRuntimeEnv("VITE_APP_ORIGIN") ??
+    readPublicRuntimeEnv("VITE_APP_ORIGIN") ??
     toOptionalEnv(env.VITE_APP_ORIGIN) ??
     toOptionalEnv(options?.requestOrigin);
 

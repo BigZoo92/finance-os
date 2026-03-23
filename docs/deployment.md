@@ -168,6 +168,8 @@ ALERTS_DISK_FREE_PERCENT_THRESHOLD=10
 ALERTS_DISK_PATHS=/mnt/postgres,/mnt/redis
 
 POWENS_CLIENT_ID=<powens-client-id>
+
+Les variables web non sensibles `VITE_APP_TITLE`, `VITE_APP_ORIGIN` et `VITE_API_BASE_URL` sont maintenant consommees via l'injection SSR de `apps/web/src/lib/public-runtime-env.ts`. Elles restent donc **runtime-safe** pour le conteneur web (override Dokploy / env du conteneur sans rebuild), mais seules ces cles publiques et non sensibles doivent suivre ce chemin.
 POWENS_CLIENT_SECRET=<powens-client-secret>
 POWENS_BASE_URL=https://<tenant>.biapi.pro
 POWENS_DOMAIN=<powens-domain>

@@ -12,6 +12,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 - Web runtime: [../../apps/web/src/routes/index.tsx](../../apps/web/src/routes/index.tsx)
   - local rules: [../../apps/web/AGENTS.md](../../apps/web/AGENTS.md)
   - SSR API client: [../../apps/web/src/lib/api.ts](../../apps/web/src/lib/api.ts)
+  - safe public runtime config bridge: [../../apps/web/src/lib/public-runtime-env.ts](../../apps/web/src/lib/public-runtime-env.ts)
   - dashboard shell: [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx)
   - Powens callback route: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Worker runtime: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
