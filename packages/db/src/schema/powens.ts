@@ -92,7 +92,6 @@ export const transaction = pgTable(
     labelHash: text('label_hash').notNull(),
     category: text('category'),
     merchant: text('merchant'),
-    raw: jsonb('raw'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [

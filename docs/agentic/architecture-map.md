@@ -27,6 +27,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 
 - DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts), [../../packages/db/src/schema/assets.ts](../../packages/db/src/schema/assets.ts)
   - raw provider import staging now lives beside the normalized Powens tables in the DB schema and is filled from the worker sync loop before/alongside business upserts
+  - normalized business transactions keep stable read-model fields only; provider payload JSON now stays in `provider_raw_import` instead of the `transaction` table
   - unified patrimoine-style assets live in the asset schema and are refreshed from worker cash-account syncs plus future manual/provider-specific writers
 - Env parsing: [../../packages/env/src/index.ts](../../packages/env/src/index.ts)
 - Powens client and crypto: [../../packages/powens/src/client.ts](../../packages/powens/src/client.ts), [../../packages/powens/src/crypto.ts](../../packages/powens/src/crypto.ts)
