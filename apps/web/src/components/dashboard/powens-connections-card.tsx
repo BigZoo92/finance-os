@@ -12,13 +12,15 @@ import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys, powensStatusQueryOptions } from '@/features/powens/query-options'
 import type { PowensConnectionStatus } from '@/features/powens/types'
 
-const STATUS_VARIANT: Record<PowensConnectionStatus['status'], 'secondary' | 'outline' | 'destructive'> =
-  {
-    connected: 'secondary',
-    syncing: 'outline',
-    error: 'destructive',
-    reconnect_required: 'destructive',
-  }
+const STATUS_VARIANT: Record<
+  PowensConnectionStatus['status'],
+  'secondary' | 'outline' | 'destructive'
+> = {
+  connected: 'secondary',
+  syncing: 'outline',
+  error: 'destructive',
+  reconnect_required: 'destructive',
+}
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -39,6 +41,22 @@ const toErrorMessage = (value: unknown) => {
   }
 
   return String(value)
+}
+
+const formatSyncMetadata = (value: Record<string, unknown> | null) => {
+  if (!value) {
+    return null
+  }
+
+  const accountCount =
+    typeof value.accountCount === 'number' ? `${value.accountCount} compte(s)` : null
+  const importedTransactionCount =
+    typeof value.importedTransactionCount === 'number'
+      ? `${value.importedTransactionCount} transaction(s)`
+      : null
+  const windowDays = typeof value.windowDays === 'number' ? `${value.windowDays}j` : null
+
+  return [accountCount, importedTransactionCount, windowDays].filter(Boolean).join(' • ') || null
 }
 
 export function PowensConnectionsCard() {
@@ -91,7 +109,9 @@ export function PowensConnectionsCard() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle>Connexions Powens</CardTitle>
-            <CardDescription>Vue locale des connexions et des dernieres synchronisations.</CardDescription>
+            <CardDescription>
+              Vue locale des connexions et des dernieres synchronisations.
+            </CardDescription>
           </div>
           <div className="flex gap-2">
             <Button
@@ -135,13 +155,34 @@ export function PowensConnectionsCard() {
                 className="rounded-md border border-border/80 bg-muted/20 px-3 py-2 space-y-1"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium">Connexion #{connection.powensConnectionId}</p>
+                  <div>
+                    <p className="font-medium">
+                      {connection.providerInstitutionName ??
+                        `Connexion #${connection.powensConnectionId}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {connection.provider} • ref {connection.providerConnectionId}
+                    </p>
+                  </div>
                   <Badge variant={STATUS_VARIANT[connection.status]}>{connection.status}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Derniere sync: {formatDateTime(connection.lastSyncAt)} | Succes:{' '}
-                  {formatDateTime(connection.lastSuccessAt)}
+                  Derniere tentative: {formatDateTime(connection.lastSyncAttemptAt)} | Derniere
+                  sync: {formatDateTime(connection.lastSyncAt)}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  Dernier succes: {formatDateTime(connection.lastSuccessAt)}
+                </p>
+                {connection.lastFailedAt ? (
+                  <p className="text-xs text-muted-foreground">
+                    Dernier echec: {formatDateTime(connection.lastFailedAt)}
+                  </p>
+                ) : null}
+                {formatSyncMetadata(connection.syncMetadata) ? (
+                  <p className="text-xs text-muted-foreground">
+                    Metadata sync: {formatSyncMetadata(connection.syncMetadata)}
+                  </p>
+                ) : null}
                 {connection.lastError ? (
                   <p className="text-xs text-destructive">Erreur: {connection.lastError}</p>
                 ) : null}

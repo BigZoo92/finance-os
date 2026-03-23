@@ -9,30 +9,37 @@ const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
 
   return or(
     lt(schema.transaction.bookingDate, cursor.bookingDate),
-    and(eq(schema.transaction.bookingDate, cursor.bookingDate), lt(schema.transaction.id, cursor.id))
+    and(
+      eq(schema.transaction.bookingDate, cursor.bookingDate),
+      lt(schema.transaction.id, cursor.id)
+    )
   )
 }
 
-export const createDashboardReadRepository = ({
-  db,
-}: {
-  db: ApiDb
-}): DashboardReadRepository => {
+export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardReadRepository => {
   return {
     async listAccountsWithConnections() {
       return db
         .select({
           powensAccountId: schema.bankAccount.powensAccountId,
           powensConnectionId: schema.bankAccount.powensConnectionId,
+          source: schema.powensConnection.source,
+          provider: schema.powensConnection.provider,
+          providerConnectionId: schema.powensConnection.providerConnectionId,
+          providerInstitutionId: schema.powensConnection.providerInstitutionId,
+          providerInstitutionName: schema.powensConnection.providerInstitutionName,
           accountName: schema.bankAccount.name,
           accountCurrency: schema.bankAccount.currency,
           accountType: schema.bankAccount.type,
           enabled: schema.bankAccount.enabled,
           accountRaw: schema.bankAccount.raw,
           connectionStatus: schema.powensConnection.status,
+          lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
           lastSyncAt: schema.powensConnection.lastSyncAt,
           lastSuccessAt: schema.powensConnection.lastSuccessAt,
+          lastFailedAt: schema.powensConnection.lastFailedAt,
           lastError: schema.powensConnection.lastError,
+          syncMetadata: schema.powensConnection.syncMetadata,
         })
         .from(schema.bankAccount)
         .leftJoin(
@@ -79,7 +86,9 @@ export const createDashboardReadRepository = ({
           count: countExpr,
         })
         .from(schema.transaction)
-        .where(and(gte(schema.transaction.bookingDate, fromDate), lt(schema.transaction.amount, '0')))
+        .where(
+          and(gte(schema.transaction.bookingDate, fromDate), lt(schema.transaction.amount, '0'))
+        )
         .groupBy(categoryExpr, merchantExpr)
         .orderBy(desc(totalExpr))
         .limit(limit)

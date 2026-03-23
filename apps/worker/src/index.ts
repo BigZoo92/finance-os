@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { createServer, type Server } from 'node:http'
 import { writeFile } from 'node:fs/promises'
+import { createServer, type Server } from 'node:http'
 import { createDbClient, schema } from '@finance-os/db'
 import {
   createPowensClient,
@@ -13,10 +13,7 @@ import {
   parsePowensJob,
   serializePowensJob,
 } from '@finance-os/powens'
-import {
-  buildRuntimeHealthWithFlags,
-  resolveRuntimeVersion,
-} from '@finance-os/prelude'
+import { buildRuntimeHealthWithFlags, resolveRuntimeVersion } from '@finance-os/prelude'
 import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
@@ -574,10 +571,13 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     connectionId,
     ...(requestId !== undefined ? { requestId } : {}),
   })
+  let connectionProvider = 'powens'
+  let previousLastSyncAt: Date | null = null
 
   try {
     const [connection] = await dbClient.db
       .select({
+        provider: schema.powensConnection.provider,
         powensConnectionId: schema.powensConnection.powensConnectionId,
         accessTokenEncrypted: schema.powensConnection.accessTokenEncrypted,
         lastSyncAt: schema.powensConnection.lastSyncAt,
@@ -590,6 +590,9 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
       return
     }
 
+    connectionProvider = connection.provider
+    previousLastSyncAt = connection.lastSyncAt
+
     await Promise.all([
       incrementDailyMetric(SYNC_COUNT_METRIC_PREFIX),
       recordLastSyncStarted(connectionId),
@@ -599,6 +602,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
       .update(schema.powensConnection)
       .set({
         status: 'syncing',
+        lastSyncAttemptAt: syncStart,
         lastSyncAt: syncStart,
         lastError: null,
         updatedAt: syncStart,
@@ -621,6 +625,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     }
 
     const batchBuffer: TransactionInsert[] = []
+    let importedTransactionCount = 0
 
     for (const account of upsertedAccounts) {
       await recordPowensCall()
@@ -647,6 +652,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
         }
 
         batchBuffer.push(row)
+        importedTransactionCount += 1
 
         if (batchBuffer.length >= TRANSACTION_BATCH_SIZE) {
           await upsertTransactionsBatch(batchBuffer.splice(0, TRANSACTION_BATCH_SIZE))
@@ -666,6 +672,16 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
         lastSyncAt: successAt,
         lastSuccessAt: successAt,
         lastError: null,
+        syncMetadata: {
+          accountCount: upsertedAccounts.length,
+          importedTransactionCount,
+          transactionWindow: {
+            fromDate,
+            maxDate,
+          },
+          lastRunResult: 'success',
+          lastRunFinishedAt: successAt.toISOString(),
+        },
         updatedAt: successAt,
       })
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
@@ -688,7 +704,18 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
       .set({
         status: failureStatus,
         lastSyncAt: failedAt,
+        lastFailedAt: failedAt,
         lastError: errorMessage,
+        syncMetadata: {
+          transactionWindow: {
+            fromDate: previousLastSyncAt
+              ? formatDate(subtractDays(previousLastSyncAt, 3))
+              : formatDate(subtractDays(syncStart, 90)),
+            maxDate: formatDate(syncStart),
+          },
+          lastRunResult: failureStatus,
+          lastRunFinishedAt: failedAt.toISOString(),
+        },
         updatedAt: failedAt,
       })
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
@@ -707,6 +734,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     logWorkerEvent({
       level: 'error',
       msg: 'worker connection sync failed',
+      provider: connectionProvider,
       connectionId,
       requestId: requestId ?? 'n/a',
       errMessage: errorMessage,
@@ -720,6 +748,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
 const syncAllConnections = async (requestId?: string) => {
   const connections = await dbClient.db
     .select({
+      provider: schema.powensConnection.provider,
       powensConnectionId: schema.powensConnection.powensConnectionId,
       status: schema.powensConnection.status,
     })
@@ -736,6 +765,7 @@ const syncAllConnections = async (requestId?: string) => {
       logWorkerEvent({
         level: 'error',
         msg: 'worker syncAll isolated failure',
+        provider: connection.provider,
         requestId: requestId ?? 'n/a',
         errMessage: toSafeErrorMessage(error),
       })

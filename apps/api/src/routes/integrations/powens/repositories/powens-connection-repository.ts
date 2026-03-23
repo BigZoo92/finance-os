@@ -37,7 +37,10 @@ export const createPowensConnectionRepository = (
       await db
         .insert(schema.powensConnection)
         .values({
+          source: 'banking',
+          provider: 'powens',
           powensConnectionId: connectionId,
+          providerConnectionId: connectionId,
           accessTokenEncrypted: encryptedAccessToken,
           status: 'connected',
           lastError: null,
@@ -46,6 +49,9 @@ export const createPowensConnectionRepository = (
         .onConflictDoUpdate({
           target: schema.powensConnection.powensConnectionId,
           set: {
+            source: 'banking',
+            provider: 'powens',
+            providerConnectionId: connectionId,
             accessTokenEncrypted: encryptedAccessToken,
             status: 'connected',
             lastError: null,
@@ -58,11 +64,19 @@ export const createPowensConnectionRepository = (
       return db
         .select({
           id: schema.powensConnection.id,
+          source: schema.powensConnection.source,
+          provider: schema.powensConnection.provider,
           powensConnectionId: schema.powensConnection.powensConnectionId,
+          providerConnectionId: schema.powensConnection.providerConnectionId,
+          providerInstitutionId: schema.powensConnection.providerInstitutionId,
+          providerInstitutionName: schema.powensConnection.providerInstitutionName,
           status: schema.powensConnection.status,
+          lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
           lastSyncAt: schema.powensConnection.lastSyncAt,
           lastSuccessAt: schema.powensConnection.lastSuccessAt,
+          lastFailedAt: schema.powensConnection.lastFailedAt,
           lastError: schema.powensConnection.lastError,
+          syncMetadata: schema.powensConnection.syncMetadata,
           createdAt: schema.powensConnection.createdAt,
           updatedAt: schema.powensConnection.updatedAt,
         })
@@ -93,9 +107,7 @@ export const createPowensConnectionRepository = (
           }
 
           runs.push(parsed)
-        } catch {
-          continue
-        }
+        } catch {}
       }
 
       return runs.sort((a, b) => {
