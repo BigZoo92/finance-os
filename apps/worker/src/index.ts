@@ -586,7 +586,6 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
           labelHash: sql`excluded.label_hash`,
           category: sql`excluded.category`,
           merchant: sql`excluded.merchant`,
-          raw: sql`excluded.raw`,
         },
       })
   }
@@ -608,7 +607,6 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
           label: sql`excluded.label`,
           category: sql`excluded.category`,
           merchant: sql`excluded.merchant`,
-          raw: sql`excluded.raw`,
         },
       })
   }
@@ -641,7 +639,6 @@ const buildTransactionInsert = (params: {
     labelHash: hashLabel(label),
     category: deriveTransactionCategory(params.transaction),
     merchant: deriveTransactionMerchant(params.transaction, label),
-    raw: params.transaction,
   }
 }
 
