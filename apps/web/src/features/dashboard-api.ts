@@ -81,3 +81,25 @@ export const fetchDashboardTransactions = async (params: {
     return getDemoDashboardTransactions(requestParams);
   }
 };
+
+export const patchTransactionClassification = async (params: {
+  transactionId: number;
+  category: string | null;
+  subcategory: string | null;
+  tags: string[];
+}) => {
+  return apiFetch<DashboardTransactionsResponse["items"][number]>(
+    `/dashboard/transactions/${params.transactionId}/classification`,
+    {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        category: params.category,
+        subcategory: params.subcategory,
+        tags: params.tags,
+      }),
+    },
+  );
+};

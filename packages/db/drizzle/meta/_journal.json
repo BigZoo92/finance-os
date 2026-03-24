@@ -71,6 +71,13 @@
       "when": 1774308266472,
       "tag": "0009_nebulous_wildside",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774350000000,
+      "tag": "0010_custom_transaction_taxonomy",
+      "breakpoints": true
     }
   ]
 }

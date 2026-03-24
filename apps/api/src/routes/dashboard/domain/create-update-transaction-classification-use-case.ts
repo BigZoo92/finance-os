@@ -1,0 +1,67 @@
+import type { DashboardUseCases } from '../types'
+
+interface CreateUpdateTransactionClassificationUseCaseDependencies {
+  updateTransactionClassification: (
+    transactionId: number,
+    input: {
+      category: string | null
+      subcategory: string | null
+      tags: string[]
+    }
+  ) => Promise<{
+    id: number
+    bookingDate: string
+    amount: string
+    currency: string
+    label: string
+    category: string | null
+    subcategory: string | null
+    tags: string[]
+    powensConnectionId: string
+    powensAccountId: string
+    accountName: string | null
+  } | null>
+}
+
+export const createUpdateTransactionClassificationUseCase = ({
+  updateTransactionClassification,
+}: CreateUpdateTransactionClassificationUseCaseDependencies): DashboardUseCases['updateTransactionClassification'] => {
+  return async (transactionId, input) => {
+    const uniqueTags = Array.from(
+      new Set(
+        input.tags
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0)
+          .slice(0, 10)
+      )
+    )
+
+    const updated = await updateTransactionClassification(transactionId, {
+      category: input.category,
+      subcategory: input.subcategory,
+      tags: uniqueTags,
+    })
+
+    if (!updated) {
+      return null
+    }
+
+    const amount = Number(updated.amount)
+    const normalizedAmount = Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0
+
+    return {
+      id: updated.id,
+      bookingDate: updated.bookingDate,
+      amount: normalizedAmount,
+      currency: updated.currency,
+      direction: normalizedAmount >= 0 ? 'income' : 'expense',
+      label: updated.label,
+      category: updated.category,
+      subcategory: updated.subcategory,
+      tags: updated.tags,
+      powensConnectionId: updated.powensConnectionId,
+      powensAccountId: updated.powensAccountId,
+      accountName: updated.accountName,
+    }
+  }
+}

@@ -98,9 +98,18 @@ export interface DashboardTransactionRow {
   amount: string
   currency: string
   label: string
+  category: string | null
+  subcategory: string | null
+  tags: string[]
   powensConnectionId: string
   powensAccountId: string
   accountName: string | null
+}
+
+export interface DashboardTransactionClassificationUpdateInput {
+  category: string | null
+  subcategory: string | null
+  tags: string[]
 }
 
 export interface DashboardSummaryResponse {
@@ -203,6 +212,9 @@ export interface DashboardTransactionsResponse {
     currency: string
     direction: 'income' | 'expense'
     label: string
+    category: string | null
+    subcategory: string | null
+    tags: string[]
     powensConnectionId: string
     powensAccountId: string
     accountName: string | null
@@ -221,6 +233,10 @@ export interface DashboardReadRepository {
     limit: number
     cursor: DashboardTransactionCursor | null
   }) => Promise<DashboardTransactionRow[]>
+  updateTransactionClassification: (
+    transactionId: number,
+    input: DashboardTransactionClassificationUpdateInput
+  ) => Promise<DashboardTransactionRow | null>
 }
 
 export interface DashboardUseCases {
@@ -230,6 +246,10 @@ export interface DashboardUseCases {
     limit: number
     cursor: string | undefined
   }) => Promise<DashboardTransactionsResponse>
+  updateTransactionClassification: (
+    transactionId: number,
+    input: DashboardTransactionClassificationUpdateInput
+  ) => Promise<DashboardTransactionsResponse['items'][number] | null>
 }
 
 export interface DashboardRouteRuntime {

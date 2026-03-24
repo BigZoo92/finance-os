@@ -176,6 +176,9 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           amount: schema.transaction.amount,
           currency: schema.transaction.currency,
           label: schema.transaction.label,
+          category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
+          subcategory: schema.transaction.customSubcategory,
+          tags: sql<string[]>`coalesce(${schema.transaction.customTags}, '[]'::jsonb)`,
           powensConnectionId: schema.transaction.powensConnectionId,
           powensAccountId: schema.transaction.powensAccountId,
           accountName: schema.financialAccount.name,
@@ -188,6 +191,46 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .where(whereClause)
         .orderBy(desc(schema.transaction.bookingDate), desc(schema.transaction.id))
         .limit(limit)
+    },
+
+    async updateTransactionClassification(transactionId, input) {
+      const [updated] = await db
+        .update(schema.transaction)
+        .set({
+          customCategory: input.category,
+          customSubcategory: input.subcategory,
+          customTags: input.tags,
+        })
+        .where(eq(schema.transaction.id, transactionId))
+        .returning({ id: schema.transaction.id })
+
+      if (!updated) {
+        return null
+      }
+
+      const [row] = await db
+        .select({
+          id: schema.transaction.id,
+          bookingDate: schema.transaction.bookingDate,
+          amount: schema.transaction.amount,
+          currency: schema.transaction.currency,
+          label: schema.transaction.label,
+          category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
+          subcategory: schema.transaction.customSubcategory,
+          tags: sql<string[]>`coalesce(${schema.transaction.customTags}, '[]'::jsonb)`,
+          powensConnectionId: schema.transaction.powensConnectionId,
+          powensAccountId: schema.transaction.powensAccountId,
+          accountName: schema.financialAccount.name,
+        })
+        .from(schema.transaction)
+        .leftJoin(
+          schema.financialAccount,
+          eq(schema.transaction.powensAccountId, schema.financialAccount.powensAccountId)
+        )
+        .where(eq(schema.transaction.id, transactionId))
+        .limit(1)
+
+      return row ?? null
     },
   }
 }
