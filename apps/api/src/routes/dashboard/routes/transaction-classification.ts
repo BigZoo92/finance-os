@@ -33,6 +33,7 @@ export const createTransactionClassificationRoute = () =>
             {
               category: context.body.category ?? null,
               subcategory: context.body.subcategory ?? null,
+              incomeType: context.body.incomeType ?? null,
               tags: context.body.tags ?? [],
             }
           )

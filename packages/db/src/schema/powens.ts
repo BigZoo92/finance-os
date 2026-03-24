@@ -106,6 +106,7 @@ export const transaction = pgTable(
     category: text('category'),
     customCategory: text('custom_category'),
     customSubcategory: text('custom_subcategory'),
+    customIncomeType: text('custom_income_type'),
     customTags: jsonb('custom_tags').$type<string[] | null>(),
     merchant: text('merchant'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

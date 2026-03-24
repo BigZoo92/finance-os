@@ -102,6 +102,7 @@ export type DashboardTransactionsResponse = {
     label: string
     category: string | null
     subcategory: string | null
+    incomeType: 'salary' | 'recurring' | 'exceptional' | null
     tags: string[]
     powensConnectionId: string
     powensAccountId: string

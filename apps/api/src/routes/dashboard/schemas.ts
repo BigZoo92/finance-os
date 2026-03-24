@@ -19,5 +19,13 @@ export const dashboardTransactionClassificationParamsSchema = t.Object({
 export const dashboardTransactionClassificationBodySchema = t.Object({
   category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
   subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+  incomeType: t.Optional(
+    t.Union([
+      t.Literal('salary'),
+      t.Literal('recurring'),
+      t.Literal('exceptional'),
+      t.Null(),
+    ])
+  ),
   tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 32 }), { maxItems: 10 })),
 })

@@ -178,6 +178,10 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           label: schema.transaction.label,
           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
+          incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
+            when ${schema.transaction.amount} <= 0 then null
+            else coalesce(nullif(${schema.transaction.customIncomeType}, ''), 'exceptional')
+          end`,
           tags: sql<string[]>`coalesce(${schema.transaction.customTags}, '[]'::jsonb)`,
           powensConnectionId: schema.transaction.powensConnectionId,
           powensAccountId: schema.transaction.powensAccountId,
@@ -199,6 +203,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .set({
           customCategory: input.category,
           customSubcategory: input.subcategory,
+          customIncomeType: input.incomeType,
           customTags: input.tags,
         })
         .where(eq(schema.transaction.id, transactionId))
@@ -217,6 +222,10 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           label: schema.transaction.label,
           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
+          incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
+            when ${schema.transaction.amount} <= 0 then null
+            else coalesce(nullif(${schema.transaction.customIncomeType}, ''), 'exceptional')
+          end`,
           tags: sql<string[]>`coalesce(${schema.transaction.customTags}, '[]'::jsonb)`,
           powensConnectionId: schema.transaction.powensConnectionId,
           powensAccountId: schema.transaction.powensAccountId,
