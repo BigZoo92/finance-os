@@ -1,5 +1,6 @@
 import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
+import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
 import type { ApiDb, DashboardRouteRuntime } from './types'
 
@@ -18,6 +19,9 @@ export const createDashboardRouteRuntime = ({ db }: { db: ApiDb }): DashboardRou
   const getTransactions = createGetDashboardTransactionsUseCase({
     listTransactions: readModel.listTransactions,
   })
+  const updateTransactionClassification = createUpdateTransactionClassificationUseCase({
+    updateTransactionClassification: readModel.updateTransactionClassification,
+  })
 
   return {
     repositories: {
@@ -26,6 +30,7 @@ export const createDashboardRouteRuntime = ({ db }: { db: ApiDb }): DashboardRou
     useCases: {
       getSummary,
       getTransactions,
+      updateTransactionClassification,
     },
   }
 }

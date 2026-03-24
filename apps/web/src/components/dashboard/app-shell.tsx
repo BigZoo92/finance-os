@@ -14,12 +14,17 @@ import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
+import { patchTransactionClassification } from '@/features/dashboard-api'
 import {
   dashboardQueryKeys,
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
-import type { DashboardRange, DashboardSummaryResponse } from '@/features/dashboard-types'
+import type {
+  DashboardRange,
+  DashboardSummaryResponse,
+  DashboardTransactionsResponse,
+} from '@/features/dashboard-types'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
   powensAuditTrailQueryOptionsWithMode,
@@ -316,6 +321,77 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     onError: error => {
       pushToast({
         title: 'Logout impossible',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
+    },
+  })
+
+  const classifyTransactionMutation = useMutation({
+    mutationFn: async (transaction: DashboardTransactionsResponse['items'][number]) => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      const categoryInput = window.prompt(
+        'Categorie personnalisée (laisser vide pour supprimer)',
+        transaction.category ?? ''
+      )
+
+      if (categoryInput === null) {
+        throw new Error('Edition annulee')
+      }
+
+      const subcategoryInput = window.prompt(
+        'Sous-categorie (laisser vide pour supprimer)',
+        transaction.subcategory ?? ''
+      )
+
+      if (subcategoryInput === null) {
+        throw new Error('Edition annulee')
+      }
+
+      const tagsInput = window.prompt(
+        'Tags (separes par virgules)',
+        transaction.tags.join(', ')
+      )
+
+      if (tagsInput === null) {
+        throw new Error('Edition annulee')
+      }
+
+      const tags = tagsInput
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0)
+
+      const category = categoryInput.trim()
+      const subcategory = subcategoryInput.trim()
+
+      return patchTransactionClassification({
+        transactionId: transaction.id,
+        category: category.length > 0 ? category : null,
+        subcategory: subcategory.length > 0 ? subcategory : null,
+        tags,
+      })
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: dashboardQueryKeys.transactions({ range, limit: 30 }),
+      })
+      pushToast({
+        title: 'Classification sauvegardee',
+        description: 'Categorie, sous-categorie et tags mis a jour.',
+        tone: 'success',
+      })
+    },
+    onError: error => {
+      if (error instanceof Error && error.message === 'Edition annulee') {
+        return
+      }
+
+      pushToast({
+        title: 'Echec de sauvegarde',
         description: toErrorMessage(error),
         tone: 'error',
       })
@@ -1146,6 +1222,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                         <th className="py-2 pr-3">Date</th>
                         <th className="py-2 pr-3">Label</th>
                         <th className="py-2 pr-3">Account</th>
+                        <th className="py-2 pr-3">Classification</th>
                         <th className="py-2 pr-3">Connection</th>
                         <th className="py-2 text-right">Amount</th>
                       </tr>
@@ -1159,6 +1236,32 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                           <td className="py-2 pr-3">{transaction.label}</td>
                           <td className="py-2 pr-3">
                             {transaction.accountName ?? transaction.powensAccountId}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <div className="space-y-1">
+                              <p className="text-xs">
+                                {transaction.category ?? 'Sans categorie'}
+                                {transaction.subcategory ? ` / ${transaction.subcategory}` : ''}
+                              </p>
+                              {transaction.tags.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {transaction.tags.map(tag => (
+                                    <Badge key={`${transaction.id}-${tag}`} variant="outline">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : null}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={!isAdmin || classifyTransactionMutation.isPending}
+                                onClick={() => classifyTransactionMutation.mutate(transaction)}
+                              >
+                                Editer
+                              </Button>
+                            </div>
                           </td>
                           <td className="py-2 pr-3">{transaction.powensConnectionId}</td>
                           <td

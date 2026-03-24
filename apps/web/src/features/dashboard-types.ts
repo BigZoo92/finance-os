@@ -100,6 +100,9 @@ export type DashboardTransactionsResponse = {
     currency: string
     direction: 'income' | 'expense'
     label: string
+    category: string | null
+    subcategory: string | null
+    tags: string[]
     powensConnectionId: string
     powensAccountId: string
     accountName: string | null

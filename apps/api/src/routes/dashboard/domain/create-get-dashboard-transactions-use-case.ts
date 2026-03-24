@@ -14,6 +14,9 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       amount: string
       currency: string
       label: string
+      category: string | null
+      subcategory: string | null
+      tags: string[]
       powensConnectionId: string
       powensAccountId: string
       accountName: string | null
@@ -68,6 +71,9 @@ export const createGetDashboardTransactionsUseCase = ({
           currency: row.currency,
           direction: amount >= 0 ? 'income' : 'expense',
           label: row.label,
+          category: row.category,
+          subcategory: row.subcategory,
+          tags: row.tags,
           powensConnectionId: row.powensConnectionId,
           powensAccountId: row.powensAccountId,
           accountName: row.accountName,
