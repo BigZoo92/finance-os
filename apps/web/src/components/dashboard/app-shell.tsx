@@ -367,11 +367,35 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
       const category = categoryInput.trim()
       const subcategory = subcategoryInput.trim()
+      const canSetIncomeType = transaction.direction === 'income'
+      const incomeTypeInput = canSetIncomeType
+        ? window.prompt(
+            'Type de revenu (salary, recurring, exceptional; laisser vide pour exceptionnel)',
+            transaction.incomeType ?? 'exceptional'
+          )
+        : ''
+
+      if (canSetIncomeType && incomeTypeInput === null) {
+        throw new Error('Edition annulee')
+      }
+
+      const normalizedIncomeType = canSetIncomeType
+        ? (incomeTypeInput ?? '').trim().toLowerCase()
+        : ''
+      const incomeType =
+        !canSetIncomeType || normalizedIncomeType.length === 0
+          ? null
+          : normalizedIncomeType === 'salary' ||
+              normalizedIncomeType === 'recurring' ||
+              normalizedIncomeType === 'exceptional'
+            ? normalizedIncomeType
+            : null
 
       return patchTransactionClassification({
         transactionId: transaction.id,
         category: category.length > 0 ? category : null,
         subcategory: subcategory.length > 0 ? subcategory : null,
+        incomeType,
         tags,
       })
     },
@@ -381,7 +405,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       })
       pushToast({
         title: 'Classification sauvegardee',
-        description: 'Categorie, sous-categorie et tags mis a jour.',
+        description: 'Categorie, sous-categorie, type de revenu et tags mis a jour.',
         tone: 'success',
       })
     },
@@ -1243,6 +1267,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                                 {transaction.category ?? 'Sans categorie'}
                                 {transaction.subcategory ? ` / ${transaction.subcategory}` : ''}
                               </p>
+                              {transaction.direction === 'income' ? (
+                                <Badge variant="secondary">
+                                  Revenu {transaction.incomeType ?? 'exceptional'}
+                                </Badge>
+                              ) : null}
                               {transaction.tags.length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                   {transaction.tags.map(tag => (

@@ -16,6 +16,7 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       label: string
       category: string | null
       subcategory: string | null
+      incomeType: 'salary' | 'recurring' | 'exceptional' | null
       tags: string[]
       powensConnectionId: string
       powensAccountId: string
@@ -73,6 +74,7 @@ export const createGetDashboardTransactionsUseCase = ({
           label: row.label,
           category: row.category,
           subcategory: row.subcategory,
+          incomeType: row.incomeType,
           tags: row.tags,
           powensConnectionId: row.powensConnectionId,
           powensAccountId: row.powensAccountId,

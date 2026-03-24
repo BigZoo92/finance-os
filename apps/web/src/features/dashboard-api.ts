@@ -86,6 +86,7 @@ export const patchTransactionClassification = async (params: {
   transactionId: number;
   category: string | null;
   subcategory: string | null;
+  incomeType: "salary" | "recurring" | "exceptional" | null;
   tags: string[];
 }) => {
   return apiFetch<DashboardTransactionsResponse["items"][number]>(
@@ -98,6 +99,7 @@ export const patchTransactionClassification = async (params: {
       body: JSON.stringify({
         category: params.category,
         subcategory: params.subcategory,
+        incomeType: params.incomeType,
         tags: params.tags,
       }),
     },

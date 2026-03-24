@@ -100,6 +100,7 @@ export interface DashboardTransactionRow {
   label: string
   category: string | null
   subcategory: string | null
+  incomeType: 'salary' | 'recurring' | 'exceptional' | null
   tags: string[]
   powensConnectionId: string
   powensAccountId: string
@@ -109,6 +110,7 @@ export interface DashboardTransactionRow {
 export interface DashboardTransactionClassificationUpdateInput {
   category: string | null
   subcategory: string | null
+  incomeType: 'salary' | 'recurring' | 'exceptional' | null
   tags: string[]
 }
 
@@ -214,6 +216,7 @@ export interface DashboardTransactionsResponse {
     label: string
     category: string | null
     subcategory: string | null
+    incomeType: 'salary' | 'recurring' | 'exceptional' | null
     tags: string[]
     powensConnectionId: string
     powensAccountId: string

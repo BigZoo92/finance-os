@@ -6,6 +6,7 @@ interface CreateUpdateTransactionClassificationUseCaseDependencies {
     input: {
       category: string | null
       subcategory: string | null
+      incomeType: 'salary' | 'recurring' | 'exceptional' | null
       tags: string[]
     }
   ) => Promise<{
@@ -16,6 +17,7 @@ interface CreateUpdateTransactionClassificationUseCaseDependencies {
     label: string
     category: string | null
     subcategory: string | null
+    incomeType: 'salary' | 'recurring' | 'exceptional' | null
     tags: string[]
     powensConnectionId: string
     powensAccountId: string
@@ -39,6 +41,7 @@ export const createUpdateTransactionClassificationUseCase = ({
     const updated = await updateTransactionClassification(transactionId, {
       category: input.category,
       subcategory: input.subcategory,
+      incomeType: input.incomeType,
       tags: uniqueTags,
     })
 
@@ -58,6 +61,7 @@ export const createUpdateTransactionClassificationUseCase = ({
       label: updated.label,
       category: updated.category,
       subcategory: updated.subcategory,
+      incomeType: updated.incomeType,
       tags: updated.tags,
       powensConnectionId: updated.powensConnectionId,
       powensAccountId: updated.powensAccountId,

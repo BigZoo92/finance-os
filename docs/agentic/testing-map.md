@@ -79,6 +79,7 @@ Use this map to choose the smallest verification set that still matches the risk
 ## Manual Checks Worth Doing
 
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
+- Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
 - Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.
 - Powens callback: invalid auth/state fails safely, valid admin/state flow returns success and queues sync.
 - Release-sensitive changes: run the smoke scripts in [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs) and [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) with the right env; prod smoke now covers `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status`, plus optional demo/admin auth context via `SMOKE_AUTH_MODE`.
