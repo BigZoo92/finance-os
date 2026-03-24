@@ -1,6 +1,7 @@
 import type { DashboardUseCases } from '../types'
 import { decodeDashboardCursor, encodeDashboardCursor } from '../utils/cursor'
 import { getRangeStartDate } from '../utils/range'
+import { applyTransactionAutoCategorization } from './transaction-auto-categorization'
 
 interface CreateGetDashboardTransactionsUseCaseDependencies {
   listTransactions: (params: {
@@ -64,6 +65,15 @@ export const createGetDashboardTransactionsUseCase = ({
           : null,
       items: visibleRows.map(row => {
         const amount = toMoney(row.amount)
+        const normalizedClassification = applyTransactionAutoCategorization({
+          label: row.label,
+          amount,
+          powensAccountId: row.powensAccountId,
+          accountName: row.accountName,
+          category: row.category,
+          subcategory: row.subcategory,
+          incomeType: row.incomeType,
+        })
 
         return {
           id: row.id,
@@ -72,9 +82,9 @@ export const createGetDashboardTransactionsUseCase = ({
           currency: row.currency,
           direction: amount >= 0 ? 'income' : 'expense',
           label: row.label,
-          category: row.category,
-          subcategory: row.subcategory,
-          incomeType: row.incomeType,
+          category: normalizedClassification.category,
+          subcategory: normalizedClassification.subcategory,
+          incomeType: normalizedClassification.incomeType,
           tags: row.tags,
           powensConnectionId: row.powensConnectionId,
           powensAccountId: row.powensAccountId,
