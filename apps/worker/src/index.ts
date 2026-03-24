@@ -22,6 +22,7 @@ import {
   buildProviderRawImportRow,
   deriveAccountBalance,
   deriveTransactionCategory,
+  deriveTransactionLabel,
   deriveTransactionMerchant,
   deriveTransactionProviderObjectAt,
   type ProviderRawImportInsert,
@@ -250,22 +251,7 @@ const parseTransactionAmount = (transaction: PowensTransaction) => {
   return null
 }
 
-const parseTransactionLabel = (transaction: PowensTransaction) => {
-  const candidates = [
-    transaction.wording,
-    typeof transaction.raw === 'string' ? transaction.raw : null,
-    toStringValue(transaction.label),
-    toStringValue(transaction.original_wording),
-  ]
-
-  for (const candidate of candidates) {
-    if (candidate && candidate.trim().length > 0) {
-      return candidate.trim()
-    }
-  }
-
-  return 'Transaction'
-}
+const parseTransactionLabel = (transaction: PowensTransaction) => deriveTransactionLabel(transaction)
 
 const toConnectionStatus = (error: unknown): 'error' | 'reconnect_required' => {
   if (error instanceof PowensApiError && error.statusCode !== null) {
