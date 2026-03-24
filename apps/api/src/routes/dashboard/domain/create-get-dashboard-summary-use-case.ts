@@ -44,6 +44,33 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
       metadata: Record<string, unknown> | null
     }>
   >
+  listInvestmentPositions: () => Promise<
+    Array<{
+      positionId: number
+      positionKey: string
+      assetId: number | null
+      powensAccountId: string | null
+      powensConnectionId: string | null
+      source: string
+      provider: string | null
+      providerConnectionId: string | null
+      providerPositionId: string | null
+      assetName: string | null
+      accountName: string | null
+      name: string
+      currency: string
+      quantity: string | null
+      costBasis: string | null
+      costBasisSource: 'minimal' | 'provider' | 'manual' | 'unknown'
+      currentValue: string | null
+      lastKnownValue: string | null
+      openedAt: Date | null
+      closedAt: Date | null
+      valuedAt: Date | null
+      lastSyncedAt: Date | null
+      metadata: Record<string, unknown> | null
+    }>
+  >
   getFlowTotals: (fromDate: string) => Promise<{ income: string; expenses: string }>
   listDailyNetFlows: (fromDate: string) => Promise<Array<{ bookingDate: string; netAmount: string }>>
   listTopExpenseGroups: (
@@ -136,6 +163,7 @@ const buildDailyWealthSnapshots = ({
 export const createGetDashboardSummaryUseCase = ({
   listAccountsWithConnections,
   listAssets,
+  listInvestmentPositions,
   getFlowTotals,
   listDailyNetFlows,
   listTopExpenseGroups,
@@ -146,9 +174,10 @@ export const createGetDashboardSummaryUseCase = ({
     const fromDate = getRangeStartDate(range, currentDate)
     const toDate = toDateOnly(currentDate)
 
-    const [accounts, assets, flowTotals, dailyNetFlows, topExpenseGroups] = await Promise.all([
+    const [accounts, assets, positions, flowTotals, dailyNetFlows, topExpenseGroups] = await Promise.all([
       listAccountsWithConnections(),
       listAssets(),
+      listInvestmentPositions(),
       getFlowTotals(fromDate),
       listDailyNetFlows(fromDate),
       listTopExpenseGroups(fromDate, 5),
@@ -195,6 +224,34 @@ export const createGetDashboardSummaryUseCase = ({
         enabled: asset.enabled,
         metadata: asset.metadata,
       }))
+
+    const positionSummaries: DashboardSummaryResponse['positions'] = positions.map(position => ({
+      positionId: position.positionId,
+      positionKey: position.positionKey,
+      assetId: position.assetId,
+      powensAccountId: position.powensAccountId,
+      powensConnectionId: position.powensConnectionId,
+      source: position.source,
+      provider: position.provider,
+      providerConnectionId: position.providerConnectionId,
+      providerPositionId: position.providerPositionId,
+      assetName: position.assetName,
+      accountName: position.accountName,
+      name: position.name,
+      currency: position.currency,
+      quantity: position.quantity === null ? null : toNumber(position.quantity),
+      costBasis: position.costBasis === null ? null : toMoney(toNumber(position.costBasis)),
+      costBasisSource: position.costBasisSource,
+      currentValue: position.currentValue === null ? null : toMoney(toNumber(position.currentValue)),
+      lastKnownValue:
+        position.lastKnownValue === null ? null : toMoney(toNumber(position.lastKnownValue)),
+      openedAt: toIsoString(position.openedAt),
+      closedAt: toIsoString(position.closedAt),
+      valuedAt: toIsoString(position.valuedAt),
+      lastSyncedAt: toIsoString(position.lastSyncedAt),
+      enabled: position.closedAt === null,
+      metadata: position.metadata,
+    }))
 
     for (const account of accounts) {
       if (!account.enabled) {
@@ -257,6 +314,7 @@ export const createGetDashboardSummaryUseCase = ({
       connections: Array.from(perConnection.values()),
       accounts: accountSummaries,
       assets: assetSummaries,
+      positions: positionSummaries,
       dailyWealthSnapshots,
       topExpenseGroups: topExpenseGroups.map(group => ({
         label: makeGroupLabel(group.category, group.merchant),

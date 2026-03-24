@@ -37,7 +37,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm worker:typecheck`
   - `bun test apps/worker/src/raw-import.test.ts`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
-- Dashboard asset-model or unified financial-account changes:
+- Dashboard asset-model, investment-position, or unified financial-account changes:
   - `pnpm api:typecheck`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
   - `pnpm worker:typecheck` when provider cash assets or financial accounts are refreshed from sync

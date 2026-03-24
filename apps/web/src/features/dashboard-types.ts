@@ -50,6 +50,32 @@ export type DashboardSummaryResponse = {
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
+  positions: Array<{
+    positionId: number
+    positionKey: string
+    assetId: number | null
+    powensAccountId: string | null
+    powensConnectionId: string | null
+    source: string
+    provider: string | null
+    providerConnectionId: string | null
+    providerPositionId: string | null
+    assetName: string | null
+    accountName: string | null
+    name: string
+    currency: string
+    quantity: number | null
+    costBasis: number | null
+    costBasisSource: 'minimal' | 'provider' | 'manual' | 'unknown'
+    currentValue: number | null
+    lastKnownValue: number | null
+    openedAt: string | null
+    closedAt: string | null
+    valuedAt: string | null
+    lastSyncedAt: string | null
+    enabled: boolean
+    metadata: Record<string, unknown> | null
+  }>
   dailyWealthSnapshots: Array<{
     date: string
     balance: number

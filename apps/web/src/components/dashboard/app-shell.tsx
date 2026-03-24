@@ -19,7 +19,7 @@ import {
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
-import type { DashboardRange } from '@/features/dashboard-types'
+import type { DashboardRange, DashboardSummaryResponse } from '@/features/dashboard-types'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
   powensAuditTrailQueryOptionsWithMode,
@@ -166,6 +166,26 @@ const ASSET_TYPE_LABEL: Record<'cash' | 'investment' | 'manual', string> = {
 const ASSET_ORIGIN_LABEL: Record<'provider' | 'manual', string> = {
   provider: 'Provider',
   manual: 'Manual',
+}
+
+const COST_BASIS_LABEL: Record<
+  DashboardSummaryResponse['positions'][number]['costBasisSource'],
+  string
+> = {
+  minimal: 'Cout minimal',
+  provider: 'Cout provider',
+  manual: 'Cout manuel',
+  unknown: 'Cout inconnu',
+}
+
+const formatQuantity = (value: number | null) => {
+  if (value === null) {
+    return '-'
+  }
+
+  return new Intl.NumberFormat('fr-FR', {
+    maximumFractionDigits: 8,
+  }).format(value)
 }
 
 export function DashboardAppShell({ range }: { range: DashboardRange }) {
@@ -361,6 +381,20 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const auditEvents = auditTrailQuery.data?.events ?? []
   const latestCallback = statusQuery.data?.lastCallback ?? null
   const latestCallbackFreshness = formatRelativeDateTime(latestCallback?.receivedAt ?? null)
+  const positions = summary?.positions ?? []
+  const positionsByAssetId = positions.reduce<Map<number, DashboardSummaryResponse['positions']>>(
+    (acc, position) => {
+      if (position.assetId === null) {
+        return acc
+      }
+
+      const existing = acc.get(position.assetId) ?? []
+      existing.push(position)
+      acc.set(position.assetId, existing)
+      return acc
+    },
+    new Map()
+  )
   const connectionBalanceById = new Map(
     (summary?.connections ?? []).map(connection => [
       connection.powensConnectionId,
@@ -901,37 +935,181 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               {summary?.assets.length ? (
-                summary.assets.map(asset => (
-                  <div
-                    key={asset.assetId}
-                    className="flex items-start justify-between gap-3 rounded-md border border-border/70 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-medium">{asset.name}</p>
-                        <Badge variant="outline">{ASSET_TYPE_LABEL[asset.type]}</Badge>
-                        <Badge variant="secondary">{ASSET_ORIGIN_LABEL[asset.origin]}</Badge>
+                summary.assets.map(asset => {
+                  const assetPositions = positionsByAssetId.get(asset.assetId) ?? []
+
+                  return (
+                    <div
+                      key={asset.assetId}
+                      className="space-y-2 rounded-md border border-border/70 px-3 py-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate font-medium">{asset.name}</p>
+                            <Badge variant="outline">{ASSET_TYPE_LABEL[asset.type]}</Badge>
+                            <Badge variant="secondary">{ASSET_ORIGIN_LABEL[asset.origin]}</Badge>
+                            {assetPositions.length > 0 ? (
+                              <Badge variant="outline">{assetPositions.length} position(s)</Badge>
+                            ) : null}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {asset.providerInstitutionName ??
+                              asset.providerConnectionId ??
+                              (asset.origin === 'manual' ? 'Manual entry' : asset.source)}
+                            {asset.powensAccountId ? ` • #${asset.powensAccountId}` : ''}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {asset.valuationAsOf
+                              ? `Valuation: ${formatDateTime(asset.valuationAsOf)}`
+                              : 'Valuation: snapshot manuel'}
+                          </p>
+                        </div>
+                        <p className="whitespace-nowrap font-medium">
+                          {formatMoney(asset.valuation, asset.currency)}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {asset.providerInstitutionName ??
-                          asset.providerConnectionId ??
-                          (asset.origin === 'manual' ? 'Manual entry' : asset.source)}
-                        {asset.powensAccountId ? ` • #${asset.powensAccountId}` : ''}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {asset.valuationAsOf
-                          ? `Valuation: ${formatDateTime(asset.valuationAsOf)}`
-                          : 'Valuation: snapshot manuel'}
-                      </p>
+
+                      {assetPositions.length > 0 ? (
+                        <div className="space-y-2 border-t border-border/60 pt-2">
+                          {assetPositions.map(position => (
+                            <div
+                              key={position.positionId}
+                              className="grid gap-2 rounded-md bg-muted/20 p-2 md:grid-cols-2 xl:grid-cols-4"
+                            >
+                              <div>
+                                <p className="text-xs font-medium">{position.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {position.accountName ?? position.assetName ?? 'Position'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Quantite</p>
+                                <p className="font-medium">{formatQuantity(position.quantity)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">{COST_BASIS_LABEL[position.costBasisSource]}</p>
+                                <p className="font-medium">
+                                  {position.costBasis === null
+                                    ? '-'
+                                    : formatMoney(position.costBasis, position.currency)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Valeur</p>
+                                <p className="font-medium">
+                                  {position.currentValue === null && position.lastKnownValue === null
+                                    ? '-'
+                                    : formatMoney(
+                                        position.currentValue ?? position.lastKnownValue ?? 0,
+                                        position.currency
+                                      )}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {position.valuedAt
+                                    ? `Valorisee le ${formatDateTime(position.valuedAt)}`
+                                    : position.lastSyncedAt
+                                      ? `Derniere sync ${formatDateTime(position.lastSyncedAt)}`
+                                      : 'Sans date de valorisation'}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                    <p className="whitespace-nowrap font-medium">
-                      {formatMoney(asset.valuation, asset.currency)}
-                    </p>
-                  </div>
-                ))
+                  )
+                })
               ) : (
                 <p className="text-muted-foreground">Aucun asset actif.</p>
               )}
+            </CardContent>
+          </Card>
+        </section>
+
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Investment positions
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>
+                Quantite, cout de base et derniere valeur connue pour chaque ligne d'investissement.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {summaryQuery.isPending ? (
+                <p className="text-sm text-muted-foreground">Chargement...</p>
+              ) : null}
+              {summaryQuery.isError ? (
+                <p className="text-sm text-destructive">{toErrorMessage(summaryQuery.error)}</p>
+              ) : null}
+              {!summaryQuery.isPending && positions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucune position d'investissement active.</p>
+              ) : null}
+
+              {positions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="text-left text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-3">Position</th>
+                        <th className="py-2 pr-3">Asset / compte</th>
+                        <th className="py-2 pr-3 text-right">Quantite</th>
+                        <th className="py-2 pr-3 text-right">Cout</th>
+                        <th className="py-2 pr-3 text-right">Valeur</th>
+                        <th className="py-2">Dates</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {positions.map(position => (
+                        <tr key={position.positionId} className="border-t border-border/70 align-top">
+                          <td className="py-2 pr-3">
+                            <p className="font-medium">{position.name}</p>
+                            <p className="text-xs text-muted-foreground">{position.positionKey}</p>
+                          </td>
+                          <td className="py-2 pr-3">
+                            <p>{position.assetName ?? '-'}</p>
+                            <p className="text-xs text-muted-foreground">{position.accountName ?? '-'}</p>
+                          </td>
+                          <td className="py-2 pr-3 text-right font-medium">
+                            {formatQuantity(position.quantity)}
+                          </td>
+                          <td className="py-2 pr-3 text-right">
+                            <p className="font-medium">
+                              {position.costBasis === null
+                                ? '-'
+                                : formatMoney(position.costBasis, position.currency)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {COST_BASIS_LABEL[position.costBasisSource]}
+                            </p>
+                          </td>
+                          <td className="py-2 pr-3 text-right">
+                            <p className="font-medium">
+                              {position.currentValue === null && position.lastKnownValue === null
+                                ? '-'
+                                : formatMoney(
+                                    position.currentValue ?? position.lastKnownValue ?? 0,
+                                    position.currency
+                                  )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {position.currentValue !== null ? 'Courante' : 'Derniere connue'}
+                            </p>
+                          </td>
+                          <td className="py-2 text-xs text-muted-foreground">
+                            <p>Ouverte: {formatDateTime(position.openedAt)}</p>
+                            <p>Valorisee: {formatDateTime(position.valuedAt)}</p>
+                            <p>Sync: {formatDateTime(position.lastSyncedAt)}</p>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </section>
