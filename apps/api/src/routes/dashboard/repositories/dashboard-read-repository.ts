@@ -76,6 +76,42 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .orderBy(desc(schema.asset.updatedAt), desc(schema.asset.id))
     },
 
+    async listInvestmentPositions() {
+      return db
+        .select({
+          positionId: schema.investmentPosition.id,
+          positionKey: schema.investmentPosition.positionKey,
+          assetId: schema.investmentPosition.assetId,
+          powensAccountId: schema.investmentPosition.powensAccountId,
+          powensConnectionId: schema.investmentPosition.powensConnectionId,
+          source: schema.investmentPosition.source,
+          provider: schema.investmentPosition.provider,
+          providerConnectionId: schema.investmentPosition.providerConnectionId,
+          providerPositionId: schema.investmentPosition.providerPositionId,
+          assetName: schema.asset.name,
+          accountName: schema.financialAccount.name,
+          name: schema.investmentPosition.name,
+          currency: schema.investmentPosition.currency,
+          quantity: schema.investmentPosition.quantity,
+          costBasis: schema.investmentPosition.costBasis,
+          costBasisSource: schema.investmentPosition.costBasisSource,
+          currentValue: schema.investmentPosition.currentValue,
+          lastKnownValue: schema.investmentPosition.lastKnownValue,
+          openedAt: schema.investmentPosition.openedAt,
+          closedAt: schema.investmentPosition.closedAt,
+          valuedAt: schema.investmentPosition.valuedAt,
+          lastSyncedAt: schema.investmentPosition.lastSyncedAt,
+          metadata: schema.investmentPosition.metadata,
+        })
+        .from(schema.investmentPosition)
+        .leftJoin(schema.asset, eq(schema.investmentPosition.assetId, schema.asset.id))
+        .leftJoin(
+          schema.financialAccount,
+          eq(schema.investmentPosition.powensAccountId, schema.financialAccount.powensAccountId)
+        )
+        .orderBy(desc(schema.investmentPosition.valuedAt), desc(schema.investmentPosition.id))
+    },
+
     async getFlowTotals(fromDate) {
       const [row] = await db
         .select({

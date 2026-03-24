@@ -49,6 +49,32 @@ export interface AssetRow {
   metadata: Record<string, unknown> | null
 }
 
+export interface InvestmentPositionRow {
+  positionId: number
+  positionKey: string
+  assetId: number | null
+  powensAccountId: string | null
+  powensConnectionId: string | null
+  source: string
+  provider: string | null
+  providerConnectionId: string | null
+  providerPositionId: string | null
+  assetName: string | null
+  accountName: string | null
+  name: string
+  currency: string
+  quantity: string | null
+  costBasis: string | null
+  costBasisSource: 'minimal' | 'provider' | 'manual' | 'unknown'
+  currentValue: string | null
+  lastKnownValue: string | null
+  openedAt: Date | null
+  closedAt: Date | null
+  valuedAt: Date | null
+  lastSyncedAt: Date | null
+  metadata: Record<string, unknown> | null
+}
+
 export interface DashboardFlowTotals {
   income: string
   expenses: string
@@ -127,6 +153,32 @@ export interface DashboardSummaryResponse {
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
+  positions: Array<{
+    positionId: number
+    positionKey: string
+    assetId: number | null
+    powensAccountId: string | null
+    powensConnectionId: string | null
+    source: string
+    provider: string | null
+    providerConnectionId: string | null
+    providerPositionId: string | null
+    assetName: string | null
+    accountName: string | null
+    name: string
+    currency: string
+    quantity: number | null
+    costBasis: number | null
+    costBasisSource: 'minimal' | 'provider' | 'manual' | 'unknown'
+    currentValue: number | null
+    lastKnownValue: number | null
+    openedAt: string | null
+    closedAt: string | null
+    valuedAt: string | null
+    lastSyncedAt: string | null
+    enabled: boolean
+    metadata: Record<string, unknown> | null
+  }>
   dailyWealthSnapshots: Array<{
     date: string
     balance: number
@@ -160,6 +212,7 @@ export interface DashboardTransactionsResponse {
 export interface DashboardReadRepository {
   listAccountsWithConnections: () => Promise<AccountWithConnectionRow[]>
   listAssets: () => Promise<AssetRow[]>
+  listInvestmentPositions: () => Promise<InvestmentPositionRow[]>
   getFlowTotals: (fromDate: string) => Promise<DashboardFlowTotals>
   listDailyNetFlows: (fromDate: string) => Promise<DashboardDailyNetFlowRow[]>
   listTopExpenseGroups: (fromDate: string, limit: number) => Promise<DashboardExpenseGroupRow[]>
