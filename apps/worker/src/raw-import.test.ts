@@ -3,6 +3,7 @@ import {
   buildProviderRawImportRow,
   deriveAccountBalance,
   deriveTransactionCategory,
+  deriveTransactionLabel,
   deriveTransactionMerchant,
   deriveTransactionProviderObjectAt,
   sanitizeProviderPayload,
@@ -60,9 +61,14 @@ describe('raw import helpers', () => {
       })
     ).toBe('Food')
     expect(
+      deriveTransactionLabel({
+        label: '  Café\u00a0Central  ',
+      })
+    ).toBe('Café Central')
+    expect(
       deriveTransactionMerchant(
         {
-          original_wording: 'Cafe Central',
+          original_wording: 'PAIEMENT PAR CARTE  Cafe Central  ',
         },
         'Fallback label'
       )
@@ -72,5 +78,10 @@ describe('raw import helpers', () => {
         date: '2026-03-22',
       })?.toISOString()
     ).toBe('2026-03-22T00:00:00.000Z')
+  })
+
+  it('falls back to canonical defaults when label and merchant cannot be normalized', () => {
+    expect(deriveTransactionLabel({ raw: ' \n\t ' })).toBe('Transaction')
+    expect(deriveTransactionMerchant({}, 'Fallback label')).toBe('Fallback label')
   })
 })

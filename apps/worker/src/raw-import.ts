@@ -74,6 +74,20 @@ const toStringValue = (value: unknown) => {
   return null
 }
 
+const normalizeTransactionText = (value: string) => {
+  return value.normalize('NFKC').replace(/\s+/g, ' ').trim()
+}
+
+const normalizeTransactionToken = (value: unknown) => {
+  const parsed = toStringValue(value)
+  if (!parsed) {
+    return null
+  }
+
+  const normalized = normalizeTransactionText(parsed)
+  return normalized.length > 0 ? normalized : null
+}
+
 const parseProviderObjectAt = (value: unknown) => {
   const raw = toStringValue(value)
   if (!raw) {
@@ -176,13 +190,79 @@ export const deriveTransactionCategory = (raw: unknown) => {
   return category ?? 'Unknown'
 }
 
+const MERCHANT_PREFIX_PATTERNS = [
+  /^paiement(?:\s+par)?(?:\s+carte)?\s+/i,
+  /^carte\s+/i,
+  /^cb\s+/i,
+  /^prelevement(?:\s+sepa)?\s+/i,
+  /^prlv(?:\s+sepa)?\s+/i,
+  /^virement(?:\s+sepa)?\s+/i,
+  /^vir(?:\s+sepa)?\s+/i,
+  /^retrait(?:\s+dab)?\s+/i,
+]
+
+const cleanDerivedMerchant = (value: string) => {
+  let normalized = normalizeTransactionText(value)
+
+  for (const pattern of MERCHANT_PREFIX_PATTERNS) {
+    normalized = normalized.replace(pattern, '')
+  }
+
+  normalized = normalized.replace(/^[^0-9\p{L}]+|[^0-9\p{L}]+$/gu, '').trim()
+
+  return normalized.length > 0 ? normalized : null
+}
+
+export const deriveTransactionLabel = (raw: unknown) => {
+  if (!raw || typeof raw !== 'object') {
+    return 'Transaction'
+  }
+
+  const source = raw as Record<string, unknown>
+  const candidates = [
+    source.label,
+    source.wording,
+    typeof source.raw === 'string' ? source.raw : null,
+    source.original_wording,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = normalizeTransactionToken(candidate)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return 'Transaction'
+}
+
 export const deriveTransactionMerchant = (raw: unknown, fallbackLabel: string) => {
   if (!raw || typeof raw !== 'object') {
     return fallbackLabel
   }
 
   const source = raw as Record<string, unknown>
-  return toStringValue(source.original_wording) ?? toStringValue(source.wording) ?? fallbackLabel
+  const candidates = [
+    source.merchant,
+    source.original_wording,
+    source.wording,
+    source.label,
+    fallbackLabel,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = normalizeTransactionToken(candidate)
+    if (!normalized) {
+      continue
+    }
+
+    const cleaned = cleanDerivedMerchant(normalized)
+    if (cleaned) {
+      return cleaned
+    }
+  }
+
+  return fallbackLabel
 }
 
 export const deriveTransactionProviderObjectAt = (raw: unknown) => {
