@@ -8,6 +8,7 @@ import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
 import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
+import { listStaticManualAssets } from './services/list-static-manual-assets'
 import type { ApiDb, DashboardRouteRuntime } from './types'
 
 export const createDashboardRouteRuntime = ({ db }: { db: ApiDb }): DashboardRouteRuntime => {
@@ -16,6 +17,7 @@ export const createDashboardRouteRuntime = ({ db }: { db: ApiDb }): DashboardRou
   const getSummary = createGetDashboardSummaryUseCase({
     listAccountsWithConnections: readModel.listAccountsWithConnections,
     listAssets: readModel.listAssets,
+    listStaticManualAssets,
     listInvestmentPositions: readModel.listInvestmentPositions,
     getFlowTotals: readModel.getFlowTotals,
     listDailyNetFlows: readModel.listDailyNetFlows,
