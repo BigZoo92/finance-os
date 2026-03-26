@@ -14,6 +14,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/system.test.ts](../../apps/api/src/routes/system.test.ts)
 - API dashboard normalization:
   - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
+  - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
 - Web auth and API client behavior:
@@ -22,6 +23,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
   - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
   - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
+  - [../../apps/web/src/features/goals/api.test.ts](../../apps/web/src/features/goals/api.test.ts)
 - Worker import normalization:
   - [../../apps/worker/src/raw-import.test.ts](../../apps/worker/src/raw-import.test.ts)
 
@@ -59,7 +61,15 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm web:typecheck`
   - `pnpm web:test`
   - `pnpm web:build`
+  - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts` when goals action logging or request-id propagation changed
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts` when the UI depends on a changed dashboard summary contract
+- Dashboard goals contract or persistence changes:
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm api:typecheck`
+  - `bun test apps/api/src/routes/dashboard/routes/goals.test.ts`
+  - `pnpm web:typecheck`
+  - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts`
+  - `pnpm web:build`
 - DB, env, Powens, Redis, or prelude package changes:
   - `pnpm --filter <package> typecheck`
   - package-specific follow-up such as `pnpm db:generate` when schema changes
@@ -79,7 +89,9 @@ Use this map to choose the smallest verification set that still matches the risk
 ## Manual Checks Worth Doing
 
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
+- Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
 - Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
 - Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.
+- Admin mode: the goals drawer can create, update, and archive goals, with recoverable error messaging and a visible request id when a write fails.
 - Powens callback: invalid auth/state fails safely, valid admin/state flow returns success and queues sync.
 - Release-sensitive changes: run the smoke scripts in [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs) and [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) with the right env; prod smoke now covers `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status`, plus optional demo/admin auth context via `SMOKE_AUTH_MODE`.

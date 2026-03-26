@@ -10,6 +10,7 @@ import {
 } from '@finance-os/ui/components'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-financial-goals-card'
 import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
@@ -33,6 +34,7 @@ import {
   powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
+import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { pushToast } from '@/lib/toast-store'
 import { getLatestSyncStatus } from './latest-sync-status'
 import { WealthHistory } from './wealth-history'
@@ -267,6 +269,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         }),
         queryClient.invalidateQueries({
           queryKey: powensQueryKeys.auditTrail(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: financialGoalsQueryKeys.list(),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
@@ -990,6 +995,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-2">
+          <div className="lg:col-span-2">
+            <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import {
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
+import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
 
@@ -36,6 +37,11 @@ export const Route = createFileRoute('/')({
         dashboardTransactionsInfiniteQueryOptionsWithMode({
           range: deps.range,
           limit: 30,
+          mode: auth.mode,
+        })
+      ),
+      context.queryClient.ensureQueryData(
+        financialGoalsQueryOptionsWithMode({
           mode: auth.mode,
         })
       ),
