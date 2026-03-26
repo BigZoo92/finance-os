@@ -139,6 +139,7 @@ POSTGRES_PASSWORD=<PASSWORD>
 PRIVATE_ACCESS_TOKEN=<long-random-token>
 DEBUG_METRICS_TOKEN=<long-random-token>
 POWENS_MANUAL_SYNC_COOLDOWN_SECONDS=300
+DERIVED_RECOMPUTE_ENABLED=true
 
 AUTH_ADMIN_EMAIL=<admin@email>
 AUTH_ADMIN_PASSWORD_HASH_B64=<base64-hash>
@@ -193,6 +194,7 @@ Ne pas mettre dans Dokploy:
 
 - `APP_IMAGE_TAG` est la cle du systeme: chaque deploy doit pointer vers un tag immuable, par exemple `v1.2.3`
 - `AUTH_ADMIN_PASSWORD_HASH_B64` est la variable canonique
+- `DERIVED_RECOMPUTE_ENABLED=false` coupe le trigger admin de recompute derivee sans changer le snapshot courant
 - `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
 - `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure
 - `ALERTS_WEBHOOK_HEADERS_JSON` peut rester vide pour un canal type ntfy, ou contenir un petit objet JSON pour des entetes de type `Authorization`

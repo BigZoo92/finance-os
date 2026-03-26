@@ -15,9 +15,14 @@ import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { patchTransactionClassification } from '@/features/dashboard-api'
+import {
+  normalizeDashboardDerivedRecomputeActionError,
+  patchTransactionClassification,
+  postDashboardDerivedRecompute,
+} from '@/features/dashboard-api'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import {
+  dashboardDerivedRecomputeStatusQueryOptionsWithMode,
   dashboardQueryKeys,
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
@@ -150,6 +155,67 @@ const formatMoney = (value: number, currency = 'EUR') => {
   }
 }
 
+const DERIVED_RECOMPUTE_BADGE: Record<
+  'idle' | 'running' | 'completed' | 'failed',
+  {
+    label: string
+    variant: 'secondary' | 'outline' | 'destructive'
+    className?: string
+  }
+> = {
+  idle: {
+    label: 'Idle',
+    variant: 'outline',
+  },
+  running: {
+    label: 'Running',
+    variant: 'outline',
+    className: 'border-sky-500/60 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+  },
+  completed: {
+    label: 'Completed',
+    variant: 'secondary',
+  },
+  failed: {
+    label: 'Failed',
+    variant: 'destructive',
+  },
+}
+
+const formatDerivedRecomputeStage = (value: string | null) => {
+  if (!value) {
+    return 'En attente'
+  }
+
+  switch (value) {
+    case 'starting':
+      return 'Initialisation'
+    case 'reading_source':
+      return 'Lecture source'
+    case 'completed':
+      return 'Snapshot actif'
+    case 'failed':
+      return 'Echec'
+    default:
+      return value.replaceAll('_', ' ')
+  }
+}
+
+const summarizeDerivedRecomputeRowCounts = (
+  value: {
+    transactionMatchedCount: number
+    transactionUpdatedCount: number
+    rawImportTimestampUpdatedCount: number
+    snapshotRowCount: number
+  } | null
+) => {
+  if (!value) {
+    return 'Compteurs indisponibles.'
+  }
+
+  return `${value.transactionUpdatedCount}/${value.transactionMatchedCount} transactions maj, ${value.rawImportTimestampUpdatedCount} timestamps raw, ${value.snapshotRowCount} lignes snapshot.`
+}
+
 const DemoWidgetBadge = ({ demo }: { demo: boolean }) => {
   if (!demo) {
     return null
@@ -228,6 +294,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const syncRunsQuery = useQuery(powensSyncRunsQueryOptionsWithMode(authModeOptions))
   const syncBacklogQuery = useQuery(powensSyncBacklogQueryOptionsWithMode(authModeOptions))
   const auditTrailQuery = useQuery(powensAuditTrailQueryOptionsWithMode(authModeOptions))
+  const derivedRecomputeStatusQuery = useQuery(
+    dashboardDerivedRecomputeStatusQueryOptionsWithMode(authModeOptions)
+  )
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -290,6 +359,37 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         title: 'Sync refusee',
         description: toErrorMessage(error),
         tone: 'error',
+      })
+    },
+  })
+
+  const derivedRecomputeMutation = useMutation({
+    mutationFn: async () => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      return postDashboardDerivedRecompute()
+    },
+    onSuccess: () => {
+      pushToast({
+        title: 'Recompute terminee',
+        description: 'Le snapshot derive actif a ete remplace.',
+        tone: 'success',
+      })
+    },
+    onError: error => {
+      const normalized = normalizeDashboardDerivedRecomputeActionError(error)
+
+      pushToast({
+        title: 'Recompute echouee',
+        description: normalized.message,
+        tone: 'error',
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: dashboardQueryKeys.all,
       })
     },
   })
@@ -357,10 +457,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         throw new Error('Edition annulee')
       }
 
-      const tagsInput = window.prompt(
-        'Tags (separes par virgules)',
-        transaction.tags.join(', ')
-      )
+      const tagsInput = window.prompt('Tags (separes par virgules)', transaction.tags.join(', '))
 
       if (tagsInput === null) {
         throw new Error('Edition annulee')
@@ -492,6 +589,21 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const auditEvents = auditTrailQuery.data?.events ?? []
   const latestCallback = statusQuery.data?.lastCallback ?? null
   const latestCallbackFreshness = formatRelativeDateTime(latestCallback?.receivedAt ?? null)
+  const derivedRecomputeStatus = derivedRecomputeStatusQuery.data
+  const derivedRecomputeLatestRun = derivedRecomputeStatus?.latestRun ?? null
+  const derivedRecomputeCurrentSnapshot = derivedRecomputeStatus?.currentSnapshot ?? null
+  const derivedRecomputeState = derivedRecomputeMutation.isPending
+    ? 'running'
+    : (derivedRecomputeStatus?.state ?? 'idle')
+  const derivedRecomputeBadge = DERIVED_RECOMPUTE_BADGE[derivedRecomputeState]
+  const derivedRecomputeFeatureEnabled = derivedRecomputeStatus?.featureEnabled ?? true
+  const derivedRecomputeCounts =
+    derivedRecomputeLatestRun?.rowCounts ?? derivedRecomputeCurrentSnapshot?.rowCounts ?? null
+  const derivedRecomputeActionLabel = derivedRecomputeMutation.isPending
+    ? 'Recompute...'
+    : derivedRecomputeState === 'failed'
+      ? 'Reessayer la recompute'
+      : 'Recompute derivee'
   const positions = adaptedSummary.positions
   const positionsByAssetId = positions.reduce<Map<number, DashboardSummaryResponse['positions']>>(
     (acc, position) => {
@@ -731,6 +843,112 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 >
                   {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
                 </Button>
+              </div>
+
+              <div className="rounded-lg border border-border/70 bg-muted/15 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold">Derived recompute</p>
+                      <Badge
+                        variant={derivedRecomputeBadge.variant}
+                        className={derivedRecomputeBadge.className}
+                      >
+                        {derivedRecomputeBadge.label}
+                      </Badge>
+                      {!derivedRecomputeFeatureEnabled ? (
+                        <Badge variant="outline">Flag OFF</Badge>
+                      ) : null}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Recalcule les champs derives depuis `provider_raw_import` puis remplace le
+                      snapshot actif de maniere atomique.
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant={derivedRecomputeState === 'failed' ? 'secondary' : 'outline'}
+                    onClick={() => derivedRecomputeMutation.mutate()}
+                    disabled={
+                      !isAdmin ||
+                      !derivedRecomputeFeatureEnabled ||
+                      derivedRecomputeMutation.isPending
+                    }
+                    title={
+                      !isAdmin
+                        ? 'Action reservee au compte BigZoo'
+                        : !derivedRecomputeFeatureEnabled
+                          ? 'DERIVED_RECOMPUTE_ENABLED=false'
+                          : undefined
+                    }
+                  >
+                    {derivedRecomputeActionLabel}
+                  </Button>
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Etat</p>
+                    <p className="font-medium">{derivedRecomputeBadge.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {derivedRecomputeMutation.isPending
+                        ? 'Requete admin en cours'
+                        : formatDerivedRecomputeStage(derivedRecomputeLatestRun?.stage ?? null)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Snapshot actif</p>
+                    <p className="font-medium">
+                      {derivedRecomputeCurrentSnapshot?.snapshotVersion ?? '-'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(derivedRecomputeCurrentSnapshot?.finishedAt ?? null)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Dernier run</p>
+                    <p className="font-medium">
+                      {formatDateTime(derivedRecomputeLatestRun?.finishedAt ?? null)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {derivedRecomputeLatestRun
+                        ? `${derivedRecomputeLatestRun.triggerSource} · ${derivedRecomputeLatestRun.requestId}`
+                        : 'Aucun run enregistre'}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Comptage</p>
+                    <p className="font-medium">
+                      {derivedRecomputeCounts
+                        ? `${derivedRecomputeCounts.transactionUpdatedCount} maj`
+                        : '-'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {summarizeDerivedRecomputeRowCounts(derivedRecomputeCounts)}
+                    </p>
+                  </div>
+                </div>
+
+                {derivedRecomputeStatusQuery.isError ? (
+                  <p className="mt-3 text-xs text-destructive">
+                    {toErrorMessage(derivedRecomputeStatusQuery.error)}
+                  </p>
+                ) : null}
+
+                {derivedRecomputeState === 'failed' ? (
+                  <p className="mt-3 text-xs text-destructive">
+                    {derivedRecomputeLatestRun?.safeErrorMessage ??
+                      'Derived recompute failed. Snapshot remains unchanged.'}
+                  </p>
+                ) : null}
+
+                {!derivedRecomputeFeatureEnabled ? (
+                  <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                    Kill-switch actif: `DERIVED_RECOMPUTE_ENABLED=false`. Le dernier snapshot valide
+                    reste courant.
+                  </p>
+                ) : null}
               </div>
 
               {isIntegrationsSafeMode ? (
@@ -1105,7 +1323,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                                 <p className="font-medium">{formatQuantity(position.quantity)}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">{COST_BASIS_LABEL[position.costBasisSource]}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {COST_BASIS_LABEL[position.costBasisSource]}
+                                </p>
                                 <p className="font-medium">
                                   {position.costBasis === null
                                     ? '-'
@@ -1115,7 +1335,8 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                               <div>
                                 <p className="text-xs text-muted-foreground">Valeur</p>
                                 <p className="font-medium">
-                                  {position.currentValue === null && position.lastKnownValue === null
+                                  {position.currentValue === null &&
+                                  position.lastKnownValue === null
                                     ? '-'
                                     : formatMoney(
                                         position.currentValue ?? position.lastKnownValue ?? 0,
@@ -1163,7 +1384,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 <p className="text-sm text-destructive">{toErrorMessage(summaryQuery.error)}</p>
               ) : null}
               {!summaryQuery.isPending && positions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucune position d'investissement active.</p>
+                <p className="text-sm text-muted-foreground">
+                  Aucune position d'investissement active.
+                </p>
               ) : null}
 
               {positions.length > 0 ? (
@@ -1181,14 +1404,19 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                     </thead>
                     <tbody>
                       {positions.map(position => (
-                        <tr key={position.positionId} className="border-t border-border/70 align-top">
+                        <tr
+                          key={position.positionId}
+                          className="border-t border-border/70 align-top"
+                        >
                           <td className="py-2 pr-3">
                             <p className="font-medium">{position.name}</p>
                             <p className="text-xs text-muted-foreground">{position.positionKey}</p>
                           </td>
                           <td className="py-2 pr-3">
                             <p>{position.assetName ?? '-'}</p>
-                            <p className="text-xs text-muted-foreground">{position.accountName ?? '-'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {position.accountName ?? '-'}
+                            </p>
                           </td>
                           <td className="py-2 pr-3 text-right font-medium">
                             {formatQuantity(position.quantity)}

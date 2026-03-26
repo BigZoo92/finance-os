@@ -54,6 +54,7 @@ Notes:
 
 ### Worker
 - `WORKER_AUTO_SYNC_ENABLED=false` (recommande en prod pour eviter sync auto non demandee)
+- `DERIVED_RECOMPUTE_ENABLED=true` (passer a `false` pour couper le trigger admin de recompute derivee)
 - `EXTERNAL_INTEGRATIONS_SAFE_MODE=false` (passer a `true` pour desactiver temporairement les appels integrations externes)
 - `WORKER_HEARTBEAT_MS=30000`
 - `WORKER_HEALTHCHECK_MAX_AGE_MS=120000`

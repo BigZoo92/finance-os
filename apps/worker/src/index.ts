@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { writeFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import { createDbClient, schema } from '@finance-os/db'
@@ -21,9 +21,7 @@ import { logWorkerEvent } from './observability/logger'
 import {
   buildProviderRawImportRow,
   deriveAccountBalance,
-  deriveTransactionCategory,
-  deriveTransactionLabel,
-  deriveTransactionMerchant,
+  derivePowensTransactionFields,
   deriveTransactionProviderObjectAt,
   type ProviderRawImportInsert,
 } from './raw-import'
@@ -132,14 +130,6 @@ const subtractDays = (value: Date, days: number) => {
   return new Date(value.getTime() - days * 24 * 60 * 60 * 1000)
 }
 
-const normalizeLabel = (label: string) => {
-  return label.normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase()
-}
-
-const hashLabel = (label: string) => {
-  return createHash('sha256').update(normalizeLabel(label), 'utf8').digest('hex')
-}
-
 const toStringValue = (value: unknown) => {
   if (typeof value === 'string') {
     return value
@@ -218,40 +208,6 @@ const parseEnabledFlag = (disabled: PowensAccount['disabled']) => {
 
   return true
 }
-
-const parseTransactionDate = (transaction: PowensTransaction) => {
-  const raw = transaction.date ?? transaction.rdate
-
-  if (typeof raw !== 'string' || raw.length < 10) {
-    return null
-  }
-
-  const datePart = raw.slice(0, 10)
-  const parsed = new Date(`${datePart}T00:00:00Z`)
-
-  if (Number.isNaN(parsed.getTime())) {
-    return null
-  }
-
-  return formatDate(parsed)
-}
-
-const parseTransactionAmount = (transaction: PowensTransaction) => {
-  if (typeof transaction.amount === 'number' && Number.isFinite(transaction.amount)) {
-    return transaction.amount.toFixed(2)
-  }
-
-  if (typeof transaction.amount === 'string' && transaction.amount.trim().length > 0) {
-    const asNumber = Number(transaction.amount)
-    if (Number.isFinite(asNumber)) {
-      return asNumber.toFixed(2)
-    }
-  }
-
-  return null
-}
-
-const parseTransactionLabel = (transaction: PowensTransaction) => deriveTransactionLabel(transaction)
 
 const toConnectionStatus = (error: unknown): 'error' | 'reconnect_required' => {
   if (error instanceof PowensApiError && error.statusCode !== null) {
@@ -612,27 +568,24 @@ const buildTransactionInsert = (params: {
   accountCurrency: string
   transaction: PowensTransaction
 }): TransactionInsert | null => {
-  const bookingDate = parseTransactionDate(params.transaction)
-  const amount = parseTransactionAmount(params.transaction)
-
-  if (!bookingDate || !amount) {
+  const derived = derivePowensTransactionFields(params.transaction)
+  if (!derived) {
     return null
   }
 
-  const label = parseTransactionLabel(params.transaction)
   const transactionId = toStringValue(params.transaction.id)
 
   return {
     powensTransactionId: transactionId,
     powensConnectionId: params.connectionId,
     powensAccountId: params.accountId,
-    bookingDate,
-    amount,
+    bookingDate: derived.bookingDate,
+    amount: derived.amount,
     currency: parseCurrency(params.transaction.currency, params.accountCurrency),
-    label,
-    labelHash: hashLabel(label),
-    category: deriveTransactionCategory(params.transaction),
-    merchant: deriveTransactionMerchant(params.transaction, label),
+    label: derived.label,
+    labelHash: derived.labelHash,
+    category: derived.category,
+    merchant: derived.merchant,
   }
 }
 

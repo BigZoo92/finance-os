@@ -109,3 +109,48 @@ export type DashboardTransactionsResponse = {
     accountName: string | null
   }>
 }
+
+export type DashboardDerivedRecomputeRowCounts = {
+  rawTransactionCount: number
+  transactionMatchedCount: number
+  transactionUpdatedCount: number
+  transactionUnchangedCount: number
+  transactionSkippedCount: number
+  rawImportTimestampUpdatedCount: number
+  snapshotRowCount: number
+}
+
+export type DashboardDerivedRecomputeRun = {
+  snapshotVersion: string
+  status: 'running' | 'completed' | 'failed'
+  triggerSource: 'admin' | 'internal'
+  requestId: string
+  stage: string | null
+  rowCounts: DashboardDerivedRecomputeRowCounts | null
+  safeErrorCode: string | null
+  safeErrorMessage: string | null
+  startedAt: string
+  finishedAt: string | null
+  durationMs: number | null
+}
+
+export type DashboardDerivedSnapshot = {
+  snapshotVersion: string
+  finishedAt: string
+  rowCounts: DashboardDerivedRecomputeRowCounts | null
+}
+
+export type DashboardDerivedRecomputeStatusResponse = {
+  featureEnabled: boolean
+  state: 'idle' | 'running' | 'completed' | 'failed'
+  latestRun: DashboardDerivedRecomputeRun | null
+  currentSnapshot: DashboardDerivedSnapshot | null
+}
+
+export type DashboardDerivedRecomputeActionError = {
+  message: string
+  code?: string
+  requestId?: string
+  retryable: boolean
+  offline: boolean
+}

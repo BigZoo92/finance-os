@@ -15,6 +15,7 @@ Use this map to choose the smallest verification set that still matches the risk
 - API dashboard normalization:
   - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
   - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
+  - [../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
   - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts) (covers incremental migration staging: `new-model-ready`, `mixed-fallback`, `legacy-fallback`, `contract-divergence`)
@@ -23,6 +24,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
   - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
   - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
+  - [../../apps/web/src/features/dashboard-api.test.ts](../../apps/web/src/features/dashboard-api.test.ts)
   - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
   - [../../apps/web/src/features/goals/api.test.ts](../../apps/web/src/features/goals/api.test.ts)
 - Worker import normalization:
@@ -72,6 +74,15 @@ Use this map to choose the smallest verification set that still matches the risk
   - `bun test apps/api/src/routes/dashboard/routes/goals.test.ts`
   - `pnpm web:typecheck`
   - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts`
+  - `pnpm web:build`
+- Dashboard derived recompute contract, persistence, or admin UI changes:
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm --filter @finance-os/powens typecheck`
+  - `pnpm api:typecheck`
+  - `pnpm worker:typecheck`
+  - `bun test apps/api/src/routes/dashboard/routes/derived-recompute.test.ts`
+  - `pnpm web:typecheck`
+  - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-api.test.ts`
   - `pnpm web:build`
 - DB, env, Powens, Redis, or prelude package changes:
   - `pnpm --filter <package> typecheck`

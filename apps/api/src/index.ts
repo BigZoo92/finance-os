@@ -49,6 +49,7 @@ const NO_STORE_EXACT_PATHS = new Set([
   '/auth/login',
   '/auth/logout',
   '/auth/me',
+  '/dashboard/derived-recompute',
   '/integrations/powens/callback',
   '/debug/health',
   '/debug/auth',
@@ -246,6 +247,7 @@ const registerAppRoutes = (app: Elysia<any>) => {
     .use(
       createDashboardRoutes({
         db,
+        featureEnabled: env.DERIVED_RECOMPUTE_ENABLED,
       })
     )
     .use(
