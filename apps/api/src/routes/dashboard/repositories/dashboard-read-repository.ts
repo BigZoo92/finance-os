@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { and, desc, eq, gte, lt, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, lt, or, sql } from 'drizzle-orm'
 import type { ApiDb, DashboardReadRepository, DashboardTransactionCursor } from '../types'
 
 const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
@@ -14,6 +14,31 @@ const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
       lt(schema.transaction.id, cursor.id)
     )
   )
+}
+
+const goalSelection = {
+  id: schema.personalGoal.id,
+  name: schema.personalGoal.name,
+  goalType: schema.personalGoal.goalType,
+  currency: schema.personalGoal.currency,
+  targetAmount: schema.personalGoal.targetAmount,
+  currentAmount: schema.personalGoal.currentAmount,
+  targetDate: schema.personalGoal.targetDate,
+  note: schema.personalGoal.note,
+  progressSnapshots: schema.personalGoal.progressSnapshots,
+  archivedAt: schema.personalGoal.archivedAt,
+  createdAt: schema.personalGoal.createdAt,
+  updatedAt: schema.personalGoal.updatedAt,
+} as const
+
+const getGoalRowById = async ({ db, goalId }: { db: ApiDb; goalId: number }) => {
+  const [row] = await db
+    .select(goalSelection)
+    .from(schema.personalGoal)
+    .where(eq(schema.personalGoal.id, goalId))
+    .limit(1)
+
+  return row ?? null
 }
 
 export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardReadRepository => {
@@ -240,6 +265,104 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .limit(1)
 
       return row ?? null
+    },
+
+    async listGoals() {
+      return db
+        .select(goalSelection)
+        .from(schema.personalGoal)
+        .orderBy(
+          asc(schema.personalGoal.archivedAt),
+          asc(schema.personalGoal.targetDate),
+          asc(schema.personalGoal.id)
+        )
+    },
+
+    async getGoalById(goalId) {
+      return getGoalRowById({
+        db,
+        goalId,
+      })
+    },
+
+    async createGoal(input) {
+      const [created] = await db
+        .insert(schema.personalGoal)
+        .values({
+          name: input.name,
+          goalType: input.goalType,
+          currency: input.currency,
+          targetAmount: input.targetAmount,
+          currentAmount: input.currentAmount,
+          targetDate: input.targetDate,
+          note: input.note,
+          progressSnapshots: input.progressSnapshots,
+          createdAt: input.updatedAt,
+          updatedAt: input.updatedAt,
+        })
+        .returning({ id: schema.personalGoal.id })
+
+      if (!created) {
+        throw new Error('Failed to create personal goal')
+      }
+
+      const row = await getGoalRowById({
+        db,
+        goalId: created.id,
+      })
+
+      if (!row) {
+        throw new Error('Failed to reload created personal goal')
+      }
+
+      return row
+    },
+
+    async updateGoal(goalId, input) {
+      const [updated] = await db
+        .update(schema.personalGoal)
+        .set({
+          name: input.name,
+          goalType: input.goalType,
+          currency: input.currency,
+          targetAmount: input.targetAmount,
+          currentAmount: input.currentAmount,
+          targetDate: input.targetDate,
+          note: input.note,
+          progressSnapshots: input.progressSnapshots,
+          updatedAt: input.updatedAt,
+        })
+        .where(eq(schema.personalGoal.id, goalId))
+        .returning({ id: schema.personalGoal.id })
+
+      if (!updated) {
+        return null
+      }
+
+      return getGoalRowById({
+        db,
+        goalId,
+      })
+    },
+
+    async archiveGoal(goalId, archivedAt) {
+      const [updated] = await db
+        .update(schema.personalGoal)
+        .set({
+          archivedAt,
+          updatedAt: archivedAt,
+        })
+        .where(eq(schema.personalGoal.id, goalId))
+        .returning({ id: schema.personalGoal.id })
+
+      if (!updated) {
+        return null
+      }
+
+      return getGoalRowById({
+        db,
+        goalId,
+      })
     },
   }
 }

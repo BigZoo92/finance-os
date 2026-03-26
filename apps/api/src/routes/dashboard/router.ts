@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
 import { createDashboardRuntimePlugin } from './plugin'
+import { createGoalsRoute } from './routes/goals'
 import { createSummaryRoute } from './routes/summary'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
@@ -12,6 +13,7 @@ export const createDashboardRoutes = ({ db }: { db: ApiDb }) => {
   return new Elysia({ prefix: '/dashboard' })
     .use(createDashboardRuntimePlugin(runtime))
     .use(createSummaryRoute())
+    .use(createGoalsRoute())
     .use(createTransactionsRoute())
     .use(createTransactionClassificationRoute())
 }

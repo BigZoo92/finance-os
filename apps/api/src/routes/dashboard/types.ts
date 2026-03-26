@@ -114,6 +114,57 @@ export interface DashboardTransactionClassificationUpdateInput {
   tags: string[]
 }
 
+export type DashboardGoalType =
+  | 'emergency_fund'
+  | 'travel'
+  | 'home'
+  | 'education'
+  | 'retirement'
+  | 'custom'
+
+export interface DashboardGoalProgressSnapshotRow {
+  recordedAt: string
+  amount: number
+  note: string | null
+}
+
+export interface DashboardGoalRow {
+  id: number
+  name: string
+  goalType: DashboardGoalType
+  currency: string
+  targetAmount: string
+  currentAmount: string
+  targetDate: string | null
+  note: string | null
+  progressSnapshots: DashboardGoalProgressSnapshotRow[]
+  archivedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface DashboardGoalWriteInput {
+  name: string
+  goalType: DashboardGoalType
+  currency: string
+  targetAmount: number
+  currentAmount: number
+  targetDate: string | null
+  note: string | null
+}
+
+export interface DashboardGoalPersistenceInput {
+  name: string
+  goalType: DashboardGoalType
+  currency: string
+  targetAmount: string
+  currentAmount: string
+  targetDate: string | null
+  note: string | null
+  progressSnapshots: DashboardGoalProgressSnapshotRow[]
+  updatedAt: Date
+}
+
 export interface DashboardSummaryResponse {
   range: DashboardRange
   totals: {
@@ -224,6 +275,25 @@ export interface DashboardTransactionsResponse {
   }>
 }
 
+export interface DashboardGoalResponse {
+  id: number
+  name: string
+  goalType: DashboardGoalType
+  currency: string
+  targetAmount: number
+  currentAmount: number
+  targetDate: string | null
+  note: string | null
+  progressSnapshots: DashboardGoalProgressSnapshotRow[]
+  archivedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DashboardGoalsResponse {
+  items: DashboardGoalResponse[]
+}
+
 export interface DashboardReadRepository {
   listAccountsWithConnections: () => Promise<AccountWithConnectionRow[]>
   listAssets: () => Promise<AssetRow[]>
@@ -240,6 +310,14 @@ export interface DashboardReadRepository {
     transactionId: number,
     input: DashboardTransactionClassificationUpdateInput
   ) => Promise<DashboardTransactionRow | null>
+  listGoals: () => Promise<DashboardGoalRow[]>
+  getGoalById: (goalId: number) => Promise<DashboardGoalRow | null>
+  createGoal: (input: DashboardGoalPersistenceInput) => Promise<DashboardGoalRow>
+  updateGoal: (
+    goalId: number,
+    input: DashboardGoalPersistenceInput
+  ) => Promise<DashboardGoalRow | null>
+  archiveGoal: (goalId: number, archivedAt: Date) => Promise<DashboardGoalRow | null>
 }
 
 export interface DashboardUseCases {
@@ -253,6 +331,13 @@ export interface DashboardUseCases {
     transactionId: number,
     input: DashboardTransactionClassificationUpdateInput
   ) => Promise<DashboardTransactionsResponse['items'][number] | null>
+  getGoals: () => Promise<DashboardGoalsResponse>
+  createGoal: (input: DashboardGoalWriteInput) => Promise<DashboardGoalResponse>
+  updateGoal: (
+    goalId: number,
+    input: DashboardGoalWriteInput
+  ) => Promise<DashboardGoalResponse | null>
+  archiveGoal: (goalId: number) => Promise<DashboardGoalResponse | null>
 }
 
 export interface DashboardRouteRuntime {

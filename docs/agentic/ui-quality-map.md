@@ -5,6 +5,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 ## Primary UI Surfaces
 
 - Dashboard shell and major state handling: [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx)
+- Personal goals surface: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
 - Powens callback flow UI: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Shared UI exports: [../../packages/ui/src/components/index.ts](../../packages/ui/src/components/index.ts)
 
@@ -24,6 +25,8 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 ## Manual UI Checklist
 
 - Demo mode banner and disabled sensitive actions still read correctly.
+- Personal goals stays list-first on load, with the full editor only appearing in the drawer or modal state.
+- Personal goals covers loading, empty (`No goals yet`), recoverable error, offline hint, and success toast states without collapsing the surrounding dashboard hierarchy.
 - Admin mode still exposes Powens connect/sync affordances without layout regressions.
 - Ops overview should keep Powens callback observability compact: show freshness plus safe-mode state without exposing callback payload contents.
 - Empty and error states remain actionable and legible.
