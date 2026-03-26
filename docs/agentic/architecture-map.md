@@ -27,11 +27,12 @@ Start here when you need the shortest path to the right runtime entrypoint.
 
 ## Package Anchors
 
-- DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts), [../../packages/db/src/schema/assets.ts](../../packages/db/src/schema/assets.ts)
+- DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts), [../../packages/db/src/schema/assets.ts](../../packages/db/src/schema/assets.ts), [../../packages/db/src/schema/recurring-commitments.ts](../../packages/db/src/schema/recurring-commitments.ts)
   - raw provider import staging now lives beside the normalized Powens tables in the DB schema and is filled from the worker sync loop before/alongside business upserts
   - normalized business transactions keep stable read-model fields only; provider payload JSON now stays in `provider_raw_import` instead of the `transaction` table
   - unified financial accounts now live in the Powens schema with generic source/provider connection keys plus current Powens compatibility ids so worker upserts and dashboard reads can track accounts through their source connection
   - unified patrimoine-style assets live in the asset schema and are refreshed from worker cash-account syncs plus future manual/provider-specific writers
+  - recurring fixed charges and subscriptions now have a dedicated model with manual validation state plus transaction links in `recurring_commitment*` tables
 - Env parsing: [../../packages/env/src/index.ts](../../packages/env/src/index.ts)
 - Powens client and crypto: [../../packages/powens/src/client.ts](../../packages/powens/src/client.ts), [../../packages/powens/src/crypto.ts](../../packages/powens/src/crypto.ts)
 - Redis factory: [../../packages/redis/src/index.ts](../../packages/redis/src/index.ts)

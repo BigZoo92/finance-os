@@ -37,6 +37,10 @@ These contracts should not regress without deliberate repo-wide updates.
 - Encrypted token storage schema: [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts)
 - Token encryption format: [../../packages/powens/src/crypto.ts](../../packages/powens/src/crypto.ts)
 
+## Persistence Contracts
+
+- Recurring expense tracking persists fixed charges/subscriptions in [../../packages/db/src/schema/recurring-commitments.ts](../../packages/db/src/schema/recurring-commitments.ts) with explicit `validationStatus` (`suggested`, `validated`, `rejected`), estimated periodicity, last known amount, active flag, and transaction links for simple recurring-expense analytics.
+
 ## Manual Contract Checks
 
 - `GET /auth/me` should never 404 in prod or prod-like environments.
