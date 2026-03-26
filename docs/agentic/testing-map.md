@@ -17,6 +17,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
+  - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts)
 - Web auth and API client behavior:
   - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
@@ -61,6 +62,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm web:typecheck`
   - `pnpm web:test`
   - `pnpm web:build`
+  - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-legacy-adapter.test.ts` when dashboard compatibility mapping/fallback behavior changes
   - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts` when goals action logging or request-id propagation changed
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts` when the UI depends on a changed dashboard summary contract
 - Dashboard goals contract or persistence changes:
