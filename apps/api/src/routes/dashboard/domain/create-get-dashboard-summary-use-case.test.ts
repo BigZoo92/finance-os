@@ -265,4 +265,59 @@ describe('createGetDashboardSummaryUseCase', () => {
       ],
     })
   })
+
+  it('appends static manual assets outside provider to the summary totals', async () => {
+    const getSummary = createGetDashboardSummaryUseCase({
+      listAccountsWithConnections: async () => [],
+      listAssets: async () => [
+        {
+          assetId: 1,
+          assetType: 'cash',
+          origin: 'provider',
+          source: 'banking',
+          provider: 'powens',
+          providerConnectionId: 'conn-1',
+          providerInstitutionName: 'Bank 1',
+          powensConnectionId: 'conn-1',
+          powensAccountId: 'acc-1',
+          name: 'Compte courant',
+          currency: 'EUR',
+          valuation: '100.00',
+          valuationAsOf: new Date('2026-03-23T00:00:00.000Z'),
+          enabled: true,
+          metadata: null,
+        },
+      ],
+      listStaticManualAssets: async () => [
+        {
+          assetId: -1001,
+          assetType: 'manual',
+          origin: 'manual',
+          source: 'manual',
+          provider: null,
+          providerConnectionId: null,
+          providerInstitutionName: null,
+          powensConnectionId: null,
+          powensAccountId: null,
+          name: 'Residence principale',
+          currency: 'EUR',
+          valuation: '250000.00',
+          valuationAsOf: null,
+          enabled: true,
+          metadata: { note: 'Estimation statique hors provider' },
+        },
+      ],
+      listInvestmentPositions: async () => [],
+      getFlowTotals: async () => ({ income: '0', expenses: '0' }),
+      listDailyNetFlows: async () => [],
+      listTopExpenseGroups: async () => [],
+      now: () => new Date('2026-03-23T12:00:00.000Z'),
+    })
+
+    const summary = await getSummary('7d')
+
+    expect(summary.assets.map(asset => asset.assetId)).toEqual([1, -1001])
+    expect(summary.totals.balance).toBe(250100)
+  })
+
 })
