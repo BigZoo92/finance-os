@@ -48,6 +48,37 @@ Start here when you need the shortest path to the right runtime entrypoint.
 - Web route loaders prewarm Query and keep SSR auth-consistent. Feature modules own query keys and request functions.
 - Worker owns provider sync loops, raw provider import staging, locks, metrics, and a localhost-only system status surface; it should not become a second public API layer.
 
+## Naming Conventions
+
+- Keep runtime-oriented file names explicit and stable:
+  - `routes/*` for HTTP handlers
+  - `domain/*` for business orchestration
+  - `repositories/*` for persistence reads/writes
+  - `services/*` for provider or side-effect integrations
+  - `runtime.ts` for dependency wiring
+- Dashboard API modules should keep the `dashboard-*` prefix when they are feature-level building blocks shared across multiple route files.
+- Web TanStack Query helpers should keep `*-query-options.ts` naming so route loaders and components can discover shared query contracts quickly.
+- Adapter files that bridge legacy and new read models should keep an explicit `*-adapter.ts` suffix and expose migration intent in their diagnostics/event names.
+- Optional TypeScript properties must omit absent keys entirely (never assign `undefined`) to stay compatible with `exactOptionalPropertyTypes`.
+
+## Core Relations
+
+- `apps/web` is the only public entrypoint and proxies `/api/*` internally to `apps/api`; this is a strict runtime boundary and deployment assumption.
+- API auth derivation (`apps/api/src/auth/*`) gates all admin/provider behavior and drives the demo/admin split consumed by dashboard and Powens routes.
+- Dashboard read-model flow is:
+  1. API route modules under `routes/dashboard/routes/*`
+  2. domain logic under `routes/dashboard/domain/*`
+  3. repository aggregation under `routes/dashboard/repositories/*`
+  4. web query options under `apps/web/src/features/*query-options.ts`
+  5. final rendering in dashboard UI components.
+- Powens integration flow is:
+  1. API Powens runtime/routes under `apps/api/src/routes/integrations/powens/*`
+  2. shared client/crypto in `packages/powens`
+  3. worker sync orchestration in `apps/worker`
+  4. normalized + raw-import persistence in `packages/db` schema modules
+  5. dashboard consumers via API read repositories.
+- Observability joins all layers: request IDs originate at API/web edges, flow through route/domain/service boundaries, and are validated in deploy-time smoke/monitoring checks.
+
 ## First Reads By Change Type
 
 - Auth or session change: [../../apps/api/src/auth/routes.ts](../../apps/api/src/auth/routes.ts), [../../apps/api/src/auth/derive.ts](../../apps/api/src/auth/derive.ts), [../../apps/web/src/features/auth-ssr.ts](../../apps/web/src/features/auth-ssr.ts)
