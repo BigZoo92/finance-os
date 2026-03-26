@@ -40,6 +40,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm worker:typecheck`
   - `bun test apps/worker/src/raw-import.test.ts`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
+  - verify the raw/normalized/derived/manual boundary still holds (raw payloads stay in `provider_raw_import`; manual edits are not clobbered by sync normalization)
 - Dashboard asset-model, investment-position, or unified financial-account changes:
   - `pnpm api:typecheck`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
