@@ -73,6 +73,7 @@ Use this map to choose the smallest verification set that still matches the risk
 - DB, env, Powens, Redis, or prelude package changes:
   - `pnpm --filter <package> typecheck`
   - package-specific follow-up such as `pnpm db:generate` when schema changes
+  - for recurring commitment schema work, also run `pnpm --filter @finance-os/db typecheck` and document whether `pnpm db:generate` was blocked by local env setup
 - Full confidence pass:
   - `pnpm lint`
   - `pnpm typecheck`
