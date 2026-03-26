@@ -17,7 +17,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
-  - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts)
+  - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts) (covers incremental migration staging: `new-model-ready`, `mixed-fallback`, `legacy-fallback`, `contract-divergence`)
 - Web auth and API client behavior:
   - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
   - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
