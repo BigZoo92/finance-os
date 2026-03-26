@@ -7,6 +7,11 @@ Scope: `apps/worker/**`
 - [src/index.ts](src/index.ts) is the worker entrypoint and operational contract. Keep connection-level failure isolation, Redis locks, idempotent upserts, and metric updates intact.
 - Treat worker code as provider-facing and secret-sensitive. Never log Powens codes, tokens, decrypted access tokens, or raw provider payloads.
 - Keep provider cash account upserts and unified asset upserts in sync so dashboard patrimoine reads do not drift from normalized banking data.
+- Preserve the data-layer boundary for sync pipelines:
+  - `raw`: provider payload snapshots are staged in `provider_raw_import` only.
+  - `normalized`: read-model-safe business fields are persisted in first-class tables (`bank_account`, `transaction`, unified assets, recurring commitments).
+  - `derived`: worker-derived helpers (label/category/merchant/object timestamps) must be deterministic and recomputable from raw payloads.
+  - `manual`: user-authored edits stay authoritative in manual/domain tables and must not be overwritten by provider normalization runs.
 - Preserve the current safety model:
   - per-connection Redis lock
   - reconnect-required handling on auth failures
