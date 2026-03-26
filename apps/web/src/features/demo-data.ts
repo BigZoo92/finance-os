@@ -473,12 +473,60 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
   },
 ]
 
+const CURSOR_PATTERN = /^(\d{4}-\d{2}-\d{2})\|(\d+)$/
+
 const normalizePaginationNumber = (value: number, fallback: number) => {
   if (!Number.isFinite(value) || value <= 0) {
     return fallback
   }
 
   return Math.floor(value)
+}
+
+const decodeDashboardCursor = (value: string | undefined) => {
+  if (!value) {
+    return null
+  }
+
+  const match = CURSOR_PATTERN.exec(value)
+  if (!match) {
+    return null
+  }
+
+  const [, bookingDate, rawId] = match
+  if (!bookingDate || !rawId) {
+    return null
+  }
+
+  const id = Number(rawId)
+  if (!Number.isInteger(id) || id <= 0) {
+    return null
+  }
+
+  return {
+    bookingDate,
+    id,
+  }
+}
+
+const encodeDashboardCursor = (cursor: { bookingDate: string; id: number }) => {
+  return `${cursor.bookingDate}|${cursor.id}`
+}
+
+const isBeforeCursor = (params: {
+  bookingDate: string
+  id: number
+  cursor: { bookingDate: string; id: number }
+}) => {
+  if (params.bookingDate < params.cursor.bookingDate) {
+    return true
+  }
+
+  if (params.bookingDate > params.cursor.bookingDate) {
+    return false
+  }
+
+  return params.id < params.cursor.id
 }
 
 export const getDemoDashboardTransactions = ({
@@ -491,16 +539,33 @@ export const getDemoDashboardTransactions = ({
   cursor?: string
 }): DashboardTransactionsResponse => {
   const normalizedLimit = normalizePaginationNumber(limit, 30)
-  const parsedCursor = cursor ? Number.parseInt(cursor, 10) : 0
-  const startIndex = Number.isFinite(parsedCursor) && parsedCursor >= 0 ? parsedCursor : 0
-  const endIndex = startIndex + normalizedLimit
-  const items = DEMO_TRANSACTIONS.slice(startIndex, endIndex)
-  const nextCursor = endIndex < DEMO_TRANSACTIONS.length ? String(endIndex) : null
+  const decodedCursor = decodeDashboardCursor(cursor)
+
+  const visible = decodedCursor
+    ? DEMO_TRANSACTIONS.filter(item =>
+        isBeforeCursor({
+          bookingDate: item.bookingDate,
+          id: item.id,
+          cursor: decodedCursor,
+        })
+      )
+    : DEMO_TRANSACTIONS
+
+  const rows = visible.slice(0, normalizedLimit + 1)
+  const hasNextPage = rows.length > normalizedLimit
+  const items = hasNextPage ? rows.slice(0, normalizedLimit) : rows
+  const tail = items[items.length - 1]
 
   return {
     range,
     limit: normalizedLimit,
-    nextCursor,
+    nextCursor:
+      hasNextPage && tail
+        ? encodeDashboardCursor({
+            bookingDate: tail.bookingDate,
+            id: tail.id,
+          })
+        : null,
     items,
   }
 }
