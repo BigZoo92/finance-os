@@ -19,7 +19,19 @@ export interface LegacyDashboardAdapterResult {
   positions: DashboardSummaryResponse['positions']
   dailyWealthSnapshots: DashboardSummaryResponse['dailyWealthSnapshots']
   topExpenseGroups: DashboardSummaryResponse['topExpenseGroups']
+  migration: {
+    stage: DashboardMigrationStage
+    fallbackFieldCount: number
+    fallbackFields: string[]
+    hasDivergence: boolean
+  }
 }
+
+export type DashboardMigrationStage =
+  | 'new-model-ready'
+  | 'mixed-fallback'
+  | 'legacy-fallback'
+  | 'contract-divergence'
 
 interface AdapterDiagnostics {
   fallbackFields: string[]
@@ -30,6 +42,32 @@ const createDiagnostics = (): AdapterDiagnostics => ({
   fallbackFields: [],
   divergences: [],
 })
+
+const allSupportedFallbackFields = [
+  'totals',
+  'connections',
+  'accounts',
+  'assets',
+  'positions',
+  'dailyWealthSnapshots',
+  'topExpenseGroups',
+] as const
+
+const getMigrationStage = (diagnostics: AdapterDiagnostics): DashboardMigrationStage => {
+  if (diagnostics.divergences.length > 0) {
+    return 'contract-divergence'
+  }
+
+  if (diagnostics.fallbackFields.length === 0) {
+    return 'new-model-ready'
+  }
+
+  if (diagnostics.fallbackFields.length === allSupportedFallbackFields.length) {
+    return 'legacy-fallback'
+  }
+
+  return 'mixed-fallback'
+}
 
 const toArrayWithFallback = <T>(value: T[] | undefined, field: string, diagnostics: AdapterDiagnostics) => {
   if (Array.isArray(value)) {
@@ -113,6 +151,12 @@ export const adaptDashboardSummaryLegacy = ({
       diagnostics
     ),
     topExpenseGroups: toArrayWithFallback(summary?.topExpenseGroups, 'topExpenseGroups', diagnostics),
+    migration: {
+      stage: getMigrationStage(diagnostics),
+      fallbackFieldCount: diagnostics.fallbackFields.length,
+      fallbackFields: [...diagnostics.fallbackFields],
+      hasDivergence: diagnostics.divergences.length > 0,
+    },
   }
 
   logDashboardAdapterEvent({
