@@ -165,6 +165,59 @@ export interface DashboardGoalPersistenceInput {
   updatedAt: Date
 }
 
+export interface DashboardDerivedRecomputeRowCounts {
+  rawTransactionCount: number
+  transactionMatchedCount: number
+  transactionUpdatedCount: number
+  transactionUnchangedCount: number
+  transactionSkippedCount: number
+  rawImportTimestampUpdatedCount: number
+  snapshotRowCount: number
+}
+
+export interface DashboardDerivedRecomputeRunRow {
+  id: number
+  snapshotVersion: string
+  status: 'running' | 'completed' | 'failed'
+  triggerSource: 'admin' | 'internal'
+  requestId: string
+  stage: string | null
+  rowCounts: DashboardDerivedRecomputeRowCounts | null
+  safeErrorCode: string | null
+  safeErrorMessage: string | null
+  isCurrentSnapshot: boolean
+  startedAt: Date
+  finishedAt: Date | null
+  durationMs: number | null
+}
+
+export interface DashboardDerivedSnapshotResponse {
+  snapshotVersion: string
+  finishedAt: string
+  rowCounts: DashboardDerivedRecomputeRowCounts | null
+}
+
+export interface DashboardDerivedRecomputeRunResponse {
+  snapshotVersion: string
+  status: 'running' | 'completed' | 'failed'
+  triggerSource: 'admin' | 'internal'
+  requestId: string
+  stage: string | null
+  rowCounts: DashboardDerivedRecomputeRowCounts | null
+  safeErrorCode: string | null
+  safeErrorMessage: string | null
+  startedAt: string
+  finishedAt: string | null
+  durationMs: number | null
+}
+
+export interface DashboardDerivedRecomputeStatusResponse {
+  featureEnabled: boolean
+  state: 'idle' | 'running' | 'completed' | 'failed'
+  latestRun: DashboardDerivedRecomputeRunResponse | null
+  currentSnapshot: DashboardDerivedSnapshotResponse | null
+}
+
 export interface DashboardSummaryResponse {
   range: DashboardRange
   totals: {
@@ -320,6 +373,39 @@ export interface DashboardReadRepository {
   archiveGoal: (goalId: number, archivedAt: Date) => Promise<DashboardGoalRow | null>
 }
 
+export interface DashboardDerivedRecomputeRepository {
+  getLatestRun: () => Promise<DashboardDerivedRecomputeRunRow | null>
+  getCurrentSnapshotRun: () => Promise<DashboardDerivedRecomputeRunRow | null>
+  createRun: (input: {
+    snapshotVersion: string
+    triggerSource: 'admin' | 'internal'
+    requestId: string
+    stage: string
+    startedAt: Date
+  }) => Promise<DashboardDerivedRecomputeRunRow>
+  updateRunProgress: (input: {
+    runId: number
+    stage: string
+    rowCounts?: DashboardDerivedRecomputeRowCounts
+  }) => Promise<void>
+  markRunFailed: (input: {
+    runId: number
+    stage: string
+    rowCounts?: DashboardDerivedRecomputeRowCounts
+    safeErrorCode: string
+    safeErrorMessage: string
+    finishedAt: Date
+    durationMs: number
+  }) => Promise<void>
+  acquireRunLock: () => Promise<boolean>
+  releaseRunLock: () => Promise<void>
+  recomputeFromSourceOfTruth: (input: { runId: number; startedAt: Date }) => Promise<{
+    rowCounts: DashboardDerivedRecomputeRowCounts
+    finishedAt: Date
+    durationMs: number
+  }>
+}
+
 export interface DashboardUseCases {
   getSummary: (range: DashboardRange) => Promise<DashboardSummaryResponse>
   getTransactions: (input: {
@@ -338,11 +424,17 @@ export interface DashboardUseCases {
     input: DashboardGoalWriteInput
   ) => Promise<DashboardGoalResponse | null>
   archiveGoal: (goalId: number) => Promise<DashboardGoalResponse | null>
+  getDerivedRecomputeStatus: () => Promise<DashboardDerivedRecomputeStatusResponse>
+  runDerivedRecompute: (input: {
+    requestId: string
+    triggerSource: 'admin' | 'internal'
+  }) => Promise<DashboardDerivedRecomputeStatusResponse>
 }
 
 export interface DashboardRouteRuntime {
   repositories: {
     readModel: DashboardReadRepository
+    derivedRecompute: DashboardDerivedRecomputeRepository
   }
   useCases: DashboardUseCases
 }

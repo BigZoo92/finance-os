@@ -8,6 +8,7 @@ Scope: `apps/web/**`
 - Keep auth SSR-consistent: prefetch `/auth/me`, avoid demo-to-admin flashes, and fall back to demo instead of crashing SSR when auth is unavailable.
 - Keep server state in Query options under `src/features/**`; do not mirror server state into local component state.
 - Keep dashboard goals in [src/features/goals/query-options.ts](src/features/goals/query-options.ts) and route admin writes through the feature API helpers so `x-request-id`, safe error normalization, and admin gating stay consistent.
+- Keep dashboard derived recompute status and trigger behavior in the shared dashboard feature helpers so admin gating, retry-safe errors, and demo mocks stay consistent with the API contract.
 - Keep dashboard filters in URL search params. Do not introduce duplicate local filter state for route-owned data.
 - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.
 - Read non-sensitive web runtime config through [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) so SSR can inject safe `VITE_*` values at runtime without exposing secrets or hard-freezing them at build time.

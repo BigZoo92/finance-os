@@ -142,7 +142,11 @@ const base64ValuePattern = /^[A-Za-z0-9+/]+={0,2}$/
 
 const decodeBase64Utf8Strict = (value: string): string | null => {
   const normalized = value.trim()
-  if (normalized.length === 0 || normalized.length % 4 !== 0 || !base64ValuePattern.test(normalized)) {
+  if (
+    normalized.length === 0 ||
+    normalized.length % 4 !== 0 ||
+    !base64ValuePattern.test(normalized)
+  ) {
     return null
   }
 
@@ -378,6 +382,10 @@ export const getApiEnv = () => {
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
+    DERIVED_RECOMPUTE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
     AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
     AUTH_ADMIN_PASSWORD_HASH_B64: z.string().optional(),

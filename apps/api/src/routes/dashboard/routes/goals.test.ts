@@ -34,6 +34,7 @@ const createDashboardRuntime = (
   return {
     repositories: {
       readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
+      derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
     },
     useCases: {
       getSummary: async () => {
@@ -54,6 +55,18 @@ const createDashboardRuntime = (
         ...baseGoal,
         archivedAt: '2026-03-25T10:30:00.000Z',
         updatedAt: '2026-03-25T10:30:00.000Z',
+      }),
+      getDerivedRecomputeStatus: async () => ({
+        featureEnabled: true,
+        state: 'idle',
+        latestRun: null,
+        currentSnapshot: null,
+      }),
+      runDerivedRecompute: async () => ({
+        featureEnabled: true,
+        state: 'idle',
+        latestRun: null,
+        currentSnapshot: null,
       }),
       ...overrides,
     },

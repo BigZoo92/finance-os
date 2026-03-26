@@ -1,66 +1,87 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiRequestError } from "@/lib/api";
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiRequestError } from '@/lib/api'
 
-const apiFetchMock = vi.fn();
+const apiRequestMock = vi.fn()
+const apiFetchMock = vi.fn()
 
-vi.mock("@/lib/api", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+vi.mock('@/lib/api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api')
 
   return {
     ...actual,
+    apiRequest: (...args: Parameters<typeof actual.apiRequest>) => apiRequestMock(...args),
     apiFetch: (...args: Parameters<typeof actual.apiFetch>) => apiFetchMock(...args),
-  };
-});
+  }
+})
 
 import {
-  fetchDashboardSummary,
-  fetchDashboardTransactions,
-} from "./dashboard-api";
-import {
-  getDemoDashboardSummary,
-  getDemoDashboardTransactions,
-} from "./demo-data";
+  normalizeDashboardDerivedRecomputeActionError,
+  postDashboardDerivedRecompute,
+} from './dashboard-api'
+import { getDemoDashboardDerivedRecomputeStatus } from './demo-data'
+import { dashboardDerivedRecomputeStatusQueryOptionsWithMode } from './dashboard-query-options'
 
-describe("dashboard API fallbacks", () => {
+describe('dashboard derived recompute API', () => {
   beforeEach(() => {
-    apiFetchMock.mockReset();
-  });
+    apiRequestMock.mockReset()
+    apiFetchMock.mockReset()
+  })
 
-  it("returns deterministic demo summary when the dashboard summary call hits a provider outage", async () => {
-    apiFetchMock.mockRejectedValue(
+  it('propagates a generated x-request-id on recompute actions', async () => {
+    apiRequestMock.mockResolvedValue({
+      ok: true,
+      data: getDemoDashboardDerivedRecomputeStatus(),
+      response: new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'x-request-id': 'derived-recompute-server-id',
+        },
+      }),
+      url: 'http://api:3001/dashboard/derived-recompute',
+    })
+
+    await postDashboardDerivedRecompute()
+
+    expect(apiRequestMock).toHaveBeenCalledTimes(1)
+    expect(apiRequestMock.mock.calls[0]?.[0]).toBe('/dashboard/derived-recompute')
+
+    const init = apiRequestMock.mock.calls[0]?.[1] as RequestInit
+    const headers = new Headers(init.headers)
+
+    expect(init.method).toBe('POST')
+    expect(headers.get('x-request-id')).toMatch(/^derived-recompute-/)
+  })
+
+  it('normalizes retryable safe errors for recompute failures', () => {
+    const normalized = normalizeDashboardDerivedRecomputeActionError(
       new ApiRequestError({
-        message: "Powens upstream unavailable",
-        status: 503,
-        url: "http://api:3001/dashboard/summary?range=30d",
-        path: "/dashboard/summary?range=30d",
-      }),
-    );
+        message: 'Derived recompute failed. Snapshot remains unchanged.',
+        status: 500,
+        code: 'DERIVED_RECOMPUTE_FAILED',
+        url: 'http://api:3001/dashboard/derived-recompute',
+        path: '/dashboard/derived-recompute',
+        requestId: 'req-derived-web-err',
+      })
+    )
 
-    await expect(fetchDashboardSummary("30d")).resolves.toEqual(
-      getDemoDashboardSummary("30d"),
-    );
-  });
+    expect(normalized).toEqual({
+      message: 'Derived recompute failed. Snapshot remains unchanged.',
+      code: 'DERIVED_RECOMPUTE_FAILED',
+      requestId: 'req-derived-web-err',
+      retryable: true,
+      offline: false,
+    })
+  })
 
-  it("returns deterministic demo transactions when the dashboard transactions call fails over the network", async () => {
-    apiFetchMock.mockRejectedValue(
-      new ApiRequestError({
-        message: "connect ECONNREFUSED",
-        status: "network_error",
-        url: "http://api:3001/dashboard/transactions?range=30d&limit=30",
-        path: "/dashboard/transactions?range=30d&limit=30",
-      }),
-    );
+  it('skips the recompute status API call entirely in demo mode', () => {
+    const queryOptions = dashboardDerivedRecomputeStatusQueryOptionsWithMode({
+      mode: 'demo',
+    })
+    const queryFn = queryOptions.queryFn as () => ReturnType<
+      typeof getDemoDashboardDerivedRecomputeStatus
+    >
 
-    await expect(
-      fetchDashboardTransactions({
-        range: "30d",
-        limit: 30,
-      }),
-    ).resolves.toEqual(
-      getDemoDashboardTransactions({
-        range: "30d",
-        limit: 30,
-      }),
-    );
-  });
-});
+    expect(queryFn()).toEqual(getDemoDashboardDerivedRecomputeStatus())
+    expect(apiFetchMock).not.toHaveBeenCalled()
+  })
+})
