@@ -16,6 +16,7 @@ import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { patchTransactionClassification } from '@/features/dashboard-api'
+import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import {
   dashboardQueryKeys,
   dashboardSummaryQueryOptionsWithMode,
@@ -428,6 +429,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   })
 
   const summary = summaryQuery.data
+  const adaptedSummary = adaptDashboardSummaryLegacy({
+    range,
+    summary,
+    ...(authMode ? { mode: authMode } : {}),
+  })
   const statusConnections = statusQuery.data?.connections ?? []
   const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false
   const isIntegrationsSafeModeFallback = statusQuery.data?.fallback === 'safe_mode'
@@ -486,7 +492,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const auditEvents = auditTrailQuery.data?.events ?? []
   const latestCallback = statusQuery.data?.lastCallback ?? null
   const latestCallbackFreshness = formatRelativeDateTime(latestCallback?.receivedAt ?? null)
-  const positions = summary?.positions ?? []
+  const positions = adaptedSummary.positions
   const positionsByAssetId = positions.reduce<Map<number, DashboardSummaryResponse['positions']>>(
     (acc, position) => {
       if (position.assetId === null) {
@@ -501,7 +507,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     new Map()
   )
   const connectionBalanceById = new Map(
-    (summary?.connections ?? []).map(connection => [
+    adaptedSummary.connections.map(connection => [
       connection.powensConnectionId,
       connection.balance,
     ])
@@ -758,16 +764,18 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               ) : null}
               {summary ? (
                 <>
-                  <p className="text-3xl font-semibold">{formatMoney(summary.totals.balance)}</p>
+                  <p className="text-3xl font-semibold">
+                    {formatMoney(adaptedSummary.totals.balance)}
+                  </p>
                   <Separator />
                   <div className="space-y-1 text-sm">
                     <p className="flex items-center justify-between">
                       <span>Income ({range})</span>
-                      <span>{formatMoney(summary.totals.incomes)}</span>
+                      <span>{formatMoney(adaptedSummary.totals.incomes)}</span>
                     </p>
                     <p className="flex items-center justify-between">
                       <span>Expenses ({range})</span>
-                      <span>{formatMoney(summary.totals.expenses)}</span>
+                      <span>{formatMoney(adaptedSummary.totals.expenses)}</span>
                     </p>
                   </div>
                 </>
@@ -777,7 +785,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
           <WealthHistory
             range={range}
-            snapshots={summary?.dailyWealthSnapshots ?? []}
+            snapshots={adaptedSummary.dailyWealthSnapshots}
             demo={isDemo}
           />
 
@@ -790,8 +798,8 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               <CardDescription>Top 5 groups in the selected range.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {summary?.topExpenseGroups.length ? (
-                summary.topExpenseGroups.map(group => (
+              {adaptedSummary.topExpenseGroups.length ? (
+                adaptedSummary.topExpenseGroups.map(group => (
                   <div
                     key={`${group.category}-${group.merchant}`}
                     className="flex items-center justify-between"
@@ -1008,8 +1016,8 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               <CardDescription>Fortuneo/Revolut totals from local DB.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {summary?.connections.length ? (
-                summary.connections.map(connection => (
+              {adaptedSummary.connections.length ? (
+                adaptedSummary.connections.map(connection => (
                   <div
                     key={connection.powensConnectionId}
                     className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
@@ -1043,8 +1051,8 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {summary?.assets.length ? (
-                summary.assets.map(asset => {
+              {adaptedSummary.assets.length ? (
+                adaptedSummary.assets.map(asset => {
                   const assetPositions = positionsByAssetId.get(asset.assetId) ?? []
 
                   return (
