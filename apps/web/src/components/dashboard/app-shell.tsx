@@ -73,6 +73,16 @@ const STATUS_VARIANT: Record<
   reconnect_required: 'destructive',
 }
 
+const SYNC_RUN_STATUS_VARIANT: Record<
+  'running' | 'success' | 'error' | 'reconnect_required',
+  'secondary' | 'outline' | 'destructive'
+> = {
+  running: 'outline',
+  success: 'secondary',
+  error: 'destructive',
+  reconnect_required: 'destructive',
+}
+
 const toErrorMessage = (value: unknown) => {
   if (value instanceof Error) {
     return value.message
@@ -1407,44 +1417,46 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                       {(() => {
                         const connectionRuns =
                           syncRunsByConnectionId.get(connection.powensConnectionId) ?? []
-                        const latestRun = connectionRuns[0]
-
-                        if (!latestRun) {
-                          return <p>Run history: aucun run recent sur cette connexion.</p>
+                        if (!connectionRuns.length) {
+                          return <p>Timeline sync: aucun run recent sur cette connexion.</p>
                         }
 
                         return (
-                          <div className="space-y-1">
-                            <p>
-                              Latest run: {latestRun.result} · started{' '}
-                              {formatDateTime(latestRun.startedAt)}
-                              {latestRun.endedAt
-                                ? ` · ended ${formatDateTime(latestRun.endedAt)}`
-                                : ' · still running'}
-                              {formatDuration(latestRun.startedAt, latestRun.endedAt)
-                                ? ` · duration ${formatDuration(latestRun.startedAt, latestRun.endedAt)}`
-                                : ''}
-                            </p>
-                            {latestRun.requestId ? (
-                              <p>Latest request ID: {latestRun.requestId}</p>
-                            ) : null}
-                            {latestRun.errorFingerprint ? (
-                              <p>Fingerprint: {latestRun.errorFingerprint}</p>
-                            ) : null}
-                            {latestRun.errorMessage ? (
-                              <p className="text-destructive">
-                                Latest error: {latestRun.errorMessage}
-                              </p>
-                            ) : null}
-                            {connectionRuns.length > 1 ? (
-                              <p>
-                                Previous runs:{' '}
-                                {connectionRuns
-                                  .slice(1, 4)
-                                  .map(run => run.result)
-                                  .join(' → ')}
-                              </p>
-                            ) : null}
+                          <div className="space-y-2">
+                            <p className="font-medium text-foreground">Timeline sync recente</p>
+                            <ol className="space-y-2">
+                              {connectionRuns.slice(0, 5).map(run => (
+                                <li
+                                  key={run.id}
+                                  className="rounded border border-border/60 bg-background/70 p-2"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <Badge variant={SYNC_RUN_STATUS_VARIANT[run.result]}>
+                                      {run.result}
+                                    </Badge>
+                                    <span className="text-[11px]">
+                                      Debut: {formatDateTime(run.startedAt)}
+                                    </span>
+                                  </div>
+                                  <p>
+                                    Fin:{' '}
+                                    {run.endedAt
+                                      ? formatDateTime(run.endedAt)
+                                      : 'Encore en cours'}
+                                    {formatDuration(run.startedAt, run.endedAt)
+                                      ? ` · Duree ${formatDuration(run.startedAt, run.endedAt)}`
+                                      : ''}
+                                  </p>
+                                  {run.requestId ? <p>Request: {run.requestId}</p> : null}
+                                  {run.errorFingerprint ? (
+                                    <p>Fingerprint: {run.errorFingerprint}</p>
+                                  ) : null}
+                                  {run.errorMessage ? (
+                                    <p className="text-destructive">Erreur: {run.errorMessage}</p>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ol>
                           </div>
                         )
                       })()}
