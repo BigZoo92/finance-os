@@ -56,6 +56,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           accountName: schema.financialAccount.name,
           accountCurrency: schema.financialAccount.currency,
           accountType: schema.financialAccount.type,
+          accountMetadata: schema.financialAccount.metadata,
           enabled: schema.financialAccount.enabled,
           accountBalance: schema.financialAccount.balance,
           connectionStatus: schema.powensConnection.status,

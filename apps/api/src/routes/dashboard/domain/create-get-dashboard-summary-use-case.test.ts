@@ -16,6 +16,10 @@ describe('createGetDashboardSummaryUseCase', () => {
           accountName: 'Main account',
           accountCurrency: 'EUR',
           accountType: 'checking',
+          accountMetadata: {
+            ownership: 'owner',
+            usage: 'PRIV',
+          },
           enabled: true,
           accountBalance: '42.50',
           connectionStatus: 'connected',
@@ -152,6 +156,10 @@ describe('createGetDashboardSummaryUseCase', () => {
           name: 'Main account',
           currency: 'EUR',
           type: 'checking',
+          metadata: {
+            ownership: 'owner',
+            usage: 'PRIV',
+          },
           enabled: true,
           balance: 42.5,
         },

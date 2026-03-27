@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import {
   derivePowensAccountBalance,
+  derivePowensAccountMetadata,
   derivePowensTransactionCategory,
   derivePowensTransactionFields,
   derivePowensTransactionLabel,
@@ -124,6 +125,7 @@ export const buildProviderRawImportRow = (params: {
 }
 
 export const deriveAccountBalance = derivePowensAccountBalance
+export const deriveAccountMetadata = derivePowensAccountMetadata
 export const deriveTransactionCategory = derivePowensTransactionCategory
 export const deriveTransactionLabel = derivePowensTransactionLabel
 export const deriveTransactionMerchant = derivePowensTransactionMerchant

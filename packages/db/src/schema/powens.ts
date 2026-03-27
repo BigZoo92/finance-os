@@ -83,6 +83,7 @@ export const financialAccount = pgTable(
     type: text('type'),
     enabled: boolean('enabled').notNull().default(true),
     balance: numeric('balance', { precision: 18, scale: 2 }),
+    metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
     raw: jsonb('raw'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

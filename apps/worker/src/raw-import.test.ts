@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import {
   buildProviderRawImportRow,
   deriveAccountBalance,
+  deriveAccountMetadata,
   deriveTransactionCategory,
   deriveTransactionLabel,
   deriveTransactionMerchant,
@@ -56,6 +57,21 @@ describe('raw import helpers', () => {
       })
     ).toBe('123.45')
     expect(
+      deriveAccountMetadata({
+        number: ' 1234 ',
+        ownership: 'owner',
+        usage: 'PRIV',
+        owner_name: ' Jane Doe ',
+        original_name: 'Compte courant',
+      })
+    ).toEqual({
+      accountNumber: '1234',
+      ownership: 'owner',
+      usage: 'PRIV',
+      ownerName: 'Jane Doe',
+      originalName: 'Compte courant',
+    })
+    expect(
       deriveTransactionCategory({
         category_name: 'Food',
       })
@@ -83,5 +99,6 @@ describe('raw import helpers', () => {
   it('falls back to canonical defaults when label and merchant cannot be normalized', () => {
     expect(deriveTransactionLabel({ raw: ' \n\t ' })).toBe('Transaction')
     expect(deriveTransactionMerchant({}, 'Fallback label')).toBe('Fallback label')
+    expect(deriveAccountMetadata({})).toBeNull()
   })
 })
