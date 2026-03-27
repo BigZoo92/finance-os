@@ -192,6 +192,14 @@ const dedupeReasons = (reasons: DashboardHealthReasonCode[]) => {
   return [...new Set(reasons)]
 }
 
+const hasTransactionGapSignal = (value: Record<string, unknown> | null | undefined) => {
+  if (!value) {
+    return false
+  }
+
+  return value.transactionGapDetected === true
+}
+
 const describeReasons = (reasons: DashboardHealthReasonCode[]) => {
   return dedupeReasons(reasons)
     .map(reason => REASON_DETAIL[reason])
@@ -345,7 +353,8 @@ const getSyncDomainReasons = ({
     syncingCount > 0 ||
     latestRun?.result === 'running' ||
     latestRun?.result === 'error' ||
-    latestRun?.result === 'reconnect_required'
+    latestRun?.result === 'reconnect_required' ||
+    connections.some(connection => hasTransactionGapSignal(connection.syncMetadata))
   ) {
     reasons.push('PARTIAL_IMPORT')
   }
