@@ -32,6 +32,7 @@ import {
   resolvePersistedSyncSnapshot,
 } from './sync-status-persistence'
 import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
+import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
 import { detectSyncIntegrityIssues } from './sync-integrity-checks'
 import { detectTransactionGaps } from './transaction-gap-detection'
 
@@ -438,14 +439,17 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
 
   const now = new Date()
 
-  const values = accounts
+  const normalizedAccounts = accounts
     .map(account => {
       const accountId = toStringValue(account.id)
       if (!accountId) {
         return null
       }
 
+      const parsedAccountType = parseAccountType(account.type)
+
       return {
+        assetType: resolveAssetTypeFromPowensAccountType(account.type),
         source: 'banking',
         provider: 'powens',
         providerConnectionId: connectionId,
@@ -455,7 +459,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
         name: safeString(account.name, `Compte ${accountId}`),
         iban: typeof account.iban === 'string' && account.iban.length > 0 ? account.iban : null,
         currency: parseCurrency(account.currency, 'EUR'),
-        type: parseAccountType(account.type),
+        type: parsedAccountType,
         enabled: parseEnabledFlag(account.disabled),
         balance: deriveAccountBalance(account),
         metadata: deriveAccountMetadata(account),
@@ -465,13 +469,31 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
     })
     .filter(value => value !== null)
 
-  if (values.length === 0) {
+  if (normalizedAccounts.length === 0) {
     return []
   }
 
+  const accountValues = normalizedAccounts.map(account => ({
+    source: account.source,
+    provider: account.provider,
+    providerConnectionId: account.providerConnectionId,
+    providerAccountId: account.providerAccountId,
+    powensAccountId: account.powensAccountId,
+    powensConnectionId: account.powensConnectionId,
+    name: account.name,
+    iban: account.iban,
+    currency: account.currency,
+    type: account.type,
+    enabled: account.enabled,
+    balance: account.balance,
+    metadata: account.metadata,
+    raw: account.raw,
+    updatedAt: account.updatedAt,
+  }))
+
   await dbClient.db
     .insert(schema.financialAccount)
-    .values(values)
+    .values(accountValues)
     .onConflictDoUpdate({
       target: schema.financialAccount.powensAccountId,
       set: {
@@ -495,8 +517,8 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
   await dbClient.db
     .insert(schema.asset)
     .values(
-      values.map(account => ({
-        assetType: 'cash' as const,
+      normalizedAccounts.map(account => ({
+        assetType: account.assetType,
         origin: 'provider' as const,
         source: 'banking',
         provider: 'powens',
@@ -533,7 +555,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
       },
     })
 
-  return values
+  return accountValues
 }
 
 type TransactionInsert = typeof schema.transaction.$inferInsert
