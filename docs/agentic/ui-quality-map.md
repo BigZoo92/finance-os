@@ -32,3 +32,4 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Empty and error states remain actionable and legible.
 - Tables, cards, and buttons stay keyboard accessible.
 - Mobile and desktop layouts still load without overflow surprises.
+- When the Powens sync cooldown UI guard is enabled, the dashboard should clearly show `Idle -> Syncing -> Cooldown -> Ready`, keep blocked reason text explicit, and still honor demo/admin gating plus the runtime kill-switch.

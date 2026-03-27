@@ -129,6 +129,8 @@ API_INTERNAL_URL=http://finance-os-api:3001
 VITE_API_BASE_URL=/api
 VITE_APP_ORIGIN=https://finance-os.enzogivernaud.fr
 VITE_APP_TITLE=finance-os
+VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=true
+VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
 
 DATABASE_URL=postgresql://finance_os:<PASSWORD>@postgres:5432/finance_os
 REDIS_URL=redis://redis:6379
@@ -170,7 +172,7 @@ ALERTS_DISK_PATHS=/mnt/postgres,/mnt/redis
 
 POWENS_CLIENT_ID=<powens-client-id>
 
-Les variables web non sensibles `VITE_APP_TITLE`, `VITE_APP_ORIGIN` et `VITE_API_BASE_URL` sont maintenant consommees via l'injection SSR de `apps/web/src/lib/public-runtime-env.ts`. Elles restent donc **runtime-safe** pour le conteneur web (override Dokploy / env du conteneur sans rebuild), mais seules ces cles publiques et non sensibles doivent suivre ce chemin.
+Les variables web non sensibles `VITE_APP_TITLE`, `VITE_APP_ORIGIN`, `VITE_API_BASE_URL`, `VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED` et `VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS` sont maintenant consommees via l'injection SSR de `apps/web/src/lib/public-runtime-env.ts`. Elles restent donc **runtime-safe** pour le conteneur web (override Dokploy / env du conteneur sans rebuild), mais seules ces cles publiques et non sensibles doivent suivre ce chemin.
 POWENS_CLIENT_SECRET=<powens-client-secret>
 POWENS_BASE_URL=https://<tenant>.biapi.pro
 POWENS_DOMAIN=<powens-domain>
@@ -213,6 +215,8 @@ PNPM_VERSION=10.15.0
 API_INTERNAL_URL=http://finance-os-api:3001
 VITE_API_BASE_URL=/api
 VITE_APP_TITLE=finance-os
+VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=true
+VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
 ```
 
 `GHCR_IMAGE_NAME` est obligatoire.

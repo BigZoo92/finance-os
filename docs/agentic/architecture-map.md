@@ -16,6 +16,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
   - SSR API client: [../../apps/web/src/lib/api.ts](../../apps/web/src/lib/api.ts)
   - safe public runtime config bridge: [../../apps/web/src/lib/public-runtime-env.ts](../../apps/web/src/lib/public-runtime-env.ts)
   - dashboard shell: [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx)
+  - Powens manual sync UI cooldown guard: [../../apps/web/src/features/powens/manual-sync-cooldown.ts](../../apps/web/src/features/powens/manual-sync-cooldown.ts)
   - dashboard shared query state and admin actions: [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/features/dashboard-api.ts](../../apps/web/src/features/dashboard-api.ts)
   - temporary legacy dashboard adapter (now emits `migration.stage` diagnostics to support incremental rollout decisions): [../../apps/web/src/features/dashboard-legacy-adapter.ts](../../apps/web/src/features/dashboard-legacy-adapter.ts)
   - financial goals card: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)

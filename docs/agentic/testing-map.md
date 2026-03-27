@@ -25,6 +25,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
   - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
   - [../../apps/web/src/features/dashboard-api.test.ts](../../apps/web/src/features/dashboard-api.test.ts)
+  - [../../apps/web/src/features/powens/manual-sync-cooldown.test.ts](../../apps/web/src/features/powens/manual-sync-cooldown.test.ts)
   - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
   - [../../apps/web/src/features/goals/api.test.ts](../../apps/web/src/features/goals/api.test.ts)
 - Worker import normalization:
