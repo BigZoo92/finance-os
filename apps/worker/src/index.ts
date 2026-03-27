@@ -31,6 +31,7 @@ import {
   resolvePersistedSyncSnapshot,
 } from './sync-status-persistence'
 import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
+import { detectSyncIntegrityIssues } from './sync-integrity-checks'
 import { detectTransactionGaps } from './transaction-gap-detection'
 
 const dbClient = createDbClient(env.DATABASE_URL)
@@ -51,6 +52,7 @@ const DEFAULT_SYNC_WINDOW_DAYS = 90
 const FULL_RESYNC_WINDOW_DAYS = 3650
 const TRANSACTION_GAP_THRESHOLD_DAYS = 45
 const MAX_TRANSACTION_GAP_DETAILS = 5
+const MAX_INTEGRITY_ISSUE_DETAILS = 5
 const RECONNECT_REQUIRED_STATUS_CODES = new Set([401, 403])
 const METRIC_RETENTION_SECONDS = 3 * 24 * 60 * 60
 const SYNC_COUNT_METRIC_PREFIX = 'powens:metrics:sync:count:'
@@ -741,6 +743,11 @@ const syncConnection = async (params: {
     const batchBuffer: TransactionInsert[] = []
     const rawImportBatchBuffer: ProviderRawImportInsert[] = []
     const bookingDatesByAccountId = new Map<string, string[]>()
+    const transactionIntegrityObservations: Array<{
+      expectedAccountId: string
+      observedAccountId: string | null
+      transactionId: string | null
+    }> = []
     let importedTransactionCount = 0
     let failedRawImportCount = rawAccountImports.filter(row => row.importStatus === 'failed').length
     let normalizedRawImportCount = rawAccountImports.length - failedRawImportCount
@@ -758,6 +765,15 @@ const syncConnection = async (params: {
       const fallbackCurrency = accountCurrencyById.get(account.powensAccountId) ?? 'EUR'
 
       for (const transaction of transactions) {
+        const observedAccountId = toStringValue(transaction.id_account)
+        const transactionId = toStringValue(transaction.id)
+
+        transactionIntegrityObservations.push({
+          expectedAccountId: account.powensAccountId,
+          observedAccountId,
+          transactionId,
+        })
+
         const row = buildTransactionInsert({
           connectionId,
           accountId: account.powensAccountId,
@@ -828,12 +844,20 @@ const syncConnection = async (params: {
           thresholdDays: TRANSACTION_GAP_THRESHOLD_DAYS,
         })
     )
+    const integrityIssues = detectSyncIntegrityIssues({
+      accounts: upsertedAccounts.map(account => ({
+        powensAccountId: account.powensAccountId,
+        balance: account.balance,
+      })),
+      transactions: transactionIntegrityObservations,
+    })
 
     const successAt = new Date()
     const syncSnapshot = resolvePersistedSyncSnapshot({
       result: 'success',
       rawImportFailedCount: failedRawImportCount,
       transactionGapCount: transactionGaps.length,
+      integrityIssueCount: integrityIssues.length,
     })
     await dbClient.db
       .update(schema.powensConnection)
@@ -858,6 +882,9 @@ const syncConnection = async (params: {
           transactionGapCount: transactionGaps.length,
           transactionGapThresholdDays: TRANSACTION_GAP_THRESHOLD_DAYS,
           transactionGapSample: transactionGaps.slice(0, MAX_TRANSACTION_GAP_DETAILS),
+          integrityIssueDetected: integrityIssues.length > 0,
+          integrityIssueCount: integrityIssues.length,
+          integrityIssueSample: integrityIssues.slice(0, MAX_INTEGRITY_ISSUE_DETAILS),
           transactionWindow: {
             fromDate,
             maxDate,
@@ -903,6 +930,7 @@ const syncConnection = async (params: {
       rawImportCount: normalizedRawImportCount + failedRawImportCount,
       rawImportFailedCount: failedRawImportCount,
       transactionGapCount: transactionGaps.length,
+      integrityIssueCount: integrityIssues.length,
     })
   } catch (error) {
     const failedAt = new Date()

@@ -33,6 +33,19 @@ describe('resolvePersistedSyncSnapshot', () => {
     })
   })
 
+
+  it('marks integrity issues as OK with PARTIAL_IMPORT reason', () => {
+    expect(
+      resolvePersistedSyncSnapshot({
+        result: 'success',
+        integrityIssueCount: 1,
+      })
+    ).toEqual({
+      status: 'OK',
+      reasonCode: 'PARTIAL_IMPORT',
+    })
+  })
+
   it('maps reconnect failures to KO with RECONNECT_REQUIRED reason', () => {
     expect(resolvePersistedSyncSnapshot({ result: 'reconnect_required' })).toEqual({
       status: 'KO',
