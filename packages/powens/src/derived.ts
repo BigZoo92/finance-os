@@ -31,6 +31,30 @@ const normalizeTransactionToken = (value: unknown) => {
   return normalized.length > 0 ? normalized : null
 }
 
+const sanitizeMetadataText = (value: unknown) => {
+  const parsed = toStringValue(value)
+  if (!parsed) {
+    return null
+  }
+
+  const normalized = parsed.normalize('NFKC').replace(/\s+/g, ' ').trim()
+  return normalized.length > 0 ? normalized : null
+}
+
+const readMetadataValue = (
+  raw: Record<string, unknown>,
+  candidates: readonly string[]
+): string | null => {
+  for (const key of candidates) {
+    const candidate = sanitizeMetadataText(raw[key])
+    if (candidate) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
 const parseProviderObjectAt = (value: unknown) => {
   const raw = toStringValue(value)
   if (!raw) {
@@ -111,6 +135,49 @@ export const derivePowensAccountBalance = (raw: unknown) => {
   }
 
   return null
+}
+
+export interface DerivedPowensAccountMetadata extends Record<string, unknown> {
+  accountNumber?: string
+  ownership?: string
+  usage?: string
+  ownerName?: string
+  originalName?: string
+}
+
+export const derivePowensAccountMetadata = (raw: unknown): DerivedPowensAccountMetadata | null => {
+  if (!isPlainObject(raw)) {
+    return null
+  }
+
+  const metadata: DerivedPowensAccountMetadata = {}
+
+  const accountNumber = readMetadataValue(raw, ['number', 'account_number'])
+  if (accountNumber) {
+    metadata.accountNumber = accountNumber
+  }
+
+  const ownership = readMetadataValue(raw, ['ownership'])
+  if (ownership) {
+    metadata.ownership = ownership
+  }
+
+  const usage = readMetadataValue(raw, ['usage'])
+  if (usage) {
+    metadata.usage = usage
+  }
+
+  const ownerName = readMetadataValue(raw, ['owner_name', 'owner'])
+  if (ownerName) {
+    metadata.ownerName = ownerName
+  }
+
+  const originalName = readMetadataValue(raw, ['original_name'])
+  if (originalName) {
+    metadata.originalName = originalName
+  }
+
+  return Object.keys(metadata).length > 0 ? metadata : null
 }
 
 export const derivePowensTransactionCategory = (raw: unknown) => {

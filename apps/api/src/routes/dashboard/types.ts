@@ -20,6 +20,7 @@ export interface AccountWithConnectionRow {
   accountName: string
   accountCurrency: string
   accountType: string | null
+  accountMetadata: Record<string, unknown> | null
   enabled: boolean
   accountBalance: string | null
   connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
@@ -248,6 +249,7 @@ export interface DashboardSummaryResponse {
     name: string
     currency: string
     type: string | null
+    metadata: Record<string, unknown> | null
     enabled: boolean
     balance: number
   }>

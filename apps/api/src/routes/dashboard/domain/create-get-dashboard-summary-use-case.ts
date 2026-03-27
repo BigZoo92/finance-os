@@ -14,6 +14,7 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
       accountName: string
       accountCurrency: string
       accountType: string | null
+      accountMetadata: Record<string, unknown> | null
       enabled: boolean
       accountBalance: string | null
       connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
@@ -288,6 +289,7 @@ export const createGetDashboardSummaryUseCase = ({
         name: account.accountName,
         currency: account.accountCurrency,
         type: account.accountType,
+        metadata: account.accountMetadata,
         enabled: account.enabled,
         balance,
       })

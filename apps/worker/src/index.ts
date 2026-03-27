@@ -21,6 +21,7 @@ import { logWorkerEvent } from './observability/logger'
 import {
   buildProviderRawImportRow,
   deriveAccountBalance,
+  deriveAccountMetadata,
   derivePowensTransactionFields,
   deriveTransactionProviderObjectAt,
   type ProviderRawImportInsert,
@@ -457,6 +458,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
         type: parseAccountType(account.type),
         enabled: parseEnabledFlag(account.disabled),
         balance: deriveAccountBalance(account),
+        metadata: deriveAccountMetadata(account),
         raw: account,
         updatedAt: now,
       }
@@ -484,6 +486,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
         type: sql`excluded.type`,
         enabled: sql`excluded.enabled`,
         balance: sql`excluded.balance`,
+        metadata: sql`excluded.metadata`,
         raw: sql`excluded.raw`,
         updatedAt: now,
       },
