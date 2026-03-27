@@ -750,7 +750,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       ? `Cooldown ${formatPowensManualSyncCountdown(manualSyncUiState.cooldownRemainingSeconds)}`
       : syncMutation.isPending
         ? 'Resync en cours...'
-        : 'Full resync (connexion)'
+        : 'Sync incrementale (connexion)'
   const handleBlockedSyncClick = ({ connectionId }: { connectionId?: string } = {}) => {
     if (!manualSyncUiState.blockReason) {
       return
@@ -1482,7 +1482,6 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                         onClick={() =>
                           syncMutation.mutate({
                             connectionId: connection.powensConnectionId,
-                            fullResync: true,
                           })
                         }
                       >
