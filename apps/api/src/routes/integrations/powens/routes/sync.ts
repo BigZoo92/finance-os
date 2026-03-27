@@ -49,9 +49,13 @@ export const createSyncRoute = () =>
 
           const connectionId =
             context.body?.connectionId === undefined ? undefined : String(context.body.connectionId)
+          const fullResync = context.body?.fullResync === true
 
           try {
-            await powens.useCases.requestSync(connectionId, { requestId })
+            await powens.useCases.requestSync(connectionId, {
+              requestId,
+              ...(fullResync ? { fullResync: true } : {}),
+            })
           } catch (error) {
             if (error instanceof PowensManualSyncRateLimitError) {
               void powens.services.adminAudit.recordEvent({
@@ -63,6 +67,7 @@ export const createSyncRoute = () =>
                 requestId,
                 details: 'rate_limit',
                 ...(connectionId ? { connectionId } : {}),
+                ...(fullResync ? { details: 'rate_limit_full_resync' } : {}),
               })
               context.set.status = 429
               context.set.headers['retry-after'] = String(error.retryAfterSeconds)
@@ -82,6 +87,7 @@ export const createSyncRoute = () =>
               requestId,
               details: 'unexpected_error',
               ...(connectionId ? { connectionId } : {}),
+              ...(fullResync ? { details: 'unexpected_error_full_resync' } : {}),
             })
             throw error
           }
@@ -94,6 +100,7 @@ export const createSyncRoute = () =>
             at: new Date().toISOString(),
             requestId,
             ...(connectionId ? { connectionId } : {}),
+            ...(fullResync ? { details: 'full_resync' } : {}),
           })
 
           return { ok: true }

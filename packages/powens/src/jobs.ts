@@ -5,6 +5,7 @@ export type PowensJob =
       type: 'powens.syncConnection'
       connectionId: string
       requestId?: string
+      fullResync?: boolean
     }
   | {
       type: 'powens.syncAll'
@@ -31,7 +32,8 @@ export const parsePowensJob = (value: string): PowensJob | null => {
       parsed.type === 'powens.syncConnection' &&
       typeof parsed.connectionId === 'string' &&
       parsed.connectionId.length > 0 &&
-      (parsed.requestId === undefined || typeof parsed.requestId === 'string')
+      (parsed.requestId === undefined || typeof parsed.requestId === 'string') &&
+      (parsed.fullResync === undefined || typeof parsed.fullResync === 'boolean')
     ) {
       return parsed
     }

@@ -50,14 +50,15 @@ export const postPowensCallback = (payload: {
   });
 };
 
-export const postPowensSync = (payload?: { connectionId?: string }) => {
+export const postPowensSync = (payload?: { connectionId?: string; fullResync?: boolean }) => {
   const init: RequestInit = {
     method: "POST",
   };
 
-  if (payload?.connectionId) {
+  if (payload?.connectionId || payload?.fullResync === true) {
     init.body = JSON.stringify({
-      connectionId: payload.connectionId,
+      ...(payload?.connectionId ? { connectionId: payload.connectionId } : {}),
+      ...(payload?.fullResync === true ? { fullResync: true } : {}),
     });
   }
 

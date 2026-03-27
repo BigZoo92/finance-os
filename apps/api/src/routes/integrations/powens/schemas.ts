@@ -11,5 +11,6 @@ export const powensCallbackBodySchema = t.Object({
 export const powensSyncBodySchema = t.Optional(
   t.Object({
     connectionId: t.Optional(powensConnectionIdSchema),
+    fullResync: t.Optional(t.Boolean()),
   })
 )
