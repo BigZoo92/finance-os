@@ -105,6 +105,7 @@ Use this map to choose the smallest verification set that still matches the risk
 ## Manual Checks Worth Doing
 
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
+- Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
 - Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
 - Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
 - Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.

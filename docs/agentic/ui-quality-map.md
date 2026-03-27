@@ -15,6 +15,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Preserve auth consistency: the first SSR render should not flash demo while admin auth is still resolving.
 - Keep hierarchy, spacing rhythm, and accessibility intact. The repo already uses a custom dashboard composition instead of generic equal-card scaffolding; keep that intentionality.
 - Keep dashboard state driven by loaders, query options, and URL search params rather than ad hoc local request state.
+- Dashboard health states should stay progressive: one global summary, inline badges only on selected decision-critical widgets, and an optional diagnosis drawer instead of repeating the same warning across the whole page.
 
 ## UI Change Expectations
 
@@ -29,6 +30,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Personal goals covers loading, empty (`No goals yet`), recoverable error, offline hint, and success toast states without collapsing the surrounding dashboard hierarchy.
 - Admin mode still exposes Powens connect/sync affordances without layout regressions.
 - Ops overview should keep Powens callback observability compact: show freshness plus safe-mode state without exposing callback payload contents.
+- The dashboard health summary should stay coherent across demo/admin: demo comes from the fixture matrix, admin comes from aggregate plus domain-level health, and global vs inline signals must not contradict each other.
 - Empty and error states remain actionable and legible.
 - Tables, cards, and buttons stay keyboard accessible.
 - Mobile and desktop layouts still load without overflow surprises.

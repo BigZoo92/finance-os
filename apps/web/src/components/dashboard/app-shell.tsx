@@ -9,9 +9,9 @@ import {
   Separator,
 } from '@finance-os/ui/components'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '@tanstack/react-store'
 import { useNavigate } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { useStore } from '@tanstack/react-store'
+import { type KeyboardEvent, type ReactNode, useEffect, useRef } from 'react'
 import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-financial-goals-card'
 import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
@@ -34,6 +34,7 @@ import type {
   DashboardSummaryResponse,
   DashboardTransactionsResponse,
 } from '@/features/dashboard-types'
+import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
   formatPowensManualSyncCountdown,
@@ -41,9 +42,9 @@ import {
   getPowensManualSyncCooldownUiConfig,
   getPowensManualSyncUiState,
   logPowensManualSyncBlockedUiEvent,
+  type PowensManualSyncUiPhase,
   powensManualSyncCooldownStore,
   startPowensManualSyncCooldown,
-  type PowensManualSyncUiPhase,
 } from '@/features/powens/manual-sync-cooldown'
 import {
   powensAuditTrailQueryOptionsWithMode,
@@ -52,8 +53,14 @@ import {
   powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
-import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { pushToast } from '@/lib/toast-store'
+import {
+  buildDashboardHealthModel,
+  getDashboardHealthUiConfig,
+  logDashboardHealthSnapshotEvent,
+  logDashboardHealthWidgetEvent,
+} from './dashboard-health'
+import { DashboardHealthPanel, DashboardWidgetHealthBadge } from './dashboard-health-panel'
 import { getLatestSyncStatus } from './latest-sync-status'
 import { WealthHistory } from './wealth-history'
 
@@ -325,11 +332,27 @@ const GuardedActionWrapper = ({
   children: ReactNode
   onBlockedClick?: (() => void) | undefined
 }) => {
+  const isBlockedInteractive = Boolean(blockedTitle && onBlockedClick)
+
   return (
     <span
       className={blockedTitle ? 'inline-flex cursor-not-allowed' : 'inline-flex'}
       title={blockedTitle ?? undefined}
-      onClick={blockedTitle && onBlockedClick ? onBlockedClick : undefined}
+      {...(isBlockedInteractive
+        ? {
+            role: 'button',
+            tabIndex: 0,
+            onClick: onBlockedClick,
+            onKeyDown: (event: KeyboardEvent<HTMLSpanElement>) => {
+              if (event.key !== 'Enter' && event.key !== ' ') {
+                return
+              }
+
+              event.preventDefault()
+              onBlockedClick?.()
+            },
+          }
+        : {})}
     >
       {children}
     </span>
@@ -370,9 +393,12 @@ const formatQuantity = (value: number | null) => {
 export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const dashboardHealthUiConfig = getDashboardHealthUiConfig()
   const manualSyncCooldownUiConfig = getPowensManualSyncCooldownUiConfig()
   const manualSyncCooldownState = useStore(powensManualSyncCooldownStore)
   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
+  const dashboardHealthSnapshotLoggedRef = useRef(false)
+  const dashboardHealthWidgetLoggedRef = useRef<Set<string>>(new Set())
 
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
@@ -783,6 +809,63 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       connection.balance,
     ])
   )
+  const dashboardHealthReady =
+    authMode !== undefined &&
+    (summary !== undefined || summaryQuery.isError) &&
+    (statusQuery.data !== undefined || statusQuery.isError) &&
+    (syncRunsQuery.data !== undefined || syncRunsQuery.isError) &&
+    (derivedRecomputeStatus !== undefined || derivedRecomputeStatusQuery.isError)
+  const dashboardHealthModel =
+    dashboardHealthReady && authMode
+      ? buildDashboardHealthModel({
+          mode: authMode,
+          syncRuns,
+          ...(summary ? { summary } : {}),
+          ...(statusQuery.data ? { status: statusQuery.data } : {}),
+          ...(derivedRecomputeStatus ? { derivedStatus: derivedRecomputeStatus } : {}),
+          summaryUnavailable: summaryQuery.isError && summary === undefined,
+          statusUnavailable: statusQuery.isError && statusQuery.data === undefined,
+          syncRunsUnavailable: syncRunsQuery.isError && syncRunsQuery.data === undefined,
+          derivedUnavailable:
+            derivedRecomputeStatusQuery.isError && derivedRecomputeStatus === undefined,
+        })
+      : null
+
+  useEffect(() => {
+    if (!authMode || !dashboardHealthModel || !dashboardHealthUiConfig.enabled) {
+      return
+    }
+
+    if (!dashboardHealthSnapshotLoggedRef.current) {
+      logDashboardHealthSnapshotEvent({
+        mode: authMode,
+        range,
+        health: dashboardHealthModel,
+        uiConfig: dashboardHealthUiConfig,
+      })
+      dashboardHealthSnapshotLoggedRef.current = true
+    }
+
+    if (!dashboardHealthUiConfig.widgetBadgesEnabled) {
+      return
+    }
+
+    for (const widget of Object.values(dashboardHealthModel.widgets)) {
+      if (
+        widget.status !== 'attention_required' ||
+        dashboardHealthWidgetLoggedRef.current.has(widget.key)
+      ) {
+        continue
+      }
+
+      logDashboardHealthWidgetEvent({
+        mode: authMode,
+        range,
+        widget,
+      })
+      dashboardHealthWidgetLoggedRef.current.add(widget.key)
+    }
+  }, [authMode, dashboardHealthModel, dashboardHealthUiConfig, range])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -879,6 +962,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               </Button>
             </CardContent>
           </Card>
+        ) : null}
+
+        {dashboardHealthUiConfig.globalIndicatorEnabled && dashboardHealthModel ? (
+          <DashboardHealthPanel demo={isDemo} health={dashboardHealthModel} />
         ) : null}
 
         <section>
@@ -1157,6 +1244,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               <CardTitle className="flex items-center gap-2">
                 Wealth overview
                 <DemoWidgetBadge demo={isDemo} />
+                {dashboardHealthModel ? (
+                  <DashboardWidgetHealthBadge
+                    enabled={dashboardHealthUiConfig.widgetBadgesEnabled}
+                    widget={dashboardHealthModel.widgets.wealth_overview}
+                  />
+                ) : null}
               </CardTitle>
               <CardDescription>Total balance across all active connections.</CardDescription>
             </CardHeader>
@@ -1355,6 +1448,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               <CardTitle className="flex items-center gap-2">
                 Connections state
                 <DemoWidgetBadge demo={isDemo} />
+                {dashboardHealthModel ? (
+                  <DashboardWidgetHealthBadge
+                    enabled={dashboardHealthUiConfig.widgetBadgesEnabled}
+                    widget={dashboardHealthModel.widgets.connections_state}
+                  />
+                ) : null}
               </CardTitle>
               <CardDescription>Powens statuses and last sync timestamps.</CardDescription>
             </CardHeader>
@@ -1440,9 +1539,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                                   </div>
                                   <p>
                                     Fin:{' '}
-                                    {run.endedAt
-                                      ? formatDateTime(run.endedAt)
-                                      : 'Encore en cours'}
+                                    {run.endedAt ? formatDateTime(run.endedAt) : 'Encore en cours'}
                                     {formatDuration(run.startedAt, run.endedAt)
                                       ? ` · Duree ${formatDuration(run.startedAt, run.endedAt)}`
                                       : ''}
@@ -1646,6 +1743,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               <CardTitle className="flex items-center gap-2">
                 Investment positions
                 <DemoWidgetBadge demo={isDemo} />
+                {dashboardHealthModel ? (
+                  <DashboardWidgetHealthBadge
+                    enabled={dashboardHealthUiConfig.widgetBadgesEnabled}
+                    widget={dashboardHealthModel.widgets.investment_positions}
+                  />
+                ) : null}
               </CardTitle>
               <CardDescription>
                 Quantite, cout de base et derniere valeur connue pour chaque ligne d'investissement.

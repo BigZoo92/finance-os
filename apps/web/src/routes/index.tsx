@@ -3,12 +3,16 @@ import { z } from 'zod'
 import { DashboardAppShell } from '@/components/dashboard/app-shell'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import {
+  dashboardDerivedRecomputeStatusQueryOptionsWithMode,
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
-import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
-import { powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
+import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
+import {
+  powensStatusQueryOptionsWithMode,
+  powensSyncRunsQueryOptionsWithMode,
+} from '@/features/powens/query-options'
 
 const dashboardSearchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -47,6 +51,16 @@ export const Route = createFileRoute('/')({
       ),
       context.queryClient.ensureQueryData(
         powensStatusQueryOptionsWithMode({
+          mode: auth.mode,
+        })
+      ),
+      context.queryClient.ensureQueryData(
+        powensSyncRunsQueryOptionsWithMode({
+          mode: auth.mode,
+        })
+      ),
+      context.queryClient.ensureQueryData(
+        dashboardDerivedRecomputeStatusQueryOptionsWithMode({
           mode: auth.mode,
         })
       ),

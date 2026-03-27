@@ -42,6 +42,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Release automation now waits for the public `/health` endpoint after `compose.deploy` and runs `scripts/smoke-prod.mjs`; the smoke must cover `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` on both root and `/api` compatibility paths, with demo/admin-aware assertions and GitHub step-summary plus `::error` output on failure.
 - Production Compose now includes an `ops-alerts` sidecar driven by [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs); keep its webhook env, shared worker heartbeat volume, and readonly volume mounts aligned when changing deploy topology.
 - Treat observability wiring as release-sensitive: `x-request-id` visibility, smoke coverage, healthcheck targets, and alert probe URLs must continue to match the public `web` entrypoint and the internal API/worker topology.
+- Runtime-safe web feature flags must stay aligned across build args, `docker-compose.prod*.yml`, Dokploy env, and `public-runtime-env.ts`; that now includes the dashboard health signal flags alongside the existing Powens cooldown UI flags.
 
 ## Smoke and Manual Checks
 

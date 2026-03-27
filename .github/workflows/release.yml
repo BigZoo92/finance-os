@@ -137,6 +137,11 @@ jobs:
             API_INTERNAL_URL=${{ vars.API_INTERNAL_URL || 'http://api:3001' }}
             VITE_APP_TITLE=${{ vars.VITE_APP_TITLE || 'finance-os' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || '/api' }}
+            VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=${{ vars.VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED || 'true' }}
+            VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=${{ vars.VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS || '300' }}
+            VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=${{ vars.VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED || 'true' }}
+            VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=${{ vars.VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED || 'true' }}
+            VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=${{ vars.VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED || 'true' }}
             GIT_SHA=${{ github.sha }}
             GIT_TAG=${{ needs.prepare.outputs.release_tag }}
             BUILD_TIME=${{ needs.prepare.outputs.build_time }}
