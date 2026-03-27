@@ -14,6 +14,7 @@ vi.mock("@/lib/api", async () => {
 
 import {
   fetchPowensAuditTrail,
+  postPowensSync,
   fetchPowensStatus,
   fetchPowensSyncBacklog,
   fetchPowensSyncRuns,
@@ -99,5 +100,37 @@ describe("powens API fallbacks", () => {
 
     expect(queryFn()).toEqual(getDemoPowensStatus());
     expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends a full resync payload when requested for one connection", async () => {
+    apiFetchMock.mockResolvedValue({ ok: true });
+
+    await postPowensSync({
+      connectionId: "conn-1",
+      fullResync: true,
+    });
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/integrations/powens/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        connectionId: "conn-1",
+        fullResync: true,
+      }),
+    });
+  });
+
+  it("omits connectionId and keeps only fullResync when no connection is provided", async () => {
+    apiFetchMock.mockResolvedValue({ ok: true });
+
+    await postPowensSync({
+      fullResync: true,
+    });
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/integrations/powens/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        fullResync: true,
+      }),
+    });
   });
 });

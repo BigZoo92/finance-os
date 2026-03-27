@@ -40,6 +40,8 @@ const TRANSACTION_BATCH_SIZE = 800
 const POWENS_TRANSACTION_PAGE_LIMIT = 250
 const LOCK_TTL_SECONDS = 15 * 60
 const CONNECTION_LOCK_PREFIX = 'powens:lock:connection:'
+const DEFAULT_SYNC_WINDOW_DAYS = 90
+const FULL_RESYNC_WINDOW_DAYS = 3650
 const RECONNECT_REQUIRED_STATUS_CODES = new Set([401, 403])
 const METRIC_RETENTION_SECONDS = 3 * 24 * 60 * 60
 const SYNC_COUNT_METRIC_PREFIX = 'powens:metrics:sync:count:'
@@ -589,7 +591,12 @@ const buildTransactionInsert = (params: {
   }
 }
 
-const syncConnection = async (connectionId: string, requestId?: string) => {
+const syncConnection = async (params: {
+  connectionId: string
+  requestId?: string
+  fullResync?: boolean
+}) => {
+  const { connectionId, requestId, fullResync } = params
   const lock = await acquireConnectionLock(connectionId)
   if (!lock) {
     return
@@ -667,9 +674,12 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
     )
     await upsertProviderRawImports(rawAccountImports)
 
-    const fromDate = connection.lastSyncAt
-      ? formatDate(subtractDays(connection.lastSyncAt, 3))
-      : formatDate(subtractDays(syncStart, 90))
+    const fromDate =
+      fullResync === true
+        ? formatDate(subtractDays(syncStart, FULL_RESYNC_WINDOW_DAYS))
+        : connection.lastSyncAt
+          ? formatDate(subtractDays(connection.lastSyncAt, 3))
+          : formatDate(subtractDays(syncStart, DEFAULT_SYNC_WINDOW_DAYS))
     const maxDate = formatDate(syncStart)
 
     const accountCurrencyById = new Map<string, string>()
@@ -770,6 +780,7 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
             fromDate,
             maxDate,
           },
+          syncMode: fullResync === true ? 'full' : 'incremental',
           lastRunResult: 'success',
           lastRunFinishedAt: successAt.toISOString(),
         },
@@ -811,11 +822,15 @@ const syncConnection = async (connectionId: string, requestId?: string) => {
         lastError: errorMessage,
         syncMetadata: {
           transactionWindow: {
-            fromDate: previousLastSyncAt
-              ? formatDate(subtractDays(previousLastSyncAt, 3))
-              : formatDate(subtractDays(syncStart, 90)),
+            fromDate:
+              fullResync === true
+                ? formatDate(subtractDays(syncStart, FULL_RESYNC_WINDOW_DAYS))
+                : previousLastSyncAt
+                  ? formatDate(subtractDays(previousLastSyncAt, 3))
+                  : formatDate(subtractDays(syncStart, DEFAULT_SYNC_WINDOW_DAYS)),
             maxDate: formatDate(syncStart),
           },
+          syncMode: fullResync === true ? 'full' : 'incremental',
           lastRunResult: failureStatus,
           lastRunFinishedAt: failedAt.toISOString(),
         },
@@ -864,7 +879,10 @@ const syncAllConnections = async (requestId?: string) => {
     }
 
     try {
-      await syncConnection(connection.powensConnectionId, requestId)
+      await syncConnection({
+        connectionId: connection.powensConnectionId,
+        ...(requestId !== undefined ? { requestId } : {}),
+      })
     } catch (error) {
       logWorkerEvent({
         level: 'error',
@@ -893,7 +911,11 @@ const handleJob = async (job: PowensJob) => {
     return
   }
 
-  await syncConnection(job.connectionId, job.requestId)
+  await syncConnection({
+    connectionId: job.connectionId,
+    ...(job.requestId !== undefined ? { requestId: job.requestId } : {}),
+    ...(job.fullResync === true ? { fullResync: true } : {}),
+  })
 }
 
 const startScheduler = () => {

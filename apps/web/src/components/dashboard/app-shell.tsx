@@ -319,12 +319,18 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   })
 
   const syncMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      connectionId,
+      fullResync,
+    }: { connectionId?: string; fullResync?: boolean } = {}) => {
       if (!isAdmin) {
         throw new Error('Admin session required')
       }
 
-      return postPowensSync()
+      return postPowensSync({
+        ...(connectionId ? { connectionId } : {}),
+        ...(fullResync === true ? { fullResync: true } : {}),
+      })
     },
     onSuccess: async () => {
       await Promise.all([
@@ -817,7 +823,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => syncMutation.mutate()}
+                  onClick={() => syncMutation.mutate({})}
                   disabled={!isAdmin || isIntegrationsSafeMode || syncMutation.isPending}
                   title={
                     !isAdmin
@@ -1214,6 +1220,24 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   {connection.lastError ? (
                     <p className="text-xs text-destructive">Error: {connection.lastError}</p>
                   ) : null}
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={syncMutation.isPending || !isAdmin}
+                      onClick={() =>
+                        syncMutation.mutate({
+                          connectionId: connection.powensConnectionId,
+                          fullResync: true,
+                        })
+                      }
+                    >
+                      {syncMutation.isPending
+                        ? 'Resync en cours...'
+                        : 'Full resync (connexion)'}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>
