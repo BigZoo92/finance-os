@@ -10,6 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys, powensStatusQueryOptions } from '@/features/powens/query-options'
+import { isPowensConnectionRetryable } from '@/features/powens/retry-connection'
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 
 const formatDateTime = (value: string | null) => {
@@ -69,6 +70,17 @@ export function PowensConnectionsCard() {
       })
     },
   })
+  const retryConnectionMutation = useMutation({
+    mutationFn: ({ connectionId }: { connectionId: string }) =>
+      postPowensSync({
+        connectionId,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: powensQueryKeys.status(),
+      })
+    },
+  })
 
   const errors = [
     statusQuery.error
@@ -87,6 +99,12 @@ export function PowensConnectionsCard() {
       ? {
           id: 'sync',
           message: toErrorMessage(syncMutation.error),
+        }
+      : null,
+    retryConnectionMutation.error
+      ? {
+          id: 'retry-connection',
+          message: toErrorMessage(retryConnectionMutation.error),
         }
       : null,
   ].filter((error): error is { id: string; message: string } => Boolean(error))
@@ -189,6 +207,30 @@ export function PowensConnectionsCard() {
                   ) : null}
                   {connection.lastError ? (
                     <p className="text-xs text-destructive">Erreur: {connection.lastError}</p>
+                  ) : null}
+                  {isPowensConnectionRetryable(connection) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      onClick={() =>
+                        retryConnectionMutation.mutate({
+                          connectionId: connection.powensConnectionId,
+                        })
+                      }
+                      disabled={
+                        retryConnectionMutation.isPending &&
+                        retryConnectionMutation.variables?.connectionId ===
+                          connection.powensConnectionId
+                      }
+                    >
+                      {retryConnectionMutation.isPending &&
+                      retryConnectionMutation.variables?.connectionId ===
+                        connection.powensConnectionId
+                        ? 'Relance...'
+                        : 'Relancer la connexion'}
+                    </Button>
                   ) : null}
                 </div>
               )
