@@ -9,7 +9,9 @@ import {
   Separator,
 } from '@finance-os/ui/components'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useStore } from '@tanstack/react-store'
 import { useNavigate } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-financial-goals-card'
 import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
@@ -33,6 +35,16 @@ import type {
   DashboardTransactionsResponse,
 } from '@/features/dashboard-types'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
+import {
+  formatPowensManualSyncCountdown,
+  getPowensManualSyncCooldownSnapshot,
+  getPowensManualSyncCooldownUiConfig,
+  getPowensManualSyncUiState,
+  logPowensManualSyncBlockedUiEvent,
+  powensManualSyncCooldownStore,
+  startPowensManualSyncCooldown,
+  type PowensManualSyncUiPhase,
+} from '@/features/powens/manual-sync-cooldown'
 import {
   powensAuditTrailQueryOptionsWithMode,
   powensQueryKeys,
@@ -222,6 +234,29 @@ const DERIVED_RECOMPUTE_BADGE: Record<
   },
 }
 
+const MANUAL_SYNC_UI_BADGE: Record<
+  PowensManualSyncUiPhase,
+  {
+    variant: 'secondary' | 'outline' | 'destructive'
+    className?: string
+  }
+> = {
+  idle: {
+    variant: 'outline',
+  },
+  syncing: {
+    variant: 'outline',
+    className: 'border-sky-500/60 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+  },
+  cooldown: {
+    variant: 'outline',
+    className: 'border-amber-500/60 bg-amber-400/15 text-amber-700 dark:text-amber-300',
+  },
+  ready: {
+    variant: 'secondary',
+  },
+}
+
 const formatDerivedRecomputeStage = (value: string | null) => {
   if (!value) {
     return 'En attente'
@@ -271,6 +306,26 @@ const DemoWidgetBadge = ({ demo }: { demo: boolean }) => {
   )
 }
 
+const GuardedActionWrapper = ({
+  blockedTitle,
+  children,
+  onBlockedClick,
+}: {
+  blockedTitle?: string | null
+  children: ReactNode
+  onBlockedClick?: (() => void) | undefined
+}) => {
+  return (
+    <span
+      className={blockedTitle ? 'inline-flex cursor-not-allowed' : 'inline-flex'}
+      title={blockedTitle ?? undefined}
+      onClick={blockedTitle && onBlockedClick ? onBlockedClick : undefined}
+    >
+      {children}
+    </span>
+  )
+}
+
 const ASSET_TYPE_LABEL: Record<'cash' | 'investment' | 'manual', string> = {
   cash: 'Cash',
   investment: 'Investment',
@@ -305,6 +360,9 @@ const formatQuantity = (value: number | null) => {
 export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const manualSyncCooldownUiConfig = getPowensManualSyncCooldownUiConfig()
+  const manualSyncCooldownState = useStore(powensManualSyncCooldownStore)
+  const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
 
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
@@ -362,7 +420,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     mutationFn: async ({
       connectionId,
       fullResync,
-    }: { connectionId?: string; fullResync?: boolean } = {}) => {
+    }: {
+      connectionId?: string
+      fullResync?: boolean
+    } = {}) => {
       if (!isAdmin) {
         throw new Error('Admin session required')
       }
@@ -373,6 +434,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       })
     },
     onSuccess: async () => {
+      if (manualSyncCooldownUiConfig.enabled) {
+        startPowensManualSyncCooldown(manualSyncCooldownUiConfig.durationSeconds)
+      }
+
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: powensQueryKeys.status(),
@@ -593,15 +658,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     statusConnections.map(connection => connection.lastSuccessAt)
   )
   const syncRuns = syncRunsQuery.data?.runs ?? []
-  const syncRunsByConnectionId = syncRuns.reduce(
-    (accumulator, run) => {
-      const existing = accumulator.get(run.connectionId) ?? []
-      existing.push(run)
-      accumulator.set(run.connectionId, existing)
-      return accumulator
-    },
-    new Map<string, typeof syncRuns>()
-  )
+  const syncRunsByConnectionId = syncRuns.reduce((accumulator, run) => {
+    const existing = accumulator.get(run.connectionId) ?? []
+    existing.push(run)
+    accumulator.set(run.connectionId, existing)
+    return accumulator
+  }, new Map<string, typeof syncRuns>())
   const recentErrorsByFingerprint = syncRuns
     .filter(run => run.result === 'error' || run.result === 'reconnect_required')
     .filter(run => run.errorFingerprint && run.errorMessage)
@@ -659,6 +721,38 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     : derivedRecomputeState === 'failed'
       ? 'Reessayer la recompute'
       : 'Recompute derivee'
+  const manualSyncUiState = getPowensManualSyncUiState({
+    cooldownUiEnabled: manualSyncCooldownUiConfig.enabled,
+    cooldownSnapshot: manualSyncCooldownSnapshot,
+    isIntegrationsSafeMode,
+    isSyncPending: syncMutation.isPending,
+    mode: authMode,
+  })
+  const manualSyncUiBadge = MANUAL_SYNC_UI_BADGE[manualSyncUiState.phase]
+  const manualSyncButtonLabel =
+    manualSyncUiState.phase === 'cooldown'
+      ? `Cooldown ${formatPowensManualSyncCountdown(manualSyncUiState.cooldownRemainingSeconds)}`
+      : syncMutation.isPending
+        ? 'Sync...'
+        : 'Lancer une sync'
+  const connectionSyncButtonLabel =
+    manualSyncUiState.phase === 'cooldown'
+      ? `Cooldown ${formatPowensManualSyncCountdown(manualSyncUiState.cooldownRemainingSeconds)}`
+      : syncMutation.isPending
+        ? 'Resync en cours...'
+        : 'Full resync (connexion)'
+  const handleBlockedSyncClick = ({ connectionId }: { connectionId?: string } = {}) => {
+    if (!manualSyncUiState.blockReason) {
+      return
+    }
+
+    logPowensManualSyncBlockedUiEvent({
+      blockReason: manualSyncUiState.blockReason,
+      ...(connectionId ? { connectionId } : {}),
+      cooldownRemainingSeconds: manualSyncUiState.cooldownRemainingSeconds,
+      mode: authMode,
+    })
+  }
   const positions = adaptedSummary.positions
   const positionsByAssetId = positions.reduce<Map<number, DashboardSummaryResponse['positions']>>(
     (acc, position) => {
@@ -866,38 +960,66 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   <p className="text-xs text-muted-foreground">Queue backlog</p>
                   <p className="font-medium">{syncBacklogCount}</p>
                 </div>
+                {manualSyncCooldownUiConfig.enabled ? (
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">Sync guard UI</p>
+                      <Badge
+                        variant={manualSyncUiBadge.variant}
+                        className={manualSyncUiBadge.className}
+                      >
+                        {manualSyncUiState.statusLabel}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {manualSyncUiState.statusMessage}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isDemo
+                        ? 'Demo: timer local mocke, sans appel API.'
+                        : 'Admin: garde locale non authoritative.'}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => syncMutation.mutate({})}
-                  disabled={!isAdmin || isIntegrationsSafeMode || syncMutation.isPending}
-                  title={
-                    !isAdmin
-                      ? 'Action reservee au compte BigZoo'
-                      : isIntegrationsSafeMode
-                        ? 'Safe mode actif: integration externe desactivee'
-                        : undefined
-                  }
-                >
-                  {syncMutation.isPending ? 'Sync...' : 'Lancer une sync'}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => connectMutation.mutate()}
-                  disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
-                  title={
-                    !isAdmin
-                      ? 'Action reservee au compte BigZoo'
-                      : isIntegrationsSafeMode
-                        ? 'Safe mode actif: integration externe desactivee'
-                        : undefined
-                  }
-                >
-                  {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
-                </Button>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <GuardedActionWrapper
+                    blockedTitle={manualSyncUiState.blockMessage}
+                    onBlockedClick={
+                      manualSyncUiState.blockReason ? () => handleBlockedSyncClick() : undefined
+                    }
+                  >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => syncMutation.mutate({})}
+                      disabled={manualSyncUiState.blocked}
+                    >
+                      {manualSyncButtonLabel}
+                    </Button>
+                  </GuardedActionWrapper>
+                  <Button
+                    type="button"
+                    onClick={() => connectMutation.mutate()}
+                    disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
+                    title={
+                      !isAdmin
+                        ? 'Action reservee au compte BigZoo'
+                        : isIntegrationsSafeMode
+                          ? 'Safe mode actif: integration externe desactivee'
+                          : undefined
+                    }
+                  >
+                    {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
+                  </Button>
+                </div>
+                {manualSyncUiState.blockMessage ? (
+                  <p className="text-xs text-muted-foreground" aria-live="polite">
+                    {manualSyncUiState.blockMessage}
+                  </p>
+                ) : null}
               </div>
 
               <div className="rounded-lg border border-border/70 bg-muted/15 p-4">
@@ -1280,9 +1402,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                       <p>Created: {formatDateTime(connection.createdAt)}</p>
                       <p>Updated: {formatDateTime(connection.updatedAt)}</p>
                       {formatDiagnosticMetadata(connection.syncMetadata) ? (
-                        <p>
-                          Sync metadata: {formatDiagnosticMetadata(connection.syncMetadata)}
-                        </p>
+                        <p>Sync metadata: {formatDiagnosticMetadata(connection.syncMetadata)}</p>
                       ) : null}
                       {(() => {
                         const connectionRuns =
@@ -1318,7 +1438,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                             ) : null}
                             {connectionRuns.length > 1 ? (
                               <p>
-                                Previous runs: {connectionRuns.slice(1, 4).map(run => run.result).join(' → ')}
+                                Previous runs:{' '}
+                                {connectionRuns
+                                  .slice(1, 4)
+                                  .map(run => run.result)
+                                  .join(' → ')}
                               </p>
                             ) : null}
                           </div>
@@ -1327,22 +1451,32 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                     </div>
                   </details>
                   <div className="mt-2 flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={syncMutation.isPending || !isAdmin}
-                      onClick={() =>
-                        syncMutation.mutate({
-                          connectionId: connection.powensConnectionId,
-                          fullResync: true,
-                        })
+                    <GuardedActionWrapper
+                      blockedTitle={manualSyncUiState.blockMessage}
+                      onBlockedClick={
+                        manualSyncUiState.blockReason
+                          ? () =>
+                              handleBlockedSyncClick({
+                                connectionId: connection.powensConnectionId,
+                              })
+                          : undefined
                       }
                     >
-                      {syncMutation.isPending
-                        ? 'Resync en cours...'
-                        : 'Full resync (connexion)'}
-                    </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={manualSyncUiState.blocked}
+                        onClick={() =>
+                          syncMutation.mutate({
+                            connectionId: connection.powensConnectionId,
+                            fullResync: true,
+                          })
+                        }
+                      >
+                        {connectionSyncButtonLabel}
+                      </Button>
+                    </GuardedActionWrapper>
                   </div>
                 </div>
               ))}

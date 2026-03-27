@@ -78,6 +78,8 @@ PNPM_VERSION
 API_INTERNAL_URL
 VITE_API_BASE_URL
 VITE_APP_TITLE
+VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED   # optional web UI kill-switch
+VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS   # optional web UI countdown duration
 ```
 
 Repository secrets:

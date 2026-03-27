@@ -4,6 +4,8 @@ export type PublicRuntimeEnvKey =
   | 'VITE_APP_TITLE'
   | 'VITE_APP_ORIGIN'
   | 'VITE_API_BASE_URL'
+  | 'VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED'
+  | 'VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS'
 
 export type PublicRuntimeEnv = Partial<Record<PublicRuntimeEnvKey, string>>
 
@@ -11,6 +13,8 @@ const PUBLIC_RUNTIME_ENV_KEYS: PublicRuntimeEnvKey[] = [
   'VITE_APP_TITLE',
   'VITE_APP_ORIGIN',
   'VITE_API_BASE_URL',
+  'VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED',
+  'VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS',
 ]
 
 const toOptionalEnv = (value: string | undefined) => {
@@ -42,6 +46,14 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
   ...withDefined('VITE_APP_TITLE', toOptionalEnv(env.VITE_APP_TITLE)),
   ...withDefined('VITE_APP_ORIGIN', toOptionalEnv(env.VITE_APP_ORIGIN)),
   ...withDefined('VITE_API_BASE_URL', toOptionalEnv(env.VITE_API_BASE_URL)),
+  ...withDefined(
+    'VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED',
+    toOptionalEnv(env.VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED)
+  ),
+  ...withDefined(
+    'VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS',
+    toOptionalEnv(env.VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS)
+  ),
 })
 
 const getWindowPublicEnv = (): PublicRuntimeEnv => {

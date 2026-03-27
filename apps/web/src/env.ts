@@ -8,6 +8,42 @@ const apiBaseUrlSchema = z
     message: 'VITE_API_BASE_URL must be an absolute URL or an absolute path (for example /api)',
   })
 
+const booleanUiFlagSchema = z
+  .string()
+  .min(1)
+  .refine(
+    value => {
+      const normalized = value.trim().toLowerCase()
+      return (
+        normalized === '1' ||
+        normalized === '0' ||
+        normalized === 'true' ||
+        normalized === 'false' ||
+        normalized === 'yes' ||
+        normalized === 'no' ||
+        normalized === 'on' ||
+        normalized === 'off'
+      )
+    },
+    {
+      message:
+        'VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED must be a boolean-like string (true/false, 1/0, yes/no, on/off)',
+    }
+  )
+
+const positiveIntegerStringSchema = z
+  .string()
+  .min(1)
+  .refine(
+    value => {
+      const parsed = Number(value.trim())
+      return Number.isInteger(parsed) && parsed > 0
+    },
+    {
+      message: 'VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS must be a positive integer',
+    }
+  )
+
 export const env = createEnv({
   server: {
     SERVER_URL: z.string().url().optional(),
@@ -23,6 +59,8 @@ export const env = createEnv({
     VITE_APP_TITLE: z.string().min(1).optional(),
     VITE_APP_ORIGIN: z.string().min(1).optional(),
     VITE_API_BASE_URL: apiBaseUrlSchema.optional(),
+    VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED: booleanUiFlagSchema.optional(),
+    VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS: positiveIntegerStringSchema.optional(),
   },
 
   /**
