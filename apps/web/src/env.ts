@@ -8,28 +8,28 @@ const apiBaseUrlSchema = z
     message: 'VITE_API_BASE_URL must be an absolute URL or an absolute path (for example /api)',
   })
 
-const booleanUiFlagSchema = z
-  .string()
-  .min(1)
-  .refine(
-    value => {
-      const normalized = value.trim().toLowerCase()
-      return (
-        normalized === '1' ||
-        normalized === '0' ||
-        normalized === 'true' ||
-        normalized === 'false' ||
-        normalized === 'yes' ||
-        normalized === 'no' ||
-        normalized === 'on' ||
-        normalized === 'off'
-      )
-    },
-    {
-      message:
-        'VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED must be a boolean-like string (true/false, 1/0, yes/no, on/off)',
-    }
-  )
+const createBooleanUiFlagSchema = (key: string) =>
+  z
+    .string()
+    .min(1)
+    .refine(
+      value => {
+        const normalized = value.trim().toLowerCase()
+        return (
+          normalized === '1' ||
+          normalized === '0' ||
+          normalized === 'true' ||
+          normalized === 'false' ||
+          normalized === 'yes' ||
+          normalized === 'no' ||
+          normalized === 'on' ||
+          normalized === 'off'
+        )
+      },
+      {
+        message: `${key} must be a boolean-like string (true/false, 1/0, yes/no, on/off)`,
+      }
+    )
 
 const positiveIntegerStringSchema = z
   .string()
@@ -59,8 +59,19 @@ export const env = createEnv({
     VITE_APP_TITLE: z.string().min(1).optional(),
     VITE_APP_ORIGIN: z.string().min(1).optional(),
     VITE_API_BASE_URL: apiBaseUrlSchema.optional(),
-    VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED: booleanUiFlagSchema.optional(),
+    VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED: createBooleanUiFlagSchema(
+      'VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED'
+    ).optional(),
     VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS: positiveIntegerStringSchema.optional(),
+    VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED: createBooleanUiFlagSchema(
+      'VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED'
+    ).optional(),
+    VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED: createBooleanUiFlagSchema(
+      'VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED'
+    ).optional(),
+    VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: createBooleanUiFlagSchema(
+      'VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED'
+    ).optional(),
   },
 
   /**
