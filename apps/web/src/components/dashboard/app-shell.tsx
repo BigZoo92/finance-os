@@ -82,6 +82,46 @@ const formatDateTime = (value: string | null) => {
   return parsed.toLocaleString('fr-FR')
 }
 
+const formatDuration = (startedAt: string, endedAt: string | null) => {
+  const started = new Date(startedAt).getTime()
+  const ended = endedAt ? new Date(endedAt).getTime() : Date.now()
+
+  if (!Number.isFinite(started) || !Number.isFinite(ended) || ended < started) {
+    return null
+  }
+
+  const seconds = Math.round((ended - started) / 1000)
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  const remainderSeconds = seconds % 60
+  if (minutes < 60) {
+    return `${minutes}m ${remainderSeconds}s`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  const remainderMinutes = minutes % 60
+  return `${hours}h ${remainderMinutes}m`
+}
+
+const formatDiagnosticMetadata = (value: Record<string, unknown> | null) => {
+  if (!value) {
+    return null
+  }
+
+  const entries = Object.entries(value)
+    .filter(([, entryValue]) => entryValue !== null)
+    .map(([key, entryValue]) => `${key}: ${String(entryValue)}`)
+
+  if (!entries.length) {
+    return null
+  }
+
+  return entries.join(' • ')
+}
+
 const formatRelativeDateTime = (value: string | null) => {
   if (!value) {
     return null
@@ -553,6 +593,15 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     statusConnections.map(connection => connection.lastSuccessAt)
   )
   const syncRuns = syncRunsQuery.data?.runs ?? []
+  const syncRunsByConnectionId = syncRuns.reduce(
+    (accumulator, run) => {
+      const existing = accumulator.get(run.connectionId) ?? []
+      existing.push(run)
+      accumulator.set(run.connectionId, existing)
+      return accumulator
+    },
+    new Map<string, typeof syncRuns>()
+  )
   const recentErrorsByFingerprint = syncRuns
     .filter(run => run.result === 'error' || run.result === 'reconnect_required')
     .filter(run => run.errorFingerprint && run.errorMessage)
@@ -1190,7 +1239,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               {statusConnections.map(connection => (
                 <div
                   key={connection.id}
-                  className="rounded-md border border-border/80 bg-muted/20 p-2"
+                  className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -1220,6 +1269,63 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   {connection.lastError ? (
                     <p className="text-xs text-destructive">Error: {connection.lastError}</p>
                   ) : null}
+                  <details className="rounded-md border border-border/70 bg-background/60 p-2 text-xs">
+                    <summary className="cursor-pointer font-medium text-foreground">
+                      Diagnostic connexion
+                    </summary>
+                    <div className="mt-2 space-y-2 text-muted-foreground">
+                      <p>Connection ID: {connection.powensConnectionId}</p>
+                      <p>Provider ID: {connection.providerConnectionId}</p>
+                      <p>Source: {connection.source}</p>
+                      <p>Created: {formatDateTime(connection.createdAt)}</p>
+                      <p>Updated: {formatDateTime(connection.updatedAt)}</p>
+                      {formatDiagnosticMetadata(connection.syncMetadata) ? (
+                        <p>
+                          Sync metadata: {formatDiagnosticMetadata(connection.syncMetadata)}
+                        </p>
+                      ) : null}
+                      {(() => {
+                        const connectionRuns =
+                          syncRunsByConnectionId.get(connection.powensConnectionId) ?? []
+                        const latestRun = connectionRuns[0]
+
+                        if (!latestRun) {
+                          return <p>Run history: aucun run recent sur cette connexion.</p>
+                        }
+
+                        return (
+                          <div className="space-y-1">
+                            <p>
+                              Latest run: {latestRun.result} · started{' '}
+                              {formatDateTime(latestRun.startedAt)}
+                              {latestRun.endedAt
+                                ? ` · ended ${formatDateTime(latestRun.endedAt)}`
+                                : ' · still running'}
+                              {formatDuration(latestRun.startedAt, latestRun.endedAt)
+                                ? ` · duration ${formatDuration(latestRun.startedAt, latestRun.endedAt)}`
+                                : ''}
+                            </p>
+                            {latestRun.requestId ? (
+                              <p>Latest request ID: {latestRun.requestId}</p>
+                            ) : null}
+                            {latestRun.errorFingerprint ? (
+                              <p>Fingerprint: {latestRun.errorFingerprint}</p>
+                            ) : null}
+                            {latestRun.errorMessage ? (
+                              <p className="text-destructive">
+                                Latest error: {latestRun.errorMessage}
+                              </p>
+                            ) : null}
+                            {connectionRuns.length > 1 ? (
+                              <p>
+                                Previous runs: {connectionRuns.slice(1, 4).map(run => run.result).join(' → ')}
+                              </p>
+                            ) : null}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </details>
                   <div className="mt-2 flex justify-end">
                     <Button
                       type="button"
