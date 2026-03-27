@@ -14,14 +14,16 @@ export type PersistedSyncSnapshot = {
 export const resolvePersistedSyncSnapshot = ({
   result,
   rawImportFailedCount = 0,
+  transactionGapCount = 0,
 }: {
   result: 'success' | 'error' | 'reconnect_required'
   rawImportFailedCount?: number
+  transactionGapCount?: number
 }): PersistedSyncSnapshot => {
   if (result === 'success') {
     return {
       status: 'OK',
-      reasonCode: rawImportFailedCount > 0 ? 'PARTIAL_IMPORT' : 'SUCCESS',
+      reasonCode: rawImportFailedCount > 0 || transactionGapCount > 0 ? 'PARTIAL_IMPORT' : 'SUCCESS',
     }
   }
 

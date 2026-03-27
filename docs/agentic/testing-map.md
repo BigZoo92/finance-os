@@ -32,6 +32,7 @@ Use this map to choose the smallest verification set that still matches the risk
 - Worker import normalization:
   - [../../apps/worker/src/raw-import.test.ts](../../apps/worker/src/raw-import.test.ts)
   - [../../apps/worker/src/sync-status-persistence.test.ts](../../apps/worker/src/sync-status-persistence.test.ts)
+  - [../../apps/worker/src/transaction-gap-detection.test.ts](../../apps/worker/src/transaction-gap-detection.test.ts)
 
 ## Scope-Based Verification
 
@@ -45,6 +46,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm worker:typecheck`
   - `bun test apps/worker/src/raw-import.test.ts`
   - `bun test apps/worker/src/sync-status-persistence.test.ts`
+  - `bun test apps/worker/src/transaction-gap-detection.test.ts`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
   - verify the raw/normalized/derived/manual boundary still holds (raw payloads stay in `provider_raw_import`; manual edits are not clobbered by sync normalization)
 - Powens sync snapshot persistence, status route, or badge changes:

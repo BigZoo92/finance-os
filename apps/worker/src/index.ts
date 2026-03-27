@@ -31,6 +31,7 @@ import {
   resolvePersistedSyncSnapshot,
 } from './sync-status-persistence'
 import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
+import { detectTransactionGaps } from './transaction-gap-detection'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -48,6 +49,8 @@ const LOCK_TTL_SECONDS = 15 * 60
 const CONNECTION_LOCK_PREFIX = 'powens:lock:connection:'
 const DEFAULT_SYNC_WINDOW_DAYS = 90
 const FULL_RESYNC_WINDOW_DAYS = 3650
+const TRANSACTION_GAP_THRESHOLD_DAYS = 45
+const MAX_TRANSACTION_GAP_DETAILS = 5
 const RECONNECT_REQUIRED_STATUS_CODES = new Set([401, 403])
 const METRIC_RETENTION_SECONDS = 3 * 24 * 60 * 60
 const SYNC_COUNT_METRIC_PREFIX = 'powens:metrics:sync:count:'
@@ -737,6 +740,7 @@ const syncConnection = async (params: {
 
     const batchBuffer: TransactionInsert[] = []
     const rawImportBatchBuffer: ProviderRawImportInsert[] = []
+    const bookingDatesByAccountId = new Map<string, string[]>()
     let importedTransactionCount = 0
     let failedRawImportCount = rawAccountImports.filter(row => row.importStatus === 'failed').length
     let normalizedRawImportCount = rawAccountImports.length - failedRawImportCount
@@ -789,6 +793,12 @@ const syncConnection = async (params: {
         }
 
         batchBuffer.push(row)
+        const existingBookingDates = bookingDatesByAccountId.get(account.powensAccountId)
+        if (existingBookingDates) {
+          existingBookingDates.push(row.bookingDate)
+        } else {
+          bookingDatesByAccountId.set(account.powensAccountId, [row.bookingDate])
+        }
         importedTransactionCount += 1
         normalizedRawImportCount += 1
 
@@ -810,10 +820,20 @@ const syncConnection = async (params: {
       await upsertProviderRawImports(rawImportBatchBuffer)
     }
 
+    const transactionGaps = [...bookingDatesByAccountId.entries()].flatMap(
+      ([accountId, bookingDates]) =>
+        detectTransactionGaps({
+          accountId,
+          bookingDates,
+          thresholdDays: TRANSACTION_GAP_THRESHOLD_DAYS,
+        })
+    )
+
     const successAt = new Date()
     const syncSnapshot = resolvePersistedSyncSnapshot({
       result: 'success',
       rawImportFailedCount: failedRawImportCount,
+      transactionGapCount: transactionGaps.length,
     })
     await dbClient.db
       .update(schema.powensConnection)
@@ -834,6 +854,10 @@ const syncConnection = async (params: {
           rawImportCount: normalizedRawImportCount + failedRawImportCount,
           rawImportFailedCount: failedRawImportCount,
           rawImportNormalizedCount: normalizedRawImportCount,
+          transactionGapDetected: transactionGaps.length > 0,
+          transactionGapCount: transactionGaps.length,
+          transactionGapThresholdDays: TRANSACTION_GAP_THRESHOLD_DAYS,
+          transactionGapSample: transactionGaps.slice(0, MAX_TRANSACTION_GAP_DETAILS),
           transactionWindow: {
             fromDate,
             maxDate,
@@ -878,6 +902,7 @@ const syncConnection = async (params: {
       importedTransactionCount,
       rawImportCount: normalizedRawImportCount + failedRawImportCount,
       rawImportFailedCount: failedRawImportCount,
+      transactionGapCount: transactionGaps.length,
     })
   } catch (error) {
     const failedAt = new Date()
