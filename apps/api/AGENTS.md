@@ -12,6 +12,7 @@ Scope: `apps/api/**`
 - Keep dashboard summary read models coherent across low-level accounts/connections and the higher-level unified `assets` collection used for patrimoine-style views.
 - Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
 - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
+- Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
 - Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
 - Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
 - Keep `/dashboard/goals*` demo-safe on reads and admin-gated on writes, with no ad hoc payload drift between route schemas, domain use cases, and web callers.

@@ -10,17 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import { powensQueryKeys, powensStatusQueryOptions } from '@/features/powens/query-options'
-import type { PowensConnectionStatus } from '@/features/powens/types'
-
-const STATUS_VARIANT: Record<
-  PowensConnectionStatus['status'],
-  'secondary' | 'outline' | 'destructive'
-> = {
-  connected: 'secondary',
-  syncing: 'outline',
-  error: 'destructive',
-  reconnect_required: 'destructive',
-}
+import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -102,6 +92,7 @@ export function PowensConnectionsCard() {
   ].filter((error): error is { id: string; message: string } => Boolean(error))
 
   const connections = statusQuery.data?.connections ?? []
+  const syncStatusPersistenceEnabled = statusQuery.data?.syncStatusPersistenceEnabled ?? false
 
   return (
     <Card>
@@ -149,45 +140,59 @@ export function PowensConnectionsCard() {
         ) : null}
 
         {!statusQuery.isPending
-          ? connections.map(connection => (
-              <div
-                key={connection.id}
-                className="rounded-md border border-border/80 bg-muted/20 px-3 py-2 space-y-1"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {connection.providerInstitutionName ??
-                        `Connexion #${connection.powensConnectionId}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {connection.provider} • ref {connection.providerConnectionId}
-                    </p>
+          ? connections.map(connection => {
+              const syncBadge = getPowensConnectionSyncBadgeModel({
+                connection,
+                persistenceEnabled: syncStatusPersistenceEnabled,
+              })
+
+              return (
+                <div
+                  key={connection.id}
+                  className="rounded-md border border-border/80 bg-muted/20 px-3 py-2 space-y-1"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        {connection.providerInstitutionName ??
+                          `Connexion #${connection.powensConnectionId}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {connection.provider} • ref {connection.providerConnectionId}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={syncBadge.badgeVariant}
+                      className={syncBadge.badgeClassName}
+                      title={syncBadge.tooltipLabel}
+                    >
+                      {syncBadge.badgeLabel}
+                    </Badge>
                   </div>
-                  <Badge variant={STATUS_VARIANT[connection.status]}>{connection.status}</Badge>
+                  <p className="text-xs text-muted-foreground">{syncBadge.reasonLabel}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Derniere tentative: {formatDateTime(connection.lastSyncAttemptAt)} | Derniere
+                    sync: {formatDateTime(connection.lastSyncAt)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Dernier succes: {formatDateTime(connection.lastSuccessAt)}
+                  </p>
+                  {connection.lastFailedAt ? (
+                    <p className="text-xs text-muted-foreground">
+                      Dernier echec: {formatDateTime(connection.lastFailedAt)}
+                    </p>
+                  ) : null}
+                  {formatSyncMetadata(connection.syncMetadata) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Metadata sync: {formatSyncMetadata(connection.syncMetadata)}
+                    </p>
+                  ) : null}
+                  {connection.lastError ? (
+                    <p className="text-xs text-destructive">Erreur: {connection.lastError}</p>
+                  ) : null}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Derniere tentative: {formatDateTime(connection.lastSyncAttemptAt)} | Derniere
-                  sync: {formatDateTime(connection.lastSyncAt)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Dernier succes: {formatDateTime(connection.lastSuccessAt)}
-                </p>
-                {connection.lastFailedAt ? (
-                  <p className="text-xs text-muted-foreground">
-                    Dernier echec: {formatDateTime(connection.lastFailedAt)}
-                  </p>
-                ) : null}
-                {formatSyncMetadata(connection.syncMetadata) ? (
-                  <p className="text-xs text-muted-foreground">
-                    Metadata sync: {formatSyncMetadata(connection.syncMetadata)}
-                  </p>
-                ) : null}
-                {connection.lastError ? (
-                  <p className="text-xs text-destructive">Erreur: {connection.lastError}</p>
-                ) : null}
-              </div>
-            ))
+              )
+            })
           : null}
       </CardContent>
     </Card>

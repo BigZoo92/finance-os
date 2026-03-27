@@ -16,6 +16,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Keep hierarchy, spacing rhythm, and accessibility intact. The repo already uses a custom dashboard composition instead of generic equal-card scaffolding; keep that intentionality.
 - Keep dashboard state driven by loaders, query options, and URL search params rather than ad hoc local request state.
 - Dashboard health states should stay progressive: one global summary, inline badges only on selected decision-critical widgets, and an optional diagnosis drawer instead of repeating the same warning across the whole page.
+- Powens connection status UI should prefer the persisted last-sync snapshot for concise badges, but it must degrade cleanly to runtime-only placeholders when the server kill-switch disables persistence.
 
 ## UI Change Expectations
 
@@ -31,6 +32,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Admin mode still exposes Powens connect/sync affordances without layout regressions.
 - Ops overview should keep Powens callback observability compact: show freshness plus safe-mode state without exposing callback payload contents.
 - The dashboard health summary should stay coherent across demo/admin: demo comes from the fixture matrix, admin comes from aggregate plus domain-level health, and global vs inline signals must not contradict each other.
+- Powens connection cards should use explicit badges (`OK`, `KO`, `En cours`, `Inconnu`), keep the short reason readable in the main card, and reserve the exact last-attempt time for a tooltip or similarly lightweight affordance.
 - Empty and error states remain actionable and legible.
 - Tables, cards, and buttons stay keyboard accessible.
 - Mobile and desktop layouts still load without overflow surprises.

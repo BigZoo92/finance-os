@@ -98,6 +98,7 @@ describe('buildDashboardHealthModel', () => {
       },
       status: {
         safeModeActive: false,
+        syncStatusPersistenceEnabled: true,
         lastCallback: null,
         connections: [
           {
@@ -109,6 +110,8 @@ describe('buildDashboardHealthModel', () => {
             providerInstitutionId: 'bank-a',
             providerInstitutionName: 'Bank A',
             status: 'connected',
+            lastSyncStatus: 'OK',
+            lastSyncReasonCode: 'SUCCESS',
             lastSyncAttemptAt: '2026-03-27T08:00:00.000Z',
             lastSyncAt: '2026-03-27T08:02:00.000Z',
             lastSuccessAt: '2026-03-27T08:02:00.000Z',
@@ -217,6 +220,7 @@ describe('buildDashboardHealthModel', () => {
       },
       status: {
         safeModeActive: true,
+        syncStatusPersistenceEnabled: true,
         lastCallback: null,
         connections: [
           {
@@ -228,6 +232,8 @@ describe('buildDashboardHealthModel', () => {
             providerInstitutionId: 'bank-a',
             providerInstitutionName: 'Bank A',
             status: 'connected',
+            lastSyncStatus: 'OK',
+            lastSyncReasonCode: 'SUCCESS',
             lastSyncAttemptAt: '2026-03-24T06:00:00.000Z',
             lastSyncAt: '2026-03-24T06:05:00.000Z',
             lastSuccessAt: '2026-03-24T06:05:00.000Z',
@@ -246,6 +252,8 @@ describe('buildDashboardHealthModel', () => {
             providerInstitutionId: 'bank-b',
             providerInstitutionName: 'Bank B',
             status: 'reconnect_required',
+            lastSyncStatus: 'KO',
+            lastSyncReasonCode: 'RECONNECT_REQUIRED',
             lastSyncAttemptAt: '2026-03-24T05:00:00.000Z',
             lastSyncAt: null,
             lastSuccessAt: null,

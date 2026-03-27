@@ -53,6 +53,7 @@ import {
   powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
+import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 import { pushToast } from '@/lib/toast-store'
 import {
   buildDashboardHealthModel,
@@ -69,16 +70,6 @@ const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
   { label: '30j', value: '30d' },
   { label: '90j', value: '90d' },
 ]
-
-const STATUS_VARIANT: Record<
-  'connected' | 'syncing' | 'error' | 'reconnect_required',
-  'secondary' | 'outline' | 'destructive'
-> = {
-  connected: 'secondary',
-  syncing: 'outline',
-  error: 'destructive',
-  reconnect_required: 'destructive',
-}
 
 const SYNC_RUN_STATUS_VARIANT: Record<
   'running' | 'success' | 'error' | 'reconnect_required',
@@ -689,6 +680,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       connection => connection.status === 'error' || connection.status === 'reconnect_required'
     ).length,
   }
+  const syncStatusPersistenceEnabled = statusQuery.data?.syncStatusPersistenceEnabled ?? false
   const latestSyncAt = pickLatestDate(statusConnections.map(connection => connection.lastSyncAt))
   const latestSuccessAt = pickLatestDate(
     statusConnections.map(connection => connection.lastSuccessAt)
@@ -1467,127 +1459,144 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               {!statusQuery.isPending && statusConnections.length === 0 ? (
                 <p className="text-muted-foreground">Aucune connexion Powens.</p>
               ) : null}
-              {statusConnections.map(connection => (
-                <div
-                  key={connection.id}
-                  className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium">
-                        {connection.providerInstitutionName ??
-                          `Connection #${connection.powensConnectionId}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {connection.provider} • ref {connection.providerConnectionId}
-                      </p>
-                    </div>
-                    <Badge variant={STATUS_VARIANT[connection.status]}>{connection.status}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Last attempt: {formatDateTime(connection.lastSyncAttemptAt)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Last sync: {formatDateTime(connection.lastSyncAt)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Last success: {formatDateTime(connection.lastSuccessAt)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Balance:{' '}
-                    {formatMoney(connectionBalanceById.get(connection.powensConnectionId) ?? 0)}
-                  </p>
-                  {connection.lastError ? (
-                    <p className="text-xs text-destructive">Error: {connection.lastError}</p>
-                  ) : null}
-                  <details className="rounded-md border border-border/70 bg-background/60 p-2 text-xs">
-                    <summary className="cursor-pointer font-medium text-foreground">
-                      Diagnostic connexion
-                    </summary>
-                    <div className="mt-2 space-y-2 text-muted-foreground">
-                      <p>Connection ID: {connection.powensConnectionId}</p>
-                      <p>Provider ID: {connection.providerConnectionId}</p>
-                      <p>Source: {connection.source}</p>
-                      <p>Created: {formatDateTime(connection.createdAt)}</p>
-                      <p>Updated: {formatDateTime(connection.updatedAt)}</p>
-                      {formatDiagnosticMetadata(connection.syncMetadata) ? (
-                        <p>Sync metadata: {formatDiagnosticMetadata(connection.syncMetadata)}</p>
-                      ) : null}
-                      {(() => {
-                        const connectionRuns =
-                          syncRunsByConnectionId.get(connection.powensConnectionId) ?? []
-                        if (!connectionRuns.length) {
-                          return <p>Timeline sync: aucun run recent sur cette connexion.</p>
-                        }
+              {statusConnections.map(connection => {
+                const syncBadge = getPowensConnectionSyncBadgeModel({
+                  connection,
+                  persistenceEnabled: syncStatusPersistenceEnabled,
+                })
 
-                        return (
-                          <div className="space-y-2">
-                            <p className="font-medium text-foreground">Timeline sync recente</p>
-                            <ol className="space-y-2">
-                              {connectionRuns.slice(0, 5).map(run => (
-                                <li
-                                  key={run.id}
-                                  className="rounded border border-border/60 bg-background/70 p-2"
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <Badge variant={SYNC_RUN_STATUS_VARIANT[run.result]}>
-                                      {run.result}
-                                    </Badge>
-                                    <span className="text-[11px]">
-                                      Debut: {formatDateTime(run.startedAt)}
-                                    </span>
-                                  </div>
-                                  <p>
-                                    Fin:{' '}
-                                    {run.endedAt ? formatDateTime(run.endedAt) : 'Encore en cours'}
-                                    {formatDuration(run.startedAt, run.endedAt)
-                                      ? ` · Duree ${formatDuration(run.startedAt, run.endedAt)}`
-                                      : ''}
-                                  </p>
-                                  {run.requestId ? <p>Request: {run.requestId}</p> : null}
-                                  {run.errorFingerprint ? (
-                                    <p>Fingerprint: {run.errorFingerprint}</p>
-                                  ) : null}
-                                  {run.errorMessage ? (
-                                    <p className="text-destructive">Erreur: {run.errorMessage}</p>
-                                  ) : null}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        )
-                      })()}
+                return (
+                  <div
+                    key={connection.id}
+                    className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">
+                          {connection.providerInstitutionName ??
+                            `Connection #${connection.powensConnectionId}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {connection.provider} • ref {connection.providerConnectionId}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={syncBadge.badgeVariant}
+                        className={syncBadge.badgeClassName}
+                        title={syncBadge.tooltipLabel}
+                      >
+                        {syncBadge.badgeLabel}
+                      </Badge>
                     </div>
-                  </details>
-                  <div className="mt-2 flex justify-end">
-                    <GuardedActionWrapper
-                      blockedTitle={manualSyncUiState.blockMessage}
-                      onBlockedClick={
-                        manualSyncUiState.blockReason
-                          ? () =>
-                              handleBlockedSyncClick({
-                                connectionId: connection.powensConnectionId,
-                              })
-                          : undefined
-                      }
-                    >
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={manualSyncUiState.blocked}
-                        onClick={() =>
-                          syncMutation.mutate({
-                            connectionId: connection.powensConnectionId,
-                          })
+                    <p className="text-xs text-muted-foreground">{syncBadge.reasonLabel}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Last attempt: {formatDateTime(connection.lastSyncAttemptAt)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Last sync: {formatDateTime(connection.lastSyncAt)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Last success: {formatDateTime(connection.lastSuccessAt)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Balance:{' '}
+                      {formatMoney(connectionBalanceById.get(connection.powensConnectionId) ?? 0)}
+                    </p>
+                    {connection.lastError ? (
+                      <p className="text-xs text-destructive">Error: {connection.lastError}</p>
+                    ) : null}
+                    <details className="rounded-md border border-border/70 bg-background/60 p-2 text-xs">
+                      <summary className="cursor-pointer font-medium text-foreground">
+                        Diagnostic connexion
+                      </summary>
+                      <div className="mt-2 space-y-2 text-muted-foreground">
+                        <p>Connection ID: {connection.powensConnectionId}</p>
+                        <p>Provider ID: {connection.providerConnectionId}</p>
+                        <p>Source: {connection.source}</p>
+                        <p>Runtime status: {connection.status}</p>
+                        <p>Created: {formatDateTime(connection.createdAt)}</p>
+                        <p>Updated: {formatDateTime(connection.updatedAt)}</p>
+                        {formatDiagnosticMetadata(connection.syncMetadata) ? (
+                          <p>Sync metadata: {formatDiagnosticMetadata(connection.syncMetadata)}</p>
+                        ) : null}
+                        {(() => {
+                          const connectionRuns =
+                            syncRunsByConnectionId.get(connection.powensConnectionId) ?? []
+                          if (!connectionRuns.length) {
+                            return <p>Timeline sync: aucun run recent sur cette connexion.</p>
+                          }
+
+                          return (
+                            <div className="space-y-2">
+                              <p className="font-medium text-foreground">Timeline sync recente</p>
+                              <ol className="space-y-2">
+                                {connectionRuns.slice(0, 5).map(run => (
+                                  <li
+                                    key={run.id}
+                                    className="rounded border border-border/60 bg-background/70 p-2"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <Badge variant={SYNC_RUN_STATUS_VARIANT[run.result]}>
+                                        {run.result}
+                                      </Badge>
+                                      <span className="text-[11px]">
+                                        Debut: {formatDateTime(run.startedAt)}
+                                      </span>
+                                    </div>
+                                    <p>
+                                      Fin:{' '}
+                                      {run.endedAt
+                                        ? formatDateTime(run.endedAt)
+                                        : 'Encore en cours'}
+                                      {formatDuration(run.startedAt, run.endedAt)
+                                        ? ` · Duree ${formatDuration(run.startedAt, run.endedAt)}`
+                                        : ''}
+                                    </p>
+                                    {run.requestId ? <p>Request: {run.requestId}</p> : null}
+                                    {run.errorFingerprint ? (
+                                      <p>Fingerprint: {run.errorFingerprint}</p>
+                                    ) : null}
+                                    {run.errorMessage ? (
+                                      <p className="text-destructive">Erreur: {run.errorMessage}</p>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </details>
+                    <div className="mt-2 flex justify-end">
+                      <GuardedActionWrapper
+                        blockedTitle={manualSyncUiState.blockMessage}
+                        onBlockedClick={
+                          manualSyncUiState.blockReason
+                            ? () =>
+                                handleBlockedSyncClick({
+                                  connectionId: connection.powensConnectionId,
+                                })
+                            : undefined
                         }
                       >
-                        {connectionSyncButtonLabel}
-                      </Button>
-                    </GuardedActionWrapper>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={manualSyncUiState.blocked}
+                          onClick={() =>
+                            syncMutation.mutate({
+                              connectionId: connection.powensConnectionId,
+                            })
+                          }
+                        >
+                          {connectionSyncButtonLabel}
+                        </Button>
+                      </GuardedActionWrapper>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </CardContent>
           </Card>
         </section>

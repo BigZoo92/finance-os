@@ -71,6 +71,8 @@ export const createPowensConnectionRepository = (
           providerInstitutionId: schema.powensConnection.providerInstitutionId,
           providerInstitutionName: schema.powensConnection.providerInstitutionName,
           status: schema.powensConnection.status,
+          lastSyncStatus: schema.powensConnection.lastSyncStatus,
+          lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
           lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
           lastSyncAt: schema.powensConnection.lastSyncAt,
           lastSuccessAt: schema.powensConnection.lastSuccessAt,

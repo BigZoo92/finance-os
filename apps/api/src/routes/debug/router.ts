@@ -1,6 +1,6 @@
 import { schema } from '@finance-os/db'
-import { desc, sql } from 'drizzle-orm'
 import { resolveRuntimeVersion } from '@finance-os/prelude'
+import { desc, sql } from 'drizzle-orm'
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../auth/context'
 import { requireInternalToken } from '../../auth/guard'
@@ -8,6 +8,7 @@ import { logApiEvent } from '../../observability/logger'
 import type { PowensRoutesDependencies } from '../integrations/powens/types'
 
 const SYNC_COUNT_METRIC_PREFIX = 'powens:metrics:sync:count:'
+const SYNC_STATUS_COUNT_METRIC_PREFIX = 'powens:metrics:sync_status:count:'
 const POWENS_CALLS_METRIC_PREFIX = 'powens:metrics:powens_calls:count:'
 const LAST_SYNC_STARTED_AT_KEY = 'powens:metrics:sync:last_started_at'
 const LAST_SYNC_STARTED_CONNECTION_KEY = 'powens:metrics:sync:last_started_connection'
@@ -38,6 +39,25 @@ const toCount = (raw: string | null) => {
   const parsed = Number(raw)
   return Number.isFinite(parsed) ? parsed : 0
 }
+
+const SYNC_STATUS_METRIC_COMBINATIONS = [
+  {
+    status: 'OK',
+    reasonCode: 'SUCCESS',
+  },
+  {
+    status: 'OK',
+    reasonCode: 'PARTIAL_IMPORT',
+  },
+  {
+    status: 'KO',
+    reasonCode: 'SYNC_FAILED',
+  },
+  {
+    status: 'KO',
+    reasonCode: 'RECONNECT_REQUIRED',
+  },
+] as const
 
 const resolveCommitSha = (env: PowensRoutesDependencies['env']) => {
   return env.APP_COMMIT_SHA ?? null
@@ -190,6 +210,7 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
           privateAccessTokenEnabled: Boolean(env.PRIVATE_ACCESS_TOKEN),
           debugMetricsTokenEnabled: Boolean(env.DEBUG_METRICS_TOKEN),
           demoModeDefault: true,
+          syncStatusPersistenceEnabled: env.SYNC_STATUS_PERSISTENCE_ENABLED,
           allowInsecureCookieInProd: env.AUTH_ALLOW_INSECURE_COOKIE_IN_PROD,
           authSessionTtlDays: env.AUTH_SESSION_TTL_DAYS,
           authLoginRateLimitPerMin: env.AUTH_LOGIN_RATE_LIMIT_PER_MIN,
@@ -203,6 +224,10 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
       const requestId = getRequestMeta(context).requestId
 
       const todayKey = toDateKey(new Date())
+      const syncStatusMetricKeys = SYNC_STATUS_METRIC_COMBINATIONS.map(
+        combination =>
+          `${SYNC_STATUS_COUNT_METRIC_PREFIX}${combination.status}:${combination.reasonCode}:${todayKey}`
+      )
       const redisValues = await redisClient.mGet([
         `${SYNC_COUNT_METRIC_PREFIX}${todayKey}`,
         `${POWENS_CALLS_METRIC_PREFIX}${todayKey}`,
@@ -211,12 +236,15 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
         LAST_SYNC_ENDED_AT_KEY,
         LAST_SYNC_ENDED_CONNECTION_KEY,
         LAST_SYNC_RESULT_KEY,
+        ...syncStatusMetricKeys,
       ])
 
       const connections = await db
         .select({
           powensConnectionId: schema.powensConnection.powensConnectionId,
           status: schema.powensConnection.status,
+          lastSyncStatus: schema.powensConnection.lastSyncStatus,
+          lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
           lastSyncAt: schema.powensConnection.lastSyncAt,
           lastSuccessAt: schema.powensConnection.lastSuccessAt,
           lastError: schema.powensConnection.lastError,
@@ -231,6 +259,16 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
         connectionCount: connections.length,
       })
 
+      const syncStatusCountsToday = SYNC_STATUS_METRIC_COMBINATIONS.reduce<
+        Record<string, Record<string, number>>
+      >((accumulator, combination, index) => {
+        const raw = redisValues[7 + index] ?? null
+        const byStatus = accumulator[combination.status] ?? {}
+        byStatus[combination.reasonCode] = toCount(raw)
+        accumulator[combination.status] = byStatus
+        return accumulator
+      }, {})
+
       return {
         requestId,
         day: todayKey,
@@ -243,9 +281,12 @@ export const createDebugRoutes = ({ db, redisClient, env }: PowensRoutesDependen
           endedConnectionId: redisValues[5] ?? null,
           result: redisValues[6] ?? null,
         },
+        syncStatusCountsToday,
         connectionStatuses: connections.map(connection => ({
           powensConnectionId: connection.powensConnectionId,
           status: connection.status,
+          lastSyncStatus: connection.lastSyncStatus,
+          lastSyncReasonCode: connection.lastSyncReasonCode,
           lastSyncAt: connection.lastSyncAt?.toISOString() ?? null,
           lastSuccessAt: connection.lastSuccessAt?.toISOString() ?? null,
           lastError: connection.lastError,

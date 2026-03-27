@@ -1,3 +1,11 @@
+export type PowensPersistedSyncStatus = 'OK' | 'KO'
+
+export type PowensPersistedSyncReasonCode =
+  | 'SUCCESS'
+  | 'PARTIAL_IMPORT'
+  | 'SYNC_FAILED'
+  | 'RECONNECT_REQUIRED'
+
 export type PowensConnectionStatus = {
   id: number
   source: string
@@ -7,6 +15,8 @@ export type PowensConnectionStatus = {
   providerInstitutionId: string | null
   providerInstitutionName: string | null
   status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+  lastSyncStatus: PowensPersistedSyncStatus | null
+  lastSyncReasonCode: PowensPersistedSyncReasonCode | null
   lastSyncAttemptAt: string | null
   lastSyncAt: string | null
   lastSuccessAt: string | null
@@ -29,6 +39,7 @@ export type PowensLatestCallback = {
 export type PowensStatusResponse = {
   connections: PowensConnectionStatus[]
   safeModeActive: boolean
+  syncStatusPersistenceEnabled: boolean
   fallback?: 'safe_mode'
   lastCallback: PowensLatestCallback | null
 }
