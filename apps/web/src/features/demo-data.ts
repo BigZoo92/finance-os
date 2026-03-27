@@ -666,6 +666,7 @@ export const getDemoPowensAuditTrail = (): PowensAuditTrailResponse => {
 export const getDemoPowensStatus = (): PowensStatusResponse => {
   return {
     safeModeActive: false,
+    syncStatusPersistenceEnabled: true,
     lastCallback: {
       receivedAt: '2026-03-23T08:42:00.000Z',
       status: 'allowed',
@@ -683,6 +684,8 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
         providerInstitutionId: 'fortuneo',
         providerInstitutionName: 'Fortuneo',
         status: 'connected',
+        lastSyncStatus: 'OK',
+        lastSyncReasonCode: 'SUCCESS',
         lastSyncAttemptAt: '2026-02-22T19:20:00.000Z',
         lastSyncAt: '2026-02-22T19:22:00.000Z',
         lastSuccessAt: '2026-02-22T19:22:00.000Z',
@@ -705,6 +708,8 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
         providerInstitutionId: 'revolut',
         providerInstitutionName: 'Revolut',
         status: 'syncing',
+        lastSyncStatus: 'OK',
+        lastSyncReasonCode: 'SUCCESS',
         lastSyncAttemptAt: '2026-02-22T18:45:00.000Z',
         lastSyncAt: '2026-02-22T18:45:00.000Z',
         lastSuccessAt: '2026-02-22T17:59:00.000Z',

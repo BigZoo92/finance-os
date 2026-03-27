@@ -144,6 +144,7 @@ POSTGRES_PASSWORD=<PASSWORD>
 PRIVATE_ACCESS_TOKEN=<long-random-token>
 DEBUG_METRICS_TOKEN=<long-random-token>
 POWENS_MANUAL_SYNC_COOLDOWN_SECONDS=300
+SYNC_STATUS_PERSISTENCE_ENABLED=true
 DERIVED_RECOMPUTE_ENABLED=true
 
 AUTH_ADMIN_EMAIL=<admin@email>
@@ -199,6 +200,7 @@ Ne pas mettre dans Dokploy:
 
 - `APP_IMAGE_TAG` est la cle du systeme: chaque deploy doit pointer vers un tag immuable, par exemple `v1.2.3`
 - `AUTH_ADMIN_PASSWORD_HASH_B64` est la variable canonique
+- `SYNC_STATUS_PERSISTENCE_ENABLED=false` coupe la persistance du dernier resultat synthétique Powens (DB + compteurs derives) et force l'UI admin a revenir au fallback runtime/placeholder sans conserver un snapshot stale
 - `DERIVED_RECOMPUTE_ENABLED=false` coupe le trigger admin de recompute derivee sans changer le snapshot courant
 - `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
 - `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure
@@ -228,6 +230,8 @@ VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
 `GHCR_IMAGE_NAME` est obligatoire.
 
 Les autres ont des valeurs par defaut raisonnables dans le workflow.
+
+`SYNC_STATUS_PERSISTENCE_ENABLED` ne fait pas partie des repo variables GitHub: c'est un flag runtime serveur a definir dans l'env Dokploy du Compose pour qu'il s'applique a la fois a `api` et a `worker`.
 
 ### Repository secrets
 

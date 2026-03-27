@@ -20,6 +20,15 @@ export const powensConnectionStatusEnum = pgEnum('powens_connection_status', [
   'reconnect_required',
 ])
 
+export const powensLastSyncStatusEnum = pgEnum('powens_last_sync_status', ['OK', 'KO'])
+
+export const powensLastSyncReasonCodeEnum = pgEnum('powens_last_sync_reason_code', [
+  'SUCCESS',
+  'PARTIAL_IMPORT',
+  'SYNC_FAILED',
+  'RECONNECT_REQUIRED',
+])
+
 export const providerRawImportStatusEnum = pgEnum('provider_raw_import_status', [
   'imported',
   'normalized',
@@ -38,6 +47,8 @@ export const powensConnection = pgTable(
     providerInstitutionName: text('provider_institution_name'),
     accessTokenEncrypted: text('access_token_encrypted').notNull(),
     status: powensConnectionStatusEnum('status').notNull().default('connected'),
+    lastSyncStatus: powensLastSyncStatusEnum('last_sync_status'),
+    lastSyncReasonCode: powensLastSyncReasonCodeEnum('last_sync_reason_code'),
     lastSyncAttemptAt: timestamp('last_sync_attempt_at', { withTimezone: true }),
     lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
     lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),

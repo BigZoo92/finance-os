@@ -25,6 +25,11 @@ import {
   deriveTransactionProviderObjectAt,
   type ProviderRawImportInsert,
 } from './raw-import'
+import {
+  type PersistedSyncReasonCode,
+  type PersistedSyncStatus,
+  resolvePersistedSyncSnapshot,
+} from './sync-status-persistence'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -45,6 +50,7 @@ const FULL_RESYNC_WINDOW_DAYS = 3650
 const RECONNECT_REQUIRED_STATUS_CODES = new Set([401, 403])
 const METRIC_RETENTION_SECONDS = 3 * 24 * 60 * 60
 const SYNC_COUNT_METRIC_PREFIX = 'powens:metrics:sync:count:'
+const SYNC_STATUS_COUNT_METRIC_PREFIX = 'powens:metrics:sync_status:count:'
 const POWENS_CALLS_METRIC_PREFIX = 'powens:metrics:powens_calls:count:'
 const LAST_SYNC_STARTED_AT_KEY = 'powens:metrics:sync:last_started_at'
 const LAST_SYNC_STARTED_CONNECTION_KEY = 'powens:metrics:sync:last_started_connection'
@@ -354,6 +360,42 @@ const recordPowensCall = async () => {
   await incrementDailyMetric(POWENS_CALLS_METRIC_PREFIX)
 }
 
+const incrementPersistedSyncMetric = async (params: {
+  status: PersistedSyncStatus
+  reasonCode: PersistedSyncReasonCode
+}) => {
+  await incrementDailyMetric(
+    `${SYNC_STATUS_COUNT_METRIC_PREFIX}${params.status}:${params.reasonCode}:`
+  )
+}
+
+const logPersistedSyncTransition = (params: {
+  source: string
+  provider: string
+  connectionId: string
+  requestId?: string
+  previousStatus: PersistedSyncStatus | null
+  previousReasonCode: PersistedSyncReasonCode | null
+  nextStatus: PersistedSyncStatus
+  nextReasonCode: PersistedSyncReasonCode
+}) => {
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker persisted sync snapshot transition',
+    source: params.source,
+    provider: params.provider,
+    connectionId: params.connectionId,
+    requestId: params.requestId ?? 'n/a',
+    previousStatus: params.previousStatus ?? 'UNKNOWN',
+    previousReasonCode: params.previousReasonCode ?? 'UNKNOWN',
+    nextStatus: params.nextStatus,
+    nextReasonCode: params.nextReasonCode,
+    changed:
+      params.previousStatus !== params.nextStatus ||
+      params.previousReasonCode !== params.nextReasonCode,
+  })
+}
+
 const acquireConnectionLock = async (connectionId: string) => {
   const lockKey = `${CONNECTION_LOCK_PREFIX}${connectionId}`
   const lockToken = randomUUID()
@@ -611,6 +653,8 @@ const syncConnection = async (params: {
   let connectionSource = 'banking'
   let providerConnectionId = connectionId
   let previousLastSyncAt: Date | null = null
+  let previousPersistedSyncStatus: PersistedSyncStatus | null = null
+  let previousPersistedSyncReasonCode: PersistedSyncReasonCode | null = null
 
   try {
     const [connection] = await dbClient.db
@@ -620,6 +664,8 @@ const syncConnection = async (params: {
         powensConnectionId: schema.powensConnection.powensConnectionId,
         providerConnectionId: schema.powensConnection.providerConnectionId,
         accessTokenEncrypted: schema.powensConnection.accessTokenEncrypted,
+        lastSyncStatus: schema.powensConnection.lastSyncStatus,
+        lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
         lastSyncAt: schema.powensConnection.lastSyncAt,
       })
       .from(schema.powensConnection)
@@ -634,6 +680,8 @@ const syncConnection = async (params: {
     connectionSource = connection.source
     providerConnectionId = connection.providerConnectionId
     previousLastSyncAt = connection.lastSyncAt
+    previousPersistedSyncStatus = connection.lastSyncStatus
+    previousPersistedSyncReasonCode = connection.lastSyncReasonCode
 
     await Promise.all([
       incrementDailyMetric(SYNC_COUNT_METRIC_PREFIX),
@@ -645,7 +693,6 @@ const syncConnection = async (params: {
       .set({
         status: 'syncing',
         lastSyncAttemptAt: syncStart,
-        lastSyncAt: syncStart,
         lastError: null,
         updatedAt: syncStart,
       })
@@ -763,6 +810,10 @@ const syncConnection = async (params: {
     }
 
     const successAt = new Date()
+    const syncSnapshot = resolvePersistedSyncSnapshot({
+      result: 'success',
+      rawImportFailedCount: failedRawImportCount,
+    })
     await dbClient.db
       .update(schema.powensConnection)
       .set({
@@ -770,6 +821,12 @@ const syncConnection = async (params: {
         lastSyncAt: successAt,
         lastSuccessAt: successAt,
         lastError: null,
+        ...(env.SYNC_STATUS_PERSISTENCE_ENABLED
+          ? {
+              lastSyncStatus: syncSnapshot.status,
+              lastSyncReasonCode: syncSnapshot.reasonCode,
+            }
+          : {}),
         syncMetadata: {
           accountCount: upsertedAccounts.length,
           importedTransactionCount,
@@ -796,6 +853,19 @@ const syncConnection = async (params: {
       runId,
       result: 'success',
     })
+    if (env.SYNC_STATUS_PERSISTENCE_ENABLED) {
+      await incrementPersistedSyncMetric(syncSnapshot)
+      logPersistedSyncTransition({
+        source: connectionSource,
+        provider: connectionProvider,
+        connectionId,
+        ...(requestId ? { requestId } : {}),
+        previousStatus: previousPersistedSyncStatus,
+        previousReasonCode: previousPersistedSyncReasonCode,
+        nextStatus: syncSnapshot.status,
+        nextReasonCode: syncSnapshot.reasonCode,
+      })
+    }
     logWorkerEvent({
       level: 'info',
       msg: 'worker connection sync succeeded',
@@ -812,6 +882,9 @@ const syncConnection = async (params: {
     const failedAt = new Date()
     const failureStatus = toConnectionStatus(error)
     const errorMessage = toSafeErrorMessage(error)
+    const syncSnapshot = resolvePersistedSyncSnapshot({
+      result: failureStatus,
+    })
 
     await dbClient.db
       .update(schema.powensConnection)
@@ -820,6 +893,12 @@ const syncConnection = async (params: {
         lastSyncAt: failedAt,
         lastFailedAt: failedAt,
         lastError: errorMessage,
+        ...(env.SYNC_STATUS_PERSISTENCE_ENABLED
+          ? {
+              lastSyncStatus: syncSnapshot.status,
+              lastSyncReasonCode: syncSnapshot.reasonCode,
+            }
+          : {}),
         syncMetadata: {
           transactionWindow: {
             fromDate:
@@ -848,6 +927,19 @@ const syncConnection = async (params: {
       errorMessage,
       errorFingerprint: toErrorFingerprint(errorMessage),
     })
+    if (env.SYNC_STATUS_PERSISTENCE_ENABLED) {
+      await incrementPersistedSyncMetric(syncSnapshot)
+      logPersistedSyncTransition({
+        source: connectionSource,
+        provider: connectionProvider,
+        connectionId,
+        ...(requestId ? { requestId } : {}),
+        previousStatus: previousPersistedSyncStatus,
+        previousReasonCode: previousPersistedSyncReasonCode,
+        nextStatus: syncSnapshot.status,
+        nextReasonCode: syncSnapshot.reasonCode,
+      })
+    }
 
     logWorkerEvent({
       level: 'error',

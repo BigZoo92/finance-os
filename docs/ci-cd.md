@@ -85,6 +85,8 @@ VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED   # optional web UI kill-switch
 VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS   # optional web UI countdown duration
 ```
 
+Runtime flags that affect API/worker writes, such as `SYNC_STATUS_PERSISTENCE_ENABLED`, are not GitHub repo variables here. They live in the Dokploy Compose env so the same value reaches both `api` and `worker` at deploy time.
+
 Repository secrets:
 
 ```text

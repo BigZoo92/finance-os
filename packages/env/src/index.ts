@@ -382,6 +382,10 @@ export const getApiEnv = () => {
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
+    SYNC_STATUS_PERSISTENCE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     DERIVED_RECOMPUTE_ENABLED: z
       .string()
       .optional()
@@ -462,6 +466,10 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => toBooleanEnv(value)),
+    SYNC_STATUS_PERSISTENCE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     EXTERNAL_INTEGRATIONS_SAFE_MODE: z
       .string()
       .optional()

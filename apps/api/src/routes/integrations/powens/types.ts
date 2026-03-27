@@ -7,6 +7,13 @@ export type ApiDb = ReturnType<typeof createDbClient>['db']
 export type RedisClient = ReturnType<typeof createRedisClient>['client']
 export type ApiEnv = ReturnType<typeof getApiEnv>
 
+export type PowensPersistedSyncStatus = 'OK' | 'KO'
+export type PowensPersistedSyncReasonCode =
+  | 'SUCCESS'
+  | 'PARTIAL_IMPORT'
+  | 'SYNC_FAILED'
+  | 'RECONNECT_REQUIRED'
+
 export interface PowensRoutesDependencies {
   db: ApiDb
   redisClient: RedisClient
@@ -34,6 +41,8 @@ export interface PowensConnectionStatusView {
   providerInstitutionId: string | null
   providerInstitutionName: string | null
   status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
+  lastSyncStatus: PowensPersistedSyncStatus | null
+  lastSyncReasonCode: PowensPersistedSyncReasonCode | null
   lastSyncAttemptAt: Date | null
   lastSyncAt: Date | null
   lastSuccessAt: Date | null

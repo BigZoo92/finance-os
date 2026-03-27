@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia'
 import { createPowensRuntimePlugin } from './plugin'
+import { createAuditTrailRoute } from './routes/audit-trail'
+import { createBacklogRoute } from './routes/backlog'
 import { createCallbackRoute } from './routes/callback'
 import { createConnectUrlRoute } from './routes/connect-url'
 import { createStatusRoute } from './routes/status'
 import { createSyncRoute } from './routes/sync'
 import { createSyncRunsRoute } from './routes/sync-runs'
 import { createPowensRouteRuntime } from './runtime'
-import { createBacklogRoute } from './routes/backlog'
-import { createAuditTrailRoute } from './routes/audit-trail'
 import type { PowensRoutesDependencies } from './types'
 
 export const createPowensRoutes = ({ db, redisClient, env }: PowensRoutesDependencies) => {
@@ -20,6 +20,10 @@ export const createPowensRoutes = ({ db, redisClient, env }: PowensRoutesDepende
     .use(createAuditTrailRoute())
     .use(createCallbackRoute())
     .use(createSyncRoute())
-    .use(createStatusRoute())
+    .use(
+      createStatusRoute({
+        syncStatusPersistenceEnabled: env.SYNC_STATUS_PERSISTENCE_ENABLED,
+      })
+    )
     .use(createSyncRunsRoute())
 }

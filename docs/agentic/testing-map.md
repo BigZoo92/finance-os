@@ -16,6 +16,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
   - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
   - [../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts)
+  - [../../apps/api/src/routes/integrations/powens/routes/status.test.ts](../../apps/api/src/routes/integrations/powens/routes/status.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
   - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts) (covers incremental migration staging: `new-model-ready`, `mixed-fallback`, `legacy-fallback`, `contract-divergence`)
@@ -30,6 +31,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/web/src/features/goals/api.test.ts](../../apps/web/src/features/goals/api.test.ts)
 - Worker import normalization:
   - [../../apps/worker/src/raw-import.test.ts](../../apps/worker/src/raw-import.test.ts)
+  - [../../apps/worker/src/sync-status-persistence.test.ts](../../apps/worker/src/sync-status-persistence.test.ts)
 
 ## Scope-Based Verification
 
@@ -42,8 +44,19 @@ Use this map to choose the smallest verification set that still matches the risk
 - Worker sync, import staging, or provider normalization changes:
   - `pnpm worker:typecheck`
   - `bun test apps/worker/src/raw-import.test.ts`
+  - `bun test apps/worker/src/sync-status-persistence.test.ts`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
   - verify the raw/normalized/derived/manual boundary still holds (raw payloads stay in `provider_raw_import`; manual edits are not clobbered by sync normalization)
+- Powens sync snapshot persistence, status route, or badge changes:
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm --filter @finance-os/env typecheck`
+  - `pnpm api:typecheck`
+  - `pnpm worker:typecheck`
+  - `pnpm web:typecheck`
+  - `bun test apps/api/src/routes/integrations/powens/routes/status.test.ts`
+  - `bun test apps/worker/src/sync-status-persistence.test.ts`
+  - `pnpm --filter @finance-os/web exec vitest run src/features/powens/sync-status.test.ts src/components/dashboard/latest-sync-status.test.ts src/features/powens/api.test.ts`
+  - `pnpm db:generate` when the schema changed
 - Dashboard asset-model, investment-position, or unified financial-account changes:
   - `pnpm api:typecheck`
   - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
@@ -106,6 +119,7 @@ Use this map to choose the smallest verification set that still matches the risk
 
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
 - Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
+- Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
 - Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
 - Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
 - Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.
