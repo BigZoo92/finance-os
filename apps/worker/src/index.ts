@@ -30,6 +30,7 @@ import {
   type PersistedSyncStatus,
   resolvePersistedSyncSnapshot,
 } from './sync-status-persistence'
+import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -962,11 +963,20 @@ const syncAllConnections = async (requestId?: string) => {
       provider: schema.powensConnection.provider,
       powensConnectionId: schema.powensConnection.powensConnectionId,
       status: schema.powensConnection.status,
+      lastFailedAt: schema.powensConnection.lastFailedAt,
+      lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
     })
     .from(schema.powensConnection)
 
   for (const connection of connections) {
-    if (connection.status === 'reconnect_required') {
+    if (
+      !shouldRunReconnectRecoverySync({
+        status: connection.status,
+        lastFailedAt: connection.lastFailedAt,
+        lastSyncAttemptAt: connection.lastSyncAttemptAt,
+        now: new Date(),
+      })
+    ) {
       continue
     }
 
