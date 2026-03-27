@@ -369,4 +369,54 @@ describe('buildDashboardHealthModel', () => {
 
     expect(health.domains.sync.reasons).toEqual(['PARTIAL_IMPORT'])
   })
+
+  it('flags PARTIAL_IMPORT when sync metadata reports integrity issues', () => {
+    const health = buildDashboardHealthModel({
+      mode: 'admin',
+      nowMs: new Date('2026-03-27T12:00:00.000Z').getTime(),
+      status: {
+        safeModeActive: false,
+        syncStatusPersistenceEnabled: true,
+        lastCallback: null,
+        connections: [
+          {
+            id: 1,
+            source: 'banking',
+            provider: 'powens',
+            powensConnectionId: 'conn-a',
+            providerConnectionId: 'conn-a',
+            providerInstitutionId: 'bank-a',
+            providerInstitutionName: 'Bank A',
+            status: 'connected',
+            lastSyncStatus: 'OK',
+            lastSyncReasonCode: 'SUCCESS',
+            lastSyncAttemptAt: '2026-03-27T10:00:00.000Z',
+            lastSyncAt: '2026-03-27T10:01:00.000Z',
+            lastSuccessAt: '2026-03-27T10:01:00.000Z',
+            lastFailedAt: null,
+            lastError: null,
+            syncMetadata: {
+              integrityIssueDetected: true,
+              integrityIssueCount: 1,
+            },
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-03-27T10:01:00.000Z',
+          },
+        ],
+      },
+      syncRuns: [
+        {
+          id: 'run-a',
+          requestId: 'req-a',
+          connectionId: 'conn-a',
+          startedAt: '2026-03-27T10:00:00.000Z',
+          endedAt: '2026-03-27T10:01:00.000Z',
+          result: 'success',
+        },
+      ],
+    })
+
+    expect(health.domains.sync.reasons).toEqual(['PARTIAL_IMPORT'])
+  })
+
 })

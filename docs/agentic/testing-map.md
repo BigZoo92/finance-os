@@ -113,7 +113,7 @@ Use this map to choose the smallest verification set that still matches the risk
 ## Known Gaps
 
 - There is no worker package test suite today.
-- Worker raw-import coverage exists as focused Bun tests, but normalized transaction persistence still relies on package typechecks plus CI migration checks rather than a dedicated end-to-end worker suite.
+- Worker raw-import, transaction-gap detection, and sync-integrity detection now have focused Bun coverage, but normalized transaction persistence still relies on package typechecks plus CI migration checks rather than a dedicated end-to-end worker suite.
 - Dashboard read-model routes and Powens route handlers have limited direct contract tests today.
 - UI regression coverage is mostly manual for dashboard surfaces.
 
