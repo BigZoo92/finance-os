@@ -432,6 +432,30 @@ const releaseConnectionLock = async (lock: { key: string; token: string }) => {
   )
 }
 
+const dedupeRowsByKey = <T>(rows: T[], getKey: (row: T) => string): T[] => {
+  if (rows.length <= 1) {
+    return rows
+  }
+
+  const indexByKey = new Map<string, number>()
+  const dedupedRows: T[] = []
+
+  for (const row of rows) {
+    const key = getKey(row)
+    const existingIndex = indexByKey.get(key)
+
+    if (existingIndex === undefined) {
+      indexByKey.set(key, dedupedRows.length)
+      dedupedRows.push(row)
+      continue
+    }
+
+    dedupedRows[existingIndex] = row
+  }
+
+  return dedupedRows
+}
+
 const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) => {
   if (accounts.length === 0) {
     return []
@@ -473,7 +497,12 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
     return []
   }
 
-  const accountValues = normalizedAccounts.map(account => ({
+  const dedupedAccounts = dedupeRowsByKey(
+    normalizedAccounts,
+    account => `${account.providerConnectionId}|${account.powensAccountId}`
+  )
+
+  const accountValues = dedupedAccounts.map(account => ({
     source: account.source,
     provider: account.provider,
     providerConnectionId: account.providerConnectionId,
@@ -517,7 +546,7 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
   await dbClient.db
     .insert(schema.asset)
     .values(
-      normalizedAccounts.map(account => ({
+      dedupedAccounts.map(account => ({
         assetType: account.assetType,
         origin: 'provider' as const,
         source: 'banking',
@@ -565,9 +594,15 @@ const upsertProviderRawImports = async (rows: ProviderRawImportInsert[]) => {
     return
   }
 
+  const dedupedRows = dedupeRowsByKey(
+    rows,
+    row =>
+      `${row.provider}|${row.providerConnectionId}|${row.objectType}|${row.externalObjectId}`
+  )
+
   await dbClient.db
     .insert(schema.providerRawImport)
-    .values(rows)
+    .values(dedupedRows)
     .onConflictDoUpdate({
       target: [
         schema.providerRawImport.provider,
@@ -595,11 +630,20 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
 
   const withPowensId = rows.filter(row => row.powensTransactionId !== null)
   const withoutPowensId = rows.filter(row => row.powensTransactionId === null)
+  const dedupedWithPowensId = dedupeRowsByKey(
+    withPowensId,
+    row => `${row.powensConnectionId}|${row.powensTransactionId}`
+  )
+  const dedupedWithoutPowensId = dedupeRowsByKey(
+    withoutPowensId,
+    row =>
+      `${row.powensConnectionId}|${row.powensAccountId}|${row.bookingDate}|${row.amount}|${row.labelHash}`
+  )
 
-  if (withPowensId.length > 0) {
+  if (dedupedWithPowensId.length > 0) {
     await dbClient.db
       .insert(schema.transaction)
-      .values(withPowensId)
+      .values(dedupedWithPowensId)
       .onConflictDoUpdate({
         target: [schema.transaction.powensConnectionId, schema.transaction.powensTransactionId],
         set: {
@@ -615,10 +659,10 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
       })
   }
 
-  if (withoutPowensId.length > 0) {
+  if (dedupedWithoutPowensId.length > 0) {
     await dbClient.db
       .insert(schema.transaction)
-      .values(withoutPowensId)
+      .values(dedupedWithoutPowensId)
       .onConflictDoUpdate({
         target: [
           schema.transaction.powensConnectionId,
