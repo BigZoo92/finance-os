@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { and, asc, desc, eq, gte, lt, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm'
 import type { ApiDb, DashboardReadRepository, DashboardTransactionCursor } from '../types'
 
 const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
@@ -221,6 +221,25 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .where(whereClause)
         .orderBy(desc(schema.transaction.bookingDate), desc(schema.transaction.id))
         .limit(limit)
+    },
+
+    async listTransactionSyncMetadata(connectionIds) {
+      if (connectionIds.length === 0) {
+        return []
+      }
+
+      return db
+        .select({
+          powensConnectionId: schema.powensConnection.powensConnectionId,
+          connectionStatus: schema.powensConnection.status,
+          lastSyncStatus: schema.powensConnection.lastSyncStatus,
+          lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
+          lastSyncAt: schema.powensConnection.lastSyncAt,
+          lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
+          lastFailedAt: schema.powensConnection.lastFailedAt,
+        })
+        .from(schema.powensConnection)
+        .where(inArray(schema.powensConnection.powensConnectionId, connectionIds))
     },
 
     async updateTransactionClassification(transactionId, input) {

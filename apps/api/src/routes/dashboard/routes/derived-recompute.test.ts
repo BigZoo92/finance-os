@@ -65,6 +65,9 @@ const createDashboardRuntime = (
       getTransactions: async () => {
         throw new Error('not used in derived recompute tests')
       },
+      requestTransactionsBackgroundRefresh: async () => {
+        throw new Error('not used in derived recompute tests')
+      },
       updateTransactionClassification: async () => {
         throw new Error('not used in derived recompute tests')
       },

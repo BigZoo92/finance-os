@@ -43,6 +43,9 @@ const createDashboardRuntime = (
       getTransactions: async () => {
         throw new Error('not used in goals tests')
       },
+      requestTransactionsBackgroundRefresh: async () => {
+        throw new Error('not used in goals tests')
+      },
       updateTransactionClassification: async () => {
         throw new Error('not used in goals tests')
       },

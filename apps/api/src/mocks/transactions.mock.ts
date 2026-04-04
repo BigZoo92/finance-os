@@ -197,6 +197,7 @@ export const getDashboardTransactionsMock = ({
   const tail = items[items.length - 1]
 
   return {
+    schemaVersion: '2026-04-04',
     range,
     limit,
     nextCursor:
@@ -206,6 +207,14 @@ export const getDashboardTransactionsMock = ({
             id: tail.id,
           })
         : null,
+    freshness: {
+      strategy: 'snapshot-first',
+      lastSyncedAt: '2026-02-22T18:45:00.000Z',
+      syncStatus: 'fresh',
+      degradedReason: null,
+      snapshotAgeSeconds: 60,
+      refreshRequested: false,
+    },
     items,
   }
 }

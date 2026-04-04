@@ -24,6 +24,21 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       accountName: string | null
     }>
   >
+  listTransactionSyncMetadata: (
+    connectionIds: string[]
+  ) => Promise<
+    Array<{
+      powensConnectionId: string
+      connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
+      lastSyncStatus: 'OK' | 'KO' | null
+      lastSyncReasonCode: 'SUCCESS' | 'PARTIAL_IMPORT' | 'SYNC_FAILED' | 'RECONNECT_REQUIRED' | null
+      lastSyncAt: Date | null
+      lastSyncAttemptAt: Date | null
+      lastFailedAt: Date | null
+    }>
+  >
+  now: () => Date
+  staleAfterMinutes: number
 }
 
 const toMoney = (value: string) => {
@@ -37,6 +52,9 @@ const toMoney = (value: string) => {
 
 export const createGetDashboardTransactionsUseCase = ({
   listTransactions,
+  listTransactionSyncMetadata,
+  now,
+  staleAfterMinutes,
 }: CreateGetDashboardTransactionsUseCaseDependencies): DashboardUseCases['getTransactions'] => {
   return async input => {
     const fromDate = getRangeStartDate(input.range)
@@ -53,7 +71,46 @@ export const createGetDashboardTransactionsUseCase = ({
     const visibleRows = hasNextPage ? rows.slice(0, input.limit) : rows
     const tail = visibleRows[visibleRows.length - 1]
 
+    const connectionIds = [...new Set(visibleRows.map(row => row.powensConnectionId))]
+    const syncMetadata = await listTransactionSyncMetadata(connectionIds)
+    const latestSyncedAtMs = syncMetadata.reduce<number | null>((latest, row) => {
+      const current = row.lastSyncAt?.getTime()
+      if (!Number.isFinite(current)) {
+        return latest
+      }
+      return latest === null ? (current ?? null) : Math.max(latest, current ?? 0)
+    }, null)
+    const snapshotAgeSeconds =
+      latestSyncedAtMs === null ? null : Math.max(0, Math.round((now().getTime() - latestSyncedAtMs) / 1000))
+    const staleThresholdSeconds = staleAfterMinutes * 60
+    const hasSyncing = syncMetadata.some(row => row.connectionStatus === 'syncing')
+    const hasFailures = syncMetadata.some(
+      row =>
+        row.connectionStatus === 'error' ||
+        row.connectionStatus === 'reconnect_required' ||
+        row.lastSyncStatus === 'KO'
+    )
+    const syncStatus =
+      visibleRows.length === 0 && latestSyncedAtMs === null
+        ? ('no-data-first-connect' as const)
+        : hasSyncing
+          ? ('syncing' as const)
+          : hasFailures
+            ? ('sync-failed-with-safe-data' as const)
+            : snapshotAgeSeconds !== null && snapshotAgeSeconds > staleThresholdSeconds
+              ? ('stale-but-usable' as const)
+              : ('fresh' as const)
+    const degradedReason =
+      syncStatus === 'stale-but-usable'
+        ? 'snapshot_stale'
+        : syncStatus === 'sync-failed-with-safe-data'
+          ? 'powens_refresh_failed'
+          : syncStatus === 'no-data-first-connect'
+            ? 'powens_first_connect_pending'
+            : null
+
     return {
+      schemaVersion: '2026-04-04',
       range: input.range,
       limit: input.limit,
       nextCursor:
@@ -63,6 +120,14 @@ export const createGetDashboardTransactionsUseCase = ({
               id: tail.id,
             })
           : null,
+      freshness: {
+        strategy: 'snapshot-first',
+        lastSyncedAt: latestSyncedAtMs === null ? null : new Date(latestSyncedAtMs).toISOString(),
+        syncStatus,
+        degradedReason,
+        snapshotAgeSeconds,
+        refreshRequested: false,
+      },
       items: visibleRows.map(row => {
         const amount = toMoney(row.amount)
         const normalizedClassification = applyTransactionAutoCategorization({

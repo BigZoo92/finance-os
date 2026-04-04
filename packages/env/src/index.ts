@@ -386,6 +386,15 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    TRANSACTIONS_SNAPSHOT_FIRST_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    POWENS_REFRESH_BACKGROUND_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES: z.coerce.number().int().positive().default(30),
     DERIVED_RECOMPUTE_ENABLED: z
       .string()
       .optional()
