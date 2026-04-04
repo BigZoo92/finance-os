@@ -247,7 +247,9 @@ const registerAppRoutes = (app: Elysia<any>) => {
     .use(
       createDashboardRoutes({
         db,
+        redisClient: redisClient.client,
         featureEnabled: env.DERIVED_RECOMPUTE_ENABLED,
+        transactionsSnapshotStaleAfterMinutes: env.TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES,
       })
     )
     .use(

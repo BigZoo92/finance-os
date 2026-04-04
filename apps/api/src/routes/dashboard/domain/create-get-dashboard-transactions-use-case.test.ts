@@ -20,6 +20,19 @@ describe('createGetDashboardTransactionsUseCase', () => {
           accountName: 'Compte courant',
         },
       ],
+      listTransactionSyncMetadata: async () => [
+        {
+          powensConnectionId: 'conn-1',
+          connectionStatus: 'connected',
+          lastSyncStatus: 'OK',
+          lastSyncReasonCode: 'SUCCESS',
+          lastSyncAt: new Date('2026-03-20T10:00:00.000Z'),
+          lastSyncAttemptAt: new Date('2026-03-20T10:00:00.000Z'),
+          lastFailedAt: null,
+        },
+      ],
+      now: () => new Date('2026-03-20T10:10:00.000Z'),
+      staleAfterMinutes: 30,
     })
 
     await expect(
@@ -29,9 +42,18 @@ describe('createGetDashboardTransactionsUseCase', () => {
         cursor: undefined,
       })
     ).resolves.toEqual({
+      schemaVersion: '2026-04-04',
       range: '30d',
       limit: 30,
       nextCursor: null,
+      freshness: {
+        strategy: 'snapshot-first',
+        lastSyncedAt: '2026-03-20T10:00:00.000Z',
+        syncStatus: 'fresh',
+        degradedReason: null,
+        snapshotAgeSeconds: 600,
+        refreshRequested: false,
+      },
       items: [
         {
           id: 7,

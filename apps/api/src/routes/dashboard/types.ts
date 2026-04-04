@@ -1,6 +1,10 @@
 import type { createDbClient } from '@finance-os/db'
+import type { getApiEnv } from '@finance-os/env'
+import type { createRedisClient } from '@finance-os/redis'
 
 export type ApiDb = ReturnType<typeof createDbClient>['db']
+export type ApiEnv = ReturnType<typeof getApiEnv>
+export type RedisClient = ReturnType<typeof createRedisClient>['client']
 
 export type DashboardRange = '7d' | '30d' | '90d'
 
@@ -106,6 +110,16 @@ export interface DashboardTransactionRow {
   powensConnectionId: string
   powensAccountId: string
   accountName: string | null
+}
+
+export interface DashboardTransactionSyncMetadataRow {
+  powensConnectionId: string
+  connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
+  lastSyncStatus: 'OK' | 'KO' | null
+  lastSyncReasonCode: 'SUCCESS' | 'PARTIAL_IMPORT' | 'SYNC_FAILED' | 'RECONNECT_REQUIRED' | null
+  lastSyncAt: Date | null
+  lastSyncAttemptAt: Date | null
+  lastFailedAt: Date | null
 }
 
 export interface DashboardTransactionClassificationUpdateInput {
@@ -310,9 +324,23 @@ export interface DashboardSummaryResponse {
 }
 
 export interface DashboardTransactionsResponse {
+  schemaVersion: '2026-04-04'
   range: DashboardRange
   limit: number
   nextCursor: string | null
+  freshness: {
+    strategy: 'snapshot-first'
+    lastSyncedAt: string | null
+    syncStatus:
+      | 'fresh'
+      | 'stale-but-usable'
+      | 'syncing'
+      | 'sync-failed-with-safe-data'
+      | 'no-data-first-connect'
+    degradedReason: string | null
+    snapshotAgeSeconds: number | null
+    refreshRequested: boolean
+  }
   items: Array<{
     id: number
     bookingDate: string
@@ -361,6 +389,9 @@ export interface DashboardReadRepository {
     limit: number
     cursor: DashboardTransactionCursor | null
   }) => Promise<DashboardTransactionRow[]>
+  listTransactionSyncMetadata: (
+    connectionIds: string[]
+  ) => Promise<DashboardTransactionSyncMetadataRow[]>
   updateTransactionClassification: (
     transactionId: number,
     input: DashboardTransactionClassificationUpdateInput
@@ -415,6 +446,7 @@ export interface DashboardUseCases {
     limit: number
     cursor: string | undefined
   }) => Promise<DashboardTransactionsResponse>
+  requestTransactionsBackgroundRefresh: (input: { requestId: string }) => Promise<boolean>
   updateTransactionClassification: (
     transactionId: number,
     input: DashboardTransactionClassificationUpdateInput

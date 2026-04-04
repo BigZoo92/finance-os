@@ -102,6 +102,25 @@ const formatDateTime = (value: string | null) => {
   return parsed.toLocaleString('fr-FR')
 }
 
+const TRANSACTION_FRESHNESS_BADGE: Record<
+  DashboardTransactionsResponse['freshness']['syncStatus'],
+  { label: string; variant: 'secondary' | 'outline' | 'destructive'; className?: string }
+> = {
+  fresh: { label: 'Fresh', variant: 'secondary' },
+  'stale-but-usable': {
+    label: 'Stale (usable)',
+    variant: 'outline',
+    className: 'border-amber-500/60 bg-amber-400/15 text-amber-700 dark:text-amber-300',
+  },
+  syncing: {
+    label: 'Syncing',
+    variant: 'outline',
+    className: 'border-sky-500/60 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+  },
+  'sync-failed-with-safe-data': { label: 'Sync failed', variant: 'destructive' },
+  'no-data-first-connect': { label: 'No data yet', variant: 'outline' },
+}
+
 const formatDuration = (startedAt: string, endedAt: string | null) => {
   const started = new Date(startedAt).getTime()
   const ended = endedAt ? new Date(endedAt).getTime() : Date.now()
@@ -673,6 +692,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false
   const isIntegrationsSafeModeFallback = statusQuery.data?.fallback === 'safe_mode'
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
+  const transactionsFreshness = transactionsQuery.data?.pages[0]?.freshness
+  const transactionsFreshnessBadge = transactionsFreshness
+    ? TRANSACTION_FRESHNESS_BADGE[transactionsFreshness.syncStatus]
+    : null
   const statusCounts = {
     connected: statusConnections.filter(connection => connection.status === 'connected').length,
     syncing: statusConnections.filter(connection => connection.status === 'syncing').length,
@@ -1852,10 +1875,28 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               <CardTitle className="flex items-center gap-2">
                 Latest transactions
                 <DemoWidgetBadge demo={isDemo} />
+                {transactionsFreshnessBadge ? (
+                  <Badge
+                    variant={transactionsFreshnessBadge.variant}
+                    className={transactionsFreshnessBadge.className}
+                  >
+                    {transactionsFreshnessBadge.label}
+                  </Badge>
+                ) : null}
               </CardTitle>
-              <CardDescription>Last 30 transactions, paginated with cursor.</CardDescription>
+              <CardDescription>
+                Last 30 transactions, paginated with cursor.
+                {transactionsFreshness
+                  ? ` Last updated: ${formatDateTime(transactionsFreshness.lastSyncedAt)}.`
+                  : ''}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {transactionsFreshness?.refreshRequested ? (
+                <p className="text-xs text-muted-foreground">
+                  Snapshot stale detected: background Powens refresh requested.
+                </p>
+              ) : null}
               {transactionsQuery.isPending ? (
                 <p className="text-sm text-muted-foreground">Chargement...</p>
               ) : null}

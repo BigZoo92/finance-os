@@ -14,17 +14,23 @@ import { createUpdateTransactionClassificationUseCase } from './domain/create-up
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
 import { listStaticManualAssets } from './services/list-static-manual-assets'
-import type { ApiDb, DashboardRouteRuntime } from './types'
+import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
+import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
 
 export const createDashboardRouteRuntime = ({
   db,
+  redisClient,
   featureEnabled,
+  transactionsSnapshotStaleAfterMinutes,
 }: {
   db: ApiDb
+  redisClient: RedisClient
   featureEnabled: boolean
+  transactionsSnapshotStaleAfterMinutes: number
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
+  const powensJobs = createPowensJobQueueRepository(redisClient)
 
   const getSummary = createGetDashboardSummaryUseCase({
     listAccountsWithConnections: readModel.listAccountsWithConnections,
@@ -38,7 +44,23 @@ export const createDashboardRouteRuntime = ({
 
   const getTransactions = createGetDashboardTransactionsUseCase({
     listTransactions: readModel.listTransactions,
+    listTransactionSyncMetadata: readModel.listTransactionSyncMetadata,
+    now: () => new Date(),
+    staleAfterMinutes: transactionsSnapshotStaleAfterMinutes,
   })
+  const requestTransactionsBackgroundRefresh: DashboardRouteRuntime['useCases']['requestTransactionsBackgroundRefresh'] =
+    async ({ requestId }) => {
+      const dedupeKey = 'powens:dashboard:transactions:background-refresh'
+      const dedupeResult = await redisClient.set(dedupeKey, requestId, {
+        NX: true,
+        EX: 120,
+      })
+      if (dedupeResult !== 'OK') {
+        return false
+      }
+      await powensJobs.enqueueAllConnectionsSync({ requestId })
+      return true
+    }
   const updateTransactionClassification = createUpdateTransactionClassificationUseCase({
     updateTransactionClassification: readModel.updateTransactionClassification,
   })
@@ -72,6 +94,7 @@ export const createDashboardRouteRuntime = ({
     useCases: {
       getSummary,
       getTransactions,
+      requestTransactionsBackgroundRefresh,
       updateTransactionClassification,
       getGoals,
       createGoal,

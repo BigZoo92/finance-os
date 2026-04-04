@@ -1,5 +1,7 @@
 import { Elysia } from 'elysia'
+import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
+import { env } from '../../../env'
 import { getDashboardTransactionsMock } from '../../../mocks/transactions.mock'
 import { getDashboardRuntime } from '../context'
 import { dashboardTransactionsQuerySchema } from '../schemas'
@@ -23,11 +25,35 @@ export const createTransactionsRoute = () =>
           }),
         real: async () => {
           const dashboard = getDashboardRuntime(context)
-          return dashboard.useCases.getTransactions({
+          const payload = await dashboard.useCases.getTransactions({
             range,
             limit,
             cursor: context.query.cursor,
           })
+
+          const shouldRequestBackgroundRefresh =
+            env.TRANSACTIONS_SNAPSHOT_FIRST_ENABLED &&
+            env.POWENS_REFRESH_BACKGROUND_ENABLED &&
+            (payload.freshness.syncStatus === 'stale-but-usable' ||
+              payload.freshness.syncStatus === 'sync-failed-with-safe-data' ||
+              payload.freshness.syncStatus === 'no-data-first-connect')
+
+          if (!shouldRequestBackgroundRefresh) {
+            return payload
+          }
+
+          const requestId = getRequestMeta(context).requestId
+          const refreshRequested = await dashboard.useCases.requestTransactionsBackgroundRefresh({
+            requestId,
+          })
+
+          return {
+            ...payload,
+            freshness: {
+              ...payload.freshness,
+              refreshRequested,
+            },
+          }
         },
       })
     },

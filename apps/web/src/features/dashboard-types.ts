@@ -90,9 +90,23 @@ export type DashboardSummaryResponse = {
 }
 
 export type DashboardTransactionsResponse = {
+  schemaVersion: '2026-04-04'
   range: DashboardRange
   limit: number
   nextCursor: string | null
+  freshness: {
+    strategy: 'snapshot-first'
+    lastSyncedAt: string | null
+    syncStatus:
+      | 'fresh'
+      | 'stale-but-usable'
+      | 'syncing'
+      | 'sync-failed-with-safe-data'
+      | 'no-data-first-connect'
+    degradedReason: string | null
+    snapshotAgeSeconds: number | null
+    refreshRequested: boolean
+  }
   items: Array<{
     id: number
     bookingDate: string

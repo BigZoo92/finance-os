@@ -6,16 +6,25 @@ import { createSummaryRoute } from './routes/summary'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
-import type { ApiDb } from './types'
+import type { ApiDb, RedisClient } from './types'
 
 export const createDashboardRoutes = ({
   db,
+  redisClient,
   featureEnabled,
+  transactionsSnapshotStaleAfterMinutes,
 }: {
   db: ApiDb
+  redisClient: RedisClient
   featureEnabled: boolean
+  transactionsSnapshotStaleAfterMinutes: number
 }) => {
-  const runtime = createDashboardRouteRuntime({ db, featureEnabled })
+  const runtime = createDashboardRouteRuntime({
+    db,
+    redisClient,
+    featureEnabled,
+    transactionsSnapshotStaleAfterMinutes,
+  })
 
   return new Elysia({ prefix: '/dashboard' })
     .use(createDashboardRuntimePlugin(runtime))

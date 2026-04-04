@@ -120,6 +120,7 @@ Use this map to choose the smallest verification set that still matches the risk
 ## Manual Checks Worth Doing
 
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
+- Transactions freshness UX: latest transactions card shows "Last updated" plus distinct freshness badges (`fresh`, `stale-but-usable`, `syncing`, `sync-failed-with-safe-data`, `no-data-first-connect`) without blocking the table behind a spinner-only state.
 - Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
 - Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
 - Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
