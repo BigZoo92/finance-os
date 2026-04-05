@@ -70,4 +70,110 @@ describe('createGetDashboardTransactionsUseCase', () => {
     ])
     expect(result.freshness.syncStatus).toBe('fresh')
   })
+
+  it('fails soft with safe transactions when sync metadata enrichment throws', async () => {
+    const useCase = createGetDashboardTransactionsUseCase({
+      listTransactions: async () => [
+        {
+          id: 17,
+          bookingDate: '2026-03-22',
+          amount: '-18.40',
+          currency: 'EUR',
+          label: 'BOULANGERIE',
+          merchant: 'BOULANGERIE',
+          providerCategory: 'Food',
+          customCategory: null,
+          customSubcategory: null,
+          category: 'Courses',
+          subcategory: null,
+          incomeType: null,
+          tags: [],
+          powensConnectionId: 'conn-1',
+          powensAccountId: 'acc-1',
+          accountName: 'Compte courant',
+        },
+      ],
+      listTransactionSyncMetadata: async () => {
+        throw new Error('provider timeout')
+      },
+      now: () => new Date('2026-03-22T09:05:00.000Z'),
+      staleAfterMinutes: 30,
+    })
+
+    const result = await useCase({
+      range: '30d',
+      limit: 30,
+      cursor: undefined,
+    })
+
+    expect(result.items).toHaveLength(1)
+    expect(result.freshness.syncStatus).toBe('sync-failed-with-safe-data')
+    expect(result.freshness.degradedReason).toBe('powens_refresh_failed')
+  })
+
+  it('marks freshness as degraded when sync metadata is only partially enriched', async () => {
+    const useCase = createGetDashboardTransactionsUseCase({
+      listTransactions: async () => [
+        {
+          id: 31,
+          bookingDate: '2026-03-24',
+          amount: '-9.90',
+          currency: 'EUR',
+          label: 'TRANSPORT',
+          merchant: 'SNCF',
+          providerCategory: 'Transport',
+          customCategory: null,
+          customSubcategory: null,
+          category: 'Transport',
+          subcategory: null,
+          incomeType: null,
+          tags: [],
+          powensConnectionId: 'conn-1',
+          powensAccountId: 'acc-1',
+          accountName: 'Compte courant',
+        },
+        {
+          id: 32,
+          bookingDate: '2026-03-23',
+          amount: '-35.10',
+          currency: 'EUR',
+          label: 'RESTAURANT',
+          merchant: 'BISTROT',
+          providerCategory: 'Food',
+          customCategory: null,
+          customSubcategory: null,
+          category: 'Restaurants',
+          subcategory: null,
+          incomeType: null,
+          tags: [],
+          powensConnectionId: 'conn-2',
+          powensAccountId: 'acc-2',
+          accountName: 'Carte',
+        },
+      ],
+      listTransactionSyncMetadata: async () => [
+        {
+          powensConnectionId: 'conn-1',
+          connectionStatus: 'connected',
+          lastSyncStatus: 'OK',
+          lastSyncReasonCode: 'SUCCESS',
+          lastSyncAt: new Date('2026-03-24T08:00:00.000Z'),
+          lastSyncAttemptAt: new Date('2026-03-24T08:00:00.000Z'),
+          lastFailedAt: null,
+        },
+      ],
+      now: () => new Date('2026-03-24T08:10:00.000Z'),
+      staleAfterMinutes: 30,
+    })
+
+    const result = await useCase({
+      range: '30d',
+      limit: 30,
+      cursor: undefined,
+    })
+
+    expect(result.items).toHaveLength(2)
+    expect(result.freshness.syncStatus).toBe('sync-failed-with-safe-data')
+    expect(result.freshness.degradedReason).toBe('powens_refresh_failed')
+  })
 })
