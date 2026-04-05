@@ -58,4 +58,23 @@ describe('applyTransactionAutoCategorization', () => {
       autoCategorizationRuleId: null,
     })
   })
+
+  it('keeps unknown category unchanged when no rule matches', () => {
+    const result = applyTransactionAutoCategorization({
+      label: 'Paiement carte artisan local',
+      amount: -18.45,
+      powensAccountId: 'acc-4',
+      accountName: 'Compte courant',
+      category: 'Unknown',
+      subcategory: null,
+      incomeType: null,
+    })
+
+    expect(result).toEqual({
+      category: 'Unknown',
+      subcategory: null,
+      incomeType: null,
+      autoCategorizationRuleId: null,
+    })
+  })
 })

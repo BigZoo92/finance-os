@@ -1,12 +1,2 @@
 Falling back to direct application...
-Applied patch to 'apps/api/src/mocks/transactions.mock.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.test.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/domain/create-update-transaction-classification-use-case.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/routes/transaction-classification.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/schemas.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/types.ts' cleanly.
-Falling back to direct application...
-Applied patch to 'packages/db/drizzle/meta/_journal.json' cleanly.
-Applied patch to 'packages/db/src/schema/powens.ts' cleanly.
+Applied patch to 'apps/api/src/routes/dashboard/domain/transaction-auto-categorization.test.ts' cleanly.
