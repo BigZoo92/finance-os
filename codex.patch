@@ -1,47 +1,347 @@
-diff --git a/.github/agent-stubs/improve-578.md b/.github/agent-stubs/improve-578.md
+diff --git a/.github/agent-stubs/improve-593.md b/.github/agent-stubs/improve-593.md
 deleted file mode 100644
-index a1b065a..0000000
---- a/.github/agent-stubs/improve-578.md
+index dfa26c1..0000000
+--- a/.github/agent-stubs/improve-593.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #578
+-# Autopilot stub for improve #593
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/578
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/593
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/api/AGENTS.md b/apps/api/AGENTS.md
-index 11855ca..23fe6bc 100644
---- a/apps/api/AGENTS.md
-+++ b/apps/api/AGENTS.md
-@@ -13,6 +13,12 @@ Scope: `apps/api/**`
- - Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
- - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
- - Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
-+- Keep Powens status and fail-soft behavior contract-stable:
-+  - Runtime connection `status` values are `connected`, `syncing`, `error`, `reconnect_required`; preserve this taxonomy unless contract/docs/tests are updated together.
-+  - Persisted sync snapshot uses `lastSyncStatus: OK|KO` with `lastSyncReasonCode: SUCCESS|PARTIAL_IMPORT|SYNC_FAILED|RECONNECT_REQUIRED`.
-+  - If persistence is disabled, omit stale meaning by blanking persisted snapshot fields (return `null` values) and rely on runtime status only.
-+  - If safe mode is active, `/integrations/powens/status` must remain available with deterministic fallback payloads (`safeModeActive`, optional `fallback: safe_mode`) so web stays usable.
-+  - Fail-soft is mandatory: provider outages/timeouts must not break unrelated dashboard reads or escalate to unsafe payloads/logs.
- - Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
- - Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
- - Keep `/dashboard/goals*` demo-safe on reads and admin-gated on writes, with no ad hoc payload drift between route schemas, domain use cases, and web callers.
-diff --git a/apps/web/AGENTS.md b/apps/web/AGENTS.md
-index cb37b7c..3f94222 100644
---- a/apps/web/AGENTS.md
-+++ b/apps/web/AGENTS.md
-@@ -12,6 +12,12 @@ Scope: `apps/web/**`
- - Keep dashboard health signals in [src/components/dashboard/dashboard-health.ts](src/components/dashboard/dashboard-health.ts) and [src/components/dashboard/dashboard-health-panel.tsx](src/components/dashboard/dashboard-health-panel.tsx); demo must stay deterministic from the fixture matrix, admin must derive one global summary plus selective widget badges from loader/query data only.
- - Keep the Powens manual sync cooldown UI in [src/features/powens/manual-sync-cooldown.ts](src/features/powens/manual-sync-cooldown.ts) as client-only state behind runtime-safe `VITE_*` config; it must never become authoritative or weaken demo/admin gating.
- - Keep Powens connection badges driven by [src/features/powens/sync-status.ts](src/features/powens/sync-status.ts): admin should prefer the persisted last-sync snapshot from `/integrations/powens/status`, fall back to runtime status when `SYNC_STATUS_PERSISTENCE_ENABLED=false`, and keep demo deterministic without DB/provider writes.
-+- Keep Powens state semantics explicit and fail-soft in UI copy and mappings:
-+  - Runtime connection states from `PowensConnectionStatus.status` are `connected`, `syncing`, `error`, `reconnect_required`.
-+  - Persisted sync snapshot from `/integrations/powens/status` is `lastSyncStatus: OK|KO` with reason codes `SUCCESS`, `PARTIAL_IMPORT`, `SYNC_FAILED`, `RECONNECT_REQUIRED`.
-+  - `syncing` must stay visually distinct from persisted KO/OK snapshots so users can tell "in-flight" from "last known result".
-+  - When persistence is disabled or unavailable, degrade gracefully to runtime-only badges (`connected => OK`, `error|reconnect_required => KO`) and avoid blank/blocked dashboard states.
-+  - In safe-mode fallback (`safeModeActive=true` and/or response `fallback: safe_mode`), keep the dashboard usable with clear non-blocking messaging instead of action-breaking hard errors.
- - Keep dashboard filters in URL search params. Do not introduce duplicate local filter state for route-owned data.
- - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.
- - Read non-sensitive web runtime config through [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) so SSR can inject safe `VITE_*` values at runtime without exposing secrets or hard-freezing them at build time, including dashboard health kill-switches such as `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED`, and `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED`.
+diff --git a/apps/web/src/routeTree.gen.ts b/apps/web/src/routeTree.gen.ts
+index 8d4cd17..a1f8ac3 100644
+--- a/apps/web/src/routeTree.gen.ts
++++ b/apps/web/src/routeTree.gen.ts
+@@ -10,6 +10,7 @@
+ 
+ import { Route as rootRouteImport } from './routes/__root'
+ import { Route as VersionRouteImport } from './routes/version'
++import { Route as TransactionsRouteImport } from './routes/transactions'
+ import { Route as LoginRouteImport } from './routes/login'
+ import { Route as HealthzRouteImport } from './routes/healthz'
+ import { Route as HealthRouteImport } from './routes/health'
+@@ -21,6 +22,11 @@ const VersionRoute = VersionRouteImport.update({
+   path: '/version',
+   getParentRoute: () => rootRouteImport,
+ } as any)
++const TransactionsRoute = TransactionsRouteImport.update({
++  id: '/transactions',
++  path: '/transactions',
++  getParentRoute: () => rootRouteImport,
++} as any)
+ const LoginRoute = LoginRouteImport.update({
+   id: '/login',
+   path: '/login',
+@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
+   '/health': typeof HealthRoute
+   '/healthz': typeof HealthzRoute
+   '/login': typeof LoginRoute
++  '/transactions': typeof TransactionsRoute
+   '/version': typeof VersionRoute
+   '/powens/callback': typeof PowensCallbackRoute
+ }
+@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
+   '/health': typeof HealthRoute
+   '/healthz': typeof HealthzRoute
+   '/login': typeof LoginRoute
++  '/transactions': typeof TransactionsRoute
+   '/version': typeof VersionRoute
+   '/powens/callback': typeof PowensCallbackRoute
+ }
+@@ -69,6 +77,7 @@ export interface FileRoutesById {
+   '/health': typeof HealthRoute
+   '/healthz': typeof HealthzRoute
+   '/login': typeof LoginRoute
++  '/transactions': typeof TransactionsRoute
+   '/version': typeof VersionRoute
+   '/powens/callback': typeof PowensCallbackRoute
+ }
+@@ -79,16 +88,25 @@ export interface FileRouteTypes {
+     | '/health'
+     | '/healthz'
+     | '/login'
++    | '/transactions'
+     | '/version'
+     | '/powens/callback'
+   fileRoutesByTo: FileRoutesByTo
+-  to: '/' | '/health' | '/healthz' | '/login' | '/version' | '/powens/callback'
++  to:
++    | '/'
++    | '/health'
++    | '/healthz'
++    | '/login'
++    | '/transactions'
++    | '/version'
++    | '/powens/callback'
+   id:
+     | '__root__'
+     | '/'
+     | '/health'
+     | '/healthz'
+     | '/login'
++    | '/transactions'
+     | '/version'
+     | '/powens/callback'
+   fileRoutesById: FileRoutesById
+@@ -98,6 +116,7 @@ export interface RootRouteChildren {
+   HealthRoute: typeof HealthRoute
+   HealthzRoute: typeof HealthzRoute
+   LoginRoute: typeof LoginRoute
++  TransactionsRoute: typeof TransactionsRoute
+   VersionRoute: typeof VersionRoute
+   PowensCallbackRoute: typeof PowensCallbackRoute
+ }
+@@ -111,6 +130,13 @@ declare module '@tanstack/react-router' {
+       preLoaderRoute: typeof VersionRouteImport
+       parentRoute: typeof rootRouteImport
+     }
++    '/transactions': {
++      id: '/transactions'
++      path: '/transactions'
++      fullPath: '/transactions'
++      preLoaderRoute: typeof TransactionsRouteImport
++      parentRoute: typeof rootRouteImport
++    }
+     '/login': {
+       id: '/login'
+       path: '/login'
+@@ -154,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
+   HealthRoute: HealthRoute,
+   HealthzRoute: HealthzRoute,
+   LoginRoute: LoginRoute,
++  TransactionsRoute: TransactionsRoute,
+   VersionRoute: VersionRoute,
+   PowensCallbackRoute: PowensCallbackRoute,
+ }
+diff --git a/apps/web/src/routes/transactions.tsx b/apps/web/src/routes/transactions.tsx
+new file mode 100644
+index 0000000..bad71f2
+--- /dev/null
++++ b/apps/web/src/routes/transactions.tsx
+@@ -0,0 +1,223 @@
++import {
++  Button,
++  Card,
++  CardContent,
++  CardDescription,
++  CardHeader,
++  CardTitle,
++  Input,
++} from '@finance-os/ui/components'
++import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query'
++import { createFileRoute, useNavigate } from '@tanstack/react-router'
++import { z } from 'zod'
++import { authMeQueryOptions } from '@/features/auth-query-options'
++import { dashboardTransactionsInfiniteQueryOptionsWithMode } from '@/features/dashboard-query-options'
++import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
++
++const transactionSearchSchema = z.object({
++  range: z.enum(['7d', '30d', '90d']).optional(),
++  q: z.string().trim().min(1).max(120).optional(),
++})
++
++const resolveRange = (value: string | undefined): DashboardRange => {
++  return value === '7d' || value === '90d' ? value : '30d'
++}
++
++const formatCurrency = (value: number, currency: string) => {
++  return new Intl.NumberFormat('fr-FR', {
++    style: 'currency',
++    currency,
++    maximumFractionDigits: 2,
++  }).format(value)
++}
++
++const formatDate = (value: string) => {
++  return new Intl.DateTimeFormat('fr-FR', {
++    dateStyle: 'medium',
++  }).format(new Date(value))
++}
++
++const toErrorMessage = (value: unknown) => {
++  if (value instanceof Error) {
++    return value.message
++  }
++
++  return String(value)
++}
++
++export const Route = createFileRoute('/transactions')({
++  validateSearch: search => transactionSearchSchema.parse(search),
++  loaderDeps: ({ search }) => ({
++    range: resolveRange(search.range),
++  }),
++  loader: async ({ context, deps }) => {
++    const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
++
++    await context.queryClient.ensureInfiniteQueryData(
++      dashboardTransactionsInfiniteQueryOptionsWithMode({
++        range: deps.range,
++        limit: 30,
++        mode: auth.mode,
++      })
++    )
++  },
++  component: TransactionsPage,
++})
++
++function filterTransactions(
++  items: DashboardTransactionsResponse['items'],
++  query: string | undefined
++) {
++  if (!query) {
++    return items
++  }
++
++  const normalizedQuery = query.toLocaleLowerCase()
++  return items.filter(item => {
++    return [item.label, item.accountName ?? '', item.category ?? '', ...item.tags]
++      .join(' ')
++      .toLocaleLowerCase()
++      .includes(normalizedQuery)
++  })
++}
++
++function TransactionsPage() {
++  const navigate = useNavigate()
++  const search = Route.useSearch()
++  const range = resolveRange(search.range)
++  const query = search.q
++
++  const auth = useSuspenseQuery(authMeQueryOptions()).data
++
++  const transactionsQuery = useInfiniteQuery(
++    dashboardTransactionsInfiniteQueryOptionsWithMode({
++      range,
++      limit: 30,
++      mode: auth.mode,
++    })
++  )
++
++  const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
++  const filteredTransactions = filterTransactions(transactions, query)
++
++  return (
++    <div className="min-h-screen bg-background p-6 text-foreground md:p-10">
++      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
++        <div className="flex flex-wrap items-end gap-3">
++          <div className="flex-1 min-w-[220px]">
++            <label className="text-sm font-medium" htmlFor="tx-q">
++              Search
++            </label>
++            <Input
++              id="tx-q"
++              value={query ?? ''}
++              onChange={event => {
++                const nextValue = event.currentTarget.value.trim()
++                void navigate({
++                  to: '/transactions',
++                  search: previous => {
++                    if (nextValue) {
++                      return {
++                        ...previous,
++                        q: nextValue,
++                      }
++                    }
++
++                    const nextSearch = { ...previous }
++                    delete nextSearch.q
++                    return nextSearch
++                  },
++                  replace: true,
++                })
++              }}
++              placeholder="Label, account, category, tag"
++            />
++          </div>
++
++          <div>
++            <label className="text-sm font-medium" htmlFor="tx-range">
++              Range
++            </label>
++            <select
++              id="tx-range"
++              className="flex h-10 w-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
++              value={range}
++              onChange={event => {
++                const nextRange = event.currentTarget.value
++                void navigate({
++                  to: '/transactions',
++                  search: previous => {
++                    if (nextRange === '30d') {
++                      const nextSearch = { ...previous }
++                      delete nextSearch.range
++                      return nextSearch
++                    }
++
++                    return {
++                      ...previous,
++                      range: nextRange as DashboardRange,
++                    }
++                  },
++                })
++              }}
++            >
++              <option value="7d">7 days</option>
++              <option value="30d">30 days</option>
++              <option value="90d">90 days</option>
++            </select>
++          </div>
++        </div>
++
++        <Card>
++          <CardHeader>
++            <CardTitle>Transactions</CardTitle>
++            <CardDescription>
++              Listing loaded from dashboard transactions query with URL-owned filters.
++            </CardDescription>
++          </CardHeader>
++          <CardContent className="space-y-3">
++            {transactionsQuery.isPending ? <p>Loading transactions...</p> : null}
++            {transactionsQuery.isError ? (
++              <p className="text-sm text-destructive">{toErrorMessage(transactionsQuery.error)}</p>
++            ) : null}
++            {!transactionsQuery.isPending && !transactionsQuery.isError && filteredTransactions.length === 0 ? (
++              <p className="text-sm text-muted-foreground">No transaction matches the current filters.</p>
++            ) : null}
++
++            {filteredTransactions.length > 0 ? (
++              <ul className="divide-y divide-border rounded-lg border border-border">
++                {filteredTransactions.map(item => (
++                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
++                    <div>
++                      <p className="font-medium">{item.label}</p>
++                      <p className="text-xs text-muted-foreground">
++                        {formatDate(item.bookingDate)} • {item.accountName ?? 'Unknown account'}
++                      </p>
++                    </div>
++                    <div className="text-right">
++                      <p className={item.amount < 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-600'}>
++                        {formatCurrency(item.amount, item.currency)}
++                      </p>
++                      <p className="text-xs text-muted-foreground">{item.category ?? 'Uncategorized'}</p>
++                    </div>
++                  </li>
++                ))}
++              </ul>
++            ) : null}
++
++            {transactionsQuery.hasNextPage ? (
++              <Button
++                type="button"
++                variant="outline"
++                onClick={() => transactionsQuery.fetchNextPage()}
++                disabled={transactionsQuery.isFetchingNextPage}
++              >
++                {transactionsQuery.isFetchingNextPage ? 'Loading...' : 'Load more'}
++              </Button>
++            ) : null}
++          </CardContent>
++        </Card>
++      </div>
++    </div>
++  )
++}
