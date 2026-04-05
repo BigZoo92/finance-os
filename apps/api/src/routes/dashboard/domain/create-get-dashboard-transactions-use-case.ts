@@ -76,7 +76,19 @@ export const createGetDashboardTransactionsUseCase = ({
     const tail = visibleRows[visibleRows.length - 1]
 
     const connectionIds = [...new Set(visibleRows.map(row => row.powensConnectionId))]
-    const syncMetadata = await listTransactionSyncMetadata(connectionIds)
+    let syncMetadataFailed = false
+    let syncMetadata: Awaited<ReturnType<typeof listTransactionSyncMetadata>> = []
+
+    if (connectionIds.length > 0) {
+      try {
+        syncMetadata = await listTransactionSyncMetadata(connectionIds)
+      } catch {
+        syncMetadataFailed = true
+      }
+    }
+
+    const metadataCoverage = new Set(syncMetadata.map(row => row.powensConnectionId))
+    const hasMissingSyncMetadata = connectionIds.some(connectionId => !metadataCoverage.has(connectionId))
     const latestSyncedAtMs = syncMetadata.reduce<number | null>((latest, row) => {
       const current = row.lastSyncAt?.getTime()
       if (!Number.isFinite(current)) {
@@ -94,12 +106,13 @@ export const createGetDashboardTransactionsUseCase = ({
         row.connectionStatus === 'reconnect_required' ||
         row.lastSyncStatus === 'KO'
     )
+    const degradedByEnrichment = syncMetadataFailed || hasMissingSyncMetadata
     const syncStatus =
       visibleRows.length === 0 && latestSyncedAtMs === null
         ? ('no-data-first-connect' as const)
         : hasSyncing
           ? ('syncing' as const)
-          : hasFailures
+          : hasFailures || degradedByEnrichment
             ? ('sync-failed-with-safe-data' as const)
             : snapshotAgeSeconds !== null && snapshotAgeSeconds > staleThresholdSeconds
               ? ('stale-but-usable' as const)
