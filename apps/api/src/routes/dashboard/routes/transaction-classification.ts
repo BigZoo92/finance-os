@@ -31,6 +31,9 @@ export const createTransactionClassificationRoute = () =>
           const result = await dashboard.useCases.updateTransactionClassification(
             context.params.transactionId,
             {
+              ...(context.body.merchant !== undefined
+                ? { merchant: context.body.merchant === null ? null : context.body.merchant }
+                : {}),
               category: context.body.category ?? null,
               subcategory: context.body.subcategory ?? null,
               incomeType: context.body.incomeType ?? null,

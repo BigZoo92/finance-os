@@ -15,6 +15,7 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       amount: string
       currency: string
       label: string
+      merchant: string
       category: string | null
       subcategory: string | null
       incomeType: 'salary' | 'recurring' | 'exceptional' | null
@@ -147,6 +148,7 @@ export const createGetDashboardTransactionsUseCase = ({
           currency: row.currency,
           direction: amount >= 0 ? 'income' : 'expense',
           label: row.label,
+          merchant: row.merchant,
           category: normalizedClassification.category,
           subcategory: normalizedClassification.subcategory,
           incomeType: normalizedClassification.incomeType,

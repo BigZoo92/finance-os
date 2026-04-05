@@ -16,6 +16,15 @@ const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
   )
 }
 
+const normalizeMerchantOverride = (merchant: string | null | undefined) => {
+  if (merchant === null || merchant === undefined) {
+    return null
+  }
+
+  const trimmed = merchant.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 const goalSelection = {
   id: schema.personalGoal.id,
   name: schema.personalGoal.name,
@@ -169,7 +178,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
 
     async listTopExpenseGroups(fromDate, limit) {
       const categoryExpr = sql<string>`coalesce(nullif(${schema.transaction.category}, ''), 'Unknown')`
-      const merchantExpr = sql<string>`coalesce(nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`
+      const merchantExpr = sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`
       const totalExpr = sql<string>`sum(abs(${schema.transaction.amount}))::text`
       const countExpr = sql<number>`count(*)::int`
 
@@ -202,6 +211,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           amount: schema.transaction.amount,
           currency: schema.transaction.currency,
           label: schema.transaction.label,
+          merchant: sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`,
           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
@@ -243,14 +253,60 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
     },
 
     async updateTransactionClassification(transactionId, input) {
+      const [existing] = await db
+        .select({
+          customMerchant: schema.transaction.customMerchant,
+          customMerchantHistory: schema.transaction.customMerchantHistory,
+        })
+        .from(schema.transaction)
+        .where(eq(schema.transaction.id, transactionId))
+        .limit(1)
+
+      if (!existing) {
+        return null
+      }
+
+      const updateSet: {
+        customCategory: string | null
+        customSubcategory: string | null
+        customIncomeType: 'salary' | 'recurring' | 'exceptional' | null
+        customTags: string[]
+        customMerchant?: string | null
+        customMerchantHistory?: Array<{
+          changedAt: string
+          previousMerchant: string | null
+          nextMerchant: string | null
+        }>
+      } = {
+        customCategory: input.category,
+        customSubcategory: input.subcategory,
+        customIncomeType: input.incomeType,
+        customTags: input.tags,
+      }
+
+      if (input.merchant !== undefined) {
+        const previousMerchant = normalizeMerchantOverride(existing.customMerchant)
+        const nextMerchant = normalizeMerchantOverride(input.merchant)
+        updateSet.customMerchant = nextMerchant
+
+        if (previousMerchant !== nextMerchant) {
+          const currentHistory = Array.isArray(existing.customMerchantHistory)
+            ? existing.customMerchantHistory
+            : []
+          updateSet.customMerchantHistory = [
+            ...currentHistory.slice(-19),
+            {
+              changedAt: new Date().toISOString(),
+              previousMerchant,
+              nextMerchant,
+            },
+          ]
+        }
+      }
+
       const [updated] = await db
         .update(schema.transaction)
-        .set({
-          customCategory: input.category,
-          customSubcategory: input.subcategory,
-          customIncomeType: input.incomeType,
-          customTags: input.tags,
-        })
+        .set(updateSet)
         .where(eq(schema.transaction.id, transactionId))
         .returning({ id: schema.transaction.id })
 
@@ -265,6 +321,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           amount: schema.transaction.amount,
           currency: schema.transaction.currency,
           label: schema.transaction.label,
+          merchant: sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`,
           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case

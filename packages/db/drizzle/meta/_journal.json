@@ -120,6 +120,13 @@
       "when": 1774619964305,
       "tag": "0016_powens_account_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1775350800000,
+      "tag": "0017_merchant_manual_overrides",
+      "breakpoints": true
     }
   ]
 }

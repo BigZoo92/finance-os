@@ -120,6 +120,15 @@ export const transaction = pgTable(
     customSubcategory: text('custom_subcategory'),
     customIncomeType: text('custom_income_type'),
     customTags: jsonb('custom_tags').$type<string[] | null>(),
+    customMerchant: text('custom_merchant'),
+    customMerchantHistory: jsonb('custom_merchant_history').$type<
+      | Array<{
+          changedAt: string
+          previousMerchant: string | null
+          nextMerchant: string | null
+        }>
+      | null
+    >(),
     merchant: text('merchant'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
