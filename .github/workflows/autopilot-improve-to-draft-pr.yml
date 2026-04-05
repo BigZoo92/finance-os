@@ -119,7 +119,8 @@ jobs:
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
             await ensureLabel("autopilot", "1d76db", "Autopilot-managed issue or pull request");
             await ensureLabel("autopilot:queued-pr", "fbca04", "Improve issue is waiting for the next implementation PR slot");
-            await ensureLabel("autopilot:waiting-codex", "fbca04", "Draft PR is waiting for manual Codex extraction on its branch");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A Codex patch comment was applied to this PR branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
@@ -260,9 +261,9 @@ jobs:
                   "",
                   `Source improve issue: ${issueLink}`,
                   "",
-                  "Autopilot mode: manual Codex handoff.",
-                  "Open this PR task in Codex and extract the implementation manually onto this branch.",
-                  "Autopilot will merge automatically once the branch is real, green, and up to date.",
+                  "Autopilot mode: GitHub patch handoff.",
+                  "Codex should implement by replying on this PR thread with one AUTOPILOT_PATCH_V1 comment.",
+                  "Autopilot will apply the patch onto this branch and continue automatically once CI is green.",
                 ].join("\n"),
               });
               pull = createdPull.data;
@@ -301,11 +302,11 @@ jobs:
 
             const desiredPrLabels = ["autopilot"];
             if (pull.draft && !pullHas("autopilot:ready-to-merge")) {
-              desiredPrLabels.push("autopilot:waiting-codex", "pr:draft");
+              desiredPrLabels.push("autopilot:waiting-patch", "pr:draft");
             }
             await addLabels(pull.number, desiredPrLabels);
 
-            for (const name of ["autopilot:waiting-patch", "autopilot:patch-applied", "autopilot:retry-pr", "needs:you"]) {
+            for (const name of ["autopilot:waiting-codex", "autopilot:patch-applied", "autopilot:retry-pr", "needs:you"]) {
               await removeLabel(pull.number, name);
             }
 
@@ -316,7 +317,7 @@ jobs:
               [linkedMarker, `Implementation PR: #${pull.number}`]
             );
 
-            const handoffMarker = `AUTOPILOT_MANUAL_CODEX_HANDOFF_V1:${issue.number}`;
+            const handoffMarker = `AUTOPILOT_IMPLEMENTATION_REQUEST_V3:${issue.number}`;
             if (pullHas("autopilot:ready-to-merge")) return;
 
             await createCommentOnce(
@@ -326,19 +327,37 @@ jobs:
                 handoffMarker,
                 "@codex",
                 "",
-                "MANUAL CODEX HANDOFF ONLY.",
+                "PATCH MODE IS THE DEFAULT IMPLEMENTATION PATH FOR THIS PR.",
                 "",
-                "This PR is intentionally paused for manual extraction in Codex.",
-                "No GitHub reply is required. This comment exists so the task appears in Codex.",
+                "Reply on THIS PR thread with EXACTLY ONE comment in the required patch format.",
                 "Stay on THIS PR branch. Do NOT open another PR in Codex UI. Do NOT use make_pr.",
-                `Delete ${stubPath} and implement the requested feature in real non-stub files on this branch.`,
+                "",
+                "Required reply format:",
+                "Line 1 must be exactly:",
+                "AUTOPILOT_PATCH_V1",
+                "",
+                "Then include EXACTLY ONE fenced code block containing a unified diff.",
+                "Prefer a ```diff fence. A plain triple-backtick fence is also accepted if the first meaningful line inside is diff --git ...",
+                "",
+                "After the closing fence, append this plain-text footer outside the fence:",
+                "Status: READY",
+                "What changed: (max 3 bullets)",
+                "Risk: (low/med/high + why)",
+                "Next: (one next step)",
+                "",
+                "Mandatory rules:",
+                `- Delete ${stubPath} in the first real implementation patch.`,
+                "- Modify at least one non-stub file in the same patch.",
+                "- Use exactly ONE fenced code block and ZERO other code fences.",
+                "- Keep AUTOPILOT_PATCH_V1 and the footer outside the code fence.",
+                "- Do NOT ask a human to extract, copy, or apply anything manually.",
                 "Repo TypeScript note: exactOptionalPropertyTypes is enabled. If an optional field is absent, omit the key entirely instead of passing undefined.",
                 "Before declaring the task done, run `pnpm check:ci` from the repo root when the environment can install dependencies.",
                 "If `pnpm check:ci` cannot run because the environment setup itself is incomplete, say so explicitly and let GitHub CI be the source of truth.",
                 `Parent improve issue: #${issue.number}`,
                 `Source improve issue: ${issueLink}`,
                 "",
-                "After you extract manually and push commits on this branch, autopilot will update the branch if needed and merge automatically once CI is green.",
+                "Autopilot will apply the patch onto this branch, rerun CI, and merge automatically once the branch is real, green, and up to date.",
               ]
             );
 

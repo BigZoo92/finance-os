@@ -52,6 +52,14 @@ jobs:
               return collected.join("\n").trim();
             }
 
+            function extractFirstSection(body, headings) {
+              for (const heading of headings) {
+                const value = extractSection(body, heading);
+                if (value) return value;
+              }
+              return "";
+            }
+
             function extractRawBullets(body) {
               return extractSection(body, "Raw specs list (one bullet per spec)")
                 .split("\n")
@@ -122,6 +130,15 @@ jobs:
             }
 
             const rawBullets = extractRawBullets(issue.body || "");
+            const batchArea = extractFirstSection(issue.body || "", ["Area (dominant)", "Area"]);
+            const batchContext = extractFirstSection(issue.body || "", ["Context"]);
+            const batchObjectives = extractFirstSection(issue.body || "", ["Objectives"]);
+            const batchDesignPrinciples = extractFirstSection(issue.body || "", ["Design principles"]);
+            const batchConstraints = extractFirstSection(issue.body || "", ["Non-negotiable constraints"]);
+            const batchExpectedEndResult = extractFirstSection(issue.body || "", ["Expected end result"]);
+            const batchCostBias = extractFirstSection(issue.body || "", ["Cost bias"]);
+            const batchDecisionRules = extractFirstSection(issue.body || "", ["Decision rules"]);
+            const batchPivot = extractFirstSection(issue.body || "", ["Explicit pivot / out-of-scope"]);
 
             async function requestRetry(reason) {
               if (has("autopilot:retried")) {
@@ -233,9 +250,7 @@ jobs:
               return;
             }
 
-            const batchBody = String(issue.body || "");
-            const areaMatch = batchBody.match(/###\s*Area[\s\S]*?\n([a-z-]+)/i);
-            const defaultArea = String(areaMatch?.[1] || "web").trim().toLowerCase();
+            const defaultArea = String(batchArea || "web").trim().toLowerCase();
 
             const allowedAreas = new Set([
               "api",
@@ -342,6 +357,14 @@ jobs:
                 item?.uiux ? `### UI/UX notes\n${item.uiux}\n` : "",
                 item?.risks ? `### Risks\n${item.risks}\n` : "",
                 `### ENV CHANGE REQUEST\n${item?.env_change_request || "None"}\n`,
+                batchContext ? `### Parent batch context\n${batchContext}\n` : "",
+                batchObjectives ? `### Parent batch objectives\n${batchObjectives}\n` : "",
+                batchDesignPrinciples ? `### Parent batch design principles\n${batchDesignPrinciples}\n` : "",
+                batchConstraints ? `### Parent batch non-negotiable constraints\n${batchConstraints}\n` : "",
+                batchExpectedEndResult ? `### Parent batch expected end result\n${batchExpectedEndResult}\n` : "",
+                batchCostBias ? `### Parent batch cost bias\n${batchCostBias}\n` : "",
+                batchDecisionRules ? `### Parent batch decision rules\n${batchDecisionRules}\n` : "",
+                batchPivot ? `### Parent batch pivot / out-of-scope\n${batchPivot}\n` : "",
                 "---",
                 `Parent batch: #${issue.number}`,
                 `Origin: ${origin} | Source bullet: ${sourceBullet}`,

@@ -14,6 +14,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Cover loading, empty, error, and success states in the real layout, not with generic spinner-only placeholders.
 - Preserve auth consistency: the first SSR render should not flash demo while admin auth is still resolving.
 - Keep hierarchy, spacing rhythm, and accessibility intact. The repo already uses a custom dashboard composition instead of generic equal-card scaffolding; keep that intentionality.
+- When a task materially changes palette, theme direction, contrast, or expressive color usage, use `skill.color-expert` before freezing the design.
 - Keep dashboard state driven by loaders, query options, and URL search params rather than ad hoc local request state.
 - Dashboard health states should stay progressive: one global summary, inline badges only on selected decision-critical widgets, and an optional diagnosis drawer instead of repeating the same warning across the whole page.
 - Powens connection status UI should prefer the persisted last-sync snapshot for concise badges, but it must degrade cleanly to runtime-only placeholders when the server kill-switch disables persistence.

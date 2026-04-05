@@ -31,6 +31,49 @@ body:
       required: true
 
   - type: textarea
+    id: objectives
+    attributes:
+      label: Objectives
+      description: What concrete outcomes must this batch achieve?
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: design_principles
+    attributes:
+      label: Design principles
+      description: Product, UX, reliability, or architecture principles that should shape every spawned spec.
+      placeholder: |
+        - Fail soft
+        - Prefer deterministic demo behavior
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_negotiable_constraints
+    attributes:
+      label: Non-negotiable constraints
+      description: Hard rules that the spawned specs and implementation must preserve.
+      placeholder: |
+        - Demo must stay deterministic
+        - No new paid dependency by default
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_end_result
+    attributes:
+      label: Expected end result
+      description: What should be true after the whole batch is complete?
+    validations:
+      required: true
+
+  - type: textarea
     id: raw_specs
     attributes:
       label: Raw specs list (one bullet per spec)
@@ -51,5 +94,29 @@ body:
       options:
         - prefer free
         - ok paid if justified
+    validations:
+      required: true
+
+  - type: textarea
+    id: decision_rules
+    attributes:
+      label: Decision rules
+      description: Heuristics Codex should use when multiple valid paths exist.
+      placeholder: |
+        - Prefer the smallest safe patch
+        - Bias toward reversible changes
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: pivot_out_of_scope
+    attributes:
+      label: Explicit pivot / out-of-scope
+      description: What should not be turned into a spec unless you explicitly request it later?
+      placeholder: |
+        - Do not redesign ...
+        - Do not migrate ...
+        - ...
     validations:
       required: true

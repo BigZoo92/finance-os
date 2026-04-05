@@ -93,7 +93,8 @@ jobs:
 
             if (!headBranch.startsWith("agent/")) return;
 
-            await ensureLabel("autopilot:waiting-codex", "fbca04", "Draft PR is waiting for manual Codex extraction on its branch");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A Codex patch comment was applied to this PR branch");
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
@@ -149,9 +150,9 @@ jobs:
                   "AUTOPILOT_STUB_ONLY_WAITING_FOR_MANUAL_CODEX_V1",
                   "Autopilot will not merge this PR because it is still stub-only.",
                   "",
-                  "The manual Codex handoff already exists earlier in this PR thread.",
-                  "Delete the .github/agent-stubs/** bootstrap file from the PR diff and implement the requested feature in real non-stub files.",
-                  "Do not open a new extraction request from this reminder. Push commits on this branch instead.",
+                  "The implementation request for this PR should already exist earlier in the thread.",
+                  "Reply on this PR thread with an AUTOPILOT_PATCH_V1 comment that deletes the .github/agent-stubs/** bootstrap file and implements the requested feature in real non-stub files.",
+                  "Do not open a new PR from this reminder.",
                 ],
                 comments
               );
@@ -166,9 +167,9 @@ jobs:
                   "AUTOPILOT_REMOVE_STUB_REQUIRED_V2",
                   "Autopilot found real implementation changes on this PR, but the bootstrap stub file is still present in the PR diff.",
                   "",
-                  "Reuse the existing manual Codex handoff for this PR.",
-                  "Remove every .github/agent-stubs/** file from this PR diff and keep the real implementation changes.",
-                  "Do not open a new extraction request from this reminder. Push commits on this branch instead.",
+                  "Reuse the existing implementation request for this PR.",
+                  "Reply on this PR thread with a cleanup AUTOPILOT_PATCH_V1 comment that removes every .github/agent-stubs/** file from this PR diff while keeping the real implementation changes.",
+                  "Do not open a new PR from this reminder.",
                 ],
                 comments
               );
@@ -177,7 +178,12 @@ jobs:
 
             let isDraft = Boolean(pr.draft);
 
-            if (isDraft || labelSet.has("autopilot:waiting-codex")) {
+            if (
+              isDraft ||
+              labelSet.has("autopilot:waiting-patch") ||
+              labelSet.has("autopilot:patch-applied") ||
+              labelSet.has("autopilot:waiting-codex")
+            ) {
               if (isDraft && pr.node_id) {
                 try {
                   await github.graphql(

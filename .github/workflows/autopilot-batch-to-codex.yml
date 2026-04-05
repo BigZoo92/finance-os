@@ -60,6 +60,14 @@ jobs:
               return collected.join("\n").trim();
             }
 
+            function extractFirstSection(body, headings) {
+              for (const heading of headings) {
+                const value = extractSection(body, heading);
+                if (value) return value;
+              }
+              return "";
+            }
+
             function extractRawBullets(body) {
               const section = extractSection(body, "Raw specs list (one bullet per spec)");
               return section
@@ -105,6 +113,15 @@ jobs:
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
 
             const rawBullets = extractRawBullets(issue.body || "");
+            const batchArea = extractFirstSection(issue.body || "", ["Area (dominant)", "Area"]);
+            const batchContext = extractFirstSection(issue.body || "", ["Context"]);
+            const batchObjectives = extractFirstSection(issue.body || "", ["Objectives"]);
+            const batchDesignPrinciples = extractFirstSection(issue.body || "", ["Design principles"]);
+            const batchConstraints = extractFirstSection(issue.body || "", ["Non-negotiable constraints"]);
+            const batchExpectedEndResult = extractFirstSection(issue.body || "", ["Expected end result"]);
+            const batchCostBias = extractFirstSection(issue.body || "", ["Cost bias"]);
+            const batchDecisionRules = extractFirstSection(issue.body || "", ["Decision rules"]);
+            const batchPivot = extractFirstSection(issue.body || "", ["Explicit pivot / out-of-scope"]);
             if (rawBullets.length === 0) {
               await github.rest.issues.addLabels({
                 owner,
@@ -139,6 +156,7 @@ jobs:
               "",
               `Create exactly one requested spec object per raw bullet (1:1, same order, count ${rawBullets.length}).`,
               "Do NOT add extra items.",
+              "Use the batch brief below as first-class product context. Preserve its fail-soft, dual-path, reliability, UX, and cost constraints where relevant.",
               "Every item must set origin='requested'.",
               `source_bullet must be 1..${rawBullets.length} exactly once, in order.`,
               "",
@@ -151,9 +169,20 @@ jobs:
               "- goal, non_goals, acceptance_criteria[], breakpoints[]",
               "- dual_path, observability, uiux, risks, env_change_request",
               "",
+              "Batch brief:",
+              batchArea ? `- Dominant area: ${batchArea}` : "",
+              batchCostBias ? `- Cost bias: ${batchCostBias}` : "",
+              batchContext ? `### Context\n${batchContext}` : "",
+              batchObjectives ? `### Objectives\n${batchObjectives}` : "",
+              batchDesignPrinciples ? `### Design principles\n${batchDesignPrinciples}` : "",
+              batchConstraints ? `### Non-negotiable constraints\n${batchConstraints}` : "",
+              batchExpectedEndResult ? `### Expected end result\n${batchExpectedEndResult}` : "",
+              batchDecisionRules ? `### Decision rules\n${batchDecisionRules}` : "",
+              batchPivot ? `### Explicit pivot / out-of-scope\n${batchPivot}` : "",
+              "",
               "Raw bullets to convert:",
               ...rawBullets.map((bullet, index) => `${index + 1}. ${bullet}`),
-            ].join("\n");
+            ].filter(Boolean).join("\n");
 
             await github.rest.issues.createComment({
               owner,

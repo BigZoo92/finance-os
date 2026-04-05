@@ -90,6 +90,69 @@ jobs:
               return live.data;
             }
 
+            async function backfillImplementationRequest(pull) {
+              if (!Number.isInteger(pull?.number) || pull.number <= 0) return;
+
+              const prIssue = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number: pull.number,
+              });
+              const labels = (prIssue.data.labels || []).map((label) =>
+                typeof label === "string" ? label : label.name
+              );
+              const labelSet = new Set(labels);
+
+              if (!labelSet.has("autopilot")) return;
+              if (labelSet.has("autopilot:ready-to-merge")) return;
+              if (!labelSet.has("autopilot:waiting-codex") && !labelSet.has("autopilot:waiting-patch")) return;
+
+              const improveMatch = String(pull.body || "").match(/Parent improve issue:\s*#(\d+)/i);
+              const improveNumber = Number(improveMatch?.[1] || "0");
+              const marker = `AUTOPILOT_IMPLEMENTATION_REQUEST_V3:${Number.isInteger(improveNumber) && improveNumber > 0 ? improveNumber : pull.number}`;
+              const stubPath =
+                Number.isInteger(improveNumber) && improveNumber > 0
+                  ? `.github/agent-stubs/improve-${improveNumber}.md`
+                  : ".github/agent-stubs/<improve-number>.md";
+
+              await addLabels(pull.number, ["autopilot:waiting-patch"]);
+              await removeLabel(pull.number, "autopilot:waiting-codex");
+
+              await createCommentOnce(
+                pull.number,
+                marker,
+                [
+                  marker,
+                  "@codex",
+                  "",
+                  "PATCH MODE IS THE DEFAULT IMPLEMENTATION PATH FOR THIS PR.",
+                  "",
+                  "Reply on THIS PR thread with EXACTLY ONE comment in the required patch format.",
+                  "Stay on THIS PR branch. Do NOT open another PR in Codex UI. Do NOT use make_pr.",
+                  "",
+                  "Required reply format:",
+                  "Line 1 must be exactly:",
+                  "AUTOPILOT_PATCH_V1",
+                  "",
+                  "Then include EXACTLY ONE fenced code block containing a unified diff.",
+                  "Prefer a ```diff fence. A plain triple-backtick fence is also accepted if the first meaningful line inside is diff --git ...",
+                  "",
+                  "After the closing fence, append this plain-text footer outside the fence:",
+                  "Status: READY",
+                  "What changed: (max 3 bullets)",
+                  "Risk: (low/med/high + why)",
+                  "Next: (one next step)",
+                  "",
+                  "Mandatory rules:",
+                  `- Delete ${stubPath} in the first real implementation patch.`,
+                  "- Modify at least one non-stub file in the same patch.",
+                  "- Use exactly ONE fenced code block and ZERO other code fences.",
+                  "- Keep AUTOPILOT_PATCH_V1 and the footer outside the code fence.",
+                  "- Do NOT ask a human to extract, copy, or apply anything manually.",
+                ]
+              );
+            }
+
             if (context.eventName === "pull_request") {
               const pull = context.payload.pull_request;
               if (!String(pull.head?.ref || "").startsWith("agent/")) return;
@@ -152,6 +215,8 @@ jobs:
             await ensureLabel("ready", "0e8a16", "Ready for next stage");
             await ensureLabel("autopilot:queued", "fbca04", "Queued until autopilot has capacity");
             await ensureLabel("autopilot:queued-pr", "fbca04", "Improve issue is waiting for the next implementation PR slot");
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A Codex patch comment was applied to this PR branch");
 
             const openPrs = await github.paginate(github.rest.pulls.list, {
               owner,
@@ -165,6 +230,9 @@ jobs:
             );
 
             if (activeAgentPrs.length >= 1) {
+              for (const pull of activeAgentPrs) {
+                await backfillImplementationRequest(pull);
+              }
               core.info(`Queue pump idle: ${activeAgentPrs.length} agent PR(s) are already open.`);
               return;
             }

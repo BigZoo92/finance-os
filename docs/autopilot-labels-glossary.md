@@ -26,8 +26,10 @@ Reference glossary for labels used by the agentic/autopilot workflow.
 - `autopilot`: item is managed by autopilot automation.
 - `autopilot:queued`: spec exists but is waiting for available PR capacity.
 - `autopilot:queued-pr`: improve issue is ready in principle but must wait for the single active implementation PR slot.
-- `autopilot:waiting-codex`: draft PR exists and is waiting for a human to extract the task in Codex and push commits on that branch.
+- `autopilot:waiting-patch`: draft PR exists and is waiting for the next Codex patch reply on the PR thread.
+- `autopilot:patch-applied`: a Codex patch reply was applied to the PR branch and CI is now the next source of truth.
 - `autopilot:ready-to-merge`: a real non-stub implementation landed on the PR branch and autopilot can continue toward merge.
+- `autopilot:waiting-codex`: legacy label from the removed manual-handoff flow; queue repair should migrate it to `autopilot:waiting-patch`.
 
 ## PR state labels (autopilot usage)
 
@@ -40,6 +42,6 @@ Reference glossary for labels used by the agentic/autopilot workflow.
 - Improve-to-PR automation should open at most one agent implementation PR at a time; additional improve issues move to `autopilot:queued-pr`.
 - Creating the implementation PR closes the linked `spec:` and `improve:` issues as completed. If that PR is later closed without merge, autopilot reopens and requeues the linked work.
 - Merge-on-green automation should only merge autopilot PRs when real non-stub files landed on the branch, the PR is no longer draft, and no stub file remains in the PR diff.
-- The implementation step is now a manual Codex handoff on the PR branch. GitHub comments can surface the handoff in Codex, but autopilot no longer depends on patch-comment apply.
-- Manual Codex extraction should start only from `implement:` draft PRs on `agent/impl-*` branches. Extracting `improve:` issue tasks can create out-of-band docs PRs that autopilot will ignore.
-- A failed CI run on an autopilot implementation PR should move the PR back into `autopilot:waiting-codex` and add a comment with the real runner failure excerpt.
+- The implementation step starts on the `implement:` PR thread. Codex replies there with `AUTOPILOT_PATCH_V1`, and autopilot applies the patch onto the same branch.
+- `implement:` draft PRs on `agent/impl-*` branches are the only valid implementation entrypoint. Extracting `improve:` issue tasks can create out-of-band PRs that autopilot will ignore.
+- A failed CI run on an autopilot implementation PR should move the PR back into `autopilot:waiting-patch` and add a comment with the real runner failure excerpt.

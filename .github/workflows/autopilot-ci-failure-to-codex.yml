@@ -173,6 +173,22 @@ jobs:
               } catch {}
             }
 
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch {
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description,
+                  });
+                } catch {}
+              }
+            }
+
             async function removeLabel(issueNumber, name) {
               if (!Number.isInteger(issueNumber) || issueNumber <= 0) return;
               try {
@@ -194,19 +210,25 @@ jobs:
             const marker = `AUTOPILOT_CI_FAILURE_V1:${headSha || runId}`;
             if (comments.some((comment) => String(comment.body || "").includes(marker))) return;
 
-            await addLabels(prNumber, ["autopilot:waiting-codex"]);
+            await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation patch comment");
+            await ensureLabel("autopilot:patch-applied", "0e8a16", "A Codex patch comment was applied to this PR branch");
+            await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
+
+            await addLabels(prNumber, ["autopilot:waiting-patch"]);
             await removeLabel(prNumber, "autopilot:ready-to-merge");
+            await removeLabel(prNumber, "autopilot:patch-applied");
+            await removeLabel(prNumber, "autopilot:waiting-codex");
 
             const body = [
               marker,
               "@codex",
               "",
               "CI failed on this PR branch.",
-              "Fix these errors on THIS branch. Do NOT open a new PR. Do NOT use make_pr.",
-              "If a manual Codex task for this PR already exists, reuse that PR branch context instead of starting from the issue again.",
+              "Reply on THIS PR thread with the next AUTOPILOT_PATCH_V1 fix patch. Do NOT open a new PR. Do NOT use make_pr.",
+              "Reuse this PR context instead of starting from the issue again.",
               "CI is the source of truth for this PR; do not treat partial local checks as success if CI disagrees.",
               "Repo TypeScript note: exactOptionalPropertyTypes is enabled. If an optional field is absent, omit the key entirely instead of passing undefined.",
-              "Before pushing the fix, rerun `pnpm check:ci` from the repo root if the environment setup is healthy enough to install dependencies.",
+              "Before replying with the fix patch, rerun `pnpm check:ci` from the repo root if the environment setup is healthy enough to install dependencies.",
               runUrl ? `Workflow run: ${runUrl}` : "",
               failedJobs ? "" : "",
               failedJobs ? "Failed jobs/steps:" : "",
@@ -217,7 +239,7 @@ jobs:
               logExcerpt || "",
               logExcerpt ? "```" : "",
               "",
-              "Push the fix on the same branch. When CI turns green, autopilot will continue automatically.",
+              "When CI turns green on the updated PR branch, autopilot will continue automatically.",
             ].filter(Boolean);
 
             await github.rest.issues.createComment({
