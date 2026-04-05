@@ -6,6 +6,8 @@ import { getDashboardGoalsMock } from '../../../mocks/dashboardGoals.mock'
 import { getDashboardRuntime } from '../context'
 import { dashboardGoalBodySchema, dashboardGoalParamsSchema } from '../schemas'
 
+const normalizeGoalCurrency = (currency: string) => currency.toUpperCase()
+
 export const createGoalsRoute = () =>
   new Elysia()
     .get('/goals', async context => {
@@ -42,7 +44,7 @@ export const createGoalsRoute = () =>
             return dashboard.useCases.createGoal({
               name: context.body.name,
               goalType: context.body.goalType,
-              currency: context.body.currency,
+              currency: normalizeGoalCurrency(context.body.currency),
               targetAmount: context.body.targetAmount,
               currentAmount: context.body.currentAmount,
               targetDate: context.body.targetDate,
@@ -77,7 +79,7 @@ export const createGoalsRoute = () =>
             const updated = await dashboard.useCases.updateGoal(context.params.goalId, {
               name: context.body.name,
               goalType: context.body.goalType,
-              currency: context.body.currency,
+              currency: normalizeGoalCurrency(context.body.currency),
               targetAmount: context.body.targetAmount,
               currentAmount: context.body.currentAmount,
               targetDate: context.body.targetDate,
