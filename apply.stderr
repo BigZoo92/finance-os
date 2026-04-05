@@ -1,3 +1,4 @@
 Falling back to direct application...
 Applied patch to 'apps/web/src/components/dashboard/monthly-category-budgets-card.tsx' cleanly.
-Applied patch to 'apps/web/src/components/dashboard/personal-financial-goals-card.tsx' cleanly.
+Applied patch to 'apps/web/src/features/demo-data.ts' cleanly.
+Applied patch to 'apps/web/src/features/goals/demo-data.ts' cleanly.
