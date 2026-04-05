@@ -2293,6 +2293,29 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                                 {transaction.category ?? 'Sans categorie'}
                                 {transaction.subcategory ? ` / ${transaction.subcategory}` : ''}
                               </p>
+                              <div className="flex flex-wrap items-center gap-1">
+                                <Badge variant="outline">
+                                  {transaction.resolutionSource === 'manual_override'
+                                    ? 'Manual'
+                                    : transaction.resolutionSource === 'merchant_rules'
+                                      ? 'Merchant Rule'
+                                      : transaction.resolutionSource === 'mcc'
+                                        ? 'MCC'
+                                        : transaction.resolutionSource === 'counterparty'
+                                          ? 'Counterparty'
+                                          : 'Fallback'}
+                                </Badge>
+                                <details className="text-xs text-muted-foreground">
+                                  <summary className="cursor-pointer">Why this category?</summary>
+                                  <ul className="mt-1 space-y-0.5">
+                                    {transaction.resolutionTrace.map(step => (
+                                      <li key={`${transaction.id}-${step.source}-${step.rank}`}>
+                                        {step.rank}. {step.source} — {step.matched ? 'matched' : 'skipped'} ({step.reason})
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </details>
+                              </div>
                               {transaction.direction === 'income' ? (
                                 <Badge variant="secondary">
                                   Revenu {transaction.incomeType ?? 'exceptional'}

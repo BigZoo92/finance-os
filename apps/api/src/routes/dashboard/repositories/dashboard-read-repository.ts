@@ -212,6 +212,9 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           currency: schema.transaction.currency,
           label: schema.transaction.label,
           merchant: sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`,
+          providerCategory: schema.transaction.category,
+          customCategory: schema.transaction.customCategory,
+          customSubcategory: schema.transaction.customSubcategory,
           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
@@ -322,6 +325,9 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           currency: schema.transaction.currency,
           label: schema.transaction.label,
           merchant: sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`,
+          providerCategory: schema.transaction.category,
+          customCategory: schema.transaction.customCategory,
+          customSubcategory: schema.transaction.customSubcategory,
           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case

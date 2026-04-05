@@ -105,6 +105,9 @@ export interface DashboardTransactionRow {
   label: string
   merchant: string
   category: string | null
+  providerCategory: string | null
+  customCategory: string | null
+  customSubcategory: string | null
   subcategory: string | null
   incomeType: 'salary' | 'recurring' | 'exceptional' | null
   tags: string[]
@@ -353,6 +356,18 @@ export interface DashboardTransactionsResponse {
     merchant: string
     category: string | null
     subcategory: string | null
+    resolvedCategory: string | null
+    resolutionSource: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+    resolutionRuleId: string | null
+    resolutionTrace: Array<{
+      source: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+      rank: number
+      matched: boolean
+      reason: string
+      category: string | null
+      subcategory: string | null
+      ruleId: string | null
+    }>
     incomeType: 'salary' | 'recurring' | 'exceptional' | null
     tags: string[]
     powensConnectionId: string
