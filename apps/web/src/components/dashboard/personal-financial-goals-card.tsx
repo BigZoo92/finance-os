@@ -1,6 +1,6 @@
 import { Badge, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { AuthMode } from '@/features/auth-types'
 import {
   archiveFinancialGoal,
@@ -445,6 +445,40 @@ export function PersonalFinancialGoalsCard({
   const activeGoals = goals.filter(goal => goal.archivedAt === null)
   const archivedGoals = goals.filter(goal => goal.archivedAt !== null)
 
+  const goalAlerts = useMemo(() => {
+    return activeGoals
+      .map(goal => {
+        const progress = clampProgress(goal)
+        const remainingAmount = Math.max(goal.targetAmount - goal.currentAmount, 0)
+
+        if (!goal.targetDate) {
+          return null
+        }
+
+        const targetDate = new Date(`${goal.targetDate}T00:00:00.000Z`)
+        const daysUntilTarget = Math.ceil((targetDate.getTime() - Date.now()) / 86_400_000)
+
+        if (daysUntilTarget < 0 && remainingAmount > 0) {
+          return {
+            goalId: goal.id,
+            level: 'high' as const,
+            message: `${goal.name}: objectif depasse de ${Math.abs(daysUntilTarget)}j, reste ${formatMoney(remainingAmount, goal.currency)} a epargner.`,
+          }
+        }
+
+        if (daysUntilTarget <= 90 && progress < 60) {
+          return {
+            goalId: goal.id,
+            level: 'medium' as const,
+            message: `${goal.name}: echeance dans ${Math.max(daysUntilTarget, 0)}j avec ${progress}% finance.`,
+          }
+        }
+
+        return null
+      })
+      .filter(item => item !== null)
+  }, [activeGoals])
+
   return (
     <>
       <Card>
@@ -489,6 +523,19 @@ export function PersonalFinancialGoalsCard({
           ) : null}
 
           {authMode === undefined || goalsQuery.isPending ? <GoalsSkeleton /> : null}
+
+          {isAdmin && !goalsQuery.isPending && !goalsQuery.isError && goalAlerts.length > 0 ? (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+              <p className="font-medium">Alertes objectif</p>
+              <ul className="mt-2 list-disc space-y-1 pl-4">
+                {goalAlerts.map(alert => (
+                  <li key={alert.goalId} className={alert.level === 'high' ? 'font-medium' : ''}>
+                    {alert.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 text-center">

@@ -1,3 +1,3 @@
 Falling back to direct application...
-Applied patch to 'apps/api/src/routes/dashboard/routes/goals.test.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/routes/goals.ts' cleanly.
+Applied patch to 'apps/web/src/components/dashboard/monthly-category-budgets-card.tsx' cleanly.
+Applied patch to 'apps/web/src/components/dashboard/personal-financial-goals-card.tsx' cleanly.

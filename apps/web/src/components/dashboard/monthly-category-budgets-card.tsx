@@ -96,6 +96,19 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
     [budgets, spentByCategory]
   )
 
+
+  const budgetAlerts = useMemo(() => {
+    const overspentRows = budgetRows.filter(row => row.delta < 0)
+    const nearLimitRows = budgetRows.filter(
+      row => row.delta >= 0 && row.monthlyBudget > 0 && row.spent / row.monthlyBudget >= 0.9
+    )
+
+    return {
+      overspentRows,
+      nearLimitRows,
+    }
+  }, [budgetRows])
+
   const handleAddBudget = () => {
     if (!isAdmin) {
       return
@@ -165,6 +178,24 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
             Ajouter
           </Button>
         </div>
+
+        {isAdmin && budgetAlerts.overspentRows.length + budgetAlerts.nearLimitRows.length > 0 ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-medium">Alertes budgetaires</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {budgetAlerts.overspentRows.map(row => (
+                <li key={`overspent-${row.category}`}>
+                  {row.category}: depassement de {formatMoney(Math.abs(row.delta))}
+                </li>
+              ))}
+              {budgetAlerts.nearLimitRows.map(row => (
+                <li key={`near-limit-${row.category}`}>
+                  {row.category}: {Math.round((row.spent / row.monthlyBudget) * 100)}% du budget consomme
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {budgetRows.length ? (
           <div className="space-y-2">
