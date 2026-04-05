@@ -103,6 +103,7 @@ export interface DashboardTransactionRow {
   amount: string
   currency: string
   label: string
+  merchant: string
   category: string | null
   subcategory: string | null
   incomeType: 'salary' | 'recurring' | 'exceptional' | null
@@ -127,6 +128,7 @@ export interface DashboardTransactionClassificationUpdateInput {
   subcategory: string | null
   incomeType: 'salary' | 'recurring' | 'exceptional' | null
   tags: string[]
+  merchant?: string | null
 }
 
 export type DashboardGoalType =
@@ -348,6 +350,7 @@ export interface DashboardTransactionsResponse {
     currency: string
     direction: 'income' | 'expense'
     label: string
+    merchant: string
     category: string | null
     subcategory: string | null
     incomeType: 'salary' | 'recurring' | 'exceptional' | null

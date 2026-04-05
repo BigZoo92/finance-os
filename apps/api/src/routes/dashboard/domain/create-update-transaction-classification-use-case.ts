@@ -8,6 +8,7 @@ interface CreateUpdateTransactionClassificationUseCaseDependencies {
       subcategory: string | null
       incomeType: 'salary' | 'recurring' | 'exceptional' | null
       tags: string[]
+      merchant?: string | null
     }
   ) => Promise<{
     id: number
@@ -15,6 +16,7 @@ interface CreateUpdateTransactionClassificationUseCaseDependencies {
     amount: string
     currency: string
     label: string
+    merchant: string
     category: string | null
     subcategory: string | null
     incomeType: 'salary' | 'recurring' | 'exceptional' | null
@@ -43,6 +45,7 @@ export const createUpdateTransactionClassificationUseCase = ({
       subcategory: input.subcategory,
       incomeType: input.incomeType,
       tags: uniqueTags,
+      ...(input.merchant !== undefined ? { merchant: input.merchant } : {}),
     })
 
     if (!updated) {
@@ -59,6 +62,7 @@ export const createUpdateTransactionClassificationUseCase = ({
       currency: updated.currency,
       direction: normalizedAmount >= 0 ? 'income' : 'expense',
       label: updated.label,
+      merchant: updated.merchant,
       category: updated.category,
       subcategory: updated.subcategory,
       incomeType: updated.incomeType,

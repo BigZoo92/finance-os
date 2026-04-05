@@ -1,347 +1,385 @@
-diff --git a/.github/agent-stubs/improve-593.md b/.github/agent-stubs/improve-593.md
+diff --git a/.github/agent-stubs/improve-595.md b/.github/agent-stubs/improve-595.md
 deleted file mode 100644
-index dfa26c1..0000000
---- a/.github/agent-stubs/improve-593.md
+index b753358..0000000
+--- a/.github/agent-stubs/improve-595.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #593
+-# Autopilot stub for improve #595
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/593
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/595
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/routeTree.gen.ts b/apps/web/src/routeTree.gen.ts
-index 8d4cd17..a1f8ac3 100644
---- a/apps/web/src/routeTree.gen.ts
-+++ b/apps/web/src/routeTree.gen.ts
-@@ -10,6 +10,7 @@
- 
- import { Route as rootRouteImport } from './routes/__root'
- import { Route as VersionRouteImport } from './routes/version'
-+import { Route as TransactionsRouteImport } from './routes/transactions'
- import { Route as LoginRouteImport } from './routes/login'
- import { Route as HealthzRouteImport } from './routes/healthz'
- import { Route as HealthRouteImport } from './routes/health'
-@@ -21,6 +22,11 @@ const VersionRoute = VersionRouteImport.update({
-   path: '/version',
-   getParentRoute: () => rootRouteImport,
- } as any)
-+const TransactionsRoute = TransactionsRouteImport.update({
-+  id: '/transactions',
-+  path: '/transactions',
-+  getParentRoute: () => rootRouteImport,
-+} as any)
- const LoginRoute = LoginRouteImport.update({
-   id: '/login',
-   path: '/login',
-@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
-   '/health': typeof HealthRoute
-   '/healthz': typeof HealthzRoute
-   '/login': typeof LoginRoute
-+  '/transactions': typeof TransactionsRoute
-   '/version': typeof VersionRoute
-   '/powens/callback': typeof PowensCallbackRoute
- }
-@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
-   '/health': typeof HealthRoute
-   '/healthz': typeof HealthzRoute
-   '/login': typeof LoginRoute
-+  '/transactions': typeof TransactionsRoute
-   '/version': typeof VersionRoute
-   '/powens/callback': typeof PowensCallbackRoute
- }
-@@ -69,6 +77,7 @@ export interface FileRoutesById {
-   '/health': typeof HealthRoute
-   '/healthz': typeof HealthzRoute
-   '/login': typeof LoginRoute
-+  '/transactions': typeof TransactionsRoute
-   '/version': typeof VersionRoute
-   '/powens/callback': typeof PowensCallbackRoute
- }
-@@ -79,16 +88,25 @@ export interface FileRouteTypes {
-     | '/health'
-     | '/healthz'
-     | '/login'
-+    | '/transactions'
-     | '/version'
-     | '/powens/callback'
-   fileRoutesByTo: FileRoutesByTo
--  to: '/' | '/health' | '/healthz' | '/login' | '/version' | '/powens/callback'
-+  to:
-+    | '/'
-+    | '/health'
-+    | '/healthz'
-+    | '/login'
-+    | '/transactions'
-+    | '/version'
-+    | '/powens/callback'
-   id:
-     | '__root__'
-     | '/'
-     | '/health'
-     | '/healthz'
-     | '/login'
-+    | '/transactions'
-     | '/version'
-     | '/powens/callback'
-   fileRoutesById: FileRoutesById
-@@ -98,6 +116,7 @@ export interface RootRouteChildren {
-   HealthRoute: typeof HealthRoute
-   HealthzRoute: typeof HealthzRoute
-   LoginRoute: typeof LoginRoute
-+  TransactionsRoute: typeof TransactionsRoute
-   VersionRoute: typeof VersionRoute
-   PowensCallbackRoute: typeof PowensCallbackRoute
- }
-@@ -111,6 +130,13 @@ declare module '@tanstack/react-router' {
-       preLoaderRoute: typeof VersionRouteImport
-       parentRoute: typeof rootRouteImport
+diff --git a/apps/api/src/mocks/transactions.mock.ts b/apps/api/src/mocks/transactions.mock.ts
+index 3f6f581..b57e92e 100644
+--- a/apps/api/src/mocks/transactions.mock.ts
++++ b/apps/api/src/mocks/transactions.mock.ts
+@@ -9,6 +9,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'Carrefour Market',
++    merchant: 'Carrefour Market',
+     category: 'Courses',
+     subcategory: 'Supermarche',
+     incomeType: null,
+@@ -24,6 +25,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'Spotify',
++    merchant: 'Spotify',
+     category: 'Abonnements',
+     subcategory: 'Musique',
+     incomeType: null,
+@@ -39,6 +41,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'income',
+     label: 'Salaire',
++    merchant: 'Salaire',
+     category: 'Revenus',
+     subcategory: 'Salaire',
+     incomeType: 'salary',
+@@ -54,6 +57,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'SNCF',
++    merchant: 'SNCF',
+     category: 'Transport',
+     subcategory: 'Train',
+     incomeType: null,
+@@ -69,6 +73,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'Netflix',
++    merchant: 'Netflix',
+     category: 'Abonnements',
+     subcategory: 'Video',
+     incomeType: null,
+@@ -84,6 +89,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'TotalEnergies',
++    merchant: 'TotalEnergies',
+     category: 'Transport',
+     subcategory: 'Carburant',
+     incomeType: null,
+@@ -99,6 +105,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'Uber',
++    merchant: 'Uber',
+     category: 'Transport',
+     subcategory: 'VTC',
+     incomeType: null,
+@@ -114,6 +121,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'Monoprix',
++    merchant: 'Monoprix',
+     category: 'Courses',
+     subcategory: 'Supermarche',
+     incomeType: null,
+@@ -129,6 +137,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'income',
+     label: 'Remboursement',
++    merchant: 'Remboursement',
+     category: 'Revenus',
+     subcategory: 'Remboursement',
+     incomeType: 'exceptional',
+@@ -144,6 +153,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     currency: 'EUR',
+     direction: 'expense',
+     label: 'Boulangerie',
++    merchant: 'Boulangerie',
+     category: 'Courses',
+     subcategory: 'Alimentation',
+     incomeType: null,
+diff --git a/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.test.ts b/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.test.ts
+index da0890d..1ea8b93 100644
+--- a/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.test.ts
++++ b/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.test.ts
+@@ -11,6 +11,7 @@ describe('createGetDashboardTransactionsUseCase', () => {
+           amount: '-45.20',
+           currency: 'EUR',
+           label: 'CARREFOUR CITY',
++          merchant: 'CARREFOUR CITY',
+           category: 'Unknown',
+           subcategory: null,
+           incomeType: null,
+@@ -62,6 +63,7 @@ describe('createGetDashboardTransactionsUseCase', () => {
+           currency: 'EUR',
+           direction: 'expense',
+           label: 'CARREFOUR CITY',
++          merchant: 'CARREFOUR CITY',
+           category: 'Courses',
+           subcategory: 'Supermarche',
+           incomeType: null,
+diff --git a/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts b/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts
+index 986dc0a..ca9b3f0 100644
+--- a/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts
++++ b/apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts
+@@ -15,6 +15,7 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
+       amount: string
+       currency: string
+       label: string
++      merchant: string
+       category: string | null
+       subcategory: string | null
+       incomeType: 'salary' | 'recurring' | 'exceptional' | null
+@@ -147,6 +148,7 @@ export const createGetDashboardTransactionsUseCase = ({
+           currency: row.currency,
+           direction: amount >= 0 ? 'income' : 'expense',
+           label: row.label,
++          merchant: row.merchant,
+           category: normalizedClassification.category,
+           subcategory: normalizedClassification.subcategory,
+           incomeType: normalizedClassification.incomeType,
+diff --git a/apps/api/src/routes/dashboard/domain/create-update-transaction-classification-use-case.ts b/apps/api/src/routes/dashboard/domain/create-update-transaction-classification-use-case.ts
+index 0777add..887a715 100644
+--- a/apps/api/src/routes/dashboard/domain/create-update-transaction-classification-use-case.ts
++++ b/apps/api/src/routes/dashboard/domain/create-update-transaction-classification-use-case.ts
+@@ -8,6 +8,7 @@ interface CreateUpdateTransactionClassificationUseCaseDependencies {
+       subcategory: string | null
+       incomeType: 'salary' | 'recurring' | 'exceptional' | null
+       tags: string[]
++      merchant?: string | null
      }
-+    '/transactions': {
-+      id: '/transactions'
-+      path: '/transactions'
-+      fullPath: '/transactions'
-+      preLoaderRoute: typeof TransactionsRouteImport
-+      parentRoute: typeof rootRouteImport
-+    }
-     '/login': {
-       id: '/login'
-       path: '/login'
-@@ -154,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
-   HealthRoute: HealthRoute,
-   HealthzRoute: HealthzRoute,
-   LoginRoute: LoginRoute,
-+  TransactionsRoute: TransactionsRoute,
-   VersionRoute: VersionRoute,
-   PowensCallbackRoute: PowensCallbackRoute,
+   ) => Promise<{
+     id: number
+@@ -15,6 +16,7 @@ interface CreateUpdateTransactionClassificationUseCaseDependencies {
+     amount: string
+     currency: string
+     label: string
++    merchant: string
+     category: string | null
+     subcategory: string | null
+     incomeType: 'salary' | 'recurring' | 'exceptional' | null
+@@ -43,6 +45,7 @@ export const createUpdateTransactionClassificationUseCase = ({
+       subcategory: input.subcategory,
+       incomeType: input.incomeType,
+       tags: uniqueTags,
++      ...(input.merchant !== undefined ? { merchant: input.merchant } : {}),
+     })
+ 
+     if (!updated) {
+@@ -59,6 +62,7 @@ export const createUpdateTransactionClassificationUseCase = ({
+       currency: updated.currency,
+       direction: normalizedAmount >= 0 ? 'income' : 'expense',
+       label: updated.label,
++      merchant: updated.merchant,
+       category: updated.category,
+       subcategory: updated.subcategory,
+       incomeType: updated.incomeType,
+diff --git a/apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts b/apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts
+index 6400bd5..93dd411 100644
+--- a/apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts
++++ b/apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts
+@@ -16,6 +16,15 @@ const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
+   )
  }
-diff --git a/apps/web/src/routes/transactions.tsx b/apps/web/src/routes/transactions.tsx
+ 
++const normalizeMerchantOverride = (merchant: string | null | undefined) => {
++  if (merchant === null || merchant === undefined) {
++    return null
++  }
++
++  const trimmed = merchant.trim()
++  return trimmed.length > 0 ? trimmed : null
++}
++
+ const goalSelection = {
+   id: schema.personalGoal.id,
+   name: schema.personalGoal.name,
+@@ -169,7 +178,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
+ 
+     async listTopExpenseGroups(fromDate, limit) {
+       const categoryExpr = sql<string>`coalesce(nullif(${schema.transaction.category}, ''), 'Unknown')`
+-      const merchantExpr = sql<string>`coalesce(nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`
++      const merchantExpr = sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`
+       const totalExpr = sql<string>`sum(abs(${schema.transaction.amount}))::text`
+       const countExpr = sql<number>`count(*)::int`
+ 
+@@ -202,6 +211,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
+           amount: schema.transaction.amount,
+           currency: schema.transaction.currency,
+           label: schema.transaction.label,
++          merchant: sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`,
+           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
+           subcategory: schema.transaction.customSubcategory,
+           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
+@@ -243,14 +253,60 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
+     },
+ 
+     async updateTransactionClassification(transactionId, input) {
++      const [existing] = await db
++        .select({
++          customMerchant: schema.transaction.customMerchant,
++          customMerchantHistory: schema.transaction.customMerchantHistory,
++        })
++        .from(schema.transaction)
++        .where(eq(schema.transaction.id, transactionId))
++        .limit(1)
++
++      if (!existing) {
++        return null
++      }
++
++      const updateSet: {
++        customCategory: string | null
++        customSubcategory: string | null
++        customIncomeType: 'salary' | 'recurring' | 'exceptional' | null
++        customTags: string[]
++        customMerchant?: string | null
++        customMerchantHistory?: Array<{
++          changedAt: string
++          previousMerchant: string | null
++          nextMerchant: string | null
++        }>
++      } = {
++        customCategory: input.category,
++        customSubcategory: input.subcategory,
++        customIncomeType: input.incomeType,
++        customTags: input.tags,
++      }
++
++      if (input.merchant !== undefined) {
++        const previousMerchant = normalizeMerchantOverride(existing.customMerchant)
++        const nextMerchant = normalizeMerchantOverride(input.merchant)
++        updateSet.customMerchant = nextMerchant
++
++        if (previousMerchant !== nextMerchant) {
++          const currentHistory = Array.isArray(existing.customMerchantHistory)
++            ? existing.customMerchantHistory
++            : []
++          updateSet.customMerchantHistory = [
++            ...currentHistory.slice(-19),
++            {
++              changedAt: new Date().toISOString(),
++              previousMerchant,
++              nextMerchant,
++            },
++          ]
++        }
++      }
++
+       const [updated] = await db
+         .update(schema.transaction)
+-        .set({
+-          customCategory: input.category,
+-          customSubcategory: input.subcategory,
+-          customIncomeType: input.incomeType,
+-          customTags: input.tags,
+-        })
++        .set(updateSet)
+         .where(eq(schema.transaction.id, transactionId))
+         .returning({ id: schema.transaction.id })
+ 
+@@ -265,6 +321,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
+           amount: schema.transaction.amount,
+           currency: schema.transaction.currency,
+           label: schema.transaction.label,
++          merchant: sql<string>`coalesce(nullif(${schema.transaction.customMerchant}, ''), nullif(${schema.transaction.merchant}, ''), ${schema.transaction.label})`,
+           category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
+           subcategory: schema.transaction.customSubcategory,
+           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
+diff --git a/apps/api/src/routes/dashboard/routes/transaction-classification.ts b/apps/api/src/routes/dashboard/routes/transaction-classification.ts
+index 13d4fca..c2e8425 100644
+--- a/apps/api/src/routes/dashboard/routes/transaction-classification.ts
++++ b/apps/api/src/routes/dashboard/routes/transaction-classification.ts
+@@ -31,6 +31,9 @@ export const createTransactionClassificationRoute = () =>
+           const result = await dashboard.useCases.updateTransactionClassification(
+             context.params.transactionId,
+             {
++              ...(context.body.merchant !== undefined
++                ? { merchant: context.body.merchant === null ? null : context.body.merchant }
++                : {}),
+               category: context.body.category ?? null,
+               subcategory: context.body.subcategory ?? null,
+               incomeType: context.body.incomeType ?? null,
+diff --git a/apps/api/src/routes/dashboard/schemas.ts b/apps/api/src/routes/dashboard/schemas.ts
+index 466ca96..cd5c041 100644
+--- a/apps/api/src/routes/dashboard/schemas.ts
++++ b/apps/api/src/routes/dashboard/schemas.ts
+@@ -26,6 +26,7 @@ export const dashboardTransactionClassificationParamsSchema = t.Object({
+ })
+ 
+ export const dashboardTransactionClassificationBodySchema = t.Object({
++  merchant: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 128 }), t.Null()])),
+   category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+   subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+   incomeType: t.Optional(
+diff --git a/apps/api/src/routes/dashboard/types.ts b/apps/api/src/routes/dashboard/types.ts
+index 9ea1870..86db4d5 100644
+--- a/apps/api/src/routes/dashboard/types.ts
++++ b/apps/api/src/routes/dashboard/types.ts
+@@ -103,6 +103,7 @@ export interface DashboardTransactionRow {
+   amount: string
+   currency: string
+   label: string
++  merchant: string
+   category: string | null
+   subcategory: string | null
+   incomeType: 'salary' | 'recurring' | 'exceptional' | null
+@@ -127,6 +128,7 @@ export interface DashboardTransactionClassificationUpdateInput {
+   subcategory: string | null
+   incomeType: 'salary' | 'recurring' | 'exceptional' | null
+   tags: string[]
++  merchant?: string | null
+ }
+ 
+ export type DashboardGoalType =
+@@ -348,6 +350,7 @@ export interface DashboardTransactionsResponse {
+     currency: string
+     direction: 'income' | 'expense'
+     label: string
++    merchant: string
+     category: string | null
+     subcategory: string | null
+     incomeType: 'salary' | 'recurring' | 'exceptional' | null
+diff --git a/packages/db/drizzle/0017_merchant_manual_overrides.sql b/packages/db/drizzle/0017_merchant_manual_overrides.sql
 new file mode 100644
-index 0000000..bad71f2
+index 0000000..bf5f63a
 --- /dev/null
-+++ b/apps/web/src/routes/transactions.tsx
-@@ -0,0 +1,223 @@
-+import {
-+  Button,
-+  Card,
-+  CardContent,
-+  CardDescription,
-+  CardHeader,
-+  CardTitle,
-+  Input,
-+} from '@finance-os/ui/components'
-+import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query'
-+import { createFileRoute, useNavigate } from '@tanstack/react-router'
-+import { z } from 'zod'
-+import { authMeQueryOptions } from '@/features/auth-query-options'
-+import { dashboardTransactionsInfiniteQueryOptionsWithMode } from '@/features/dashboard-query-options'
-+import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
-+
-+const transactionSearchSchema = z.object({
-+  range: z.enum(['7d', '30d', '90d']).optional(),
-+  q: z.string().trim().min(1).max(120).optional(),
-+})
-+
-+const resolveRange = (value: string | undefined): DashboardRange => {
-+  return value === '7d' || value === '90d' ? value : '30d'
-+}
-+
-+const formatCurrency = (value: number, currency: string) => {
-+  return new Intl.NumberFormat('fr-FR', {
-+    style: 'currency',
-+    currency,
-+    maximumFractionDigits: 2,
-+  }).format(value)
-+}
-+
-+const formatDate = (value: string) => {
-+  return new Intl.DateTimeFormat('fr-FR', {
-+    dateStyle: 'medium',
-+  }).format(new Date(value))
-+}
-+
-+const toErrorMessage = (value: unknown) => {
-+  if (value instanceof Error) {
-+    return value.message
-+  }
-+
-+  return String(value)
-+}
-+
-+export const Route = createFileRoute('/transactions')({
-+  validateSearch: search => transactionSearchSchema.parse(search),
-+  loaderDeps: ({ search }) => ({
-+    range: resolveRange(search.range),
-+  }),
-+  loader: async ({ context, deps }) => {
-+    const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-+
-+    await context.queryClient.ensureInfiniteQueryData(
-+      dashboardTransactionsInfiniteQueryOptionsWithMode({
-+        range: deps.range,
-+        limit: 30,
-+        mode: auth.mode,
-+      })
-+    )
-+  },
-+  component: TransactionsPage,
-+})
-+
-+function filterTransactions(
-+  items: DashboardTransactionsResponse['items'],
-+  query: string | undefined
-+) {
-+  if (!query) {
-+    return items
-+  }
-+
-+  const normalizedQuery = query.toLocaleLowerCase()
-+  return items.filter(item => {
-+    return [item.label, item.accountName ?? '', item.category ?? '', ...item.tags]
-+      .join(' ')
-+      .toLocaleLowerCase()
-+      .includes(normalizedQuery)
-+  })
-+}
-+
-+function TransactionsPage() {
-+  const navigate = useNavigate()
-+  const search = Route.useSearch()
-+  const range = resolveRange(search.range)
-+  const query = search.q
-+
-+  const auth = useSuspenseQuery(authMeQueryOptions()).data
-+
-+  const transactionsQuery = useInfiniteQuery(
-+    dashboardTransactionsInfiniteQueryOptionsWithMode({
-+      range,
-+      limit: 30,
-+      mode: auth.mode,
-+    })
-+  )
-+
-+  const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
-+  const filteredTransactions = filterTransactions(transactions, query)
-+
-+  return (
-+    <div className="min-h-screen bg-background p-6 text-foreground md:p-10">
-+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-+        <div className="flex flex-wrap items-end gap-3">
-+          <div className="flex-1 min-w-[220px]">
-+            <label className="text-sm font-medium" htmlFor="tx-q">
-+              Search
-+            </label>
-+            <Input
-+              id="tx-q"
-+              value={query ?? ''}
-+              onChange={event => {
-+                const nextValue = event.currentTarget.value.trim()
-+                void navigate({
-+                  to: '/transactions',
-+                  search: previous => {
-+                    if (nextValue) {
-+                      return {
-+                        ...previous,
-+                        q: nextValue,
-+                      }
-+                    }
-+
-+                    const nextSearch = { ...previous }
-+                    delete nextSearch.q
-+                    return nextSearch
-+                  },
-+                  replace: true,
-+                })
-+              }}
-+              placeholder="Label, account, category, tag"
-+            />
-+          </div>
-+
-+          <div>
-+            <label className="text-sm font-medium" htmlFor="tx-range">
-+              Range
-+            </label>
-+            <select
-+              id="tx-range"
-+              className="flex h-10 w-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-+              value={range}
-+              onChange={event => {
-+                const nextRange = event.currentTarget.value
-+                void navigate({
-+                  to: '/transactions',
-+                  search: previous => {
-+                    if (nextRange === '30d') {
-+                      const nextSearch = { ...previous }
-+                      delete nextSearch.range
-+                      return nextSearch
-+                    }
-+
-+                    return {
-+                      ...previous,
-+                      range: nextRange as DashboardRange,
-+                    }
-+                  },
-+                })
-+              }}
-+            >
-+              <option value="7d">7 days</option>
-+              <option value="30d">30 days</option>
-+              <option value="90d">90 days</option>
-+            </select>
-+          </div>
-+        </div>
-+
-+        <Card>
-+          <CardHeader>
-+            <CardTitle>Transactions</CardTitle>
-+            <CardDescription>
-+              Listing loaded from dashboard transactions query with URL-owned filters.
-+            </CardDescription>
-+          </CardHeader>
-+          <CardContent className="space-y-3">
-+            {transactionsQuery.isPending ? <p>Loading transactions...</p> : null}
-+            {transactionsQuery.isError ? (
-+              <p className="text-sm text-destructive">{toErrorMessage(transactionsQuery.error)}</p>
-+            ) : null}
-+            {!transactionsQuery.isPending && !transactionsQuery.isError && filteredTransactions.length === 0 ? (
-+              <p className="text-sm text-muted-foreground">No transaction matches the current filters.</p>
-+            ) : null}
-+
-+            {filteredTransactions.length > 0 ? (
-+              <ul className="divide-y divide-border rounded-lg border border-border">
-+                {filteredTransactions.map(item => (
-+                  <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
-+                    <div>
-+                      <p className="font-medium">{item.label}</p>
-+                      <p className="text-xs text-muted-foreground">
-+                        {formatDate(item.bookingDate)} • {item.accountName ?? 'Unknown account'}
-+                      </p>
-+                    </div>
-+                    <div className="text-right">
-+                      <p className={item.amount < 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-600'}>
-+                        {formatCurrency(item.amount, item.currency)}
-+                      </p>
-+                      <p className="text-xs text-muted-foreground">{item.category ?? 'Uncategorized'}</p>
-+                    </div>
-+                  </li>
-+                ))}
-+              </ul>
-+            ) : null}
-+
-+            {transactionsQuery.hasNextPage ? (
-+              <Button
-+                type="button"
-+                variant="outline"
-+                onClick={() => transactionsQuery.fetchNextPage()}
-+                disabled={transactionsQuery.isFetchingNextPage}
-+              >
-+                {transactionsQuery.isFetchingNextPage ? 'Loading...' : 'Load more'}
-+              </Button>
-+            ) : null}
-+          </CardContent>
-+        </Card>
-+      </div>
-+    </div>
-+  )
-+}
++++ b/packages/db/drizzle/0017_merchant_manual_overrides.sql
+@@ -0,0 +1,2 @@
++ALTER TABLE "transaction" ADD COLUMN "custom_merchant" text;--> statement-breakpoint
++ALTER TABLE "transaction" ADD COLUMN "custom_merchant_history" jsonb;--> statement-breakpoint
+diff --git a/packages/db/drizzle/meta/_journal.json b/packages/db/drizzle/meta/_journal.json
+index d184e50..10f6ddb 100644
+--- a/packages/db/drizzle/meta/_journal.json
++++ b/packages/db/drizzle/meta/_journal.json
+@@ -120,6 +120,13 @@
+       "when": 1774619964305,
+       "tag": "0016_powens_account_metadata",
+       "breakpoints": true
++    },
++    {
++      "idx": 17,
++      "version": "7",
++      "when": 1775350800000,
++      "tag": "0017_merchant_manual_overrides",
++      "breakpoints": true
+     }
+   ]
+ }
+diff --git a/packages/db/src/schema/powens.ts b/packages/db/src/schema/powens.ts
+index 2b5fb0b..745fbff 100644
+--- a/packages/db/src/schema/powens.ts
++++ b/packages/db/src/schema/powens.ts
+@@ -120,6 +120,15 @@ export const transaction = pgTable(
+     customSubcategory: text('custom_subcategory'),
+     customIncomeType: text('custom_income_type'),
+     customTags: jsonb('custom_tags').$type<string[] | null>(),
++    customMerchant: text('custom_merchant'),
++    customMerchantHistory: jsonb('custom_merchant_history').$type<
++      | Array<{
++          changedAt: string
++          previousMerchant: string | null
++          nextMerchant: string | null
++        }>
++      | null
++    >(),
+     merchant: text('merchant'),
+     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+   },

@@ -26,6 +26,7 @@ export const dashboardTransactionClassificationParamsSchema = t.Object({
 })
 
 export const dashboardTransactionClassificationBodySchema = t.Object({
+  merchant: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 128 }), t.Null()])),
   category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
   subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
   incomeType: t.Optional(
