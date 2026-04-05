@@ -45,7 +45,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Production Compose now includes an `ops-alerts` sidecar driven by [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs); keep its webhook env, shared worker heartbeat volume, and readonly volume mounts aligned when changing deploy topology.
 - Treat observability wiring as release-sensitive: `x-request-id` visibility, smoke coverage, healthcheck targets, and alert probe URLs must continue to match the public `web` entrypoint and the internal API/worker topology.
 - Runtime-safe web feature flags must stay aligned across build args, `docker-compose.prod*.yml`, Dokploy env, and `public-runtime-env.ts`; that now includes the dashboard health signal flags alongside the existing Powens cooldown UI flags.
-- Server-side Powens kill-switches that change worker/API write behavior, such as `SYNC_STATUS_PERSISTENCE_ENABLED`, must stay aligned across the API and worker runtime env in `docker-compose.prod.yml` and the Dokploy env snapshot even though they are not build args or `VITE_*` flags.
+- Server-side Powens kill-switches that change worker/API write behavior, such as `SYNC_STATUS_PERSISTENCE_ENABLED`, `POWENS_FORCE_FULL_SYNC`, and `POWENS_SYNC_DISABLED_PROVIDERS`, must stay aligned across the API and worker runtime env in `docker-compose.prod.yml` and the Dokploy env snapshot even though they are not build args or `VITE_*` flags.
 
 ## Smoke and Manual Checks
 

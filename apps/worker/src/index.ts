@@ -31,6 +31,7 @@ import {
   type PersistedSyncStatus,
   resolvePersistedSyncSnapshot,
 } from './sync-status-persistence'
+import { parseDisabledProviders, resolveSyncWindow } from './sync-window'
 import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
 import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
 import { detectSyncIntegrityIssues } from './sync-integrity-checks'
@@ -52,6 +53,9 @@ const LOCK_TTL_SECONDS = 15 * 60
 const CONNECTION_LOCK_PREFIX = 'powens:lock:connection:'
 const DEFAULT_SYNC_WINDOW_DAYS = 90
 const FULL_RESYNC_WINDOW_DAYS = 3650
+const INCREMENTAL_LOOKBACK_DAYS = env.POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS
+const FORCE_FULL_SYNC_MODE = env.POWENS_FORCE_FULL_SYNC
+const DISABLED_SYNC_PROVIDERS = parseDisabledProviders(env.POWENS_SYNC_DISABLED_PROVIDERS)
 const TRANSACTION_GAP_THRESHOLD_DAYS = 45
 const MAX_TRANSACTION_GAP_DETAILS = 5
 const MAX_INTEGRITY_ISSUE_DETAILS = 5
@@ -727,7 +731,7 @@ const syncConnection = async (params: {
   let connectionProvider = 'powens'
   let connectionSource = 'banking'
   let providerConnectionId = connectionId
-  let previousLastSyncAt: Date | null = null
+  let previousLastSuccessAt: Date | null = null
   let previousPersistedSyncStatus: PersistedSyncStatus | null = null
   let previousPersistedSyncReasonCode: PersistedSyncReasonCode | null = null
 
@@ -742,6 +746,7 @@ const syncConnection = async (params: {
         lastSyncStatus: schema.powensConnection.lastSyncStatus,
         lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
         lastSyncAt: schema.powensConnection.lastSyncAt,
+        lastSuccessAt: schema.powensConnection.lastSuccessAt,
       })
       .from(schema.powensConnection)
       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
@@ -754,9 +759,25 @@ const syncConnection = async (params: {
     connectionProvider = connection.provider
     connectionSource = connection.source
     providerConnectionId = connection.providerConnectionId
-    previousLastSyncAt = connection.lastSyncAt
+    previousLastSuccessAt = connection.lastSuccessAt
     previousPersistedSyncStatus = connection.lastSyncStatus
     previousPersistedSyncReasonCode = connection.lastSyncReasonCode
+
+    if (DISABLED_SYNC_PROVIDERS.has(connection.provider.toLowerCase())) {
+      await recordSyncRunEnded({
+        runId,
+        result: 'success',
+      })
+      logWorkerEvent({
+        level: 'warn',
+        msg: 'worker connection sync skipped for disabled provider',
+        source: connection.source,
+        provider: connection.provider,
+        connectionId,
+        requestId: requestId ?? 'n/a',
+      })
+      return
+    }
 
     await Promise.all([
       incrementDailyMetric(SYNC_COUNT_METRIC_PREFIX),
@@ -796,13 +817,30 @@ const syncConnection = async (params: {
     )
     await upsertProviderRawImports(rawAccountImports)
 
-    const fromDate =
-      fullResync === true
-        ? formatDate(subtractDays(syncStart, FULL_RESYNC_WINDOW_DAYS))
-        : connection.lastSyncAt
-          ? formatDate(subtractDays(connection.lastSyncAt, 3))
-          : formatDate(subtractDays(syncStart, DEFAULT_SYNC_WINDOW_DAYS))
-    const maxDate = formatDate(syncStart)
+    const syncWindow = resolveSyncWindow({
+      syncStart,
+      lastSuccessAt: connection.lastSuccessAt,
+      fullResyncRequested: fullResync === true,
+      forceFullSync: FORCE_FULL_SYNC_MODE,
+      incrementalLookbackDays: INCREMENTAL_LOOKBACK_DAYS,
+      defaultSyncWindowDays: DEFAULT_SYNC_WINDOW_DAYS,
+      fullResyncWindowDays: FULL_RESYNC_WINDOW_DAYS,
+    })
+    const { fromDate, maxDate } = syncWindow
+
+    logWorkerEvent({
+      level: 'info',
+      msg: 'worker connection sync started',
+      source: connectionSource,
+      provider: connectionProvider,
+      connectionId,
+      requestId: requestId ?? 'n/a',
+      syncId: runId,
+      syncMode: syncWindow.syncMode,
+      fallbackReason: syncWindow.reason,
+      transactionWindowFromDate: fromDate,
+      transactionWindowMaxDate: maxDate,
+    })
 
     const accountCurrencyById = new Map<string, string>()
     for (const account of upsertedAccounts) {
@@ -958,7 +996,8 @@ const syncConnection = async (params: {
             fromDate,
             maxDate,
           },
-          syncMode: fullResync === true ? 'full' : 'incremental',
+          syncMode: syncWindow.syncMode,
+          fallbackReason: syncWindow.reason,
           lastRunResult: 'success',
           lastRunFinishedAt: successAt.toISOString(),
         },
@@ -994,6 +1033,9 @@ const syncConnection = async (params: {
       provider: connectionProvider,
       connectionId,
       requestId: requestId ?? 'n/a',
+      syncId: runId,
+      syncMode: syncWindow.syncMode,
+      fallbackReason: syncWindow.reason,
       importedAccountCount: upsertedAccounts.length,
       importedTransactionCount,
       rawImportCount: normalizedRawImportCount + failedRawImportCount,
@@ -1005,6 +1047,15 @@ const syncConnection = async (params: {
     const failedAt = new Date()
     const failureStatus = toConnectionStatus(error)
     const errorMessage = toSafeErrorMessage(error)
+    const failedSyncWindow = resolveSyncWindow({
+      syncStart,
+      lastSuccessAt: previousLastSuccessAt,
+      fullResyncRequested: fullResync === true,
+      forceFullSync: FORCE_FULL_SYNC_MODE,
+      incrementalLookbackDays: INCREMENTAL_LOOKBACK_DAYS,
+      defaultSyncWindowDays: DEFAULT_SYNC_WINDOW_DAYS,
+      fullResyncWindowDays: FULL_RESYNC_WINDOW_DAYS,
+    })
     const syncSnapshot = resolvePersistedSyncSnapshot({
       result: failureStatus,
     })
@@ -1024,15 +1075,11 @@ const syncConnection = async (params: {
           : {}),
         syncMetadata: {
           transactionWindow: {
-            fromDate:
-              fullResync === true
-                ? formatDate(subtractDays(syncStart, FULL_RESYNC_WINDOW_DAYS))
-                : previousLastSyncAt
-                  ? formatDate(subtractDays(previousLastSyncAt, 3))
-                  : formatDate(subtractDays(syncStart, DEFAULT_SYNC_WINDOW_DAYS)),
-            maxDate: formatDate(syncStart),
+            fromDate: failedSyncWindow.fromDate,
+            maxDate: failedSyncWindow.maxDate,
           },
-          syncMode: fullResync === true ? 'full' : 'incremental',
+          syncMode: failedSyncWindow.syncMode,
+          fallbackReason: failedSyncWindow.reason,
           lastRunResult: failureStatus,
           lastRunFinishedAt: failedAt.toISOString(),
         },
@@ -1071,6 +1118,9 @@ const syncConnection = async (params: {
       provider: connectionProvider,
       connectionId,
       requestId: requestId ?? 'n/a',
+      syncId: runId,
+      syncMode: failedSyncWindow.syncMode,
+      fallbackReason: failedSyncWindow.reason,
       errMessage: errorMessage,
       failureStatus,
     })

@@ -19,6 +19,9 @@ Optional environment variables:
 - `POWENS_WEBVIEW_URL` (use full URL override for manual sandbox tests)
 - `POWENS_REDIRECT_URI_PROD`
 - `POWENS_SYNC_INTERVAL_MS` (default: `43200000`, 2 sync/day)
+- `POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS` (default: `7`, conservative late-posted catch-up)
+- `POWENS_FORCE_FULL_SYNC` (default: `false`, kill-switch to force full window)
+- `POWENS_SYNC_DISABLED_PROVIDERS` (default: empty CSV, disables sync for listed providers)
 
 Use `.env.example` as template.
 
@@ -52,6 +55,8 @@ Powens endpoints used by this MVP:
 - Dashboard button `Sync maintenant` triggers `POST /integrations/powens/sync`.
 - Callback page button `Lancer sync` triggers sync for the specific connection.
 - Worker scheduler enqueues `powens.syncAll` every `POWENS_SYNC_INTERVAL_MS`.
+- Incremental sync uses `last_success_at` watermark + lookback window (`POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS`) for safer late-posted transactions.
+- Connection-scoped manual full-resync and global `POWENS_FORCE_FULL_SYNC=true` both switch to the large replay window.
 
 ## Idempotence model
 

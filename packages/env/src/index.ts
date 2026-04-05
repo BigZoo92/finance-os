@@ -471,6 +471,22 @@ export const getWorkerEnv = () =>
       .int()
       .positive()
       .default(12 * 60 * 60 * 1000),
+    POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    POWENS_FORCE_FULL_SYNC: z
+      .string()
+      .optional()
+      .transform(value => toBooleanEnv(value)),
+    POWENS_SYNC_DISABLED_PROVIDERS: z
+      .string()
+      .optional()
+      .transform(value =>
+        value
+          ? value
+              .split(',')
+              .map(item => item.trim())
+              .filter(Boolean)
+          : []
+      ),
     WORKER_AUTO_SYNC_ENABLED: z
       .string()
       .optional()

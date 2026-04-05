@@ -1,0 +1,10 @@
+Applied patch to '.env.example' cleanly.
+Applied patch to '.env.prod.example' cleanly.
+Falling back to direct application...
+Applied patch to 'apps/worker/src/index.ts' cleanly.
+Falling back to direct application...
+Falling back to direct application...
+Applied patch to 'docs/agentic/release-map.md' cleanly.
+Applied patch to 'docs/deployment.md' cleanly.
+Applied patch to 'docs/powens-mvp.md' cleanly.
+Applied patch to 'packages/env/src/index.ts' cleanly.
