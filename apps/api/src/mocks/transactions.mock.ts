@@ -1,7 +1,7 @@
 import type { DashboardRange, DashboardTransactionsResponse } from '../routes/dashboard/types'
 import { decodeDashboardCursor, encodeDashboardCursor } from '../routes/dashboard/utils/cursor'
 
-const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+export const DEMO_TRANSACTIONS_LEGACY: DashboardTransactionsResponse['items'] = [
   {
     id: 12012,
     bookingDate: '2026-02-22',
@@ -224,22 +224,25 @@ export const getDashboardTransactionsMock = ({
   range,
   limit,
   cursor,
+  fixtureItems,
 }: {
   range: DashboardRange
   limit: number
   cursor: string | undefined
+  fixtureItems?: DashboardTransactionsResponse['items']
 }): DashboardTransactionsResponse => {
+  const sourceItems = fixtureItems ?? DEMO_TRANSACTIONS_LEGACY
   const decodedCursor = decodeDashboardCursor(cursor)
 
   const visible = decodedCursor
-    ? DEMO_TRANSACTIONS.filter(item =>
+    ? sourceItems.filter(item =>
         isBeforeCursor({
           bookingDate: item.bookingDate,
           id: item.id,
           cursor: decodedCursor,
         })
       )
-    : DEMO_TRANSACTIONS
+    : sourceItems
 
   const rows = visible.slice(0, limit + 1)
   const hasNextPage = rows.length > limit

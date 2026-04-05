@@ -25,6 +25,7 @@ import {
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import {
   dashboardDerivedRecomputeStatusQueryOptionsWithMode,
+  type DemoTransactionsScenario,
   dashboardQueryKeys,
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
@@ -84,6 +85,12 @@ const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
   { label: '7j', value: '7d' },
   { label: '30j', value: '30d' },
   { label: '90j', value: '90d' },
+]
+const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScenario }> = [
+  { label: 'Default', value: 'default' },
+  { label: 'Empty', value: 'empty' },
+  { label: 'Subscriptions', value: 'subscriptions' },
+  { label: 'Parse fail (fallback)', value: 'parse_error' },
 ]
 
 const SYNC_RUN_STATUS_VARIANT: Record<
@@ -428,6 +435,8 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const reconnectRequestIdRef = useRef<string | null>(null)
   const reconnectBannerUiEnabled = getPowensReconnectBannerUiEnabled()
   const [demoReconnectInfoVisible, setDemoReconnectInfoVisible] = useState(false)
+  const [demoTransactionsScenario, setDemoTransactionsScenario] =
+    useState<DemoTransactionsScenario>('default')
   const [deferredSnapshot, setDeferredSnapshot] = useState(() =>
     readReconnectBannerDeferredSnapshot()
   )
@@ -453,6 +462,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     dashboardTransactionsInfiniteQueryOptionsWithMode({
       range,
       limit: 30,
+      ...(isDemo ? { demoScenario: demoTransactionsScenario } : {}),
       ...authModeOptions,
     })
   )
@@ -734,6 +744,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const isIntegrationsSafeModeFallback = statusQuery.data?.fallback === 'safe_mode'
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
   const transactionsFreshness = transactionsQuery.data?.pages[0]?.freshness
+  const transactionsDemoFixture = transactionsQuery.data?.pages[0]?.demoFixture
   const transactionsFreshnessBadge = transactionsFreshness
     ? TRANSACTION_FRESHNESS_BADGE[transactionsFreshness.syncStatus]
     : null
@@ -2245,6 +2256,29 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {isDemo ? (
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Demo scenario
+                  <select
+                    className="rounded border bg-background px-2 py-1 text-xs"
+                    value={demoTransactionsScenario}
+                    onChange={event =>
+                      setDemoTransactionsScenario(event.target.value as DemoTransactionsScenario)
+                    }
+                  >
+                    {DEMO_SCENARIO_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {transactionsDemoFixture?.degradedFallback ? (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Demo fixture degraded to legacy fallback ({transactionsDemoFixture.degradedReason ?? 'unknown'}).
+                </p>
+              ) : null}
               {transactionsFreshness?.refreshRequested ? (
                 <p className="text-xs text-muted-foreground">
                   Snapshot stale detected: background Powens refresh requested.
