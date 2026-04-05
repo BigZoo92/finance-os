@@ -10,6 +10,7 @@ const { envMock } = vi.hoisted(() => ({
     VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED: 'true',
     VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED: 'true',
     VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: 'true',
+    VITE_UI_RECONNECT_BANNER_ENABLED: 'true',
   },
 }))
 
@@ -34,6 +35,7 @@ describe('public runtime env', () => {
     process.env.VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED
   const initialDashboardHealthWidgetBadgesEnabled =
     process.env.VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED
+  const initialReconnectBannerEnabled = process.env.VITE_UI_RECONNECT_BANNER_ENABLED
 
   afterEach(() => {
     if (typeof initialAppTitle === 'undefined') {
@@ -86,6 +88,12 @@ describe('public runtime env', () => {
         initialDashboardHealthWidgetBadgesEnabled
     }
 
+    if (typeof initialReconnectBannerEnabled === 'undefined') {
+      delete process.env.VITE_UI_RECONNECT_BANNER_ENABLED
+    } else {
+      process.env.VITE_UI_RECONNECT_BANNER_ENABLED = initialReconnectBannerEnabled
+    }
+
     vi.unstubAllGlobals()
   })
 
@@ -98,6 +106,7 @@ describe('public runtime env', () => {
     process.env.VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED = 'false'
     process.env.VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED = 'true'
     process.env.VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED = 'false'
+    process.env.VITE_UI_RECONNECT_BANNER_ENABLED = 'false'
 
     expect(getPublicRuntimeEnv()).toEqual({
       VITE_APP_TITLE: 'Finance OS Runtime',
@@ -108,6 +117,7 @@ describe('public runtime env', () => {
       VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED: 'false',
       VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED: 'true',
       VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: 'false',
+      VITE_UI_RECONNECT_BANNER_ENABLED: 'false',
     })
   })
 
@@ -118,6 +128,7 @@ describe('public runtime env', () => {
         VITE_API_BASE_URL: '/browser-api',
         VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED: 'false',
         VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: 'false',
+        VITE_UI_RECONNECT_BANNER_ENABLED: 'false',
       },
     } as Window & typeof globalThis)
 
@@ -129,6 +140,7 @@ describe('public runtime env', () => {
     expect(readPublicRuntimeEnv('VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED')).toBe('true')
     expect(readPublicRuntimeEnv('VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED')).toBe('true')
     expect(readPublicRuntimeEnv('VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED')).toBe('false')
+    expect(readPublicRuntimeEnv('VITE_UI_RECONNECT_BANNER_ENABLED')).toBe('false')
   })
 
   it('serializes only defined public runtime keys for SSR injection', () => {
@@ -140,9 +152,10 @@ describe('public runtime env', () => {
     process.env.VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED = 'true'
     process.env.VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED = 'false'
     process.env.VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED = 'true'
+    process.env.VITE_UI_RECONNECT_BANNER_ENABLED = 'false'
 
     expect(getPublicRuntimeEnvScript()).toBe(
-      'window.__FINANCE_OS_PUBLIC_RUNTIME_ENV__={"VITE_APP_TITLE":"Finance \\u003cOS\\u003e","VITE_APP_ORIGIN":"https://build.example.test","VITE_API_BASE_URL":"/api","VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED":"false","VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS":"300","VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED":"true","VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED":"false","VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED":"true"};'
+      'window.__FINANCE_OS_PUBLIC_RUNTIME_ENV__={"VITE_APP_TITLE":"Finance \\u003cOS\\u003e","VITE_APP_ORIGIN":"https://build.example.test","VITE_API_BASE_URL":"/api","VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED":"false","VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS":"300","VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED":"true","VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED":"false","VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED":"true","VITE_UI_RECONNECT_BANNER_ENABLED":"false"};'
     )
   })
 })

@@ -16,6 +16,7 @@ import {
   fetchPowensAuditTrail,
   postPowensSync,
   fetchPowensStatus,
+  fetchPowensConnectUrl,
   fetchPowensSyncBacklog,
   fetchPowensSyncRuns,
 } from "./api";
@@ -100,6 +101,19 @@ describe("powens API fallbacks", () => {
 
     expect(queryFn()).toEqual(getDemoPowensStatus());
     expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+
+
+  it("propagates a caller-provided x-request-id when opening reconnect flow", async () => {
+    apiFetchMock.mockResolvedValue({ url: "https://powens.example.test/connect" });
+
+    await fetchPowensConnectUrl({ requestId: "powens-reconnect-test" });
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/integrations/powens/connect-url", {
+      headers: {
+        "x-request-id": "powens-reconnect-test",
+      },
+    });
   });
 
   it("sends a full resync payload when requested for one connection", async () => {

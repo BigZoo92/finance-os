@@ -11,7 +11,7 @@ import {
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
-import { type KeyboardEvent, type ReactNode, useEffect, useRef } from 'react'
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-financial-goals-card'
 import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
@@ -54,6 +54,19 @@ import {
   powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
+import {
+  clearReconnectBannerDeferredSnapshot,
+  createPowensRequestId,
+  createReconnectRequiredFingerprint,
+  getPowensReconnectBannerUiEnabled,
+  getReconnectRequiredConnectionIds,
+  logReconnectBannerCtaClicked,
+  logReconnectBannerDismissed,
+  logReconnectBannerShown,
+  readReconnectBannerDeferredSnapshot,
+  writeReconnectBannerDeferredSnapshot,
+  type PowensReconnectBannerUiState,
+} from '@/features/powens/reconnect-banner'
 import { getPowensInternalNotifications } from '@/features/powens/internal-notifications'
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 import { pushToast } from '@/lib/toast-store'
@@ -411,6 +424,13 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
   const dashboardHealthSnapshotLoggedRef = useRef(false)
   const dashboardHealthWidgetLoggedRef = useRef<Set<string>>(new Set())
+  const reconnectBannerShownLoggedRef = useRef<Set<string>>(new Set())
+  const reconnectRequestIdRef = useRef<string | null>(null)
+  const reconnectBannerUiEnabled = getPowensReconnectBannerUiEnabled()
+  const [demoReconnectInfoVisible, setDemoReconnectInfoVisible] = useState(false)
+  const [deferredSnapshot, setDeferredSnapshot] = useState(() =>
+    readReconnectBannerDeferredSnapshot()
+  )
 
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
@@ -446,12 +466,12 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   )
 
   const connectMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ requestId }: { requestId?: string } = {}) => {
       if (!isAdmin) {
         throw new Error('Admin session required')
       }
 
-      return fetchPowensConnectUrl()
+      return fetchPowensConnectUrl(requestId ? { requestId } : {})
     },
     onSuccess: payload => {
       window.location.assign(payload.url)
@@ -829,6 +849,29 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       mode: authMode,
     })
   }
+
+  const reconnectRequiredConnectionIds = getReconnectRequiredConnectionIds(statusQuery.data)
+  const reconnectFingerprint = createReconnectRequiredFingerprint(reconnectRequiredConnectionIds)
+  const reconnectStatusUnavailable = statusQuery.isError && statusQuery.data === undefined
+  const reconnectRequired = reconnectRequiredConnectionIds.length > 0 || reconnectStatusUnavailable
+  const reconnectDeferred =
+    reconnectRequired && deferredSnapshot?.fingerprint === reconnectFingerprint
+  const reconnectBannerState: PowensReconnectBannerUiState | null = !reconnectBannerUiEnabled
+    ? null
+    : isAuthPending || statusQuery.isPending
+      ? 'loading'
+      : connectMutation.isPending
+        ? 'in_progress'
+        : connectMutation.isError
+          ? 'error_retryable'
+          : demoReconnectInfoVisible
+            ? 'success'
+            : reconnectDeferred
+              ? 'deferred'
+              : reconnectRequired
+                ? 'required'
+                : null
+
   const positions = adaptedSummary.positions
   const positionsByAssetId = positions.reduce<Map<number, DashboardSummaryResponse['positions']>>(
     (acc, position) => {
@@ -872,6 +915,64 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       : null
 
   useEffect(() => {
+    if (!reconnectBannerUiEnabled) {
+      return
+    }
+
+    if (!reconnectRequired) {
+      if (deferredSnapshot) {
+        clearReconnectBannerDeferredSnapshot()
+        setDeferredSnapshot(null)
+      }
+      return
+    }
+
+    if (deferredSnapshot && deferredSnapshot.fingerprint !== reconnectFingerprint) {
+      clearReconnectBannerDeferredSnapshot()
+      setDeferredSnapshot(null)
+    }
+  }, [
+    deferredSnapshot,
+    reconnectBannerUiEnabled,
+    reconnectFingerprint,
+    reconnectRequired,
+  ])
+
+  useEffect(() => {
+    if (!authMode || !reconnectBannerUiEnabled || !reconnectBannerState) {
+      return
+    }
+
+    const dedupeKey = `${authMode}:${reconnectBannerState}:${reconnectFingerprint}`
+    if (reconnectBannerShownLoggedRef.current.has(dedupeKey)) {
+      return
+    }
+
+    logReconnectBannerShown({
+      mode: authMode,
+      state: reconnectBannerState,
+      fingerprint: reconnectFingerprint,
+      requestId: reconnectRequestIdRef.current,
+      fallback: reconnectStatusUnavailable ? 'status_unavailable' : null,
+    })
+    reconnectBannerShownLoggedRef.current.add(dedupeKey)
+  }, [
+    authMode,
+    reconnectBannerUiEnabled,
+    reconnectBannerState,
+    reconnectFingerprint,
+    reconnectStatusUnavailable,
+  ])
+
+  useEffect(() => {
+    if (!connectMutation.isError) {
+      return
+    }
+
+    reconnectRequestIdRef.current = null
+  }, [connectMutation.isError])
+
+  useEffect(() => {
     if (!authMode || !dashboardHealthModel || !dashboardHealthUiConfig.enabled) {
       return
     }
@@ -906,6 +1007,66 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       dashboardHealthWidgetLoggedRef.current.add(widget.key)
     }
   }, [authMode, dashboardHealthModel, dashboardHealthUiConfig, range])
+
+  const handleReconnectCta = () => {
+    if (!authMode || !reconnectBannerState || reconnectBannerState === 'loading') {
+      return
+    }
+
+    if (isDemo) {
+      logReconnectBannerCtaClicked({
+        mode: authMode,
+        cta: 'reconnect',
+        state: reconnectBannerState,
+        fingerprint: reconnectFingerprint,
+        requestId: null,
+      })
+      setDemoReconnectInfoVisible(true)
+      return
+    }
+
+    const requestId = createPowensRequestId('reconnect')
+    reconnectRequestIdRef.current = requestId
+
+    logReconnectBannerCtaClicked({
+      mode: authMode,
+      cta: 'reconnect',
+      state: reconnectBannerState,
+      fingerprint: reconnectFingerprint,
+      requestId,
+    })
+
+    connectMutation.mutate({ requestId })
+  }
+
+  const handleReconnectDefer = () => {
+    if (!authMode || !reconnectBannerState) {
+      return
+    }
+
+    logReconnectBannerCtaClicked({
+      mode: authMode,
+      cta: 'later',
+      state: reconnectBannerState,
+      fingerprint: reconnectFingerprint,
+      requestId: reconnectRequestIdRef.current,
+    })
+
+    logReconnectBannerDismissed({
+      mode: authMode,
+      state: reconnectBannerState,
+      fingerprint: reconnectFingerprint,
+      requestId: reconnectRequestIdRef.current,
+    })
+
+    const snapshot = {
+      fingerprint: reconnectFingerprint,
+      deferredAt: new Date().toISOString(),
+    }
+    writeReconnectBannerDeferredSnapshot(snapshot)
+    setDeferredSnapshot(snapshot)
+    setDemoReconnectInfoVisible(false)
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -970,6 +1131,78 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
             )}
           </div>
         </header>
+
+        {reconnectBannerUiEnabled && reconnectBannerState ? (
+          <section
+            className="rounded-lg border border-amber-500/40 bg-amber-50/80 p-4 dark:bg-amber-950/30"
+            role={reconnectBannerState === 'required' || reconnectBannerState === 'error_retryable' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  {reconnectBannerState === 'loading'
+                    ? "Verification de l'etat de reconnexion..."
+                    : reconnectBannerState === 'in_progress'
+                      ? 'Reconnexion Powens en cours...'
+                      : reconnectBannerState === 'success'
+                        ? 'Etape de reconnexion ouverte.'
+                        : reconnectBannerState === 'error_retryable'
+                          ? 'La tentative de reconnexion a echoue.'
+                          : reconnectBannerState === 'deferred'
+                            ? 'Reconnexion reportee pour cette alerte.'
+                            : reconnectStatusUnavailable
+                              ? 'Etat Powens indisponible, mais le dashboard reste utilisable.'
+                              : 'Une reconnexion Powens est requise.'}
+                </p>
+                <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
+                  {reconnectBannerState === 'loading'
+                    ? "Chargement de l'etat provider avec placeholders non bloquants."
+                    : reconnectBannerState === 'in_progress'
+                      ? 'Nous transmettons la demande de reconnexion avec un x-request-id dedie.'
+                      : reconnectBannerState === 'success'
+                        ? isDemo
+                          ? 'Demo: ecran explicatif mock ouvert, sans appel DB/provider.'
+                          : 'Redirection vers le flux provider.'
+                        : reconnectBannerState === 'error_retryable'
+                          ? 'Reessayez maintenant ou deferer pour continuer le dashboard.'
+                          : reconnectBannerState === 'deferred'
+                            ? 'Vous pouvez relancer la reconnexion plus tard depuis ce bandeau ou Ops overview.'
+                            : reconnectStatusUnavailable
+                              ? "Fallback texte statique actif tant que l'endpoint /integrations/powens/status est indisponible."
+                              : `${reconnectRequiredConnectionIds.length} connexion(s) necessitent une reconnexion.`}
+                </p>
+                {demoReconnectInfoVisible ? (
+                  <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
+                    Demo explicatif: la reconnexion reelle reste reservee au mode admin.
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={handleReconnectCta}
+                  disabled={reconnectBannerState === 'loading' || reconnectBannerState === 'in_progress'}
+                >
+                  {reconnectBannerState === 'in_progress' ? 'Reconnexion...' : 'Reconnecter'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleReconnectDefer}
+                  disabled={reconnectBannerState === 'loading' || reconnectBannerState === 'in_progress'}
+                >
+                  Plus tard
+                </Button>
+              </div>
+            </div>
+
+            {reconnectBannerState === 'loading' ? (
+              <div className="mt-3 h-2 w-full animate-pulse rounded bg-amber-300/50 dark:bg-amber-700/50" />
+            ) : null}
+          </section>
+        ) : null}
 
         {isDemo ? (
           <p className="text-xs text-muted-foreground">
@@ -1139,7 +1372,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   </GuardedActionWrapper>
                   <Button
                     type="button"
-                    onClick={() => connectMutation.mutate()}
+                    onClick={() => connectMutation.mutate({})}
                     disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
                     title={
                       !isAdmin
