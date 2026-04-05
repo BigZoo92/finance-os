@@ -72,6 +72,9 @@ export const env = createEnv({
     VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: createBooleanUiFlagSchema(
       'VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED'
     ).optional(),
+    VITE_UI_RECONNECT_BANNER_ENABLED: createBooleanUiFlagSchema(
+      'VITE_UI_RECONNECT_BANNER_ENABLED'
+    ).optional(),
   },
 
   /**

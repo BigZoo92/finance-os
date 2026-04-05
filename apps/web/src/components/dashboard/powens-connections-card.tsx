@@ -135,7 +135,7 @@ export function PowensConnectionsCard() {
             <Button
               type="button"
               size="sm"
-              onClick={() => connectMutation.mutate()}
+              onClick={() => connectMutation.mutate({})}
               disabled={connectMutation.isPending}
             >
               {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}

@@ -1,4 +1,5 @@
 import { apiFetch, ApiRequestError } from "@/lib/api";
+import { createPowensRequestId } from "./reconnect-banner";
 import {
   getDemoPowensAuditTrail,
   getDemoPowensStatus,
@@ -13,8 +14,14 @@ import type {
 } from "./types";
 
 export const fetchPowensStatus = async () => {
+  const requestId = createPowensRequestId("status");
+
   try {
-    return await apiFetch<PowensStatusResponse>("/integrations/powens/status");
+    return await apiFetch<PowensStatusResponse>("/integrations/powens/status", {
+      headers: {
+        "x-request-id": requestId,
+      },
+    });
   } catch (error) {
     if (error instanceof ApiRequestError) {
       if (
@@ -32,8 +39,14 @@ export const fetchPowensStatus = async () => {
   }
 };
 
-export const fetchPowensConnectUrl = () => {
-  return apiFetch<{ url: string }>("/integrations/powens/connect-url");
+export const fetchPowensConnectUrl = ({ requestId }: { requestId?: string } = {}) => {
+  const resolvedRequestId = requestId ?? createPowensRequestId("reconnect");
+
+  return apiFetch<{ url: string }>("/integrations/powens/connect-url", {
+    headers: {
+      "x-request-id": resolvedRequestId,
+    },
+  });
 };
 
 export const postPowensCallback = (payload: {

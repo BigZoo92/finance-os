@@ -38,3 +38,4 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Tables, cards, and buttons stay keyboard accessible.
 - Mobile and desktop layouts still load without overflow surprises.
 - When the Powens sync cooldown UI guard is enabled, the dashboard should clearly show `Idle -> Syncing -> Cooldown -> Ready`, keep blocked reason text explicit, and still honor demo/admin gating plus the runtime kill-switch.
+- Reconnect-required states should surface as a non-blocking inline banner at the top of dashboard with explicit `Reconnecter` and `Plus tard` CTAs, full loading/in-progress/error/deferred state copy, and deterministic demo behavior behind `VITE_UI_RECONNECT_BANNER_ENABLED`.

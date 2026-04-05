@@ -83,6 +83,7 @@ VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED      # optional master switch for dashboar
 VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED
 VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED
 VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED   # optional web UI kill-switch
+VITE_UI_RECONNECT_BANNER_ENABLED        # optional web reconnect banner kill-switch
 VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS   # optional web UI countdown duration
 ```
 

@@ -132,6 +132,7 @@ VITE_APP_TITLE=finance-os
 VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=true
 VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=true
 VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=true
+VITE_UI_RECONNECT_BANNER_ENABLED=true
 VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=true
 VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
 
@@ -179,7 +180,7 @@ ALERTS_DISK_PATHS=/mnt/postgres,/mnt/redis
 
 POWENS_CLIENT_ID=<powens-client-id>
 
-Les variables web non sensibles `VITE_APP_TITLE`, `VITE_APP_ORIGIN`, `VITE_API_BASE_URL`, `VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED`, `VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS`, `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED` et `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED` sont maintenant consommees via l'injection SSR de `apps/web/src/lib/public-runtime-env.ts`. Elles restent donc **runtime-safe** pour le conteneur web (override Dokploy / env du conteneur sans rebuild), mais seules ces cles publiques et non sensibles doivent suivre ce chemin.
+Les variables web non sensibles `VITE_APP_TITLE`, `VITE_APP_ORIGIN`, `VITE_API_BASE_URL`, `VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED`, `VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS`, `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED`, `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED` et `VITE_UI_RECONNECT_BANNER_ENABLED` sont maintenant consommees via l'injection SSR de `apps/web/src/lib/public-runtime-env.ts`. Elles restent donc **runtime-safe** pour le conteneur web (override Dokploy / env du conteneur sans rebuild), mais seules ces cles publiques et non sensibles doivent suivre ce chemin.
 POWENS_CLIENT_SECRET=<powens-client-secret>
 POWENS_BASE_URL=https://<tenant>.biapi.pro
 POWENS_DOMAIN=<powens-domain>
@@ -229,6 +230,7 @@ VITE_APP_TITLE=finance-os
 VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=true
 VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=true
 VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=true
+VITE_UI_RECONNECT_BANNER_ENABLED=true
 VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=true
 VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
 ```
