@@ -48,11 +48,13 @@ export const fetchDashboardTransactions = async (params: {
   range: DashboardRange
   limit: number
   cursor?: string
+  demoScenario?: 'default' | 'empty' | 'subscriptions' | 'parse_error'
 }) => {
   const requestParams = {
     range: params.range,
     limit: params.limit,
     ...(params.cursor ? { cursor: params.cursor } : {}),
+    ...(params.demoScenario ? { demoScenario: params.demoScenario } : {}),
   }
   const query = toSearchParams(requestParams)
 

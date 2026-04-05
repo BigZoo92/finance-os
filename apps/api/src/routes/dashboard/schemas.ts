@@ -19,6 +19,14 @@ export const dashboardTransactionsQuerySchema = t.Object({
   range: t.Optional(dashboardRangeSchema),
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
   cursor: t.Optional(t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}\\|\\d+$', maxLength: 64 })),
+  demoScenario: t.Optional(
+    t.Union([
+      t.Literal('default'),
+      t.Literal('empty'),
+      t.Literal('subscriptions'),
+      t.Literal('parse_error'),
+    ])
+  ),
 })
 
 export const dashboardTransactionClassificationParamsSchema = t.Object({

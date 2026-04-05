@@ -90,10 +90,18 @@ export type DashboardSummaryResponse = {
 }
 
 export type DashboardTransactionsResponse = {
-  schemaVersion: '2026-04-04'
+  schemaVersion: '2026-04-04' | '2026-04-05'
   range: DashboardRange
   limit: number
   nextCursor: string | null
+  demoFixture?: {
+    mode: 'demo' | 'admin'
+    datasetVersion: string | null
+    fixtureSeed: string | null
+    scenario: string | null
+    degradedFallback: boolean
+    degradedReason: string | null
+  }
   freshness: {
     strategy: 'snapshot-first'
     lastSyncedAt: string | null
