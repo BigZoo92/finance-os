@@ -13,6 +13,12 @@ Scope: `apps/api/**`
 - Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
 - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
 - Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
+- Keep Powens status and fail-soft behavior contract-stable:
+  - Runtime connection `status` values are `connected`, `syncing`, `error`, `reconnect_required`; preserve this taxonomy unless contract/docs/tests are updated together.
+  - Persisted sync snapshot uses `lastSyncStatus: OK|KO` with `lastSyncReasonCode: SUCCESS|PARTIAL_IMPORT|SYNC_FAILED|RECONNECT_REQUIRED`.
+  - If persistence is disabled, omit stale meaning by blanking persisted snapshot fields (return `null` values) and rely on runtime status only.
+  - If safe mode is active, `/integrations/powens/status` must remain available with deterministic fallback payloads (`safeModeActive`, optional `fallback: safe_mode`) so web stays usable.
+  - Fail-soft is mandatory: provider outages/timeouts must not break unrelated dashboard reads or escalate to unsafe payloads/logs.
 - Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
 - Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
 - Keep `/dashboard/goals*` demo-safe on reads and admin-gated on writes, with no ad hoc payload drift between route schemas, domain use cases, and web callers.

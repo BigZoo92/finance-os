@@ -1,203 +1,47 @@
-diff --git a/.github/agent-stubs/improve-573.md b/.github/agent-stubs/improve-573.md
+diff --git a/.github/agent-stubs/improve-578.md b/.github/agent-stubs/improve-578.md
 deleted file mode 100644
-index 0308a01..0000000
---- a/.github/agent-stubs/improve-573.md
+index a1b065a..0000000
+--- a/.github/agent-stubs/improve-578.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #573
+-# Autopilot stub for improve #578
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/573
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/578
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/api/src/mocks/connectionsStatus.mock.ts b/apps/api/src/mocks/connectionsStatus.mock.ts
-index 26b6fd6..2ce14df 100644
---- a/apps/api/src/mocks/connectionsStatus.mock.ts
-+++ b/apps/api/src/mocks/connectionsStatus.mock.ts
-@@ -35,12 +35,12 @@ export const getPowensConnectionsStatusMock = (): PowensConnectionStatusView[] =
-       providerInstitutionId: 'revolut',
-       providerInstitutionName: 'Revolut',
-       status: 'syncing',
--      lastSyncStatus: 'OK',
--      lastSyncReasonCode: 'SUCCESS',
--      lastSyncAttemptAt: new Date('2026-02-22T18:45:00.000Z'),
-+      lastSyncStatus: 'KO',
-+      lastSyncReasonCode: 'SYNC_FAILED',
-+      lastSyncAttemptAt: new Date('2026-02-22T18:47:00.000Z'),
-       lastSyncAt: new Date('2026-02-22T18:45:00.000Z'),
-       lastSuccessAt: new Date('2026-02-22T17:59:00.000Z'),
--      lastFailedAt: new Date('2026-02-21T16:14:00.000Z'),
-+      lastFailedAt: new Date('2026-02-22T18:46:30.000Z'),
-       lastError: null,
-       syncMetadata: {
-         accountCount: 1,
-@@ -48,7 +48,55 @@ export const getPowensConnectionsStatusMock = (): PowensConnectionStatusView[] =
-         windowDays: 30,
-       },
-       createdAt: new Date('2026-01-19T09:30:00.000Z'),
--      updatedAt: new Date('2026-02-22T18:45:00.000Z'),
-+      updatedAt: new Date('2026-02-22T18:47:00.000Z'),
-+    },
-+    {
-+      id: 3,
-+      source: 'banking',
-+      provider: 'powens',
-+      powensConnectionId: 'demo-boursorama',
-+      providerConnectionId: 'demo-boursorama',
-+      providerInstitutionId: 'boursorama',
-+      providerInstitutionName: 'Boursorama Banque',
-+      status: 'error',
-+      lastSyncStatus: 'KO',
-+      lastSyncReasonCode: 'SYNC_FAILED',
-+      lastSyncAttemptAt: new Date('2026-02-22T17:40:00.000Z'),
-+      lastSyncAt: new Date('2026-02-22T17:40:00.000Z'),
-+      lastSuccessAt: new Date('2026-02-22T15:18:00.000Z'),
-+      lastFailedAt: new Date('2026-02-22T17:41:00.000Z'),
-+      lastError: 'Powens timeout while fetching transactions',
-+      syncMetadata: {
-+        accountCount: 3,
-+        importedTransactionCount: 0,
-+        windowDays: 90,
-+      },
-+      createdAt: new Date('2026-01-10T09:10:00.000Z'),
-+      updatedAt: new Date('2026-02-22T17:41:00.000Z'),
-+    },
-+    {
-+      id: 4,
-+      source: 'banking',
-+      provider: 'powens',
-+      powensConnectionId: 'demo-bnp',
-+      providerConnectionId: 'demo-bnp',
-+      providerInstitutionId: 'bnp',
-+      providerInstitutionName: 'BNP Paribas',
-+      status: 'reconnect_required',
-+      lastSyncStatus: 'KO',
-+      lastSyncReasonCode: 'RECONNECT_REQUIRED',
-+      lastSyncAttemptAt: new Date('2026-02-22T14:12:00.000Z'),
-+      lastSyncAt: new Date('2026-02-22T14:12:00.000Z'),
-+      lastSuccessAt: new Date('2026-02-20T08:45:00.000Z'),
-+      lastFailedAt: new Date('2026-02-22T14:13:00.000Z'),
-+      lastError: 'Strong customer authentication expired',
-+      syncMetadata: {
-+        accountCount: 2,
-+        importedTransactionCount: 0,
-+        windowDays: 30,
-+      },
-+      createdAt: new Date('2026-01-08T07:20:00.000Z'),
-+      updatedAt: new Date('2026-02-22T14:13:00.000Z'),
-     },
-   ]
- }
-diff --git a/apps/web/src/features/demo-data.ts b/apps/web/src/features/demo-data.ts
-index 7042abf..7460d1c 100644
---- a/apps/web/src/features/demo-data.ts
-+++ b/apps/web/src/features/demo-data.ts
-@@ -594,9 +594,9 @@ export const getDemoPowensSyncRuns = (): PowensSyncRunsResponse => {
-       {
-         id: 'demo-sync-run-2',
-         requestId: 'req-demo-2',
--        connectionId: 'demo-revolut',
--        startedAt: '2026-02-22T18:44:00.000Z',
--        endedAt: '2026-02-22T18:45:00.000Z',
-+        connectionId: 'demo-boursorama',
-+        startedAt: '2026-02-22T17:40:00.000Z',
-+        endedAt: '2026-02-22T17:41:00.000Z',
-         result: 'error',
-         errorMessage: 'Powens timeout while fetching transactions',
-         errorFingerprint: 'powens timeout while fetching transactions',
-@@ -604,8 +604,18 @@ export const getDemoPowensSyncRuns = (): PowensSyncRunsResponse => {
-       {
-         id: 'demo-sync-run-3',
-         requestId: 'req-demo-3',
--        connectionId: 'demo-fortuneo',
--        startedAt: '2026-02-22T18:00:00.000Z',
-+        connectionId: 'demo-bnp',
-+        startedAt: '2026-02-22T14:12:00.000Z',
-+        endedAt: '2026-02-22T14:13:00.000Z',
-+        result: 'reconnect_required',
-+        errorMessage: 'Strong customer authentication expired',
-+        errorFingerprint: 'strong customer authentication expired',
-+      },
-+      {
-+        id: 'demo-sync-run-4',
-+        requestId: 'req-demo-4',
-+        connectionId: 'demo-revolut',
-+        startedAt: '2026-02-22T18:47:00.000Z',
-         endedAt: null,
-         result: 'running',
-       },
-@@ -717,12 +727,12 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
-         providerInstitutionId: 'revolut',
-         providerInstitutionName: 'Revolut',
-         status: 'syncing',
--        lastSyncStatus: 'OK',
--        lastSyncReasonCode: 'SUCCESS',
--        lastSyncAttemptAt: '2026-02-22T18:45:00.000Z',
-+        lastSyncStatus: 'KO',
-+        lastSyncReasonCode: 'SYNC_FAILED',
-+        lastSyncAttemptAt: '2026-02-22T18:47:00.000Z',
-         lastSyncAt: '2026-02-22T18:45:00.000Z',
-         lastSuccessAt: '2026-02-22T17:59:00.000Z',
--        lastFailedAt: '2026-02-21T16:14:00.000Z',
-+        lastFailedAt: '2026-02-22T18:46:30.000Z',
-         lastError: null,
-         syncMetadata: {
-           accountCount: 1,
-@@ -730,7 +740,55 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
-           windowDays: 30,
-         },
-         createdAt: '2026-01-19T09:30:00.000Z',
--        updatedAt: '2026-02-22T18:45:00.000Z',
-+        updatedAt: '2026-02-22T18:47:00.000Z',
-+      },
-+      {
-+        id: 3,
-+        source: 'banking',
-+        provider: 'powens',
-+        powensConnectionId: 'demo-boursorama',
-+        providerConnectionId: 'demo-boursorama',
-+        providerInstitutionId: 'boursorama',
-+        providerInstitutionName: 'Boursorama Banque',
-+        status: 'error',
-+        lastSyncStatus: 'KO',
-+        lastSyncReasonCode: 'SYNC_FAILED',
-+        lastSyncAttemptAt: '2026-02-22T17:40:00.000Z',
-+        lastSyncAt: '2026-02-22T17:40:00.000Z',
-+        lastSuccessAt: '2026-02-22T15:18:00.000Z',
-+        lastFailedAt: '2026-02-22T17:41:00.000Z',
-+        lastError: 'Powens timeout while fetching transactions',
-+        syncMetadata: {
-+          accountCount: 3,
-+          importedTransactionCount: 0,
-+          windowDays: 90,
-+        },
-+        createdAt: '2026-01-10T09:10:00.000Z',
-+        updatedAt: '2026-02-22T17:41:00.000Z',
-+      },
-+      {
-+        id: 4,
-+        source: 'banking',
-+        provider: 'powens',
-+        powensConnectionId: 'demo-bnp',
-+        providerConnectionId: 'demo-bnp',
-+        providerInstitutionId: 'bnp',
-+        providerInstitutionName: 'BNP Paribas',
-+        status: 'reconnect_required',
-+        lastSyncStatus: 'KO',
-+        lastSyncReasonCode: 'RECONNECT_REQUIRED',
-+        lastSyncAttemptAt: '2026-02-22T14:12:00.000Z',
-+        lastSyncAt: '2026-02-22T14:12:00.000Z',
-+        lastSuccessAt: '2026-02-20T08:45:00.000Z',
-+        lastFailedAt: '2026-02-22T14:13:00.000Z',
-+        lastError: 'Strong customer authentication expired',
-+        syncMetadata: {
-+          accountCount: 2,
-+          importedTransactionCount: 0,
-+          windowDays: 30,
-+        },
-+        createdAt: '2026-01-08T07:20:00.000Z',
-+        updatedAt: '2026-02-22T14:13:00.000Z',
-       },
-     ],
-   }
+diff --git a/apps/api/AGENTS.md b/apps/api/AGENTS.md
+index 11855ca..23fe6bc 100644
+--- a/apps/api/AGENTS.md
++++ b/apps/api/AGENTS.md
+@@ -13,6 +13,12 @@ Scope: `apps/api/**`
+ - Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
+ - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
+ - Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
++- Keep Powens status and fail-soft behavior contract-stable:
++  - Runtime connection `status` values are `connected`, `syncing`, `error`, `reconnect_required`; preserve this taxonomy unless contract/docs/tests are updated together.
++  - Persisted sync snapshot uses `lastSyncStatus: OK|KO` with `lastSyncReasonCode: SUCCESS|PARTIAL_IMPORT|SYNC_FAILED|RECONNECT_REQUIRED`.
++  - If persistence is disabled, omit stale meaning by blanking persisted snapshot fields (return `null` values) and rely on runtime status only.
++  - If safe mode is active, `/integrations/powens/status` must remain available with deterministic fallback payloads (`safeModeActive`, optional `fallback: safe_mode`) so web stays usable.
++  - Fail-soft is mandatory: provider outages/timeouts must not break unrelated dashboard reads or escalate to unsafe payloads/logs.
+ - Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
+ - Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
+ - Keep `/dashboard/goals*` demo-safe on reads and admin-gated on writes, with no ad hoc payload drift between route schemas, domain use cases, and web callers.
+diff --git a/apps/web/AGENTS.md b/apps/web/AGENTS.md
+index cb37b7c..3f94222 100644
+--- a/apps/web/AGENTS.md
++++ b/apps/web/AGENTS.md
+@@ -12,6 +12,12 @@ Scope: `apps/web/**`
+ - Keep dashboard health signals in [src/components/dashboard/dashboard-health.ts](src/components/dashboard/dashboard-health.ts) and [src/components/dashboard/dashboard-health-panel.tsx](src/components/dashboard/dashboard-health-panel.tsx); demo must stay deterministic from the fixture matrix, admin must derive one global summary plus selective widget badges from loader/query data only.
+ - Keep the Powens manual sync cooldown UI in [src/features/powens/manual-sync-cooldown.ts](src/features/powens/manual-sync-cooldown.ts) as client-only state behind runtime-safe `VITE_*` config; it must never become authoritative or weaken demo/admin gating.
+ - Keep Powens connection badges driven by [src/features/powens/sync-status.ts](src/features/powens/sync-status.ts): admin should prefer the persisted last-sync snapshot from `/integrations/powens/status`, fall back to runtime status when `SYNC_STATUS_PERSISTENCE_ENABLED=false`, and keep demo deterministic without DB/provider writes.
++- Keep Powens state semantics explicit and fail-soft in UI copy and mappings:
++  - Runtime connection states from `PowensConnectionStatus.status` are `connected`, `syncing`, `error`, `reconnect_required`.
++  - Persisted sync snapshot from `/integrations/powens/status` is `lastSyncStatus: OK|KO` with reason codes `SUCCESS`, `PARTIAL_IMPORT`, `SYNC_FAILED`, `RECONNECT_REQUIRED`.
++  - `syncing` must stay visually distinct from persisted KO/OK snapshots so users can tell "in-flight" from "last known result".
++  - When persistence is disabled or unavailable, degrade gracefully to runtime-only badges (`connected => OK`, `error|reconnect_required => KO`) and avoid blank/blocked dashboard states.
++  - In safe-mode fallback (`safeModeActive=true` and/or response `fallback: safe_mode`), keep the dashboard usable with clear non-blocking messaging instead of action-breaking hard errors.
+ - Keep dashboard filters in URL search params. Do not introduce duplicate local filter state for route-owned data.
+ - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.
+ - Read non-sensitive web runtime config through [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) so SSR can inject safe `VITE_*` values at runtime without exposing secrets or hard-freezing them at build time, including dashboard health kill-switches such as `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED`, and `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED`.
