@@ -159,6 +159,9 @@ WORKER_HEALTHCHECK_MAX_AGE_MS=120000
 WORKER_AUTO_SYNC_ENABLED=false
 POWENS_SYNC_INTERVAL_MS=43200000
 POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000
+POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS=7
+POWENS_FORCE_FULL_SYNC=false
+POWENS_SYNC_DISABLED_PROVIDERS=
 
 ALERTS_ENABLED=true
 ALERTS_WEBHOOK_URL=<webhook-ops>
@@ -201,6 +204,9 @@ Ne pas mettre dans Dokploy:
 - `APP_IMAGE_TAG` est la cle du systeme: chaque deploy doit pointer vers un tag immuable, par exemple `v1.2.3`
 - `AUTH_ADMIN_PASSWORD_HASH_B64` est la variable canonique
 - `SYNC_STATUS_PERSISTENCE_ENABLED=false` coupe la persistance du dernier resultat synthétique Powens (DB + compteurs derives) et force l'UI admin a revenir au fallback runtime/placeholder sans conserver un snapshot stale
+- `POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS` regle la fenetre de rattrapage incremental (recommande: 3-7 jours) autour de `last_success_at` pour absorber les operations retardees
+- `POWENS_FORCE_FULL_SYNC=true` force temporairement tous les jobs en mode full-sync (kill-switch rollback en cas de doute sur l'incremental)
+- `POWENS_SYNC_DISABLED_PROVIDERS` desactive la sync pour les providers listes (CSV) sans couper toute l'integration
 - `DERIVED_RECOMPUTE_ENABLED=false` coupe le trigger admin de recompute derivee sans changer le snapshot courant
 - `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
 - `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure
