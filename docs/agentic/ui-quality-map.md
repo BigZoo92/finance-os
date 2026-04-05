@@ -23,6 +23,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 
 - Add a short UI rationale in the PR summary or change notes.
 - Include screenshot notes for meaningful UI changes.
+- For medium-high risk changes, include the full state catalog and screenshot matrix from [policy-verification-bundle.md](policy-verification-bundle.md).
 - If a shared primitive changes, check both the consuming web page and the package export surface.
 
 ## Manual UI Checklist
@@ -39,3 +40,4 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Mobile and desktop layouts still load without overflow surprises.
 - When the Powens sync cooldown UI guard is enabled, the dashboard should clearly show `Idle -> Syncing -> Cooldown -> Ready`, keep blocked reason text explicit, and still honor demo/admin gating plus the runtime kill-switch.
 - Reconnect-required states should surface as a non-blocking inline banner at the top of dashboard with explicit `Reconnecter` and `Plus tard` CTAs, full loading/in-progress/error/deferred state copy, and deterministic demo behavior behind `VITE_UI_RECONNECT_BANNER_ENABLED`.
+- Capture screenshots for at least success, degraded fallback, and error/retry states when those states are user-visible in the touched UI.

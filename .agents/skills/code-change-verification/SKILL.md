@@ -28,8 +28,9 @@ description: Run the smallest reliable verification set for a Finance-OS change 
 
 1. Start from [../../../docs/agentic/testing-map.md](../../../docs/agentic/testing-map.md) and the nearest local `AGENTS.md`.
 2. Run the smallest relevant checks first instead of defaulting to the full repo suite.
-3. Include the agentic validator when `AGENTS.md`, `.agents/skills/`, or `docs/agentic/` changed.
-4. Escalate to broader checks only if the scope or failures justify it.
+3. For medium-high risk changes, include the checklist and decision trees from [../../../docs/agentic/policy-verification-bundle.md](../../../docs/agentic/policy-verification-bundle.md) in the verification note.
+4. Include the agentic validator when `AGENTS.md`, `.agents/skills/`, or `docs/agentic/` changed.
+5. Escalate to broader checks only if the scope or failures justify it.
 
 ## Trigger Examples
 

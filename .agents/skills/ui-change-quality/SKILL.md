@@ -29,7 +29,8 @@ description: Review Finance-OS UI changes for loader-first data flow, state cove
 1. Read [../../../apps/web/AGENTS.md](../../../apps/web/AGENTS.md) and [../../../docs/agentic/ui-quality-map.md](../../../docs/agentic/ui-quality-map.md).
 2. Verify the change still respects loader-first data flow and SSR auth consistency.
 3. Check that shared primitives in [../../../packages/ui/AGENTS.md](../../../packages/ui/AGENTS.md) remain generic and accessible.
-4. Capture the shortest useful rationale and screenshot checklist for review.
+4. Validate full UI state coverage against [../../../docs/agentic/policy-verification-bundle.md](../../../docs/agentic/policy-verification-bundle.md) (loading, empty, success, degraded, recoverable error, and gated states).
+5. Capture the shortest useful rationale and screenshot checklist for review.
 
 ## Trigger Examples
 
