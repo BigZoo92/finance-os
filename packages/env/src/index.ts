@@ -386,6 +386,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    POWENS_DIAGNOSTICS_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     TRANSACTIONS_SNAPSHOT_FIRST_ENABLED: z
       .string()
       .optional()
@@ -492,6 +496,10 @@ export const getWorkerEnv = () =>
       .optional()
       .transform(value => toBooleanEnv(value)),
     SYNC_STATUS_PERSISTENCE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    POWENS_DIAGNOSTICS_ENABLED: z
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),

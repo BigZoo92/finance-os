@@ -6,6 +6,7 @@ import { createCallbackRoute } from './routes/callback'
 import { createConnectUrlRoute } from './routes/connect-url'
 import { createStatusRoute } from './routes/status'
 import { createSyncRoute } from './routes/sync'
+import { createDiagnosticsRoute } from './routes/diagnostics'
 import { createSyncRunsRoute } from './routes/sync-runs'
 import { createPowensRouteRuntime } from './runtime'
 import type { PowensRoutesDependencies } from './types'
@@ -20,6 +21,7 @@ export const createPowensRoutes = ({ db, redisClient, env }: PowensRoutesDepende
     .use(createAuditTrailRoute())
     .use(createCallbackRoute())
     .use(createSyncRoute())
+    .use(createDiagnosticsRoute())
     .use(
       createStatusRoute({
         syncStatusPersistenceEnabled: env.SYNC_STATUS_PERSISTENCE_ENABLED,

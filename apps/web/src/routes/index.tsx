@@ -12,6 +12,7 @@ import {
 import type { DashboardRange } from '@/features/dashboard-types'
 import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 import {
+  powensDiagnosticsQueryOptionsWithMode,
   powensStatusQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
@@ -70,6 +71,13 @@ export const prefetchDashboardRouteQueries = async ({
     swallowPowensPrefetchError(
       queryClient.ensureQueryData(
         powensSyncRunsQueryOptionsWithMode({
+          mode,
+        })
+      )
+    ),
+    swallowPowensPrefetchError(
+      queryClient.ensureQueryData(
+        powensDiagnosticsQueryOptionsWithMode({
           mode,
         })
       )

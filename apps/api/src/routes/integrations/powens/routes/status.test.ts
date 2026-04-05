@@ -75,6 +75,17 @@ const createPowensRuntime = ({
       listRecentEvents: async () => [],
       getLatestCallback: async () => createLatestCallback(),
     },
+    diagnostics: {
+      run: async () => ({
+        enabled: true,
+        mode: 'admin',
+        provider: 'powens',
+        outcome: 'ok',
+        guidance: 'unused in status tests',
+        retryable: true,
+        lastCheckedAt: '2026-03-27T08:03:00.000Z',
+      }),
+    },
   },
   repositories: {
     connection: {
