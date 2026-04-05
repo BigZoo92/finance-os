@@ -407,6 +407,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    ENRICHMENT_BULK_TRIAGE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
     AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
     AUTH_ADMIN_PASSWORD_HASH_B64: z.string().optional(),

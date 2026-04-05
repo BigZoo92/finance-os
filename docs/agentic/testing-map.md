@@ -19,6 +19,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/integrations/powens/routes/status.test.ts](../../apps/api/src/routes/integrations/powens/routes/status.test.ts)
   - [../../apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts](../../apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts)
   - [../../apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts](../../apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts)
+  - [../../apps/api/src/routes/enrichment/routes/enrichment.test.ts](../../apps/api/src/routes/enrichment/routes/enrichment.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
   - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts) (covers incremental migration staging: `new-model-ready`, `mixed-fallback`, `legacy-fallback`, `contract-divergence`)
@@ -104,6 +105,12 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm web:typecheck`
   - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-api.test.ts`
   - `pnpm web:build`
+- Enrichment notes and bulk triage contract/persistence changes:
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm --filter @finance-os/env typecheck`
+  - `pnpm api:typecheck`
+  - `bun test apps/api/src/routes/enrichment/routes/enrichment.test.ts`
+  - `pnpm db:generate` when schema changes
 - DB, env, Powens, Redis, or prelude package changes:
   - `pnpm --filter <package> typecheck`
   - package-specific follow-up such as `pnpm db:generate` when schema changes

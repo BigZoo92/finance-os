@@ -4,3 +4,5 @@ export * from './goals'
 export * from './powens'
 export * from './recurring-commitments'
 export * from './technical-probe'
+
+export * from './enrichment'
