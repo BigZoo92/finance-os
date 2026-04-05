@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
+import type { QueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { DashboardAppShell } from '@/components/dashboard/app-shell'
+import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import {
   dashboardDerivedRecomputeStatusQueryOptionsWithMode,
@@ -22,6 +24,64 @@ const resolveRange = (value: string | undefined): DashboardRange => {
   return value === '7d' || value === '90d' ? value : '30d'
 }
 
+const swallowPowensPrefetchError = async (prefetch: Promise<unknown>) => {
+  try {
+    await prefetch
+  } catch {
+    // Fail-soft by design: dashboard still renders with localized widget-level errors.
+  }
+}
+
+export const prefetchDashboardRouteQueries = async ({
+  queryClient,
+  mode,
+  range,
+}: {
+  queryClient: QueryClient
+  mode: AuthMode
+  range: DashboardRange
+}) => {
+  await Promise.all([
+    queryClient.ensureQueryData(
+      dashboardSummaryQueryOptionsWithMode({
+        range,
+        mode,
+      })
+    ),
+    queryClient.ensureInfiniteQueryData(
+      dashboardTransactionsInfiniteQueryOptionsWithMode({
+        range,
+        limit: 30,
+        mode,
+      })
+    ),
+    queryClient.ensureQueryData(
+      financialGoalsQueryOptionsWithMode({
+        mode,
+      })
+    ),
+    swallowPowensPrefetchError(
+      queryClient.ensureQueryData(
+        powensStatusQueryOptionsWithMode({
+          mode,
+        })
+      )
+    ),
+    swallowPowensPrefetchError(
+      queryClient.ensureQueryData(
+        powensSyncRunsQueryOptionsWithMode({
+          mode,
+        })
+      )
+    ),
+    queryClient.ensureQueryData(
+      dashboardDerivedRecomputeStatusQueryOptionsWithMode({
+        mode,
+      })
+    ),
+  ])
+}
+
 export const Route = createFileRoute('/')({
   validateSearch: search => dashboardSearchSchema.parse(search),
   loaderDeps: ({ search }) => ({
@@ -30,41 +90,11 @@ export const Route = createFileRoute('/')({
   loader: async ({ context, deps }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
 
-    await Promise.all([
-      context.queryClient.ensureQueryData(
-        dashboardSummaryQueryOptionsWithMode({
-          range: deps.range,
-          mode: auth.mode,
-        })
-      ),
-      context.queryClient.ensureInfiniteQueryData(
-        dashboardTransactionsInfiniteQueryOptionsWithMode({
-          range: deps.range,
-          limit: 30,
-          mode: auth.mode,
-        })
-      ),
-      context.queryClient.ensureQueryData(
-        financialGoalsQueryOptionsWithMode({
-          mode: auth.mode,
-        })
-      ),
-      context.queryClient.ensureQueryData(
-        powensStatusQueryOptionsWithMode({
-          mode: auth.mode,
-        })
-      ),
-      context.queryClient.ensureQueryData(
-        powensSyncRunsQueryOptionsWithMode({
-          mode: auth.mode,
-        })
-      ),
-      context.queryClient.ensureQueryData(
-        dashboardDerivedRecomputeStatusQueryOptionsWithMode({
-          mode: auth.mode,
-        })
-      ),
-    ])
+    await prefetchDashboardRouteQueries({
+      queryClient: context.queryClient,
+      mode: auth.mode,
+      range: deps.range,
+    })
   },
   component: HomePage,
 })
