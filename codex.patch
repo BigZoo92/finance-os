@@ -1,105 +1,135 @@
-diff --git a/.github/agent-stubs/improve-623.md b/.github/agent-stubs/improve-623.md
+diff --git a/.github/agent-stubs/improve-627.md b/.github/agent-stubs/improve-627.md
 deleted file mode 100644
-index b01af9f..0000000
---- a/.github/agent-stubs/improve-623.md
+index 0aea638..0000000
+--- a/.github/agent-stubs/improve-627.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #623
+-# Autopilot stub for improve #627
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/623
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/627
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/api/src/routes/dashboard/routes/goals.test.ts b/apps/api/src/routes/dashboard/routes/goals.test.ts
-index 947d480..80d2048 100644
---- a/apps/api/src/routes/dashboard/routes/goals.test.ts
-+++ b/apps/api/src/routes/dashboard/routes/goals.test.ts
-@@ -184,7 +184,7 @@ describe('createGoalsRoute', () => {
-         body: JSON.stringify({
-           name: 'Apartment deposit',
-           goalType: 'home',
--          currency: 'EUR',
-+          currency: 'eur',
-           targetAmount: 45000,
-           currentAmount: 18500,
-           targetDate: '2028-12-31',
-@@ -208,6 +208,47 @@ describe('createGoalsRoute', () => {
-     })
-   })
+diff --git a/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx b/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
+index 2d6949d..7a11a04 100644
+--- a/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
++++ b/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
+@@ -96,6 +96,19 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+     [budgets, spentByCategory]
+   )
  
-+  it('normalizes currency casing when updating a goal in admin mode', async () => {
-+    let receivedCurrency = ''
-+    const app = createGoalsTestApp({
-+      mode: 'admin',
-+      runtime: createDashboardRuntime({
-+        updateGoal: async (_goalId, input) => {
-+          receivedCurrency = input.currency
-+          return {
-+            ...createGoalPayload(),
-+            currency: input.currency,
-+          }
-+        },
-+      }),
-+    })
 +
-+    const response = await app.handle(
-+      new Request('http://finance-os.local/goals/91', {
-+        method: 'PATCH',
-+        headers: {
-+          'content-type': 'application/json',
-+        },
-+        body: JSON.stringify({
-+          name: 'Emergency runway',
-+          goalType: 'emergency_fund',
-+          currency: 'usd',
-+          targetAmount: 12000,
-+          currentAmount: 8400,
-+          targetDate: '2026-09-30',
-+          note: null,
-+        }),
-+      })
++  const budgetAlerts = useMemo(() => {
++    const overspentRows = budgetRows.filter(row => row.delta < 0)
++    const nearLimitRows = budgetRows.filter(
++      row => row.delta >= 0 && row.monthlyBudget > 0 && row.spent / row.monthlyBudget >= 0.9
 +    )
-+    const payload = await response.json()
 +
-+    expect(response.status).toBe(200)
-+    expect(receivedCurrency).toBe('USD')
-+    expect(payload).toMatchObject({
-+      currency: 'USD',
-+    })
-+  })
++    return {
++      overspentRows,
++      nearLimitRows,
++    }
++  }, [budgetRows])
 +
-   it('returns 404 when updating a missing goal in admin mode', async () => {
-     const app = createGoalsTestApp({
-       mode: 'admin',
-diff --git a/apps/api/src/routes/dashboard/routes/goals.ts b/apps/api/src/routes/dashboard/routes/goals.ts
-index 690ebba..c845379 100644
---- a/apps/api/src/routes/dashboard/routes/goals.ts
-+++ b/apps/api/src/routes/dashboard/routes/goals.ts
-@@ -6,6 +6,8 @@ import { getDashboardGoalsMock } from '../../../mocks/dashboardGoals.mock'
- import { getDashboardRuntime } from '../context'
- import { dashboardGoalBodySchema, dashboardGoalParamsSchema } from '../schemas'
+   const handleAddBudget = () => {
+     if (!isAdmin) {
+       return
+@@ -166,6 +179,24 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+           </Button>
+         </div>
  
-+const normalizeGoalCurrency = (currency: string) => currency.toUpperCase()
++        {isAdmin && budgetAlerts.overspentRows.length + budgetAlerts.nearLimitRows.length > 0 ? (
++          <div className="rounded-md border border-amber-500/40 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
++            <p className="font-medium">Alertes budgetaires</p>
++            <ul className="mt-1 list-disc space-y-1 pl-4">
++              {budgetAlerts.overspentRows.map(row => (
++                <li key={`overspent-${row.category}`}>
++                  {row.category}: depassement de {formatMoney(Math.abs(row.delta))}
++                </li>
++              ))}
++              {budgetAlerts.nearLimitRows.map(row => (
++                <li key={`near-limit-${row.category}`}>
++                  {row.category}: {Math.round((row.spent / row.monthlyBudget) * 100)}% du budget consomme
++                </li>
++              ))}
++            </ul>
++          </div>
++        ) : null}
 +
- export const createGoalsRoute = () =>
-   new Elysia()
-     .get('/goals', async context => {
-@@ -42,7 +44,7 @@ export const createGoalsRoute = () =>
-             return dashboard.useCases.createGoal({
-               name: context.body.name,
-               goalType: context.body.goalType,
--              currency: context.body.currency,
-+              currency: normalizeGoalCurrency(context.body.currency),
-               targetAmount: context.body.targetAmount,
-               currentAmount: context.body.currentAmount,
-               targetDate: context.body.targetDate,
-@@ -77,7 +79,7 @@ export const createGoalsRoute = () =>
-             const updated = await dashboard.useCases.updateGoal(context.params.goalId, {
-               name: context.body.name,
-               goalType: context.body.goalType,
--              currency: context.body.currency,
-+              currency: normalizeGoalCurrency(context.body.currency),
-               targetAmount: context.body.targetAmount,
-               currentAmount: context.body.currentAmount,
-               targetDate: context.body.targetDate,
+         {budgetRows.length ? (
+           <div className="space-y-2">
+             {budgetRows.map(row => {
+diff --git a/apps/web/src/components/dashboard/personal-financial-goals-card.tsx b/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
+index b8bb2d4..3031d88 100644
+--- a/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
++++ b/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
+@@ -1,6 +1,6 @@
+ import { Badge, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
+ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+-import { useState } from 'react'
++import { useMemo, useState } from 'react'
+ import type { AuthMode } from '@/features/auth-types'
+ import {
+   archiveFinancialGoal,
+@@ -445,6 +445,40 @@ export function PersonalFinancialGoalsCard({
+   const activeGoals = goals.filter(goal => goal.archivedAt === null)
+   const archivedGoals = goals.filter(goal => goal.archivedAt !== null)
+ 
++  const goalAlerts = useMemo(() => {
++    return activeGoals
++      .map(goal => {
++        const progress = clampProgress(goal)
++        const remainingAmount = Math.max(goal.targetAmount - goal.currentAmount, 0)
++
++        if (!goal.targetDate) {
++          return null
++        }
++
++        const targetDate = new Date(`${goal.targetDate}T00:00:00.000Z`)
++        const daysUntilTarget = Math.ceil((targetDate.getTime() - Date.now()) / 86_400_000)
++
++        if (daysUntilTarget < 0 && remainingAmount > 0) {
++          return {
++            goalId: goal.id,
++            level: 'high' as const,
++            message: `${goal.name}: objectif depasse de ${Math.abs(daysUntilTarget)}j, reste ${formatMoney(remainingAmount, goal.currency)} a epargner.`,
++          }
++        }
++
++        if (daysUntilTarget <= 90 && progress < 60) {
++          return {
++            goalId: goal.id,
++            level: 'medium' as const,
++            message: `${goal.name}: echeance dans ${Math.max(daysUntilTarget, 0)}j avec ${progress}% finance.`,
++          }
++        }
++
++        return null
++      })
++      .filter(item => item !== null)
++  }, [activeGoals])
++
+   return (
+     <>
+       <Card>
+@@ -490,6 +524,19 @@ export function PersonalFinancialGoalsCard({
+ 
+           {authMode === undefined || goalsQuery.isPending ? <GoalsSkeleton /> : null}
+ 
++          {isAdmin && !goalsQuery.isPending && !goalsQuery.isError && goalAlerts.length > 0 ? (
++            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
++              <p className="font-medium">Alertes objectif</p>
++              <ul className="mt-2 list-disc space-y-1 pl-4">
++                {goalAlerts.map(alert => (
++                  <li key={alert.goalId} className={alert.level === 'high' ? 'font-medium' : ''}>
++                    {alert.message}
++                  </li>
++                ))}
++              </ul>
++            </div>
++          ) : null}
++
+           {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length === 0 ? (
+             <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 text-center">
+               <p className="text-lg font-semibold">No goals yet</p>
