@@ -459,7 +459,8 @@ export function PersonalFinancialGoalsCard({
               ) : null}
             </CardTitle>
             <CardDescription>
-              List-first tracking for your savings goals, with edit controls revealed only when needed.
+              List-first tracking for your savings goals, so monthly budget decisions can stay tied to
+              concrete objective progress.
             </CardDescription>
           </div>
           <CardAction>

@@ -1,3 +1,2 @@
 Falling back to direct application...
-Applied patch to 'apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.test.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts' cleanly.
+Applied patch to 'apps/web/src/components/dashboard/personal-financial-goals-card.tsx' cleanly.
