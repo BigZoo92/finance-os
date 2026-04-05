@@ -1,0 +1,151 @@
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
+import type { DashboardTransactionsResponse } from '@/features/dashboard-types'
+
+type DashboardTransaction = DashboardTransactionsResponse['items'][number]
+
+type MonthEndProjectionInput = {
+  transactions: DashboardTransaction[]
+  referenceDate?: Date
+}
+
+export type MonthEndProjectionResult = {
+  monthLabel: string
+  transactionsCount: number
+  daysElapsed: number
+  daysRemaining: number
+  incomesToDate: number
+  expensesToDate: number
+  netToDate: number
+  averageNetPerDay: number
+  projectedNetAtMonthEnd: number
+}
+
+const asUtcDate = (value: string) => {
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const formatMoney = (value: number, currency = 'EUR') => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+export const calculateMonthEndProjection = ({
+  transactions,
+  referenceDate = new Date(),
+}: MonthEndProjectionInput): MonthEndProjectionResult | null => {
+  const year = referenceDate.getUTCFullYear()
+  const month = referenceDate.getUTCMonth()
+
+  const startOfMonth = Date.UTC(year, month, 1)
+  const endOfMonth = Date.UTC(year, month + 1, 0)
+
+  const monthTransactions = transactions.filter(transaction => {
+    const bookingDate = asUtcDate(transaction.bookingDate)
+    if (!bookingDate) {
+      return false
+    }
+
+    const timestamp = bookingDate.getTime()
+    return timestamp >= startOfMonth && timestamp <= endOfMonth
+  })
+
+  if (!monthTransactions.length) {
+    return null
+  }
+
+  let incomesToDate = 0
+  let expensesToDate = 0
+
+  for (const transaction of monthTransactions) {
+    if (transaction.direction === 'income') {
+      incomesToDate += transaction.amount
+      continue
+    }
+
+    expensesToDate += Math.abs(transaction.amount)
+  }
+
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const daysElapsed = Math.max(1, Math.min(referenceDate.getUTCDate(), daysInMonth))
+  const daysRemaining = Math.max(0, daysInMonth - daysElapsed)
+  const netToDate = incomesToDate - expensesToDate
+  const averageNetPerDay = netToDate / daysElapsed
+  const projectedNetAtMonthEnd = netToDate + averageNetPerDay * daysRemaining
+
+  const monthLabel = referenceDate.toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+
+  return {
+    monthLabel,
+    transactionsCount: monthTransactions.length,
+    daysElapsed,
+    daysRemaining,
+    incomesToDate,
+    expensesToDate,
+    netToDate,
+    averageNetPerDay,
+    projectedNetAtMonthEnd,
+  }
+}
+
+export const MonthEndProjectionCard = ({
+  isAdmin,
+  transactions,
+}: {
+  isAdmin: boolean
+  transactions: DashboardTransaction[]
+}) => {
+  const projection = calculateMonthEndProjection({ transactions })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          Projection fin de mois
+          <Badge variant={isAdmin ? 'secondary' : 'outline'}>{isAdmin ? 'admin' : 'demo'}</Badge>
+        </CardTitle>
+        <CardDescription>
+          Modele lineaire explicable: net courant + moyenne journaliere x jours restants.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {!isAdmin ? (
+          <p className="text-muted-foreground">
+            Demo: projection informative uniquement. Passe en mode admin pour piloter les actions.
+          </p>
+        ) : null}
+        {!projection ? (
+          <p className="text-muted-foreground">Aucune transaction exploitable sur le mois courant.</p>
+        ) : (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="rounded-md border border-border/70 px-3 py-2">
+                <p className="text-xs text-muted-foreground">Net constate ({projection.monthLabel})</p>
+                <p className="font-medium">{formatMoney(projection.netToDate)}</p>
+              </div>
+              <div className="rounded-md border border-border/70 px-3 py-2">
+                <p className="text-xs text-muted-foreground">Projection fin de mois</p>
+                <p className="font-medium">{formatMoney(projection.projectedNetAtMonthEnd)}</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {projection.daysElapsed} jour(s) observes sur {projection.daysElapsed + projection.daysRemaining}. Moyenne
+              nette: {formatMoney(projection.averageNetPerDay)} / jour.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Detail: revenus {formatMoney(projection.incomesToDate)} • depenses {formatMoney(projection.expensesToDate)} •
+              {` ${projection.transactionsCount}`} transaction(s).
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

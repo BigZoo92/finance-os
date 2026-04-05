@@ -79,6 +79,7 @@ import {
 } from './dashboard-health'
 import { DashboardHealthPanel, DashboardWidgetHealthBadge } from './dashboard-health-panel'
 import { getLatestSyncStatus } from './latest-sync-status'
+import { MonthEndProjectionCard } from './month-end-projection-card'
 import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
 import { WealthHistory } from './wealth-history'
 
@@ -1999,6 +2000,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               isDemo={isDemo}
               transactions={transactions}
             />
+          </div>
+          <div className="lg:col-span-2">
+            <MonthEndProjectionCard isAdmin={isAdmin} transactions={transactions} />
           </div>
 
           <Card>
