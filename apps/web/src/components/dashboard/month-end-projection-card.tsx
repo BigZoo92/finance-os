@@ -20,6 +20,14 @@ export type MonthEndProjectionResult = {
   projectedNetAtMonthEnd: number
 }
 
+export type MonthlyRecurringOverview = {
+  fixedChargesMonthlyTotal: number
+  expectedIncomeMonthlyTotal: number
+  expectedNetMonthlyAfterFixedCharges: number
+  fixedCharges: Array<{ canonicalLabel: string; lastKnownAmount: number; occurrences: number }>
+  expectedIncomes: Array<{ canonicalLabel: string; lastKnownAmount: number; occurrences: number }>
+}
+
 const asUtcDate = (value: string) => {
   const parsed = new Date(`${value}T00:00:00.000Z`)
   return Number.isNaN(parsed.getTime()) ? null : parsed
@@ -31,6 +39,147 @@ const formatMoney = (value: number, currency = 'EUR') => {
     currency,
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+const normalizeRecurringLabel = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/\d+/g, ' ')
+    .replace(/[^a-z\s]/g, ' ')
+    .replace(/\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const estimateMonthGap = (dates: string[]): number | null => {
+  if (dates.length < 2) {
+    return null
+  }
+
+  const sorted = [...dates].sort((left, right) => left.localeCompare(right))
+  const diffs: number[] = []
+
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = asUtcDate(sorted[index - 1] ?? '')
+    const current = asUtcDate(sorted[index] ?? '')
+
+    if (!previous || !current) {
+      continue
+    }
+
+    const diff = (current.getTime() - previous.getTime()) / 86_400_000
+    if (Number.isFinite(diff) && diff > 0) {
+      diffs.push(diff)
+    }
+  }
+
+  if (!diffs.length) {
+    return null
+  }
+
+  return diffs.reduce((total, value) => total + value, 0) / diffs.length
+}
+
+const hasStableAmount = (amounts: number[]): boolean => {
+  if (amounts.length < 2) {
+    return false
+  }
+
+  const average = amounts.reduce((total, value) => total + value, 0) / amounts.length
+  if (average === 0) {
+    return false
+  }
+
+  return amounts.every(value => Math.abs(value - average) / average <= 0.2)
+}
+
+export const calculateMonthlyRecurringOverview = (
+  transactions: DashboardTransaction[],
+): MonthlyRecurringOverview | null => {
+  const grouped = new Map<
+    string,
+    {
+      kind: 'fixed_charge' | 'expected_income'
+      canonicalLabel: string
+      amounts: number[]
+      bookingDates: string[]
+    }
+  >()
+
+  for (const transaction of transactions) {
+    if (transaction.amount === 0) {
+      continue
+    }
+
+    const canonicalLabel = normalizeRecurringLabel(transaction.label)
+    if (canonicalLabel.length < 3) {
+      continue
+    }
+
+    const kind: 'fixed_charge' | 'expected_income' =
+      transaction.direction === 'income' ? 'expected_income' : 'fixed_charge'
+    const key = `${kind}|${transaction.currency}|${canonicalLabel}`
+    const existing = grouped.get(key)
+    const amount = Math.abs(transaction.amount)
+
+    if (existing) {
+      existing.amounts.push(amount)
+      existing.bookingDates.push(transaction.bookingDate)
+      continue
+    }
+
+    grouped.set(key, {
+      kind,
+      canonicalLabel,
+      amounts: [amount],
+      bookingDates: [transaction.bookingDate],
+    })
+  }
+
+  const fixedCharges: MonthlyRecurringOverview['fixedCharges'] = []
+  const expectedIncomes: MonthlyRecurringOverview['expectedIncomes'] = []
+
+  for (const [, group] of grouped) {
+    if (group.amounts.length < 2) {
+      continue
+    }
+
+    const monthGap = estimateMonthGap(group.bookingDates)
+    if (monthGap === null || monthGap < 25 || monthGap > 35) {
+      continue
+    }
+
+    if (!hasStableAmount(group.amounts)) {
+      continue
+    }
+
+    const target = {
+      canonicalLabel: group.canonicalLabel,
+      lastKnownAmount: group.amounts.at(-1) ?? 0,
+      occurrences: group.amounts.length,
+    }
+
+    if (group.kind === 'expected_income') {
+      expectedIncomes.push(target)
+      continue
+    }
+
+    fixedCharges.push(target)
+  }
+
+  if (!fixedCharges.length && !expectedIncomes.length) {
+    return null
+  }
+
+  const fixedChargesMonthlyTotal = fixedCharges.reduce((total, item) => total + item.lastKnownAmount, 0)
+  const expectedIncomeMonthlyTotal = expectedIncomes.reduce((total, item) => total + item.lastKnownAmount, 0)
+
+  return {
+    fixedChargesMonthlyTotal,
+    expectedIncomeMonthlyTotal,
+    expectedNetMonthlyAfterFixedCharges: expectedIncomeMonthlyTotal - fixedChargesMonthlyTotal,
+    fixedCharges: [...fixedCharges].sort((left, right) => right.lastKnownAmount - left.lastKnownAmount),
+    expectedIncomes: [...expectedIncomes].sort((left, right) => right.lastKnownAmount - left.lastKnownAmount),
+  }
 }
 
 export const calculateMonthEndProjection = ({
@@ -103,6 +252,7 @@ export const MonthEndProjectionCard = ({
   transactions: DashboardTransaction[]
 }) => {
   const projection = calculateMonthEndProjection({ transactions })
+  const recurringOverview = calculateMonthlyRecurringOverview(transactions)
 
   return (
     <Card>
@@ -145,6 +295,41 @@ export const MonthEndProjectionCard = ({
             </p>
           </>
         )}
+
+        {isAdmin ? (
+          <div className="space-y-3 rounded-md border border-border/70 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Charges fixes & revenus attendus mensuels
+            </p>
+            {!recurringOverview ? (
+              <p className="text-xs text-muted-foreground">
+                Pas assez d&apos;historique mensuel pour estimer les charges fixes et revenus attendus.
+              </p>
+            ) : (
+              <>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Charges fixes estimees</p>
+                    <p className="font-medium">{formatMoney(recurringOverview.fixedChargesMonthlyTotal)}</p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Revenus attendus</p>
+                    <p className="font-medium">{formatMoney(recurringOverview.expectedIncomeMonthlyTotal)}</p>
+                  </div>
+                  <div className="rounded-md border border-border/70 px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Marge theorique</p>
+                    <p className="font-medium">
+                      {formatMoney(recurringOverview.expectedNetMonthlyAfterFixedCharges)}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Estimation basee sur les operations repetitives detectees sur un rythme mensuel.
+                </p>
+              </>
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

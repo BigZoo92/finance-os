@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateMonthEndProjection } from './month-end-projection-card'
+import { calculateMonthEndProjection, calculateMonthlyRecurringOverview } from './month-end-projection-card'
 
 describe('calculateMonthEndProjection', () => {
   it('returns a linear projection based on current month transactions', () => {
@@ -102,5 +102,145 @@ describe('calculateMonthEndProjection', () => {
     })
 
     expect(projection).toBeNull()
+  })
+})
+
+describe('calculateMonthlyRecurringOverview', () => {
+  it('estimates monthly fixed charges and expected incomes from recurring transactions', () => {
+    const overview = calculateMonthlyRecurringOverview([
+      {
+        id: 1,
+        bookingDate: '2026-01-05',
+        amount: -900,
+        currency: 'EUR',
+        direction: 'expense',
+        label: 'LOYER APPARTEMENT JAN',
+        category: null,
+        subcategory: null,
+        resolvedCategory: null,
+        resolutionSource: 'fallback',
+        resolutionRuleId: null,
+        resolutionTrace: [],
+        incomeType: null,
+        tags: [],
+        powensConnectionId: 'conn-a',
+        powensAccountId: 'acc-a',
+        accountName: null,
+      },
+      {
+        id: 2,
+        bookingDate: '2026-02-05',
+        amount: -905,
+        currency: 'EUR',
+        direction: 'expense',
+        label: 'LOYER APPARTEMENT FEB',
+        category: null,
+        subcategory: null,
+        resolvedCategory: null,
+        resolutionSource: 'fallback',
+        resolutionRuleId: null,
+        resolutionTrace: [],
+        incomeType: null,
+        tags: [],
+        powensConnectionId: 'conn-a',
+        powensAccountId: 'acc-a',
+        accountName: null,
+      },
+      {
+        id: 3,
+        bookingDate: '2026-03-05',
+        amount: -895,
+        currency: 'EUR',
+        direction: 'expense',
+        label: 'LOYER APPARTEMENT MAR',
+        category: null,
+        subcategory: null,
+        resolvedCategory: null,
+        resolutionSource: 'fallback',
+        resolutionRuleId: null,
+        resolutionTrace: [],
+        incomeType: null,
+        tags: [],
+        powensConnectionId: 'conn-a',
+        powensAccountId: 'acc-a',
+        accountName: null,
+      },
+      {
+        id: 4,
+        bookingDate: '2026-01-28',
+        amount: 2100,
+        currency: 'EUR',
+        direction: 'income',
+        label: 'SALAIRE ACME JAN',
+        category: null,
+        subcategory: null,
+        resolvedCategory: null,
+        resolutionSource: 'fallback',
+        resolutionRuleId: null,
+        resolutionTrace: [],
+        incomeType: 'salary',
+        tags: [],
+        powensConnectionId: 'conn-a',
+        powensAccountId: 'acc-a',
+        accountName: null,
+      },
+      {
+        id: 5,
+        bookingDate: '2026-02-28',
+        amount: 2090,
+        currency: 'EUR',
+        direction: 'income',
+        label: 'SALAIRE ACME FEB',
+        category: null,
+        subcategory: null,
+        resolvedCategory: null,
+        resolutionSource: 'fallback',
+        resolutionRuleId: null,
+        resolutionTrace: [],
+        incomeType: 'salary',
+        tags: [],
+        powensConnectionId: 'conn-a',
+        powensAccountId: 'acc-a',
+        accountName: null,
+      },
+      {
+        id: 6,
+        bookingDate: '2026-03-28',
+        amount: 2110,
+        currency: 'EUR',
+        direction: 'income',
+        label: 'SALAIRE ACME MAR',
+        category: null,
+        subcategory: null,
+        resolvedCategory: null,
+        resolutionSource: 'fallback',
+        resolutionRuleId: null,
+        resolutionTrace: [],
+        incomeType: 'salary',
+        tags: [],
+        powensConnectionId: 'conn-a',
+        powensAccountId: 'acc-a',
+        accountName: null,
+      },
+    ])
+
+    expect(overview).not.toBeNull()
+    expect(overview?.fixedChargesMonthlyTotal).toBe(895)
+    expect(overview?.expectedIncomeMonthlyTotal).toBe(2110)
+    expect(overview?.expectedNetMonthlyAfterFixedCharges).toBe(1215)
+    expect(overview?.fixedCharges).toEqual([
+      {
+        canonicalLabel: 'loyer appartement',
+        lastKnownAmount: 895,
+        occurrences: 3,
+      },
+    ])
+    expect(overview?.expectedIncomes).toEqual([
+      {
+        canonicalLabel: 'salaire acme',
+        lastKnownAmount: 2110,
+        occurrences: 3,
+      },
+    ])
   })
 })
