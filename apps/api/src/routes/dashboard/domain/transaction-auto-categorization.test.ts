@@ -2,79 +2,83 @@ import { describe, expect, it } from 'bun:test'
 import { applyTransactionAutoCategorization } from './transaction-auto-categorization'
 
 describe('applyTransactionAutoCategorization', () => {
-  it('applies a deterministic label+amount rule when category is unknown', () => {
+  it('uses manual override as first precedence', () => {
     const result = applyTransactionAutoCategorization({
       label: 'NETFLIX.COM 03/2026',
+      merchant: 'Netflix',
       amount: -15.99,
       powensAccountId: 'acc-1',
       accountName: 'Compte courant',
-      category: 'Unknown',
-      subcategory: null,
+      providerCategory: 'Unknown',
+      customCategory: 'Manuel',
+      customSubcategory: 'Perso',
+      category: 'Manuel',
+      subcategory: 'Perso',
       incomeType: null,
     })
 
-    expect(result).toEqual({
-      category: 'Abonnements',
-      subcategory: 'Streaming',
-      incomeType: null,
-      autoCategorizationRuleId: 'subscriptions-streaming',
-    })
+    expect(result.resolutionSource).toBe('manual_override')
+    expect(result.category).toBe('Manuel')
   })
 
-  it('uses account+amount constraints and wins on priority when multiple rules match', () => {
+  it('uses merchant rules before mcc and counterparty', () => {
     const result = applyTransactionAutoCategorization({
-      label: 'Cotisation frais mensuels',
+      label: 'SPOTIFY ABONNEMENT',
+      merchant: 'Spotify',
       amount: -12.5,
       powensAccountId: 'acc-2',
       accountName: 'Compte checking principal',
+      providerCategory: 'Unknown',
+      customCategory: null,
+      customSubcategory: null,
       category: null,
       subcategory: null,
       incomeType: null,
     })
 
-    expect(result).toEqual({
-      category: 'Frais bancaires',
-      subcategory: null,
-      incomeType: null,
-      autoCategorizationRuleId: 'bank-fees-checking-account',
+    expect(result).toMatchObject({
+      category: 'Abonnements',
+      subcategory: 'Streaming',
+      resolutionSource: 'merchant_rules',
+      resolutionRuleId: 'merchant-streaming',
     })
   })
 
-  it('keeps explicit manual/provider category untouched', () => {
+  it('uses provider category in mcc precedence when no rule matches', () => {
     const result = applyTransactionAutoCategorization({
-      label: 'UBER TRIP',
+      label: 'Paiement CB',
+      merchant: 'Commercant local',
       amount: -20,
       powensAccountId: 'acc-3',
       accountName: 'Compte courant',
+      providerCategory: 'Restaurants',
+      customCategory: null,
+      customSubcategory: null,
       category: 'Restaurants',
-      subcategory: 'Delivery',
+      subcategory: null,
       incomeType: null,
     })
 
-    expect(result).toEqual({
-      category: 'Restaurants',
-      subcategory: 'Delivery',
-      incomeType: null,
-      autoCategorizationRuleId: null,
-    })
+    expect(result.resolutionSource).toBe('mcc')
+    expect(result.category).toBe('Restaurants')
   })
 
-  it('keeps unknown category unchanged when no rule matches', () => {
+  it('falls back deterministically when nothing else matches', () => {
     const result = applyTransactionAutoCategorization({
       label: 'Paiement carte artisan local',
+      merchant: 'Artisan',
       amount: -18.45,
       powensAccountId: 'acc-4',
       accountName: 'Compte courant',
+      providerCategory: 'Unknown',
+      customCategory: null,
+      customSubcategory: null,
       category: 'Unknown',
       subcategory: null,
       incomeType: null,
     })
 
-    expect(result).toEqual({
-      category: 'Unknown',
-      subcategory: null,
-      incomeType: null,
-      autoCategorizationRuleId: null,
-    })
+    expect(result.resolutionSource).toBe('fallback')
+    expect(result.resolutionTrace.at(-1)?.source).toBe('fallback')
   })
 })

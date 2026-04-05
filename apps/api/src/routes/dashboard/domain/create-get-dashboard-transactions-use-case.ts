@@ -17,6 +17,9 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       label: string
       merchant: string
       category: string | null
+      providerCategory: string | null
+      customCategory: string | null
+      customSubcategory: string | null
       subcategory: string | null
       incomeType: 'salary' | 'recurring' | 'exceptional' | null
       tags: string[]
@@ -136,6 +139,10 @@ export const createGetDashboardTransactionsUseCase = ({
           amount,
           powensAccountId: row.powensAccountId,
           accountName: row.accountName,
+          merchant: row.merchant,
+          providerCategory: row.providerCategory,
+          customCategory: row.customCategory,
+          customSubcategory: row.customSubcategory,
           category: row.category,
           subcategory: row.subcategory,
           incomeType: row.incomeType,
@@ -152,6 +159,10 @@ export const createGetDashboardTransactionsUseCase = ({
           category: normalizedClassification.category,
           subcategory: normalizedClassification.subcategory,
           incomeType: normalizedClassification.incomeType,
+          resolvedCategory: normalizedClassification.resolvedCategory,
+          resolutionSource: normalizedClassification.resolutionSource,
+          resolutionRuleId: normalizedClassification.resolutionRuleId,
+          resolutionTrace: normalizedClassification.resolutionTrace,
           tags: row.tags,
           powensConnectionId: row.powensConnectionId,
           powensAccountId: row.powensAccountId,
