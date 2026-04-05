@@ -15,6 +15,11 @@ type BudgetEntry = {
 
 const STORAGE_KEY = 'finance_os.admin.monthly_category_budgets.v1'
 
+type BudgetStorageState = {
+  entries: BudgetEntry[]
+  warning: string | null
+}
+
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('fr-FR', {
     style: 'currency',
@@ -22,51 +27,76 @@ const formatMoney = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value)
 
-const readBudgets = (): BudgetEntry[] => {
+const readBudgets = (): BudgetStorageState => {
   if (typeof window === 'undefined') {
-    return []
+    return { entries: [], warning: null }
   }
 
-  const raw = window.localStorage.getItem(STORAGE_KEY)
+  let raw: string | null = null
+  try {
+    raw = window.localStorage.getItem(STORAGE_KEY)
+  } catch {
+    return {
+      entries: [],
+      warning: 'Le stockage local est indisponible. Les budgets restent utilisables pour cette session.',
+    }
+  }
+
   if (!raw) {
-    return []
+    return { entries: [], warning: null }
   }
 
   try {
     const parsed = JSON.parse(raw) as unknown
 
     if (!Array.isArray(parsed)) {
-      return []
+      return {
+        entries: [],
+        warning: 'Les budgets sauvegardes etaient invalides et ont ete ignores.',
+      }
     }
 
-    return parsed
-      .filter(item =>
-        typeof item === 'object' &&
-        item !== null &&
-        typeof item.category === 'string' &&
-        typeof item.monthlyBudget === 'number' &&
-        Number.isFinite(item.monthlyBudget) &&
-        item.category.trim().length > 0
-      )
-      .map(item => ({
-        category: item.category.trim(),
-        monthlyBudget: Math.max(0, Math.round(item.monthlyBudget)),
-      }))
+    return {
+      entries: parsed
+        .filter(item =>
+          typeof item === 'object' &&
+          item !== null &&
+          typeof item.category === 'string' &&
+          typeof item.monthlyBudget === 'number' &&
+          Number.isFinite(item.monthlyBudget) &&
+          item.category.trim().length > 0
+        )
+        .map(item => ({
+          category: item.category.trim(),
+          monthlyBudget: Math.max(0, Math.round(item.monthlyBudget)),
+        })),
+      warning: null,
+    }
   } catch {
-    return []
+    return {
+      entries: [],
+      warning: 'Impossible de relire les budgets sauvegardes. La carte reste utilisable.',
+    }
   }
 }
 
-const writeBudgets = (entries: BudgetEntry[]) => {
+const writeBudgets = (entries: BudgetEntry[]): string | null => {
   if (typeof window === 'undefined') {
-    return
+    return null
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+    return null
+  } catch {
+    return 'Impossible de sauvegarder localement. Les changements restent visibles sans etre persistes.'
+  }
 }
 
 export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: MonthlyCategoryBudgetsCardProps) {
-  const [budgets, setBudgets] = useState<BudgetEntry[]>(() => readBudgets())
+  const [storageState] = useState<BudgetStorageState>(() => readBudgets())
+  const [budgets, setBudgets] = useState<BudgetEntry[]>(() => storageState.entries)
+  const [storageWarning, setStorageWarning] = useState<string | null>(() => storageState.warning)
   const [categoryInput, setCategoryInput] = useState('')
   const [budgetInput, setBudgetInput] = useState('')
 
@@ -127,7 +157,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
     ].sort((a, b) => a.category.localeCompare(b.category, 'fr'))
 
     setBudgets(next)
-    writeBudgets(next)
+    setStorageWarning(writeBudgets(next))
     setCategoryInput('')
     setBudgetInput('')
   }
@@ -139,7 +169,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
 
     const next = budgets.filter(entry => entry.category !== category)
     setBudgets(next)
-    writeBudgets(next)
+    setStorageWarning(writeBudgets(next))
   }
 
   return (
@@ -157,6 +187,12 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
         {isDemo ? (
           <p className="rounded-md border border-amber-500/40 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
             Demo: edition des budgets desactivee. Passe en mode admin pour definir les plafonds mensuels.
+          </p>
+        ) : null}
+
+        {storageWarning ? (
+          <p className="rounded-md border border-amber-500/40 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            {storageWarning}
           </p>
         ) : null}
 

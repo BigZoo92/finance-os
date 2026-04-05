@@ -238,6 +238,9 @@ const ErrorBanner = ({
     <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
       <p className="font-semibold text-destructive">{error.title}</p>
       <p className="mt-1 text-destructive/90">{error.message}</p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        This issue is non-blocking: other dashboard modules remain available while you retry.
+      </p>
       {error.offline ? (
         <p className="mt-2 text-xs text-destructive/90">
           Offline or API unreachable. Retry once the connection is back.
