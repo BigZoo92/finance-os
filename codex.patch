@@ -1,453 +1,203 @@
-diff --git a/.env.example b/.env.example
-index 9d7a38c..79ebe6c 100644
---- a/.env.example
-+++ b/.env.example
-@@ -42,6 +42,10 @@ WORKER_HEARTBEAT_MS=30000
- WORKER_AUTO_SYNC_ENABLED=false
- POWENS_SYNC_INTERVAL_MS=43200000
- POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000
-+POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS=7
-+POWENS_FORCE_FULL_SYNC=false
-+# Comma-separated provider ids (e.g. "powens,bridge") to pause sync ingestion per provider.
-+POWENS_SYNC_DISABLED_PROVIDERS=
- APP_URL=http://127.0.0.1:3000
- WEB_URL=http://127.0.0.1:3000
- API_URL=http://127.0.0.1:3001
-diff --git a/.env.prod.example b/.env.prod.example
-index e122a5f..9219f9c 100644
---- a/.env.prod.example
-+++ b/.env.prod.example
-@@ -76,6 +76,10 @@ WORKER_HEALTHCHECK_MAX_AGE_MS=120000
- WORKER_AUTO_SYNC_ENABLED=false
- POWENS_SYNC_INTERVAL_MS=43200000
- POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000
-+POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS=7
-+POWENS_FORCE_FULL_SYNC=false
-+# Comma-separated provider ids (e.g. "powens,bridge") to pause sync ingestion per provider.
-+POWENS_SYNC_DISABLED_PROVIDERS=
- 
- # ---------------------------------------------------------------------------
- # Powens
-diff --git a/.github/agent-stubs/improve-569.md b/.github/agent-stubs/improve-569.md
+diff --git a/.github/agent-stubs/improve-573.md b/.github/agent-stubs/improve-573.md
 deleted file mode 100644
-index cf39269..0000000
---- a/.github/agent-stubs/improve-569.md
+index 0308a01..0000000
+--- a/.github/agent-stubs/improve-573.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #569
+-# Autopilot stub for improve #573
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/569
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/573
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/worker/src/index.ts b/apps/worker/src/index.ts
-index 3c0b139..187a566 100644
---- a/apps/worker/src/index.ts
-+++ b/apps/worker/src/index.ts
-@@ -31,6 +31,7 @@ import {
-   type PersistedSyncStatus,
-   resolvePersistedSyncSnapshot,
- } from './sync-status-persistence'
-+import { parseDisabledProviders, resolveSyncWindow } from './sync-window'
- import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
- import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
- import { detectSyncIntegrityIssues } from './sync-integrity-checks'
-@@ -52,6 +53,9 @@ const LOCK_TTL_SECONDS = 15 * 60
- const CONNECTION_LOCK_PREFIX = 'powens:lock:connection:'
- const DEFAULT_SYNC_WINDOW_DAYS = 90
- const FULL_RESYNC_WINDOW_DAYS = 3650
-+const INCREMENTAL_LOOKBACK_DAYS = env.POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS
-+const FORCE_FULL_SYNC_MODE = env.POWENS_FORCE_FULL_SYNC
-+const DISABLED_SYNC_PROVIDERS = parseDisabledProviders(env.POWENS_SYNC_DISABLED_PROVIDERS)
- const TRANSACTION_GAP_THRESHOLD_DAYS = 45
- const MAX_TRANSACTION_GAP_DETAILS = 5
- const MAX_INTEGRITY_ISSUE_DETAILS = 5
-@@ -727,7 +731,7 @@ const syncConnection = async (params: {
-   let connectionProvider = 'powens'
-   let connectionSource = 'banking'
-   let providerConnectionId = connectionId
--  let previousLastSyncAt: Date | null = null
-+  let previousLastSuccessAt: Date | null = null
-   let previousPersistedSyncStatus: PersistedSyncStatus | null = null
-   let previousPersistedSyncReasonCode: PersistedSyncReasonCode | null = null
- 
-@@ -742,6 +746,7 @@ const syncConnection = async (params: {
-         lastSyncStatus: schema.powensConnection.lastSyncStatus,
-         lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
-         lastSyncAt: schema.powensConnection.lastSyncAt,
-+        lastSuccessAt: schema.powensConnection.lastSuccessAt,
-       })
-       .from(schema.powensConnection)
-       .where(eq(schema.powensConnection.powensConnectionId, connectionId))
-@@ -754,10 +759,26 @@ const syncConnection = async (params: {
-     connectionProvider = connection.provider
-     connectionSource = connection.source
-     providerConnectionId = connection.providerConnectionId
--    previousLastSyncAt = connection.lastSyncAt
-+    previousLastSuccessAt = connection.lastSuccessAt
-     previousPersistedSyncStatus = connection.lastSyncStatus
-     previousPersistedSyncReasonCode = connection.lastSyncReasonCode
- 
-+    if (DISABLED_SYNC_PROVIDERS.has(connection.provider.toLowerCase())) {
-+      await recordSyncRunEnded({
-+        runId,
-+        result: 'success',
-+      })
-+      logWorkerEvent({
-+        level: 'warn',
-+        msg: 'worker connection sync skipped for disabled provider',
-+        source: connection.source,
-+        provider: connection.provider,
-+        connectionId,
-+        requestId: requestId ?? 'n/a',
-+      })
-+      return
-+    }
-+
-     await Promise.all([
-       incrementDailyMetric(SYNC_COUNT_METRIC_PREFIX),
-       recordLastSyncStarted(connectionId),
-@@ -796,13 +817,30 @@ const syncConnection = async (params: {
-     )
-     await upsertProviderRawImports(rawAccountImports)
- 
--    const fromDate =
--      fullResync === true
--        ? formatDate(subtractDays(syncStart, FULL_RESYNC_WINDOW_DAYS))
--        : connection.lastSyncAt
--          ? formatDate(subtractDays(connection.lastSyncAt, 3))
--          : formatDate(subtractDays(syncStart, DEFAULT_SYNC_WINDOW_DAYS))
--    const maxDate = formatDate(syncStart)
-+    const syncWindow = resolveSyncWindow({
-+      syncStart,
-+      lastSuccessAt: connection.lastSuccessAt,
-+      fullResyncRequested: fullResync === true,
-+      forceFullSync: FORCE_FULL_SYNC_MODE,
-+      incrementalLookbackDays: INCREMENTAL_LOOKBACK_DAYS,
-+      defaultSyncWindowDays: DEFAULT_SYNC_WINDOW_DAYS,
-+      fullResyncWindowDays: FULL_RESYNC_WINDOW_DAYS,
-+    })
-+    const { fromDate, maxDate } = syncWindow
-+
-+    logWorkerEvent({
-+      level: 'info',
-+      msg: 'worker connection sync started',
-+      source: connectionSource,
-+      provider: connectionProvider,
-+      connectionId,
-+      requestId: requestId ?? 'n/a',
-+      syncId: runId,
-+      syncMode: syncWindow.syncMode,
-+      fallbackReason: syncWindow.reason,
-+      transactionWindowFromDate: fromDate,
-+      transactionWindowMaxDate: maxDate,
-+    })
- 
-     const accountCurrencyById = new Map<string, string>()
-     for (const account of upsertedAccounts) {
-@@ -958,7 +996,8 @@ const syncConnection = async (params: {
-             fromDate,
-             maxDate,
-           },
--          syncMode: fullResync === true ? 'full' : 'incremental',
-+          syncMode: syncWindow.syncMode,
-+          fallbackReason: syncWindow.reason,
-           lastRunResult: 'success',
-           lastRunFinishedAt: successAt.toISOString(),
-         },
-@@ -994,6 +1033,9 @@ const syncConnection = async (params: {
-       provider: connectionProvider,
-       connectionId,
-       requestId: requestId ?? 'n/a',
-+      syncId: runId,
-+      syncMode: syncWindow.syncMode,
-+      fallbackReason: syncWindow.reason,
-       importedAccountCount: upsertedAccounts.length,
-       importedTransactionCount,
-       rawImportCount: normalizedRawImportCount + failedRawImportCount,
-@@ -1005,6 +1047,15 @@ const syncConnection = async (params: {
-     const failedAt = new Date()
-     const failureStatus = toConnectionStatus(error)
-     const errorMessage = toSafeErrorMessage(error)
-+    const failedSyncWindow = resolveSyncWindow({
-+      syncStart,
-+      lastSuccessAt: previousLastSuccessAt,
-+      fullResyncRequested: fullResync === true,
-+      forceFullSync: FORCE_FULL_SYNC_MODE,
-+      incrementalLookbackDays: INCREMENTAL_LOOKBACK_DAYS,
-+      defaultSyncWindowDays: DEFAULT_SYNC_WINDOW_DAYS,
-+      fullResyncWindowDays: FULL_RESYNC_WINDOW_DAYS,
-+    })
-     const syncSnapshot = resolvePersistedSyncSnapshot({
-       result: failureStatus,
-     })
-@@ -1024,15 +1075,11 @@ const syncConnection = async (params: {
-           : {}),
+diff --git a/apps/api/src/mocks/connectionsStatus.mock.ts b/apps/api/src/mocks/connectionsStatus.mock.ts
+index 26b6fd6..2ce14df 100644
+--- a/apps/api/src/mocks/connectionsStatus.mock.ts
++++ b/apps/api/src/mocks/connectionsStatus.mock.ts
+@@ -35,12 +35,12 @@ export const getPowensConnectionsStatusMock = (): PowensConnectionStatusView[] =
+       providerInstitutionId: 'revolut',
+       providerInstitutionName: 'Revolut',
+       status: 'syncing',
+-      lastSyncStatus: 'OK',
+-      lastSyncReasonCode: 'SUCCESS',
+-      lastSyncAttemptAt: new Date('2026-02-22T18:45:00.000Z'),
++      lastSyncStatus: 'KO',
++      lastSyncReasonCode: 'SYNC_FAILED',
++      lastSyncAttemptAt: new Date('2026-02-22T18:47:00.000Z'),
+       lastSyncAt: new Date('2026-02-22T18:45:00.000Z'),
+       lastSuccessAt: new Date('2026-02-22T17:59:00.000Z'),
+-      lastFailedAt: new Date('2026-02-21T16:14:00.000Z'),
++      lastFailedAt: new Date('2026-02-22T18:46:30.000Z'),
+       lastError: null,
+       syncMetadata: {
+         accountCount: 1,
+@@ -48,7 +48,55 @@ export const getPowensConnectionsStatusMock = (): PowensConnectionStatusView[] =
+         windowDays: 30,
+       },
+       createdAt: new Date('2026-01-19T09:30:00.000Z'),
+-      updatedAt: new Date('2026-02-22T18:45:00.000Z'),
++      updatedAt: new Date('2026-02-22T18:47:00.000Z'),
++    },
++    {
++      id: 3,
++      source: 'banking',
++      provider: 'powens',
++      powensConnectionId: 'demo-boursorama',
++      providerConnectionId: 'demo-boursorama',
++      providerInstitutionId: 'boursorama',
++      providerInstitutionName: 'Boursorama Banque',
++      status: 'error',
++      lastSyncStatus: 'KO',
++      lastSyncReasonCode: 'SYNC_FAILED',
++      lastSyncAttemptAt: new Date('2026-02-22T17:40:00.000Z'),
++      lastSyncAt: new Date('2026-02-22T17:40:00.000Z'),
++      lastSuccessAt: new Date('2026-02-22T15:18:00.000Z'),
++      lastFailedAt: new Date('2026-02-22T17:41:00.000Z'),
++      lastError: 'Powens timeout while fetching transactions',
++      syncMetadata: {
++        accountCount: 3,
++        importedTransactionCount: 0,
++        windowDays: 90,
++      },
++      createdAt: new Date('2026-01-10T09:10:00.000Z'),
++      updatedAt: new Date('2026-02-22T17:41:00.000Z'),
++    },
++    {
++      id: 4,
++      source: 'banking',
++      provider: 'powens',
++      powensConnectionId: 'demo-bnp',
++      providerConnectionId: 'demo-bnp',
++      providerInstitutionId: 'bnp',
++      providerInstitutionName: 'BNP Paribas',
++      status: 'reconnect_required',
++      lastSyncStatus: 'KO',
++      lastSyncReasonCode: 'RECONNECT_REQUIRED',
++      lastSyncAttemptAt: new Date('2026-02-22T14:12:00.000Z'),
++      lastSyncAt: new Date('2026-02-22T14:12:00.000Z'),
++      lastSuccessAt: new Date('2026-02-20T08:45:00.000Z'),
++      lastFailedAt: new Date('2026-02-22T14:13:00.000Z'),
++      lastError: 'Strong customer authentication expired',
++      syncMetadata: {
++        accountCount: 2,
++        importedTransactionCount: 0,
++        windowDays: 30,
++      },
++      createdAt: new Date('2026-01-08T07:20:00.000Z'),
++      updatedAt: new Date('2026-02-22T14:13:00.000Z'),
+     },
+   ]
+ }
+diff --git a/apps/web/src/features/demo-data.ts b/apps/web/src/features/demo-data.ts
+index 7042abf..7460d1c 100644
+--- a/apps/web/src/features/demo-data.ts
++++ b/apps/web/src/features/demo-data.ts
+@@ -594,9 +594,9 @@ export const getDemoPowensSyncRuns = (): PowensSyncRunsResponse => {
+       {
+         id: 'demo-sync-run-2',
+         requestId: 'req-demo-2',
+-        connectionId: 'demo-revolut',
+-        startedAt: '2026-02-22T18:44:00.000Z',
+-        endedAt: '2026-02-22T18:45:00.000Z',
++        connectionId: 'demo-boursorama',
++        startedAt: '2026-02-22T17:40:00.000Z',
++        endedAt: '2026-02-22T17:41:00.000Z',
+         result: 'error',
+         errorMessage: 'Powens timeout while fetching transactions',
+         errorFingerprint: 'powens timeout while fetching transactions',
+@@ -604,8 +604,18 @@ export const getDemoPowensSyncRuns = (): PowensSyncRunsResponse => {
+       {
+         id: 'demo-sync-run-3',
+         requestId: 'req-demo-3',
+-        connectionId: 'demo-fortuneo',
+-        startedAt: '2026-02-22T18:00:00.000Z',
++        connectionId: 'demo-bnp',
++        startedAt: '2026-02-22T14:12:00.000Z',
++        endedAt: '2026-02-22T14:13:00.000Z',
++        result: 'reconnect_required',
++        errorMessage: 'Strong customer authentication expired',
++        errorFingerprint: 'strong customer authentication expired',
++      },
++      {
++        id: 'demo-sync-run-4',
++        requestId: 'req-demo-4',
++        connectionId: 'demo-revolut',
++        startedAt: '2026-02-22T18:47:00.000Z',
+         endedAt: null,
+         result: 'running',
+       },
+@@ -717,12 +727,12 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
+         providerInstitutionId: 'revolut',
+         providerInstitutionName: 'Revolut',
+         status: 'syncing',
+-        lastSyncStatus: 'OK',
+-        lastSyncReasonCode: 'SUCCESS',
+-        lastSyncAttemptAt: '2026-02-22T18:45:00.000Z',
++        lastSyncStatus: 'KO',
++        lastSyncReasonCode: 'SYNC_FAILED',
++        lastSyncAttemptAt: '2026-02-22T18:47:00.000Z',
+         lastSyncAt: '2026-02-22T18:45:00.000Z',
+         lastSuccessAt: '2026-02-22T17:59:00.000Z',
+-        lastFailedAt: '2026-02-21T16:14:00.000Z',
++        lastFailedAt: '2026-02-22T18:46:30.000Z',
+         lastError: null,
          syncMetadata: {
-           transactionWindow: {
--            fromDate:
--              fullResync === true
--                ? formatDate(subtractDays(syncStart, FULL_RESYNC_WINDOW_DAYS))
--                : previousLastSyncAt
--                  ? formatDate(subtractDays(previousLastSyncAt, 3))
--                  : formatDate(subtractDays(syncStart, DEFAULT_SYNC_WINDOW_DAYS)),
--            maxDate: formatDate(syncStart),
-+            fromDate: failedSyncWindow.fromDate,
-+            maxDate: failedSyncWindow.maxDate,
-           },
--          syncMode: fullResync === true ? 'full' : 'incremental',
-+          syncMode: failedSyncWindow.syncMode,
-+          fallbackReason: failedSyncWindow.reason,
-           lastRunResult: failureStatus,
-           lastRunFinishedAt: failedAt.toISOString(),
+           accountCount: 1,
+@@ -730,7 +740,55 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
+           windowDays: 30,
          },
-@@ -1071,6 +1118,9 @@ const syncConnection = async (params: {
-       provider: connectionProvider,
-       connectionId,
-       requestId: requestId ?? 'n/a',
-+      syncId: runId,
-+      syncMode: failedSyncWindow.syncMode,
-+      fallbackReason: failedSyncWindow.reason,
-       errMessage: errorMessage,
-       failureStatus,
-     })
-diff --git a/apps/worker/src/sync-window.test.ts b/apps/worker/src/sync-window.test.ts
-new file mode 100644
-index 0000000..aba6945
---- /dev/null
-+++ b/apps/worker/src/sync-window.test.ts
-@@ -0,0 +1,76 @@
-+import { describe, expect, it } from 'bun:test'
-+import { parseDisabledProviders, resolveSyncWindow } from './sync-window'
-+
-+describe('resolveSyncWindow', () => {
-+  const baseInput = {
-+    syncStart: new Date('2026-04-05T10:00:00.000Z'),
-+    lastSuccessAt: null as Date | null,
-+    fullResyncRequested: false,
-+    forceFullSync: false,
-+    incrementalLookbackDays: 5,
-+    defaultSyncWindowDays: 90,
-+    fullResyncWindowDays: 3650,
-+  }
-+
-+  it('uses forced full sync when kill-switch is enabled', () => {
-+    const result = resolveSyncWindow({
-+      ...baseInput,
-+      forceFullSync: true,
-+      fullResyncRequested: false,
-+      lastSuccessAt: new Date('2026-04-03T10:00:00.000Z'),
-+    })
-+
-+    expect(result).toEqual({
-+      fromDate: '2016-04-07',
-+      maxDate: '2026-04-05',
-+      reason: 'force_full_sync_enabled',
-+      syncMode: 'full',
-+    })
-+  })
-+
-+  it('uses manual full resync when requested', () => {
-+    const result = resolveSyncWindow({
-+      ...baseInput,
-+      fullResyncRequested: true,
-+    })
-+
-+    expect(result.reason).toBe('manual_full_resync_requested')
-+    expect(result.syncMode).toBe('full')
-+  })
-+
-+  it('uses last_success_at watermark with conservative lookback', () => {
-+    const result = resolveSyncWindow({
-+      ...baseInput,
-+      lastSuccessAt: new Date('2026-04-04T10:00:00.000Z'),
-+      incrementalLookbackDays: 7,
-+    })
-+
-+    expect(result).toEqual({
-+      fromDate: '2026-03-28',
-+      maxDate: '2026-04-05',
-+      reason: 'incremental_last_success_lookback',
-+      syncMode: 'incremental',
-+    })
-+  })
-+
-+  it('falls back to initial backfill when no successful sync is recorded', () => {
-+    const result = resolveSyncWindow(baseInput)
-+
-+    expect(result).toEqual({
-+      fromDate: '2026-01-05',
-+      maxDate: '2026-04-05',
-+      reason: 'incremental_initial_backfill',
-+      syncMode: 'incremental',
-+    })
-+  })
-+})
-+
-+describe('parseDisabledProviders', () => {
-+  it('normalizes providers to a lower-cased set', () => {
-+    const disabledProviders = parseDisabledProviders([' Powens ', 'bridge', ''])
-+
-+    expect(disabledProviders.has('powens')).toBe(true)
-+    expect(disabledProviders.has('bridge')).toBe(true)
-+    expect(disabledProviders.size).toBe(2)
-+  })
-+})
-diff --git a/apps/worker/src/sync-window.ts b/apps/worker/src/sync-window.ts
-new file mode 100644
-index 0000000..4c1291a
---- /dev/null
-+++ b/apps/worker/src/sync-window.ts
-@@ -0,0 +1,64 @@
-+type SyncMode = 'full' | 'incremental'
-+
-+export type SyncWindowReason =
-+  | 'force_full_sync_enabled'
-+  | 'manual_full_resync_requested'
-+  | 'incremental_last_success_lookback'
-+  | 'incremental_initial_backfill'
-+
-+export const formatDate = (date: Date) => date.toISOString().slice(0, 10)
-+
-+const subtractDays = (date: Date, days: number) => {
-+  const clone = new Date(date)
-+  clone.setUTCDate(clone.getUTCDate() - days)
-+  return clone
-+}
-+
-+export const resolveSyncWindow = (input: {
-+  syncStart: Date
-+  lastSuccessAt: Date | null
-+  fullResyncRequested: boolean
-+  forceFullSync: boolean
-+  incrementalLookbackDays: number
-+  defaultSyncWindowDays: number
-+  fullResyncWindowDays: number
-+}) => {
-+  const maxDate = formatDate(input.syncStart)
-+
-+  if (input.forceFullSync) {
-+    return {
-+      fromDate: formatDate(subtractDays(input.syncStart, input.fullResyncWindowDays)),
-+      maxDate,
-+      syncMode: 'full' as SyncMode,
-+      reason: 'force_full_sync_enabled' as SyncWindowReason,
-+    }
-+  }
-+
-+  if (input.fullResyncRequested) {
-+    return {
-+      fromDate: formatDate(subtractDays(input.syncStart, input.fullResyncWindowDays)),
-+      maxDate,
-+      syncMode: 'full' as SyncMode,
-+      reason: 'manual_full_resync_requested' as SyncWindowReason,
-+    }
-+  }
-+
-+  if (input.lastSuccessAt) {
-+    return {
-+      fromDate: formatDate(subtractDays(input.lastSuccessAt, input.incrementalLookbackDays)),
-+      maxDate,
-+      syncMode: 'incremental' as SyncMode,
-+      reason: 'incremental_last_success_lookback' as SyncWindowReason,
-+    }
-+  }
-+
-+  return {
-+    fromDate: formatDate(subtractDays(input.syncStart, input.defaultSyncWindowDays)),
-+    maxDate,
-+    syncMode: 'incremental' as SyncMode,
-+    reason: 'incremental_initial_backfill' as SyncWindowReason,
-+  }
-+}
-+
-+export const parseDisabledProviders = (value: string[]) =>
-+  new Set(value.map(provider => provider.trim().toLowerCase()).filter(Boolean))
-diff --git a/docs/agentic/release-map.md b/docs/agentic/release-map.md
-index 76fe460..9b95e20 100644
---- a/docs/agentic/release-map.md
-+++ b/docs/agentic/release-map.md
-@@ -43,7 +43,7 @@ This repo already has a working automation model. Treat this map as an entry poi
- - Production Compose now includes an `ops-alerts` sidecar driven by [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs); keep its webhook env, shared worker heartbeat volume, and readonly volume mounts aligned when changing deploy topology.
- - Treat observability wiring as release-sensitive: `x-request-id` visibility, smoke coverage, healthcheck targets, and alert probe URLs must continue to match the public `web` entrypoint and the internal API/worker topology.
- - Runtime-safe web feature flags must stay aligned across build args, `docker-compose.prod*.yml`, Dokploy env, and `public-runtime-env.ts`; that now includes the dashboard health signal flags alongside the existing Powens cooldown UI flags.
--- Server-side Powens kill-switches that change worker/API write behavior, such as `SYNC_STATUS_PERSISTENCE_ENABLED`, must stay aligned across the API and worker runtime env in `docker-compose.prod.yml` and the Dokploy env snapshot even though they are not build args or `VITE_*` flags.
-+- Server-side Powens kill-switches that change worker/API write behavior, such as `SYNC_STATUS_PERSISTENCE_ENABLED`, `POWENS_FORCE_FULL_SYNC`, and `POWENS_SYNC_DISABLED_PROVIDERS`, must stay aligned across the API and worker runtime env in `docker-compose.prod.yml` and the Dokploy env snapshot even though they are not build args or `VITE_*` flags.
- 
- ## Smoke and Manual Checks
- 
-diff --git a/docs/deployment.md b/docs/deployment.md
-index a97f458..758b864 100644
---- a/docs/deployment.md
-+++ b/docs/deployment.md
-@@ -159,6 +159,9 @@ WORKER_HEALTHCHECK_MAX_AGE_MS=120000
- WORKER_AUTO_SYNC_ENABLED=false
- POWENS_SYNC_INTERVAL_MS=43200000
- POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000
-+POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS=7
-+POWENS_FORCE_FULL_SYNC=false
-+POWENS_SYNC_DISABLED_PROVIDERS=
- 
- ALERTS_ENABLED=true
- ALERTS_WEBHOOK_URL=<webhook-ops>
-@@ -201,6 +204,9 @@ Ne pas mettre dans Dokploy:
- - `APP_IMAGE_TAG` est la cle du systeme: chaque deploy doit pointer vers un tag immuable, par exemple `v1.2.3`
- - `AUTH_ADMIN_PASSWORD_HASH_B64` est la variable canonique
- - `SYNC_STATUS_PERSISTENCE_ENABLED=false` coupe la persistance du dernier resultat synthétique Powens (DB + compteurs derives) et force l'UI admin a revenir au fallback runtime/placeholder sans conserver un snapshot stale
-+- `POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS` regle la fenetre de rattrapage incremental (recommande: 3-7 jours) autour de `last_success_at` pour absorber les operations retardees
-+- `POWENS_FORCE_FULL_SYNC=true` force temporairement tous les jobs en mode full-sync (kill-switch rollback en cas de doute sur l'incremental)
-+- `POWENS_SYNC_DISABLED_PROVIDERS` desactive la sync pour les providers listes (CSV) sans couper toute l'integration
- - `DERIVED_RECOMPUTE_ENABLED=false` coupe le trigger admin de recompute derivee sans changer le snapshot courant
- - `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
- - `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure
-diff --git a/docs/powens-mvp.md b/docs/powens-mvp.md
-index 62a7807..466f142 100644
---- a/docs/powens-mvp.md
-+++ b/docs/powens-mvp.md
-@@ -19,6 +19,9 @@ Optional environment variables:
- - `POWENS_WEBVIEW_URL` (use full URL override for manual sandbox tests)
- - `POWENS_REDIRECT_URI_PROD`
- - `POWENS_SYNC_INTERVAL_MS` (default: `43200000`, 2 sync/day)
-+- `POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS` (default: `7`, conservative late-posted catch-up)
-+- `POWENS_FORCE_FULL_SYNC` (default: `false`, kill-switch to force full window)
-+- `POWENS_SYNC_DISABLED_PROVIDERS` (default: empty CSV, disables sync for listed providers)
- 
- Use `.env.example` as template.
- 
-@@ -52,6 +55,8 @@ Powens endpoints used by this MVP:
- - Dashboard button `Sync maintenant` triggers `POST /integrations/powens/sync`.
- - Callback page button `Lancer sync` triggers sync for the specific connection.
- - Worker scheduler enqueues `powens.syncAll` every `POWENS_SYNC_INTERVAL_MS`.
-+- Incremental sync uses `last_success_at` watermark + lookback window (`POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS`) for safer late-posted transactions.
-+- Connection-scoped manual full-resync and global `POWENS_FORCE_FULL_SYNC=true` both switch to the large replay window.
- 
- ## Idempotence model
- 
-diff --git a/packages/env/src/index.ts b/packages/env/src/index.ts
-index 6f30ccf..7053f9d 100644
---- a/packages/env/src/index.ts
-+++ b/packages/env/src/index.ts
-@@ -471,6 +471,22 @@ export const getWorkerEnv = () =>
-       .int()
-       .positive()
-       .default(12 * 60 * 60 * 1000),
-+    POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS: z.coerce.number().int().min(1).max(30).default(7),
-+    POWENS_FORCE_FULL_SYNC: z
-+      .string()
-+      .optional()
-+      .transform(value => toBooleanEnv(value)),
-+    POWENS_SYNC_DISABLED_PROVIDERS: z
-+      .string()
-+      .optional()
-+      .transform(value =>
-+        value
-+          ? value
-+              .split(',')
-+              .map(item => item.trim())
-+              .filter(Boolean)
-+          : []
-+      ),
-     WORKER_AUTO_SYNC_ENABLED: z
-       .string()
-       .optional()
+         createdAt: '2026-01-19T09:30:00.000Z',
+-        updatedAt: '2026-02-22T18:45:00.000Z',
++        updatedAt: '2026-02-22T18:47:00.000Z',
++      },
++      {
++        id: 3,
++        source: 'banking',
++        provider: 'powens',
++        powensConnectionId: 'demo-boursorama',
++        providerConnectionId: 'demo-boursorama',
++        providerInstitutionId: 'boursorama',
++        providerInstitutionName: 'Boursorama Banque',
++        status: 'error',
++        lastSyncStatus: 'KO',
++        lastSyncReasonCode: 'SYNC_FAILED',
++        lastSyncAttemptAt: '2026-02-22T17:40:00.000Z',
++        lastSyncAt: '2026-02-22T17:40:00.000Z',
++        lastSuccessAt: '2026-02-22T15:18:00.000Z',
++        lastFailedAt: '2026-02-22T17:41:00.000Z',
++        lastError: 'Powens timeout while fetching transactions',
++        syncMetadata: {
++          accountCount: 3,
++          importedTransactionCount: 0,
++          windowDays: 90,
++        },
++        createdAt: '2026-01-10T09:10:00.000Z',
++        updatedAt: '2026-02-22T17:41:00.000Z',
++      },
++      {
++        id: 4,
++        source: 'banking',
++        provider: 'powens',
++        powensConnectionId: 'demo-bnp',
++        providerConnectionId: 'demo-bnp',
++        providerInstitutionId: 'bnp',
++        providerInstitutionName: 'BNP Paribas',
++        status: 'reconnect_required',
++        lastSyncStatus: 'KO',
++        lastSyncReasonCode: 'RECONNECT_REQUIRED',
++        lastSyncAttemptAt: '2026-02-22T14:12:00.000Z',
++        lastSyncAt: '2026-02-22T14:12:00.000Z',
++        lastSuccessAt: '2026-02-20T08:45:00.000Z',
++        lastFailedAt: '2026-02-22T14:13:00.000Z',
++        lastError: 'Strong customer authentication expired',
++        syncMetadata: {
++          accountCount: 2,
++          importedTransactionCount: 0,
++          windowDays: 30,
++        },
++        createdAt: '2026-01-08T07:20:00.000Z',
++        updatedAt: '2026-02-22T14:13:00.000Z',
+       },
+     ],
+   }
