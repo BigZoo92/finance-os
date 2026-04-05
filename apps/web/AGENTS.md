@@ -8,6 +8,11 @@ Scope: `apps/web/**`
 - Keep auth SSR-consistent: prefetch `/auth/me`, avoid demo-to-admin flashes, and fall back to demo instead of crashing SSR when auth is unavailable.
 - Keep server state in Query options under `src/features/**`; do not mirror server state into local component state.
 - Keep dashboard goals in [src/features/goals/query-options.ts](src/features/goals/query-options.ts) and route admin writes through the feature API helpers so `x-request-id`, safe error normalization, and admin gating stay consistent.
+- Keep dashboard budget/objective/projection/alert conventions aligned with the existing card modules:
+  - category budgets stay in [src/components/dashboard/monthly-category-budgets-card.tsx](src/components/dashboard/monthly-category-budgets-card.tsx) with deterministic demo read-only behavior and admin-only edits.
+  - personal objectives stay in [src/components/dashboard/personal-financial-goals-card.tsx](src/components/dashboard/personal-financial-goals-card.tsx) with safe local persistence and explicit non-blocking alert copy.
+  - month-end projections stay in [src/components/dashboard/month-end-projection-card.tsx](src/components/dashboard/month-end-projection-card.tsx) as informative calculations that never trigger hidden writes or provider calls.
+  - alert copy must remain fail-soft and action-guiding (informative in demo, actionable in admin) without implying hard-blocking errors.
 - Keep dashboard derived recompute status and trigger behavior in the shared dashboard feature helpers so admin gating, retry-safe errors, and demo mocks stay consistent with the API contract.
 - Keep dashboard health signals in [src/components/dashboard/dashboard-health.ts](src/components/dashboard/dashboard-health.ts) and [src/components/dashboard/dashboard-health-panel.tsx](src/components/dashboard/dashboard-health-panel.tsx); demo must stay deterministic from the fixture matrix, admin must derive one global summary plus selective widget badges from loader/query data only.
 - Keep the Powens manual sync cooldown UI in [src/features/powens/manual-sync-cooldown.ts](src/features/powens/manual-sync-cooldown.ts) as client-only state behind runtime-safe `VITE_*` config; it must never become authoritative or weaken demo/admin gating.
