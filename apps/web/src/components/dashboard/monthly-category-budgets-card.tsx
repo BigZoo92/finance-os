@@ -13,6 +13,27 @@ type BudgetEntry = {
   monthlyBudget: number
 }
 
+const DEMO_MONTHLY_BUDGETS: Record<string, BudgetEntry[]> = {
+  '2025-12': [
+    { category: 'Courses', monthlyBudget: 460 },
+    { category: 'Transport', monthlyBudget: 210 },
+    { category: 'Abonnements', monthlyBudget: 45 },
+    { category: 'Restaurants', monthlyBudget: 150 },
+  ],
+  '2026-01': [
+    { category: 'Courses', monthlyBudget: 480 },
+    { category: 'Transport', monthlyBudget: 220 },
+    { category: 'Abonnements', monthlyBudget: 48 },
+    { category: 'Restaurants', monthlyBudget: 160 },
+  ],
+  '2026-02': [
+    { category: 'Courses', monthlyBudget: 500 },
+    { category: 'Transport', monthlyBudget: 230 },
+    { category: 'Abonnements', monthlyBudget: 50 },
+    { category: 'Restaurants', monthlyBudget: 170 },
+  ],
+}
+
 const STORAGE_KEY = 'finance_os.admin.monthly_category_budgets.v1'
 
 type BudgetStorageState = {
@@ -93,6 +114,31 @@ const writeBudgets = (entries: BudgetEntry[]): string | null => {
   }
 }
 
+const getDemoBudgetsForVisibleMonths = (transactions: DashboardTransactionsResponse['items']): BudgetEntry[] => {
+  const months = new Set(
+    transactions
+      .map(transaction => transaction.bookingDate.slice(0, 7))
+      .filter(month => /^\d{4}-\d{2}$/.test(month))
+  )
+
+  if (!months.size) {
+    return DEMO_MONTHLY_BUDGETS['2026-02'] ?? []
+  }
+
+  const aggregated = new Map<string, number>()
+
+  for (const month of months) {
+    const source = DEMO_MONTHLY_BUDGETS[month] ?? DEMO_MONTHLY_BUDGETS['2026-02'] ?? []
+    for (const entry of source) {
+      aggregated.set(entry.category, (aggregated.get(entry.category) ?? 0) + entry.monthlyBudget)
+    }
+  }
+
+  return [...aggregated.entries()]
+    .map(([category, monthlyBudget]) => ({ category, monthlyBudget }))
+    .sort((a, b) => a.category.localeCompare(b.category, 'fr'))
+}
+
 export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: MonthlyCategoryBudgetsCardProps) {
   const [storageState] = useState<BudgetStorageState>(() => readBudgets())
   const [budgets, setBudgets] = useState<BudgetEntry[]>(() => storageState.entries)
@@ -110,9 +156,17 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
       }, new Map())
   }, [transactions])
 
+  const visibleBudgets = useMemo(() => {
+    if (isDemo) {
+      return getDemoBudgetsForVisibleMonths(transactions)
+    }
+
+    return budgets
+  }, [budgets, isDemo, transactions])
+
   const budgetRows = useMemo(
     () =>
-      budgets
+      visibleBudgets
         .map(entry => {
           const spent = spentByCategory.get(entry.category) ?? 0
           const delta = entry.monthlyBudget - spent
@@ -123,7 +177,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
           }
         })
         .sort((a, b) => a.delta - b.delta),
-    [budgets, spentByCategory]
+    [visibleBudgets, spentByCategory]
   )
 
 

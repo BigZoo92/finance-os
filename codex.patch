@@ -1,174 +1,238 @@
-diff --git a/.github/agent-stubs/improve-635.md b/.github/agent-stubs/improve-635.md
+diff --git a/.github/agent-stubs/improve-637.md b/.github/agent-stubs/improve-637.md
 deleted file mode 100644
-index 7d48a2e..0000000
---- a/.github/agent-stubs/improve-635.md
+index 05d9436..0000000
+--- a/.github/agent-stubs/improve-637.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #635
+-# Autopilot stub for improve #637
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/635
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/637
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
 diff --git a/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx b/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
-index 7a11a04..34d9d70 100644
+index 34d9d70..284a8e1 100644
 --- a/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
 +++ b/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
-@@ -15,6 +15,11 @@ type BudgetEntry = {
+@@ -13,6 +13,27 @@ type BudgetEntry = {
+   monthlyBudget: number
+ }
  
- const STORAGE_KEY = 'finance_os.admin.monthly_category_budgets.v1'
- 
-+type BudgetStorageState = {
-+  entries: BudgetEntry[]
-+  warning: string | null
++const DEMO_MONTHLY_BUDGETS: Record<string, BudgetEntry[]> = {
++  '2025-12': [
++    { category: 'Courses', monthlyBudget: 460 },
++    { category: 'Transport', monthlyBudget: 210 },
++    { category: 'Abonnements', monthlyBudget: 45 },
++    { category: 'Restaurants', monthlyBudget: 150 },
++  ],
++  '2026-01': [
++    { category: 'Courses', monthlyBudget: 480 },
++    { category: 'Transport', monthlyBudget: 220 },
++    { category: 'Abonnements', monthlyBudget: 48 },
++    { category: 'Restaurants', monthlyBudget: 160 },
++  ],
++  '2026-02': [
++    { category: 'Courses', monthlyBudget: 500 },
++    { category: 'Transport', monthlyBudget: 230 },
++    { category: 'Abonnements', monthlyBudget: 50 },
++    { category: 'Restaurants', monthlyBudget: 170 },
++  ],
 +}
 +
- const formatMoney = (value: number) =>
-   new Intl.NumberFormat('fr-FR', {
-     style: 'currency',
-@@ -22,51 +27,76 @@ const formatMoney = (value: number) =>
-     maximumFractionDigits: 0,
-   }).format(value)
+ const STORAGE_KEY = 'finance_os.admin.monthly_category_budgets.v1'
  
--const readBudgets = (): BudgetEntry[] => {
-+const readBudgets = (): BudgetStorageState => {
-   if (typeof window === 'undefined') {
--    return []
-+    return { entries: [], warning: null }
+ type BudgetStorageState = {
+@@ -93,6 +114,31 @@ const writeBudgets = (entries: BudgetEntry[]): string | null => {
+   }
+ }
+ 
++const getDemoBudgetsForVisibleMonths = (transactions: DashboardTransactionsResponse['items']): BudgetEntry[] => {
++  const months = new Set(
++    transactions
++      .map(transaction => transaction.bookingDate.slice(0, 7))
++      .filter(month => /^\d{4}-\d{2}$/.test(month))
++  )
++
++  if (!months.size) {
++    return DEMO_MONTHLY_BUDGETS['2026-02'] ?? []
 +  }
 +
-+  let raw: string | null = null
-+  try {
-+    raw = window.localStorage.getItem(STORAGE_KEY)
-+  } catch {
-+    return {
-+      entries: [],
-+      warning: 'Le stockage local est indisponible. Les budgets restent utilisables pour cette session.',
++  const aggregated = new Map<string, number>()
++
++  for (const month of months) {
++    const source = DEMO_MONTHLY_BUDGETS[month] ?? DEMO_MONTHLY_BUDGETS['2026-02'] ?? []
++    for (const entry of source) {
++      aggregated.set(entry.category, (aggregated.get(entry.category) ?? 0) + entry.monthlyBudget)
 +    }
-   }
- 
--  const raw = window.localStorage.getItem(STORAGE_KEY)
-   if (!raw) {
--    return []
-+    return { entries: [], warning: null }
-   }
- 
-   try {
-     const parsed = JSON.parse(raw) as unknown
- 
-     if (!Array.isArray(parsed)) {
--      return []
-+      return {
-+        entries: [],
-+        warning: 'Les budgets sauvegardes etaient invalides et ont ete ignores.',
-+      }
-     }
- 
--    return parsed
--      .filter(item =>
--        typeof item === 'object' &&
--        item !== null &&
--        typeof item.category === 'string' &&
--        typeof item.monthlyBudget === 'number' &&
--        Number.isFinite(item.monthlyBudget) &&
--        item.category.trim().length > 0
--      )
--      .map(item => ({
--        category: item.category.trim(),
--        monthlyBudget: Math.max(0, Math.round(item.monthlyBudget)),
--      }))
-+    return {
-+      entries: parsed
-+        .filter(item =>
-+          typeof item === 'object' &&
-+          item !== null &&
-+          typeof item.category === 'string' &&
-+          typeof item.monthlyBudget === 'number' &&
-+          Number.isFinite(item.monthlyBudget) &&
-+          item.category.trim().length > 0
-+        )
-+        .map(item => ({
-+          category: item.category.trim(),
-+          monthlyBudget: Math.max(0, Math.round(item.monthlyBudget)),
-+        })),
-+      warning: null,
-+    }
-   } catch {
--    return []
-+    return {
-+      entries: [],
-+      warning: 'Impossible de relire les budgets sauvegardes. La carte reste utilisable.',
-+    }
-   }
- }
- 
--const writeBudgets = (entries: BudgetEntry[]) => {
-+const writeBudgets = (entries: BudgetEntry[]): string | null => {
-   if (typeof window === 'undefined') {
--    return
-+    return null
-   }
- 
--  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
-+  try {
-+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
-+    return null
-+  } catch {
-+    return 'Impossible de sauvegarder localement. Les changements restent visibles sans etre persistes.'
 +  }
- }
- 
++
++  return [...aggregated.entries()]
++    .map(([category, monthlyBudget]) => ({ category, monthlyBudget }))
++    .sort((a, b) => a.category.localeCompare(b.category, 'fr'))
++}
++
  export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: MonthlyCategoryBudgetsCardProps) {
--  const [budgets, setBudgets] = useState<BudgetEntry[]>(() => readBudgets())
-+  const [storageState] = useState<BudgetStorageState>(() => readBudgets())
-+  const [budgets, setBudgets] = useState<BudgetEntry[]>(() => storageState.entries)
-+  const [storageWarning, setStorageWarning] = useState<string | null>(() => storageState.warning)
-   const [categoryInput, setCategoryInput] = useState('')
-   const [budgetInput, setBudgetInput] = useState('')
+   const [storageState] = useState<BudgetStorageState>(() => readBudgets())
+   const [budgets, setBudgets] = useState<BudgetEntry[]>(() => storageState.entries)
+@@ -110,9 +156,17 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+       }, new Map())
+   }, [transactions])
  
-@@ -127,7 +157,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
-     ].sort((a, b) => a.category.localeCompare(b.category, 'fr'))
- 
-     setBudgets(next)
--    writeBudgets(next)
-+    setStorageWarning(writeBudgets(next))
-     setCategoryInput('')
-     setBudgetInput('')
-   }
-@@ -139,7 +169,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
- 
-     const next = budgets.filter(entry => entry.category !== category)
-     setBudgets(next)
--    writeBudgets(next)
-+    setStorageWarning(writeBudgets(next))
-   }
- 
-   return (
-@@ -160,6 +190,12 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
-           </p>
-         ) : null}
- 
-+        {storageWarning ? (
-+          <p className="rounded-md border border-amber-500/40 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-+            {storageWarning}
-+          </p>
-+        ) : null}
++  const visibleBudgets = useMemo(() => {
++    if (isDemo) {
++      return getDemoBudgetsForVisibleMonths(transactions)
++    }
 +
-         <div className="grid gap-2 md:grid-cols-[2fr_1fr_auto]">
-           <Input
-             value={categoryInput}
-diff --git a/apps/web/src/components/dashboard/personal-financial-goals-card.tsx b/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
-index 3031d88..b47196a 100644
---- a/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
-+++ b/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
-@@ -238,6 +238,9 @@ const ErrorBanner = ({
-     <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
-       <p className="font-semibold text-destructive">{error.title}</p>
-       <p className="mt-1 text-destructive/90">{error.message}</p>
-+      <p className="mt-2 text-xs text-muted-foreground">
-+        This issue is non-blocking: other dashboard modules remain available while you retry.
-+      </p>
-       {error.offline ? (
-         <p className="mt-2 text-xs text-destructive/90">
-           Offline or API unreachable. Retry once the connection is back.
++    return budgets
++  }, [budgets, isDemo, transactions])
++
+   const budgetRows = useMemo(
+     () =>
+-      budgets
++      visibleBudgets
+         .map(entry => {
+           const spent = spentByCategory.get(entry.category) ?? 0
+           const delta = entry.monthlyBudget - spent
+@@ -123,7 +177,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+           }
+         })
+         .sort((a, b) => a.delta - b.delta),
+-    [budgets, spentByCategory]
++    [visibleBudgets, spentByCategory]
+   )
+ 
+ 
+diff --git a/apps/web/src/features/demo-data.ts b/apps/web/src/features/demo-data.ts
+index d3fd15f..9edaeb9 100644
+--- a/apps/web/src/features/demo-data.ts
++++ b/apps/web/src/features/demo-data.ts
+@@ -512,6 +512,63 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
+     powensAccountId: 'demo-fortuneo-checking',
+     accountName: 'Fortuneo Courant',
+   },
++  {
++    id: 12002,
++    bookingDate: '2026-01-29',
++    amount: -148.35,
++    currency: 'EUR',
++    direction: 'expense',
++    label: 'Carrefour Drive',
++    category: 'Courses',
++    subcategory: 'Supermarche',
++    resolvedCategory: 'Courses',
++    resolutionSource: 'fallback',
++    resolutionRuleId: null,
++    resolutionTrace: [],
++    incomeType: null,
++    tags: ['essentiel'],
++    powensConnectionId: 'demo-fortuneo',
++    powensAccountId: 'demo-fortuneo-checking',
++    accountName: 'Fortuneo Courant',
++  },
++  {
++    id: 12001,
++    bookingDate: '2026-01-24',
++    amount: -58,
++    currency: 'EUR',
++    direction: 'expense',
++    label: 'SNCF',
++    category: 'Transport',
++    subcategory: 'Train',
++    resolvedCategory: 'Transport',
++    resolutionSource: 'fallback',
++    resolutionRuleId: null,
++    resolutionTrace: [],
++    incomeType: null,
++    tags: ['deplacement'],
++    powensConnectionId: 'demo-fortuneo',
++    powensAccountId: 'demo-fortuneo-checking',
++    accountName: 'Fortuneo Courant',
++  },
++  {
++    id: 12000,
++    bookingDate: '2025-12-27',
++    amount: -82.9,
++    currency: 'EUR',
++    direction: 'expense',
++    label: 'Ubereats',
++    category: 'Restaurants',
++    subcategory: 'Livraison',
++    resolvedCategory: 'Restaurants',
++    resolutionSource: 'fallback',
++    resolutionRuleId: null,
++    resolutionTrace: [],
++    incomeType: null,
++    tags: ['loisir'],
++    powensConnectionId: 'demo-revolut',
++    powensAccountId: 'demo-revolut-main',
++    accountName: 'Revolut Main',
++  },
+ ]
+ 
+ const CURSOR_PATTERN = /^(\d{4}-\d{2}-\d{2})\|(\d+)$/
+diff --git a/apps/web/src/features/goals/demo-data.ts b/apps/web/src/features/goals/demo-data.ts
+index eaa5c5c..5c49f4a 100644
+--- a/apps/web/src/features/goals/demo-data.ts
++++ b/apps/web/src/features/goals/demo-data.ts
+@@ -13,6 +13,21 @@ export const getDemoFinancialGoals = (): FinancialGoalsResponse => {
+         targetDate: '2026-09-30',
+         note: 'Six months of fixed expenses.',
+         progressSnapshots: [
++          {
++            recordedAt: '2025-10-31T18:00:00.000Z',
++            amount: 3200,
++            note: null,
++          },
++          {
++            recordedAt: '2025-11-30T18:00:00.000Z',
++            amount: 4100,
++            note: null,
++          },
++          {
++            recordedAt: '2025-12-31T18:00:00.000Z',
++            amount: 4900,
++            note: null,
++          },
+           {
+             recordedAt: '2026-01-31T18:00:00.000Z',
+             amount: 5600,
+@@ -43,6 +58,16 @@ export const getDemoFinancialGoals = (): FinancialGoalsResponse => {
+         targetDate: '2027-04-15',
+         note: 'Flights plus 10 nights and food buffer.',
+         progressSnapshots: [
++          {
++            recordedAt: '2025-12-01T08:30:00.000Z',
++            amount: 400,
++            note: null,
++          },
++          {
++            recordedAt: '2026-01-01T08:30:00.000Z',
++            amount: 760,
++            note: null,
++          },
+           {
+             recordedAt: '2026-02-01T08:30:00.000Z',
+             amount: 1200,
+@@ -73,6 +98,21 @@ export const getDemoFinancialGoals = (): FinancialGoalsResponse => {
+         targetDate: '2028-12-31',
+         note: 'Keep this separate from the emergency fund.',
+         progressSnapshots: [
++          {
++            recordedAt: '2025-09-30T18:15:00.000Z',
++            amount: 12800,
++            note: null,
++          },
++          {
++            recordedAt: '2025-10-31T18:15:00.000Z',
++            amount: 13300,
++            note: null,
++          },
++          {
++            recordedAt: '2025-11-30T18:15:00.000Z',
++            amount: 13750,
++            note: null,
++          },
+           {
+             recordedAt: '2025-12-31T18:15:00.000Z',
+             amount: 14000,

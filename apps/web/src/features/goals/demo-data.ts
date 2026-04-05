@@ -14,6 +14,21 @@ export const getDemoFinancialGoals = (): FinancialGoalsResponse => {
         note: 'Six months of fixed expenses.',
         progressSnapshots: [
           {
+            recordedAt: '2025-10-31T18:00:00.000Z',
+            amount: 3200,
+            note: null,
+          },
+          {
+            recordedAt: '2025-11-30T18:00:00.000Z',
+            amount: 4100,
+            note: null,
+          },
+          {
+            recordedAt: '2025-12-31T18:00:00.000Z',
+            amount: 4900,
+            note: null,
+          },
+          {
             recordedAt: '2026-01-31T18:00:00.000Z',
             amount: 5600,
             note: null,
@@ -44,6 +59,16 @@ export const getDemoFinancialGoals = (): FinancialGoalsResponse => {
         note: 'Flights plus 10 nights and food buffer.',
         progressSnapshots: [
           {
+            recordedAt: '2025-12-01T08:30:00.000Z',
+            amount: 400,
+            note: null,
+          },
+          {
+            recordedAt: '2026-01-01T08:30:00.000Z',
+            amount: 760,
+            note: null,
+          },
+          {
             recordedAt: '2026-02-01T08:30:00.000Z',
             amount: 1200,
             note: null,
@@ -73,6 +98,21 @@ export const getDemoFinancialGoals = (): FinancialGoalsResponse => {
         targetDate: '2028-12-31',
         note: 'Keep this separate from the emergency fund.',
         progressSnapshots: [
+          {
+            recordedAt: '2025-09-30T18:15:00.000Z',
+            amount: 12800,
+            note: null,
+          },
+          {
+            recordedAt: '2025-10-31T18:15:00.000Z',
+            amount: 13300,
+            note: null,
+          },
+          {
+            recordedAt: '2025-11-30T18:15:00.000Z',
+            amount: 13750,
+            note: null,
+          },
           {
             recordedAt: '2025-12-31T18:15:00.000Z',
             amount: 14000,
