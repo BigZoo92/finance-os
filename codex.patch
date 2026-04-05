@@ -1,41 +1,356 @@
-diff --git a/.github/agent-stubs/improve-597.md b/.github/agent-stubs/improve-597.md
+diff --git a/.github/agent-stubs/improve-605.md b/.github/agent-stubs/improve-605.md
 deleted file mode 100644
-index da9efac..0000000
---- a/.github/agent-stubs/improve-597.md
+index 2be70dd..0000000
+--- a/.github/agent-stubs/improve-605.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #597
+-# Autopilot stub for improve #605
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/597
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/605
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/api/src/routes/dashboard/domain/transaction-auto-categorization.test.ts b/apps/api/src/routes/dashboard/domain/transaction-auto-categorization.test.ts
-index 2e30a39..b266127 100644
---- a/apps/api/src/routes/dashboard/domain/transaction-auto-categorization.test.ts
-+++ b/apps/api/src/routes/dashboard/domain/transaction-auto-categorization.test.ts
-@@ -58,4 +58,23 @@ describe('applyTransactionAutoCategorization', () => {
-       autoCategorizationRuleId: null,
-     })
-   })
+diff --git a/apps/api/src/routes/dashboard/domain/detect-recurring-commitments.test.ts b/apps/api/src/routes/dashboard/domain/detect-recurring-commitments.test.ts
+new file mode 100644
+index 0000000..6ca50fd
+--- /dev/null
++++ b/apps/api/src/routes/dashboard/domain/detect-recurring-commitments.test.ts
+@@ -0,0 +1,135 @@
++import { describe, expect, it } from 'bun:test'
++import { detectRecurringCommitmentSuggestions } from './detect-recurring-commitments'
 +
-+  it('keeps unknown category unchanged when no rule matches', () => {
-+    const result = applyTransactionAutoCategorization({
-+      label: 'Paiement carte artisan local',
-+      amount: -18.45,
-+      powensAccountId: 'acc-4',
-+      accountName: 'Compte courant',
-+      category: 'Unknown',
-+      subcategory: null,
-+      incomeType: null,
++describe('detectRecurringCommitmentSuggestions', () => {
++  it('detects monthly subscriptions and recurring income candidates', () => {
++    const result = detectRecurringCommitmentSuggestions({
++      transactions: [
++        {
++          bookingDate: '2026-01-05',
++          amount: -15.99,
++          currency: 'EUR',
++          label: 'NETFLIX.COM JAN',
++        },
++        {
++          bookingDate: '2026-02-05',
++          amount: -16.2,
++          currency: 'EUR',
++          label: 'NETFLIX.COM FEB',
++        },
++        {
++          bookingDate: '2026-03-05',
++          amount: -16,
++          currency: 'EUR',
++          label: 'NETFLIX.COM MAR',
++        },
++        {
++          bookingDate: '2026-01-28',
++          amount: 2100,
++          currency: 'EUR',
++          label: 'ACME PAYROLL 01',
++        },
++        {
++          bookingDate: '2026-02-28',
++          amount: 2090,
++          currency: 'EUR',
++          label: 'ACME PAYROLL 02',
++        },
++        {
++          bookingDate: '2026-03-28',
++          amount: 2115,
++          currency: 'EUR',
++          label: 'ACME PAYROLL 03',
++        },
++      ],
++      manualValidations: [],
 +    })
 +
-+    expect(result).toEqual({
-+      category: 'Unknown',
-+      subcategory: null,
-+      incomeType: null,
-+      autoCategorizationRuleId: null,
-+    })
++    expect(result).toEqual([
++      {
++        kind: 'fixed_charge',
++        canonicalLabel: 'acme payroll',
++        currency: 'EUR',
++        estimatedPeriodicity: 'monthly',
++        validationStatus: 'suggested',
++        occurrenceCount: 3,
++        linkedTransactionDates: ['2026-01-28', '2026-02-28', '2026-03-28'],
++        lastKnownAmount: 2115,
++      },
++      {
++        kind: 'subscription',
++        canonicalLabel: 'netflix com',
++        currency: 'EUR',
++        estimatedPeriodicity: 'monthly',
++        validationStatus: 'suggested',
++        occurrenceCount: 3,
++        linkedTransactionDates: ['2026-01-05', '2026-02-05', '2026-03-05'],
++        lastKnownAmount: 16,
++      },
++    ])
 +  })
- })
++
++  it('applies manual validation and excludes rejected candidates', () => {
++    const result = detectRecurringCommitmentSuggestions({
++      transactions: [
++        {
++          bookingDate: '2026-01-05',
++          amount: -10,
++          currency: 'EUR',
++          label: 'SPOTIFY 01',
++        },
++        {
++          bookingDate: '2026-02-05',
++          amount: -10,
++          currency: 'EUR',
++          label: 'SPOTIFY 02',
++        },
++        {
++          bookingDate: '2026-03-05',
++          amount: -10,
++          currency: 'EUR',
++          label: 'SPOTIFY 03',
++        },
++        {
++          bookingDate: '2026-01-15',
++          amount: 120,
++          currency: 'EUR',
++          label: 'CAFETERIA ALLOWANCE 1',
++        },
++        {
++          bookingDate: '2026-02-15',
++          amount: 120,
++          currency: 'EUR',
++          label: 'CAFETERIA ALLOWANCE 2',
++        },
++      ],
++      manualValidations: [
++        {
++          kind: 'subscription',
++          canonicalLabel: 'spotify',
++          currency: 'EUR',
++          validationStatus: 'validated',
++        },
++        {
++          kind: 'fixed_charge',
++          canonicalLabel: 'cafeteria allowance',
++          currency: 'EUR',
++          validationStatus: 'rejected',
++        },
++      ],
++    })
++
++    expect(result).toEqual([
++      {
++        kind: 'subscription',
++        canonicalLabel: 'spotify',
++        currency: 'EUR',
++        estimatedPeriodicity: 'monthly',
++        validationStatus: 'validated',
++        occurrenceCount: 3,
++        linkedTransactionDates: ['2026-01-05', '2026-02-05', '2026-03-05'],
++        lastKnownAmount: 10,
++      },
++    ])
++  })
++})
+diff --git a/apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts b/apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts
+new file mode 100644
+index 0000000..d55a324
+--- /dev/null
++++ b/apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts
+@@ -0,0 +1,196 @@
++export type RecurringCommitmentKind = 'fixed_charge' | 'subscription'
++export type RecurringCommitmentValidationStatus = 'suggested' | 'validated' | 'rejected'
++export type RecurringCommitmentPeriodicity = 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'unknown'
++
++export interface RecurringDetectionTransactionInput {
++  bookingDate: string
++  amount: number
++  currency: string
++  label: string
++}
++
++export interface RecurringCommitmentManualValidationInput {
++  kind: RecurringCommitmentKind
++  canonicalLabel: string
++  currency: string
++  validationStatus: RecurringCommitmentValidationStatus
++}
++
++export interface RecurringCommitmentSuggestion {
++  kind: RecurringCommitmentKind
++  canonicalLabel: string
++  currency: string
++  estimatedPeriodicity: RecurringCommitmentPeriodicity
++  validationStatus: Exclude<RecurringCommitmentValidationStatus, 'rejected'>
++  occurrenceCount: number
++  linkedTransactionDates: string[]
++  lastKnownAmount: number
++}
++
++interface TransactionPoint {
++  bookingDate: string
++  amount: number
++}
++
++interface GroupedCommitment {
++  kind: RecurringCommitmentKind
++  canonicalLabel: string
++  currency: string
++  transactions: TransactionPoint[]
++}
++
++const normalizeLabel = (value: string): string =>
++  value
++    .toLowerCase()
++    .replace(/\d+/g, ' ')
++    .replace(/[^a-z\s]/g, ' ')
++    .replace(/\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/g, ' ')
++    .replace(/\s+/g, ' ')
++    .trim()
++
++const getPeriodicityFromAverageGap = (averageGapDays: number): RecurringCommitmentPeriodicity => {
++  if (averageGapDays >= 6 && averageGapDays <= 8) {
++    return 'weekly'
++  }
++  if (averageGapDays >= 25 && averageGapDays <= 35) {
++    return 'monthly'
++  }
++  if (averageGapDays >= 80 && averageGapDays <= 100) {
++    return 'quarterly'
++  }
++  if (averageGapDays >= 350 && averageGapDays <= 380) {
++    return 'yearly'
++  }
++
++  return 'unknown'
++}
++
++const toEpochDay = (date: string): number => {
++  const timestamp = Date.parse(date)
++  if (Number.isNaN(timestamp)) {
++    return Number.NaN
++  }
++
++  return Math.floor(timestamp / 86_400_000)
++}
++
++const hasStableAmount = (amounts: number[]): boolean => {
++  if (amounts.length < 2) {
++    return false
++  }
++
++  const absoluteValues = amounts.map(value => Math.abs(value))
++  const average = absoluteValues.reduce((total, value) => total + value, 0) / absoluteValues.length
++  if (average === 0) {
++    return false
++  }
++
++  return absoluteValues.every(value => Math.abs(value - average) / average <= 0.2)
++}
++
++const groupByRecurringSignal = (
++  transactions: RecurringDetectionTransactionInput[],
++): Map<string, GroupedCommitment> => {
++  const grouped = new Map<string, GroupedCommitment>()
++
++  for (const transaction of transactions) {
++    if (transaction.amount === 0) {
++      continue
++    }
++
++    const canonicalLabel = normalizeLabel(transaction.label)
++    if (canonicalLabel.length < 3) {
++      continue
++    }
++
++    const kind: RecurringCommitmentKind = transaction.amount > 0 ? 'fixed_charge' : 'subscription'
++    const key = `${kind}|${canonicalLabel}|${transaction.currency}`
++    const existing = grouped.get(key)
++
++    if (existing) {
++      existing.transactions.push({ bookingDate: transaction.bookingDate, amount: transaction.amount })
++      continue
++    }
++
++    grouped.set(key, {
++      kind,
++      canonicalLabel,
++      currency: transaction.currency,
++      transactions: [{ bookingDate: transaction.bookingDate, amount: transaction.amount }],
++    })
++  }
++
++  return grouped
++}
++
++export const detectRecurringCommitmentSuggestions = (input: {
++  transactions: RecurringDetectionTransactionInput[]
++  manualValidations: RecurringCommitmentManualValidationInput[]
++}): RecurringCommitmentSuggestion[] => {
++  const validationByKey = new Map(
++    input.manualValidations.map(item => [`${item.kind}|${item.canonicalLabel}|${item.currency}`, item.validationStatus]),
++  )
++
++  const grouped = groupByRecurringSignal(input.transactions)
++  const suggestions: RecurringCommitmentSuggestion[] = []
++
++  for (const [, group] of grouped) {
++    if (group.transactions.length < 2) {
++      continue
++    }
++
++    const sortedTransactions = [...group.transactions].sort((left, right) => left.bookingDate.localeCompare(right.bookingDate))
++    const dayDiffs: number[] = []
++
++    for (let index = 1; index < sortedTransactions.length; index += 1) {
++      const previousDay = toEpochDay(sortedTransactions[index - 1]!.bookingDate)
++      const currentDay = toEpochDay(sortedTransactions[index]!.bookingDate)
++      const diff = currentDay - previousDay
++
++      if (Number.isFinite(diff) && diff > 0) {
++        dayDiffs.push(diff)
++      }
++    }
++
++    if (dayDiffs.length === 0) {
++      continue
++    }
++
++    const periodicity = getPeriodicityFromAverageGap(dayDiffs.reduce((total, value) => total + value, 0) / dayDiffs.length)
++
++    if (periodicity === 'unknown') {
++      continue
++    }
++
++    const amounts = sortedTransactions.map(item => item.amount)
++    if (!hasStableAmount(amounts)) {
++      continue
++    }
++
++    const validationKey = `${group.kind}|${group.canonicalLabel}|${group.currency}`
++    const manualValidation = validationByKey.get(validationKey)
++
++    if (manualValidation === 'rejected') {
++      continue
++    }
++
++    suggestions.push({
++      kind: group.kind,
++      canonicalLabel: group.canonicalLabel,
++      currency: group.currency,
++      estimatedPeriodicity: periodicity,
++      validationStatus: manualValidation === 'validated' ? 'validated' : 'suggested',
++      occurrenceCount: sortedTransactions.length,
++      linkedTransactionDates: sortedTransactions.map(item => item.bookingDate),
++      lastKnownAmount: Math.abs(sortedTransactions.at(-1)?.amount ?? 0),
++    })
++  }
++
++  return suggestions.sort((left, right) => {
++    if (left.validationStatus !== right.validationStatus) {
++      return left.validationStatus === 'validated' ? -1 : 1
++    }
++
++    return right.lastKnownAmount - left.lastKnownAmount
++  })
++}
