@@ -79,6 +79,7 @@ import {
 } from './dashboard-health'
 import { DashboardHealthPanel, DashboardWidgetHealthBadge } from './dashboard-health-panel'
 import { getLatestSyncStatus } from './latest-sync-status'
+import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
 import { WealthHistory } from './wealth-history'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -1991,6 +1992,13 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="lg:col-span-2">
             <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
+          </div>
+          <div className="lg:col-span-2">
+            <MonthlyCategoryBudgetsCard
+              isAdmin={isAdmin}
+              isDemo={isDemo}
+              transactions={transactions}
+            />
           </div>
 
           <Card>
