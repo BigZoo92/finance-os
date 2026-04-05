@@ -19,6 +19,7 @@ import { createDashboardRoutes } from './routes/dashboard/router'
 import { createDebugRoutes } from './routes/debug/router'
 import { registerSystemRoutes } from './routes/system'
 import { createPowensRoutes } from './routes/integrations/powens/router'
+import { createEnrichmentRoutes } from './routes/enrichment/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -60,7 +61,7 @@ const NO_STORE_EXACT_PATHS = new Set([
   '/version',
 ])
 
-const NO_STORE_PREFIX_PATHS = ['/auth/', '/integrations/powens/', '/debug/']
+const NO_STORE_PREFIX_PATHS = ['/auth/', '/integrations/powens/', '/enrichment/', '/debug/']
 
 const normalizeCompatibilityPath = (pathname: string) => {
   if (pathname === '/api') {
@@ -257,6 +258,12 @@ const registerAppRoutes = (app: Elysia<any>) => {
         db,
         redisClient: redisClient.client,
         env,
+      })
+    )
+    .use(
+      createEnrichmentRoutes({
+        db,
+        bulkEnabled: env.ENRICHMENT_BULK_TRIAGE_ENABLED,
       })
     )
     .use(

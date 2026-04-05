@@ -127,6 +127,13 @@
       "when": 1775350800000,
       "tag": "0017_merchant_manual_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1775406055764,
+      "tag": "0018_enrichment_notes",
+      "breakpoints": true
     }
   ]
 }
