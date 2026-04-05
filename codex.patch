@@ -1,29 +1,174 @@
-diff --git a/.github/agent-stubs/improve-633.md b/.github/agent-stubs/improve-633.md
+diff --git a/.github/agent-stubs/improve-635.md b/.github/agent-stubs/improve-635.md
 deleted file mode 100644
-index fcc5333..0000000
---- a/.github/agent-stubs/improve-633.md
+index 7d48a2e..0000000
+--- a/.github/agent-stubs/improve-635.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #633
+-# Autopilot stub for improve #635
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/633
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/635
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/AGENTS.md b/apps/web/AGENTS.md
-index d7b30bf..3a8e633 100644
---- a/apps/web/AGENTS.md
-+++ b/apps/web/AGENTS.md
-@@ -8,6 +8,11 @@ Scope: `apps/web/**`
- - Keep auth SSR-consistent: prefetch `/auth/me`, avoid demo-to-admin flashes, and fall back to demo instead of crashing SSR when auth is unavailable.
- - Keep server state in Query options under `src/features/**`; do not mirror server state into local component state.
- - Keep dashboard goals in [src/features/goals/query-options.ts](src/features/goals/query-options.ts) and route admin writes through the feature API helpers so `x-request-id`, safe error normalization, and admin gating stay consistent.
-+- Keep dashboard budget/objective/projection/alert conventions aligned with the existing card modules:
-+  - category budgets stay in [src/components/dashboard/monthly-category-budgets-card.tsx](src/components/dashboard/monthly-category-budgets-card.tsx) with deterministic demo read-only behavior and admin-only edits.
-+  - personal objectives stay in [src/components/dashboard/personal-financial-goals-card.tsx](src/components/dashboard/personal-financial-goals-card.tsx) with safe local persistence and explicit non-blocking alert copy.
-+  - month-end projections stay in [src/components/dashboard/month-end-projection-card.tsx](src/components/dashboard/month-end-projection-card.tsx) as informative calculations that never trigger hidden writes or provider calls.
-+  - alert copy must remain fail-soft and action-guiding (informative in demo, actionable in admin) without implying hard-blocking errors.
- - Keep dashboard derived recompute status and trigger behavior in the shared dashboard feature helpers so admin gating, retry-safe errors, and demo mocks stay consistent with the API contract.
- - Keep dashboard health signals in [src/components/dashboard/dashboard-health.ts](src/components/dashboard/dashboard-health.ts) and [src/components/dashboard/dashboard-health-panel.tsx](src/components/dashboard/dashboard-health-panel.tsx); demo must stay deterministic from the fixture matrix, admin must derive one global summary plus selective widget badges from loader/query data only.
- - Keep the Powens manual sync cooldown UI in [src/features/powens/manual-sync-cooldown.ts](src/features/powens/manual-sync-cooldown.ts) as client-only state behind runtime-safe `VITE_*` config; it must never become authoritative or weaken demo/admin gating.
+diff --git a/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx b/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
+index 7a11a04..34d9d70 100644
+--- a/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
++++ b/apps/web/src/components/dashboard/monthly-category-budgets-card.tsx
+@@ -15,6 +15,11 @@ type BudgetEntry = {
+ 
+ const STORAGE_KEY = 'finance_os.admin.monthly_category_budgets.v1'
+ 
++type BudgetStorageState = {
++  entries: BudgetEntry[]
++  warning: string | null
++}
++
+ const formatMoney = (value: number) =>
+   new Intl.NumberFormat('fr-FR', {
+     style: 'currency',
+@@ -22,51 +27,76 @@ const formatMoney = (value: number) =>
+     maximumFractionDigits: 0,
+   }).format(value)
+ 
+-const readBudgets = (): BudgetEntry[] => {
++const readBudgets = (): BudgetStorageState => {
+   if (typeof window === 'undefined') {
+-    return []
++    return { entries: [], warning: null }
++  }
++
++  let raw: string | null = null
++  try {
++    raw = window.localStorage.getItem(STORAGE_KEY)
++  } catch {
++    return {
++      entries: [],
++      warning: 'Le stockage local est indisponible. Les budgets restent utilisables pour cette session.',
++    }
+   }
+ 
+-  const raw = window.localStorage.getItem(STORAGE_KEY)
+   if (!raw) {
+-    return []
++    return { entries: [], warning: null }
+   }
+ 
+   try {
+     const parsed = JSON.parse(raw) as unknown
+ 
+     if (!Array.isArray(parsed)) {
+-      return []
++      return {
++        entries: [],
++        warning: 'Les budgets sauvegardes etaient invalides et ont ete ignores.',
++      }
+     }
+ 
+-    return parsed
+-      .filter(item =>
+-        typeof item === 'object' &&
+-        item !== null &&
+-        typeof item.category === 'string' &&
+-        typeof item.monthlyBudget === 'number' &&
+-        Number.isFinite(item.monthlyBudget) &&
+-        item.category.trim().length > 0
+-      )
+-      .map(item => ({
+-        category: item.category.trim(),
+-        monthlyBudget: Math.max(0, Math.round(item.monthlyBudget)),
+-      }))
++    return {
++      entries: parsed
++        .filter(item =>
++          typeof item === 'object' &&
++          item !== null &&
++          typeof item.category === 'string' &&
++          typeof item.monthlyBudget === 'number' &&
++          Number.isFinite(item.monthlyBudget) &&
++          item.category.trim().length > 0
++        )
++        .map(item => ({
++          category: item.category.trim(),
++          monthlyBudget: Math.max(0, Math.round(item.monthlyBudget)),
++        })),
++      warning: null,
++    }
+   } catch {
+-    return []
++    return {
++      entries: [],
++      warning: 'Impossible de relire les budgets sauvegardes. La carte reste utilisable.',
++    }
+   }
+ }
+ 
+-const writeBudgets = (entries: BudgetEntry[]) => {
++const writeBudgets = (entries: BudgetEntry[]): string | null => {
+   if (typeof window === 'undefined') {
+-    return
++    return null
+   }
+ 
+-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
++  try {
++    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
++    return null
++  } catch {
++    return 'Impossible de sauvegarder localement. Les changements restent visibles sans etre persistes.'
++  }
+ }
+ 
+ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: MonthlyCategoryBudgetsCardProps) {
+-  const [budgets, setBudgets] = useState<BudgetEntry[]>(() => readBudgets())
++  const [storageState] = useState<BudgetStorageState>(() => readBudgets())
++  const [budgets, setBudgets] = useState<BudgetEntry[]>(() => storageState.entries)
++  const [storageWarning, setStorageWarning] = useState<string | null>(() => storageState.warning)
+   const [categoryInput, setCategoryInput] = useState('')
+   const [budgetInput, setBudgetInput] = useState('')
+ 
+@@ -127,7 +157,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+     ].sort((a, b) => a.category.localeCompare(b.category, 'fr'))
+ 
+     setBudgets(next)
+-    writeBudgets(next)
++    setStorageWarning(writeBudgets(next))
+     setCategoryInput('')
+     setBudgetInput('')
+   }
+@@ -139,7 +169,7 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+ 
+     const next = budgets.filter(entry => entry.category !== category)
+     setBudgets(next)
+-    writeBudgets(next)
++    setStorageWarning(writeBudgets(next))
+   }
+ 
+   return (
+@@ -160,6 +190,12 @@ export function MonthlyCategoryBudgetsCard({ isAdmin, isDemo, transactions }: Mo
+           </p>
+         ) : null}
+ 
++        {storageWarning ? (
++          <p className="rounded-md border border-amber-500/40 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
++            {storageWarning}
++          </p>
++        ) : null}
++
+         <div className="grid gap-2 md:grid-cols-[2fr_1fr_auto]">
+           <Input
+             value={categoryInput}
+diff --git a/apps/web/src/components/dashboard/personal-financial-goals-card.tsx b/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
+index 3031d88..b47196a 100644
+--- a/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
++++ b/apps/web/src/components/dashboard/personal-financial-goals-card.tsx
+@@ -238,6 +238,9 @@ const ErrorBanner = ({
+     <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+       <p className="font-semibold text-destructive">{error.title}</p>
+       <p className="mt-1 text-destructive/90">{error.message}</p>
++      <p className="mt-2 text-xs text-muted-foreground">
++        This issue is non-blocking: other dashboard modules remain available while you retry.
++      </p>
+       {error.offline ? (
+         <p className="mt-2 text-xs text-destructive/90">
+           Offline or API unreachable. Retry once the connection is back.
