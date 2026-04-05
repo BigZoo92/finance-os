@@ -184,7 +184,7 @@ describe('createGoalsRoute', () => {
         body: JSON.stringify({
           name: 'Apartment deposit',
           goalType: 'home',
-          currency: 'EUR',
+          currency: 'eur',
           targetAmount: 45000,
           currentAmount: 18500,
           targetDate: '2028-12-31',
@@ -205,6 +205,47 @@ describe('createGoalsRoute', () => {
       currentAmount: 18500,
       targetDate: '2028-12-31',
       note: 'Long horizon cash target.',
+    })
+  })
+
+  it('normalizes currency casing when updating a goal in admin mode', async () => {
+    let receivedCurrency = ''
+    const app = createGoalsTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        updateGoal: async (_goalId, input) => {
+          receivedCurrency = input.currency
+          return {
+            ...createGoalPayload(),
+            currency: input.currency,
+          }
+        },
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/goals/91', {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'Emergency runway',
+          goalType: 'emergency_fund',
+          currency: 'usd',
+          targetAmount: 12000,
+          currentAmount: 8400,
+          targetDate: '2026-09-30',
+          note: null,
+        }),
+      })
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(receivedCurrency).toBe('USD')
+    expect(payload).toMatchObject({
+      currency: 'USD',
     })
   })
 
