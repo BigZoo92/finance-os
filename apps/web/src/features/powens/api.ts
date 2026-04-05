@@ -9,6 +9,7 @@ import type {
   PowensStatusResponse,
   PowensSyncBacklogResponse,
   PowensSyncRunsResponse,
+  PowensDiagnosticsResponse,
 } from "./types";
 
 export const fetchPowensStatus = async () => {
@@ -130,5 +131,50 @@ export const fetchPowensAuditTrail = async () => {
     }
 
     return getDemoPowensAuditTrail();
+  }
+};
+
+export const fetchPowensDiagnostics = async () => {
+  try {
+    return await apiFetch<PowensDiagnosticsResponse>("/integrations/powens/diagnostics");
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (error.status === "network_error") {
+        return {
+          enabled: true,
+          mode: "admin",
+          provider: "powens",
+          outcome: "timeout",
+          issueType: "timeout",
+          guidance: "Network timeout while contacting provider. Retry is safe.",
+          retryable: true,
+          lastCheckedAt: new Date().toISOString(),
+        } satisfies PowensDiagnosticsResponse;
+      }
+
+      if (error.status === 401 || error.status === 403) {
+        return {
+          enabled: true,
+          mode: "admin",
+          provider: "powens",
+          outcome: "auth_error",
+          issueType: "auth",
+          guidance: "Provider credentials need admin attention. Reconnect the institution.",
+          retryable: false,
+          lastCheckedAt: new Date().toISOString(),
+        } satisfies PowensDiagnosticsResponse;
+      }
+    }
+
+    return {
+      enabled: true,
+      mode: "admin",
+      provider: "powens",
+      outcome: "provider_error",
+      issueType: "provider",
+      guidance: "Provider diagnostics failed unexpectedly. Dashboard remains usable.",
+      retryable: true,
+      lastCheckedAt: new Date().toISOString(),
+    } satisfies PowensDiagnosticsResponse;
   }
 };

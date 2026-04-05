@@ -9,6 +9,10 @@ import { createPowensSyncGuardRepository } from './repositories/powens-sync-guar
 import { createPowensClientService } from './services/create-powens-client-service'
 import { createPowensConnectUrlService } from './services/create-powens-connect-url-service'
 import { createPowensAdminAuditService } from './services/create-powens-admin-audit-service'
+import { createMockDiagnosticProvider } from './services/create-mock-diagnostic-provider'
+import { createPowensDiagnosticProvider } from './services/create-powens-diagnostic-provider'
+import { createDiagnosticsMetrics } from './services/create-diagnostics-metrics'
+import { createDiagnosticsService } from './domain/diagnostics'
 import type { PowensRouteRuntime, PowensRoutesDependencies } from './types'
 
 export const createPowensRouteRuntime = ({
@@ -21,6 +25,7 @@ export const createPowensRouteRuntime = ({
   const adminAudit = createPowensAdminAuditService(redisClient)
 
   const connection = createPowensConnectionRepository(db, redisClient)
+  const diagnosticsMetrics = createDiagnosticsMetrics(redisClient)
   const jobs = createPowensJobQueueRepository(redisClient)
   const syncGuard = createPowensSyncGuardRepository(redisClient, env.POWENS_MANUAL_SYNC_COOLDOWN_SECONDS)
 
@@ -49,11 +54,22 @@ export const createPowensRouteRuntime = ({
     getSyncBacklogCount: jobs.getSyncBacklogCount,
   })
 
+  const diagnostics = createDiagnosticsService({
+    diagnosticsEnabled: env.POWENS_DIAGNOSTICS_ENABLED,
+    mockProvider: createMockDiagnosticProvider(),
+    powensProvider: createPowensDiagnosticProvider({
+      listStatuses,
+      isSafeModeActive: connectUrl.isExternalIntegrationsSafeModeEnabled,
+    }),
+    incrementOutcome: diagnosticsMetrics.incrementOutcome,
+  })
+
   return {
     services: {
       client,
       connectUrl,
       adminAudit,
+      diagnostics,
     },
     repositories: {
       connection,

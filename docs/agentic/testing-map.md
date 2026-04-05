@@ -17,6 +17,8 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
   - [../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts)
   - [../../apps/api/src/routes/integrations/powens/routes/status.test.ts](../../apps/api/src/routes/integrations/powens/routes/status.test.ts)
+  - [../../apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts](../../apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts)
+  - [../../apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts](../../apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts)
 - Web dashboard presentation helpers:
   - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
   - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts) (covers incremental migration staging: `new-model-ready`, `mixed-fallback`, `legacy-fallback`, `contract-divergence`)
@@ -56,6 +58,8 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm worker:typecheck`
   - `pnpm web:typecheck`
   - `bun test apps/api/src/routes/integrations/powens/routes/status.test.ts`
+  - `bun test apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts`
+  - `bun test apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts`
   - `bun test apps/worker/src/sync-status-persistence.test.ts`
   - `pnpm --filter @finance-os/web exec vitest run src/features/powens/sync-status.test.ts src/components/dashboard/latest-sync-status.test.ts src/features/powens/api.test.ts`
   - `pnpm db:generate` when the schema changed

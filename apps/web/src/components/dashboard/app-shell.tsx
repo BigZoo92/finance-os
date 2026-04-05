@@ -48,6 +48,7 @@ import {
 } from '@/features/powens/manual-sync-cooldown'
 import {
   powensAuditTrailQueryOptionsWithMode,
+  powensDiagnosticsQueryOptionsWithMode,
   powensQueryKeys,
   powensStatusQueryOptionsWithMode,
   powensSyncBacklogQueryOptionsWithMode,
@@ -438,6 +439,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const syncRunsQuery = useQuery(powensSyncRunsQueryOptionsWithMode(authModeOptions))
   const syncBacklogQuery = useQuery(powensSyncBacklogQueryOptionsWithMode(authModeOptions))
   const auditTrailQuery = useQuery(powensAuditTrailQueryOptionsWithMode(authModeOptions))
+  const diagnosticsQuery = useQuery(powensDiagnosticsQueryOptionsWithMode(authModeOptions))
   const derivedRecomputeStatusQuery = useQuery(
     dashboardDerivedRecomputeStatusQueryOptionsWithMode(authModeOptions)
   )
@@ -496,6 +498,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         }),
         queryClient.invalidateQueries({
           queryKey: powensQueryKeys.auditTrail(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.diagnostics(),
         }),
         queryClient.invalidateQueries({
           queryKey: financialGoalsQueryKeys.list(),
@@ -569,6 +574,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         }),
         queryClient.invalidateQueries({
           queryKey: powensQueryKeys.auditTrail(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: powensQueryKeys.diagnostics(),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
@@ -688,6 +696,18 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     summary,
     ...(authMode ? { mode: authMode } : {}),
   })
+  const diagnostics = diagnosticsQuery.data
+  const diagnosticsOutcomeBadge: Record<
+    "ok" | "degraded" | "timeout" | "auth_error" | "provider_error",
+    { label: string; variant: "secondary" | "outline" | "destructive" }
+  > = {
+    ok: { label: "OK", variant: "secondary" },
+    degraded: { label: "Degraded", variant: "outline" },
+    timeout: { label: "Timeout", variant: "destructive" },
+    auth_error: { label: "Auth issue", variant: "destructive" },
+    provider_error: { label: "Provider error", variant: "destructive" },
+  }
+
   const statusConnections = statusQuery.data?.connections ?? []
   const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false
   const isIntegrationsSafeModeFallback = statusQuery.data?.fallback === 'safe_mode'
@@ -1455,6 +1475,57 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   ) : null}
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Diagnostic provider
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>
+                Runtime diagnostic snapshot with explicit degraded-but-usable guidance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {diagnosticsQuery.isPending ? <p className="text-muted-foreground">Chargement...</p> : null}
+              {diagnosticsQuery.isError ? (
+                <p className="text-destructive">{toErrorMessage(diagnosticsQuery.error)}</p>
+              ) : null}
+              {diagnostics ? (
+                <div className="space-y-2 rounded-md border border-border/80 bg-muted/20 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{diagnostics.provider === 'mock' ? 'MockDiagnosticProvider' : 'PowensDiagnosticProvider'}</p>
+                    <Badge variant={diagnosticsOutcomeBadge[diagnostics.outcome].variant}>
+                      {diagnosticsOutcomeBadge[diagnostics.outcome].label}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Last checked: {formatDateTime(diagnostics.lastCheckedAt)}</p>
+                  <p className="text-xs text-muted-foreground">{diagnostics.guidance}</p>
+                  {diagnostics.issueType === 'timeout' ? (
+                    <p className="text-xs text-amber-700 dark:text-amber-300">Timeout reseau detecte. Les donnees restent utilisables.</p>
+                  ) : null}
+                  {diagnostics.issueType === 'auth' ? (
+                    <p className="text-xs text-destructive">Probleme credentials/auth detecte. Reconnexion admin requise.</p>
+                  ) : null}
+                  {!diagnostics.enabled ? (
+                    <p className="text-xs text-muted-foreground">Diagnostics temporarily disabled. UI shell remains available.</p>
+                  ) : null}
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => diagnosticsQuery.refetch()}
+                      disabled={diagnosticsQuery.isFetching || diagnostics.retryable === false}
+                    >
+                      Retry diagnostics
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 

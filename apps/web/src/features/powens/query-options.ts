@@ -7,6 +7,7 @@ import {
 } from "../demo-data";
 import {
   fetchPowensAuditTrail,
+  fetchPowensDiagnostics,
   fetchPowensStatus,
   fetchPowensSyncBacklog,
   fetchPowensSyncRuns,
@@ -18,6 +19,7 @@ export const powensQueryKeys = {
   syncRuns: () => [...powensQueryKeys.all, "sync-runs"] as const,
   syncBacklog: () => [...powensQueryKeys.all, "sync-backlog"] as const,
   auditTrail: () => [...powensQueryKeys.all, "audit-trail"] as const,
+  diagnostics: () => [...powensQueryKeys.all, "diagnostics"] as const,
 };
 
 export const powensStatusQueryOptions = () =>
@@ -84,6 +86,31 @@ export const powensAuditTrailQueryOptionsWithMode = ({
       }
 
       return fetchPowensAuditTrail();
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === "demo" ? Number.POSITIVE_INFINITY : 10_000,
+  });
+
+
+export const powensDiagnosticsQueryOptionsWithMode = ({
+  mode,
+}: { mode?: AuthMode } = {}) =>
+  queryOptions({
+    queryKey: powensQueryKeys.diagnostics(),
+    queryFn: () => {
+      if (mode === "demo") {
+        return {
+          enabled: true,
+          mode: "demo",
+          provider: "mock",
+          outcome: "ok",
+          guidance: "Demo diagnostics are deterministic and fully local.",
+          retryable: true,
+          lastCheckedAt: "2026-04-04T08:00:00.000Z",
+        } as const;
+      }
+
+      return fetchPowensDiagnostics();
     },
     enabled: mode !== undefined,
     staleTime: mode === "demo" ? Number.POSITIVE_INFINITY : 10_000,

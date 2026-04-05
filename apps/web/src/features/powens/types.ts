@@ -78,3 +78,14 @@ export type PowensAuditTrailResponse = {
   events: PowensAdminAuditEvent[]
   requestId: string
 }
+
+export type PowensDiagnosticsResponse = {
+  enabled: boolean
+  mode: 'demo' | 'admin'
+  provider: 'mock' | 'powens'
+  outcome: 'ok' | 'degraded' | 'timeout' | 'auth_error' | 'provider_error'
+  guidance: string
+  issueType?: 'timeout' | 'auth' | 'provider'
+  retryable: boolean
+  lastCheckedAt: string
+}

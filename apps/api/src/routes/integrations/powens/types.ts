@@ -2,6 +2,7 @@ import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
 import type { PowensAccount, PowensTokenResponse, PowensTransaction } from '@finance-os/powens'
 import type { createRedisClient } from '@finance-os/redis'
+import type { DiagnosticsServiceResponse } from './domain/diagnostics'
 
 export type ApiDb = ReturnType<typeof createDbClient>['db']
 export type RedisClient = ReturnType<typeof createRedisClient>['client']
@@ -146,6 +147,9 @@ export interface PowensRouteRuntime {
     client: PowensClient
     connectUrl: PowensConnectUrlService
     adminAudit: PowensAdminAuditService
+    diagnostics: {
+      run: (context: { requestId: string; mode: 'demo' | 'admin' }) => Promise<DiagnosticsServiceResponse>
+    }
   }
   repositories: {
     connection: PowensConnectionRepository
