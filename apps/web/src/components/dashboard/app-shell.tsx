@@ -54,6 +54,7 @@ import {
   powensSyncBacklogQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
+import { getPowensInternalNotifications } from '@/features/powens/internal-notifications'
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 import { pushToast } from '@/lib/toast-store'
 import {
@@ -774,6 +775,10 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     .slice(0, 6)
   const syncBacklogCount = syncBacklogQuery.data?.syncBacklogCount ?? 0
   const latestSyncStatus = getLatestSyncStatus(syncRuns)
+  const powensInternalNotifications = getPowensInternalNotifications({
+    connections: statusConnections,
+    runs: syncRuns,
+  }).slice(0, 8)
   const auditEvents = auditTrailQuery.data?.events ?? []
   const latestCallback = statusQuery.data?.lastCallback ?? null
   const latestCallbackFreshness = formatRelativeDateTime(latestCallback?.receivedAt ?? null)
@@ -1390,6 +1395,50 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                   <p className="text-xs text-muted-foreground">
                     End: {formatDateTime(run.endedAt)}
                   </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Notifications internes
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>
+                Alertes prioritaires pour les connexions en erreur et reconnect_required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {statusQuery.isPending || syncRunsQuery.isPending ? (
+                <p className="text-muted-foreground">Chargement...</p>
+              ) : null}
+              {statusQuery.isError || syncRunsQuery.isError ? (
+                <p className="text-destructive">Impossible de calculer les notifications.</p>
+              ) : null}
+              {!statusQuery.isPending &&
+              !syncRunsQuery.isPending &&
+              !statusQuery.isError &&
+              !syncRunsQuery.isError &&
+              powensInternalNotifications.length === 0 ? (
+                <p className="text-muted-foreground">Aucune notification interne active.</p>
+              ) : null}
+              {powensInternalNotifications.map(notification => (
+                <div
+                  key={notification.id}
+                  className="rounded-md border border-border/80 bg-muted/20 p-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{notification.title}</p>
+                    <Badge variant={notification.level === 'critical' ? 'destructive' : 'outline'}>
+                      {notification.level === 'critical' ? 'critique' : 'warning'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Connexion: {notification.connectionId}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{notification.detail}</p>
                 </div>
               ))}
             </CardContent>
