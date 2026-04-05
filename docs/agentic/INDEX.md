@@ -10,6 +10,7 @@ Use these files as markdown-first entry points before re-exploring the repo.
 - [ui-quality-map.md](ui-quality-map.md): UI quality bar, key surfaces, and manual UI checks
 - [release-map.md](release-map.md): CI, autopilot, release, deploy, and smoke-test entrypoints
 - [code_review.md](code_review.md): practical review severity and checklist for this repo
+- [policy-verification-bundle.md](policy-verification-bundle.md): conventions, decision trees, and high-effort verification checklists for dual-path parity, observability, UI states, and rollback
 
 ## Local Guides
 

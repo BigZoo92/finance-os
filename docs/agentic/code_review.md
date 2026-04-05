@@ -16,6 +16,7 @@ Use this guide for reviews in this repo.
 - Required HTTP contracts still exist and still return the expected auth-safe shape
 - Verification matches the changed scope
 - Observability contracts still line up: `x-request-id` propagation, structured/safe logs, smoke checks, healthcheck targets, and alert probe wiring
+- For medium-high risk changes, require the decision-tree and checklist evidence from [policy-verification-bundle.md](policy-verification-bundle.md).
 
 ## UI-Specific Checks
 

@@ -39,6 +39,9 @@ Use this map to choose the smallest verification set that still matches the risk
 
 ## Scope-Based Verification
 
+- Medium-high risk policy/documentation bundle changes:
+  - `node .agents/skills/scripts/validate-agent-foundation.mjs`
+  - Apply the required checklist in [policy-verification-bundle.md](policy-verification-bundle.md), including dual-path negative tests and fallback assertions.
 - Docs, AGENTS, or skills only:
   - `node .agents/skills/scripts/validate-agent-foundation.mjs`
 - API auth or contract changes:
@@ -131,6 +134,7 @@ Use this map to choose the smallest verification set that still matches the risk
 ## Manual Checks Worth Doing
 
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
+- Demo/admin parity acceptance: verify the touched flow against [policy-verification-bundle.md](policy-verification-bundle.md) for explicit pass criteria on each path plus required negative tests.
 - Transactions freshness UX: latest transactions card shows "Last updated" plus distinct freshness badges (`fresh`, `stale-but-usable`, `syncing`, `sync-failed-with-safe-data`, `no-data-first-connect`) without blocking the table behind a spinner-only state.
 - Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
 - Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
@@ -140,3 +144,4 @@ Use this map to choose the smallest verification set that still matches the risk
 - Admin mode: the goals drawer can create, update, and archive goals, with recoverable error messaging and a visible request id when a write fails.
 - Powens callback: invalid auth/state fails safely, valid admin/state flow returns success and queues sync.
 - Release-sensitive changes: run the smoke scripts in [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs) and [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) with the right env; prod smoke now covers `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status`, plus optional demo/admin auth context via `SMOKE_AUTH_MODE`.
+- Rollback readiness: verify kill-switch behavior and emergency downgrade steps from [policy-verification-bundle.md](policy-verification-bundle.md) before marking medium-high risk work as release-ready.
