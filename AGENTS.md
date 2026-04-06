@@ -1,6 +1,6 @@
 # AGENTS.md - Finance-OS
 
-Last updated: 2026-04-04
+Last updated: 2026-04-06
 
 Use the nearest `AGENTS.md` before editing. Keep this root file small and durable; push local detail into nested `AGENTS.md`, `.agents/skills/`, and `docs/agentic/`.
 
@@ -22,6 +22,13 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - keep deploy-time probes, smoke checks, and ops alerting aligned with the live route topology
 - TypeScript optional-property invariant:
   - `exactOptionalPropertyTypes` is enabled; when an optional field is absent, omit the key entirely instead of passing `undefined`
+- Analytics conventions and source-of-truth requirements:
+  - analytics is descriptive telemetry, never an execution dependency; core product behavior must not rely on event delivery
+  - every metric, chart, or dashboard must declare one canonical source of truth (DB table/view, API contract, or deterministic demo fixture) and link to it in local docs when introduced
+  - source-of-truth graphs must show upstream provenance and downstream consumers so reviewers can trace transformations end to end
+  - assumptions (time windows, freshness SLOs, sampling, currency/FX handling, timezone boundaries, and null/default semantics) must be explicit and versioned with the feature
+  - when data is delayed, missing, or inconsistent, fail soft with clear fallback UI copy and degraded-but-usable defaults instead of blocking flows
+  - demo-mode analytics must remain deterministic and mock-backed; admin-only analytics may use live providers but must keep demo/admin split explicit
 - Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
 - `batch:` issues are first-class product briefs. Preserve their context, objectives, design principles, non-negotiable constraints, expected result, cost bias, decision rules, and explicit out-of-scope when spawning downstream work.
 - Autopilot workflow invariants:
