@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia'
 import { getAuth, getRequestMeta } from '../../../auth/context'
+import { getDashboardAnalyticsMockTransactions } from '../../../mocks/dashboardAnalytics.mock'
 import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
 import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
@@ -35,6 +36,7 @@ export const createAnalyticsRoute = () =>
         ? mapSummaryToAnalyticsContract({
             summary: getDashboardSummaryMock(range),
             source: 'demoAdapter',
+            transactions: getDashboardAnalyticsMockTransactions(range),
           })
         : await (async () => {
             const runtime = getDashboardRuntime(context)

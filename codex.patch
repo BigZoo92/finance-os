@@ -1,293 +1,164 @@
-diff --git a/.github/agent-stubs/improve-660.md b/.github/agent-stubs/improve-660.md
+diff --git a/.github/agent-stubs/improve-668.md b/.github/agent-stubs/improve-668.md
 deleted file mode 100644
-index cf97771..0000000
---- a/.github/agent-stubs/improve-660.md
+index 1777d2e..0000000
+--- a/.github/agent-stubs/improve-668.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #660
+-# Autopilot stub for improve #668
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/660
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/668
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/components/dashboard/wealth-history.tsx b/apps/web/src/components/dashboard/wealth-history.tsx
-index eb47222..af74d9e 100644
---- a/apps/web/src/components/dashboard/wealth-history.tsx
-+++ b/apps/web/src/components/dashboard/wealth-history.tsx
-@@ -1,4 +1,5 @@
--import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
-+import { useId, useMemo, useState } from 'react'
-+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
- import type { DashboardRange, DashboardSummaryResponse } from '@/features/dashboard-types'
- 
- const RANGE_LABEL: Record<DashboardRange, string> = {
-@@ -7,6 +8,14 @@ const RANGE_LABEL: Record<DashboardRange, string> = {
-   '90d': '90 jours',
- }
- 
-+type LocalPeriodFilter = 'all' | '14d' | '7d'
+diff --git a/apps/api/src/mocks/dashboardAnalytics.mock.ts b/apps/api/src/mocks/dashboardAnalytics.mock.ts
+new file mode 100644
+index 0000000..4f2cc4f
+--- /dev/null
++++ b/apps/api/src/mocks/dashboardAnalytics.mock.ts
+@@ -0,0 +1,103 @@
++import type { DashboardRange } from '../routes/dashboard/types'
 +
-+const PERIOD_OPTIONS: { value: LocalPeriodFilter; label: string; minimumSamples: number }[] = [
-+  { value: 'all', label: 'Periode complete', minimumSamples: 1 },
-+  { value: '14d', label: '14 jours', minimumSamples: 14 },
-+  { value: '7d', label: '7 jours', minimumSamples: 7 },
++interface DashboardAnalyticsMockTransaction {
++  bookingDate: string
++  amount: number
++  direction: 'income' | 'expense'
++  currency: string
++  label: string
++  merchant: string
++}
++
++const RANGE_TO_DAYS: Record<DashboardRange, number> = {
++  '7d': 7,
++  '30d': 30,
++  '90d': 90,
++}
++
++const DEMO_ANALYTICS_MOCK_TODAY = '2026-02-22'
++
++const DEMO_ANALYTICS_TRANSACTIONS: DashboardAnalyticsMockTransaction[] = [
++  {
++    bookingDate: '2025-12-28',
++    amount: -520,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Virement Loyer Dec',
++    merchant: 'SCI Logement',
++  },
++  {
++    bookingDate: '2026-01-26',
++    amount: -519.5,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Virement Loyer Jan',
++    merchant: 'SCI Logement',
++  },
++  {
++    bookingDate: '2026-02-21',
++    amount: -520,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Virement Loyer Feb',
++    merchant: 'SCI Logement',
++  },
++  {
++    bookingDate: '2026-01-27',
++    amount: -12.99,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Spotify Premium Jan',
++    merchant: 'Spotify',
++  },
++  {
++    bookingDate: '2026-02-22',
++    amount: -12.99,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Spotify Premium Feb',
++    merchant: 'Spotify',
++  },
++  {
++    bookingDate: '2026-02-18',
++    amount: -132.45,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Carrefour City',
++    merchant: 'Carrefour',
++  },
++  {
++    bookingDate: '2026-02-20',
++    amount: -38.2,
++    direction: 'expense',
++    currency: 'EUR',
++    label: 'Uber trip',
++    merchant: 'Uber',
++  },
++  {
++    bookingDate: '2026-02-21',
++    amount: 2840,
++    direction: 'income',
++    currency: 'EUR',
++    label: 'Salaire Fevrier',
++    merchant: 'Employeur',
++  },
 +]
 +
- const SVG_WIDTH = 320
- const SVG_HEIGHT = 112
- const SVG_PADDING = 12
-@@ -109,6 +118,111 @@ export const buildSparklinePath = (
-     .join(' ')
- }
- 
-+const getSnapshotCoordinates = (
-+  snapshots: DashboardSummaryResponse['dailyWealthSnapshots'],
-+  width = SVG_WIDTH,
-+  height = SVG_HEIGHT,
-+  padding = SVG_PADDING
-+) => {
-+  if (snapshots.length === 0) {
-+    return []
-+  }
++const toDateOnly = (value: Date) => value.toISOString().slice(0, 10)
 +
-+  const balances = snapshots.map(snapshot => snapshot.balance)
-+  const min = Math.min(...balances)
-+  const max = Math.max(...balances)
-+  const xStep = snapshots.length <= 1 ? 0 : (width - padding * 2) / (snapshots.length - 1)
-+  const yScale = max === min ? 0 : (height - padding * 2) / (max - min)
-+
-+  return snapshots.map((snapshot, index) => ({
-+    snapshot,
-+    x: padding + index * xStep,
-+    y: max === min ? height / 2 : height - padding - (snapshot.balance - min) * yScale,
-+  }))
++const getRangeStartDate = (range: DashboardRange) => {
++  const start = new Date(`${DEMO_ANALYTICS_MOCK_TODAY}T00:00:00.000Z`)
++  start.setUTCDate(start.getUTCDate() - (RANGE_TO_DAYS[range] - 1))
++  return toDateOnly(start)
 +}
 +
-+const getLocalPeriodSnapshots = (
-+  snapshots: DashboardSummaryResponse['dailyWealthSnapshots'],
-+  period: LocalPeriodFilter
-+) => {
-+  if (period === 'all') {
-+    return snapshots
-+  }
++export const getDashboardAnalyticsMockTransactions = (
++  range: DashboardRange,
++): DashboardAnalyticsMockTransaction[] => {
++  const start = getRangeStartDate(range)
 +
-+  const limit = period === '14d' ? 14 : 7
-+  return snapshots.slice(Math.max(0, snapshots.length - limit))
-+}
-+
-+const exportSvgToFile = ({
-+  svgId,
-+  filename,
-+}: {
-+  svgId: string
-+  filename: string
-+}) => {
-+  const node = document.getElementById(svgId)
-+
-+  if (!node) {
-+    return
-+  }
-+
-+  const serializer = new XMLSerializer()
-+  const content = serializer.serializeToString(node)
-+  const blob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' })
-+  const url = URL.createObjectURL(blob)
-+  const link = document.createElement('a')
-+
-+  link.href = url
-+  link.download = `${filename}.svg`
-+  link.click()
-+
-+  URL.revokeObjectURL(url)
-+}
-+
-+const printChartAsPdf = ({
-+  svgId,
-+  title,
-+}: {
-+  svgId: string
-+  title: string
-+}) => {
-+  const node = document.getElementById(svgId)
-+
-+  if (!node) {
-+    return
-+  }
-+
-+  const serializer = new XMLSerializer()
-+  const content = serializer.serializeToString(node)
-+  const popup = window.open('', '_blank', 'noopener,noreferrer,width=900,height=600')
-+
-+  if (!popup) {
-+    return
-+  }
-+
-+  popup.document.write(`
-+    <html>
-+      <head>
-+        <title>${title}</title>
-+        <style>
-+          body { font-family: system-ui, sans-serif; margin: 24px; }
-+          .meta { margin-bottom: 12px; color: #6b7280; font-size: 12px; }
-+          svg { width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px; }
-+        </style>
-+      </head>
-+      <body>
-+        <h1>${title}</h1>
-+        <div class="meta">Generated ${new Date().toLocaleString('fr-FR')}</div>
-+        ${content}
-+      </body>
-+    </html>
-+  `)
-+  popup.document.close()
-+  popup.focus()
-+  popup.print()
-+  popup.close()
-+}
-+
- export function WealthHistory({
-   range,
-   snapshots,
-@@ -118,8 +232,19 @@ export function WealthHistory({
-   snapshots: DashboardSummaryResponse['dailyWealthSnapshots']
-   demo: boolean
- }) {
--  const summary = summarizeWealthHistory(snapshots)
--  const path = buildSparklinePath(snapshots)
-+  const [period, setPeriod] = useState<LocalPeriodFilter>('all')
-+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
-+  const svgId = useId()
-+
-+  const filteredSnapshots = useMemo(
-+    () => getLocalPeriodSnapshots(snapshots, period),
-+    [period, snapshots]
++  return DEMO_ANALYTICS_TRANSACTIONS.filter(
++    transaction => transaction.bookingDate >= start && transaction.bookingDate <= DEMO_ANALYTICS_MOCK_TODAY,
 +  )
-+  const summary = summarizeWealthHistory(filteredSnapshots)
-+  const path = buildSparklinePath(filteredSnapshots)
-+  const points = getSnapshotCoordinates(filteredSnapshots)
-+  const focusedPoint =
-+    activeIndex === null ? null : points.at(Math.min(Math.max(activeIndex, 0), points.length - 1))
-   const changeTone =
-     summary.change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
++}
+diff --git a/apps/api/src/routes/dashboard/routes/analytics.test.ts b/apps/api/src/routes/dashboard/routes/analytics.test.ts
+index 908cbbd..4db909e 100644
+--- a/apps/api/src/routes/dashboard/routes/analytics.test.ts
++++ b/apps/api/src/routes/dashboard/routes/analytics.test.ts
+@@ -143,6 +143,18 @@ describe('createAnalyticsRoute', () => {
+     expect(response.status).toBe(200)
+     expect(payload.source).toBe('demoAdapter')
+     expect(getSummaryCalls).toBe(0)
++    expect(payload.recurringSpend.fixedCharges.totalMonthly).toBe(520)
++    expect(payload.recurringSpend.subscriptions.totalMonthly).toBe(12.99)
++    expect(payload.recurringSpend.fixedCharges.items[0]).toEqual({
++      label: 'virement loyer',
++      monthlyAmount: 520,
++      occurrences: 2,
++    })
++    expect(payload.recurringSpend.subscriptions.items[0]).toEqual({
++      label: 'spotify premium',
++      monthlyAmount: 12.99,
++      occurrences: 2,
++    })
+   })
  
-@@ -142,6 +267,51 @@ export function WealthHistory({
-           </p>
-         ) : (
-           <>
-+            <div className="flex flex-wrap items-center justify-between gap-2">
-+              <div className="flex flex-wrap items-center gap-1">
-+                {PERIOD_OPTIONS.map(option => {
-+                  const disabled = snapshots.length < option.minimumSamples
-+                  return (
-+                    <Button
-+                      key={option.value}
-+                      variant={period === option.value ? 'secondary' : 'ghost'}
-+                      size="sm"
-+                      disabled={disabled}
-+                      onClick={() => setPeriod(option.value)}
-+                    >
-+                      {option.label}
-+                    </Button>
-+                  )
-+                })}
-+              </div>
-+              <div className="flex flex-wrap items-center gap-1">
-+                <Button
-+                  size="sm"
-+                  variant="outline"
-+                  onClick={() =>
-+                    exportSvgToFile({
-+                      svgId,
-+                      filename: `wealth-history-${range}-${period}`,
-+                    })
-+                  }
-+                >
-+                  Export image
-+                </Button>
-+                <Button
-+                  size="sm"
-+                  variant="outline"
-+                  onClick={() =>
-+                    printChartAsPdf({
-+                      svgId,
-+                      title: `Patrimoine ${RANGE_LABEL[range]} (${period})`,
-+                    })
-+                  }
-+                >
-+                  Export PDF
-+                </Button>
-+              </div>
-+            </div>
-+
-             <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-               <div className="space-y-2">
-                 <div>
-@@ -149,18 +319,23 @@ export function WealthHistory({
-                     Cloture du jour
-                   </p>
-                   <p className="text-3xl font-semibold">
--                    {formatMoney(summary.latest?.balance ?? 0)}
-+                    {formatMoney((focusedPoint?.snapshot ?? summary.latest)?.balance ?? 0)}
-                   </p>
-                 </div>
-                 <div className="flex flex-wrap items-center gap-3 text-sm">
-                   <span className={changeTone}>
-                     {summary.change >= 0 ? '+' : ''}
--                    {formatMoney(summary.change)} sur {RANGE_LABEL[range].toLowerCase()}
-+                    {formatMoney(summary.change)} sur {PERIOD_OPTIONS.find(option => option.value === period)?.label.toLowerCase()}
-                   </span>
-                   <span className="text-muted-foreground">
-                     {formatDay(summary.start?.date ?? '')} → {formatDay(summary.latest?.date ?? '')}
-                   </span>
-                 </div>
-+                {focusedPoint ? (
-+                  <p className="text-xs text-muted-foreground">
-+                    Focus: {formatDay(focusedPoint.snapshot.date)} · {formatCompactMoney(focusedPoint.snapshot.balance)}
-+                  </p>
-+                ) : null}
-               </div>
- 
-               <div className="grid grid-cols-2 gap-3 text-sm">
-@@ -183,11 +358,13 @@ export function WealthHistory({
- 
-             <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
-               <svg
-+                id={svgId}
-                 viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-                 role="img"
-                 aria-label={`Evolution du patrimoine sur ${RANGE_LABEL[range].toLowerCase()}`}
-                 className="h-28 w-full"
-                 preserveAspectRatio="none"
-+                onMouseLeave={() => setActiveIndex(null)}
-               >
-                 <path
-                   d={path}
-@@ -197,6 +374,27 @@ export function WealthHistory({
-                   strokeLinecap="round"
-                   strokeLinejoin="round"
-                 />
-+                {points.map((point, index) => {
-+                  const active = index === activeIndex
-+                  return (
-+                    <circle
-+                      key={point.snapshot.date}
-+                      cx={point.x}
-+                      cy={point.y}
-+                      r={active ? 4 : 2.5}
-+                      fill={active ? 'var(--color-chart-2)' : 'hsl(var(--background))'}
-+                      stroke="var(--color-chart-2)"
-+                      strokeWidth={active ? 2 : 1.5}
-+                      onMouseEnter={() => setActiveIndex(index)}
-+                      onFocus={() => setActiveIndex(index)}
-+                      onBlur={() => setActiveIndex(null)}
-+                    >
-+                      <title>
-+                        {formatDay(point.snapshot.date)} · {formatCompactMoney(point.snapshot.balance)}
-+                      </title>
-+                    </circle>
-+                  )
-+                })}
-               </svg>
-               <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                 <span>{formatDay(summary.start?.date ?? '')}</span>
+   it('uses admin adapter in admin mode by default', async () => {
+diff --git a/apps/api/src/routes/dashboard/routes/analytics.ts b/apps/api/src/routes/dashboard/routes/analytics.ts
+index 7c9a1e9..7c1d3b6 100644
+--- a/apps/api/src/routes/dashboard/routes/analytics.ts
++++ b/apps/api/src/routes/dashboard/routes/analytics.ts
+@@ -1,5 +1,6 @@
+ import { Elysia } from 'elysia'
+ import { getAuth, getRequestMeta } from '../../../auth/context'
++import { getDashboardAnalyticsMockTransactions } from '../../../mocks/dashboardAnalytics.mock'
+ import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
+ import { logApiEvent } from '../../../observability/logger'
+ import { getDashboardRuntime } from '../context'
+@@ -35,6 +36,7 @@ export const createAnalyticsRoute = () =>
+         ? mapSummaryToAnalyticsContract({
+             summary: getDashboardSummaryMock(range),
+             source: 'demoAdapter',
++            transactions: getDashboardAnalyticsMockTransactions(range),
+           })
+         : await (async () => {
+             const runtime = getDashboardRuntime(context)
