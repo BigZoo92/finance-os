@@ -36,6 +36,8 @@ import type {
   DashboardTransactionsResponse,
 } from '@/features/dashboard-types'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
+import { postPushOptIn, postPushPreview, postPushSubscription } from '@/features/notifications/api'
+import { pushSettingsQueryOptionsWithMode, notificationsQueryKeys } from '@/features/notifications/query-options'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
   formatPowensManualSyncCountdown,
@@ -78,6 +80,7 @@ import {
   logDashboardHealthWidgetEvent,
 } from './dashboard-health'
 import { DashboardHealthPanel, DashboardWidgetHealthBadge } from './dashboard-health-panel'
+import { PushNotificationCard } from './push-notification-card'
 import { getLatestSyncStatus } from './latest-sync-status'
 import { MonthEndProjectionCard } from './month-end-projection-card'
 import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
@@ -558,6 +561,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const derivedRecomputeStatusQuery = useQuery(
     dashboardDerivedRecomputeStatusQueryOptionsWithMode(authModeOptions)
   )
+  const pushSettingsQuery = useQuery(pushSettingsQueryOptionsWithMode(authModeOptions))
 
   const connectMutation = useMutation({
     mutationFn: async ({ requestId }: { requestId?: string } = {}) => {
@@ -671,6 +675,89 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     },
   })
 
+
+  const pushOptInMutation = useMutation({
+    mutationFn: () =>
+      postPushOptIn({
+        optIn: !(pushSettingsQuery.data?.optIn ?? false),
+        permission: pushSettingsQuery.data?.permission ?? 'unknown',
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: notificationsQueryKeys.pushSettings(),
+      })
+      pushToast({
+        title: 'Preference push mise a jour',
+        description: 'Etat opt-in synchronise.',
+        tone: 'success',
+      })
+    },
+    onError: error => {
+      pushToast({
+        title: 'Mise a jour push impossible',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
+    },
+  })
+
+  const pushRegisterMutation = useMutation({
+    mutationFn: () =>
+      postPushSubscription({
+        endpoint: isDemo ? 'demo://subscription' : 'https://example.invalid/subscription',
+        keys: { auth: 'masked_auth', p256dh: 'masked_p256dh' },
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: notificationsQueryKeys.pushSettings(),
+      })
+      pushToast({
+        title: 'Subscription push enregistree',
+        description: isDemo
+          ? 'Mode demo: subscription mockee de maniere deterministe.'
+          : 'Subscription admin enregistree.',
+        tone: 'success',
+      })
+    },
+    onError: error => {
+      pushToast({
+        title: 'Subscription push echouee',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
+    },
+  })
+
+  const pushPreviewMutation = useMutation({
+    mutationFn: () => postPushPreview(),
+    onSuccess: payload => {
+      if (payload.ok) {
+        pushToast({
+          title: 'Preview push envoye',
+          description:
+            payload.delivery === 'mocked'
+              ? 'Mode demo: envoi mocke.'
+              : 'Alerte critique envoyee via provider.',
+          tone: 'success',
+        })
+        return
+      }
+
+      pushToast({
+        title: 'Preview push degrade',
+        description: payload.message,
+        tone: 'info',
+      })
+    },
+    onError: error => {
+      pushToast({
+        title: 'Preview push impossible',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
+    },
+  })
   const logoutMutation = useMutation({
     mutationFn: postAuthLogout,
     onSuccess: async () => {
@@ -1471,6 +1558,22 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
         {dashboardHealthUiConfig.globalIndicatorEnabled && dashboardHealthModel ? (
           <DashboardHealthPanel demo={isDemo} health={dashboardHealthModel} />
         ) : null}
+
+        <PushNotificationCard
+          {...(pushSettingsQuery.data ? { settings: pushSettingsQuery.data } : {})}
+          unavailable={Boolean(
+            pushSettingsQuery.data &&
+              (pushSettingsQuery.data.unavailableReason ||
+                !pushSettingsQuery.data.featureEnabled ||
+                !pushSettingsQuery.data.criticalEnabled)
+          )}
+          onToggle={() => pushOptInMutation.mutate()}
+          onRegisterSubscription={() => pushRegisterMutation.mutate()}
+          onSendPreview={() => pushPreviewMutation.mutate()}
+          busy={
+            pushOptInMutation.isPending || pushRegisterMutation.isPending || pushPreviewMutation.isPending
+          }
+        />
 
         <section>
           <Card>

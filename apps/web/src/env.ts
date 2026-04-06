@@ -75,6 +75,10 @@ export const env = createEnv({
     VITE_UI_RECONNECT_BANNER_ENABLED: createBooleanUiFlagSchema(
       'VITE_UI_RECONNECT_BANNER_ENABLED'
     ).optional(),
+    VITE_PWA_NOTIFICATIONS_ENABLED: createBooleanUiFlagSchema(
+      'VITE_PWA_NOTIFICATIONS_ENABLED'
+    ).optional(),
+    VITE_PWA_CRITICAL_ENABLED: createBooleanUiFlagSchema('VITE_PWA_CRITICAL_ENABLED').optional(),
   },
 
   /**
