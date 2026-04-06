@@ -1,164 +1,121 @@
-diff --git a/.github/agent-stubs/improve-668.md b/.github/agent-stubs/improve-668.md
+diff --git a/.github/agent-stubs/improve-684.md b/.github/agent-stubs/improve-684.md
 deleted file mode 100644
-index 1777d2e..0000000
---- a/.github/agent-stubs/improve-668.md
+index 73395d0..0000000
+--- a/.github/agent-stubs/improve-684.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #668
+-# Autopilot stub for improve #684
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/668
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/684
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/api/src/mocks/dashboardAnalytics.mock.ts b/apps/api/src/mocks/dashboardAnalytics.mock.ts
-new file mode 100644
-index 0000000..4f2cc4f
---- /dev/null
-+++ b/apps/api/src/mocks/dashboardAnalytics.mock.ts
-@@ -0,0 +1,103 @@
-+import type { DashboardRange } from '../routes/dashboard/types'
-+
-+interface DashboardAnalyticsMockTransaction {
-+  bookingDate: string
-+  amount: number
-+  direction: 'income' | 'expense'
-+  currency: string
-+  label: string
-+  merchant: string
-+}
-+
-+const RANGE_TO_DAYS: Record<DashboardRange, number> = {
-+  '7d': 7,
-+  '30d': 30,
-+  '90d': 90,
-+}
-+
-+const DEMO_ANALYTICS_MOCK_TODAY = '2026-02-22'
-+
-+const DEMO_ANALYTICS_TRANSACTIONS: DashboardAnalyticsMockTransaction[] = [
-+  {
-+    bookingDate: '2025-12-28',
-+    amount: -520,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Virement Loyer Dec',
-+    merchant: 'SCI Logement',
-+  },
-+  {
-+    bookingDate: '2026-01-26',
-+    amount: -519.5,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Virement Loyer Jan',
-+    merchant: 'SCI Logement',
-+  },
-+  {
-+    bookingDate: '2026-02-21',
-+    amount: -520,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Virement Loyer Feb',
-+    merchant: 'SCI Logement',
-+  },
-+  {
-+    bookingDate: '2026-01-27',
-+    amount: -12.99,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Spotify Premium Jan',
-+    merchant: 'Spotify',
-+  },
-+  {
-+    bookingDate: '2026-02-22',
-+    amount: -12.99,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Spotify Premium Feb',
-+    merchant: 'Spotify',
-+  },
-+  {
-+    bookingDate: '2026-02-18',
-+    amount: -132.45,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Carrefour City',
-+    merchant: 'Carrefour',
-+  },
-+  {
-+    bookingDate: '2026-02-20',
-+    amount: -38.2,
-+    direction: 'expense',
-+    currency: 'EUR',
-+    label: 'Uber trip',
-+    merchant: 'Uber',
-+  },
-+  {
-+    bookingDate: '2026-02-21',
-+    amount: 2840,
-+    direction: 'income',
-+    currency: 'EUR',
-+    label: 'Salaire Fevrier',
-+    merchant: 'Employeur',
-+  },
-+]
-+
-+const toDateOnly = (value: Date) => value.toISOString().slice(0, 10)
-+
-+const getRangeStartDate = (range: DashboardRange) => {
-+  const start = new Date(`${DEMO_ANALYTICS_MOCK_TODAY}T00:00:00.000Z`)
-+  start.setUTCDate(start.getUTCDate() - (RANGE_TO_DAYS[range] - 1))
-+  return toDateOnly(start)
-+}
-+
-+export const getDashboardAnalyticsMockTransactions = (
-+  range: DashboardRange,
-+): DashboardAnalyticsMockTransaction[] => {
-+  const start = getRangeStartDate(range)
-+
-+  return DEMO_ANALYTICS_TRANSACTIONS.filter(
-+    transaction => transaction.bookingDate >= start && transaction.bookingDate <= DEMO_ANALYTICS_MOCK_TODAY,
-+  )
-+}
-diff --git a/apps/api/src/routes/dashboard/routes/analytics.test.ts b/apps/api/src/routes/dashboard/routes/analytics.test.ts
-index 908cbbd..4db909e 100644
---- a/apps/api/src/routes/dashboard/routes/analytics.test.ts
-+++ b/apps/api/src/routes/dashboard/routes/analytics.test.ts
-@@ -143,6 +143,18 @@ describe('createAnalyticsRoute', () => {
-     expect(response.status).toBe(200)
-     expect(payload.source).toBe('demoAdapter')
-     expect(getSummaryCalls).toBe(0)
-+    expect(payload.recurringSpend.fixedCharges.totalMonthly).toBe(520)
-+    expect(payload.recurringSpend.subscriptions.totalMonthly).toBe(12.99)
-+    expect(payload.recurringSpend.fixedCharges.items[0]).toEqual({
-+      label: 'virement loyer',
-+      monthlyAmount: 520,
-+      occurrences: 2,
-+    })
-+    expect(payload.recurringSpend.subscriptions.items[0]).toEqual({
-+      label: 'spotify premium',
-+      monthlyAmount: 12.99,
-+      occurrences: 2,
-+    })
-   })
+diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
+index 840c56a..349d48a 100644
+--- a/apps/web/src/components/dashboard/app-shell.tsx
++++ b/apps/web/src/components/dashboard/app-shell.tsx
+@@ -219,6 +219,80 @@ const formatRelativeDateTime = (value: string | null) => {
+   return formatDateTime(value)
+ }
  
-   it('uses admin adapter in admin mode by default', async () => {
-diff --git a/apps/api/src/routes/dashboard/routes/analytics.ts b/apps/api/src/routes/dashboard/routes/analytics.ts
-index 7c9a1e9..7c1d3b6 100644
---- a/apps/api/src/routes/dashboard/routes/analytics.ts
-+++ b/apps/api/src/routes/dashboard/routes/analytics.ts
-@@ -1,5 +1,6 @@
- import { Elysia } from 'elysia'
- import { getAuth, getRequestMeta } from '../../../auth/context'
-+import { getDashboardAnalyticsMockTransactions } from '../../../mocks/dashboardAnalytics.mock'
- import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
- import { logApiEvent } from '../../../observability/logger'
- import { getDashboardRuntime } from '../context'
-@@ -35,6 +36,7 @@ export const createAnalyticsRoute = () =>
-         ? mapSummaryToAnalyticsContract({
-             summary: getDashboardSummaryMock(range),
-             source: 'demoAdapter',
-+            transactions: getDashboardAnalyticsMockTransactions(range),
-           })
-         : await (async () => {
-             const runtime = getDashboardRuntime(context)
++type PersonalAlertSignal = {
++  id: string
++  title: string
++  detail: string
++  tone: 'outline' | 'destructive'
++}
++
++const buildPersonalAlertSignals = ({
++  syncBacklogCount,
++  latestSyncStatus,
++  summary,
++  transactions,
++}: {
++  syncBacklogCount: number
++  latestSyncStatus: ReturnType<typeof getLatestSyncStatus>
++  summary: DashboardSummaryResponse
++  transactions: DashboardTransactionsResponse['items']
++}): PersonalAlertSignal[] => {
++  const alerts: PersonalAlertSignal[] = []
++
++  if (
++    syncBacklogCount > 0 ||
++    latestSyncStatus.badgeVariant === 'destructive'
++  ) {
++    alerts.push({
++      id: 'personal-sync-signal',
++      title: 'Signal sync personnel',
++      detail:
++        syncBacklogCount > 0
++          ? `${syncBacklogCount} synchronisation(s) en attente: les soldes et transactions peuvent etre incomplets.`
++          : "Un incident de synchronisation persiste sur au moins une connexion. Verifie l'onglet sync.",
++      tone: latestSyncStatus.badgeVariant === 'destructive' ? 'destructive' : 'outline',
++    })
++  }
++
++  if (summary.totals.incomes > 0) {
++    const spendRatio = summary.totals.expenses / summary.totals.incomes
++    if (spendRatio >= 0.9) {
++      alerts.push({
++        id: 'personal-budget-signal',
++        title: 'Signal budget personnel',
++        detail: `Les depenses representent ${Math.round(spendRatio * 100)}% des revenus sur la periode.`,
++        tone: spendRatio >= 1 ? 'destructive' : 'outline',
++      })
++    }
++  }
++
++  const expenseTransactions = transactions
++    .filter(transaction => transaction.direction === 'expense')
++    .map(transaction => Math.abs(transaction.amount))
++    .filter(amount => amount > 0)
++    .sort((a, b) => a - b)
++  const medianExpenseAmount =
++    expenseTransactions.length === 0
++      ? 0
++      : (expenseTransactions[Math.floor(expenseTransactions.length / 2)] ?? 0)
++  const anomalyThreshold = Math.max(medianExpenseAmount * 2.5, 250)
++  const anomalyCount = expenseTransactions.filter(amount => amount >= anomalyThreshold).length
++
++  if (anomalyCount > 0) {
++    alerts.push({
++      id: 'personal-anomaly-signal',
++      title: 'Signal anomalies personnel',
++      detail:
++        anomalyCount === 1
++          ? "1 transaction inhabituelle detectee (montant au-dessus de l'historique recent)."
++          : `${anomalyCount} transactions inhabituelles detectees (montants au-dessus de l'historique recent).`,
++      tone: anomalyCount >= 3 ? 'destructive' : 'outline',
++    })
++  }
++
++  return alerts
++}
++
+ const pickLatestDate = (values: Array<string | null>) => {
+   const timestamps = values
+     .filter((value): value is string => Boolean(value))
+@@ -826,7 +900,22 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+     connections: statusConnections,
+     runs: syncRuns,
+   }).slice(0, 8)
++  const personalAlertSignals = isAdmin
++    ? buildPersonalAlertSignals({
++        syncBacklogCount,
++        latestSyncStatus,
++        summary: adaptedSummary,
++        transactions,
++      })
++    : []
+   const alertInsightItems = [
++    ...personalAlertSignals.map(signal => ({
++      id: signal.id,
++      kind: 'alert' as const,
++      title: signal.title,
++      detail: signal.detail,
++      tone: signal.tone,
++    })),
+     ...(powensInternalNotifications.slice(0, 3).map(notification => ({
+       id: `powens-${notification.id}`,
+       kind: 'alert' as const,
