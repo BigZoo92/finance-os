@@ -82,6 +82,7 @@ import { getLatestSyncStatus } from './latest-sync-status'
 import { MonthEndProjectionCard } from './month-end-projection-card'
 import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
 import { WealthHistory } from './wealth-history'
+import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
   { label: '7j', value: '7d' },
@@ -728,6 +729,14 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     range,
     summary,
     ...(authMode ? { mode: authMode } : {}),
+  })
+  const wealthTrend = getTrendDirection({
+    start: adaptedSummary.dailyWealthSnapshots[0]?.balance ?? null,
+    end: adaptedSummary.dailyWealthSnapshots.at(-1)?.balance ?? null,
+  })
+  const cashflowDirection = summarizeCashflowDirection({
+    incomes: adaptedSummary.totals.incomes,
+    expenses: adaptedSummary.totals.expenses,
   })
   const diagnostics = diagnosticsQuery.data
   const diagnosticsOutcomeBadge: Record<
@@ -1548,11 +1557,20 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               ) : null}
               {summary ? (
                 <>
-                  <p className="text-3xl font-semibold">
-                    {formatMoney(adaptedSummary.totals.balance)}
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-3xl font-semibold">
+                      {formatMoney(adaptedSummary.totals.balance)}
+                    </p>
+                    <Badge variant={wealthTrend === 'down' ? 'destructive' : 'secondary'}>
+                      {wealthTrend === 'up'
+                        ? '↑ Net worth up'
+                        : wealthTrend === 'down'
+                          ? '↓ Net worth down'
+                          : '• Net worth flat'}
+                    </Badge>
+                  </div>
                   <Separator />
-                  <div className="space-y-1 text-sm">
+                  <div className="space-y-2 text-sm">
                     <p className="flex items-center justify-between">
                       <span>Income ({range})</span>
                       <span>{formatMoney(adaptedSummary.totals.incomes)}</span>
@@ -1561,6 +1579,33 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                       <span>Expenses ({range})</span>
                       <span>{formatMoney(adaptedSummary.totals.expenses)}</span>
                     </p>
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Cashflow direction</span>
+                        <span>
+                          {cashflowDirection.direction === 'up'
+                            ? '↑ Positive'
+                            : cashflowDirection.direction === 'down'
+                              ? '↓ Negative'
+                              : '• Neutral'}
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full border border-border/70 bg-muted/30">
+                        <div className="flex h-full w-full">
+                          <div
+                            className="h-full bg-emerald-500/80"
+                            style={{ width: `${cashflowDirection.incomeSharePercent}%` }}
+                          />
+                          <div
+                            className="h-full bg-red-500/70"
+                            style={{ width: `${cashflowDirection.expenseSharePercent}%` }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Net cashflow: {formatMoney(cashflowDirection.net)}
+                      </p>
+                    </div>
                   </div>
                 </>
               ) : null}
