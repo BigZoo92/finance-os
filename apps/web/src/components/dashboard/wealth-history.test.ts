@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSparklinePath, summarizeWealthHistory } from './wealth-history'
+import { buildSparklinePath, buildWealthHistoryExplanation, summarizeWealthHistory } from './wealth-history'
 
 describe('wealth history helpers', () => {
   it('summarizes the visible range delta/high/low', () => {
@@ -23,5 +23,21 @@ describe('wealth history helpers', () => {
         { date: '2026-03-19', balance: 125 },
       ], 120, 60, 10)
     ).toBe('M 10.00 38.57 L 60.00 50.00 L 110.00 10.00')
+  })
+
+  it('provides a lightweight explain-this message based on trend direction', () => {
+    expect(
+      buildWealthHistoryExplanation({
+        change: 1200,
+        periodLabel: '14 jours',
+      })
+    ).toContain('progresse')
+
+    expect(
+      buildWealthHistoryExplanation({
+        change: -300,
+        periodLabel: '7 jours',
+      })
+    ).toContain('recule')
   })
 })

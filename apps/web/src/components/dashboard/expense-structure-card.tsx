@@ -1,4 +1,5 @@
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
+import { useMemo, useState } from 'react'
 import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
 
 type DashboardTransaction = DashboardTransactionsResponse['items'][number]
@@ -106,6 +107,20 @@ export const summarizeExpenseTimeline = (
     .slice(-limit)
 }
 
+export const buildExpenseStructureExplanation = ({
+  topCategory,
+  totalExpenses,
+}: {
+  topCategory: CategorySpendRow | null
+  totalExpenses: number
+}) => {
+  if (!topCategory || totalExpenses <= 0) {
+    return 'Pas assez de depenses sur la periode pour degager une tendance claire.'
+  }
+
+  return `${topCategory.category} est le principal poste avec ${formatMoney(topCategory.total)}, soit ${formatPercent(topCategory.ratio)} des depenses observees.`
+}
+
 export function ExpenseStructureCard({
   range,
   transactions,
@@ -118,6 +133,14 @@ export function ExpenseStructureCard({
   const categorySplit = summarizeExpenseCategories(transactions)
   const timeline = summarizeExpenseTimeline(transactions)
   const maxMonthlyExpense = timeline.reduce((max, row) => Math.max(max, row.total), 0)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const totalExpenses = categorySplit.reduce((sum, row) => sum + row.total, 0)
+  const selectedCategory =
+    categorySplit.find(row => row.category === activeCategory) ?? categorySplit[0] ?? null
+  const explanation = useMemo(
+    () => buildExpenseStructureExplanation({ topCategory: categorySplit[0] ?? null, totalExpenses }),
+    [categorySplit, totalExpenses]
+  )
 
   return (
     <Card className="xl:col-span-2">
@@ -143,7 +166,12 @@ export function ExpenseStructureCard({
               </p>
               <div className="space-y-2">
                 {categorySplit.map(row => (
-                  <div key={row.category} className="rounded-md border border-border/70 p-2">
+                  <button
+                    key={row.category}
+                    type="button"
+                    className="w-full rounded-md border border-border/70 p-2 text-left transition hover:bg-muted/30"
+                    onClick={() => setActiveCategory(row.category)}
+                  >
                     <div className="mb-1 flex items-center justify-between gap-2 text-sm">
                       <p className="font-medium">{row.category}</p>
                       <p className="text-muted-foreground">{formatMoney(row.total)}</p>
@@ -155,7 +183,7 @@ export function ExpenseStructureCard({
                       />
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{formatPercent(row.ratio)}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -185,6 +213,35 @@ export function ExpenseStructureCard({
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+
+            <div className="rounded-md border border-border/70 bg-background/80 p-3 text-sm">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Explain this</p>
+              <p className="mt-1">{explanation}</p>
+            </div>
+
+            <div className="rounded-md border border-border/70 bg-background/80 p-3 text-sm">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Drill-down</p>
+              {selectedCategory ? (
+                <dl className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Categorie</dt>
+                    <dd className="font-medium">{selectedCategory.category}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Montant</dt>
+                    <dd className="font-medium">{formatMoney(selectedCategory.total)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Poids</dt>
+                    <dd className="font-medium">{formatPercent(selectedCategory.ratio)}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="mt-1 text-muted-foreground">
+                  Aucune categorie exploitable pour afficher un detail.
+                </p>
               )}
             </div>
           </>

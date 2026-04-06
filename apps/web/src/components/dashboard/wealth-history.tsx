@@ -87,6 +87,24 @@ export const summarizeWealthHistory = (
   }
 }
 
+export const buildWealthHistoryExplanation = ({
+  change,
+  periodLabel,
+}: {
+  change: number
+  periodLabel: string
+}) => {
+  if (change > 0) {
+    return `Le patrimoine progresse de ${formatMoney(change)} sur ${periodLabel.toLowerCase()}, ce qui indique une dynamique positive.`
+  }
+
+  if (change < 0) {
+    return `Le patrimoine recule de ${formatMoney(Math.abs(change))} sur ${periodLabel.toLowerCase()}, principalement a surveiller via les depenses inhabituelles.`
+  }
+
+  return `Le patrimoine reste globalement stable sur ${periodLabel.toLowerCase()}, sans variation marquante.`
+}
+
 export const buildSparklinePath = (
   snapshots: DashboardSummaryResponse['dailyWealthSnapshots'],
   width = SVG_WIDTH,
@@ -247,6 +265,11 @@ export function WealthHistory({
     activeIndex === null ? null : points.at(Math.min(Math.max(activeIndex, 0), points.length - 1))
   const changeTone =
     summary.change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+  const currentPeriodLabel = PERIOD_OPTIONS.find(option => option.value === period)?.label ?? 'Periode complete'
+  const explanation = buildWealthHistoryExplanation({
+    change: summary.change,
+    periodLabel: currentPeriodLabel,
+  })
 
   return (
     <Card className="xl:col-span-2">
@@ -401,6 +424,37 @@ export function WealthHistory({
                 <span>{RANGE_LABEL[range]}</span>
                 <span>{formatDay(summary.latest?.date ?? '')}</span>
               </div>
+            </div>
+
+            <div className="rounded-md border border-border/70 bg-background/80 p-3 text-sm">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Explain this</p>
+              <p className="mt-1 text-foreground">{explanation}</p>
+            </div>
+
+            <div className="rounded-md border border-border/70 bg-background/80 p-3 text-sm">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Drill-down</p>
+              {focusedPoint ? (
+                <dl className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Date</dt>
+                    <dd className="font-medium">{formatDay(focusedPoint.snapshot.date)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Patrimoine</dt>
+                    <dd className="font-medium">{formatMoney(focusedPoint.snapshot.balance)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Ecart vs point bas</dt>
+                    <dd className="font-medium">
+                      {summary.low ? formatMoney(focusedPoint.snapshot.balance - summary.low.balance) : '-'}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="mt-1 text-muted-foreground">
+                  Survolez un point du graphe pour afficher le detail de cette journee.
+                </p>
+              )}
             </div>
           </>
         )}
