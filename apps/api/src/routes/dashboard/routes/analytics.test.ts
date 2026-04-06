@@ -143,6 +143,18 @@ describe('createAnalyticsRoute', () => {
     expect(response.status).toBe(200)
     expect(payload.source).toBe('demoAdapter')
     expect(getSummaryCalls).toBe(0)
+    expect(payload.recurringSpend.fixedCharges.totalMonthly).toBe(520)
+    expect(payload.recurringSpend.subscriptions.totalMonthly).toBe(12.99)
+    expect(payload.recurringSpend.fixedCharges.items[0]).toEqual({
+      label: 'virement loyer',
+      monthlyAmount: 520,
+      occurrences: 2,
+    })
+    expect(payload.recurringSpend.subscriptions.items[0]).toEqual({
+      label: 'spotify premium',
+      monthlyAmount: 12.99,
+      occurrences: 2,
+    })
   })
 
   it('uses admin adapter in admin mode by default', async () => {
