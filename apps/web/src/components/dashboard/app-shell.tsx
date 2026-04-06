@@ -84,6 +84,7 @@ import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
 import { WealthHistory } from './wealth-history'
 import { ExpenseStructureCard } from './expense-structure-card'
 import { NewsFeed } from './news-feed'
+import { buildHighValueSignalDigest } from './high-value-signals'
 import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -97,6 +98,8 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
   { label: 'Subscriptions', value: 'subscriptions' },
   { label: 'Parse fail (fallback)', value: 'parse_error' },
 ]
+const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
+const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
 
 const SYNC_RUN_STATUS_VARIANT: Record<
   'running' | 'success' | 'error' | 'reconnect_required',
@@ -510,6 +513,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
   const dashboardHealthSnapshotLoggedRef = useRef(false)
   const dashboardHealthWidgetLoggedRef = useRef<Set<string>>(new Set())
+  const highValueSignalsDigestRef = useRef<string | null>(null)
   const reconnectBannerShownLoggedRef = useRef<Set<string>>(new Set())
   const reconnectRequestIdRef = useRef<string | null>(null)
   const reconnectBannerUiEnabled = getPowensReconnectBannerUiEnabled()
@@ -1197,6 +1201,42 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       dashboardHealthWidgetLoggedRef.current.add(widget.key)
     }
   }, [authMode, dashboardHealthModel, dashboardHealthUiConfig, range])
+
+  useEffect(() => {
+    if (!authMode || !isAdmin) {
+      return
+    }
+
+    const logDigest = () => {
+      const digest = buildHighValueSignalDigest(
+        alertInsightItems.map(item => ({
+          id: item.id,
+          kind: item.kind,
+          title: item.title,
+        }))
+      )
+
+      if (!digest || digest.fingerprint === highValueSignalsDigestRef.current) {
+        return
+      }
+
+      console.info(HIGH_VALUE_SIGNALS_DIGEST_SCOPE, {
+        event: 'periodic_compact_digest',
+        mode: authMode,
+        range,
+        alertCount: digest.alertCount,
+        insightCount: digest.insightCount,
+        topTitles: digest.topTitles,
+        fingerprint: digest.fingerprint,
+        timestamp: new Date().toISOString(),
+      })
+      highValueSignalsDigestRef.current = digest.fingerprint
+    }
+
+    logDigest()
+    const intervalId = window.setInterval(logDigest, HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS)
+    return () => window.clearInterval(intervalId)
+  }, [alertInsightItems, authMode, isAdmin, range])
 
   const handleReconnectCta = () => {
     if (!authMode || !reconnectBannerState || reconnectBannerState === 'loading') {
