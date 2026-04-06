@@ -82,6 +82,7 @@ import { getLatestSyncStatus } from './latest-sync-status'
 import { MonthEndProjectionCard } from './month-end-projection-card'
 import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
 import { WealthHistory } from './wealth-history'
+import { ExpenseStructureCard } from './expense-structure-card'
 import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -1617,6 +1618,8 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
             snapshots={adaptedSummary.dailyWealthSnapshots}
             demo={isDemo}
           />
+
+          <ExpenseStructureCard range={range} transactions={transactions} demo={isDemo} />
 
           <Card>
             <CardHeader>
