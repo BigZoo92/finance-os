@@ -1,158 +1,291 @@
-diff --git a/.github/agent-stubs/improve-686.md b/.github/agent-stubs/improve-686.md
+diff --git a/.github/agent-stubs/improve-688.md b/.github/agent-stubs/improve-688.md
 deleted file mode 100644
-index f305c65..0000000
---- a/.github/agent-stubs/improve-686.md
+index 2c14e52..0000000
+--- a/.github/agent-stubs/improve-688.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #686
+-# Autopilot stub for improve #688
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/686
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/688
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
 diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
-index 349d48a..dc980c3 100644
+index dc980c3..f8e33c9 100644
 --- a/apps/web/src/components/dashboard/app-shell.tsx
 +++ b/apps/web/src/components/dashboard/app-shell.tsx
-@@ -84,6 +84,7 @@ import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
- import { WealthHistory } from './wealth-history'
+@@ -85,6 +85,7 @@ import { WealthHistory } from './wealth-history'
  import { ExpenseStructureCard } from './expense-structure-card'
  import { NewsFeed } from './news-feed'
-+import { buildHighValueSignalDigest } from './high-value-signals'
+ import { buildHighValueSignalDigest } from './high-value-signals'
++import { rankPersonalSignalsByRelevance } from './relevance-scoring'
  import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
  
  const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
-@@ -97,6 +98,8 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
-   { label: 'Subscriptions', value: 'subscriptions' },
-   { label: 'Parse fail (fallback)', value: 'parse_error' },
- ]
-+const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
-+const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
+@@ -293,7 +294,7 @@ const buildPersonalAlertSignals = ({
+     })
+   }
  
- const SYNC_RUN_STATUS_VARIANT: Record<
-   'running' | 'success' | 'error' | 'reconnect_required',
-@@ -510,6 +513,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
-   const dashboardHealthSnapshotLoggedRef = useRef(false)
-   const dashboardHealthWidgetLoggedRef = useRef<Set<string>>(new Set())
-+  const highValueSignalsDigestRef = useRef<string | null>(null)
-   const reconnectBannerShownLoggedRef = useRef<Set<string>>(new Set())
-   const reconnectRequestIdRef = useRef<string | null>(null)
-   const reconnectBannerUiEnabled = getPowensReconnectBannerUiEnabled()
-@@ -1198,6 +1202,42 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-     }
-   }, [authMode, dashboardHealthModel, dashboardHealthUiConfig, range])
+-  return alerts
++  return rankPersonalSignalsByRelevance(alerts).map(entry => entry.item)
+ }
  
-+  useEffect(() => {
-+    if (!authMode || !isAdmin) {
-+      return
-+    }
-+
-+    const logDigest = () => {
-+      const digest = buildHighValueSignalDigest(
-+        alertInsightItems.map(item => ({
-+          id: item.id,
-+          kind: item.kind,
-+          title: item.title,
-+        }))
-+      )
-+
-+      if (!digest || digest.fingerprint === highValueSignalsDigestRef.current) {
-+        return
-+      }
-+
-+      console.info(HIGH_VALUE_SIGNALS_DIGEST_SCOPE, {
-+        event: 'periodic_compact_digest',
-+        mode: authMode,
-+        range,
-+        alertCount: digest.alertCount,
-+        insightCount: digest.insightCount,
-+        topTitles: digest.topTitles,
-+        fingerprint: digest.fingerprint,
-+        timestamp: new Date().toISOString(),
+ const pickLatestDate = (values: Array<string | null>) => {
+diff --git a/apps/web/src/components/dashboard/news-feed.tsx b/apps/web/src/components/dashboard/news-feed.tsx
+index 8ad5838..125b722 100644
+--- a/apps/web/src/components/dashboard/news-feed.tsx
++++ b/apps/web/src/components/dashboard/news-feed.tsx
+@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
+ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
+ import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
+ import type { AuthMode } from '@/features/auth-types'
++import { rankNewsByRelevance } from './relevance-scoring'
+ 
+ export function NewsFeed({ mode }: { mode: AuthMode }) {
+   const [topic, setTopic] = useState('')
+@@ -20,6 +21,12 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
+   )
+ 
+   const payload = newsQuery.data
++  const rankedItems = payload
++    ? rankNewsByRelevance(payload.items, {
++        topicFilter: topic.trim(),
++        sourceFilter: source.trim(),
 +      })
-+      highValueSignalsDigestRef.current = digest.fingerprint
-+    }
-+
-+    logDigest()
-+    const intervalId = window.setInterval(logDigest, HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS)
-+    return () => window.clearInterval(intervalId)
-+  }, [alertInsightItems, authMode, isAdmin, range])
-+
-   const handleReconnectCta = () => {
-     if (!authMode || !reconnectBannerState || reconnectBannerState === 'loading') {
-       return
-diff --git a/apps/web/src/components/dashboard/high-value-signals.test.ts b/apps/web/src/components/dashboard/high-value-signals.test.ts
++    : []
+ 
+   return (
+     <Card>
+@@ -64,13 +71,17 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
+           )
+         ) : null}
+ 
+-        {payload?.items.map(item => (
++        {rankedItems.map(({ item, score, reasons }) => (
+           <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="block rounded-md border p-3">
+             <div className="flex items-start justify-between gap-2">
+               <p className="text-sm font-medium leading-snug">{item.title}</p>
+-              <Badge variant="secondary">{item.topic}</Badge>
++              <div className="flex items-center gap-2">
++                <Badge variant="secondary">{item.topic}</Badge>
++                <Badge variant="outline">Score {score}</Badge>
++              </div>
+             </div>
+             <p className="mt-1 text-xs text-muted-foreground">{item.sourceName}</p>
++            <p className="mt-1 text-xs text-muted-foreground">Why relevant: {reasons.join(', ')}</p>
+           </a>
+         ))}
+       </CardContent>
+diff --git a/apps/web/src/components/dashboard/relevance-scoring.test.ts b/apps/web/src/components/dashboard/relevance-scoring.test.ts
 new file mode 100644
-index 0000000..fb4f6e7
+index 0000000..03240be
 --- /dev/null
-+++ b/apps/web/src/components/dashboard/high-value-signals.test.ts
-@@ -0,0 +1,24 @@
++++ b/apps/web/src/components/dashboard/relevance-scoring.test.ts
+@@ -0,0 +1,64 @@
 +import { describe, expect, it } from 'vitest'
-+import { buildHighValueSignalDigest } from './high-value-signals'
++import { rankNewsByRelevance, rankPersonalSignalsByRelevance } from './relevance-scoring'
 +
-+describe('buildHighValueSignalDigest', () => {
-+  it('returns null when no signal is available', () => {
-+    expect(buildHighValueSignalDigest([])).toBeNull()
-+  })
++describe('rankNewsByRelevance', () => {
++  it('prioritizes topic/source matches and recency with explainable reasons', () => {
++    const ranked = rankNewsByRelevance(
++      [
++        {
++          id: 'older-match',
++          title: 'Equity markets digest inflation outlook',
++          summary: 'Long form context',
++          url: 'https://example.com/older-match',
++          sourceName: 'Macro Wire',
++          topic: 'macro',
++          language: 'en',
++          publishedAt: '2026-04-02T10:00:00.000Z',
++        },
++        {
++          id: 'fresh-miss',
++          title: 'Corporate bonds hold steady',
++          summary: null,
++          url: 'https://example.com/fresh-miss',
++          sourceName: 'Bond Desk',
++          topic: 'credit',
++          language: 'en',
++          publishedAt: '2026-04-06T09:30:00.000Z',
++        },
++      ],
++      {
++        topicFilter: 'macro',
++        sourceFilter: 'macro',
++        now: new Date('2026-04-06T10:00:00.000Z'),
++      }
++    )
 +
-+  it('builds a compact digest with counts and top titles', () => {
-+    const digest = buildHighValueSignalDigest([
-+      { id: 'alert-1', kind: 'alert', title: 'Sync backlog' },
-+      { id: 'alert-2', kind: 'alert', title: 'Transaction freshness degraded' },
-+      { id: 'insight-1', kind: 'insight', title: 'Top expense group' },
-+      { id: 'insight-2', kind: 'insight', title: 'Cashflow trend' },
-+    ])
-+
-+    expect(digest).toEqual({
-+      fingerprint: 'alert:alert-1|alert:alert-2|insight:insight-1',
-+      alertCount: 2,
-+      insightCount: 2,
-+      topTitles: ['Sync backlog', 'Transaction freshness degraded', 'Top expense group'],
-+    })
++    expect(ranked[0]?.item.id).toBe('older-match')
++    expect(ranked[0]?.reasons).toContain('topic matches filter')
++    expect(ranked[0]?.reasons).toContain('source matches filter')
 +  })
 +})
-diff --git a/apps/web/src/components/dashboard/high-value-signals.ts b/apps/web/src/components/dashboard/high-value-signals.ts
++
++describe('rankPersonalSignalsByRelevance', () => {
++  it('puts destructive quantified signals first and includes reasons', () => {
++    const ranked = rankPersonalSignalsByRelevance([
++      {
++        id: 'budget',
++        title: 'Signal budget personnel',
++        detail: 'Depenses a 95% des revenus',
++        tone: 'outline',
++      },
++      {
++        id: 'sync',
++        title: 'Signal sync personnel',
++        detail: '3 synchronisations en attente',
++        tone: 'destructive',
++      },
++    ])
++
++    expect(ranked[0]?.item.id).toBe('sync')
++    expect(ranked[0]?.reasons).toContain('critical tone')
++    expect(ranked[0]?.reasons).toContain('operational risk signal')
++    expect(ranked[0]?.reasons).toContain('quantified impact')
++  })
++})
+diff --git a/apps/web/src/components/dashboard/relevance-scoring.ts b/apps/web/src/components/dashboard/relevance-scoring.ts
 new file mode 100644
-index 0000000..74d9757
+index 0000000..c1ed018
 --- /dev/null
-+++ b/apps/web/src/components/dashboard/high-value-signals.ts
-@@ -0,0 +1,37 @@
-+export type HighValueSignalItem = {
++++ b/apps/web/src/components/dashboard/relevance-scoring.ts
+@@ -0,0 +1,136 @@
++const NEWS_RECENCY_WINDOW_HOURS = 72
++
++export type NewsRelevanceInput = {
 +  id: string
-+  kind: 'alert' | 'insight'
 +  title: string
++  summary: string | null
++  url: string
++  sourceName: string
++  topic: string
++  language: string
++  publishedAt: string
 +}
 +
-+export type HighValueSignalDigest = {
-+  fingerprint: string
-+  alertCount: number
-+  insightCount: number
-+  topTitles: string[]
++export type PersonalSignalRelevanceInput = {
++  id: string
++  title: string
++  detail: string
++  tone: 'outline' | 'destructive'
 +}
 +
-+const DIGEST_MAX_TITLES = 3
++export type RankedEntry<T> = {
++  item: T
++  score: number
++  reasons: string[]
++}
 +
-+export const buildHighValueSignalDigest = (
-+  items: HighValueSignalItem[]
-+): HighValueSignalDigest | null => {
-+  if (items.length === 0) {
-+    return null
++const clamp = (value: number, min: number, max: number) => {
++  return Math.min(max, Math.max(min, value))
++}
++
++const tokenize = (value: string) => value.toLowerCase().trim()
++
++export const rankNewsByRelevance = (
++  items: NewsRelevanceInput[],
++  context: {
++    topicFilter: string
++    sourceFilter: string
++    now?: Date
 +  }
++): RankedEntry<NewsRelevanceInput>[] => {
++  const topicFilter = tokenize(context.topicFilter)
++  const sourceFilter = tokenize(context.sourceFilter)
++  const nowMs = (context.now ?? new Date()).getTime()
 +
-+  const alertCount = items.filter(item => item.kind === 'alert').length
-+  const insightCount = items.length - alertCount
-+  const topTitles = items.slice(0, DIGEST_MAX_TITLES).map(item => item.title)
-+  const fingerprint = items
-+    .slice(0, DIGEST_MAX_TITLES)
-+    .map(item => `${item.kind}:${item.id}`)
-+    .join('|')
++  return items
++    .map(item => {
++      const reasons: string[] = []
++      let score = 0
 +
-+  return {
-+    fingerprint,
-+    alertCount,
-+    insightCount,
-+    topTitles,
-+  }
++      if (topicFilter.length > 0 && tokenize(item.topic) === topicFilter) {
++        score += 35
++        reasons.push('topic matches filter')
++      }
++
++      if (sourceFilter.length > 0 && tokenize(item.sourceName).includes(sourceFilter)) {
++        score += 25
++        reasons.push('source matches filter')
++      }
++
++      const publishedMs = new Date(item.publishedAt).getTime()
++      if (Number.isFinite(publishedMs)) {
++        const ageHours = (nowMs - publishedMs) / 3_600_000
++        const recencyScore = clamp((NEWS_RECENCY_WINDOW_HOURS - ageHours) / NEWS_RECENCY_WINDOW_HOURS, 0, 1) * 30
++        if (recencyScore > 0) {
++          score += recencyScore
++          reasons.push('recent publication')
++        }
++      }
++
++      if (item.summary && item.summary.trim().length > 0) {
++        score += 5
++        reasons.push('has summary context')
++      }
++
++      const lowerTitle = item.title.toLowerCase()
++      if (/(etf|rates?|inflation|crypto|equity|bond|market)/.test(lowerTitle)) {
++        score += 10
++        reasons.push('finance keyword in title')
++      }
++
++      return {
++        item,
++        score: Math.round(score),
++        reasons: reasons.length > 0 ? reasons : ['baseline relevance'],
++      }
++    })
++    .sort((a, b) => {
++      if (b.score !== a.score) {
++        return b.score - a.score
++      }
++
++      const aPublished = new Date(a.item.publishedAt).getTime()
++      const bPublished = new Date(b.item.publishedAt).getTime()
++      return bPublished - aPublished
++    })
++}
++
++export const rankPersonalSignalsByRelevance = (
++  items: PersonalSignalRelevanceInput[]
++): RankedEntry<PersonalSignalRelevanceInput>[] => {
++  return items
++    .map(item => {
++      const reasons: string[] = []
++      let score = 0
++
++      if (item.tone === 'destructive') {
++        score += 45
++        reasons.push('critical tone')
++      } else {
++        score += 25
++        reasons.push('actionable tone')
++      }
++
++      const lowerText = `${item.title} ${item.detail}`.toLowerCase()
++      if (/(sync|backlog|incident|anomal)/.test(lowerText)) {
++        score += 25
++        reasons.push('operational risk signal')
++      }
++
++      const numericMatch = lowerText.match(/(\d+)/)
++      if (numericMatch) {
++        const numericValue = Number.parseInt(numericMatch[1] ?? '0', 10)
++        if (Number.isFinite(numericValue) && numericValue > 0) {
++          score += clamp(numericValue, 1, 20)
++          reasons.push('quantified impact')
++        }
++      }
++
++      return {
++        item,
++        score,
++        reasons: reasons.length > 0 ? reasons : ['baseline relevance'],
++      }
++    })
++    .sort((a, b) => b.score - a.score)
 +}
