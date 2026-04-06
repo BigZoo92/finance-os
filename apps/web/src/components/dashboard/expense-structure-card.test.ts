@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeExpenseCategories, summarizeExpenseTimeline } from './expense-structure-card'
+import {
+  buildExpenseStructureExplanation,
+  summarizeExpenseCategories,
+  summarizeExpenseTimeline,
+} from './expense-structure-card'
 import type { DashboardTransactionsResponse } from '@/features/dashboard-types'
 
 const buildTx = (
@@ -51,5 +55,19 @@ describe('expense structure helpers', () => {
     expect(rows).toHaveLength(2)
     expect(rows[0]).toMatchObject({ month: '2026-01', total: 150 })
     expect(rows[1]).toMatchObject({ month: '2026-02', total: 75 })
+  })
+
+  it('builds explain-this copy from the dominant category', () => {
+    const [topCategory] = summarizeExpenseCategories([
+      buildTx({ id: 1, amount: -90, category: 'Logement' }),
+      buildTx({ id: 2, amount: -10, category: 'Transport' }),
+    ])
+
+    expect(
+      buildExpenseStructureExplanation({
+        topCategory: topCategory ?? null,
+        totalExpenses: 100,
+      })
+    ).toContain('Logement')
   })
 })
