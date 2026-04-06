@@ -219,6 +219,80 @@ const formatRelativeDateTime = (value: string | null) => {
   return formatDateTime(value)
 }
 
+type PersonalAlertSignal = {
+  id: string
+  title: string
+  detail: string
+  tone: 'outline' | 'destructive'
+}
+
+const buildPersonalAlertSignals = ({
+  syncBacklogCount,
+  latestSyncStatus,
+  summary,
+  transactions,
+}: {
+  syncBacklogCount: number
+  latestSyncStatus: ReturnType<typeof getLatestSyncStatus>
+  summary: DashboardSummaryResponse
+  transactions: DashboardTransactionsResponse['items']
+}): PersonalAlertSignal[] => {
+  const alerts: PersonalAlertSignal[] = []
+
+  if (
+    syncBacklogCount > 0 ||
+    latestSyncStatus.badgeVariant === 'destructive'
+  ) {
+    alerts.push({
+      id: 'personal-sync-signal',
+      title: 'Signal sync personnel',
+      detail:
+        syncBacklogCount > 0
+          ? `${syncBacklogCount} synchronisation(s) en attente: les soldes et transactions peuvent etre incomplets.`
+          : "Un incident de synchronisation persiste sur au moins une connexion. Verifie l'onglet sync.",
+      tone: latestSyncStatus.badgeVariant === 'destructive' ? 'destructive' : 'outline',
+    })
+  }
+
+  if (summary.totals.incomes > 0) {
+    const spendRatio = summary.totals.expenses / summary.totals.incomes
+    if (spendRatio >= 0.9) {
+      alerts.push({
+        id: 'personal-budget-signal',
+        title: 'Signal budget personnel',
+        detail: `Les depenses representent ${Math.round(spendRatio * 100)}% des revenus sur la periode.`,
+        tone: spendRatio >= 1 ? 'destructive' : 'outline',
+      })
+    }
+  }
+
+  const expenseTransactions = transactions
+    .filter(transaction => transaction.direction === 'expense')
+    .map(transaction => Math.abs(transaction.amount))
+    .filter(amount => amount > 0)
+    .sort((a, b) => a - b)
+  const medianExpenseAmount =
+    expenseTransactions.length === 0
+      ? 0
+      : (expenseTransactions[Math.floor(expenseTransactions.length / 2)] ?? 0)
+  const anomalyThreshold = Math.max(medianExpenseAmount * 2.5, 250)
+  const anomalyCount = expenseTransactions.filter(amount => amount >= anomalyThreshold).length
+
+  if (anomalyCount > 0) {
+    alerts.push({
+      id: 'personal-anomaly-signal',
+      title: 'Signal anomalies personnel',
+      detail:
+        anomalyCount === 1
+          ? "1 transaction inhabituelle detectee (montant au-dessus de l'historique recent)."
+          : `${anomalyCount} transactions inhabituelles detectees (montants au-dessus de l'historique recent).`,
+      tone: anomalyCount >= 3 ? 'destructive' : 'outline',
+    })
+  }
+
+  return alerts
+}
+
 const pickLatestDate = (values: Array<string | null>) => {
   const timestamps = values
     .filter((value): value is string => Boolean(value))
@@ -826,7 +900,22 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     connections: statusConnections,
     runs: syncRuns,
   }).slice(0, 8)
+  const personalAlertSignals = isAdmin
+    ? buildPersonalAlertSignals({
+        syncBacklogCount,
+        latestSyncStatus,
+        summary: adaptedSummary,
+        transactions,
+      })
+    : []
   const alertInsightItems = [
+    ...personalAlertSignals.map(signal => ({
+      id: signal.id,
+      kind: 'alert' as const,
+      title: signal.title,
+      detail: signal.detail,
+      tone: signal.tone,
+    })),
     ...(powensInternalNotifications.slice(0, 3).map(notification => ({
       id: `powens-${notification.id}`,
       kind: 'alert' as const,
