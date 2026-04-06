@@ -735,6 +735,9 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     start: adaptedSummary.dailyWealthSnapshots[0]?.balance ?? null,
     end: adaptedSummary.dailyWealthSnapshots.at(-1)?.balance ?? null,
   })
+  const wealthDelta =
+    (adaptedSummary.dailyWealthSnapshots.at(-1)?.balance ?? 0) -
+    (adaptedSummary.dailyWealthSnapshots[0]?.balance ?? 0)
   const cashflowDirection = summarizeCashflowDirection({
     incomes: adaptedSummary.totals.incomes,
     expenses: adaptedSummary.totals.expenses,
@@ -822,6 +825,80 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
     connections: statusConnections,
     runs: syncRuns,
   }).slice(0, 8)
+  const alertInsightItems = [
+    ...(powensInternalNotifications.slice(0, 3).map(notification => ({
+      id: `powens-${notification.id}`,
+      kind: 'alert' as const,
+      title: notification.title,
+      detail: notification.detail,
+      tone: notification.level === 'critical' ? ('destructive' as const) : ('outline' as const),
+    })) ?? []),
+    ...(syncBacklogCount > 0
+      ? [
+          {
+            id: 'sync-backlog',
+            kind: 'alert' as const,
+            title: 'Backlog de sync en attente',
+            detail: `${syncBacklogCount} synchronisation(s) en file d'attente.`,
+            tone: 'outline' as const,
+          },
+        ]
+      : []),
+    ...(transactionsFreshness?.syncStatus === 'stale-but-usable' ||
+    transactionsFreshness?.syncStatus === 'sync-failed-with-safe-data'
+      ? [
+          {
+            id: 'transactions-freshness',
+            kind: 'alert' as const,
+            title: 'Transactions en mode degrade',
+            detail:
+              transactionsFreshness.syncStatus === 'sync-failed-with-safe-data'
+                ? 'La derniere sync a echoue, mais les dernieres donnees restent consultables.'
+                : 'Les transactions ne sont pas toutes fraiches, mais le cockpit reste utilisable.',
+            tone: 'outline' as const,
+          },
+        ]
+      : []),
+    ...(wealthTrend === 'up' || wealthTrend === 'down'
+      ? [
+          {
+            id: 'wealth-trend',
+            kind: 'insight' as const,
+            title: 'Tendance patrimoine',
+            detail:
+              wealthTrend === 'up'
+                ? `Le patrimoine progresse de ${formatMoney(wealthDelta)} sur la periode.`
+                : `Le patrimoine recule de ${formatMoney(Math.abs(wealthDelta))} sur la periode.`,
+            tone: 'secondary' as const,
+          },
+        ]
+      : []),
+    ...(adaptedSummary.topExpenseGroups[0]
+      ? [
+          {
+            id: 'top-expense-group',
+            kind: 'insight' as const,
+            title: 'Poste de depense dominant',
+            detail: `${adaptedSummary.topExpenseGroups[0].label} (${formatMoney(adaptedSummary.topExpenseGroups[0].total)} sur ${adaptedSummary.topExpenseGroups[0].count} transaction(s)).`,
+            tone: 'secondary' as const,
+          },
+        ]
+      : []),
+    ...(cashflowDirection.direction === 'up' || cashflowDirection.direction === 'down'
+      ? [
+          {
+            id: 'cashflow-net',
+            kind: 'insight' as const,
+            title: 'Signal cashflow',
+            detail:
+              cashflowDirection.direction === 'up'
+                ? `Cashflow net positif: ${formatMoney(cashflowDirection.net)}.`
+                : `Cashflow net negatif: ${formatMoney(cashflowDirection.net)}.`,
+            tone: 'secondary' as const,
+          },
+        ]
+      : []),
+  ].slice(0, 6)
   const auditEvents = auditTrailQuery.data?.events ?? []
   const latestCallback = statusQuery.data?.lastCallback ?? null
   const latestCallbackFreshness = formatRelativeDateTime(latestCallback?.receivedAt ?? null)
@@ -1620,6 +1697,34 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           />
 
           <ExpenseStructureCard range={range} transactions={transactions} demo={isDemo} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Alerts & insights center
+                <DemoWidgetBadge demo={isDemo} />
+              </CardTitle>
+              <CardDescription>
+                Vue unifiee des alertes prioritaires et des signaux utiles du cockpit.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {alertInsightItems.length === 0 ? (
+                <p className="text-muted-foreground">
+                  Aucun signal prioritaire pour le moment.
+                </p>
+              ) : null}
+              {alertInsightItems.map(item => (
+                <div key={item.id} className="rounded-md border border-border/80 bg-muted/20 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant={item.tone}>{item.kind === 'alert' ? 'alerte' : 'insight'}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
