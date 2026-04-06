@@ -10,6 +10,7 @@ import {
 } from './domain/derived-recompute'
 import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
 import { createDashboardNewsUseCases } from './domain/dashboard-news'
+import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/failsoft-policy'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
 import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
@@ -25,12 +26,18 @@ export const createDashboardRouteRuntime = ({
   featureEnabled,
   liveNewsIngestionEnabled,
   transactionsSnapshotStaleAfterMinutes,
+  failsoftPolicyEnabled,
+  failsoftSourceOrder,
+  failsoftNewsEnabled,
 }: {
   db: ApiDb
   redisClient: RedisClient
   featureEnabled: boolean
   liveNewsIngestionEnabled: boolean
   transactionsSnapshotStaleAfterMinutes: number
+  failsoftPolicyEnabled: boolean
+  failsoftSourceOrder: FailsoftSource[]
+  failsoftNewsEnabled: boolean
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
@@ -93,6 +100,9 @@ export const createDashboardRouteRuntime = ({
     readModel,
     fetchLiveNews,
     liveIngestionEnabled: liveNewsIngestionEnabled,
+    failsoftPolicyEnabled,
+    failsoftSourceOrder: failsoftSourceOrder.length > 0 ? failsoftSourceOrder : DEFAULT_FAILSOFT_SOURCE_ORDER,
+    failsoftNewsEnabled,
   })
 
   return {

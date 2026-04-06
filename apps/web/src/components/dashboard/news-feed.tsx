@@ -28,6 +28,10 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
       })
     : []
 
+  const resilience = payload?.resilience
+  const showPartialState = resilience?.status === 'degraded'
+  const showUnavailableState = resilience?.status === 'unavailable'
+
   return (
     <Card>
       <CardHeader>
@@ -47,20 +51,37 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
 
         {newsQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading news…</p> : null}
 
-        {payload?.staleCache ? (
+        {showPartialState ? (
           <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900">
-            Showing last successful sync. Live provider may be delayed.
+            Partial data mode active: showing resilient fallback data while live sources recover.
           </div>
         ) : null}
 
-        {payload?.providerError ? (
+        {showUnavailableState ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+            News is temporarily unavailable. Safe fallback mode is active.
+          </div>
+        ) : null}
+
+        {payload?.providerError && !showUnavailableState ? (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
             Provider fallback active: {payload.providerError.message}
           </div>
         ) : null}
 
+        {payload?.staleCache && !showPartialState ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900">
+            Showing last successful sync. Live provider may be delayed.
+          </div>
+        ) : null}
+
         {payload?.lastUpdatedAt ? (
           <p className="text-xs text-muted-foreground">Last updated: {new Date(payload.lastUpdatedAt).toLocaleString()}</p>
+        ) : null}
+        {resilience ? (
+          <p className="text-xs text-muted-foreground">
+            Resilience status: {resilience.status} · source: {resilience.source} · request-id: {resilience.requestId}
+          </p>
         ) : null}
 
         {payload && payload.items.length === 0 ? (

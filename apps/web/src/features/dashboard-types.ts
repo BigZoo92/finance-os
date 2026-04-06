@@ -191,6 +191,22 @@ export type DashboardDerivedRecomputeActionError = {
 
 export type DashboardNewsResponse = {
   source: 'demo_fixture' | 'cache'
+  resilience: {
+    domain: 'alerts' | 'news' | 'insights'
+    status: 'ok' | 'degraded' | 'unavailable'
+    source: 'live' | 'cache' | 'demo'
+    requestId: string
+    reasonCode: string | null
+    policy: {
+      enabled: boolean
+      sourceOrder: Array<'live' | 'cache' | 'demo'>
+    }
+    slo: {
+      degradedRate: number
+      hardFailRate: number
+      staleAgeSeconds: number | null
+    }
+  }
   lastUpdatedAt: string | null
   staleCache: boolean
   providerError: {
