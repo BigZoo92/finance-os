@@ -85,6 +85,7 @@ import { WealthHistory } from './wealth-history'
 import { ExpenseStructureCard } from './expense-structure-card'
 import { NewsFeed } from './news-feed'
 import { buildHighValueSignalDigest } from './high-value-signals'
+import { rankPersonalSignalsByRelevance } from './relevance-scoring'
 import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -293,7 +294,7 @@ const buildPersonalAlertSignals = ({
     })
   }
 
-  return alerts
+  return rankPersonalSignalsByRelevance(alerts).map(entry => entry.item)
 }
 
 const pickLatestDate = (values: Array<string | null>) => {

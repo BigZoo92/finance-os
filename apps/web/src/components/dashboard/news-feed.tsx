@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
 import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import type { AuthMode } from '@/features/auth-types'
+import { rankNewsByRelevance } from './relevance-scoring'
 
 export function NewsFeed({ mode }: { mode: AuthMode }) {
   const [topic, setTopic] = useState('')
@@ -20,6 +21,12 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
   )
 
   const payload = newsQuery.data
+  const rankedItems = payload
+    ? rankNewsByRelevance(payload.items, {
+        topicFilter: topic.trim(),
+        sourceFilter: source.trim(),
+      })
+    : []
 
   return (
     <Card>
@@ -64,13 +71,17 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
           )
         ) : null}
 
-        {payload?.items.map(item => (
+        {rankedItems.map(({ item, score, reasons }) => (
           <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="block rounded-md border p-3">
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-medium leading-snug">{item.title}</p>
-              <Badge variant="secondary">{item.topic}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{item.topic}</Badge>
+                <Badge variant="outline">Score {score}</Badge>
+              </div>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{item.sourceName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Why relevant: {reasons.join(', ')}</p>
           </a>
         ))}
       </CardContent>
