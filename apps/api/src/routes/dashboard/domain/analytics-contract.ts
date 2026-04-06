@@ -20,10 +20,26 @@ export interface DashboardAnalyticsResponse {
     items: Array<{ label: string; total: number; ratio: number }>
     state: DashboardAnalyticsWidgetState
   }
+  portfolioAllocation: {
+    items: Array<{ type: 'cash' | 'investment' | 'manual'; total: number; ratio: number }>
+    state: DashboardAnalyticsWidgetState
+  }
+  allocationEvolution: {
+    points: Array<{
+      date: string
+      total: number
+      cash: number
+      investment: number
+      manual: number
+    }>
+    state: DashboardAnalyticsWidgetState
+  }
   availability: {
     summaryCards: boolean
     timeseries: boolean
     categorySplit: boolean
+    portfolioAllocation: boolean
+    allocationEvolution: boolean
   }
 }
 
@@ -61,6 +77,8 @@ export const mapSummaryToAnalyticsContract = ({
     summaryCards: !disabledWidgets.has('summaryCards'),
     timeseries: !disabledWidgets.has('timeseries'),
     categorySplit: !disabledWidgets.has('categorySplit'),
+    portfolioAllocation: !disabledWidgets.has('portfolioAllocation'),
+    allocationEvolution: !disabledWidgets.has('allocationEvolution'),
   }
 
   const categoryTotal = summary.topExpenseGroups.reduce((acc, item) => acc + item.total, 0)
@@ -69,6 +87,57 @@ export const mapSummaryToAnalyticsContract = ({
     total: item.total,
     ratio: categoryTotal > 0 ? Number((item.total / categoryTotal).toFixed(4)) : 0,
   }))
+  const portfolioTotals = summary.assets.reduce(
+    (acc, asset) => {
+      if (!asset.enabled || !Number.isFinite(asset.valuation) || asset.valuation <= 0) {
+        return acc
+      }
+
+      acc[asset.type] += asset.valuation
+      return acc
+    },
+    {
+      cash: 0,
+      investment: 0,
+      manual: 0,
+    }
+  )
+  const portfolioGrandTotal = portfolioTotals.cash + portfolioTotals.investment + portfolioTotals.manual
+  const portfolioAllocationBase = [
+    { type: 'cash', total: portfolioTotals.cash, ratio: 0 },
+    { type: 'investment', total: portfolioTotals.investment, ratio: 0 },
+    { type: 'manual', total: portfolioTotals.manual, ratio: 0 },
+  ] as const
+  const portfolioAllocationItems: DashboardAnalyticsResponse['portfolioAllocation']['items'] = portfolioAllocationBase
+    .filter(item => item.total > 0)
+    .map(item => ({
+      ...item,
+      ratio: portfolioGrandTotal > 0 ? Number((item.total / portfolioGrandTotal).toFixed(4)) : 0,
+    }))
+  const allocationRatioByType = portfolioAllocationItems.reduce(
+    (acc, item) => {
+      acc[item.type] = item.ratio
+      return acc
+    },
+    {
+      cash: 0,
+      investment: 0,
+      manual: 0,
+    }
+  )
+  const allocationEvolutionPoints = summary.dailyWealthSnapshots.map(snapshot => {
+    const cash = Number((snapshot.balance * allocationRatioByType.cash).toFixed(2))
+    const investment = Number((snapshot.balance * allocationRatioByType.investment).toFixed(2))
+    const manual = Number((snapshot.balance - cash - investment).toFixed(2))
+
+    return {
+      date: snapshot.date,
+      total: snapshot.balance,
+      cash,
+      investment,
+      manual,
+    }
+  })
 
   return {
     schemaVersion: '2026-04-06',
@@ -96,6 +165,14 @@ export const mapSummaryToAnalyticsContract = ({
     categorySplit: {
       items: categoryItems,
       state: toState(availability.categorySplit, categoryItems.length > 0),
+    },
+    portfolioAllocation: {
+      items: portfolioAllocationItems,
+      state: toState(availability.portfolioAllocation, portfolioAllocationItems.length > 0),
+    },
+    allocationEvolution: {
+      points: allocationEvolutionPoints,
+      state: toState(availability.allocationEvolution, allocationEvolutionPoints.length > 0),
     },
     availability,
   }

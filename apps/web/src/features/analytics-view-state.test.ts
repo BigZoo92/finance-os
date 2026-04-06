@@ -20,10 +20,20 @@ const buildPayload = (overrides?: Partial<DashboardAnalyticsResponse>): Dashboar
     items: [{ label: 'Housing', total: 20, ratio: 1 }],
     state: 'ready',
   },
+  portfolioAllocation: {
+    items: [{ type: 'investment', total: 100, ratio: 1 }],
+    state: 'ready',
+  },
+  allocationEvolution: {
+    points: [{ date: '2026-04-01', total: 100, cash: 0, investment: 100, manual: 0 }],
+    state: 'ready',
+  },
   availability: {
     summaryCards: true,
     timeseries: true,
     categorySplit: true,
+    portfolioAllocation: true,
+    allocationEvolution: true,
   },
   ...overrides,
 })
@@ -46,6 +56,8 @@ describe('deriveAnalyticsPageState', () => {
       },
       timeseries: { points: [], state: 'empty' },
       categorySplit: { items: [], state: 'empty' },
+      portfolioAllocation: { items: [], state: 'empty' },
+      allocationEvolution: { points: [], state: 'empty' },
     })
 
     expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: empty })).toBe('empty')
@@ -58,6 +70,8 @@ describe('deriveAnalyticsPageState', () => {
         summaryCards: true,
         timeseries: false,
         categorySplit: true,
+        portfolioAllocation: true,
+        allocationEvolution: true,
       },
     })
 

@@ -20,10 +20,26 @@ export type DashboardAnalyticsResponse = {
     items: Array<{ label: string; total: number; ratio: number }>
     state: AnalyticsWidgetState
   }
+  portfolioAllocation: {
+    items: Array<{ type: 'cash' | 'investment' | 'manual'; total: number; ratio: number }>
+    state: AnalyticsWidgetState
+  }
+  allocationEvolution: {
+    points: Array<{
+      date: string
+      total: number
+      cash: number
+      investment: number
+      manual: number
+    }>
+    state: AnalyticsWidgetState
+  }
   availability: {
     summaryCards: boolean
     timeseries: boolean
     categorySplit: boolean
+    portfolioAllocation: boolean
+    allocationEvolution: boolean
   }
 }
 

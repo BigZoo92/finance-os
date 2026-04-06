@@ -1,4 +1,6 @@
 Falling back to direct application...
-Applied patch to 'apps/web/src/components/dashboard/app-shell.tsx' cleanly.
-Falling back to direct application...
-Falling back to direct application...
+Applied patch to 'apps/api/src/routes/dashboard/domain/analytics-contract.ts' cleanly.
+Applied patch to 'apps/api/src/routes/dashboard/routes/analytics.test.ts' cleanly.
+Applied patch to 'apps/web/src/features/analytics-types.ts' cleanly.
+Applied patch to 'apps/web/src/features/analytics-view-state.test.ts' cleanly.
+Applied patch to 'apps/web/src/features/analytics-view-state.ts' cleanly.
