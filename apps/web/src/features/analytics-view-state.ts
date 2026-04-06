@@ -9,11 +9,11 @@ export const deriveAnalyticsPageState = ({
   isError: boolean
   data: DashboardAnalyticsResponse | undefined
 }): AnalyticsPageState => {
-  if (isLoading) {
-    return 'loading'
-  }
+  if (!data) {
+    if (isLoading) {
+      return 'loading'
+    }
 
-  if (isError || !data) {
     return 'error'
   }
 
@@ -31,7 +31,7 @@ export const deriveAnalyticsPageState = ({
     return 'empty'
   }
 
-  if (widgetStates.some(state => state === 'degraded')) {
+  if (isError || widgetStates.some(state => state !== 'ready')) {
     return 'degraded'
   }
 
