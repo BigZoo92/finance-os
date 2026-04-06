@@ -1,6 +1,2 @@
 Falling back to direct application...
-Applied patch to 'apps/api/src/routes/dashboard/domain/analytics-contract.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/routes/analytics.test.ts' cleanly.
-Applied patch to 'apps/web/src/features/analytics-types.ts' cleanly.
-Applied patch to 'apps/web/src/features/analytics-view-state.test.ts' cleanly.
-Applied patch to 'apps/web/src/features/analytics-view-state.ts' cleanly.
+Applied patch to 'apps/web/src/components/dashboard/wealth-history.tsx' cleanly.
