@@ -8,6 +8,7 @@ import { createAnalyticsRoute } from './routes/analytics'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
+import type { FailsoftSource } from './domain/failsoft-policy'
 import type { ApiDb, RedisClient } from './types'
 
 export const createDashboardRoutes = ({
@@ -16,12 +17,18 @@ export const createDashboardRoutes = ({
   featureEnabled,
   liveNewsIngestionEnabled,
   transactionsSnapshotStaleAfterMinutes,
+  failsoftPolicyEnabled,
+  failsoftSourceOrder,
+  failsoftNewsEnabled,
 }: {
   db: ApiDb
   redisClient: RedisClient
   featureEnabled: boolean
   liveNewsIngestionEnabled: boolean
   transactionsSnapshotStaleAfterMinutes: number
+  failsoftPolicyEnabled: boolean
+  failsoftSourceOrder: FailsoftSource[]
+  failsoftNewsEnabled: boolean
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -29,6 +36,9 @@ export const createDashboardRoutes = ({
     featureEnabled,
     liveNewsIngestionEnabled,
     transactionsSnapshotStaleAfterMinutes,
+    failsoftPolicyEnabled,
+    failsoftSourceOrder,
+    failsoftNewsEnabled,
   })
 
   return new Elysia({ prefix: '/dashboard' })

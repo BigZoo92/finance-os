@@ -253,6 +253,9 @@ const registerAppRoutes = (app: Elysia<any>) => {
         featureEnabled: env.DERIVED_RECOMPUTE_ENABLED,
         liveNewsIngestionEnabled: env.LIVE_NEWS_INGESTION_ENABLED,
         transactionsSnapshotStaleAfterMinutes: env.TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES,
+        failsoftPolicyEnabled: env.FAILSOFT_POLICY_ENABLED,
+        failsoftSourceOrder: env.FAILSOFT_SOURCE_ORDER,
+        failsoftNewsEnabled: env.FAILSOFT_NEWS_ENABLED,
       })
     )
     .use(

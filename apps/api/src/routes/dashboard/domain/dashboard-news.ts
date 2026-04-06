@@ -1,4 +1,8 @@
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import {
+  buildFailsoftEnvelope,
+  type FailsoftSource,
+} from './failsoft-policy'
 import type { DashboardNewsResponse, DashboardNewsUseCases, DashboardReadRepository } from '../types'
 
 const STALE_AFTER_MS = 1000 * 60 * 60 * 6
@@ -7,6 +11,9 @@ export const createDashboardNewsUseCases = ({
   readModel,
   fetchLiveNews,
   liveIngestionEnabled,
+  failsoftPolicyEnabled,
+  failsoftSourceOrder,
+  failsoftNewsEnabled,
 }: {
   readModel: DashboardReadRepository
   fetchLiveNews: (input: { requestId: string }) => Promise<
@@ -24,6 +31,9 @@ export const createDashboardNewsUseCases = ({
     }>
   >
   liveIngestionEnabled: boolean
+  failsoftPolicyEnabled: boolean
+  failsoftSourceOrder: FailsoftSource[]
+  failsoftNewsEnabled: boolean
 }): DashboardNewsUseCases => ({
   getNews: async ({ topic, sourceName, limit, requestId }) => {
     const state = await readModel.getNewsCacheState()
@@ -34,22 +44,54 @@ export const createDashboardNewsUseCases = ({
     })
     const nowMs = Date.now()
     const lastUpdatedAt = state?.lastSuccessAt?.toISOString() ?? null
+    const staleAgeSeconds =
+      state?.lastSuccessAt === null || state?.lastSuccessAt === undefined
+        ? null
+        : Math.max(0, Math.round((nowMs - state.lastSuccessAt.getTime()) / 1000))
+    const staleCache =
+      state?.lastSuccessAt === null || state?.lastSuccessAt === undefined
+        ? true
+        : nowMs - state.lastSuccessAt.getTime() > STALE_AFTER_MS
+    const providerFailureRate =
+      state && state.ingestionCount > 0
+        ? state.providerFailureCount / state.ingestionCount
+        : state && state.providerFailureCount > 0
+          ? 1
+          : 0
+    const resilience = buildFailsoftEnvelope({
+      mode: 'admin',
+      domain: 'news',
+      requestId,
+      staleAgeSeconds,
+      hasCacheData: rows.length > 0,
+      providerFailureRate,
+      cacheStale: staleCache,
+      sourceOrder: failsoftSourceOrder,
+      policyEnabled: failsoftPolicyEnabled,
+      domainEnabled: failsoftNewsEnabled,
+    })
     logApiEvent({
-      level: 'info',
+      level: resilience.status === 'ok' ? 'info' : 'warn',
       msg: 'dashboard news cache query',
       requestId,
       filter_topic: topic ?? null,
       filter_source: sourceName ?? null,
       result_count: rows.length,
+      failsoft_domain: resilience.domain,
+      failsoft_status: resilience.status,
+      failsoft_source: resilience.source,
+      failsoft_reason_code: resilience.reasonCode,
+      failsoft_policy_enabled: resilience.policy.enabled,
+      failsoft_degraded_rate: resilience.slo.degradedRate,
+      failsoft_hard_fail_rate: resilience.slo.hardFailRate,
+      failsoft_stale_age_seconds: resilience.slo.staleAgeSeconds,
     })
 
     return {
       source: 'cache',
+      resilience,
       lastUpdatedAt,
-      staleCache:
-        state?.lastSuccessAt === null || state?.lastSuccessAt === undefined
-          ? true
-          : nowMs - state.lastSuccessAt.getTime() > STALE_AFTER_MS,
+      staleCache,
       providerError:
         state?.lastErrorCode && state.lastErrorMessage
           ? {
@@ -61,12 +103,7 @@ export const createDashboardNewsUseCases = ({
         cacheHitRate: rows.length > 0 ? 1 : 0,
         dedupeDropRate:
           state && state.ingestionCount > 0 ? state.dedupeDropCount / state.ingestionCount : 0,
-        providerFailureRate:
-          state && state.ingestionCount > 0
-            ? state.providerFailureCount / state.ingestionCount
-            : state && state.providerFailureCount > 0
-              ? 1
-              : 0,
+        providerFailureRate,
       },
       items: rows.map(row => ({
         id: String(row.id),

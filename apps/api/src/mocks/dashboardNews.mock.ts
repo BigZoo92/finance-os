@@ -2,6 +2,22 @@ import type { DashboardNewsResponse } from '../routes/dashboard/types'
 
 export const getDashboardNewsMock = (): DashboardNewsResponse => ({
   source: 'demo_fixture',
+  resilience: {
+    domain: 'news',
+    status: 'ok',
+    source: 'demo',
+    requestId: 'demo-news-request',
+    reasonCode: null,
+    policy: {
+      enabled: true,
+      sourceOrder: ['demo'],
+    },
+    slo: {
+      degradedRate: 0,
+      hardFailRate: 0,
+      staleAgeSeconds: null,
+    },
+  },
   lastUpdatedAt: '2026-04-05T10:30:00.000Z',
   staleCache: false,
   providerError: null,

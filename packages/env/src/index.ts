@@ -55,6 +55,23 @@ const toBooleanEnv = (value: string | undefined) => {
   return normalized === '1' || normalized === 'true' || normalized === 'yes'
 }
 
+const toFailsoftSourceOrderEnv = (value: string | undefined) => {
+  const defaultOrder: Array<'live' | 'cache' | 'demo'> = ['live', 'cache', 'demo']
+  const normalized = toOptionalEnv(value)
+  if (!normalized) {
+    return defaultOrder
+  }
+
+  const parsed = normalized
+    .split(',')
+    .map(entry => entry.trim().toLowerCase())
+    .filter((entry): entry is 'live' | 'cache' | 'demo' =>
+      entry === 'live' || entry === 'cache' || entry === 'demo'
+    )
+
+  return parsed.length > 0 ? Array.from(new Set(parsed)) : defaultOrder
+}
+
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '')
 
 const toDecodedBuffer = (value: string): Buffer | null => {
@@ -408,6 +425,26 @@ export const getApiEnv = () => {
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     LIVE_NEWS_INGESTION_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FAILSOFT_POLICY_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FAILSOFT_SOURCE_ORDER: z
+      .string()
+      .optional()
+      .transform(value => toFailsoftSourceOrderEnv(value)),
+    FAILSOFT_ALERTS_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FAILSOFT_NEWS_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FAILSOFT_INSIGHTS_ENABLED: z
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
