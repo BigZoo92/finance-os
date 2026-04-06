@@ -408,6 +408,12 @@ export interface DashboardTransactionsResponse {
 
 export interface DashboardNewsResponse {
   source: 'demo_fixture' | 'cache'
+  dataset?: {
+    version: string
+    source: 'demo_fixture' | 'admin_live' | 'admin_fallback'
+    mode: 'demo' | 'admin'
+    isDemoData: boolean
+  }
   resilience: {
     domain: 'alerts' | 'news' | 'insights'
     status: 'ok' | 'degraded' | 'unavailable'
