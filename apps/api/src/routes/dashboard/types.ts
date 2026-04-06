@@ -92,6 +92,28 @@ export interface DashboardExpenseGroupRow {
   count: number
 }
 
+export interface DashboardNewsArticleRow {
+  id: number
+  title: string
+  summary: string | null
+  url: string
+  sourceName: string
+  topic: string
+  language: string
+  publishedAt: Date
+}
+
+export interface DashboardNewsCacheStateRow {
+  lastSuccessAt: Date | null
+  lastAttemptAt: Date | null
+  lastFailureAt: Date | null
+  lastErrorCode: string | null
+  lastErrorMessage: string | null
+  ingestionCount: number
+  dedupeDropCount: number
+  providerFailureCount: number
+}
+
 export interface DashboardDailyNetFlowRow {
   bookingDate: string
   netAmount: string
@@ -384,6 +406,31 @@ export interface DashboardTransactionsResponse {
   }>
 }
 
+export interface DashboardNewsResponse {
+  source: 'demo_fixture' | 'cache'
+  lastUpdatedAt: string | null
+  staleCache: boolean
+  providerError: {
+    code: string
+    message: string
+  } | null
+  metrics: {
+    cacheHitRate: number
+    dedupeDropRate: number
+    providerFailureRate: number
+  }
+  items: Array<{
+    id: string
+    title: string
+    summary: string | null
+    url: string
+    sourceName: string
+    topic: string
+    language: string
+    publishedAt: string
+  }>
+}
+
 export interface DashboardGoalResponse {
   id: number
   name: string
@@ -430,6 +477,38 @@ export interface DashboardReadRepository {
     input: DashboardGoalPersistenceInput
   ) => Promise<DashboardGoalRow | null>
   archiveGoal: (goalId: number, archivedAt: Date) => Promise<DashboardGoalRow | null>
+  listNewsArticles: (params: {
+    topic?: string
+    sourceName?: string
+    limit: number
+  }) => Promise<DashboardNewsArticleRow[]>
+  upsertNewsArticles: (
+    rows: Array<{
+      providerArticleId: string
+      dedupeKey: string
+      title: string
+      summary: string | null
+      url: string
+      sourceName: string
+      topic: string
+      language: string
+      publishedAt: Date
+      metadata: Record<string, unknown> | null
+    }>
+  ) => Promise<{ insertedCount: number; dedupeDropCount: number }>
+  getNewsCacheState: () => Promise<DashboardNewsCacheStateRow | null>
+  upsertNewsCacheState: (input: {
+    lastSuccessAt?: Date | null
+    lastAttemptAt?: Date | null
+    lastFailureAt?: Date | null
+    lastErrorCode?: string | null
+    lastErrorMessage?: string | null
+    lastRequestId?: string | null
+    ingestionCountIncrement?: number
+    dedupeDropCountIncrement?: number
+    providerFailureCountIncrement?: number
+    lastIngestDurationMs?: number
+  }) => Promise<void>
 }
 
 export interface DashboardDerivedRecomputeRepository {
@@ -489,6 +568,31 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource: 'admin' | 'internal'
   }) => Promise<DashboardDerivedRecomputeStatusResponse>
+  getNews?: (input: {
+    topic?: string
+    sourceName?: string
+    limit: number
+    requestId: string
+  }) => Promise<DashboardNewsResponse>
+  ingestNews?: (input: { requestId: string }) => Promise<{
+    fetchedCount: number
+    insertedCount: number
+    dedupeDropCount: number
+  }>
+}
+
+export interface DashboardNewsUseCases {
+  getNews: (input: {
+    topic?: string
+    sourceName?: string
+    limit: number
+    requestId: string
+  }) => Promise<DashboardNewsResponse>
+  ingestNews: (input: { requestId: string }) => Promise<{
+    fetchedCount: number
+    insertedCount: number
+    dedupeDropCount: number
+  }>
 }
 
 export interface DashboardRouteRuntime {

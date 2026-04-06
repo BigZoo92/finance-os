@@ -1,7 +1,8 @@
 import { apiFetch, apiRequest, ApiRequestError } from '@/lib/api'
-import { getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
+import { getDemoDashboardNews, getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
 import type {
   DashboardDerivedRecomputeActionError,
+  DashboardNewsResponse,
   DashboardRange,
   DashboardDerivedRecomputeStatusResponse,
   DashboardSummaryResponse,
@@ -20,6 +21,38 @@ const toSearchParams = (params: Record<string, string | number | undefined>) => 
   }
 
   return search.toString()
+}
+
+export const fetchDashboardNews = async (params?: {
+  topic?: string
+  source?: string
+  limit?: number
+}) => {
+  const query = toSearchParams({
+    topic: params?.topic,
+    source: params?.source,
+    limit: params?.limit,
+  })
+
+  try {
+    return await apiFetch<DashboardNewsResponse>(
+      `/dashboard/news${query.length > 0 ? `?${query}` : ''}`
+    )
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      if (
+        error.status === 'network_error' ||
+        error.status === 401 ||
+        error.status === 403 ||
+        error.status === 404 ||
+        error.status >= 500
+      ) {
+        return getDemoDashboardNews()
+      }
+    }
+
+    return getDemoDashboardNews()
+  }
 }
 
 export const fetchDashboardSummary = async (range: DashboardRange) => {

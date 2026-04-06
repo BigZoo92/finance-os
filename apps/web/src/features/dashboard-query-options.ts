@@ -1,12 +1,14 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import {
   fetchDashboardDerivedRecomputeStatus,
+  fetchDashboardNews,
   fetchDashboardSummary,
   fetchDashboardTransactions,
 } from './dashboard-api'
 import type { AuthMode } from './auth-types'
 import {
   getDemoDashboardDerivedRecomputeStatus,
+  getDemoDashboardNews,
   getDemoDashboardSummary,
 } from './demo-data'
 import type { DashboardRange } from './dashboard-types'
@@ -17,6 +19,8 @@ export const dashboardQueryKeys = {
   all: ['dashboard'] as const,
   summary: (range: DashboardRange) => [...dashboardQueryKeys.all, 'summary', range] as const,
   derivedRecomputeStatus: () => [...dashboardQueryKeys.all, 'derived-recompute'] as const,
+  news: (params?: { topic?: string; source?: string; limit?: number }) =>
+    [...dashboardQueryKeys.all, 'news', params?.topic ?? null, params?.source ?? null, params?.limit ?? 20] as const,
   transactions: (params: {
     range: DashboardRange
     limit: number
@@ -30,6 +34,37 @@ export const dashboardSummaryQueryOptions = (range: DashboardRange) =>
     range,
     mode: 'admin',
   })
+
+export const dashboardNewsQueryOptionsWithMode = ({
+  mode,
+  topic,
+  source,
+  limit = 20,
+}: {
+  mode?: AuthMode
+  topic?: string
+  source?: string
+  limit?: number
+}) => {
+  const keyParams = {
+    ...(topic ? { topic } : {}),
+    ...(source ? { source } : {}),
+    limit,
+  }
+
+  return queryOptions({
+    queryKey: dashboardQueryKeys.news(keyParams),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoDashboardNews()
+      }
+
+      return fetchDashboardNews(keyParams)
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+}
 
 export const dashboardSummaryQueryOptionsWithMode = ({
   range,

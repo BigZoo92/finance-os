@@ -250,6 +250,7 @@ const registerAppRoutes = (app: Elysia<any>) => {
         db,
         redisClient: redisClient.client,
         featureEnabled: env.DERIVED_RECOMPUTE_ENABLED,
+        liveNewsIngestionEnabled: env.LIVE_NEWS_INGESTION_ENABLED,
         transactionsSnapshotStaleAfterMinutes: env.TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES,
       })
     )

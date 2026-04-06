@@ -407,6 +407,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    LIVE_NEWS_INGESTION_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     ENRICHMENT_BULK_TRIAGE_ENABLED: z
       .string()
       .optional()

@@ -29,6 +29,16 @@ export const dashboardTransactionsQuerySchema = t.Object({
   ),
 })
 
+export const dashboardNewsQuerySchema = t.Object({
+  topic: t.Optional(t.String({ minLength: 1, maxLength: 32 })),
+  source: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 50 })),
+})
+
+export const dashboardNewsIngestBodySchema = t.Object({
+  trigger: t.Optional(t.Union([t.Literal('manual'), t.Literal('scheduled')])),
+})
+
 export const dashboardTransactionClassificationParamsSchema = t.Object({
   transactionId: t.Numeric({ minimum: 1 }),
 })
