@@ -3,6 +3,7 @@ import { createDashboardRuntimePlugin } from './plugin'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
 import { createGoalsRoute } from './routes/goals'
 import { createSummaryRoute } from './routes/summary'
+import { createAnalyticsRoute } from './routes/analytics'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
@@ -29,6 +30,7 @@ export const createDashboardRoutes = ({
   return new Elysia({ prefix: '/dashboard' })
     .use(createDashboardRuntimePlugin(runtime))
     .use(createSummaryRoute())
+    .use(createAnalyticsRoute())
     .use(createDerivedRecomputeRoute())
     .use(createGoalsRoute())
     .use(createTransactionsRoute())

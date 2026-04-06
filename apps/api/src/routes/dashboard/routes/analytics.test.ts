@@ -1,0 +1,154 @@
+import { afterEach, describe, expect, it } from 'bun:test'
+import { Elysia } from 'elysia'
+import { createDashboardRuntimePlugin } from '../plugin'
+import { createAnalyticsRoute } from './analytics'
+import type { DashboardRouteRuntime, DashboardSummaryResponse } from '../types'
+
+const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => ({
+  range,
+  totals: {
+    balance: 100,
+    incomes: 80,
+    expenses: 20,
+  },
+  connections: [],
+  accounts: [],
+  assets: [],
+  positions: [],
+  dailyWealthSnapshots: [{ date: '2026-04-01', balance: 90 }],
+  topExpenseGroups: [{ label: 'Housing', category: 'housing', merchant: 'Landlord', total: 20, count: 1 }],
+})
+
+const createDashboardRuntime = (
+  overrides?: Partial<DashboardRouteRuntime['useCases']>
+): DashboardRouteRuntime => ({
+  repositories: {
+    readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
+    derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
+  },
+  useCases: {
+    getSummary: async range => buildSummary(range),
+    getTransactions: async () => {
+      throw new Error('not used in analytics tests')
+    },
+    requestTransactionsBackgroundRefresh: async () => false,
+    updateTransactionClassification: async () => null,
+    getGoals: async () => ({ items: [] }),
+    createGoal: async () => {
+      throw new Error('not used in analytics tests')
+    },
+    updateGoal: async () => null,
+    archiveGoal: async () => null,
+    getDerivedRecomputeStatus: async () => {
+      throw new Error('not used in analytics tests')
+    },
+    runDerivedRecompute: async () => {
+      throw new Error('not used in analytics tests')
+    },
+    ...overrides,
+  },
+})
+
+const createAnalyticsTestApp = ({
+  mode,
+  runtime,
+}: {
+  mode: 'admin' | 'demo'
+  runtime?: DashboardRouteRuntime
+}) => {
+  return new Elysia()
+    .derive(() => ({
+      auth: { mode } as const,
+      requestMeta: {
+        requestId: 'req-analytics-test',
+        startedAtMs: 0,
+      },
+    }))
+    .use(createDashboardRuntimePlugin(runtime ?? createDashboardRuntime()))
+    .use(createAnalyticsRoute())
+}
+
+afterEach(() => {
+  delete process.env.DASHBOARD_ANALYTICS_FORCE_DEMO_ADAPTER
+  delete process.env.DASHBOARD_ANALYTICS_DISABLED_WIDGETS
+})
+
+describe('createAnalyticsRoute', () => {
+  it('uses demo adapter in demo mode and never calls admin use case', async () => {
+    let getSummaryCalls = 0
+    const app = createAnalyticsTestApp({
+      mode: 'demo',
+      runtime: createDashboardRuntime({
+        getSummary: async range => {
+          getSummaryCalls += 1
+          return buildSummary(range)
+        },
+      }),
+    })
+
+    const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
+    const payload = (await response.json()) as any
+
+    expect(response.status).toBe(200)
+    expect(payload.source).toBe('demoAdapter')
+    expect(getSummaryCalls).toBe(0)
+  })
+
+  it('uses admin adapter in admin mode by default', async () => {
+    let getSummaryCalls = 0
+    const app = createAnalyticsTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        getSummary: async range => {
+          getSummaryCalls += 1
+          return buildSummary(range)
+        },
+      }),
+    })
+
+    const response = await app.handle(new Request('http://finance-os.local/analytics?range=7d'))
+    const payload = (await response.json()) as any
+
+    expect(response.status).toBe(200)
+    expect(payload.source).toBe('adminAdapter')
+    expect(payload.range).toBe('7d')
+    expect(getSummaryCalls).toBe(1)
+  })
+
+  it('forces demo adapter for admin when kill-switch is enabled', async () => {
+    process.env.DASHBOARD_ANALYTICS_FORCE_DEMO_ADAPTER = '1'
+    let getSummaryCalls = 0
+    const app = createAnalyticsTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        getSummary: async range => {
+          getSummaryCalls += 1
+          return buildSummary(range)
+        },
+      }),
+    })
+
+    const response = await app.handle(new Request('http://finance-os.local/analytics?range=90d'))
+    const payload = (await response.json()) as any
+
+    expect(response.status).toBe(200)
+    expect(payload.source).toBe('demoAdapter')
+    expect(getSummaryCalls).toBe(0)
+  })
+
+  it('marks disabled widgets as degraded while keeping payload available', async () => {
+    process.env.DASHBOARD_ANALYTICS_DISABLED_WIDGETS = 'timeseries,categorySplit'
+    const app = createAnalyticsTestApp({
+      mode: 'admin',
+    })
+
+    const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
+    const payload = (await response.json()) as any
+
+    expect(response.status).toBe(200)
+    expect(payload.availability.timeseries).toBe(false)
+    expect(payload.availability.categorySplit).toBe(false)
+    expect(payload.timeseries.state).toBe('degraded')
+    expect(payload.categorySplit.state).toBe('degraded')
+  })
+})
