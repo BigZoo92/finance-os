@@ -6,3 +6,5 @@ export * from './recurring-commitments'
 export * from './technical-probe'
 
 export * from './enrichment'
+
+export * from './news'

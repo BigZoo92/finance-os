@@ -99,6 +99,12 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm web:typecheck`
   - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts`
   - `pnpm web:build`
+- Dashboard news ingestion/cache contract, persistence, or UI changes:
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm --filter @finance-os/env typecheck`
+  - `pnpm api:typecheck`
+  - `pnpm web:typecheck`
+  - `pnpm web:build`
 - Dashboard derived recompute contract, persistence, or admin UI changes:
   - `pnpm --filter @finance-os/db typecheck`
   - `pnpm --filter @finance-os/powens typecheck`

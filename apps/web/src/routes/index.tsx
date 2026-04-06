@@ -6,6 +6,7 @@ import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import {
   dashboardDerivedRecomputeStatusQueryOptionsWithMode,
+  dashboardNewsQueryOptionsWithMode,
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
@@ -84,6 +85,11 @@ export const prefetchDashboardRouteQueries = async ({
     ),
     queryClient.ensureQueryData(
       dashboardDerivedRecomputeStatusQueryOptionsWithMode({
+        mode,
+      })
+    ),
+    queryClient.ensureQueryData(
+      dashboardNewsQueryOptionsWithMode({
         mode,
       })
     ),

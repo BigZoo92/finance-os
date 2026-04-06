@@ -83,6 +83,7 @@ import { MonthEndProjectionCard } from './month-end-projection-card'
 import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
 import { WealthHistory } from './wealth-history'
 import { ExpenseStructureCard } from './expense-structure-card'
+import { NewsFeed } from './news-feed'
 import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
@@ -2157,6 +2158,11 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           <div className="lg:col-span-2">
             <MonthEndProjectionCard isAdmin={isAdmin} transactions={transactions} />
           </div>
+          {authMode ? (
+            <div className="lg:col-span-2">
+              <NewsFeed mode={authMode} />
+            </div>
+          ) : null}
 
           <Card>
             <CardHeader>

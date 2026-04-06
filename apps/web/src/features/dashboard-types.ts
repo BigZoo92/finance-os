@@ -188,3 +188,28 @@ export type DashboardDerivedRecomputeActionError = {
   retryable: boolean
   offline: boolean
 }
+
+export type DashboardNewsResponse = {
+  source: 'demo_fixture' | 'cache'
+  lastUpdatedAt: string | null
+  staleCache: boolean
+  providerError: {
+    code: string
+    message: string
+  } | null
+  metrics: {
+    cacheHitRate: number
+    dedupeDropRate: number
+    providerFailureRate: number
+  }
+  items: Array<{
+    id: string
+    title: string
+    summary: string | null
+    url: string
+    sourceName: string
+    topic: string
+    language: string
+    publishedAt: string
+  }>
+}

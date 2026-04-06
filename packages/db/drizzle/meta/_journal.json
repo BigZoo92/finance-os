@@ -134,6 +134,13 @@
       "when": 1775406055764,
       "tag": "0018_enrichment_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1775430000000,
+      "tag": "0019_news_cache",
+      "breakpoints": true
     }
   ]
 }
