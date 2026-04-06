@@ -23,6 +23,8 @@ export const deriveAnalyticsPageState = ({
     data.summaryCards.expenses.state,
     data.timeseries.state,
     data.categorySplit.state,
+    data.portfolioAllocation.state,
+    data.allocationEvolution.state,
   ]
 
   if (widgetStates.every(state => state === 'empty')) {
