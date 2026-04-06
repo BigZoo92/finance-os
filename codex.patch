@@ -1,121 +1,158 @@
-diff --git a/.github/agent-stubs/improve-684.md b/.github/agent-stubs/improve-684.md
+diff --git a/.github/agent-stubs/improve-686.md b/.github/agent-stubs/improve-686.md
 deleted file mode 100644
-index 73395d0..0000000
---- a/.github/agent-stubs/improve-684.md
+index f305c65..0000000
+--- a/.github/agent-stubs/improve-686.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #684
+-# Autopilot stub for improve #686
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/684
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/686
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
 diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
-index 840c56a..349d48a 100644
+index 349d48a..dc980c3 100644
 --- a/apps/web/src/components/dashboard/app-shell.tsx
 +++ b/apps/web/src/components/dashboard/app-shell.tsx
-@@ -219,6 +219,80 @@ const formatRelativeDateTime = (value: string | null) => {
-   return formatDateTime(value)
- }
+@@ -84,6 +84,7 @@ import { MonthlyCategoryBudgetsCard } from './monthly-category-budgets-card'
+ import { WealthHistory } from './wealth-history'
+ import { ExpenseStructureCard } from './expense-structure-card'
+ import { NewsFeed } from './news-feed'
++import { buildHighValueSignalDigest } from './high-value-signals'
+ import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
  
-+type PersonalAlertSignal = {
-+  id: string
-+  title: string
-+  detail: string
-+  tone: 'outline' | 'destructive'
-+}
-+
-+const buildPersonalAlertSignals = ({
-+  syncBacklogCount,
-+  latestSyncStatus,
-+  summary,
-+  transactions,
-+}: {
-+  syncBacklogCount: number
-+  latestSyncStatus: ReturnType<typeof getLatestSyncStatus>
-+  summary: DashboardSummaryResponse
-+  transactions: DashboardTransactionsResponse['items']
-+}): PersonalAlertSignal[] => {
-+  const alerts: PersonalAlertSignal[] = []
-+
-+  if (
-+    syncBacklogCount > 0 ||
-+    latestSyncStatus.badgeVariant === 'destructive'
-+  ) {
-+    alerts.push({
-+      id: 'personal-sync-signal',
-+      title: 'Signal sync personnel',
-+      detail:
-+        syncBacklogCount > 0
-+          ? `${syncBacklogCount} synchronisation(s) en attente: les soldes et transactions peuvent etre incomplets.`
-+          : "Un incident de synchronisation persiste sur au moins une connexion. Verifie l'onglet sync.",
-+      tone: latestSyncStatus.badgeVariant === 'destructive' ? 'destructive' : 'outline',
-+    })
-+  }
-+
-+  if (summary.totals.incomes > 0) {
-+    const spendRatio = summary.totals.expenses / summary.totals.incomes
-+    if (spendRatio >= 0.9) {
-+      alerts.push({
-+        id: 'personal-budget-signal',
-+        title: 'Signal budget personnel',
-+        detail: `Les depenses representent ${Math.round(spendRatio * 100)}% des revenus sur la periode.`,
-+        tone: spendRatio >= 1 ? 'destructive' : 'outline',
-+      })
+ const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
+@@ -97,6 +98,8 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
+   { label: 'Subscriptions', value: 'subscriptions' },
+   { label: 'Parse fail (fallback)', value: 'parse_error' },
+ ]
++const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
++const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
+ 
+ const SYNC_RUN_STATUS_VARIANT: Record<
+   'running' | 'success' | 'error' | 'reconnect_required',
+@@ -510,6 +513,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
+   const dashboardHealthSnapshotLoggedRef = useRef(false)
+   const dashboardHealthWidgetLoggedRef = useRef<Set<string>>(new Set())
++  const highValueSignalsDigestRef = useRef<string | null>(null)
+   const reconnectBannerShownLoggedRef = useRef<Set<string>>(new Set())
+   const reconnectRequestIdRef = useRef<string | null>(null)
+   const reconnectBannerUiEnabled = getPowensReconnectBannerUiEnabled()
+@@ -1198,6 +1202,42 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+     }
+   }, [authMode, dashboardHealthModel, dashboardHealthUiConfig, range])
+ 
++  useEffect(() => {
++    if (!authMode || !isAdmin) {
++      return
 +    }
-+  }
 +
-+  const expenseTransactions = transactions
-+    .filter(transaction => transaction.direction === 'expense')
-+    .map(transaction => Math.abs(transaction.amount))
-+    .filter(amount => amount > 0)
-+    .sort((a, b) => a - b)
-+  const medianExpenseAmount =
-+    expenseTransactions.length === 0
-+      ? 0
-+      : (expenseTransactions[Math.floor(expenseTransactions.length / 2)] ?? 0)
-+  const anomalyThreshold = Math.max(medianExpenseAmount * 2.5, 250)
-+  const anomalyCount = expenseTransactions.filter(amount => amount >= anomalyThreshold).length
++    const logDigest = () => {
++      const digest = buildHighValueSignalDigest(
++        alertInsightItems.map(item => ({
++          id: item.id,
++          kind: item.kind,
++          title: item.title,
++        }))
++      )
 +
-+  if (anomalyCount > 0) {
-+    alerts.push({
-+      id: 'personal-anomaly-signal',
-+      title: 'Signal anomalies personnel',
-+      detail:
-+        anomalyCount === 1
-+          ? "1 transaction inhabituelle detectee (montant au-dessus de l'historique recent)."
-+          : `${anomalyCount} transactions inhabituelles detectees (montants au-dessus de l'historique recent).`,
-+      tone: anomalyCount >= 3 ? 'destructive' : 'outline',
++      if (!digest || digest.fingerprint === highValueSignalsDigestRef.current) {
++        return
++      }
++
++      console.info(HIGH_VALUE_SIGNALS_DIGEST_SCOPE, {
++        event: 'periodic_compact_digest',
++        mode: authMode,
++        range,
++        alertCount: digest.alertCount,
++        insightCount: digest.insightCount,
++        topTitles: digest.topTitles,
++        fingerprint: digest.fingerprint,
++        timestamp: new Date().toISOString(),
++      })
++      highValueSignalsDigestRef.current = digest.fingerprint
++    }
++
++    logDigest()
++    const intervalId = window.setInterval(logDigest, HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS)
++    return () => window.clearInterval(intervalId)
++  }, [alertInsightItems, authMode, isAdmin, range])
++
+   const handleReconnectCta = () => {
+     if (!authMode || !reconnectBannerState || reconnectBannerState === 'loading') {
+       return
+diff --git a/apps/web/src/components/dashboard/high-value-signals.test.ts b/apps/web/src/components/dashboard/high-value-signals.test.ts
+new file mode 100644
+index 0000000..fb4f6e7
+--- /dev/null
++++ b/apps/web/src/components/dashboard/high-value-signals.test.ts
+@@ -0,0 +1,24 @@
++import { describe, expect, it } from 'vitest'
++import { buildHighValueSignalDigest } from './high-value-signals'
++
++describe('buildHighValueSignalDigest', () => {
++  it('returns null when no signal is available', () => {
++    expect(buildHighValueSignalDigest([])).toBeNull()
++  })
++
++  it('builds a compact digest with counts and top titles', () => {
++    const digest = buildHighValueSignalDigest([
++      { id: 'alert-1', kind: 'alert', title: 'Sync backlog' },
++      { id: 'alert-2', kind: 'alert', title: 'Transaction freshness degraded' },
++      { id: 'insight-1', kind: 'insight', title: 'Top expense group' },
++      { id: 'insight-2', kind: 'insight', title: 'Cashflow trend' },
++    ])
++
++    expect(digest).toEqual({
++      fingerprint: 'alert:alert-1|alert:alert-2|insight:insight-1',
++      alertCount: 2,
++      insightCount: 2,
++      topTitles: ['Sync backlog', 'Transaction freshness degraded', 'Top expense group'],
 +    })
-+  }
-+
-+  return alerts
++  })
++})
+diff --git a/apps/web/src/components/dashboard/high-value-signals.ts b/apps/web/src/components/dashboard/high-value-signals.ts
+new file mode 100644
+index 0000000..74d9757
+--- /dev/null
++++ b/apps/web/src/components/dashboard/high-value-signals.ts
+@@ -0,0 +1,37 @@
++export type HighValueSignalItem = {
++  id: string
++  kind: 'alert' | 'insight'
++  title: string
 +}
 +
- const pickLatestDate = (values: Array<string | null>) => {
-   const timestamps = values
-     .filter((value): value is string => Boolean(value))
-@@ -826,7 +900,22 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-     connections: statusConnections,
-     runs: syncRuns,
-   }).slice(0, 8)
-+  const personalAlertSignals = isAdmin
-+    ? buildPersonalAlertSignals({
-+        syncBacklogCount,
-+        latestSyncStatus,
-+        summary: adaptedSummary,
-+        transactions,
-+      })
-+    : []
-   const alertInsightItems = [
-+    ...personalAlertSignals.map(signal => ({
-+      id: signal.id,
-+      kind: 'alert' as const,
-+      title: signal.title,
-+      detail: signal.detail,
-+      tone: signal.tone,
-+    })),
-     ...(powensInternalNotifications.slice(0, 3).map(notification => ({
-       id: `powens-${notification.id}`,
-       kind: 'alert' as const,
++export type HighValueSignalDigest = {
++  fingerprint: string
++  alertCount: number
++  insightCount: number
++  topTitles: string[]
++}
++
++const DIGEST_MAX_TITLES = 3
++
++export const buildHighValueSignalDigest = (
++  items: HighValueSignalItem[]
++): HighValueSignalDigest | null => {
++  if (items.length === 0) {
++    return null
++  }
++
++  const alertCount = items.filter(item => item.kind === 'alert').length
++  const insightCount = items.length - alertCount
++  const topTitles = items.slice(0, DIGEST_MAX_TITLES).map(item => item.title)
++  const fingerprint = items
++    .slice(0, DIGEST_MAX_TITLES)
++    .map(item => `${item.kind}:${item.id}`)
++    .join('|')
++
++  return {
++    fingerprint,
++    alertCount,
++    insightCount,
++    topTitles,
++  }
++}
