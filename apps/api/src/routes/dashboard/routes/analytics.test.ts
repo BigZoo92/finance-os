@@ -51,7 +51,11 @@ const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => 
   ],
   positions: [],
   dailyWealthSnapshots: [{ date: '2026-04-01', balance: 90 }],
-  topExpenseGroups: [{ label: 'Housing', category: 'housing', merchant: 'Landlord', total: 20, count: 1 }],
+  topExpenseGroups: [
+    { label: 'Housing', category: 'housing', merchant: 'Landlord', total: 20, count: 1 },
+    { label: 'Groceries', category: 'food', merchant: 'Market', total: 15, count: 2 },
+    { label: 'Transport', category: 'mobility', merchant: 'Metro', total: 5, count: 3 },
+  ],
 })
 
 const createDashboardRuntime = (
@@ -63,9 +67,21 @@ const createDashboardRuntime = (
   },
   useCases: {
     getSummary: async range => buildSummary(range),
-    getTransactions: async () => {
-      throw new Error('not used in analytics tests')
-    },
+    getTransactions: async () => ({
+      schemaVersion: '2026-04-05',
+      range: '30d',
+      limit: 500,
+      nextCursor: null,
+      freshness: {
+        strategy: 'snapshot-first',
+        lastSyncedAt: null,
+        syncStatus: 'fresh',
+        degradedReason: null,
+        snapshotAgeSeconds: null,
+        refreshRequested: false,
+      },
+      items: [],
+    }),
     requestTransactionsBackgroundRefresh: async () => false,
     updateTransactionClassification: async () => null,
     getGoals: async () => ({ items: [] }),
@@ -208,5 +224,130 @@ describe('createAnalyticsRoute', () => {
     expect(payload.allocationEvolution.points).toEqual([
       { date: '2026-04-01', total: 90, cash: 36, investment: 54, manual: 0 },
     ])
+  })
+
+  it('computes recurring spend and concentration widgets in admin mode', async () => {
+    const app = createAnalyticsTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        getTransactions: async () => ({
+          schemaVersion: '2026-04-05',
+          range: '30d',
+          limit: 500,
+          nextCursor: null,
+          freshness: {
+            strategy: 'snapshot-first',
+            lastSyncedAt: null,
+            syncStatus: 'fresh',
+            degradedReason: null,
+            snapshotAgeSeconds: null,
+            refreshRequested: false,
+          },
+          items: [
+            {
+              id: 1,
+              bookingDate: '2026-03-05',
+              amount: -50,
+              currency: 'EUR',
+              direction: 'expense',
+              label: 'Gym Membership 03',
+              merchant: 'Gym',
+              category: 'sports',
+              subcategory: null,
+              resolvedCategory: 'sports',
+              resolutionSource: 'fallback',
+              resolutionRuleId: null,
+              resolutionTrace: [],
+              incomeType: null,
+              tags: [],
+              powensConnectionId: 'conn-1',
+              powensAccountId: 'acc-1',
+              accountName: 'Checking',
+            },
+            {
+              id: 2,
+              bookingDate: '2026-04-05',
+              amount: -51,
+              currency: 'EUR',
+              direction: 'expense',
+              label: 'Gym Membership 04',
+              merchant: 'Gym',
+              category: 'sports',
+              subcategory: null,
+              resolvedCategory: 'sports',
+              resolutionSource: 'fallback',
+              resolutionRuleId: null,
+              resolutionTrace: [],
+              incomeType: null,
+              tags: [],
+              powensConnectionId: 'conn-1',
+              powensAccountId: 'acc-1',
+              accountName: 'Checking',
+            },
+            {
+              id: 3,
+              bookingDate: '2026-03-06',
+              amount: -12,
+              currency: 'EUR',
+              direction: 'expense',
+              label: 'Spotify Premium Mar',
+              merchant: 'Spotify',
+              category: 'entertainment',
+              subcategory: null,
+              resolvedCategory: 'entertainment',
+              resolutionSource: 'fallback',
+              resolutionRuleId: null,
+              resolutionTrace: [],
+              incomeType: null,
+              tags: [],
+              powensConnectionId: 'conn-1',
+              powensAccountId: 'acc-1',
+              accountName: 'Checking',
+            },
+            {
+              id: 4,
+              bookingDate: '2026-04-06',
+              amount: -12,
+              currency: 'EUR',
+              direction: 'expense',
+              label: 'Spotify Premium Apr',
+              merchant: 'Spotify',
+              category: 'entertainment',
+              subcategory: null,
+              resolvedCategory: 'entertainment',
+              resolutionSource: 'fallback',
+              resolutionRuleId: null,
+              resolutionTrace: [],
+              incomeType: null,
+              tags: [],
+              powensConnectionId: 'conn-1',
+              powensAccountId: 'acc-1',
+              accountName: 'Checking',
+            },
+          ],
+        }),
+      }),
+    })
+
+    const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
+    const payload = (await response.json()) as any
+
+    expect(response.status).toBe(200)
+    expect(payload.recurringSpend.fixedCharges.totalMonthly).toBe(51)
+    expect(payload.recurringSpend.subscriptions.totalMonthly).toBe(12)
+    expect(payload.recurringSpend.fixedCharges.items[0]).toEqual({
+      label: 'gym membership',
+      monthlyAmount: 51,
+      occurrences: 2,
+    })
+    expect(payload.recurringSpend.subscriptions.items[0]).toEqual({
+      label: 'spotify premium',
+      monthlyAmount: 12,
+      occurrences: 2,
+    })
+    expect(payload.spendConcentration.topMerchantShare).toBe(0.5)
+    expect(payload.spendConcentration.top3Share).toBe(1)
+    expect(payload.spendConcentration.hhi).toBe(0.4063)
+    expect(payload.spendConcentration.dominantMerchantLabel).toBe('Housing')
   })
 })

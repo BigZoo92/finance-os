@@ -36,10 +36,48 @@ export const createAnalyticsRoute = () =>
             summary: getDashboardSummaryMock(range),
             source: 'demoAdapter',
           })
-        : mapSummaryToAnalyticsContract({
-            summary: await getDashboardRuntime(context).useCases.getSummary(range),
-            source: 'adminAdapter',
-          })
+        : await (async () => {
+            const runtime = getDashboardRuntime(context)
+            const summary = await runtime.useCases.getSummary(range)
+            let transactions: Array<{
+              bookingDate: string
+              amount: number
+              direction: 'income' | 'expense'
+              currency: string
+              label: string
+              merchant: string
+            }> = []
+
+            try {
+              const transactionPayload = await runtime.useCases.getTransactions({
+                range,
+                limit: 500,
+                cursor: undefined,
+              })
+              transactions = transactionPayload.items.map(item => ({
+                bookingDate: item.bookingDate,
+                amount: item.amount,
+                direction: item.direction,
+                currency: item.currency,
+                label: item.label,
+                merchant: item.merchant,
+              }))
+            } catch {
+              logApiEvent({
+                level: 'warn',
+                msg: 'dashboard analytics recurring spend fallback to summary only',
+                requestId: requestMeta.requestId,
+                route: '/dashboard/analytics',
+                source: 'adminAdapter',
+              })
+            }
+
+            return mapSummaryToAnalyticsContract({
+              summary,
+              source: 'adminAdapter',
+              transactions,
+            })
+          })()
 
       if (!validateAnalyticsContract(payload)) {
         logApiEvent({
@@ -68,6 +106,8 @@ export const createAnalyticsRoute = () =>
         source: payload.source,
         timeseries_points: payload.timeseries.points.length,
         category_items: payload.categorySplit.items.length,
+        recurring_fixed_charge_items: payload.recurringSpend.fixedCharges.items.length,
+        recurring_subscription_items: payload.recurringSpend.subscriptions.items.length,
       })
 
       return payload
