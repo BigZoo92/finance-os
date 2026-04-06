@@ -1,8 +1,7 @@
 import { Elysia } from 'elysia'
-import { demoOrReal } from '../../../auth/demo-mode'
 import { getAuth, getRequestMeta } from '../../../auth/context'
-import { getDashboardNewsMock } from '../../../mocks/dashboardNews.mock'
 import { getDashboardRuntime } from '../context'
+import { selectDashboardNewsDataset } from '../domain/dashboard-dataset-selector'
 import { dashboardNewsIngestBodySchema, dashboardNewsQuerySchema } from '../schemas'
 
 export const createNewsRoute = () =>
@@ -10,23 +9,18 @@ export const createNewsRoute = () =>
     .get(
       '/news',
       async context => {
+        const auth = getAuth(context)
         const requestMeta = getRequestMeta(context)
-        const demoBase = getDashboardNewsMock()
-        const demoPayload = {
-          ...demoBase,
-          resilience: {
-            ...demoBase.resilience,
-            requestId: requestMeta.requestId,
-          },
-        }
-        return demoOrReal({
-          context,
-          demo: () => demoPayload,
-          real: () => {
+
+        return selectDashboardNewsDataset({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          live: async () => {
             const dashboard = getDashboardRuntime(context)
             if (!dashboard.useCases.getNews) {
-              return demoPayload
+              throw new Error('NEWS_RUNTIME_UNAVAILABLE')
             }
+
             return dashboard.useCases.getNews({
               ...(context.query.topic ? { topic: context.query.topic } : {}),
               ...(context.query.source ? { sourceName: context.query.source } : {}),
