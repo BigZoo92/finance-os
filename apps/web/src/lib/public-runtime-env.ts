@@ -10,6 +10,8 @@ export type PublicRuntimeEnvKey =
   | 'VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED'
   | 'VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED'
   | 'VITE_UI_RECONNECT_BANNER_ENABLED'
+  | 'VITE_PWA_NOTIFICATIONS_ENABLED'
+  | 'VITE_PWA_CRITICAL_ENABLED'
 
 export type PublicRuntimeEnv = Partial<Record<PublicRuntimeEnvKey, string>>
 
@@ -23,6 +25,8 @@ const PUBLIC_RUNTIME_ENV_KEYS: PublicRuntimeEnvKey[] = [
   'VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED',
   'VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED',
   'VITE_UI_RECONNECT_BANNER_ENABLED',
+  'VITE_PWA_NOTIFICATIONS_ENABLED',
+  'VITE_PWA_CRITICAL_ENABLED',
 ]
 
 const toOptionalEnv = (value: string | undefined) => {
@@ -78,6 +82,11 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
     'VITE_UI_RECONNECT_BANNER_ENABLED',
     toOptionalEnv(env.VITE_UI_RECONNECT_BANNER_ENABLED)
   ),
+  ...withDefined(
+    'VITE_PWA_NOTIFICATIONS_ENABLED',
+    toOptionalEnv(env.VITE_PWA_NOTIFICATIONS_ENABLED)
+  ),
+  ...withDefined('VITE_PWA_CRITICAL_ENABLED', toOptionalEnv(env.VITE_PWA_CRITICAL_ENABLED)),
 })
 
 const getWindowPublicEnv = (): PublicRuntimeEnv => {

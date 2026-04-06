@@ -415,6 +415,17 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    PWA_NOTIFICATIONS_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    PWA_CRITICAL_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    PUSH_DELIVERY_PROVIDER_URL: z.string().url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL').optional(),
+    PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+    PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
     AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
     AUTH_ADMIN_PASSWORD_HASH_B64: z.string().optional(),
@@ -519,5 +530,16 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => toBooleanEnv(value)),
+    PWA_NOTIFICATIONS_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    PWA_CRITICAL_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    PUSH_DELIVERY_PROVIDER_URL: z.string().url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL').optional(),
+    PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+    PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
     ...powensShape,
   })

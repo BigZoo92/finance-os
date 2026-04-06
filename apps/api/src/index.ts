@@ -20,6 +20,7 @@ import { createDebugRoutes } from './routes/debug/router'
 import { registerSystemRoutes } from './routes/system'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createEnrichmentRoutes } from './routes/enrichment/router'
+import { createNotificationsRoutes } from './routes/notifications/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
