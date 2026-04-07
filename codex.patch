@@ -1,111 +1,135 @@
-diff --git a/.github/agent-stubs/improve-744.md b/.github/agent-stubs/improve-744.md
+diff --git a/.github/agent-stubs/improve-746.md b/.github/agent-stubs/improve-746.md
 deleted file mode 100644
-index 14b2f69..0000000
---- a/.github/agent-stubs/improve-744.md
+index 21aa8ab..0000000
+--- a/.github/agent-stubs/improve-746.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #744
+-# Autopilot stub for improve #746
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/744
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/746
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
 diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
-index eacffa1..5ed801b 100644
+index 5ed801b..f6038a3 100644
 --- a/apps/web/src/components/dashboard/app-shell.tsx
 +++ b/apps/web/src/components/dashboard/app-shell.tsx
-@@ -110,6 +110,13 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
-   { label: 'Parse fail (fallback)', value: 'parse_error' },
- ]
- const DEMO_PROFILE_OPTIONS = ['Student Campus', 'Freelancer Solo', 'Family Household', 'Retired Couple']
-+const SECONDARY_NAV_SECTIONS: Array<{ id: string; label: string; hint: string }> = [
-+  { id: 'ops-overview', label: 'Ops', hint: 'session, Powens et sync' },
-+  { id: 'insights-center', label: 'Insights', hint: 'wealth, alertes et diagnostics' },
-+  { id: 'planning-center', label: 'Planning', hint: 'goals, budgets et projections' },
-+  { id: 'investment-center', label: 'Investments', hint: 'positions et valorisation' },
-+  { id: 'transactions-center', label: 'Transactions', hint: 'activite recente' },
-+]
- const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
- const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
+@@ -702,11 +702,16 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
  
-@@ -1468,6 +1475,34 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-           </div>
-         </header>
  
-+        <section
-+          aria-label="Navigation secondaire dashboard"
-+          className="rounded-lg border bg-card/80 p-3"
-+        >
-+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-+              Navigation secondaire
-+            </p>
-+            <p className="text-xs text-muted-foreground">
-+              Acces direct aux zones prioritaires du cockpit.
-+            </p>
-+          </div>
-+          <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-+            {SECONDARY_NAV_SECTIONS.map(section => (
-+              <a
-+                key={section.id}
-+                href={`#${section.id}`}
-+                className="group rounded-md border border-border/80 bg-background/50 px-3 py-2 transition hover:border-primary/40 hover:bg-primary/5"
-+              >
-+                <p className="text-sm font-medium">{section.label}</p>
-+                <p className="text-xs text-muted-foreground transition group-hover:text-foreground/80">
-+                  {section.hint}
-+                </p>
-+              </a>
-+            ))}
-+          </nav>
-+        </section>
+   const pushOptInMutation = useMutation({
+-    mutationFn: () =>
+-      postPushOptIn({
++    mutationFn: () => {
++      if (!isAdmin) {
++        throw new Error('Admin session required')
++      }
 +
-         {reconnectBannerUiEnabled && reconnectBannerState ? (
-           <section
-             className="rounded-lg border border-amber-500/40 bg-amber-50/80 p-4 dark:bg-amber-950/30"
-@@ -1593,7 +1628,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-           }
-         />
++      return postPushOptIn({
+         optIn: !(pushSettingsQuery.data?.optIn ?? false),
+         permission: pushSettingsQuery.data?.permission ?? 'unknown',
+-      }),
++      })
++    },
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: notificationsQueryKeys.pushSettings(),
+@@ -727,12 +732,17 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+   })
  
--        <section>
-+        <section id="ops-overview" className="scroll-mt-24">
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-@@ -1863,7 +1898,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-           </Card>
-         </section>
+   const pushRegisterMutation = useMutation({
+-    mutationFn: () =>
+-      postPushSubscription({
++    mutationFn: () => {
++      if (!isAdmin) {
++        throw new Error('Admin session required')
++      }
++
++      return postPushSubscription({
+         endpoint: isDemo ? 'demo://subscription' : 'https://example.invalid/subscription',
+         keys: { auth: 'masked_auth', p256dh: 'masked_p256dh' },
+         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+-      }),
++      })
++    },
+     onSuccess: async () => {
+       await queryClient.invalidateQueries({
+         queryKey: notificationsQueryKeys.pushSettings(),
+@@ -755,7 +765,13 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+   })
  
--        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-+        <section id="insights-center" className="grid scroll-mt-24 gap-4 lg:grid-cols-2 xl:grid-cols-4">
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-@@ -2404,7 +2439,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-           </Card>
-         </section>
+   const pushPreviewMutation = useMutation({
+-    mutationFn: () => postPushPreview(),
++    mutationFn: () => {
++      if (!isAdmin) {
++        throw new Error('Admin session required')
++      }
++
++      return postPushPreview()
++    },
+     onSuccess: payload => {
+       if (payload.ok) {
+         pushToast({
+@@ -1620,6 +1636,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+                 !pushSettingsQuery.data.featureEnabled ||
+                 !pushSettingsQuery.data.criticalEnabled)
+           )}
++          readOnly={!isAdmin}
+           onToggle={() => pushOptInMutation.mutate()}
+           onRegisterSubscription={() => pushRegisterMutation.mutate()}
+           onSendPreview={() => pushPreviewMutation.mutate()}
+diff --git a/apps/web/src/components/dashboard/push-notification-card.tsx b/apps/web/src/components/dashboard/push-notification-card.tsx
+index 1156fc8..1e588a8 100644
+--- a/apps/web/src/components/dashboard/push-notification-card.tsx
++++ b/apps/web/src/components/dashboard/push-notification-card.tsx
+@@ -4,6 +4,7 @@ import type { PushSettingsResponse } from '@/features/notifications/types'
+ type Props = {
+   settings?: PushSettingsResponse
+   unavailable: boolean
++  readOnly: boolean
+   onToggle: () => void
+   onRegisterSubscription: () => void
+   onSendPreview: () => void
+@@ -19,6 +20,7 @@ const permissionLabel: Record<PushSettingsResponse['permission'], string> = {
+ export const PushNotificationCard = ({
+   settings,
+   unavailable,
++  readOnly,
+   onToggle,
+   onRegisterSubscription,
+   onSendPreview,
+@@ -55,6 +57,11 @@ export const PushNotificationCard = ({
+             Notifications temporairement indisponibles. Interface en lecture seule.
+           </p>
+         ) : null}
++        {readOnly ? (
++          <p className='rounded border border-dashed p-2 text-muted-foreground'>
++            Réglages modifiables uniquement en session admin. En démo: aperçu sobre et non bloquant.
++          </p>
++        ) : null}
  
--        <section className="grid gap-4 lg:grid-cols-2">
-+        <section id="planning-center" className="grid scroll-mt-24 gap-4 lg:grid-cols-2">
-           <div className="lg:col-span-2">
-             <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
-           </div>
-@@ -2564,7 +2599,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-           </Card>
-         </section>
+         {settings.providerStatus === 'unavailable' ? (
+           <p className='rounded border border-amber-400/50 bg-amber-50 p-2 text-amber-900'>
+@@ -63,18 +70,18 @@ export const PushNotificationCard = ({
+         ) : null}
  
--        <section>
-+        <section id="investment-center" className="scroll-mt-24">
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-@@ -2664,7 +2699,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-           </Card>
-         </section>
- 
--        <section>
-+        <section id="transactions-center" className="scroll-mt-24">
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
+         <div className='flex flex-wrap gap-2'>
+-          <Button size='sm' variant='outline' onClick={onToggle} disabled={busy || unavailable}>
++          <Button size='sm' variant='outline' onClick={onToggle} disabled={busy || unavailable || readOnly}>
+             {settings.optIn ? 'Se désinscrire' : "Activer l'opt-in"}
+           </Button>
+           <Button
+             size='sm'
+             variant='outline'
+             onClick={onRegisterSubscription}
+-            disabled={busy || unavailable}
++            disabled={busy || unavailable || readOnly}
+           >
+             {settings.subscriptionStale ? 'Réactiver subscription' : 'Enregistrer subscription'}
+           </Button>
+-          <Button size='sm' onClick={onSendPreview} disabled={busy || unavailable}>
++          <Button size='sm' onClick={onSendPreview} disabled={busy || unavailable || readOnly}>
+             Envoyer un aperçu critique
+           </Button>
+         </div>

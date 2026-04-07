@@ -4,6 +4,7 @@ import type { PushSettingsResponse } from '@/features/notifications/types'
 type Props = {
   settings?: PushSettingsResponse
   unavailable: boolean
+  readOnly: boolean
   onToggle: () => void
   onRegisterSubscription: () => void
   onSendPreview: () => void
@@ -19,6 +20,7 @@ const permissionLabel: Record<PushSettingsResponse['permission'], string> = {
 export const PushNotificationCard = ({
   settings,
   unavailable,
+  readOnly,
   onToggle,
   onRegisterSubscription,
   onSendPreview,
@@ -55,6 +57,11 @@ export const PushNotificationCard = ({
             Notifications temporairement indisponibles. Interface en lecture seule.
           </p>
         ) : null}
+        {readOnly ? (
+          <p className='rounded border border-dashed p-2 text-muted-foreground'>
+            Réglages modifiables uniquement en session admin. En démo: aperçu sobre et non bloquant.
+          </p>
+        ) : null}
 
         {settings.providerStatus === 'unavailable' ? (
           <p className='rounded border border-amber-400/50 bg-amber-50 p-2 text-amber-900'>
@@ -63,18 +70,18 @@ export const PushNotificationCard = ({
         ) : null}
 
         <div className='flex flex-wrap gap-2'>
-          <Button size='sm' variant='outline' onClick={onToggle} disabled={busy || unavailable}>
+          <Button size='sm' variant='outline' onClick={onToggle} disabled={busy || unavailable || readOnly}>
             {settings.optIn ? 'Se désinscrire' : "Activer l'opt-in"}
           </Button>
           <Button
             size='sm'
             variant='outline'
             onClick={onRegisterSubscription}
-            disabled={busy || unavailable}
+            disabled={busy || unavailable || readOnly}
           >
             {settings.subscriptionStale ? 'Réactiver subscription' : 'Enregistrer subscription'}
           </Button>
-          <Button size='sm' onClick={onSendPreview} disabled={busy || unavailable}>
+          <Button size='sm' onClick={onSendPreview} disabled={busy || unavailable || readOnly}>
             Envoyer un aperçu critique
           </Button>
         </div>
