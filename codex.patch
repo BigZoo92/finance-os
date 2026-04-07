@@ -1,0 +1,113 @@
+diff --git a/.github/agent-stubs/improve-742.md b/.github/agent-stubs/improve-742.md
+deleted file mode 100644
+index 2ac2a6a..0000000
+--- a/.github/agent-stubs/improve-742.md
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# Autopilot stub for improve #742
+-
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/742
+-
+-This file is a temporary bootstrap marker for branch/PR creation.
+-Delete this file in the first real implementation patch.
+\ No newline at end of file
+diff --git a/apps/web/src/features/powens/sync-status.test.ts b/apps/web/src/features/powens/sync-status.test.ts
+index 1d21a6e..5a731c3 100644
+--- a/apps/web/src/features/powens/sync-status.test.ts
++++ b/apps/web/src/features/powens/sync-status.test.ts
+@@ -77,6 +77,38 @@ describe('getPowensConnectionSyncBadgeModel', () => {
+     )
+   })
+ 
++
++  it('adds read-only degraded copy when persisted snapshot is KO', () => {
++    expect(
++      getPowensConnectionSyncBadgeModel({
++        connection: createConnection({
++          status: 'error',
++          lastSyncStatus: 'KO',
++          lastSyncReasonCode: 'SYNC_FAILED',
++        }),
++        persistenceEnabled: true,
++      })
++    ).toEqual(
++      expect.objectContaining({
++        badgeLabel: 'KO',
++        reasonLabel: 'Echec de synchronisation · lecture seule sur dernier snapshot',
++      })
++    )
++  })
++
++  it('includes snapshot freshness in tooltip label', () => {
++    const badge = getPowensConnectionSyncBadgeModel({
++      connection: createConnection({
++        lastSyncAttemptAt: '2026-03-27T08:00:00.000Z',
++        lastSuccessAt: '2026-03-27T07:45:00.000Z',
++      }),
++      persistenceEnabled: true,
++    })
++
++    expect(badge.tooltipLabel).toContain('Dernier essai a')
++    expect(badge.tooltipLabel).toContain('Dernier snapshot confirme a')
++  })
++
+   it('returns Inconnu when there is no persisted result yet', () => {
+     expect(
+       getPowensConnectionSyncBadgeModel({
+diff --git a/apps/web/src/features/powens/sync-status.ts b/apps/web/src/features/powens/sync-status.ts
+index eb3de9a..fc603a0 100644
+--- a/apps/web/src/features/powens/sync-status.ts
++++ b/apps/web/src/features/powens/sync-status.ts
+@@ -31,9 +31,22 @@ const formatAttemptTime = (value: string | null) => {
+   })
+ }
+ 
+-const toTooltipLabel = (value: string | null) => {
++const toSnapshotFreshnessLabel = (value: string | null) => {
+   const formatted = formatAttemptTime(value)
+-  return formatted ? `Dernier essai a ${formatted}` : 'Dernier essai inconnu'
++  return formatted ? `Dernier snapshot confirme a ${formatted}` : 'Dernier snapshot inconnu'
++}
++
++const toTooltipLabel = ({
++  attemptAt,
++  snapshotAt,
++}: {
++  attemptAt: string | null
++  snapshotAt: string | null
++}) => {
++  const formattedAttempt = formatAttemptTime(attemptAt)
++  const attemptLabel = formattedAttempt ? `Dernier essai a ${formattedAttempt}` : 'Dernier essai inconnu'
++
++  return `${attemptLabel} · ${toSnapshotFreshnessLabel(snapshotAt)}`
+ }
+ 
+ export const getPowensConnectionSyncBadgeModel = ({
+@@ -43,7 +56,11 @@ export const getPowensConnectionSyncBadgeModel = ({
+   connection: PowensConnectionStatus
+   persistenceEnabled: boolean
+ }): PowensConnectionSyncBadgeModel => {
+-  const tooltipLabel = toTooltipLabel(connection.lastSyncAttemptAt)
++  const snapshotAt = connection.lastSuccessAt ?? connection.lastSyncAt
++  const tooltipLabel = toTooltipLabel({
++    attemptAt: connection.lastSyncAttemptAt,
++    snapshotAt,
++  })
+ 
+   if (connection.status === 'syncing') {
+     return {
+@@ -60,10 +77,12 @@ export const getPowensConnectionSyncBadgeModel = ({
+       badgeLabel: connection.lastSyncStatus,
+       badgeVariant: connection.lastSyncStatus === 'OK' ? 'secondary' : 'destructive',
+       reasonLabel: connection.lastSyncReasonCode
+-        ? REASON_LABEL[connection.lastSyncReasonCode]
++        ? connection.lastSyncStatus === 'KO'
++          ? `${REASON_LABEL[connection.lastSyncReasonCode]} · lecture seule sur dernier snapshot`
++          : REASON_LABEL[connection.lastSyncReasonCode]
+         : connection.lastSyncStatus === 'OK'
+           ? 'Synchronisation complete'
+-          : 'Echec de synchronisation',
++          : 'Echec de synchronisation · lecture seule sur dernier snapshot',
+       tooltipLabel,
+     }
+   }

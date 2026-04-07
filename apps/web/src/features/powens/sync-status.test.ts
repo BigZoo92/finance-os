@@ -77,6 +77,38 @@ describe('getPowensConnectionSyncBadgeModel', () => {
     )
   })
 
+
+  it('adds read-only degraded copy when persisted snapshot is KO', () => {
+    expect(
+      getPowensConnectionSyncBadgeModel({
+        connection: createConnection({
+          status: 'error',
+          lastSyncStatus: 'KO',
+          lastSyncReasonCode: 'SYNC_FAILED',
+        }),
+        persistenceEnabled: true,
+      })
+    ).toEqual(
+      expect.objectContaining({
+        badgeLabel: 'KO',
+        reasonLabel: 'Echec de synchronisation · lecture seule sur dernier snapshot',
+      })
+    )
+  })
+
+  it('includes snapshot freshness in tooltip label', () => {
+    const badge = getPowensConnectionSyncBadgeModel({
+      connection: createConnection({
+        lastSyncAttemptAt: '2026-03-27T08:00:00.000Z',
+        lastSuccessAt: '2026-03-27T07:45:00.000Z',
+      }),
+      persistenceEnabled: true,
+    })
+
+    expect(badge.tooltipLabel).toContain('Dernier essai a')
+    expect(badge.tooltipLabel).toContain('Dernier snapshot confirme a')
+  })
+
   it('returns Inconnu when there is no persisted result yet', () => {
     expect(
       getPowensConnectionSyncBadgeModel({
