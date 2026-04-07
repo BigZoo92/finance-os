@@ -31,9 +31,22 @@ const formatAttemptTime = (value: string | null) => {
   })
 }
 
-const toTooltipLabel = (value: string | null) => {
+const toSnapshotFreshnessLabel = (value: string | null) => {
   const formatted = formatAttemptTime(value)
-  return formatted ? `Dernier essai a ${formatted}` : 'Dernier essai inconnu'
+  return formatted ? `Dernier snapshot confirme a ${formatted}` : 'Dernier snapshot inconnu'
+}
+
+const toTooltipLabel = ({
+  attemptAt,
+  snapshotAt,
+}: {
+  attemptAt: string | null
+  snapshotAt: string | null
+}) => {
+  const formattedAttempt = formatAttemptTime(attemptAt)
+  const attemptLabel = formattedAttempt ? `Dernier essai a ${formattedAttempt}` : 'Dernier essai inconnu'
+
+  return `${attemptLabel} · ${toSnapshotFreshnessLabel(snapshotAt)}`
 }
 
 export const getPowensConnectionSyncBadgeModel = ({
@@ -43,7 +56,11 @@ export const getPowensConnectionSyncBadgeModel = ({
   connection: PowensConnectionStatus
   persistenceEnabled: boolean
 }): PowensConnectionSyncBadgeModel => {
-  const tooltipLabel = toTooltipLabel(connection.lastSyncAttemptAt)
+  const snapshotAt = connection.lastSuccessAt ?? connection.lastSyncAt
+  const tooltipLabel = toTooltipLabel({
+    attemptAt: connection.lastSyncAttemptAt,
+    snapshotAt,
+  })
 
   if (connection.status === 'syncing') {
     return {
@@ -60,10 +77,12 @@ export const getPowensConnectionSyncBadgeModel = ({
       badgeLabel: connection.lastSyncStatus,
       badgeVariant: connection.lastSyncStatus === 'OK' ? 'secondary' : 'destructive',
       reasonLabel: connection.lastSyncReasonCode
-        ? REASON_LABEL[connection.lastSyncReasonCode]
+        ? connection.lastSyncStatus === 'KO'
+          ? `${REASON_LABEL[connection.lastSyncReasonCode]} · lecture seule sur dernier snapshot`
+          : REASON_LABEL[connection.lastSyncReasonCode]
         : connection.lastSyncStatus === 'OK'
           ? 'Synchronisation complete'
-          : 'Echec de synchronisation',
+          : 'Echec de synchronisation · lecture seule sur dernier snapshot',
       tooltipLabel,
     }
   }
