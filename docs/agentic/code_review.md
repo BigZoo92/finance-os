@@ -34,3 +34,13 @@ Use this guide for reviews in this repo.
 
 - Prefer concrete findings with file references and expected impact.
 - If a code change altered architecture, contracts, env, testing expectations, or review guidance, expect the nearby `AGENTS.md` and `docs/agentic` map to be updated too.
+
+
+## Alert quality checks (monitor + digest changes)
+
+When a change touches ops alerts, monitor rules, or digest formatting, reviewers should verify:
+
+- Priority mapping is explicit and consistent with repo severity language (`critical -> P0`, `high -> P1`, `medium/low -> P2`).
+- Scoring is documented as `impact (0-5) + confidence (0-3) + recency (0-2)` and examples show the final score used for ordering.
+- Anti-noise protections exist (dedupe fingerprinting, cooldown suppression, and state-change-first notifications).
+- Digests stay decision-first: top actionable items list priority, score, owner, and next step before any informational backlog.

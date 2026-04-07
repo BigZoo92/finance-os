@@ -22,6 +22,11 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - keep deploy-time probes, smoke checks, and ops alerting aligned with the live route topology
 - TypeScript optional-property invariant:
   - `exactOptionalPropertyTypes` is enabled; when an optional field is absent, omit the key entirely instead of passing `undefined`
+- Ops alert-quality conventions (for monitor rules, digests, and review notes):
+  - priority levels must be explicit and map to review severity: `critical -> P0`, `high -> P1`, `medium/low -> P2`
+  - scoring must be transparent and additive: `impact (0-5) + confidence (0-3) + recency (0-2)`; include the final score in docs/PR notes when adding or tuning alerts
+  - anti-noise defaults are required: deduplicate by fingerprint, suppress repeats inside a cooldown window, and prefer state-change notifications over interval spam
+  - digests must be decision-first: include only top actionable items first (priority, score, owner, next step), then collapse informational tails to keep the signal concise
 - Analytics conventions and source-of-truth requirements:
   - analytics is descriptive telemetry, never an execution dependency; core product behavior must not rely on event delivery
   - every metric, chart, or dashboard must declare one canonical source of truth (DB table/view, API contract, or deterministic demo fixture) and link to it in local docs when introduced
