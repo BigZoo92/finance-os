@@ -33,6 +33,12 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
 - Read `docs/frontend/information-architecture.md` before adding or reorganizing pages/routes.
 - Read `docs/frontend/motion-and-interactions.md` before adding animations or transitions.
 - When modifying UI, update the relevant documentation in the same change.
+- **Impeccable** (`pbakaus/impeccable`, 21 skills) is installed for UI refinement. Use it as a complement to DESIGN.md and the design system, not as a replacement. Key skills for this repo:
+  - `polish` / `critique` / `audit` — pre-ship quality pass
+  - `arrange` / `typeset` / `colorize` — layout, typography, and color fixes
+  - `distill` / `bolder` / `quieter` — calibrate visual intensity
+  - `adapt` / `harden` — responsive design + edge-case resilience
+  - `normalize` / `extract` — design system alignment and token extraction
 
 ## Output Bias
 
