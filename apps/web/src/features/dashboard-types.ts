@@ -166,6 +166,19 @@ export type DashboardAdvisorResponse = {
     detail: string
     severity: 'info' | 'warning'
   }>
+  actions: Array<{
+    id: string
+    title: string
+    detail: string
+    estimatedMonthlyImpact: number
+    effort: 'low' | 'medium' | 'high'
+    tracking: {
+      status: 'suggested' | 'in_progress' | 'done'
+      metricLabel: string
+      targetLabel: string
+      currentLabel: string
+    }
+  }>
 }
 
 export type DashboardDerivedRecomputeRowCounts = {

@@ -5,7 +5,12 @@ import { buildAdvisorFinancialContext } from '../domain/build-advisor-financial-
 import { createGetDashboardAdvisorUseCase, readDashboardAdvisorFlags } from '../domain/create-get-dashboard-advisor-use-case'
 import { getDashboardRuntime } from '../context'
 import { dashboardSummaryQuerySchema } from '../schemas'
-import type { DashboardAdvisorInsight, DashboardAdvisorResponse, DashboardSummaryResponse } from '../types'
+import type {
+  DashboardAdvisorAction,
+  DashboardAdvisorInsight,
+  DashboardAdvisorResponse,
+  DashboardSummaryResponse,
+} from '../types'
 
 const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisorInsight[] => {
   const financialContext = buildAdvisorFinancialContext(summary)
@@ -57,6 +62,57 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
       }
 
   return [trendInsight, ratioInsight, expenseInsight]
+}
+
+const buildActionTracking = (params: {
+  metricLabel: string
+  targetLabel: string
+  currentLabel: string
+}): DashboardAdvisorAction['tracking'] => ({
+  status: 'suggested',
+  metricLabel: params.metricLabel,
+  targetLabel: params.targetLabel,
+  currentLabel: params.currentLabel,
+})
+
+const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorAction[] => {
+  const financialContext = buildAdvisorFinancialContext(summary)
+  const net = financialContext.totals.netCashflow
+  const topExpenseAmount = Math.max(0, Math.round(financialContext.focus.topExpenseAmount ?? 0))
+  const monthlyExpenseBaseline = Math.max(0, Math.round(summary.totals.expenses))
+
+  const trimTopExpense: DashboardAdvisorAction = {
+    id: 'action-trim-top-expense-10pct',
+    title: 'Reduire le principal poste variable de 10%',
+    detail: financialContext.focus.topExpenseLabel
+      ? `Commencez par ${financialContext.focus.topExpenseLabel} avec un plafond hebdomadaire explicite.`
+      : 'Choisissez un poste variable non essentiel et fixez un plafond hebdomadaire explicite.',
+    estimatedMonthlyImpact: Math.max(15, Math.round(topExpenseAmount * 0.1)),
+    effort: 'medium',
+    tracking: buildActionTracking({
+      metricLabel: 'Depense variable mensuelle',
+      targetLabel: '-10% sur 30 jours',
+      currentLabel: `${monthlyExpenseBaseline}`,
+    }),
+  }
+
+  const cashflowBuffer: DashboardAdvisorAction = {
+    id: 'action-cashflow-buffer',
+    title: 'Programmer un transfert securite chaque semaine',
+    detail:
+      net >= 0
+        ? 'Automatisez un virement vers votre reserve juste apres les revenus principaux.'
+        : 'Demarrez avec un petit montant fixe pour recreer une reserve sans bloquer le budget.',
+    estimatedMonthlyImpact: net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20,
+    effort: 'low',
+    tracking: buildActionTracking({
+      metricLabel: 'Reserve de securite',
+      targetLabel: '4 virements effectues ce mois',
+      currentLabel: '0/4 effectue',
+    }),
+  }
+
+  return [trimTopExpense, cashflowBuffer]
 }
 
 export const createAdvisorRoute = () =>
@@ -115,6 +171,7 @@ export const createAdvisorRoute = () =>
           insightAcceptedRate: 0,
         },
         insights: buildLocalInsights(result.summary),
+        actions: buildLocalActions(result.summary),
       }
 
       if (response.fallbackReason === 'provider_unavailable') {

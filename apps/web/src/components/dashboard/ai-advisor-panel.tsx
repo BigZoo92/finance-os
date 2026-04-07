@@ -43,6 +43,28 @@ export const AiAdvisorPanel = ({
             <p className="text-xs text-muted-foreground">{insight.detail}</p>
           </div>
         ))}
+        {advisor?.actions.length ? (
+          <div className="space-y-2 pt-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Actions concretes proposees
+            </p>
+            {advisor.actions.map(action => (
+              <div key={action.id} className="rounded-md border border-border/80 bg-background/80 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium">{action.title}</p>
+                  <Badge variant="outline">impact ~{action.estimatedMonthlyImpact}/mois</Badge>
+                </div>
+                <p className="pt-1 text-xs text-muted-foreground">{action.detail}</p>
+                <div className="pt-2 text-xs text-muted-foreground">
+                  <p>
+                    Suivi: {action.tracking.metricLabel} · cible {action.tracking.targetLabel}
+                  </p>
+                  <p>Etat: {action.tracking.status} · actuel {action.tracking.currentLabel}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

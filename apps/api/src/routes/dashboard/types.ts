@@ -414,6 +414,20 @@ export interface DashboardAdvisorInsight {
   severity: 'info' | 'warning'
 }
 
+export interface DashboardAdvisorAction {
+  id: string
+  title: string
+  detail: string
+  estimatedMonthlyImpact: number
+  effort: 'low' | 'medium' | 'high'
+  tracking: {
+    status: 'suggested' | 'in_progress' | 'done'
+    metricLabel: string
+    targetLabel: string
+    currentLabel: string
+  }
+}
+
 export interface DashboardAdvisorResponse {
   mode: 'demo' | 'admin'
   source: 'local' | 'provider'
@@ -430,6 +444,7 @@ export interface DashboardAdvisorResponse {
     insightAcceptedRate: number
   }
   insights: DashboardAdvisorInsight[]
+  actions: DashboardAdvisorAction[]
 }
 
 export interface DashboardNewsResponse {
