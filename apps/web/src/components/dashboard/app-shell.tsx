@@ -1429,7 +1429,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6">
+      <main id="main-content" className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6">
         <header className="flex flex-col gap-4 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Finance OS Dashboard</h1>
