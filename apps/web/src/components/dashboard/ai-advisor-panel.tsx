@@ -47,7 +47,7 @@ export const AiAdvisorPanel = ({
             </div>
             <p className="text-xs text-muted-foreground">{insight.detail}</p>
             {insight.citations.length ? (
-              <p className="pt-1 text-[11px] text-muted-foreground">
+              <p className="pt-1 text-xs text-muted-foreground">
                 Sources: {insight.citations.map(citation => `${citation.label}=${citation.value}`).join(' · ')}
               </p>
             ) : null}

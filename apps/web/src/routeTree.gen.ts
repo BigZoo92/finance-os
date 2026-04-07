@@ -14,8 +14,17 @@ import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as HealthRouteImport } from './routes/health'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
+import { Route as AppSanteRouteImport } from './routes/_app/sante'
+import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
+import { Route as AppParametresRouteImport } from './routes/_app/parametres'
+import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
+import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
+import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
+import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
+import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 
 const VersionRoute = VersionRouteImport.update({
   id: '/version',
@@ -42,44 +51,113 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 const PowensCallbackRoute = PowensCallbackRouteImport.update({
   id: '/powens/callback',
   path: '/powens/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSanteRoute = AppSanteRouteImport.update({
+  id: '/sante',
+  path: '/sante',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPatrimoineRoute = AppPatrimoineRouteImport.update({
+  id: '/patrimoine',
+  path: '/patrimoine',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppParametresRoute = AppParametresRouteImport.update({
+  id: '/parametres',
+  path: '/parametres',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppObjectifsRoute = AppObjectifsRouteImport.update({
+  id: '/objectifs',
+  path: '/objectifs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvestissementsRoute = AppInvestissementsRouteImport.update({
+  id: '/investissements',
+  path: '/investissements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDepensesRoute = AppDepensesRouteImport.update({
+  id: '/depenses',
+  path: '/depenses',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppActualitesRoute = AppActualitesRouteImport.update({
+  id: '/actualites',
+  path: '/actualites',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
   '/health': typeof HealthRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
   '/transactions': typeof TransactionsRoute
   '/version': typeof VersionRoute
+  '/actualites': typeof AppActualitesRoute
+  '/depenses': typeof AppDepensesRoute
+  '/integrations': typeof AppIntegrationsRoute
+  '/investissements': typeof AppInvestissementsRoute
+  '/objectifs': typeof AppObjectifsRoute
+  '/parametres': typeof AppParametresRoute
+  '/patrimoine': typeof AppPatrimoineRoute
+  '/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/health': typeof HealthRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
   '/transactions': typeof TransactionsRoute
   '/version': typeof VersionRoute
+  '/actualites': typeof AppActualitesRoute
+  '/depenses': typeof AppDepensesRoute
+  '/integrations': typeof AppIntegrationsRoute
+  '/investissements': typeof AppInvestissementsRoute
+  '/objectifs': typeof AppObjectifsRoute
+  '/parametres': typeof AppParametresRoute
+  '/patrimoine': typeof AppPatrimoineRoute
+  '/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
+  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
   '/health': typeof HealthRoute
   '/healthz': typeof HealthzRoute
   '/login': typeof LoginRoute
   '/transactions': typeof TransactionsRoute
   '/version': typeof VersionRoute
+  '/_app/actualites': typeof AppActualitesRoute
+  '/_app/depenses': typeof AppDepensesRoute
+  '/_app/integrations': typeof AppIntegrationsRoute
+  '/_app/investissements': typeof AppInvestissementsRoute
+  '/_app/objectifs': typeof AppObjectifsRoute
+  '/_app/parametres': typeof AppParametresRoute
+  '/_app/patrimoine': typeof AppPatrimoineRoute
+  '/_app/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
+  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,29 +168,54 @@ export interface FileRouteTypes {
     | '/login'
     | '/transactions'
     | '/version'
+    | '/actualites'
+    | '/depenses'
+    | '/integrations'
+    | '/investissements'
+    | '/objectifs'
+    | '/parametres'
+    | '/patrimoine'
+    | '/sante'
     | '/powens/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/health'
     | '/healthz'
     | '/login'
     | '/transactions'
     | '/version'
+    | '/actualites'
+    | '/depenses'
+    | '/integrations'
+    | '/investissements'
+    | '/objectifs'
+    | '/parametres'
+    | '/patrimoine'
+    | '/sante'
     | '/powens/callback'
+    | '/'
   id:
     | '__root__'
-    | '/'
+    | '/_app'
     | '/health'
     | '/healthz'
     | '/login'
     | '/transactions'
     | '/version'
+    | '/_app/actualites'
+    | '/_app/depenses'
+    | '/_app/integrations'
+    | '/_app/investissements'
+    | '/_app/objectifs'
+    | '/_app/parametres'
+    | '/_app/patrimoine'
+    | '/_app/sante'
     | '/powens/callback'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   HealthRoute: typeof HealthRoute
   HealthzRoute: typeof HealthzRoute
   LoginRoute: typeof LoginRoute
@@ -158,12 +261,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/powens/callback': {
       id: '/powens/callback'
@@ -172,11 +282,93 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PowensCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/sante': {
+      id: '/_app/sante'
+      path: '/sante'
+      fullPath: '/sante'
+      preLoaderRoute: typeof AppSanteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/patrimoine': {
+      id: '/_app/patrimoine'
+      path: '/patrimoine'
+      fullPath: '/patrimoine'
+      preLoaderRoute: typeof AppPatrimoineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/parametres': {
+      id: '/_app/parametres'
+      path: '/parametres'
+      fullPath: '/parametres'
+      preLoaderRoute: typeof AppParametresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/objectifs': {
+      id: '/_app/objectifs'
+      path: '/objectifs'
+      fullPath: '/objectifs'
+      preLoaderRoute: typeof AppObjectifsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/investissements': {
+      id: '/_app/investissements'
+      path: '/investissements'
+      fullPath: '/investissements'
+      preLoaderRoute: typeof AppInvestissementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/integrations': {
+      id: '/_app/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AppIntegrationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/depenses': {
+      id: '/_app/depenses'
+      path: '/depenses'
+      fullPath: '/depenses'
+      preLoaderRoute: typeof AppDepensesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/actualites': {
+      id: '/_app/actualites'
+      path: '/actualites'
+      fullPath: '/actualites'
+      preLoaderRoute: typeof AppActualitesRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppActualitesRoute: typeof AppActualitesRoute
+  AppDepensesRoute: typeof AppDepensesRoute
+  AppIntegrationsRoute: typeof AppIntegrationsRoute
+  AppInvestissementsRoute: typeof AppInvestissementsRoute
+  AppObjectifsRoute: typeof AppObjectifsRoute
+  AppParametresRoute: typeof AppParametresRoute
+  AppPatrimoineRoute: typeof AppPatrimoineRoute
+  AppSanteRoute: typeof AppSanteRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppActualitesRoute: AppActualitesRoute,
+  AppDepensesRoute: AppDepensesRoute,
+  AppIntegrationsRoute: AppIntegrationsRoute,
+  AppInvestissementsRoute: AppInvestissementsRoute,
+  AppObjectifsRoute: AppObjectifsRoute,
+  AppParametresRoute: AppParametresRoute,
+  AppPatrimoineRoute: AppPatrimoineRoute,
+  AppSanteRoute: AppSanteRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   HealthRoute: HealthRoute,
   HealthzRoute: HealthzRoute,
   LoginRoute: LoginRoute,

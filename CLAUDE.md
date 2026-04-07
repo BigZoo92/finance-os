@@ -28,6 +28,11 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
 
 - Use `skill.color-expert` when the task is about palette direction, contrast, theme systems, expressive color usage, or visual harmonization.
 - Keep Finance-OS UI intentional and non-generic; do not flatten color decisions into safe default SaaS styling.
+- Read `DESIGN.md` before any UI work — it is the source of truth for visual identity, palette, typography, and composition rules.
+- Read `docs/frontend/design-system.md` before creating or modifying components — it documents tokens, patterns, and responsive conventions.
+- Read `docs/frontend/information-architecture.md` before adding or reorganizing pages/routes.
+- Read `docs/frontend/motion-and-interactions.md` before adding animations or transitions.
+- When modifying UI, update the relevant documentation in the same change.
 
 ## Output Bias
 

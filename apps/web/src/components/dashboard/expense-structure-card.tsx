@@ -1,252 +1,164 @@
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
+import { Badge } from '@finance-os/ui/components'
 import { useMemo, useState } from 'react'
+import { motion } from 'motion/react'
 import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
 
 type DashboardTransaction = DashboardTransactionsResponse['items'][number]
+type CategorySpendRow = { category: string; total: number; ratio: number }
+type MonthlySpendRow = { month: string; label: string; total: number }
 
-type CategorySpendRow = {
-  category: string
-  total: number
-  ratio: number
+const RANGE_LABEL: Record<DashboardRange, string> = { '7d': '7 jours', '30d': '30 jours', '90d': '90 jours' }
+
+const fmtMoney = (v: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
+const fmtPct = (v: number) => `${Math.round(v)}%`
+const fmtMonth = (m: string) => {
+  const d = new Date(`${m}-01T00:00:00Z`)
+  return Number.isNaN(d.getTime()) ? m : d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
 }
 
-type MonthlySpendRow = {
-  month: string
-  label: string
-  total: number
-}
-
-const RANGE_LABEL: Record<DashboardRange, string> = {
-  '7d': '7 jours',
-  '30d': '30 jours',
-  '90d': '90 jours',
-}
-
-const formatMoney = (value: number) => {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value)
-}
-
-const formatPercent = (value: number) => {
-  return `${Math.round(value)}%`
-}
-
-const formatMonthLabel = (month: string) => {
-  const parsed = new Date(`${month}-01T00:00:00.000Z`)
-
-  if (Number.isNaN(parsed.getTime())) {
-    return month
+export const summarizeExpenseCategories = (transactions: DashboardTransaction[], limit = 6): CategorySpendRow[] => {
+  const map = new Map<string, number>()
+  for (const tx of transactions) {
+    const amt = tx.direction === 'expense' ? Math.abs(tx.amount) : 0
+    if (amt <= 0) continue
+    const key = (tx.category ?? 'Sans catégorie').trim() || 'Sans catégorie'
+    map.set(key, (map.get(key) ?? 0) + amt)
   }
-
-  return parsed.toLocaleDateString('fr-FR', {
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-const getExpenseAmount = (transaction: DashboardTransaction) => {
-  if (transaction.direction !== 'expense') {
-    return 0
-  }
-
-  return Math.abs(transaction.amount)
-}
-
-export const summarizeExpenseCategories = (
-  transactions: DashboardTransactionsResponse['items'],
-  limit = 6
-): CategorySpendRow[] => {
-  const categoryTotals = new Map<string, number>()
-
-  for (const transaction of transactions) {
-    const amount = getExpenseAmount(transaction)
-
-    if (amount <= 0) {
-      continue
-    }
-
-    const key = (transaction.category ?? 'Sans categorie').trim() || 'Sans categorie'
-    categoryTotals.set(key, (categoryTotals.get(key) ?? 0) + amount)
-  }
-
-  const totalExpenses = [...categoryTotals.values()].reduce((sum, value) => sum + value, 0)
-
-  return [...categoryTotals.entries()]
-    .map(([category, total]) => ({
-      category,
-      total,
-      ratio: totalExpenses > 0 ? (total / totalExpenses) * 100 : 0,
-    }))
+  const total = [...map.values()].reduce((s, v) => s + v, 0)
+  return [...map.entries()]
+    .map(([category, t]) => ({ category, total: t, ratio: total > 0 ? (t / total) * 100 : 0 }))
     .sort((a, b) => b.total - a.total)
     .slice(0, limit)
 }
 
-export const summarizeExpenseTimeline = (
-  transactions: DashboardTransactionsResponse['items'],
-  limit = 6
-): MonthlySpendRow[] => {
-  const monthlyTotals = new Map<string, number>()
-
-  for (const transaction of transactions) {
-    const amount = getExpenseAmount(transaction)
-
-    if (amount <= 0) {
-      continue
-    }
-
-    const month = transaction.bookingDate.slice(0, 7)
-    monthlyTotals.set(month, (monthlyTotals.get(month) ?? 0) + amount)
+export const summarizeExpenseTimeline = (transactions: DashboardTransaction[], limit = 6): MonthlySpendRow[] => {
+  const map = new Map<string, number>()
+  for (const tx of transactions) {
+    const amt = tx.direction === 'expense' ? Math.abs(tx.amount) : 0
+    if (amt <= 0) continue
+    const month = tx.bookingDate.slice(0, 7)
+    map.set(month, (map.get(month) ?? 0) + amt)
   }
-
-  return [...monthlyTotals.entries()]
-    .map(([month, total]) => ({ month, total, label: formatMonthLabel(month) }))
+  return [...map.entries()]
+    .map(([month, total]) => ({ month, total, label: fmtMonth(month) }))
     .sort((a, b) => a.month.localeCompare(b.month))
     .slice(-limit)
 }
 
-export const buildExpenseStructureExplanation = ({
-  topCategory,
-  totalExpenses,
-}: {
-  topCategory: CategorySpendRow | null
-  totalExpenses: number
-}) => {
-  if (!topCategory || totalExpenses <= 0) {
-    return 'Pas assez de depenses sur la periode pour degager une tendance claire.'
-  }
-
-  return `${topCategory.category} est le principal poste avec ${formatMoney(topCategory.total)}, soit ${formatPercent(topCategory.ratio)} des depenses observees.`
+export const buildExpenseStructureExplanation = ({ topCategory, totalExpenses }: { topCategory: CategorySpendRow | null; totalExpenses: number }) => {
+  if (!topCategory || totalExpenses <= 0) return 'Pas assez de données pour dégager une tendance.'
+  return `${topCategory.category} est le principal poste avec ${fmtMoney(topCategory.total)}, soit ${fmtPct(topCategory.ratio)} des dépenses.`
 }
 
+// Color palette for categories
+const CAT_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)']
+
 export function ExpenseStructureCard({
-  range,
-  transactions,
-  demo,
+  range, transactions, demo,
 }: {
   range: DashboardRange
   transactions: DashboardTransactionsResponse['items']
   demo: boolean
 }) {
-  const categorySplit = summarizeExpenseCategories(transactions)
+  const cats = summarizeExpenseCategories(transactions)
   const timeline = summarizeExpenseTimeline(transactions)
-  const maxMonthlyExpense = timeline.reduce((max, row) => Math.max(max, row.total), 0)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const totalExpenses = categorySplit.reduce((sum, row) => sum + row.total, 0)
-  const selectedCategory =
-    categorySplit.find(row => row.category === activeCategory) ?? categorySplit[0] ?? null
-  const explanation = useMemo(
-    () => buildExpenseStructureExplanation({ topCategory: categorySplit[0] ?? null, totalExpenses }),
-    [categorySplit, totalExpenses]
-  )
+  const maxMonth = timeline.reduce((m, r) => Math.max(m, r.total), 0)
+  const totalExpenses = cats.reduce((s, r) => s + r.total, 0)
+  const [active, setActive] = useState<string | null>(null)
+  const explanation = useMemo(() => buildExpenseStructureExplanation({ topCategory: cats[0] ?? null, totalExpenses }), [cats, totalExpenses])
+
+  if (cats.length === 0) {
+    return (
+      <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border/30">
+        <span className="font-mono text-xs text-muted-foreground/40">[ aucune dépense sur la période ]</span>
+      </div>
+    )
+  }
 
   return (
-    <Card className="xl:col-span-2">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          Expense structure
-          {demo ? <Badge variant="outline">DEMO</Badge> : null}
-        </CardTitle>
-        <CardDescription>
-          Category mix and monthly trajectory for {RANGE_LABEL[range].toLowerCase()}.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {categorySplit.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucune depense exploitable sur cette periode pour construire la structure.
-          </p>
-        ) : (
-          <>
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Repartition par categorie
-              </p>
-              <div className="space-y-2">
-                {categorySplit.map(row => (
-                  <button
-                    key={row.category}
-                    type="button"
-                    className="w-full rounded-md border border-border/70 p-2 text-left transition hover:bg-muted/30"
-                    onClick={() => setActiveCategory(row.category)}
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-                      <p className="font-medium">{row.category}</p>
-                      <p className="text-muted-foreground">{formatMoney(row.total)}</p>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full border border-border/70 bg-muted/30">
-                      <div
-                        className="h-full rounded-full bg-indigo-500/75"
-                        style={{ width: `${Math.max(row.ratio, 4)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{formatPercent(row.ratio)}</p>
-                  </button>
-                ))}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
+          <span aria-hidden="true">↔</span> Structure des dépenses
+        </p>
+        {demo && <Badge variant="warning" className="text-xs">DÉMO</Badge>}
+      </div>
+
+      {/* Categories — horizontal bars with color coding */}
+      <div className="space-y-2">
+        {cats.map((row, i) => {
+          const isActive = active === row.category
+          const color = CAT_COLORS[i % CAT_COLORS.length]
+          return (
+            <motion.button
+              key={row.category}
+              type="button"
+              onClick={() => setActive(isActive ? null : row.category)}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.25 }}
+              className={`group flex w-full items-center gap-4 rounded-xl px-4 py-3 text-left transition-all duration-150 ${
+                isActive ? 'bg-card ring-1 ring-primary/20' : 'hover:bg-card/60'
+              }`}
+            >
+              {/* Color bar indicator */}
+              <div className="relative h-8 w-1 rounded-full overflow-hidden bg-border/20">
+                <motion.div
+                  className="absolute bottom-0 w-full rounded-full"
+                  style={{ backgroundColor: color }}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(row.ratio, 10)}%` }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
+                />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Evolution mensuelle des depenses
-              </p>
-              {timeline.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Historique mensuel insuffisant.</p>
-              ) : (
-                <div className="space-y-2">
-                  {timeline.map(row => (
-                    <div key={row.month} className="space-y-1">
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="text-muted-foreground">{row.label}</span>
-                        <span className="font-medium">{formatMoney(row.total)}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full border border-border/70 bg-muted/30">
-                        <div
-                          className="h-full rounded-full bg-rose-500/75"
-                          style={{
-                            width: `${maxMonthlyExpense === 0 ? 0 : (row.total / maxMonthlyExpense) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              {/* Label */}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{row.category}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="relative h-1.5 flex-1 rounded-full bg-border/20 overflow-hidden">
+                    <motion.div
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ backgroundColor: color }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${row.ratio}%` }}
+                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: i * 0.06 }}
+                    />
+                  </div>
+                  <span className="font-mono text-xs text-muted-foreground/60 w-8 text-right">{fmtPct(row.ratio)}</span>
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="rounded-md border border-border/70 bg-background/80 p-3 text-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Explain this</p>
-              <p className="mt-1">{explanation}</p>
-            </div>
+              {/* Amount */}
+              <p className="font-financial text-sm font-semibold whitespace-nowrap">{fmtMoney(row.total)}</p>
+            </motion.button>
+          )
+        })}
+      </div>
 
-            <div className="rounded-md border border-border/70 bg-background/80 p-3 text-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Drill-down</p>
-              {selectedCategory ? (
-                <dl className="mt-2 space-y-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="text-muted-foreground">Categorie</dt>
-                    <dd className="font-medium">{selectedCategory.category}</dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="text-muted-foreground">Montant</dt>
-                    <dd className="font-medium">{formatMoney(selectedCategory.total)}</dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="text-muted-foreground">Poids</dt>
-                    <dd className="font-medium">{formatPercent(selectedCategory.ratio)}</dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="mt-1 text-muted-foreground">
-                  Aucune categorie exploitable pour afficher un detail.
-                </p>
-              )}
+      {/* Monthly timeline — compact horizontal bars */}
+      {timeline.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground/40">Évolution mensuelle</p>
+          {timeline.map((row, i) => (
+            <div key={row.month} className="flex items-center gap-3">
+              <span className="w-16 text-right text-xs text-muted-foreground/60 shrink-0">{row.label}</span>
+              <div className="relative h-3 flex-1 rounded-full bg-border/15 overflow-hidden">
+                <motion.div
+                  className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-negative/50 to-negative/80"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${maxMonth === 0 ? 0 : (row.total / maxMonth) * 100}%` }}
+                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: i * 0.08 }}
+                />
+              </div>
+              <span className="font-financial text-sm font-medium w-14 text-right shrink-0">{fmtMoney(row.total)}</span>
             </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Explanation */}
+      <p className="text-sm text-muted-foreground/60 italic">{explanation}</p>
+    </div>
   )
 }

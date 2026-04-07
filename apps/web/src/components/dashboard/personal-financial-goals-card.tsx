@@ -1,6 +1,7 @@
 import { Badge, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import type { AuthMode } from '@/features/auth-types'
 import {
   archiveFinancialGoal,
@@ -23,12 +24,21 @@ const EMPTY_GOAL_FORM: FinancialGoalWriteInput = {
 }
 
 const GOAL_TYPE_LABEL: Record<FinancialGoalType, string> = {
-  emergency_fund: 'Emergency fund',
-  travel: 'Travel',
-  home: 'Home',
-  education: 'Education',
-  retirement: 'Retirement',
-  custom: 'Custom',
+  emergency_fund: 'Épargne de précaution',
+  travel: 'Voyage',
+  home: 'Immobilier',
+  education: 'Éducation',
+  retirement: 'Retraite',
+  custom: 'Personnalisé',
+}
+
+const GOAL_TYPE_ICON: Record<FinancialGoalType, string> = {
+  emergency_fund: '🛡',
+  travel: '✈',
+  home: '🏠',
+  education: '📚',
+  retirement: '🌅',
+  custom: '◎',
 }
 
 type GoalEditorState =
@@ -484,199 +494,188 @@ export function PersonalFinancialGoalsCard({
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="space-y-2">
-            <CardTitle className="flex items-center gap-2">
-              Personal Financial Goals
-              {isDemo ? (
-                <Badge variant="outline" className="border-amber-500/60 text-amber-700">
-                  DEMO
-                </Badge>
-              ) : null}
-            </CardTitle>
-            <CardDescription>
-              List-first tracking for your savings goals, so monthly budget decisions can stay tied to
-              concrete objective progress.
-            </CardDescription>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
+              <span className="text-lg" aria-hidden="true">◎</span> Objectifs financiers
+            </p>
+            {isDemo && <Badge variant="warning" className="mt-1 text-xs">DÉMO — lecture seule</Badge>}
           </div>
-          <CardAction>
-            <Button type="button" size="sm" onClick={openCreateDrawer} disabled={!isAdmin}>
-              New goal
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isDemo ? (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
-              Demo mode keeps this module read-only and uses deterministic snapshots only.
+          <Button type="button" size="sm" onClick={openCreateDrawer} disabled={!isAdmin}>
+            + Nouvel objectif
+          </Button>
+        </div>
+
+        {bannerError ? (
+          <ErrorBanner
+            error={bannerError}
+            onRetry={retryLastAction}
+            {...(bannerError.source === 'query' ? {} : { onDismiss: () => setRecoverableError(null) })}
+          />
+        ) : null}
+
+        {authMode === undefined || goalsQuery.isPending ? <GoalsSkeleton /> : null}
+
+        {/* Alerts */}
+        {isAdmin && !goalsQuery.isPending && !goalsQuery.isError && goalAlerts.length > 0 ? (
+          <div className="rounded-2xl border border-warning/20 bg-warning/5 px-5 py-4 text-sm">
+            <p className="font-semibold text-warning">⚡ Alertes</p>
+            <ul className="mt-2 space-y-1.5">
+              {goalAlerts.map(alert => (
+                <li key={alert.goalId} className={`text-xs ${alert.level === 'high' ? 'text-negative font-medium' : 'text-muted-foreground'}`}>
+                  {alert.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {/* Empty state */}
+        {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border/30 py-12 text-center">
+            <span className="text-4xl" aria-hidden="true">◎</span>
+            <div>
+              <p className="text-lg font-semibold">Aucun objectif</p>
+              <p className="mt-1 text-sm text-muted-foreground">Créez votre premier objectif pour suivre votre progression.</p>
             </div>
-          ) : null}
+            {isAdmin && (
+              <Button type="button" onClick={openCreateDrawer}>Créer un objectif</Button>
+            )}
+          </div>
+        ) : null}
 
-          {bannerError ? (
-            <ErrorBanner
-              error={bannerError}
-              onRetry={retryLastAction}
-              {...(bannerError.source === 'query'
-                ? {}
-                : {
-                    onDismiss: () => setRecoverableError(null),
-                  })}
-            />
-          ) : null}
+        {/* Goal cards — redesigned */}
+        {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {activeGoals.map((goal, i) => {
+              const progress = clampProgress(goal)
+              const remainingAmount = Math.max(goal.targetAmount - goal.currentAmount, 0)
+              const status = getGoalStatus(goal)
+              const icon = GOAL_TYPE_ICON[goal.goalType] ?? '◎'
 
-          {authMode === undefined || goalsQuery.isPending ? <GoalsSkeleton /> : null}
+              return (
+                <motion.div
+                  key={goal.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className="group relative overflow-hidden rounded-2xl border border-border/30 bg-card/50 p-5 transition-all duration-200 hover:bg-card hover:shadow-lg"
+                >
+                  {/* Progress background fill */}
+                  <motion.div
+                    className="absolute inset-y-0 left-0 bg-primary/[0.03]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: i * 0.08 }}
+                  />
 
-          {isAdmin && !goalsQuery.isPending && !goalsQuery.isError && goalAlerts.length > 0 ? (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
-              <p className="font-medium">Alertes objectif</p>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {goalAlerts.map(alert => (
-                  <li key={alert.goalId} className={alert.level === 'high' ? 'font-medium' : ''}>
-                    {alert.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border/80 bg-muted/10 p-6 text-center">
-              <p className="text-lg font-semibold">No goals yet</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Add the first goal to start tracking contribution progress and target dates.
-              </p>
-              {isAdmin ? (
-                <div className="mt-4">
-                  <Button type="button" onClick={openCreateDrawer}>
-                    Create the first goal
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length > 0 ? (
-            <div className="space-y-3">
-              {activeGoals.map(goal => {
-                const progress = clampProgress(goal)
-                const remainingAmount = Math.max(goal.targetAmount - goal.currentAmount, 0)
-                const status = getGoalStatus(goal)
-                const latestSnapshot = goal.progressSnapshots[goal.progressSnapshots.length - 1]
-
-                return (
-                  <div
-                    key={goal.id}
-                    className="rounded-xl border border-border/70 bg-card/70 p-4"
-                  >
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold">{goal.name}</h3>
-                          <Badge variant="outline">{GOAL_TYPE_LABEL[goal.goalType]}</Badge>
-                          <Badge variant="outline" className={status.badgeClassName}>
-                            {status.label}
-                          </Badge>
-                        </div>
-                        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
-                          <div className="rounded-lg border border-border/70 px-3 py-2">
-                            <p className="text-xs uppercase tracking-wide">Saved</p>
-                            <p className="mt-1 font-medium text-foreground">
-                              {formatMoney(goal.currentAmount, goal.currency)}
-                            </p>
-                          </div>
-                          <div className="rounded-lg border border-border/70 px-3 py-2">
-                            <p className="text-xs uppercase tracking-wide">Target</p>
-                            <p className="mt-1 font-medium text-foreground">
-                              {formatMoney(goal.targetAmount, goal.currency)}
-                            </p>
-                          </div>
-                          <div className="rounded-lg border border-border/70 px-3 py-2">
-                            <p className="text-xs uppercase tracking-wide">Remaining</p>
-                            <p className="mt-1 font-medium text-foreground">
-                              {formatMoney(remainingAmount, goal.currency)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <p className="font-medium">{progress}% funded</p>
-                            <p className="text-muted-foreground">{formatDate(goal.targetDate)}</p>
-                          </div>
-                          <div className="h-2 rounded-full bg-muted">
-                            <div
-                              className={`h-2 rounded-full transition-[width] ${status.barClassName}`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {goal.progressSnapshots.length > 0 ? (
-                            goal.progressSnapshots.slice(-3).map(snapshot => (
-                              <span
-                                key={`${goal.id}-${snapshot.recordedAt}`}
-                                className="rounded-full border border-border/70 px-2.5 py-1 text-xs text-muted-foreground"
-                              >
-                                {formatSnapshotDate(snapshot.recordedAt)} ·{' '}
-                                {formatMoney(snapshot.amount, goal.currency)}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">No progress snapshots yet.</span>
-                          )}
-                        </div>
-                        {goal.note ? <p className="text-sm text-muted-foreground">{goal.note}</p> : null}
-                        {latestSnapshot ? (
-                          <p className="text-xs text-muted-foreground">
-                            Latest update: {formatSnapshotDate(latestSnapshot.recordedAt)}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex shrink-0 items-start gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDrawer(goal)}
-                          disabled={!isAdmin}
+                  <div className="relative">
+                    {/* Header row */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <motion.span
+                          className="text-2xl"
+                          whileHover={{ scale: 1.2, rotate: 5 }}
+                          transition={{ type: 'spring', bounce: 0.5 }}
                         >
-                          Edit
-                        </Button>
+                          {icon}
+                        </motion.span>
+                        <div>
+                          <h3 className="text-base font-bold">{goal.name}</h3>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground/50">{GOAL_TYPE_LABEL[goal.goalType]}</span>
+                            <Badge
+                              variant={status.label === 'On track' || status.label === 'Reached' ? 'positive' : status.label === 'Behind' ? 'destructive' : 'warning'}
+                              className="text-xs"
+                            >
+                              {status.label}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => openEditDrawer(goal)}
+                        disabled={!isAdmin}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      >
+                        Modifier
+                      </Button>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : null}
 
-          {!goalsQuery.isPending && !goalsQuery.isError && archivedGoals.length > 0 ? (
-            <details className="rounded-xl border border-border/70 bg-muted/10 p-4">
-              <summary className="cursor-pointer text-sm font-medium">
-                Archived goals ({archivedGoals.length})
-              </summary>
-              <div className="mt-3 space-y-2">
-                {archivedGoals.map(goal => (
-                  <div
-                    key={goal.id}
-                    className="flex flex-col gap-2 rounded-lg border border-border/70 bg-background/80 px-3 py-3 text-sm md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium">{goal.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Archived on {formatDate(goal.archivedAt?.slice(0, 10) ?? null)}
-                      </p>
+                    {/* Amount display — big and clear */}
+                    <div className="mt-4 flex items-end justify-between gap-4">
+                      <div>
+                        <p className="font-financial text-2xl font-bold tracking-tight">{formatMoney(goal.currentAmount, goal.currency)}</p>
+                        <p className="text-sm text-muted-foreground/60">
+                          sur {formatMoney(goal.targetAmount, goal.currency)}
+                          {remainingAmount > 0 && <span> · reste {formatMoney(remainingAmount, goal.currency)}</span>}
+                        </p>
+                      </div>
+                      <motion.span
+                        className="font-financial text-3xl font-black text-primary/20"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 + i * 0.08, duration: 0.5 }}
+                      >
+                        {progress}%
+                      </motion.span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Final value {formatMoney(goal.currentAmount, goal.currency)}
-                    </p>
+
+                    {/* Progress bar — animated with glow */}
+                    <div className="mt-3 relative h-2.5 overflow-hidden rounded-full bg-border/20">
+                      <motion.div
+                        className={`absolute inset-y-0 left-0 rounded-full ${status.barClassName}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: i * 0.08 }}
+                      />
+                      {progress > 5 && (
+                        <motion.div
+                          className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white/80 shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h/50%)]"
+                          initial={{ left: 0 }}
+                          animate={{ left: `calc(${Math.min(progress, 97)}% - 8px)` }}
+                          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: i * 0.08 }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Footer — date + note */}
+                    <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground/60">
+                      <span>{formatDate(goal.targetDate)}</span>
+                      {goal.note && <span className="truncate ml-2 italic max-w-[50%]">{goal.note}</span>}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </details>
-          ) : null}
-        </CardContent>
-      </Card>
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : null}
+
+        {/* Archived */}
+        {!goalsQuery.isPending && !goalsQuery.isError && archivedGoals.length > 0 ? (
+          <details className="group">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              {archivedGoals.length} objectif{archivedGoals.length > 1 ? 's' : ''} archivé{archivedGoals.length > 1 ? 's' : ''}
+            </summary>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {archivedGoals.map(goal => (
+                <div key={goal.id} className="flex items-center justify-between rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-sm">
+                  <div>
+                    <p className="font-medium text-muted-foreground">{goal.name}</p>
+                    <p className="text-xs text-muted-foreground/50">Archivé le {formatDate(goal.archivedAt?.slice(0, 10) ?? null)}</p>
+                  </div>
+                  <p className="font-financial text-sm text-muted-foreground">{formatMoney(goal.currentAmount, goal.currency)}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </div>
 
       {editorState ? (
         <div

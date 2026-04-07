@@ -47,6 +47,16 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - merge-on-green may only promote and merge an autopilot PR after real non-stub files land on the branch, all `.github/agent-stubs/**` files are gone from the PR diff, and the branch is up to date with green CI
   - failed CI on an autopilot implementation PR must be summarized back onto the PR thread so Codex sees the runner error instead of relying on partial local checks
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
+- Design system and frontend identity invariants:
+  - Always consult `DESIGN.md` before modifying any UI component, layout, or visual styling.
+  - Always consult `docs/frontend/design-system.md` before creating or modifying a shared component.
+  - Always reuse or extend the existing design system tokens (colors, spacing, radius, motion, typography) before introducing isolated values.
+  - Always preserve the amber/gold primary identity (`oklch ~75° hue`), Inter + JetBrains Mono typography, and surface depth system (surface-0/1/2).
+  - Always maintain mobile responsiveness, performance constraints, and accessibility when changing UI.
+  - When adding new design tokens, patterns, components, or routes, update the relevant frontend documentation (`DESIGN.md`, `docs/frontend/*.md`) in the same change.
+  - When modifying navigation or route structure, update `docs/frontend/information-architecture.md` and the `NAV_ITEMS` in `apps/web/src/components/shell/app-sidebar.tsx`.
+  - Financial amounts must use the `.font-financial` class (monospace, tabular figures) for readability.
+  - Use semantic color tokens (`positive`, `negative`, `warning`) for financial data, never hardcoded colors.
 
 ## Global Verification
 

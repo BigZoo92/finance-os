@@ -69,32 +69,13 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
     return {
       meta: [
-        {
-          charSet: 'utf-8',
-        },
-        {
-          name: 'viewport',
-          content: 'width=device-width, initial-scale=1',
-        },
-        {
-          title: appTitle,
-        },
-        {
-          name: 'robots',
-          content: 'noindex, nofollow, noarchive',
-        },
-        {
-          name: 'theme-color',
-          content: '#0b1020',
-        },
-        {
-          name: 'apple-mobile-web-app-capable',
-          content: 'yes',
-        },
-        {
-          name: 'apple-mobile-web-app-status-bar-style',
-          content: 'black-translucent',
-        },
+        { charSet: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { title: String(appTitle) },
+        { name: 'robots', content: 'noindex, nofollow, noarchive' },
+        { name: 'theme-color', content: '#0f0f12' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],
       links: [
         {
@@ -133,7 +114,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="fr" className="dark">
       <head>
         <HeadContent />
         <script

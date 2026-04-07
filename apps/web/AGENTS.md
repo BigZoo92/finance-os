@@ -41,7 +41,26 @@ Scope: `apps/web/**`
 - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.
 - Read non-sensitive web runtime config through [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) so SSR can inject safe `VITE_*` values at runtime without exposing secrets or hard-freezing them at build time, including dashboard health/reconnect kill-switches such as `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED`, `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED`, and `VITE_UI_RECONNECT_BANNER_ENABLED`.
 - Keep public `GET /health`, legacy `GET /healthz`, and `GET /version` aligned with the shared system contract used by api and worker, including runtime flags such as `safeModeActive`.
-- UI work must cover loading, empty, error, and success states. Avoid generic equal-card layouts when touching dashboard surfaces such as [src/components/dashboard/app-shell.tsx](src/components/dashboard/app-shell.tsx).
+- UI work must cover loading, empty, error, and success states. Avoid generic equal-card layouts when touching dashboard surfaces.
+- **App shell and navigation**: The app uses a pathless layout route `_app.tsx` that wraps all authenticated pages with a sidebar (desktop) / bottom nav (mobile). All new pages go under `src/routes/_app/`. System routes (`/login`, `/health`, `/powens/callback`) stay outside the shell at the top level.
+- **Multi-page architecture**: The monolithic `app-shell.tsx` is superseded by dedicated pages under `_app/`:
+  - `/` (cockpit) — KPIs, wealth trend, top dépenses, connexions, objectifs
+  - `/depenses` — transactions, budgets, projections, structure dépenses
+  - `/patrimoine` — actifs, historique patrimoine, soldes par connexion
+  - `/investissements` — positions, valorisation
+  - `/objectifs` — objectifs financiers (CRUD)
+  - `/actualites` — news feed, IA advisor
+  - `/integrations` — connexions Powens, sync runs, diagnostics, audit trail
+  - `/sante` — vue consolidée de l'état système
+  - `/parametres` — notifications push, derived recompute, exports
+- **Design system compliance**: Always use tokens from `packages/ui/src/styles/globals.css` and patterns from `docs/frontend/design-system.md`. Financial amounts use `.font-financial`. Colors use semantic tokens (`positive`, `negative`, `warning`). Surface depth uses `surface-0/1/2`.
+- **Sidebar navigation**: The navigation items are defined in `NAV_ITEMS` in `src/components/shell/app-sidebar.tsx`. When adding/removing pages, update both the route file and the nav items. Nav is split into `main` (finances) and `system` sections.
+- **Motion conventions**: Follow `docs/frontend/motion-and-interactions.md`. CSS transitions first, `motion` library only when needed. Use token durations/easing, not hardcoded values. Page transitions use `AnimatePresence` in `_app.tsx`.
+- **Charts**: Use D3.js for all data visualization. `src/components/ui/d3-sparkline.tsx` provides `D3Sparkline` (interactive) and `MiniSparkline` (inline). Do not add Recharts, Victory, or similar heavy chart libraries.
+- **ASCII identity**: Use `src/components/ui/ascii-brand.tsx` for visual accents. Never overuse — ASCII serves the interface, not the other way around.
+- **Command palette**: `Cmd+K` opens the command palette (`src/components/shell/command-palette.tsx`). When adding a new page, add it to `PAGES` in this file.
+- **Theme toggle**: Dark/light mode toggle in topbar with localStorage persistence. Theme is managed by `src/components/shell/theme-toggle.tsx`.
+- **Shared formatting**: Use `src/lib/format.ts` for date/money/number formatting. Use `src/lib/export.ts` for CSV/PDF export utilities. Do not duplicate.
 
 ## Verify
 
