@@ -7,8 +7,6 @@ type DashboardTransaction = DashboardTransactionsResponse['items'][number]
 type CategorySpendRow = { category: string; total: number; ratio: number }
 type MonthlySpendRow = { month: string; label: string; total: number }
 
-const RANGE_LABEL: Record<DashboardRange, string> = { '7d': '7 jours', '30d': '30 jours', '90d': '90 jours' }
-
 const fmtMoney = (v: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
 const fmtPct = (v: number) => `${Math.round(v)}%`
 const fmtMonth = (m: string) => {
@@ -54,7 +52,7 @@ export const buildExpenseStructureExplanation = ({ topCategory, totalExpenses }:
 const CAT_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)']
 
 export function ExpenseStructureCard({
-  range, transactions, demo,
+  range: _range, transactions, demo,
 }: {
   range: DashboardRange
   transactions: DashboardTransactionsResponse['items']

@@ -1,8 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
 import { z } from 'zod'
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Separator } from '@finance-os/ui/components'
+import { Button, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -10,18 +9,15 @@ import {
   dashboardSummaryQueryOptionsWithMode,
   dashboardTransactionsInfiniteQueryOptionsWithMode,
   dashboardQueryKeys,
-  type DemoTransactionsScenario,
 } from '@/features/dashboard-query-options'
 import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
 import { patchTransactionClassification } from '@/features/dashboard-api'
-import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import { ExpenseStructureCard } from '@/components/dashboard/expense-structure-card'
 import { MonthlyCategoryBudgetsCard } from '@/components/dashboard/monthly-category-budgets-card'
 import { MonthEndProjectionCard } from '@/components/dashboard/month-end-projection-card'
 import { formatMoney, formatDate, toErrorMessage } from '@/lib/format'
 import { exportTransactionsCsv } from '@/lib/export'
 import { pushToast } from '@/lib/toast-store'
-import { AsciiDivider } from '@/components/ui/ascii-brand'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -72,9 +68,6 @@ function DepensesPage() {
   const isAdmin = authViewState === 'admin'
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
 
-  const summaryQuery = useQuery(
-    dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) })
-  )
   const transactionsQuery = useInfiniteQuery(
     dashboardTransactionsInfiniteQueryOptionsWithMode({
       range,
@@ -83,10 +76,6 @@ function DepensesPage() {
     })
   )
 
-  const summary = summaryQuery.data
-  const adaptedSummary = adaptDashboardSummaryLegacy({
-    range, summary, ...(authMode ? { mode: authMode } : {}),
-  })
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
 
   const classifyMutation = useMutation({

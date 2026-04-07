@@ -1,7 +1,7 @@
-import { Badge, Button, Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
+import { Badge, Button, Input } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion } from 'motion/react'
 import type { AuthMode } from '@/features/auth-types'
 import {
   archiveFinancialGoal,
@@ -98,18 +98,6 @@ const formatDate = (value: string | null) => {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  })
-}
-
-const formatSnapshotDate = (value: string) => {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-
-  return parsed.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
   })
 }
 

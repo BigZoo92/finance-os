@@ -1,7 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { NAV_ITEMS } from './nav-items'
+import { NAV_ITEMS, type NavItem } from './nav-items'
 
 export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const routerState = useRouterState()

@@ -1,14 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
+import { Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query-options'
-import type { DashboardRange, DashboardSummaryResponse } from '@/features/dashboard-types'
+import type { DashboardRange } from '@/features/dashboard-types'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
-import { formatMoney, formatDateTime, formatQuantity } from '@/lib/format'
+import { formatMoney, formatQuantity } from '@/lib/format'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -32,15 +32,6 @@ export const Route = createFileRoute('/_app/investissements')({
   component: InvestissementsPage,
 })
 
-const COST_BASIS_LABEL: Record<
-  DashboardSummaryResponse['positions'][number]['costBasisSource'],
-  string
-> = {
-  minimal: 'Coût minimal',
-  provider: 'Coût provider',
-  manual: 'Coût manuel',
-  unknown: 'Coût inconnu',
-}
 
 function InvestissementsPage() {
   const { range: searchRange } = Route.useSearch()

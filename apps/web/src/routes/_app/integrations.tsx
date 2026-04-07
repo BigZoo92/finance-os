@@ -9,11 +9,9 @@ import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
 import {
-  formatPowensManualSyncCountdown,
   getPowensManualSyncCooldownSnapshot,
   getPowensManualSyncCooldownUiConfig,
   getPowensManualSyncUiState,
-  logPowensManualSyncBlockedUiEvent,
   powensManualSyncCooldownStore,
   startPowensManualSyncCooldown,
 } from '@/features/powens/manual-sync-cooldown'

@@ -1,5 +1,4 @@
 import { Badge, Button } from '@finance-os/ui/components'
-import { motion } from 'motion/react'
 import type { PushSettingsResponse } from '@/features/notifications/types'
 
 type Props = {
@@ -21,7 +20,6 @@ const permissionLabel: Record<PushSettingsResponse['permission'], string> = {
 export const PushNotificationCard = ({ settings, unavailable, readOnly, onToggle, onRegisterSubscription, onSendPreview, busy }: Props) => {
   if (!settings) return null
 
-  const statusColor = settings.optIn ? 'positive' : 'outline'
   const isHealthy = settings.optIn && settings.permission === 'granted' && !settings.subscriptionStale && settings.providerStatus !== 'unavailable'
 
   return (

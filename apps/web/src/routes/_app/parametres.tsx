@@ -1,16 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator } from '@finance-os/ui/components'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
   dashboardDerivedRecomputeStatusQueryOptionsWithMode,
   dashboardQueryKeys,
-  dashboardSummaryQueryOptionsWithMode,
-  dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
-import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
 import {
   normalizeDashboardDerivedRecomputeActionError,
   postDashboardDerivedRecompute,
@@ -96,11 +93,11 @@ function ParametresPage() {
       return postPushPreview()
     },
     onSuccess: payload => {
-      pushToast({
-        title: payload.ok ? 'Preview envoyé' : 'Preview dégradé',
-        description: payload.ok ? undefined : payload.message,
-        tone: payload.ok ? 'success' : 'info',
-      })
+      pushToast(
+        payload.ok
+          ? { title: 'Preview envoyé', tone: 'success' as const }
+          : { title: 'Preview dégradé', description: payload.message, tone: 'info' as const }
+      )
     },
     onError: error => {
       pushToast({ title: 'Preview impossible', description: toErrorMessage(error), tone: 'error' })

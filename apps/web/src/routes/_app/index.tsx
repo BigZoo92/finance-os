@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
-import { Badge, Card, CardContent, Separator } from '@finance-os/ui/components'
+import { Badge } from '@finance-os/ui/components'
 import { motion } from 'motion/react'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -53,7 +53,7 @@ function CockpitPage() {
 
   const summaryQ = useQuery(dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) }))
   const statusQ = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const goalsQ = useQuery(financialGoalsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
+  const goalsQ = useQuery(financialGoalsQueryOptionsWithMode({ mode: authMode }))
 
   const adapted = adaptDashboardSummaryLegacy({ range, summary: summaryQ.data, ...(authMode ? { mode: authMode } : {}) })
   const trend = getTrendDirection({ start: adapted.dailyWealthSnapshots[0]?.balance ?? null, end: adapted.dailyWealthSnapshots.at(-1)?.balance ?? null })
@@ -64,8 +64,8 @@ function CockpitPage() {
   const connsOk = conns.filter(c => c.status === 'connected').length
   const connsFail = conns.filter(c => c.status === 'error' || c.status === 'reconnect_required').length
 
-  const goals = goalsQ.data?.goals ?? []
-  const activeGoals = goals.filter((g: { archivedAt: string | null }) => !g.archivedAt)
+  const goals = goalsQ.data?.items ?? []
+  const activeGoals = goals.filter(g => !g.archivedAt)
 
   const sparkData = adapted.dailyWealthSnapshots.map(s => ({ date: s.date, value: s.balance }))
 
@@ -136,7 +136,7 @@ function CockpitPage() {
             <Kpi label="Patrimoine" value={formatMoney(adapted.totals.balance)} large loading={summaryQ.isPending} />
             <Kpi label="Revenus" value={formatMoney(adapted.totals.incomes)} color="positive" loading={summaryQ.isPending} />
             <Kpi label="Dépenses" value={formatMoney(adapted.totals.expenses)} color="negative" loading={summaryQ.isPending} />
-            <Kpi label="Cashflow" value={formatMoney(cf.net)} color={cf.direction === 'up' ? 'positive' : cf.direction === 'down' ? 'negative' : undefined} loading={summaryQ.isPending} />
+            <Kpi label="Cashflow" value={formatMoney(cf.net)} {...(cf.direction === 'up' ? { color: 'positive' as const } : cf.direction === 'down' ? { color: 'negative' as const } : {})} loading={summaryQ.isPending} />
           </div>
         </div>
       </section>
@@ -201,7 +201,7 @@ function CockpitPage() {
           </p>
           <div className="space-y-3">
             {activeGoals.length > 0 ? (
-              activeGoals.slice(0, 4).map((g: { id: string; name: string; targetAmount: number; currentAmount: number }, i: number) => {
+              activeGoals.slice(0, 4).map((g, i) => {
                 const pct = g.targetAmount > 0 ? Math.min(100, (g.currentAmount / g.targetAmount) * 100) : 0
                 return (
                   <div key={g.id} className="space-y-1.5">
@@ -237,8 +237,8 @@ function CockpitPage() {
       {/* ── ASCII status bar ── */}
       <footer className="rounded-2xl bg-card/50 px-5 py-3">
         <div className="font-mono text-xs flex flex-wrap gap-x-6 gap-y-1">
-          <Stat label="patrimoine" value={formatMoney(adapted.totals.balance)} tone={trend === 'up' ? 'positive' : trend === 'down' ? 'negative' : undefined} />
-          <Stat label="cashflow" value={formatMoney(cf.net)} tone={cf.direction === 'up' ? 'positive' : cf.direction === 'down' ? 'negative' : undefined} />
+          <Stat label="patrimoine" value={formatMoney(adapted.totals.balance)} {...(trend === 'up' ? { tone: 'positive' as const } : trend === 'down' ? { tone: 'negative' as const } : {})} />
+          <Stat label="cashflow" value={formatMoney(cf.net)} {...(cf.direction === 'up' ? { tone: 'positive' as const } : cf.direction === 'down' ? { tone: 'negative' as const } : {})} />
           <Stat label="connexions" value={`${connsOk}/${conns.length}`} />
           <Stat label="objectifs" value={`${activeGoals.length}`} />
           <Stat label="période" value={range} />

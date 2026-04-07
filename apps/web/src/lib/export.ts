@@ -1,5 +1,4 @@
-import type { DashboardTransactionsResponse, DashboardSummaryResponse, DashboardRange } from '@/features/dashboard-types'
-import { formatMoney } from './format'
+import type { DashboardTransactionsResponse, DashboardRange } from '@/features/dashboard-types'
 
 const sanitizeCsvCell = (value: string | number | null) => {
   const text = value === null ? '' : String(value)

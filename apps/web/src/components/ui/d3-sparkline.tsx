@@ -97,11 +97,15 @@ export function D3Sparkline({
   const handleTouch = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
     if (!showTooltip || !points.length || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const touchX = e.touches[0].clientX - rect.left - margin.left
+    const touch = e.touches[0]
+    if (!touch) return
+    const touchX = touch.clientX - rect.left - margin.left
     let closest = 0
     let minDist = Infinity
     for (let i = 0; i < points.length; i++) {
-      const dist = Math.abs(points[i].x - touchX)
+      const pt = points[i]
+      if (!pt) continue
+      const dist = Math.abs(pt.x - touchX)
       if (dist < minDist) { minDist = dist; closest = i }
     }
     setHoveredIdx(closest)
@@ -233,7 +237,9 @@ export function MiniSparkline({
 
   if (data.length < 2) return null
 
-  const trendColor = data[data.length - 1] >= data[0] ? 'var(--positive)' : 'var(--negative)'
+  const last = data[data.length - 1]
+  const first = data[0]
+  const trendColor = last !== undefined && first !== undefined && last >= first ? 'var(--positive)' : 'var(--negative)'
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={`inline-block ${className ?? ''}`} style={{ width, height }}>

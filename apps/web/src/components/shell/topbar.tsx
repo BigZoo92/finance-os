@@ -21,7 +21,6 @@ export function Topbar() {
     isPending: authQuery.isPending,
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
-  const isAdmin = authViewState === 'admin'
   const isDemo = authViewState === 'demo'
   const isPending = authViewState === 'pending'
 
