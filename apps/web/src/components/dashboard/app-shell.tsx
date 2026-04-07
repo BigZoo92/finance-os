@@ -110,6 +110,13 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
   { label: 'Parse fail (fallback)', value: 'parse_error' },
 ]
 const DEMO_PROFILE_OPTIONS = ['Student Campus', 'Freelancer Solo', 'Family Household', 'Retired Couple']
+const SECONDARY_NAV_SECTIONS: Array<{ id: string; label: string; hint: string }> = [
+  { id: 'ops-overview', label: 'Ops', hint: 'session, Powens et sync' },
+  { id: 'insights-center', label: 'Insights', hint: 'wealth, alertes et diagnostics' },
+  { id: 'planning-center', label: 'Planning', hint: 'goals, budgets et projections' },
+  { id: 'investment-center', label: 'Investments', hint: 'positions et valorisation' },
+  { id: 'transactions-center', label: 'Transactions', hint: 'activite recente' },
+]
 const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
 const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
 
@@ -1468,6 +1475,34 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           </div>
         </header>
 
+        <section
+          aria-label="Navigation secondaire dashboard"
+          className="rounded-lg border bg-card/80 p-3"
+        >
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Navigation secondaire
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Acces direct aux zones prioritaires du cockpit.
+            </p>
+          </div>
+          <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            {SECONDARY_NAV_SECTIONS.map(section => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                className="group rounded-md border border-border/80 bg-background/50 px-3 py-2 transition hover:border-primary/40 hover:bg-primary/5"
+              >
+                <p className="text-sm font-medium">{section.label}</p>
+                <p className="text-xs text-muted-foreground transition group-hover:text-foreground/80">
+                  {section.hint}
+                </p>
+              </a>
+            ))}
+          </nav>
+        </section>
+
         {reconnectBannerUiEnabled && reconnectBannerState ? (
           <section
             className="rounded-lg border border-amber-500/40 bg-amber-50/80 p-4 dark:bg-amber-950/30"
@@ -1593,7 +1628,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           }
         />
 
-        <section>
+        <section id="ops-overview" className="scroll-mt-24">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1863,7 +1898,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           </Card>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <section id="insights-center" className="grid scroll-mt-24 gap-4 lg:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -2404,7 +2439,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           </Card>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-2">
+        <section id="planning-center" className="grid scroll-mt-24 gap-4 lg:grid-cols-2">
           <div className="lg:col-span-2">
             <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
           </div>
@@ -2564,7 +2599,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           </Card>
         </section>
 
-        <section>
+        <section id="investment-center" className="scroll-mt-24">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -2664,7 +2699,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
           </Card>
         </section>
 
-        <section>
+        <section id="transactions-center" className="scroll-mt-24">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
