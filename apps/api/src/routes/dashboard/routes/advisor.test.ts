@@ -104,6 +104,21 @@ describe('createAdvisorRoute', () => {
     expect(payload.degradedMessage).toBe('Conseils limites, source externe indisponible')
   })
 
+
+  it('uses local fallback path when force-local flag is enabled for admin', async () => {
+    process.env.AI_ADVISOR_FORCE_LOCAL_ONLY = '1'
+    const app = createAdvisorTestApp({ mode: 'admin' })
+
+    const response = await app.handle(new Request('http://finance-os.local/advisor'))
+    const payload = (await response.json()) as DashboardAdvisorResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.mode).toBe('admin')
+    expect(payload.source).toBe('local')
+    expect(payload.fallback).toBe(true)
+    expect(payload.fallbackReason).toBe('force_local_only')
+  })
+
   it('blocks demo when admin-only flag is enabled', async () => {
     process.env.AI_ADVISOR_ADMIN_ONLY = '1'
     const app = createAdvisorTestApp({ mode: 'demo' })

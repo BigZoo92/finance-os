@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { getAuth, getRequestMeta } from '../../../auth/context'
-import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
-import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
+import { logApiEvent } from '../../../observability/logger'
+import { createGetDashboardAdvisorUseCase, readDashboardAdvisorFlags } from '../domain/create-get-dashboard-advisor-use-case'
 import { getDashboardRuntime } from '../context'
 import { dashboardSummaryQuerySchema } from '../schemas'
 import type { DashboardAdvisorInsight, DashboardAdvisorResponse, DashboardSummaryResponse } from '../types'
@@ -58,21 +58,6 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
   return [trendInsight, ratioInsight, expenseInsight]
 }
 
-const shouldDisableAdvisor = () => {
-  const value = process.env.AI_ADVISOR_ENABLED
-  return value === '0' || value === 'false'
-}
-
-const shouldRestrictToAdmin = () => {
-  const value = process.env.AI_ADVISOR_ADMIN_ONLY
-  return value === '1' || value === 'true'
-}
-
-const shouldForceLocalOnly = () => {
-  const value = process.env.AI_ADVISOR_FORCE_LOCAL_ONLY
-  return value === '1' || value === 'true'
-}
-
 export const createAdvisorRoute = () =>
   new Elysia().get(
     '/advisor',
@@ -81,6 +66,7 @@ export const createAdvisorRoute = () =>
       const requestMeta = getRequestMeta(context)
       const range = context.query.range ?? '30d'
       const startedAt = Date.now()
+      const flags = readDashboardAdvisorFlags()
 
       logApiEvent({
         level: 'info',
@@ -90,7 +76,7 @@ export const createAdvisorRoute = () =>
         range,
       })
 
-      if (shouldDisableAdvisor()) {
+      if (!flags.advisorEnabled) {
         context.set.status = 503
         return {
           code: 'ADVISOR_DISABLED',
@@ -99,7 +85,7 @@ export const createAdvisorRoute = () =>
         }
       }
 
-      if (shouldRestrictToAdmin() && auth.mode !== 'admin') {
+      if (flags.adminOnly && auth.mode !== 'admin') {
         context.set.status = 403
         return {
           code: 'ADVISOR_ADMIN_ONLY',
@@ -108,137 +94,66 @@ export const createAdvisorRoute = () =>
         }
       }
 
-      if (auth.mode === 'demo') {
-        const summary = getDashboardSummaryMock(range)
-        const response: DashboardAdvisorResponse = {
-          mode: 'demo',
-          source: 'local',
-          fallback: false,
-          fallbackReason: null,
-          requestId: requestMeta.requestId,
-          generatedAt: new Date().toISOString(),
-          metrics: {
-            latencyMs: Date.now() - startedAt,
-            fallbackRate: 0,
-            errorRate: 0,
-            insightAcceptedRate: 0,
-          },
-          insights: buildLocalInsights(summary),
-        }
+      const dashboard = getDashboardRuntime(context)
+      const getAdvisor = createGetDashboardAdvisorUseCase({ getSummary: dashboard.useCases.getSummary })
+      const result = await getAdvisor({ mode: auth.mode, range })
 
-        logApiEvent({
-          level: 'info',
-          msg: 'advisor_response',
-          requestId: requestMeta.requestId,
-          auth_mode: auth.mode,
-          advisor_source: response.source,
-          fallback_rate: response.metrics.fallbackRate,
-          error_rate: response.metrics.errorRate,
-          insight_accepted_rate: response.metrics.insightAcceptedRate,
-          latency_ms: response.metrics.latencyMs,
-        })
-        return response
+      const response: DashboardAdvisorResponse = {
+        mode: result.plan.mode,
+        source: result.plan.source,
+        fallback: result.plan.fallback,
+        fallbackReason: result.plan.fallbackReason,
+        requestId: requestMeta.requestId,
+        generatedAt: new Date().toISOString(),
+        ...(result.plan.degradedMessage ? { degradedMessage: result.plan.degradedMessage } : {}),
+        ...(result.summary.assets.length === 0 ? { emptyMessage: 'Aucune donnee exploitable' } : {}),
+        metrics: {
+          latencyMs: Date.now() - startedAt,
+          fallbackRate: result.plan.fallback ? 1 : 0,
+          errorRate: result.plan.fallbackReason === 'provider_unavailable' ? 1 : 0,
+          insightAcceptedRate: 0,
+        },
+        insights: buildLocalInsights(result.summary),
       }
 
-      const dashboard = getDashboardRuntime(context)
-
-      try {
-        const summary = await dashboard.useCases.getSummary(range)
-        let source: DashboardAdvisorResponse['source'] = 'provider'
-        let fallback = false
-        let fallbackReason: string | null = null
-
-        if (shouldForceLocalOnly()) {
-          source = 'local'
-          fallback = true
-          fallbackReason = 'force_local_only'
-        }
-
-        const response: DashboardAdvisorResponse = {
-          mode: 'admin',
-          source,
-          fallback,
-          fallbackReason,
-          requestId: requestMeta.requestId,
-          generatedAt: new Date().toISOString(),
-          degradedMessage: fallback ? 'Conseils limites, source externe indisponible' : null,
-          emptyMessage: summary.assets.length === 0 ? 'Aucune donnee exploitable' : null,
-          metrics: {
-            latencyMs: Date.now() - startedAt,
-            fallbackRate: fallback ? 1 : 0,
-            errorRate: 0,
-            insightAcceptedRate: 0,
-          },
-          insights: buildLocalInsights(summary),
-        }
-
-        if (response.fallback) {
-          logApiEvent({
-            level: 'warn',
-            msg: 'advisor_fallback',
-            requestId: requestMeta.requestId,
-            auth_mode: auth.mode,
-            fallback_reason: response.fallbackReason,
-            latency_ms: response.metrics.latencyMs,
-          })
-        }
-
-        logApiEvent({
-          level: 'info',
-          msg: 'advisor_response',
-          requestId: requestMeta.requestId,
-          auth_mode: auth.mode,
-          advisor_source: response.source,
-          fallback_rate: response.metrics.fallbackRate,
-          error_rate: response.metrics.errorRate,
-          insight_accepted_rate: response.metrics.insightAcceptedRate,
-          latency_ms: response.metrics.latencyMs,
-        })
-
-        return response
-      } catch (error) {
-        const summary = getDashboardSummaryMock(range)
-        const fallbackResponse: DashboardAdvisorResponse = {
-          mode: 'admin',
-          source: 'local',
-          fallback: true,
-          fallbackReason: 'provider_unavailable',
-          requestId: requestMeta.requestId,
-          generatedAt: new Date().toISOString(),
-          degradedMessage: 'Conseils limites, source externe indisponible',
-          emptyMessage: summary.assets.length === 0 ? 'Aucune donnee exploitable' : null,
-          metrics: {
-            latencyMs: Date.now() - startedAt,
-            fallbackRate: 1,
-            errorRate: 1,
-            insightAcceptedRate: 0,
-          },
-          insights: buildLocalInsights(summary),
-        }
-
+      if (response.fallbackReason === 'provider_unavailable') {
         logApiEvent({
           level: 'error',
           msg: 'advisor_error',
           requestId: requestMeta.requestId,
           auth_mode: auth.mode,
-          latency_ms: fallbackResponse.metrics.latencyMs,
-          ...toErrorLogFields({
-            error,
-            includeStack: false,
-          }),
+          safe_error_code: response.fallbackReason,
+          summary_source: result.plan.summarySource,
+          latency_ms: response.metrics.latencyMs,
         })
+      }
 
+      if (response.fallback) {
         logApiEvent({
           level: 'warn',
           msg: 'advisor_fallback',
           requestId: requestMeta.requestId,
           auth_mode: auth.mode,
-          fallback_reason: fallbackResponse.fallbackReason,
-          latency_ms: fallbackResponse.metrics.latencyMs,
+          fallback_reason: response.fallbackReason,
+          summary_source: result.plan.summarySource,
+          latency_ms: response.metrics.latencyMs,
         })
-
-        return fallbackResponse
       }
+
+      logApiEvent({
+        level: 'info',
+        msg: 'advisor_response',
+        requestId: requestMeta.requestId,
+        auth_mode: auth.mode,
+        advisor_source: response.source,
+        summary_source: result.plan.summarySource,
+        fallback_rate: response.metrics.fallbackRate,
+        error_rate: response.metrics.errorRate,
+        insight_accepted_rate: response.metrics.insightAcceptedRate,
+        latency_ms: response.metrics.latencyMs,
+      })
+
+      return response
     },
     {
       query: dashboardSummaryQuerySchema,
