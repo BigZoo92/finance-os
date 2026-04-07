@@ -1,113 +1,111 @@
-diff --git a/.github/agent-stubs/improve-742.md b/.github/agent-stubs/improve-742.md
+diff --git a/.github/agent-stubs/improve-744.md b/.github/agent-stubs/improve-744.md
 deleted file mode 100644
-index 2ac2a6a..0000000
---- a/.github/agent-stubs/improve-742.md
+index 14b2f69..0000000
+--- a/.github/agent-stubs/improve-744.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #742
+-# Autopilot stub for improve #744
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/742
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/744
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/features/powens/sync-status.test.ts b/apps/web/src/features/powens/sync-status.test.ts
-index 1d21a6e..5a731c3 100644
---- a/apps/web/src/features/powens/sync-status.test.ts
-+++ b/apps/web/src/features/powens/sync-status.test.ts
-@@ -77,6 +77,38 @@ describe('getPowensConnectionSyncBadgeModel', () => {
-     )
-   })
+diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
+index eacffa1..5ed801b 100644
+--- a/apps/web/src/components/dashboard/app-shell.tsx
++++ b/apps/web/src/components/dashboard/app-shell.tsx
+@@ -110,6 +110,13 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
+   { label: 'Parse fail (fallback)', value: 'parse_error' },
+ ]
+ const DEMO_PROFILE_OPTIONS = ['Student Campus', 'Freelancer Solo', 'Family Household', 'Retired Couple']
++const SECONDARY_NAV_SECTIONS: Array<{ id: string; label: string; hint: string }> = [
++  { id: 'ops-overview', label: 'Ops', hint: 'session, Powens et sync' },
++  { id: 'insights-center', label: 'Insights', hint: 'wealth, alertes et diagnostics' },
++  { id: 'planning-center', label: 'Planning', hint: 'goals, budgets et projections' },
++  { id: 'investment-center', label: 'Investments', hint: 'positions et valorisation' },
++  { id: 'transactions-center', label: 'Transactions', hint: 'activite recente' },
++]
+ const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
+ const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
  
-+
-+  it('adds read-only degraded copy when persisted snapshot is KO', () => {
-+    expect(
-+      getPowensConnectionSyncBadgeModel({
-+        connection: createConnection({
-+          status: 'error',
-+          lastSyncStatus: 'KO',
-+          lastSyncReasonCode: 'SYNC_FAILED',
-+        }),
-+        persistenceEnabled: true,
-+      })
-+    ).toEqual(
-+      expect.objectContaining({
-+        badgeLabel: 'KO',
-+        reasonLabel: 'Echec de synchronisation · lecture seule sur dernier snapshot',
-+      })
-+    )
-+  })
-+
-+  it('includes snapshot freshness in tooltip label', () => {
-+    const badge = getPowensConnectionSyncBadgeModel({
-+      connection: createConnection({
-+        lastSyncAttemptAt: '2026-03-27T08:00:00.000Z',
-+        lastSuccessAt: '2026-03-27T07:45:00.000Z',
-+      }),
-+      persistenceEnabled: true,
-+    })
-+
-+    expect(badge.tooltipLabel).toContain('Dernier essai a')
-+    expect(badge.tooltipLabel).toContain('Dernier snapshot confirme a')
-+  })
-+
-   it('returns Inconnu when there is no persisted result yet', () => {
-     expect(
-       getPowensConnectionSyncBadgeModel({
-diff --git a/apps/web/src/features/powens/sync-status.ts b/apps/web/src/features/powens/sync-status.ts
-index eb3de9a..fc603a0 100644
---- a/apps/web/src/features/powens/sync-status.ts
-+++ b/apps/web/src/features/powens/sync-status.ts
-@@ -31,9 +31,22 @@ const formatAttemptTime = (value: string | null) => {
-   })
- }
+@@ -1468,6 +1475,34 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+           </div>
+         </header>
  
--const toTooltipLabel = (value: string | null) => {
-+const toSnapshotFreshnessLabel = (value: string | null) => {
-   const formatted = formatAttemptTime(value)
--  return formatted ? `Dernier essai a ${formatted}` : 'Dernier essai inconnu'
-+  return formatted ? `Dernier snapshot confirme a ${formatted}` : 'Dernier snapshot inconnu'
-+}
++        <section
++          aria-label="Navigation secondaire dashboard"
++          className="rounded-lg border bg-card/80 p-3"
++        >
++          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
++            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
++              Navigation secondaire
++            </p>
++            <p className="text-xs text-muted-foreground">
++              Acces direct aux zones prioritaires du cockpit.
++            </p>
++          </div>
++          <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
++            {SECONDARY_NAV_SECTIONS.map(section => (
++              <a
++                key={section.id}
++                href={`#${section.id}`}
++                className="group rounded-md border border-border/80 bg-background/50 px-3 py-2 transition hover:border-primary/40 hover:bg-primary/5"
++              >
++                <p className="text-sm font-medium">{section.label}</p>
++                <p className="text-xs text-muted-foreground transition group-hover:text-foreground/80">
++                  {section.hint}
++                </p>
++              </a>
++            ))}
++          </nav>
++        </section>
 +
-+const toTooltipLabel = ({
-+  attemptAt,
-+  snapshotAt,
-+}: {
-+  attemptAt: string | null
-+  snapshotAt: string | null
-+}) => {
-+  const formattedAttempt = formatAttemptTime(attemptAt)
-+  const attemptLabel = formattedAttempt ? `Dernier essai a ${formattedAttempt}` : 'Dernier essai inconnu'
-+
-+  return `${attemptLabel} · ${toSnapshotFreshnessLabel(snapshotAt)}`
- }
+         {reconnectBannerUiEnabled && reconnectBannerState ? (
+           <section
+             className="rounded-lg border border-amber-500/40 bg-amber-50/80 p-4 dark:bg-amber-950/30"
+@@ -1593,7 +1628,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+           }
+         />
  
- export const getPowensConnectionSyncBadgeModel = ({
-@@ -43,7 +56,11 @@ export const getPowensConnectionSyncBadgeModel = ({
-   connection: PowensConnectionStatus
-   persistenceEnabled: boolean
- }): PowensConnectionSyncBadgeModel => {
--  const tooltipLabel = toTooltipLabel(connection.lastSyncAttemptAt)
-+  const snapshotAt = connection.lastSuccessAt ?? connection.lastSyncAt
-+  const tooltipLabel = toTooltipLabel({
-+    attemptAt: connection.lastSyncAttemptAt,
-+    snapshotAt,
-+  })
+-        <section>
++        <section id="ops-overview" className="scroll-mt-24">
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+@@ -1863,7 +1898,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+           </Card>
+         </section>
  
-   if (connection.status === 'syncing') {
-     return {
-@@ -60,10 +77,12 @@ export const getPowensConnectionSyncBadgeModel = ({
-       badgeLabel: connection.lastSyncStatus,
-       badgeVariant: connection.lastSyncStatus === 'OK' ? 'secondary' : 'destructive',
-       reasonLabel: connection.lastSyncReasonCode
--        ? REASON_LABEL[connection.lastSyncReasonCode]
-+        ? connection.lastSyncStatus === 'KO'
-+          ? `${REASON_LABEL[connection.lastSyncReasonCode]} · lecture seule sur dernier snapshot`
-+          : REASON_LABEL[connection.lastSyncReasonCode]
-         : connection.lastSyncStatus === 'OK'
-           ? 'Synchronisation complete'
--          : 'Echec de synchronisation',
-+          : 'Echec de synchronisation · lecture seule sur dernier snapshot',
-       tooltipLabel,
-     }
-   }
+-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
++        <section id="insights-center" className="grid scroll-mt-24 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+@@ -2404,7 +2439,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+           </Card>
+         </section>
+ 
+-        <section className="grid gap-4 lg:grid-cols-2">
++        <section id="planning-center" className="grid scroll-mt-24 gap-4 lg:grid-cols-2">
+           <div className="lg:col-span-2">
+             <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
+           </div>
+@@ -2564,7 +2599,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+           </Card>
+         </section>
+ 
+-        <section>
++        <section id="investment-center" className="scroll-mt-24">
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+@@ -2664,7 +2699,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
+           </Card>
+         </section>
+ 
+-        <section>
++        <section id="transactions-center" className="scroll-mt-24">
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
