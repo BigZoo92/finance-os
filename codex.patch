@@ -1,232 +1,62 @@
-diff --git a/.github/agent-stubs/improve-750.md b/.github/agent-stubs/improve-750.md
+diff --git a/.github/agent-stubs/improve-752.md b/.github/agent-stubs/improve-752.md
 deleted file mode 100644
-index dbc4ba9..0000000
---- a/.github/agent-stubs/improve-750.md
+index fa410b1..0000000
+--- a/.github/agent-stubs/improve-752.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #750
+-# Autopilot stub for improve #752
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/750
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/752
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
-index 4f2299c..6c9e7fb 100644
---- a/apps/web/src/components/dashboard/app-shell.tsx
-+++ b/apps/web/src/components/dashboard/app-shell.tsx
-@@ -357,6 +357,156 @@ const formatMoney = (value: number, currency = 'EUR') => {
-   }
- }
- 
-+const sanitizeCsvCell = (value: string | number | null) => {
-+  const text = value === null ? '' : String(value)
-+  const escaped = text.replaceAll('"', '""')
-+  return `"${escaped}"`
-+}
+diff --git a/docs/auth-demo-mode.md b/docs/auth-demo-mode.md
+index 458f0aa..bddaa1c 100644
+--- a/docs/auth-demo-mode.md
++++ b/docs/auth-demo-mode.md
+@@ -104,3 +104,44 @@ Quand tu ajoutes une feature:
+    - demo sans cookie
+    - admin avec cookie
+    - erreur auth attendue (`401/403`, jamais `500`).
 +
-+const buildTransactionsCsv = (transactions: DashboardTransactionsResponse['items']) => {
-+  const header = [
-+    'id',
-+    'bookingDate',
-+    'label',
-+    'amount',
-+    'currency',
-+    'direction',
-+    'category',
-+    'subcategory',
-+    'resolvedCategory',
-+    'incomeType',
-+    'tags',
-+    'accountName',
-+    'powensConnectionId',
-+    'powensAccountId',
-+  ]
++## 9) Onboarding court (demo/admin + installation + notifications + limites hors-ligne)
 +
-+  const rows = transactions.map(transaction => {
-+    return [
-+      transaction.id,
-+      transaction.bookingDate,
-+      transaction.label,
-+      transaction.amount.toFixed(2),
-+      transaction.currency,
-+      transaction.direction,
-+      transaction.category,
-+      transaction.subcategory,
-+      transaction.resolvedCategory,
-+      transaction.incomeType,
-+      transaction.tags.join('|'),
-+      transaction.accountName,
-+      transaction.powensConnectionId,
-+      transaction.powensAccountId,
-+    ]
-+      .map(value => sanitizeCsvCell(value))
-+      .join(',')
-+  })
++### A. Installation locale (chemin le plus court)
 +
-+  return [header.join(','), ...rows].join('\n')
-+}
++1. Installer les dependances: `pnpm install --frozen-lockfile`
++2. Copier l'env: `cp .env.example .env`
++3. Demarrer le web + API (selon votre workflow local, ex. `pnpm dev`)
++4. Ouvrir l'app puis verifier que l'etat initial est bien `demo`
 +
-+const downloadFile = ({
-+  filename,
-+  mimeType,
-+  content,
-+}: {
-+  filename: string
-+  mimeType: string
-+  content: string
-+}) => {
-+  const blob = new Blob([content], { type: mimeType })
-+  const url = URL.createObjectURL(blob)
-+  const link = document.createElement('a')
-+  link.href = url
-+  link.download = filename
-+  link.click()
-+  URL.revokeObjectURL(url)
-+}
++### B. Validation rapide du split demo/admin
 +
-+const openSummaryPdfPrintView = ({
-+  range,
-+  summary,
-+  transactions,
-+  generatedAt,
-+  mode,
-+}: {
-+  range: DashboardRange
-+  summary: DashboardSummaryResponse
-+  transactions: DashboardTransactionsResponse['items']
-+  generatedAt: Date
-+  mode: 'demo' | 'admin'
-+}) => {
-+  const popup = window.open('', '_blank', 'noopener,noreferrer,width=1000,height=740')
-+  if (!popup) {
-+    return
-+  }
++- `demo` (par defaut):
++  - aucune lecture/ecriture DB
++  - aucun appel provider
++  - donnees deterministes mock uniquement
++- `admin` (apres login):
++  - DB + providers actives derriere cookie session signe
++  - erreurs provider tolerees avec fallback clair (fail-soft)
 +
-+  const topExpenses = transactions
-+    .filter(transaction => transaction.direction === 'expense')
-+    .sort((left, right) => Math.abs(right.amount) - Math.abs(left.amount))
-+    .slice(0, 8)
++### C. Notifications (comportement attendu)
 +
-+  const topExpensesMarkup = topExpenses
-+    .map(transaction => {
-+      return `<tr>
-+        <td>${transaction.bookingDate}</td>
-+        <td>${transaction.label}</td>
-+        <td>${formatMoney(Math.abs(transaction.amount), transaction.currency)}</td>
-+        <td>${transaction.category ?? '-'}</td>
-+      </tr>`
-+    })
-+    .join('')
++- Les notifications push restent **descriptives** et non bloquantes pour les flux coeur produit.
++- Si permission navigateur/refus provider: l'UI reste utilisable avec message explicite.
++- En mode demo, les chemins notifications doivent rester deterministes (mock), sans effet externe.
 +
-+  popup.document.write(`
-+    <html>
-+      <head>
-+        <title>Finance-OS synthese ${range}</title>
-+        <style>
-+          body { font-family: Inter, system-ui, -apple-system, sans-serif; margin: 24px; color: #111827; }
-+          h1 { margin-bottom: 6px; }
-+          .meta { font-size: 12px; color: #6b7280; margin-bottom: 16px; }
-+          .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
-+          .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; }
-+          .k { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 4px; }
-+          .v { font-size: 16px; font-weight: 600; }
-+          table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-+          th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 8px 6px; }
-+          th { color: #374151; font-weight: 600; background: #f9fafb; }
-+        </style>
-+      </head>
-+      <body>
-+        <h1>Synthese dashboard (${range})</h1>
-+        <p class="meta">Mode ${mode} · Genere le ${generatedAt.toLocaleString('fr-FR')} · ${transactions.length} transactions exportees</p>
-+        <div class="grid">
-+          <div class="card"><div class="k">Patrimoine total</div><div class="v">${formatMoney(summary.totals.balance)}</div></div>
-+          <div class="card"><div class="k">Delta revenus-depenses</div><div class="v">${formatMoney(summary.totals.incomes - summary.totals.expenses)}</div></div>
-+          <div class="card"><div class="k">Revenus</div><div class="v">${formatMoney(summary.totals.incomes)}</div></div>
-+          <div class="card"><div class="k">Depenses</div><div class="v">${formatMoney(summary.totals.expenses)}</div></div>
-+          <div class="card"><div class="k">Nb transactions</div><div class="v">${transactions.length}</div></div>
-+          <div class="card"><div class="k">Positions investissement</div><div class="v">${summary.positions.length}</div></div>
-+        </div>
-+        <h2>Top depenses</h2>
-+        <table>
-+          <thead>
-+            <tr>
-+              <th>Date</th>
-+              <th>Libelle</th>
-+              <th>Montant</th>
-+              <th>Categorie</th>
-+            </tr>
-+          </thead>
-+          <tbody>
-+            ${topExpensesMarkup || '<tr><td colspan="4">Aucune depense disponible.</td></tr>'}
-+          </tbody>
-+        </table>
-+      </body>
-+    </html>
-+  `)
-+  popup.document.close()
-+  popup.focus()
-+  popup.print()
-+}
++### D. Limites hors-ligne (offline)
 +
- const DERIVED_RECOMPUTE_BADGE: Record<
-   'idle' | 'running' | 'completed' | 'failed',
-   {
-@@ -971,6 +1121,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-   const transactionsFreshnessBadge = transactionsFreshness
-     ? TRANSACTION_FRESHNESS_BADGE[transactionsFreshness.syncStatus]
-     : null
-+  const canExportOpsData = isAdmin && transactions.length > 0 && Boolean(summary)
-   const statusCounts = {
-     connected: statusConnections.filter(connection => connection.status === 'connected').length,
-     syncing: statusConnections.filter(connection => connection.status === 'syncing').length,
-@@ -1788,6 +1939,49 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
-                   >
-                     {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
-                   </Button>
-+                  <Button
-+                    type="button"
-+                    variant="secondary"
-+                    disabled={!canExportOpsData}
-+                    title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
-+                    onClick={() => {
-+                      if (!summary || transactions.length === 0) {
-+                        return
-+                      }
++- Hors-ligne, l'app doit rester navigable autant que possible avec etats de degradation explicites.
++- Les actions qui necessitent reseau/provider doivent:
++  - afficher une raison claire,
++  - proposer une reprise quand la connexion revient,
++  - ne jamais casser le parcours principal.
 +
-+                      const now = new Date()
-+                      const datePart = now.toISOString().slice(0, 10)
-+                      const csv = buildTransactionsCsv(transactions)
-+                      downloadFile({
-+                        filename: `finance-os-transactions-${range}-${datePart}.csv`,
-+                        mimeType: 'text/csv;charset=utf-8',
-+                        content: csv,
-+                      })
-+                    }}
-+                  >
-+                    Export CSV transactions
-+                  </Button>
-+                  <Button
-+                    type="button"
-+                    variant="secondary"
-+                    disabled={!canExportOpsData}
-+                    title={!isAdmin ? 'Action reservee au compte BigZoo' : undefined}
-+                    onClick={() => {
-+                      if (!summary || transactions.length === 0) {
-+                        return
-+                      }
++### E. Checklist d'onboarding operateur (5 min)
 +
-+                      openSummaryPdfPrintView({
-+                        range,
-+                        summary,
-+                        transactions,
-+                        generatedAt: new Date(),
-+                        mode: isAdmin ? 'admin' : 'demo',
-+                      })
-+                    }}
-+                  >
-+                    Export PDF synthese
-+                  </Button>
-                 </div>
-                 {manualSyncUiState.blockMessage ? (
-                   <p className="text-xs text-muted-foreground" aria-live="polite">
++1. Verifier `/auth/me` retourne `demo` hors session.
++2. Passer en `admin` via `/login`, puis reverifier `/auth/me`.
++3. Couper le reseau (ou simuler indisponibilite provider) et confirmer le fallback UI.
++4. Tester l'opt-in notifications et verifier qu'un echec ne bloque pas le dashboard.
++5. Revenir en `demo` via logout et confirmer l'absence d'acces mutation.
