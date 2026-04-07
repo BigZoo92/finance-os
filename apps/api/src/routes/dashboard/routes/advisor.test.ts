@@ -70,8 +70,11 @@ describe('createAdvisorRoute', () => {
     expect(payload.mode).toBe('demo')
     expect(payload.source).toBe('local')
     expect(payload.fallback).toBe(false)
+    expect(['sufficient', 'insufficient']).toContain(payload.dataStatus.mode)
     expect(payload.insights.length).toBeGreaterThan(0)
+    expect(payload.insights[0]?.citations.length).toBeGreaterThan(0)
     expect(payload.actions.length).toBeGreaterThan(0)
+    expect(payload.actions[0]?.citations.length).toBeGreaterThan(0)
     expect(payload.actions[0]?.tracking.status).toBe('suggested')
   })
 

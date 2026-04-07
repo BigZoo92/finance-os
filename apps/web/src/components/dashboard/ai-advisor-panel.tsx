@@ -32,6 +32,11 @@ export const AiAdvisorPanel = ({
         {advisor?.degradedMessage ? (
           <p className="text-amber-700 dark:text-amber-300">{advisor.degradedMessage}</p>
         ) : null}
+        {advisor?.dataStatus.mode === 'insufficient' ? (
+          <p className="text-amber-700 dark:text-amber-300">
+            {advisor.dataStatus.message ?? 'Donnees insuffisantes: recommandations non bloquantes.'}
+          </p>
+        ) : null}
         {advisor?.insights.map(insight => (
           <div key={insight.id} className="rounded-md border border-border/80 bg-muted/20 p-2">
             <div className="flex items-center justify-between gap-2">
@@ -41,6 +46,11 @@ export const AiAdvisorPanel = ({
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">{insight.detail}</p>
+            {insight.citations.length ? (
+              <p className="pt-1 text-[11px] text-muted-foreground">
+                Sources: {insight.citations.map(citation => `${citation.label}=${citation.value}`).join(' · ')}
+              </p>
+            ) : null}
           </div>
         ))}
         {advisor?.actions.length ? (
@@ -60,6 +70,9 @@ export const AiAdvisorPanel = ({
                     Suivi: {action.tracking.metricLabel} · cible {action.tracking.targetLabel}
                   </p>
                   <p>Etat: {action.tracking.status} · actuel {action.tracking.currentLabel}</p>
+                  {action.citations.length ? (
+                    <p>Sources: {action.citations.map(citation => `${citation.label}=${citation.value}`).join(' · ')}</p>
+                  ) : null}
                 </div>
               </div>
             ))}

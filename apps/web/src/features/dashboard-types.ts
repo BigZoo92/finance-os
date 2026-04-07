@@ -154,6 +154,10 @@ export type DashboardAdvisorResponse = {
   generatedAt: string
   degradedMessage?: string | null
   emptyMessage?: string | null
+  dataStatus: {
+    mode: 'sufficient' | 'insufficient'
+    message: string | null
+  }
   metrics: {
     latencyMs: number
     fallbackRate: number
@@ -165,6 +169,11 @@ export type DashboardAdvisorResponse = {
     title: string
     detail: string
     severity: 'info' | 'warning'
+    citations: Array<{
+      id: string
+      label: string
+      value: string
+    }>
   }>
   actions: Array<{
     id: string
@@ -178,6 +187,11 @@ export type DashboardAdvisorResponse = {
       targetLabel: string
       currentLabel: string
     }
+    citations: Array<{
+      id: string
+      label: string
+      value: string
+    }>
   }>
 }
 
