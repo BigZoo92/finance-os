@@ -400,7 +400,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          for attempt in $(seq 1 24); do
+          echo "Waiting 120s for deployment to start..."
+          sleep 120
+
+          for attempt in $(seq 1 10); do
             if curl --silent --show-error --fail --location \
               --max-time 15 \
               "${SMOKE_BASE_URL}/health" > /tmp/release-smoke-health.json; then
@@ -408,8 +411,8 @@ jobs:
               exit 0
             fi
 
-            echo "Waiting for deployment to become reachable (${attempt}/24)..."
-            sleep 10
+            echo "Waiting for deployment to become reachable (${attempt}/10)..."
+            sleep 120
           done
 
           echo "Timed out waiting for ${SMOKE_BASE_URL}/health after deployment." >&2
