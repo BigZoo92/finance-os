@@ -146,6 +146,34 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
         severity: 'info',
       },
     ],
+    actions: [
+      {
+        id: 'demo-action-cap-variable',
+        title: 'Limiter un poste variable de 10%',
+        detail: 'Choisissez un poste non essentiel et fixez un plafond hebdomadaire visible.',
+        estimatedMonthlyImpact: 60,
+        effort: 'medium',
+        tracking: {
+          status: 'suggested',
+          metricLabel: 'Depense variable mensuelle',
+          targetLabel: '-10% sur 30 jours',
+          currentLabel: 'Baseline demo: 620',
+        },
+      },
+      {
+        id: 'demo-action-safety-transfer',
+        title: 'Activer un virement reserve hebdomadaire',
+        detail: 'Automatisez un petit montant chaque semaine pour securiser la tresorerie.',
+        estimatedMonthlyImpact: 40,
+        effort: 'low',
+        tracking: {
+          status: 'suggested',
+          metricLabel: 'Reserve de securite',
+          targetLabel: '4 virements/mois',
+          currentLabel: '0/4 effectue',
+        },
+      },
+    ],
   }
 }
 

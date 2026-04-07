@@ -71,6 +71,8 @@ describe('createAdvisorRoute', () => {
     expect(payload.source).toBe('local')
     expect(payload.fallback).toBe(false)
     expect(payload.insights.length).toBeGreaterThan(0)
+    expect(payload.actions.length).toBeGreaterThan(0)
+    expect(payload.actions[0]?.tracking.status).toBe('suggested')
   })
 
   it('returns admin response from real summary path', async () => {
