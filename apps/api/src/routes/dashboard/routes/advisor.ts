@@ -1,14 +1,16 @@
 import { Elysia } from 'elysia'
 import { getAuth, getRequestMeta } from '../../../auth/context'
 import { logApiEvent } from '../../../observability/logger'
+import { buildAdvisorFinancialContext } from '../domain/build-advisor-financial-context'
 import { createGetDashboardAdvisorUseCase, readDashboardAdvisorFlags } from '../domain/create-get-dashboard-advisor-use-case'
 import { getDashboardRuntime } from '../context'
 import { dashboardSummaryQuerySchema } from '../schemas'
 import type { DashboardAdvisorInsight, DashboardAdvisorResponse, DashboardSummaryResponse } from '../types'
 
 const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisorInsight[] => {
-  const net = summary.totals.incomes - summary.totals.expenses
-  const spendRatio = summary.totals.incomes > 0 ? summary.totals.expenses / summary.totals.incomes : 1
+  const financialContext = buildAdvisorFinancialContext(summary)
+  const net = financialContext.totals.netCashflow
+  const spendRatio = financialContext.totals.spendRatio
 
   const trendInsight: DashboardAdvisorInsight =
     net >= 0
@@ -40,12 +42,11 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
           severity: 'info',
         }
 
-  const topExpense = summary.topExpenseGroups[0]
-  const expenseInsight: DashboardAdvisorInsight = topExpense
+  const expenseInsight: DashboardAdvisorInsight = financialContext.focus.topExpenseLabel
     ? {
         id: 'local-top-expense',
-        title: `Focus depense: ${topExpense.label}`,
-        detail: `Poste principal sur la periode: ${Math.round(topExpense.total)} sur ${topExpense.count} transactions.`,
+        title: `Focus depense: ${financialContext.focus.topExpenseLabel}`,
+        detail: `Poste principal sur la periode: ${Math.round(financialContext.focus.topExpenseAmount ?? 0)} sur ${financialContext.focus.topExpenseCount ?? 0} transactions.`,
         severity: 'info',
       }
     : {

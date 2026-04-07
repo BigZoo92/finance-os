@@ -1,291 +1,209 @@
-diff --git a/.github/agent-stubs/improve-688.md b/.github/agent-stubs/improve-688.md
+diff --git a/.github/agent-stubs/improve-713.md b/.github/agent-stubs/improve-713.md
 deleted file mode 100644
-index 2c14e52..0000000
---- a/.github/agent-stubs/improve-688.md
+index 2ce75e2..0000000
+--- a/.github/agent-stubs/improve-713.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #688
+-# Autopilot stub for improve #713
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/688
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/713
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/components/dashboard/app-shell.tsx b/apps/web/src/components/dashboard/app-shell.tsx
-index dc980c3..f8e33c9 100644
---- a/apps/web/src/components/dashboard/app-shell.tsx
-+++ b/apps/web/src/components/dashboard/app-shell.tsx
-@@ -85,6 +85,7 @@ import { WealthHistory } from './wealth-history'
- import { ExpenseStructureCard } from './expense-structure-card'
- import { NewsFeed } from './news-feed'
- import { buildHighValueSignalDigest } from './high-value-signals'
-+import { rankPersonalSignalsByRelevance } from './relevance-scoring'
- import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
- 
- const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
-@@ -293,7 +294,7 @@ const buildPersonalAlertSignals = ({
-     })
-   }
- 
--  return alerts
-+  return rankPersonalSignalsByRelevance(alerts).map(entry => entry.item)
- }
- 
- const pickLatestDate = (values: Array<string | null>) => {
-diff --git a/apps/web/src/components/dashboard/news-feed.tsx b/apps/web/src/components/dashboard/news-feed.tsx
-index 8ad5838..125b722 100644
---- a/apps/web/src/components/dashboard/news-feed.tsx
-+++ b/apps/web/src/components/dashboard/news-feed.tsx
-@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
- import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@finance-os/ui/components'
- import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
- import type { AuthMode } from '@/features/auth-types'
-+import { rankNewsByRelevance } from './relevance-scoring'
- 
- export function NewsFeed({ mode }: { mode: AuthMode }) {
-   const [topic, setTopic] = useState('')
-@@ -20,6 +21,12 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
-   )
- 
-   const payload = newsQuery.data
-+  const rankedItems = payload
-+    ? rankNewsByRelevance(payload.items, {
-+        topicFilter: topic.trim(),
-+        sourceFilter: source.trim(),
-+      })
-+    : []
- 
-   return (
-     <Card>
-@@ -64,13 +71,17 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
-           )
-         ) : null}
- 
--        {payload?.items.map(item => (
-+        {rankedItems.map(({ item, score, reasons }) => (
-           <a key={item.id} href={item.url} target="_blank" rel="noreferrer" className="block rounded-md border p-3">
-             <div className="flex items-start justify-between gap-2">
-               <p className="text-sm font-medium leading-snug">{item.title}</p>
--              <Badge variant="secondary">{item.topic}</Badge>
-+              <div className="flex items-center gap-2">
-+                <Badge variant="secondary">{item.topic}</Badge>
-+                <Badge variant="outline">Score {score}</Badge>
-+              </div>
-             </div>
-             <p className="mt-1 text-xs text-muted-foreground">{item.sourceName}</p>
-+            <p className="mt-1 text-xs text-muted-foreground">Why relevant: {reasons.join(', ')}</p>
-           </a>
-         ))}
-       </CardContent>
-diff --git a/apps/web/src/components/dashboard/relevance-scoring.test.ts b/apps/web/src/components/dashboard/relevance-scoring.test.ts
+diff --git a/apps/api/src/routes/dashboard/domain/build-advisor-financial-context.test.ts b/apps/api/src/routes/dashboard/domain/build-advisor-financial-context.test.ts
 new file mode 100644
-index 0000000..03240be
+index 0000000..3eb2c11
 --- /dev/null
-+++ b/apps/web/src/components/dashboard/relevance-scoring.test.ts
-@@ -0,0 +1,64 @@
-+import { describe, expect, it } from 'vitest'
-+import { rankNewsByRelevance, rankPersonalSignalsByRelevance } from './relevance-scoring'
++++ b/apps/api/src/routes/dashboard/domain/build-advisor-financial-context.test.ts
+@@ -0,0 +1,82 @@
++import { describe, expect, it } from 'bun:test'
++import type { DashboardSummaryResponse } from '../types'
++import { buildAdvisorFinancialContext } from './build-advisor-financial-context'
 +
-+describe('rankNewsByRelevance', () => {
-+  it('prioritizes topic/source matches and recency with explainable reasons', () => {
-+    const ranked = rankNewsByRelevance(
-+      [
++describe('buildAdvisorFinancialContext', () => {
++  it('builds a concise server context from dashboard summary', () => {
++    const summary: DashboardSummaryResponse = {
++      range: '30d',
++      totals: { balance: 12345.678, incomes: 2500, expenses: 1800 },
++      connections: [],
++      accounts: [],
++      assets: [
 +        {
-+          id: 'older-match',
-+          title: 'Equity markets digest inflation outlook',
-+          summary: 'Long form context',
-+          url: 'https://example.com/older-match',
-+          sourceName: 'Macro Wire',
-+          topic: 'macro',
-+          language: 'en',
-+          publishedAt: '2026-04-02T10:00:00.000Z',
++          assetId: 1,
++          type: 'cash',
++          origin: 'provider',
++          source: 'banking',
++          provider: 'powens',
++          providerConnectionId: 'conn_1',
++          providerInstitutionName: 'Bank',
++          powensConnectionId: 'powens_conn_1',
++          powensAccountId: 'powens_acc_1',
++          name: 'Checking',
++          currency: 'EUR',
++          valuation: 5100.551,
++          valuationAsOf: '2026-04-07T00:00:00.000Z',
++          enabled: true,
++          metadata: null,
 +        },
 +        {
-+          id: 'fresh-miss',
-+          title: 'Corporate bonds hold steady',
-+          summary: null,
-+          url: 'https://example.com/fresh-miss',
-+          sourceName: 'Bond Desk',
-+          topic: 'credit',
-+          language: 'en',
-+          publishedAt: '2026-04-06T09:30:00.000Z',
++          assetId: 2,
++          type: 'investment',
++          origin: 'provider',
++          source: 'banking',
++          provider: 'powens',
++          providerConnectionId: 'conn_1',
++          providerInstitutionName: 'Bank',
++          powensConnectionId: 'powens_conn_1',
++          powensAccountId: 'powens_acc_2',
++          name: 'ETF',
++          currency: 'EUR',
++          valuation: 2400.337,
++          valuationAsOf: '2026-04-07T00:00:00.000Z',
++          enabled: true,
++          metadata: null,
 +        },
 +      ],
-+      {
-+        topicFilter: 'macro',
-+        sourceFilter: 'macro',
-+        now: new Date('2026-04-06T10:00:00.000Z'),
-+      }
-+    )
++      positions: [],
++      dailyWealthSnapshots: [],
++      topExpenseGroups: [
++        {
++          label: 'Housing',
++          category: 'Housing',
++          merchant: 'Rent',
++          total: 920.444,
++          count: 2,
++        },
++      ],
++    }
 +
-+    expect(ranked[0]?.item.id).toBe('older-match')
-+    expect(ranked[0]?.reasons).toContain('topic matches filter')
-+    expect(ranked[0]?.reasons).toContain('source matches filter')
++    expect(buildAdvisorFinancialContext(summary)).toEqual({
++      range: '30d',
++      totals: {
++        balance: 12345.68,
++        incomes: 2500,
++        expenses: 1800,
++        netCashflow: 700,
++        spendRatio: 0.72,
++      },
++      patrimoine: {
++        totalAssets: 7500.89,
++        investmentAssets: 2400.34,
++        cashAssets: 5100.55,
++      },
++      focus: {
++        topExpenseLabel: 'Housing',
++        topExpenseAmount: 920.44,
++        topExpenseCount: 2,
++      },
++    })
 +  })
 +})
-+
-+describe('rankPersonalSignalsByRelevance', () => {
-+  it('puts destructive quantified signals first and includes reasons', () => {
-+    const ranked = rankPersonalSignalsByRelevance([
-+      {
-+        id: 'budget',
-+        title: 'Signal budget personnel',
-+        detail: 'Depenses a 95% des revenus',
-+        tone: 'outline',
-+      },
-+      {
-+        id: 'sync',
-+        title: 'Signal sync personnel',
-+        detail: '3 synchronisations en attente',
-+        tone: 'destructive',
-+      },
-+    ])
-+
-+    expect(ranked[0]?.item.id).toBe('sync')
-+    expect(ranked[0]?.reasons).toContain('critical tone')
-+    expect(ranked[0]?.reasons).toContain('operational risk signal')
-+    expect(ranked[0]?.reasons).toContain('quantified impact')
-+  })
-+})
-diff --git a/apps/web/src/components/dashboard/relevance-scoring.ts b/apps/web/src/components/dashboard/relevance-scoring.ts
+diff --git a/apps/api/src/routes/dashboard/domain/build-advisor-financial-context.ts b/apps/api/src/routes/dashboard/domain/build-advisor-financial-context.ts
 new file mode 100644
-index 0000000..c1ed018
+index 0000000..9cb8659
 --- /dev/null
-+++ b/apps/web/src/components/dashboard/relevance-scoring.ts
-@@ -0,0 +1,136 @@
-+const NEWS_RECENCY_WINDOW_HOURS = 72
++++ b/apps/api/src/routes/dashboard/domain/build-advisor-financial-context.ts
+@@ -0,0 +1,63 @@
++import type { DashboardSummaryResponse } from '../types'
 +
-+export type NewsRelevanceInput = {
-+  id: string
-+  title: string
-+  summary: string | null
-+  url: string
-+  sourceName: string
-+  topic: string
-+  language: string
-+  publishedAt: string
-+}
-+
-+export type PersonalSignalRelevanceInput = {
-+  id: string
-+  title: string
-+  detail: string
-+  tone: 'outline' | 'destructive'
-+}
-+
-+export type RankedEntry<T> = {
-+  item: T
-+  score: number
-+  reasons: string[]
-+}
-+
-+const clamp = (value: number, min: number, max: number) => {
-+  return Math.min(max, Math.max(min, value))
-+}
-+
-+const tokenize = (value: string) => value.toLowerCase().trim()
-+
-+export const rankNewsByRelevance = (
-+  items: NewsRelevanceInput[],
-+  context: {
-+    topicFilter: string
-+    sourceFilter: string
-+    now?: Date
++export interface AdvisorFinancialContext {
++  range: DashboardSummaryResponse['range']
++  totals: {
++    balance: number
++    incomes: number
++    expenses: number
++    netCashflow: number
++    spendRatio: number
 +  }
-+): RankedEntry<NewsRelevanceInput>[] => {
-+  const topicFilter = tokenize(context.topicFilter)
-+  const sourceFilter = tokenize(context.sourceFilter)
-+  const nowMs = (context.now ?? new Date()).getTime()
-+
-+  return items
-+    .map(item => {
-+      const reasons: string[] = []
-+      let score = 0
-+
-+      if (topicFilter.length > 0 && tokenize(item.topic) === topicFilter) {
-+        score += 35
-+        reasons.push('topic matches filter')
-+      }
-+
-+      if (sourceFilter.length > 0 && tokenize(item.sourceName).includes(sourceFilter)) {
-+        score += 25
-+        reasons.push('source matches filter')
-+      }
-+
-+      const publishedMs = new Date(item.publishedAt).getTime()
-+      if (Number.isFinite(publishedMs)) {
-+        const ageHours = (nowMs - publishedMs) / 3_600_000
-+        const recencyScore = clamp((NEWS_RECENCY_WINDOW_HOURS - ageHours) / NEWS_RECENCY_WINDOW_HOURS, 0, 1) * 30
-+        if (recencyScore > 0) {
-+          score += recencyScore
-+          reasons.push('recent publication')
-+        }
-+      }
-+
-+      if (item.summary && item.summary.trim().length > 0) {
-+        score += 5
-+        reasons.push('has summary context')
-+      }
-+
-+      const lowerTitle = item.title.toLowerCase()
-+      if (/(etf|rates?|inflation|crypto|equity|bond|market)/.test(lowerTitle)) {
-+        score += 10
-+        reasons.push('finance keyword in title')
-+      }
-+
-+      return {
-+        item,
-+        score: Math.round(score),
-+        reasons: reasons.length > 0 ? reasons : ['baseline relevance'],
-+      }
-+    })
-+    .sort((a, b) => {
-+      if (b.score !== a.score) {
-+        return b.score - a.score
-+      }
-+
-+      const aPublished = new Date(a.item.publishedAt).getTime()
-+      const bPublished = new Date(b.item.publishedAt).getTime()
-+      return bPublished - aPublished
-+    })
++  patrimoine: {
++    totalAssets: number
++    investmentAssets: number
++    cashAssets: number
++  }
++  focus: {
++    topExpenseLabel: string | null
++    topExpenseAmount: number | null
++    topExpenseCount: number | null
++  }
 +}
 +
-+export const rankPersonalSignalsByRelevance = (
-+  items: PersonalSignalRelevanceInput[]
-+): RankedEntry<PersonalSignalRelevanceInput>[] => {
-+  return items
-+    .map(item => {
-+      const reasons: string[] = []
-+      let score = 0
++const roundToTwo = (value: number) => Math.round(value * 100) / 100
 +
-+      if (item.tone === 'destructive') {
-+        score += 45
-+        reasons.push('critical tone')
-+      } else {
-+        score += 25
-+        reasons.push('actionable tone')
-+      }
++export const buildAdvisorFinancialContext = (
++  summary: DashboardSummaryResponse
++): AdvisorFinancialContext => {
++  const netCashflow = summary.totals.incomes - summary.totals.expenses
++  const spendRatio =
++    summary.totals.incomes > 0 ? summary.totals.expenses / summary.totals.incomes : 1
 +
-+      const lowerText = `${item.title} ${item.detail}`.toLowerCase()
-+      if (/(sync|backlog|incident|anomal)/.test(lowerText)) {
-+        score += 25
-+        reasons.push('operational risk signal')
-+      }
++  const totalAssets = summary.assets.reduce((acc, asset) => acc + asset.valuation, 0)
++  const investmentAssets = summary.assets
++    .filter(asset => asset.type === 'investment')
++    .reduce((acc, asset) => acc + asset.valuation, 0)
++  const cashAssets = summary.assets
++    .filter(asset => asset.type === 'cash')
++    .reduce((acc, asset) => acc + asset.valuation, 0)
 +
-+      const numericMatch = lowerText.match(/(\d+)/)
-+      if (numericMatch) {
-+        const numericValue = Number.parseInt(numericMatch[1] ?? '0', 10)
-+        if (Number.isFinite(numericValue) && numericValue > 0) {
-+          score += clamp(numericValue, 1, 20)
-+          reasons.push('quantified impact')
-+        }
-+      }
++  const topExpense = summary.topExpenseGroups[0]
 +
-+      return {
-+        item,
-+        score,
-+        reasons: reasons.length > 0 ? reasons : ['baseline relevance'],
-+      }
-+    })
-+    .sort((a, b) => b.score - a.score)
++  return {
++    range: summary.range,
++    totals: {
++      balance: roundToTwo(summary.totals.balance),
++      incomes: roundToTwo(summary.totals.incomes),
++      expenses: roundToTwo(summary.totals.expenses),
++      netCashflow: roundToTwo(netCashflow),
++      spendRatio: roundToTwo(spendRatio),
++    },
++    patrimoine: {
++      totalAssets: roundToTwo(totalAssets),
++      investmentAssets: roundToTwo(investmentAssets),
++      cashAssets: roundToTwo(cashAssets),
++    },
++    focus: {
++      topExpenseLabel: topExpense?.label ?? null,
++      topExpenseAmount: topExpense ? roundToTwo(topExpense.total) : null,
++      topExpenseCount: topExpense?.count ?? null,
++    },
++  }
 +}
+diff --git a/apps/api/src/routes/dashboard/routes/advisor.ts b/apps/api/src/routes/dashboard/routes/advisor.ts
+index e042230..2dadfc5 100644
+--- a/apps/api/src/routes/dashboard/routes/advisor.ts
++++ b/apps/api/src/routes/dashboard/routes/advisor.ts
+@@ -1,14 +1,16 @@
+ import { Elysia } from 'elysia'
+ import { getAuth, getRequestMeta } from '../../../auth/context'
+ import { logApiEvent } from '../../../observability/logger'
++import { buildAdvisorFinancialContext } from '../domain/build-advisor-financial-context'
+ import { createGetDashboardAdvisorUseCase, readDashboardAdvisorFlags } from '../domain/create-get-dashboard-advisor-use-case'
+ import { getDashboardRuntime } from '../context'
+ import { dashboardSummaryQuerySchema } from '../schemas'
+ import type { DashboardAdvisorInsight, DashboardAdvisorResponse, DashboardSummaryResponse } from '../types'
+ 
+ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisorInsight[] => {
+-  const net = summary.totals.incomes - summary.totals.expenses
+-  const spendRatio = summary.totals.incomes > 0 ? summary.totals.expenses / summary.totals.incomes : 1
++  const financialContext = buildAdvisorFinancialContext(summary)
++  const net = financialContext.totals.netCashflow
++  const spendRatio = financialContext.totals.spendRatio
+ 
+   const trendInsight: DashboardAdvisorInsight =
+     net >= 0
+@@ -40,12 +42,11 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
+           severity: 'info',
+         }
+ 
+-  const topExpense = summary.topExpenseGroups[0]
+-  const expenseInsight: DashboardAdvisorInsight = topExpense
++  const expenseInsight: DashboardAdvisorInsight = financialContext.focus.topExpenseLabel
+     ? {
+         id: 'local-top-expense',
+-        title: `Focus depense: ${topExpense.label}`,
+-        detail: `Poste principal sur la periode: ${Math.round(topExpense.total)} sur ${topExpense.count} transactions.`,
++        title: `Focus depense: ${financialContext.focus.topExpenseLabel}`,
++        detail: `Poste principal sur la periode: ${Math.round(financialContext.focus.topExpenseAmount ?? 0)} sur ${financialContext.focus.topExpenseCount ?? 0} transactions.`,
+         severity: 'info',
+       }
+     : {
