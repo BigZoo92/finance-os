@@ -40,12 +40,23 @@
     "web:build": "pnpm --filter @finance-os/web build",
     "web:start": "pnpm --filter @finance-os/web start",
     "web:typecheck": "pnpm --filter @finance-os/web typecheck",
-    "web:test": "pnpm --filter @finance-os/web test"
+    "web:test": "pnpm --filter @finance-os/web test",
+    "gitnexus:analyze": "npx gitnexus analyze --skills",
+    "gitnexus:analyze:full": "npx gitnexus analyze --embeddings --skills --verbose",
+    "gitnexus:analyze:force": "npx gitnexus analyze --embeddings --skills --verbose --force",
+    "gitnexus:status": "npx gitnexus status",
+    "gitnexus:list": "npx gitnexus list",
+    "gitnexus:mcp": "npx gitnexus mcp",
+    "gitnexus:serve": "npx gitnexus serve",
+    "gitnexus:wiki": "npx gitnexus wiki",
+    "gitnexus:clean": "npx gitnexus clean",
+    "gitnexus:sync-generated-skills": "node scripts/sync-gitnexus-generated-skills.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@types/node": "^25.3.0",
-    "typescript": "^5.9.3",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "gitnexus": "1.4.10",
+    "typescript": "^5.9.3"
   }
 }

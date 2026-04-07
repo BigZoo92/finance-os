@@ -16,3 +16,6 @@ coverage
 .vscode/*.code-workspace
 
 docker-data
+
+# GitNexus local index (generated, machine-specific)
+.gitnexus/
