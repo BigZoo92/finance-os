@@ -10,6 +10,7 @@ import {
 import { getGlobalStartContext } from '@tanstack/react-start'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ToastViewport } from '@/components/toast-viewport'
+import { PwaInstallPrompt } from '@/components/pwa-install-prompt'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
 import { getPublicRuntimeEnvScript, readPublicRuntimeEnv } from '@/lib/public-runtime-env'
@@ -82,11 +83,35 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
           name: 'robots',
           content: 'noindex, nofollow, noarchive',
         },
+        {
+          name: 'theme-color',
+          content: '#0b1020',
+        },
+        {
+          name: 'apple-mobile-web-app-capable',
+          content: 'yes',
+        },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'black-translucent',
+        },
       ],
       links: [
         {
           rel: 'stylesheet',
           href: appCss,
+        },
+        {
+          rel: 'manifest',
+          href: '/manifest.json',
+        },
+        {
+          rel: 'icon',
+          href: '/favicon.ico',
+        },
+        {
+          rel: 'apple-touch-icon',
+          href: '/logo192.png',
         },
       ],
     }
@@ -119,6 +144,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <PwaInstallPrompt />
         <ToastViewport />
         <TanStackDevtools
           config={{
