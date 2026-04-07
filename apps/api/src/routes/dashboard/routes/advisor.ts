@@ -102,6 +102,16 @@ const buildActionTracking = (params: {
   currentLabel: params.currentLabel,
 })
 
+const buildDecisionWorkflow = (params: {
+  goal: string
+  checkpoints: DashboardAdvisorAction['decisionWorkflow']['checkpoints']
+  nextReviewLabel: string
+}): DashboardAdvisorAction['decisionWorkflow'] => ({
+  goal: params.goal,
+  checkpoints: params.checkpoints,
+  nextReviewLabel: params.nextReviewLabel,
+})
+
 const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorAction[] => {
   const financialContext = buildAdvisorFinancialContext(summary)
   const net = financialContext.totals.netCashflow
@@ -116,6 +126,27 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
       : 'Choisissez un poste variable non essentiel et fixez un plafond hebdomadaire explicite.',
     estimatedMonthlyImpact: Math.max(15, Math.round(topExpenseAmount * 0.1)),
     effort: 'medium',
+    decisionWorkflow: buildDecisionWorkflow({
+      goal: 'Baisser la depense variable dominante sans effet tunnel.',
+      checkpoints: [
+        {
+          id: 'trim-top-expense-baseline',
+          label: 'Fixer un plafond hebdomadaire clair',
+          rationale: 'Un budget explicite rend la decision actionnable chaque semaine.',
+        },
+        {
+          id: 'trim-top-expense-tradeoff',
+          label: 'Choisir une alternative moins couteuse',
+          rationale: 'Definir un compromis concret evite la fatigue de decision.',
+        },
+        {
+          id: 'trim-top-expense-review',
+          label: 'Comparer reel vs plafond en fin de semaine',
+          rationale: 'La boucle de revue permet un ajustement progressif sans blocage.',
+        },
+      ],
+      nextReviewLabel: 'Revue dans 7 jours',
+    }),
     tracking: buildActionTracking({
       metricLabel: 'Depense variable mensuelle',
       targetLabel: '-10% sur 30 jours',
@@ -136,6 +167,27 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
         : 'Demarrez avec un petit montant fixe pour recreer une reserve sans bloquer le budget.',
     estimatedMonthlyImpact: net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20,
     effort: 'low',
+    decisionWorkflow: buildDecisionWorkflow({
+      goal: 'Ancrer une reserve de securite sans destabiliser le budget courant.',
+      checkpoints: [
+        {
+          id: 'cashflow-buffer-amount',
+          label: 'Choisir un montant automatique realiste',
+          rationale: 'Un montant atteignable augmente la regularite des virements.',
+        },
+        {
+          id: 'cashflow-buffer-trigger',
+          label: 'Declencher juste apres les revenus principaux',
+          rationale: 'Automatiser apres entree d argent limite le risque d oubli.',
+        },
+        {
+          id: 'cashflow-buffer-follow-up',
+          label: 'Verifier le nombre de virements realises',
+          rationale: 'Le suivi simple confirme l execution avant d augmenter le montant.',
+        },
+      ],
+      nextReviewLabel: 'Point de suivi fin de mois',
+    }),
     tracking: buildActionTracking({
       metricLabel: 'Reserve de securite',
       targetLabel: '4 virements effectues ce mois',
