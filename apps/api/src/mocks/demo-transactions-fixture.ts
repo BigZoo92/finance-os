@@ -15,6 +15,66 @@ export type DemoDatasetStrategy = 'legacy' | 'minimal' | 'v1'
 
 const V1_FIXTURE_JSON = JSON.stringify([
   {
+    id: 14023,
+    bookingDate: '2026-04-01',
+    amount: -1,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Push notif permission check',
+    merchant: 'Finance-OS',
+    category: 'Divers',
+    subcategory: 'Notification',
+    resolvedCategory: 'Divers',
+    resolutionSource: 'fallback',
+    resolutionRuleId: null,
+    resolutionTrace: [],
+    incomeType: null,
+    tags: ['notification_candidate', 'installation'],
+    powensConnectionId: 'demo-revolut',
+    powensAccountId: 'demo-revolut-main',
+    accountName: 'Revolut Main',
+  },
+  {
+    id: 14022,
+    bookingDate: '2026-03-31',
+    amount: -3.49,
+    currency: 'EUR',
+    direction: 'expense',
+    label: 'Offline retry buffer',
+    merchant: 'Finance-OS',
+    category: 'Divers',
+    subcategory: 'Offline',
+    resolvedCategory: 'Divers',
+    resolutionSource: 'fallback',
+    resolutionRuleId: null,
+    resolutionTrace: [],
+    incomeType: null,
+    tags: ['offline', 'export_candidate'],
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
+    id: 14021,
+    bookingDate: '2026-03-31',
+    amount: 0,
+    currency: 'EUR',
+    direction: 'income',
+    label: 'Installation seed event',
+    merchant: 'Finance-OS',
+    category: 'Divers',
+    subcategory: 'Onboarding',
+    resolvedCategory: 'Divers',
+    resolutionSource: 'fallback',
+    resolutionRuleId: null,
+    resolutionTrace: [],
+    incomeType: null,
+    tags: ['installation', 'export_candidate'],
+    powensConnectionId: 'demo-fortuneo',
+    powensAccountId: 'demo-fortuneo-checking',
+    accountName: 'Fortuneo Courant',
+  },
+  {
     id: 14020,
     bookingDate: '2026-03-31',
     amount: -95.12,
@@ -217,6 +277,27 @@ const readFixtureItems = (strategy: DemoDatasetStrategy, scenario: DemoTransacti
 
   if (scenario === 'subscriptions') {
     return parsed.filter(item => item.tags.includes('subscription'))
+  }
+
+  if (scenario === 'installation_readiness') {
+    return parsed.filter(item => item.tags.includes('installation'))
+  }
+
+  if (scenario === 'offline_resilience') {
+    return parsed.filter(item => item.tags.includes('offline') || item.tags.includes('pending'))
+  }
+
+  if (scenario === 'notifications_candidate') {
+    return parsed.filter(item => item.tags.includes('notification_candidate'))
+  }
+
+  if (scenario === 'export_audit') {
+    return parsed.filter(
+      item =>
+        item.tags.includes('export_candidate') ||
+        item.tags.includes('salary') ||
+        item.tags.includes('refund')
+    )
   }
 
   if (scenario === 'student_budget') {
