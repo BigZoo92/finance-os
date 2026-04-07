@@ -106,7 +106,10 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(15,118,110,0.25),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(249,115,22,0.22),transparent_42%),hsl(var(--background))] p-6 text-foreground md:p-10">
+    <main
+      id="main-content"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(15,118,110,0.25),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(249,115,22,0.22),transparent_42%),hsl(var(--background))] p-6 text-foreground md:p-10"
+    >
       <div className="mx-auto w-full max-w-md">
         <Card className="border-emerald-500/30 bg-card/95 backdrop-blur-sm">
           <CardHeader className="space-y-2">
@@ -163,6 +166,6 @@ function LoginPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </main>
   );
 }
