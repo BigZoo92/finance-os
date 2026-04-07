@@ -1,12 +1,17 @@
 import type { DashboardTransactionsResponse } from '../routes/dashboard/types'
 import { env } from '../env'
 import { DEMO_TRANSACTIONS_LEGACY } from './transactions.mock'
+import {
+  matchPersonaScenario,
+  type DemoPersonaId,
+  type DemoTransactionsScenario,
+  type PersonaMatchResult,
+} from './demo-scenario-library'
 
 export const DEMO_DATASET_VERSION = 'demoDataset:v1'
 export const DEMO_DATASET_SEED = 'finance-os-demo-seed-v1'
 
 export type DemoDatasetStrategy = 'legacy' | 'minimal' | 'v1'
-export type DemoTransactionsScenario = 'default' | 'empty' | 'subscriptions' | 'parse_error'
 
 const V1_FIXTURE_JSON = JSON.stringify([
   {
@@ -214,6 +219,22 @@ const readFixtureItems = (strategy: DemoDatasetStrategy, scenario: DemoTransacti
     return parsed.filter(item => item.tags.includes('subscription'))
   }
 
+  if (scenario === 'student_budget') {
+    return parsed.filter(item => item.direction === 'expense' && Math.abs(item.amount) <= 150)
+  }
+
+  if (scenario === 'freelancer_cashflow') {
+    return parsed.filter(item => item.incomeType !== 'salary')
+  }
+
+  if (scenario === 'family_planning') {
+    return parsed.filter(item => item.category === 'Logement' || item.category === 'Courses')
+  }
+
+  if (scenario === 'retiree_stability') {
+    return parsed.filter(item => item.direction === 'income' || item.category === 'Transferts')
+  }
+
   return parsed
 }
 
@@ -231,17 +252,44 @@ export const getDemoDatasetStrategy = (): DemoDatasetStrategy => {
 
 export const resolveDemoTransactionsFixture = ({
   scenario,
+  profile,
 }: {
   scenario: DemoTransactionsScenario
+  profile?: string
 }): {
   datasetVersion: string
   fixtureSeed: string
   strategy: DemoDatasetStrategy
   degradedFallback: boolean
   degradedReason: string | null
+  personaMatch: {
+    profile: string
+    personaId: DemoPersonaId
+    scenarioId: DemoTransactionsScenario
+    boundedVariation: 0 | 1 | 2
+    overrideReason: 'manual_scenario_override' | 'persona_match' | 'kill_switch_disabled'
+    matchReason: string
+    fallbackCause: string | null
+  }
   items: DashboardTransactionsResponse['items']
 } => {
   const strategy = getDemoDatasetStrategy()
+  const personaMatchResult: PersonaMatchResult = matchPersonaScenario(profile)
+  const killSwitchActive = env.DEMO_PERSONA_MATCHING_ENABLED === false
+  const hasScenarioOverride = scenario !== 'default'
+  const scenarioToUse = killSwitchActive
+    ? hasScenarioOverride
+      ? scenario
+      : 'default'
+    : hasScenarioOverride
+      ? scenario
+      : personaMatchResult.scenarioId
+  const overrideReason = killSwitchActive
+    ? 'kill_switch_disabled'
+    : hasScenarioOverride
+      ? 'manual_scenario_override'
+      : 'persona_match'
+  const fallbackCause = killSwitchActive ? 'persona_matching_disabled' : null
 
   try {
     return {
@@ -250,7 +298,13 @@ export const resolveDemoTransactionsFixture = ({
       strategy,
       degradedFallback: false,
       degradedReason: null,
-      items: readFixtureItems(strategy, scenario),
+      personaMatch: {
+        ...personaMatchResult,
+        scenarioId: scenarioToUse,
+        overrideReason,
+        fallbackCause,
+      },
+      items: readFixtureItems(strategy, scenarioToUse),
     }
   } catch {
     return {
@@ -259,6 +313,12 @@ export const resolveDemoTransactionsFixture = ({
       strategy: 'legacy',
       degradedFallback: true,
       degradedReason: 'fixture_parse_failed',
+      personaMatch: {
+        ...personaMatchResult,
+        scenarioId: scenarioToUse,
+        overrideReason,
+        fallbackCause: 'fixture_parse_failed',
+      },
       items: DEMO_TRANSACTIONS_LEGACY,
     }
   }

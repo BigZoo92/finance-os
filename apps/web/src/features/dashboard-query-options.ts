@@ -15,7 +15,15 @@ import {
 } from './demo-data'
 import type { DashboardRange } from './dashboard-types'
 
-export type DemoTransactionsScenario = 'default' | 'empty' | 'subscriptions' | 'parse_error'
+export type DemoTransactionsScenario =
+  | 'default'
+  | 'empty'
+  | 'subscriptions'
+  | 'parse_error'
+  | 'student_budget'
+  | 'freelancer_cashflow'
+  | 'family_planning'
+  | 'retiree_stability'
 
 export const dashboardQueryKeys = {
   all: ['dashboard'] as const,
@@ -28,8 +36,16 @@ export const dashboardQueryKeys = {
     range: DashboardRange
     limit: number
     demoScenario?: DemoTransactionsScenario
+    demoProfile?: string
   }) =>
-    [...dashboardQueryKeys.all, 'transactions', params.range, params.limit, params.demoScenario ?? null] as const,
+    [
+      ...dashboardQueryKeys.all,
+      'transactions',
+      params.range,
+      params.limit,
+      params.demoScenario ?? null,
+      params.demoProfile ?? null,
+    ] as const,
 }
 
 export const dashboardSummaryQueryOptions = (range: DashboardRange) =>
@@ -144,6 +160,7 @@ export const dashboardTransactionsInfiniteQueryOptionsWithMode = (params: {
   limit: number
   mode?: AuthMode
   demoScenario?: DemoTransactionsScenario
+  demoProfile?: string
 }) =>
   infiniteQueryOptions({
     queryKey: dashboardQueryKeys.transactions(params),
@@ -160,6 +177,7 @@ export const dashboardTransactionsInfiniteQueryOptionsWithMode = (params: {
         ...(params.mode === 'demo' && params.demoScenario
           ? { demoScenario: params.demoScenario }
           : {}),
+        ...(params.mode === 'demo' && params.demoProfile ? { demoProfile: params.demoProfile } : {}),
       })
     },
     enabled: params.mode !== undefined,

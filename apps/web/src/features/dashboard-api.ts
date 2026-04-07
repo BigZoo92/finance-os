@@ -82,13 +82,23 @@ export const fetchDashboardTransactions = async (params: {
   range: DashboardRange
   limit: number
   cursor?: string
-  demoScenario?: 'default' | 'empty' | 'subscriptions' | 'parse_error'
+  demoScenario?:
+    | 'default'
+    | 'empty'
+    | 'subscriptions'
+    | 'parse_error'
+    | 'student_budget'
+    | 'freelancer_cashflow'
+    | 'family_planning'
+    | 'retiree_stability'
+  demoProfile?: string
 }) => {
   const requestParams = {
     range: params.range,
     limit: params.limit,
     ...(params.cursor ? { cursor: params.cursor } : {}),
     ...(params.demoScenario ? { demoScenario: params.demoScenario } : {}),
+    ...(params.demoProfile ? { demoProfile: params.demoProfile } : {}),
   }
   const query = toSearchParams(requestParams)
 

@@ -25,8 +25,13 @@ export const dashboardTransactionsQuerySchema = t.Object({
       t.Literal('empty'),
       t.Literal('subscriptions'),
       t.Literal('parse_error'),
+      t.Literal('student_budget'),
+      t.Literal('freelancer_cashflow'),
+      t.Literal('family_planning'),
+      t.Literal('retiree_stability'),
     ])
   ),
+  demoProfile: t.Optional(t.String({ minLength: 1, maxLength: 80 })),
 })
 
 export const dashboardNewsQuerySchema = t.Object({

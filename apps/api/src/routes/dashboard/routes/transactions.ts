@@ -1,7 +1,8 @@
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { env } from '../../../env'
-import { resolveDemoTransactionsFixture, type DemoTransactionsScenario } from '../../../mocks/demo-transactions-fixture'
+import { type DemoTransactionsScenario } from '../../../mocks/demo-scenario-library'
+import { resolveDemoTransactionsFixture } from '../../../mocks/demo-transactions-fixture'
 import { getDashboardTransactionsMock } from '../../../mocks/transactions.mock'
 import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
@@ -22,6 +23,7 @@ export const createTransactionsRoute = () =>
       const auth = getAuth(context)
       const internalAuth = getInternalAuth(context)
       const requestedScenario: DemoTransactionsScenario = context.query.demoScenario ?? 'default'
+      const requestedProfile = context.query.demoProfile ?? 'default-profile'
 
       const logResolutionStats = (
         path: 'demo' | 'admin',
@@ -70,6 +72,7 @@ export const createTransactionsRoute = () =>
       if (auth.mode === 'demo' || useDemoFixtureOverride) {
         const fixture = resolveDemoTransactionsFixture({
           scenario: requestedScenario,
+          profile: requestedProfile,
         })
 
         if (fixture.degradedFallback) {
@@ -87,8 +90,12 @@ export const createTransactionsRoute = () =>
           mode: auth.mode,
           dataset_version: fixture.datasetVersion,
           fixture_seed: fixture.fixtureSeed,
-          scenario: requestedScenario,
+          scenario: fixture.personaMatch.scenarioId,
           strategy: fixture.strategy,
+          persona_match_result: fixture.personaMatch.personaId,
+          scenario_id: fixture.personaMatch.scenarioId,
+          override_reason: fixture.personaMatch.overrideReason,
+          fallback_cause: fixture.personaMatch.fallbackCause,
           demo_fixture_load_success: demoFixtureLoadSuccess,
           demo_fixture_load_fail: demoFixtureLoadFail,
           admin_override: useDemoFixtureOverride,
@@ -110,9 +117,14 @@ export const createTransactionsRoute = () =>
             mode: auth.mode,
             datasetVersion: fixture.datasetVersion,
             fixtureSeed: fixture.fixtureSeed,
-            scenario: requestedScenario,
+            scenario: fixture.personaMatch.scenarioId,
             degradedFallback: fixture.degradedFallback,
             degradedReason: fixture.degradedReason,
+            personaProfile: fixture.personaMatch.profile,
+            personaId: fixture.personaMatch.personaId,
+            personaVariation: fixture.personaMatch.boundedVariation,
+            overrideReason: fixture.personaMatch.overrideReason,
+            fallbackCause: fixture.personaMatch.fallbackCause,
           },
         }
       }
@@ -142,6 +154,11 @@ export const createTransactionsRoute = () =>
             scenario: null,
             degradedFallback: false,
             degradedReason: null,
+            personaProfile: null,
+            personaId: null,
+            personaVariation: null,
+            overrideReason: null,
+            fallbackCause: null,
           },
         }
       }
@@ -163,6 +180,11 @@ export const createTransactionsRoute = () =>
           scenario: null,
           degradedFallback: false,
           degradedReason: null,
+          personaProfile: null,
+          personaId: null,
+          personaVariation: null,
+          overrideReason: null,
+          fallbackCause: null,
         },
       }
     },
