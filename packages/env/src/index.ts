@@ -419,6 +419,10 @@ export const getApiEnv = () => {
       .enum(['legacy', 'minimal', 'v1'])
       .optional()
       .default('v1'),
+    DEMO_PERSONA_MATCHING_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES: z.coerce.number().int().positive().default(30),
     DERIVED_RECOMPUTE_ENABLED: z
       .string()

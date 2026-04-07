@@ -103,8 +103,13 @@ const DEMO_SCENARIO_OPTIONS: Array<{ label: string; value: DemoTransactionsScena
   { label: 'Default', value: 'default' },
   { label: 'Empty', value: 'empty' },
   { label: 'Subscriptions', value: 'subscriptions' },
+  { label: 'Student budget', value: 'student_budget' },
+  { label: 'Freelancer cashflow', value: 'freelancer_cashflow' },
+  { label: 'Family planning', value: 'family_planning' },
+  { label: 'Retiree stability', value: 'retiree_stability' },
   { label: 'Parse fail (fallback)', value: 'parse_error' },
 ]
+const DEMO_PROFILE_OPTIONS = ['Student Campus', 'Freelancer Solo', 'Family Household', 'Retired Couple']
 const HIGH_VALUE_SIGNALS_DIGEST_SCOPE = '[web:high-value-signals]'
 const HIGH_VALUE_SIGNALS_DIGEST_INTERVAL_MS = 15 * 60 * 1000
 
@@ -527,6 +532,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const [demoReconnectInfoVisible, setDemoReconnectInfoVisible] = useState(false)
   const [demoTransactionsScenario, setDemoTransactionsScenario] =
     useState<DemoTransactionsScenario>('default')
+  const [demoProfile, setDemoProfile] = useState(DEMO_PROFILE_OPTIONS[0])
   const [deferredSnapshot, setDeferredSnapshot] = useState(() =>
     readReconnectBannerDeferredSnapshot()
   )
@@ -561,6 +567,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
       range,
       limit: 30,
       ...(isDemo ? { demoScenario: demoTransactionsScenario } : {}),
+      ...(isDemo ? { demoProfile } : {}),
       ...authModeOptions,
     })
   )
@@ -2681,22 +2688,43 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
             </CardHeader>
             <CardContent className="space-y-3">
               {isDemo ? (
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  Demo scenario
-                  <select
-                    className="rounded border bg-background px-2 py-1 text-xs"
-                    value={demoTransactionsScenario}
-                    onChange={event =>
-                      setDemoTransactionsScenario(event.target.value as DemoTransactionsScenario)
-                    }
-                  >
-                    {DEMO_SCENARIO_OPTIONS.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    Demo scenario
+                    <select
+                      className="rounded border bg-background px-2 py-1 text-xs"
+                      value={demoTransactionsScenario}
+                      onChange={event =>
+                        setDemoTransactionsScenario(event.target.value as DemoTransactionsScenario)
+                      }
+                    >
+                      {DEMO_SCENARIO_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setDemoProfile(current => {
+                          const index = DEMO_PROFILE_OPTIONS.findIndex(item => item === current)
+                          const nextIndex = index < 0 ? 0 : (index + 1) % DEMO_PROFILE_OPTIONS.length
+                          return DEMO_PROFILE_OPTIONS[nextIndex]
+                        })
+                      }
+                    >
+                      Try another profile
+                    </Button>
+                  </div>
+                  <p>
+                    Why this dataset? Profile <strong>{transactionsDemoFixture?.personaProfile ?? demoProfile}</strong>{' '}
+                    matches <strong>{transactionsDemoFixture?.personaId ?? 'persona'}</strong>, which selects scenario{' '}
+                    <strong>{transactionsDemoFixture?.scenario ?? demoTransactionsScenario}</strong>.
+                  </p>
+                </div>
               ) : null}
               {transactionsDemoFixture?.degradedFallback ? (
                 <p className="text-xs text-amber-700 dark:text-amber-300">

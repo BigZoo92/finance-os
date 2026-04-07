@@ -362,6 +362,11 @@ export interface DashboardTransactionsResponse {
     scenario: string | null
     degradedFallback: boolean
     degradedReason: string | null
+    personaProfile: string | null
+    personaId: 'student' | 'freelancer' | 'family' | 'retiree' | null
+    personaVariation: 0 | 1 | 2 | null
+    overrideReason: 'manual_scenario_override' | 'persona_match' | 'kill_switch_disabled' | null
+    fallbackCause: string | null
   }
   freshness: {
     strategy: 'snapshot-first'
