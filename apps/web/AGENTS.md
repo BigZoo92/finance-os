@@ -23,6 +23,12 @@ Scope: `apps/web/**`
   - `syncing` must stay visually distinct from persisted KO/OK snapshots so users can tell "in-flight" from "last known result".
   - When persistence is disabled or unavailable, degrade gracefully to runtime-only badges (`connected => OK`, `error|reconnect_required => KO`) and avoid blank/blocked dashboard states.
   - In safe-mode fallback (`safeModeActive=true` and/or response `fallback: safe_mode`), keep the dashboard usable with clear non-blocking messaging instead of action-breaking hard errors.
+- Keep AI advisor context assembly, retrieval, and rendering conventions stable in [src/components/dashboard/ai-advisor-panel.tsx](src/components/dashboard/ai-advisor-panel.tsx) and [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts):
+  - context must be deterministic in demo mode and sourced only from loader/query contracts; never add hidden provider calls or side-effect writes.
+  - retrieval must stay read-only (`GET /dashboard/advisor`) with explicit fail-soft fallback copy when live/admin data is delayed or unavailable.
+  - citation chips/links must only reference data present in the advisor payload; avoid synthetic sources that cannot be traced to contract fields.
+  - redact or omit sensitive values in advisor UI text (tokens, callback codes, account identifiers) and keep request-id-safe logging assumptions intact.
+  - cost guardrails are mandatory: keep expensive generation behind existing API/runtime flags and preserve deterministic local insights when AI advisor runtime toggles are off.
 - Keep dashboard filters in URL search params. Do not introduce duplicate local filter state for route-owned data.
 - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.
 - Read non-sensitive web runtime config through [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) so SSR can inject safe `VITE_*` values at runtime without exposing secrets or hard-freezing them at build time, including dashboard health/reconnect kill-switches such as `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED`, `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED`, and `VITE_UI_RECONNECT_BANNER_ENABLED`.
