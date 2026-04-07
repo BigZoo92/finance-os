@@ -38,7 +38,7 @@ describe('expense structure helpers', () => {
       buildTx({ id: 4, amount: -20, category: null }),
     ])
 
-    expect(rows.map(row => row.category)).toEqual(['Courses', 'Transport', 'Sans categorie'])
+    expect(rows.map(row => row.category)).toEqual(['Courses', 'Transport', 'Sans catégorie'])
     expect(rows.map(row => row.total)).toEqual([60, 40, 20])
     expect(rows[0]?.ratio).toBeCloseTo(50)
     expect(rows[2]?.ratio).toBeCloseTo(16.666, 2)
