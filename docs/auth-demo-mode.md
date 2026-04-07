@@ -104,3 +104,44 @@ Quand tu ajoutes une feature:
    - demo sans cookie
    - admin avec cookie
    - erreur auth attendue (`401/403`, jamais `500`).
+
+## 9) Onboarding court (demo/admin + installation + notifications + limites hors-ligne)
+
+### A. Installation locale (chemin le plus court)
+
+1. Installer les dependances: `pnpm install --frozen-lockfile`
+2. Copier l'env: `cp .env.example .env`
+3. Demarrer le web + API (selon votre workflow local, ex. `pnpm dev`)
+4. Ouvrir l'app puis verifier que l'etat initial est bien `demo`
+
+### B. Validation rapide du split demo/admin
+
+- `demo` (par defaut):
+  - aucune lecture/ecriture DB
+  - aucun appel provider
+  - donnees deterministes mock uniquement
+- `admin` (apres login):
+  - DB + providers actives derriere cookie session signe
+  - erreurs provider tolerees avec fallback clair (fail-soft)
+
+### C. Notifications (comportement attendu)
+
+- Les notifications push restent **descriptives** et non bloquantes pour les flux coeur produit.
+- Si permission navigateur/refus provider: l'UI reste utilisable avec message explicite.
+- En mode demo, les chemins notifications doivent rester deterministes (mock), sans effet externe.
+
+### D. Limites hors-ligne (offline)
+
+- Hors-ligne, l'app doit rester navigable autant que possible avec etats de degradation explicites.
+- Les actions qui necessitent reseau/provider doivent:
+  - afficher une raison claire,
+  - proposer une reprise quand la connexion revient,
+  - ne jamais casser le parcours principal.
+
+### E. Checklist d'onboarding operateur (5 min)
+
+1. Verifier `/auth/me` retourne `demo` hors session.
+2. Passer en `admin` via `/login`, puis reverifier `/auth/me`.
+3. Couper le reseau (ou simuler indisponibilite provider) et confirmer le fallback UI.
+4. Tester l'opt-in notifications et verifier qu'un echec ne bloque pas le dashboard.
+5. Revenir en `demo` via logout et confirmer l'absence d'acces mutation.
