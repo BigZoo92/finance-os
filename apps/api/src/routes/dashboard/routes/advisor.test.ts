@@ -110,6 +110,34 @@ describe('createAdvisorRoute', () => {
     expect(payload.degradedMessage).toBe('Conseils limites, source externe indisponible')
   })
 
+  it('caps estimated advisor action impact to a bounded range', async () => {
+    const app = createAdvisorTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        getSummary: async range => ({
+          range,
+          totals: { balance: 4_000, incomes: 10_000, expenses: 8_000 },
+          connections: [],
+          accounts: [],
+          assets: [],
+          positions: [],
+          dailyWealthSnapshots: [],
+          topExpenseGroups: [{ category: 'travel', merchant: 'airline', label: 'Travel', total: 12_000, count: 4 }],
+        }),
+      }),
+    })
+
+    const response = await app.handle(new Request('http://finance-os.local/advisor?range=30d'))
+    const payload = (await response.json()) as DashboardAdvisorResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.actions.length).toBeGreaterThan(0)
+    for (const action of payload.actions) {
+      expect(action.estimatedMonthlyImpact).toBeGreaterThanOrEqual(10)
+      expect(action.estimatedMonthlyImpact).toBeLessThanOrEqual(600)
+    }
+  })
+
 
   it('uses local fallback path when force-local flag is enabled for admin', async () => {
     process.env.AI_ADVISOR_FORCE_LOCAL_ONLY = '1'

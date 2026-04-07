@@ -12,6 +12,11 @@ import type {
   DashboardSummaryResponse,
 } from '../types'
 
+const ADVISOR_IMPACT_MAX = 600
+const ADVISOR_MIN_BASELINE = 50
+
+const clampImpactEstimate = (value: number): number => Math.max(10, Math.min(ADVISOR_IMPACT_MAX, Math.round(value)))
+
 const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisorInsight[] => {
   const financialContext = buildAdvisorFinancialContext(summary)
   const net = financialContext.totals.netCashflow
@@ -45,7 +50,7 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
       ? {
           id: 'local-spend-ratio-high',
           title: 'Ratio depenses/revenus eleve',
-          detail: 'Objectif indicatif: rester sous 85% pour absorber les imprévus.',
+          detail: 'Objectif indicatif: rester sous 85% pour absorber les imprevus.',
           severity: 'warning',
           citations: [
             { id: 'totals.spendRatio', label: 'Ratio depenses/revenus', value: `${Math.round(spendRatio * 100)}%` },
@@ -116,7 +121,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
   const financialContext = buildAdvisorFinancialContext(summary)
   const net = financialContext.totals.netCashflow
   const topExpenseAmount = Math.max(0, Math.round(financialContext.focus.topExpenseAmount ?? 0))
-  const monthlyExpenseBaseline = Math.max(0, Math.round(summary.totals.expenses))
+  const monthlyExpenseBaseline = Math.max(ADVISOR_MIN_BASELINE, Math.round(summary.totals.expenses))
 
   const trimTopExpense: DashboardAdvisorAction = {
     id: 'action-trim-top-expense-10pct',
@@ -124,7 +129,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
     detail: financialContext.focus.topExpenseLabel
       ? `Commencez par ${financialContext.focus.topExpenseLabel} avec un plafond hebdomadaire explicite.`
       : 'Choisissez un poste variable non essentiel et fixez un plafond hebdomadaire explicite.',
-    estimatedMonthlyImpact: Math.max(15, Math.round(topExpenseAmount * 0.1)),
+    estimatedMonthlyImpact: clampImpactEstimate(Math.max(15, Math.round(topExpenseAmount * 0.1))),
     effort: 'medium',
     decisionWorkflow: buildDecisionWorkflow({
       goal: 'Baisser la depense variable dominante sans effet tunnel.',
@@ -165,7 +170,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
       net >= 0
         ? 'Automatisez un virement vers votre reserve juste apres les revenus principaux.'
         : 'Demarrez avec un petit montant fixe pour recreer une reserve sans bloquer le budget.',
-    estimatedMonthlyImpact: net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20,
+    estimatedMonthlyImpact: clampImpactEstimate(net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20),
     effort: 'low',
     decisionWorkflow: buildDecisionWorkflow({
       goal: 'Ancrer une reserve de securite sans destabiliser le budget courant.',
