@@ -76,6 +76,7 @@ describe('createAdvisorRoute', () => {
     expect(payload.actions.length).toBeGreaterThan(0)
     expect(payload.actions[0]?.citations.length).toBeGreaterThan(0)
     expect(payload.actions[0]?.tracking.status).toBe('suggested')
+    expect(payload.actions[0]?.decisionWorkflow.checkpoints.length).toBeGreaterThan(0)
   })
 
   it('returns admin response from real summary path', async () => {

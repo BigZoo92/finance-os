@@ -65,6 +65,19 @@ export const AiAdvisorPanel = ({
                   <Badge variant="outline">impact ~{action.estimatedMonthlyImpact}/mois</Badge>
                 </div>
                 <p className="pt-1 text-xs text-muted-foreground">{action.detail}</p>
+                <div className="pt-2 text-xs">
+                  <p className="font-medium text-foreground/90">Workflow decisionnel</p>
+                  <p className="text-muted-foreground">{action.decisionWorkflow.goal}</p>
+                  <ul className="list-disc space-y-1 pl-4 pt-1 text-muted-foreground">
+                    {action.decisionWorkflow.checkpoints.map(checkpoint => (
+                      <li key={checkpoint.id}>
+                        <span className="font-medium text-foreground/90">{checkpoint.label}:</span>{' '}
+                        {checkpoint.rationale}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="pt-1 text-muted-foreground">Prochaine revue: {action.decisionWorkflow.nextReviewLabel}</p>
+                </div>
                 <div className="pt-2 text-xs text-muted-foreground">
                   <p>
                     Suivi: {action.tracking.metricLabel} · cible {action.tracking.targetLabel}

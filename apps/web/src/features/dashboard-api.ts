@@ -172,6 +172,27 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
         detail: 'Choisissez un poste non essentiel et fixez un plafond hebdomadaire visible.',
         estimatedMonthlyImpact: 60,
         effort: 'medium',
+        decisionWorkflow: {
+          goal: 'Baisser une depense variable sans surcharge mentale.',
+          checkpoints: [
+            {
+              id: 'demo-cap-variable-budget',
+              label: 'Fixer un plafond hebdomadaire',
+              rationale: 'Un plafond clair transforme l intention en choix concret.',
+            },
+            {
+              id: 'demo-cap-variable-choice',
+              label: 'Prevoir une alternative moins couteuse',
+              rationale: 'La decision est plus simple quand une option de repli existe deja.',
+            },
+            {
+              id: 'demo-cap-variable-review',
+              label: 'Mesurer ecart reel vs plafond',
+              rationale: 'Le suivi hebdomadaire permet un ajustement progressif.',
+            },
+          ],
+          nextReviewLabel: 'Revue dans 7 jours',
+        },
         tracking: {
           status: 'suggested',
           metricLabel: 'Depense variable mensuelle',
@@ -188,6 +209,27 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
         detail: 'Automatisez un petit montant chaque semaine pour securiser la tresorerie.',
         estimatedMonthlyImpact: 40,
         effort: 'low',
+        decisionWorkflow: {
+          goal: 'Consolider une reserve avec une routine reguliere.',
+          checkpoints: [
+            {
+              id: 'demo-safety-transfer-amount',
+              label: 'Choisir un montant atteignable',
+              rationale: 'Un montant modeste augmente la chance de repetition.',
+            },
+            {
+              id: 'demo-safety-transfer-trigger',
+              label: 'Programmer apres l entree de revenus',
+              rationale: 'Le timing reduit les arbitrages de fin de mois.',
+            },
+            {
+              id: 'demo-safety-transfer-follow-up',
+              label: 'Verifier le nombre de virements realises',
+              rationale: 'Le compteur mensuel valide la discipline avant d augmenter la cible.',
+            },
+          ],
+          nextReviewLabel: 'Point fin de mois',
+        },
         tracking: {
           status: 'suggested',
           metricLabel: 'Reserve de securite',

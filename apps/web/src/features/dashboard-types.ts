@@ -186,6 +186,15 @@ export type DashboardAdvisorResponse = {
     detail: string
     estimatedMonthlyImpact: number
     effort: 'low' | 'medium' | 'high'
+    decisionWorkflow: {
+      goal: string
+      checkpoints: Array<{
+        id: string
+        label: string
+        rationale: string
+      }>
+      nextReviewLabel: string
+    }
     tracking: {
       status: 'suggested' | 'in_progress' | 'done'
       metricLabel: string
