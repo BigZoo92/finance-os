@@ -7,6 +7,7 @@ import type {
   DashboardDerivedRecomputeStatusResponse,
   DashboardSummaryResponse,
   DashboardTransactionsResponse,
+  DashboardAdvisorResponse,
 } from './dashboard-types'
 
 const toSearchParams = (params: Record<string, string | number | undefined>) => {
@@ -107,6 +108,54 @@ export const fetchDashboardTransactions = async (params: {
     }
 
     return getDemoDashboardTransactions(requestParams)
+  }
+}
+
+
+export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisorResponse => {
+  const summary = getDemoDashboardSummary(range)
+  const net = summary.totals.incomes - summary.totals.expenses
+
+  return {
+    mode: 'demo',
+    source: 'local',
+    fallback: false,
+    fallbackReason: null,
+    requestId: 'demo-advisor-request',
+    generatedAt: '2026-04-06T09:00:00.000Z',
+    metrics: {
+      latencyMs: 4,
+      fallbackRate: 0,
+      errorRate: 0,
+      insightAcceptedRate: 0,
+    },
+    insights: [
+      {
+        id: 'demo-cashflow',
+        title: net >= 0 ? 'Cashflow positif' : 'Cashflow negatif',
+        detail:
+          net >= 0
+            ? 'Le cockpit demo montre une marge positive sur la periode.'
+            : 'Le cockpit demo montre un deficit temporaire sur la periode.',
+        severity: net >= 0 ? 'info' : 'warning',
+      },
+      {
+        id: 'demo-expense',
+        title: 'Conseil generique',
+        detail: 'Revoyez vos 3 principaux postes de depense avant tout arbitrage.',
+        severity: 'info',
+      },
+    ],
+  }
+}
+
+export const fetchDashboardAdvisor = async (range: DashboardRange) => {
+  const query = toSearchParams({ range })
+
+  try {
+    return await apiFetch<DashboardAdvisorResponse>(`/dashboard/advisor?${query}`)
+  } catch {
+    return getDemoDashboardAdvisor(range)
   }
 }
 

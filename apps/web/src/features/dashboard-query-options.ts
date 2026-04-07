@@ -1,5 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import {
+  fetchDashboardAdvisor,
+  getDemoDashboardAdvisor,
   fetchDashboardDerivedRecomputeStatus,
   fetchDashboardNews,
   fetchDashboardSummary,
@@ -21,6 +23,7 @@ export const dashboardQueryKeys = {
   derivedRecomputeStatus: () => [...dashboardQueryKeys.all, 'derived-recompute'] as const,
   news: (params?: { topic?: string; source?: string; limit?: number }) =>
     [...dashboardQueryKeys.all, 'news', params?.topic ?? null, params?.source ?? null, params?.limit ?? 20] as const,
+  advisor: (range: DashboardRange) => [...dashboardQueryKeys.all, 'advisor', range] as const,
   transactions: (params: {
     range: DashboardRange
     limit: number
@@ -104,6 +107,27 @@ export const dashboardDerivedRecomputeStatusQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 5_000,
     refetchInterval: query =>
       mode === 'admin' && query.state.data?.state === 'running' ? 3_000 : false,
+  })
+
+
+export const dashboardAdvisorQueryOptionsWithMode = ({
+  range,
+  mode,
+}: {
+  range: DashboardRange
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisor(range),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoDashboardAdvisor(range)
+      }
+
+      return fetchDashboardAdvisor(range)
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
 export const dashboardTransactionsInfiniteQueryOptions = (params: {

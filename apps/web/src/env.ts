@@ -79,6 +79,8 @@ export const env = createEnv({
       'VITE_PWA_NOTIFICATIONS_ENABLED'
     ).optional(),
     VITE_PWA_CRITICAL_ENABLED: createBooleanUiFlagSchema('VITE_PWA_CRITICAL_ENABLED').optional(),
+    VITE_AI_ADVISOR_ENABLED: createBooleanUiFlagSchema('VITE_AI_ADVISOR_ENABLED').optional(),
+    VITE_AI_ADVISOR_ADMIN_ONLY: createBooleanUiFlagSchema('VITE_AI_ADVISOR_ADMIN_ONLY').optional(),
   },
 
   /**

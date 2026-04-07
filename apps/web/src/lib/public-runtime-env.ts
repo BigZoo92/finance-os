@@ -12,6 +12,8 @@ export type PublicRuntimeEnvKey =
   | 'VITE_UI_RECONNECT_BANNER_ENABLED'
   | 'VITE_PWA_NOTIFICATIONS_ENABLED'
   | 'VITE_PWA_CRITICAL_ENABLED'
+  | 'VITE_AI_ADVISOR_ENABLED'
+  | 'VITE_AI_ADVISOR_ADMIN_ONLY'
 
 export type PublicRuntimeEnv = Partial<Record<PublicRuntimeEnvKey, string>>
 
@@ -27,6 +29,8 @@ const PUBLIC_RUNTIME_ENV_KEYS: PublicRuntimeEnvKey[] = [
   'VITE_UI_RECONNECT_BANNER_ENABLED',
   'VITE_PWA_NOTIFICATIONS_ENABLED',
   'VITE_PWA_CRITICAL_ENABLED',
+  'VITE_AI_ADVISOR_ENABLED',
+  'VITE_AI_ADVISOR_ADMIN_ONLY',
 ]
 
 const toOptionalEnv = (value: string | undefined) => {
@@ -87,6 +91,8 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
     toOptionalEnv(env.VITE_PWA_NOTIFICATIONS_ENABLED)
   ),
   ...withDefined('VITE_PWA_CRITICAL_ENABLED', toOptionalEnv(env.VITE_PWA_CRITICAL_ENABLED)),
+  ...withDefined('VITE_AI_ADVISOR_ENABLED', toOptionalEnv(env.VITE_AI_ADVISOR_ENABLED)),
+  ...withDefined('VITE_AI_ADVISOR_ADMIN_ONLY', toOptionalEnv(env.VITE_AI_ADVISOR_ADMIN_ONLY)),
 })
 
 const getWindowPublicEnv = (): PublicRuntimeEnv => {

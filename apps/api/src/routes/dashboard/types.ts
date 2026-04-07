@@ -406,6 +406,32 @@ export interface DashboardTransactionsResponse {
   }>
 }
 
+
+export interface DashboardAdvisorInsight {
+  id: string
+  title: string
+  detail: string
+  severity: 'info' | 'warning'
+}
+
+export interface DashboardAdvisorResponse {
+  mode: 'demo' | 'admin'
+  source: 'local' | 'provider'
+  fallback: boolean
+  fallbackReason: string | null
+  requestId: string
+  generatedAt: string
+  degradedMessage?: string | null
+  emptyMessage?: string | null
+  metrics: {
+    latencyMs: number
+    fallbackRate: number
+    errorRate: number
+    insightAcceptedRate: number
+  }
+  insights: DashboardAdvisorInsight[]
+}
+
 export interface DashboardNewsResponse {
   source: 'demo_fixture' | 'cache'
   dataset?: {

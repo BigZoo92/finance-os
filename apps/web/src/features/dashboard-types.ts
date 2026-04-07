@@ -144,6 +144,30 @@ export type DashboardTransactionsResponse = {
   }>
 }
 
+
+export type DashboardAdvisorResponse = {
+  mode: 'demo' | 'admin'
+  source: 'local' | 'provider'
+  fallback: boolean
+  fallbackReason: string | null
+  requestId: string
+  generatedAt: string
+  degradedMessage?: string | null
+  emptyMessage?: string | null
+  metrics: {
+    latencyMs: number
+    fallbackRate: number
+    errorRate: number
+    insightAcceptedRate: number
+  }
+  insights: Array<{
+    id: string
+    title: string
+    detail: string
+    severity: 'info' | 'warning'
+  }>
+}
+
 export type DashboardDerivedRecomputeRowCounts = {
   rawTransactionCount: number
   transactionMatchedCount: number
