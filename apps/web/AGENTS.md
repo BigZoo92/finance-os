@@ -23,6 +23,14 @@ Scope: `apps/web/**`
   - `syncing` must stay visually distinct from persisted KO/OK snapshots so users can tell "in-flight" from "last known result".
   - When persistence is disabled or unavailable, degrade gracefully to runtime-only badges (`connected => OK`, `error|reconnect_required => KO`) and avoid blank/blocked dashboard states.
   - In safe-mode fallback (`safeModeActive=true` and/or response `fallback: safe_mode`), keep the dashboard usable with clear non-blocking messaging instead of action-breaking hard errors.
+- Keep PWA/offline/cache/notification/export conventions explicit and aligned with the personal-cockpit scope:
+  - PWA installability stays progressive enhancement only; do not make core dashboard workflows depend on install prompts or service-worker-only features.
+  - Offline behavior must stay fail-soft and deterministic in demo mode: use cached/read-only placeholders with explicit stale copy, and never introduce hidden DB/provider writes while offline.
+  - Cache strategy should prefer predictable dashboard reads (stale-while-revalidate semantics where available) and must surface freshness metadata when values can be stale.
+  - Push notification UX remains strictly opt-in, admin-gated, and kill-switch aware; demo mode must keep deterministic mock states with no real subscription or delivery side effects.
+  - Export/report features must keep privacy-by-design defaults (no secrets, no raw provider tokens, explicit user intent before file generation) and preserve readable fallback messaging when generation fails.
+  - Shared UI/API export barrels must remain intentional: when adding/removing exports, update the nearest index barrel and verify consumer imports to prevent accidental public-surface drift.
+  - Desktop strategy is deferred by design: prioritize responsive mobile/tablet-first web quality now, and document desktop-shell assumptions as future work instead of coupling current features to Electron/native packaging decisions.
 - Keep AI advisor context assembly, retrieval, and rendering conventions stable in [src/components/dashboard/ai-advisor-panel.tsx](src/components/dashboard/ai-advisor-panel.tsx) and [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts):
   - context must be deterministic in demo mode and sourced only from loader/query contracts; never add hidden provider calls or side-effect writes.
   - retrieval must stay read-only (`GET /dashboard/advisor`) with explicit fail-soft fallback copy when live/admin data is delayed or unavailable.

@@ -1,62 +1,32 @@
-diff --git a/.github/agent-stubs/improve-752.md b/.github/agent-stubs/improve-752.md
+diff --git a/.github/agent-stubs/improve-754.md b/.github/agent-stubs/improve-754.md
 deleted file mode 100644
-index fa410b1..0000000
---- a/.github/agent-stubs/improve-752.md
+index 582e754..0000000
+--- a/.github/agent-stubs/improve-754.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #752
+-# Autopilot stub for improve #754
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/752
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/754
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/docs/auth-demo-mode.md b/docs/auth-demo-mode.md
-index 458f0aa..bddaa1c 100644
---- a/docs/auth-demo-mode.md
-+++ b/docs/auth-demo-mode.md
-@@ -104,3 +104,44 @@ Quand tu ajoutes une feature:
-    - demo sans cookie
-    - admin avec cookie
-    - erreur auth attendue (`401/403`, jamais `500`).
-+
-+## 9) Onboarding court (demo/admin + installation + notifications + limites hors-ligne)
-+
-+### A. Installation locale (chemin le plus court)
-+
-+1. Installer les dependances: `pnpm install --frozen-lockfile`
-+2. Copier l'env: `cp .env.example .env`
-+3. Demarrer le web + API (selon votre workflow local, ex. `pnpm dev`)
-+4. Ouvrir l'app puis verifier que l'etat initial est bien `demo`
-+
-+### B. Validation rapide du split demo/admin
-+
-+- `demo` (par defaut):
-+  - aucune lecture/ecriture DB
-+  - aucun appel provider
-+  - donnees deterministes mock uniquement
-+- `admin` (apres login):
-+  - DB + providers actives derriere cookie session signe
-+  - erreurs provider tolerees avec fallback clair (fail-soft)
-+
-+### C. Notifications (comportement attendu)
-+
-+- Les notifications push restent **descriptives** et non bloquantes pour les flux coeur produit.
-+- Si permission navigateur/refus provider: l'UI reste utilisable avec message explicite.
-+- En mode demo, les chemins notifications doivent rester deterministes (mock), sans effet externe.
-+
-+### D. Limites hors-ligne (offline)
-+
-+- Hors-ligne, l'app doit rester navigable autant que possible avec etats de degradation explicites.
-+- Les actions qui necessitent reseau/provider doivent:
-+  - afficher une raison claire,
-+  - proposer une reprise quand la connexion revient,
-+  - ne jamais casser le parcours principal.
-+
-+### E. Checklist d'onboarding operateur (5 min)
-+
-+1. Verifier `/auth/me` retourne `demo` hors session.
-+2. Passer en `admin` via `/login`, puis reverifier `/auth/me`.
-+3. Couper le reseau (ou simuler indisponibilite provider) et confirmer le fallback UI.
-+4. Tester l'opt-in notifications et verifier qu'un echec ne bloque pas le dashboard.
-+5. Revenir en `demo` via logout et confirmer l'absence d'acces mutation.
+diff --git a/apps/web/AGENTS.md b/apps/web/AGENTS.md
+index 51b14d0..eda7a43 100644
+--- a/apps/web/AGENTS.md
++++ b/apps/web/AGENTS.md
+@@ -23,6 +23,14 @@ Scope: `apps/web/**`
+   - `syncing` must stay visually distinct from persisted KO/OK snapshots so users can tell "in-flight" from "last known result".
+   - When persistence is disabled or unavailable, degrade gracefully to runtime-only badges (`connected => OK`, `error|reconnect_required => KO`) and avoid blank/blocked dashboard states.
+   - In safe-mode fallback (`safeModeActive=true` and/or response `fallback: safe_mode`), keep the dashboard usable with clear non-blocking messaging instead of action-breaking hard errors.
++- Keep PWA/offline/cache/notification/export conventions explicit and aligned with the personal-cockpit scope:
++  - PWA installability stays progressive enhancement only; do not make core dashboard workflows depend on install prompts or service-worker-only features.
++  - Offline behavior must stay fail-soft and deterministic in demo mode: use cached/read-only placeholders with explicit stale copy, and never introduce hidden DB/provider writes while offline.
++  - Cache strategy should prefer predictable dashboard reads (stale-while-revalidate semantics where available) and must surface freshness metadata when values can be stale.
++  - Push notification UX remains strictly opt-in, admin-gated, and kill-switch aware; demo mode must keep deterministic mock states with no real subscription or delivery side effects.
++  - Export/report features must keep privacy-by-design defaults (no secrets, no raw provider tokens, explicit user intent before file generation) and preserve readable fallback messaging when generation fails.
++  - Shared UI/API export barrels must remain intentional: when adding/removing exports, update the nearest index barrel and verify consumer imports to prevent accidental public-surface drift.
++  - Desktop strategy is deferred by design: prioritize responsive mobile/tablet-first web quality now, and document desktop-shell assumptions as future work instead of coupling current features to Electron/native packaging decisions.
+ - Keep AI advisor context assembly, retrieval, and rendering conventions stable in [src/components/dashboard/ai-advisor-panel.tsx](src/components/dashboard/ai-advisor-panel.tsx) and [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts):
+   - context must be deterministic in demo mode and sourced only from loader/query contracts; never add hidden provider calls or side-effect writes.
+   - retrieval must stay read-only (`GET /dashboard/advisor`) with explicit fail-soft fallback copy when live/admin data is delayed or unavailable.
