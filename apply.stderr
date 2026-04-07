@@ -1,3 +1,2 @@
 Falling back to direct application...
 Applied patch to 'apps/web/src/components/dashboard/app-shell.tsx' cleanly.
-Applied patch to 'apps/web/src/components/dashboard/push-notification-card.tsx' cleanly.
