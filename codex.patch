@@ -1,252 +1,104 @@
-diff --git a/.github/agent-stubs/improve-715.md b/.github/agent-stubs/improve-715.md
+diff --git a/.github/agent-stubs/improve-728.md b/.github/agent-stubs/improve-728.md
 deleted file mode 100644
-index 2ed32c9..0000000
---- a/.github/agent-stubs/improve-715.md
+index dd099b3..0000000
+--- a/.github/agent-stubs/improve-728.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #715
+-# Autopilot stub for improve #728
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/715
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/728
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
 diff --git a/apps/api/src/routes/dashboard/routes/advisor.test.ts b/apps/api/src/routes/dashboard/routes/advisor.test.ts
-index 1658af2..0505c44 100644
+index 35a9b13..11a7b75 100644
 --- a/apps/api/src/routes/dashboard/routes/advisor.test.ts
 +++ b/apps/api/src/routes/dashboard/routes/advisor.test.ts
-@@ -71,6 +71,8 @@ describe('createAdvisorRoute', () => {
-     expect(payload.source).toBe('local')
-     expect(payload.fallback).toBe(false)
-     expect(payload.insights.length).toBeGreaterThan(0)
-+    expect(payload.actions.length).toBeGreaterThan(0)
-+    expect(payload.actions[0]?.tracking.status).toBe('suggested')
+@@ -110,6 +110,34 @@ describe('createAdvisorRoute', () => {
+     expect(payload.degradedMessage).toBe('Conseils limites, source externe indisponible')
    })
  
-   it('returns admin response from real summary path', async () => {
++  it('caps estimated advisor action impact to a bounded range', async () => {
++    const app = createAdvisorTestApp({
++      mode: 'admin',
++      runtime: createDashboardRuntime({
++        getSummary: async range => ({
++          range,
++          totals: { balance: 4_000, incomes: 10_000, expenses: 8_000 },
++          connections: [],
++          accounts: [],
++          assets: [],
++          positions: [],
++          dailyWealthSnapshots: [],
++          topExpenseGroups: [{ category: 'travel', merchant: 'airline', label: 'Travel', total: 12_000, count: 4 }],
++        }),
++      }),
++    })
++
++    const response = await app.handle(new Request('http://finance-os.local/advisor?range=30d'))
++    const payload = (await response.json()) as DashboardAdvisorResponse
++
++    expect(response.status).toBe(200)
++    expect(payload.actions.length).toBeGreaterThan(0)
++    for (const action of payload.actions) {
++      expect(action.estimatedMonthlyImpact).toBeGreaterThanOrEqual(10)
++      expect(action.estimatedMonthlyImpact).toBeLessThanOrEqual(600)
++    }
++  })
++
+ 
+   it('uses local fallback path when force-local flag is enabled for admin', async () => {
+     process.env.AI_ADVISOR_FORCE_LOCAL_ONLY = '1'
 diff --git a/apps/api/src/routes/dashboard/routes/advisor.ts b/apps/api/src/routes/dashboard/routes/advisor.ts
-index 2dadfc5..ecff394 100644
+index 4910598..7d3d6c6 100644
 --- a/apps/api/src/routes/dashboard/routes/advisor.ts
 +++ b/apps/api/src/routes/dashboard/routes/advisor.ts
-@@ -5,7 +5,12 @@ import { buildAdvisorFinancialContext } from '../domain/build-advisor-financial-
- import { createGetDashboardAdvisorUseCase, readDashboardAdvisorFlags } from '../domain/create-get-dashboard-advisor-use-case'
- import { getDashboardRuntime } from '../context'
- import { dashboardSummaryQuerySchema } from '../schemas'
--import type { DashboardAdvisorInsight, DashboardAdvisorResponse, DashboardSummaryResponse } from '../types'
-+import type {
-+  DashboardAdvisorAction,
-+  DashboardAdvisorInsight,
-+  DashboardAdvisorResponse,
-+  DashboardSummaryResponse,
-+} from '../types'
+@@ -12,6 +12,11 @@ import type {
+   DashboardSummaryResponse,
+ } from '../types'
  
++const ADVISOR_IMPACT_MAX = 600
++const ADVISOR_MIN_BASELINE = 50
++
++const clampImpactEstimate = (value: number): number => Math.max(10, Math.min(ADVISOR_IMPACT_MAX, Math.round(value)))
++
  const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisorInsight[] => {
    const financialContext = buildAdvisorFinancialContext(summary)
-@@ -59,6 +64,57 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
-   return [trendInsight, ratioInsight, expenseInsight]
- }
+   const net = financialContext.totals.netCashflow
+@@ -45,7 +50,7 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
+       ? {
+           id: 'local-spend-ratio-high',
+           title: 'Ratio depenses/revenus eleve',
+-          detail: 'Objectif indicatif: rester sous 85% pour absorber les imprévus.',
++          detail: 'Objectif indicatif: rester sous 85% pour absorber les imprevus.',
+           severity: 'warning',
+           citations: [
+             { id: 'totals.spendRatio', label: 'Ratio depenses/revenus', value: `${Math.round(spendRatio * 100)}%` },
+@@ -116,7 +121,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
+   const financialContext = buildAdvisorFinancialContext(summary)
+   const net = financialContext.totals.netCashflow
+   const topExpenseAmount = Math.max(0, Math.round(financialContext.focus.topExpenseAmount ?? 0))
+-  const monthlyExpenseBaseline = Math.max(0, Math.round(summary.totals.expenses))
++  const monthlyExpenseBaseline = Math.max(ADVISOR_MIN_BASELINE, Math.round(summary.totals.expenses))
  
-+const buildActionTracking = (params: {
-+  metricLabel: string
-+  targetLabel: string
-+  currentLabel: string
-+}): DashboardAdvisorAction['tracking'] => ({
-+  status: 'suggested',
-+  metricLabel: params.metricLabel,
-+  targetLabel: params.targetLabel,
-+  currentLabel: params.currentLabel,
-+})
-+
-+const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorAction[] => {
-+  const financialContext = buildAdvisorFinancialContext(summary)
-+  const net = financialContext.totals.netCashflow
-+  const topExpenseAmount = Math.max(0, Math.round(financialContext.focus.topExpenseAmount ?? 0))
-+  const monthlyExpenseBaseline = Math.max(0, Math.round(summary.totals.expenses))
-+
-+  const trimTopExpense: DashboardAdvisorAction = {
-+    id: 'action-trim-top-expense-10pct',
-+    title: 'Reduire le principal poste variable de 10%',
-+    detail: financialContext.focus.topExpenseLabel
-+      ? `Commencez par ${financialContext.focus.topExpenseLabel} avec un plafond hebdomadaire explicite.`
-+      : 'Choisissez un poste variable non essentiel et fixez un plafond hebdomadaire explicite.',
-+    estimatedMonthlyImpact: Math.max(15, Math.round(topExpenseAmount * 0.1)),
-+    effort: 'medium',
-+    tracking: buildActionTracking({
-+      metricLabel: 'Depense variable mensuelle',
-+      targetLabel: '-10% sur 30 jours',
-+      currentLabel: `${monthlyExpenseBaseline}`,
-+    }),
-+  }
-+
-+  const cashflowBuffer: DashboardAdvisorAction = {
-+    id: 'action-cashflow-buffer',
-+    title: 'Programmer un transfert securite chaque semaine',
-+    detail:
-+      net >= 0
-+        ? 'Automatisez un virement vers votre reserve juste apres les revenus principaux.'
-+        : 'Demarrez avec un petit montant fixe pour recreer une reserve sans bloquer le budget.',
-+    estimatedMonthlyImpact: net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20,
-+    effort: 'low',
-+    tracking: buildActionTracking({
-+      metricLabel: 'Reserve de securite',
-+      targetLabel: '4 virements effectues ce mois',
-+      currentLabel: '0/4 effectue',
-+    }),
-+  }
-+
-+  return [trimTopExpense, cashflowBuffer]
-+}
-+
- export const createAdvisorRoute = () =>
-   new Elysia().get(
-     '/advisor',
-@@ -115,6 +171,7 @@ export const createAdvisorRoute = () =>
-           insightAcceptedRate: 0,
-         },
-         insights: buildLocalInsights(result.summary),
-+        actions: buildLocalActions(result.summary),
-       }
- 
-       if (response.fallbackReason === 'provider_unavailable') {
-diff --git a/apps/api/src/routes/dashboard/types.ts b/apps/api/src/routes/dashboard/types.ts
-index 6c2482b..ee3f275 100644
---- a/apps/api/src/routes/dashboard/types.ts
-+++ b/apps/api/src/routes/dashboard/types.ts
-@@ -414,6 +414,20 @@ export interface DashboardAdvisorInsight {
-   severity: 'info' | 'warning'
- }
- 
-+export interface DashboardAdvisorAction {
-+  id: string
-+  title: string
-+  detail: string
-+  estimatedMonthlyImpact: number
-+  effort: 'low' | 'medium' | 'high'
-+  tracking: {
-+    status: 'suggested' | 'in_progress' | 'done'
-+    metricLabel: string
-+    targetLabel: string
-+    currentLabel: string
-+  }
-+}
-+
- export interface DashboardAdvisorResponse {
-   mode: 'demo' | 'admin'
-   source: 'local' | 'provider'
-@@ -430,6 +444,7 @@ export interface DashboardAdvisorResponse {
-     insightAcceptedRate: number
-   }
-   insights: DashboardAdvisorInsight[]
-+  actions: DashboardAdvisorAction[]
- }
- 
- export interface DashboardNewsResponse {
-diff --git a/apps/web/src/components/dashboard/ai-advisor-panel.tsx b/apps/web/src/components/dashboard/ai-advisor-panel.tsx
-index 0ab107a..3e05adb 100644
---- a/apps/web/src/components/dashboard/ai-advisor-panel.tsx
-+++ b/apps/web/src/components/dashboard/ai-advisor-panel.tsx
-@@ -43,6 +43,28 @@ export const AiAdvisorPanel = ({
-             <p className="text-xs text-muted-foreground">{insight.detail}</p>
-           </div>
-         ))}
-+        {advisor?.actions.length ? (
-+          <div className="space-y-2 pt-2">
-+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-+              Actions concretes proposees
-+            </p>
-+            {advisor.actions.map(action => (
-+              <div key={action.id} className="rounded-md border border-border/80 bg-background/80 p-3">
-+                <div className="flex flex-wrap items-center justify-between gap-2">
-+                  <p className="font-medium">{action.title}</p>
-+                  <Badge variant="outline">impact ~{action.estimatedMonthlyImpact}/mois</Badge>
-+                </div>
-+                <p className="pt-1 text-xs text-muted-foreground">{action.detail}</p>
-+                <div className="pt-2 text-xs text-muted-foreground">
-+                  <p>
-+                    Suivi: {action.tracking.metricLabel} · cible {action.tracking.targetLabel}
-+                  </p>
-+                  <p>Etat: {action.tracking.status} · actuel {action.tracking.currentLabel}</p>
-+                </div>
-+              </div>
-+            ))}
-+          </div>
-+        ) : null}
-       </CardContent>
-     </Card>
-   )
-diff --git a/apps/web/src/features/dashboard-api.ts b/apps/web/src/features/dashboard-api.ts
-index d441c24..f11dda7 100644
---- a/apps/web/src/features/dashboard-api.ts
-+++ b/apps/web/src/features/dashboard-api.ts
-@@ -146,6 +146,34 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
-         severity: 'info',
-       },
-     ],
-+    actions: [
-+      {
-+        id: 'demo-action-cap-variable',
-+        title: 'Limiter un poste variable de 10%',
-+        detail: 'Choisissez un poste non essentiel et fixez un plafond hebdomadaire visible.',
-+        estimatedMonthlyImpact: 60,
-+        effort: 'medium',
-+        tracking: {
-+          status: 'suggested',
-+          metricLabel: 'Depense variable mensuelle',
-+          targetLabel: '-10% sur 30 jours',
-+          currentLabel: 'Baseline demo: 620',
-+        },
-+      },
-+      {
-+        id: 'demo-action-safety-transfer',
-+        title: 'Activer un virement reserve hebdomadaire',
-+        detail: 'Automatisez un petit montant chaque semaine pour securiser la tresorerie.',
-+        estimatedMonthlyImpact: 40,
-+        effort: 'low',
-+        tracking: {
-+          status: 'suggested',
-+          metricLabel: 'Reserve de securite',
-+          targetLabel: '4 virements/mois',
-+          currentLabel: '0/4 effectue',
-+        },
-+      },
-+    ],
-   }
- }
- 
-diff --git a/apps/web/src/features/dashboard-types.ts b/apps/web/src/features/dashboard-types.ts
-index 3214a90..15b4a66 100644
---- a/apps/web/src/features/dashboard-types.ts
-+++ b/apps/web/src/features/dashboard-types.ts
-@@ -166,6 +166,19 @@ export type DashboardAdvisorResponse = {
-     detail: string
-     severity: 'info' | 'warning'
-   }>
-+  actions: Array<{
-+    id: string
-+    title: string
-+    detail: string
-+    estimatedMonthlyImpact: number
-+    effort: 'low' | 'medium' | 'high'
-+    tracking: {
-+      status: 'suggested' | 'in_progress' | 'done'
-+      metricLabel: string
-+      targetLabel: string
-+      currentLabel: string
-+    }
-+  }>
- }
- 
- export type DashboardDerivedRecomputeRowCounts = {
-diff --git a/docs/agentic/contracts-map.md b/docs/agentic/contracts-map.md
-index 16c8971..d67a941 100644
---- a/docs/agentic/contracts-map.md
-+++ b/docs/agentic/contracts-map.md
-@@ -17,7 +17,7 @@ These contracts should not regress without deliberate repo-wide updates.
- | `POST /dashboard/goals/:goalId/archive`                             | [../../apps/api/src/routes/dashboard/routes/goals.ts](../../apps/api/src/routes/dashboard/routes/goals.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | [../../apps/web/src/features/goals/api.ts](../../apps/web/src/features/goals/api.ts), [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)             | Admin-only archive action; demo must forbid, archived goals stay visible only in the archived list, and the request-id must line up with the client action log                                                                                                         |
- | `GET /notifications/push/settings`, `POST /notifications/push/opt-in`, `POST /notifications/push/subscription`, `POST /notifications/push/send-preview` | [../../apps/api/src/routes/notifications/routes/push.ts](../../apps/api/src/routes/notifications/routes/push.ts), [../../apps/api/src/routes/notifications/services/push-store.ts](../../apps/api/src/routes/notifications/services/push-store.ts), [../../apps/api/src/routes/notifications/services/delivery-worker.ts](../../apps/api/src/routes/notifications/services/delivery-worker.ts) | [../../apps/web/src/features/notifications/query-options.ts](../../apps/web/src/features/notifications/query-options.ts), [../../apps/web/src/features/notifications/api.ts](../../apps/web/src/features/notifications/api.ts), [../../apps/web/src/components/dashboard/push-notification-card.tsx](../../apps/web/src/components/dashboard/push-notification-card.tsx) | Dual-path web push contract: demo stays deterministic with mock subscription/delivery, admin persists opt-in + subscription in Redis and executes critical-only preview delivery with normalized safe errors (`permission_denied`, `subscription_expired`, `provider_unavailable`), request-id propagation, and structured events (`push_opt_in_changed`, `push_subscription_registered`, `push_delivery_attempted`, `push_delivery_result`). Kill-switches `PWA_NOTIFICATIONS_ENABLED` + `PWA_CRITICAL_ENABLED` keep UI/API read-only when disabled. |
- | `GET /dashboard/derived-recompute`                                  | [../../apps/api/src/routes/dashboard/routes/derived-recompute.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx)                               | Demo must short-circuit to deterministic mock snapshot metadata before DB; real status allows admin session or valid internal token, returns `Cache-Control: no-store`, and exposes both the latest run and the current active snapshot version                       |
--| `GET /dashboard/advisor?range=7d|30d|90d`                           | [../../apps/api/src/routes/dashboard/routes/advisor.ts](../../apps/api/src/routes/dashboard/routes/advisor.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/components/dashboard/ai-advisor-panel.tsx](../../apps/web/src/components/dashboard/ai-advisor-panel.tsx), [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx) | Read-only contextual advisor. Demo must remain deterministic and local-only (no DB/provider). Admin reads dashboard summary and fail-soft degrades to local insights when providers/data are unavailable. Must propagate `x-request-id` and emit structured `advisor_request`, `advisor_response`, `advisor_fallback`, and `advisor_error` logs; runtime kill-switches: `AI_ADVISOR_ENABLED`, `AI_ADVISOR_ADMIN_ONLY`, `AI_ADVISOR_FORCE_LOCAL_ONLY` with UI mirrors `VITE_AI_ADVISOR_ENABLED` and `VITE_AI_ADVISOR_ADMIN_ONLY`. |
-+| `GET /dashboard/advisor?range=7d|30d|90d`                           | [../../apps/api/src/routes/dashboard/routes/advisor.ts](../../apps/api/src/routes/dashboard/routes/advisor.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/components/dashboard/ai-advisor-panel.tsx](../../apps/web/src/components/dashboard/ai-advisor-panel.tsx), [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx) | Read-only contextual advisor. Demo must remain deterministic and local-only (no DB/provider). Admin reads dashboard summary and fail-soft degrades to local insights when providers/data are unavailable. Contract now returns both `insights[]` and actionable `actions[]` with `estimatedMonthlyImpact`, `effort`, and simple `tracking` state so UI can surface concrete next steps without triggering writes. Must propagate `x-request-id` and emit structured `advisor_request`, `advisor_response`, `advisor_fallback`, and `advisor_error` logs; runtime kill-switches: `AI_ADVISOR_ENABLED`, `AI_ADVISOR_ADMIN_ONLY`, `AI_ADVISOR_FORCE_LOCAL_ONLY` with UI mirrors `VITE_AI_ADVISOR_ENABLED` and `VITE_AI_ADVISOR_ADMIN_ONLY`. |
- | `GET /dashboard/news?topic=&source=&limit=`                              | [../../apps/api/src/routes/dashboard/routes/news.ts](../../apps/api/src/routes/dashboard/routes/news.ts), [../../apps/api/src/routes/dashboard/domain/dashboard-news.ts](../../apps/api/src/routes/dashboard/domain/dashboard-news.ts), [../../apps/api/src/routes/dashboard/domain/failsoft-policy.ts](../../apps/api/src/routes/dashboard/domain/failsoft-policy.ts)                                                                                                                                                                                                                                                                                                                                                     | [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/components/dashboard/news-feed.tsx](../../apps/web/src/components/dashboard/news-feed.tsx)                               | Shared fail-soft envelope (`status: ok|degraded|unavailable`, source, policy, SLO fields) is returned in demo/admin. Demo is hard-locked to deterministic data from the versioned static fixture pack; admin uses the live/DB path with explicit fixture fallback on runtime errors. Route logs now emit `dataset_source=demo_fixture|admin_live|admin_fallback` and include `x-request-id`; `DASHBOARD_NEWS_FORCE_FIXTURE_FALLBACK=1` forces admin to fixture fallback as a kill-switch. |
- | `POST /dashboard/derived-recompute`                                 | [../../apps/api/src/routes/dashboard/routes/derived-recompute.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | [../../apps/web/src/features/dashboard-api.ts](../../apps/web/src/features/dashboard-api.ts), [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx)                                                 | Demo must forbid; real execution is admin/internal-token only, must emit safe `409/503/500` envelopes, honor `DERIVED_RECOMPUTE_ENABLED`, and atomically replace the derived snapshot while preserving the last good version metadata                               |
- | `POST /dashboard/news/ingest`                                           | [../../apps/api/src/routes/dashboard/routes/news.ts](../../apps/api/src/routes/dashboard/routes/news.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | (admin-triggered ingestion from dashboard widgets; caller wiring pending)                                                                                                                                                         | Admin-only ingestion trigger behind `LIVE_NEWS_INGESTION_ENABLED`; fail-soft policy can be disabled globally (`FAILSOFT_POLICY_ENABLED=false`) or per-domain (`FAILSOFT_NEWS_ENABLED=false`) without blocking cached reads.                                                                                                                   |
+   const trimTopExpense: DashboardAdvisorAction = {
+     id: 'action-trim-top-expense-10pct',
+@@ -124,7 +129,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
+     detail: financialContext.focus.topExpenseLabel
+       ? `Commencez par ${financialContext.focus.topExpenseLabel} avec un plafond hebdomadaire explicite.`
+       : 'Choisissez un poste variable non essentiel et fixez un plafond hebdomadaire explicite.',
+-    estimatedMonthlyImpact: Math.max(15, Math.round(topExpenseAmount * 0.1)),
++    estimatedMonthlyImpact: clampImpactEstimate(Math.max(15, Math.round(topExpenseAmount * 0.1))),
+     effort: 'medium',
+     decisionWorkflow: buildDecisionWorkflow({
+       goal: 'Baisser la depense variable dominante sans effet tunnel.',
+@@ -165,7 +170,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
+       net >= 0
+         ? 'Automatisez un virement vers votre reserve juste apres les revenus principaux.'
+         : 'Demarrez avec un petit montant fixe pour recreer une reserve sans bloquer le budget.',
+-    estimatedMonthlyImpact: net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20,
++    estimatedMonthlyImpact: clampImpactEstimate(net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20),
+     effort: 'low',
+     decisionWorkflow: buildDecisionWorkflow({
+       goal: 'Ancrer une reserve de securite sans destabiliser le budget courant.',
