@@ -702,11 +702,16 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
 
 
   const pushOptInMutation = useMutation({
-    mutationFn: () =>
-      postPushOptIn({
+    mutationFn: () => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      return postPushOptIn({
         optIn: !(pushSettingsQuery.data?.optIn ?? false),
         permission: pushSettingsQuery.data?.permission ?? 'unknown',
-      }),
+      })
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: notificationsQueryKeys.pushSettings(),
@@ -727,12 +732,17 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   })
 
   const pushRegisterMutation = useMutation({
-    mutationFn: () =>
-      postPushSubscription({
+    mutationFn: () => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      return postPushSubscription({
         endpoint: isDemo ? 'demo://subscription' : 'https://example.invalid/subscription',
         keys: { auth: 'masked_auth', p256dh: 'masked_p256dh' },
         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      }),
+      })
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: notificationsQueryKeys.pushSettings(),
@@ -755,7 +765,13 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   })
 
   const pushPreviewMutation = useMutation({
-    mutationFn: () => postPushPreview(),
+    mutationFn: () => {
+      if (!isAdmin) {
+        throw new Error('Admin session required')
+      }
+
+      return postPushPreview()
+    },
     onSuccess: payload => {
       if (payload.ok) {
         pushToast({
@@ -1620,6 +1636,7 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
                 !pushSettingsQuery.data.featureEnabled ||
                 !pushSettingsQuery.data.criticalEnabled)
           )}
+          readOnly={!isAdmin}
           onToggle={() => pushOptInMutation.mutate()}
           onRegisterSubscription={() => pushRegisterMutation.mutate()}
           onSendPreview={() => pushPreviewMutation.mutate()}
