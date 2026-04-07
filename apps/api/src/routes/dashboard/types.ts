@@ -412,6 +412,11 @@ export interface DashboardAdvisorInsight {
   title: string
   detail: string
   severity: 'info' | 'warning'
+  citations: Array<{
+    id: string
+    label: string
+    value: string
+  }>
 }
 
 export interface DashboardAdvisorAction {
@@ -426,6 +431,11 @@ export interface DashboardAdvisorAction {
     targetLabel: string
     currentLabel: string
   }
+  citations: Array<{
+    id: string
+    label: string
+    value: string
+  }>
 }
 
 export interface DashboardAdvisorResponse {
@@ -437,6 +447,10 @@ export interface DashboardAdvisorResponse {
   generatedAt: string
   degradedMessage?: string | null
   emptyMessage?: string | null
+  dataStatus: {
+    mode: 'sufficient' | 'insufficient'
+    message: string | null
+  }
   metrics: {
     latencyMs: number
     fallbackRate: number

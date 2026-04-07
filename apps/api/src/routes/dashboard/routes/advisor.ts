@@ -24,12 +24,20 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
           title: 'Cashflow positif sur la periode',
           detail: `Vos revenus depassent les depenses de ${Math.round(net)}. Gardez ce rythme avec une epargne automatique.`,
           severity: 'info',
+          citations: [
+            { id: 'totals.incomes', label: 'Revenus periode', value: `${Math.round(summary.totals.incomes)}` },
+            { id: 'totals.expenses', label: 'Depenses periode', value: `${Math.round(summary.totals.expenses)}` },
+          ],
         }
       : {
           id: 'local-cashflow-negative',
           title: 'Cashflow negatif detecte',
           detail: `Les depenses depassent les revenus de ${Math.round(Math.abs(net))}. Reduisez une categorie variable cette semaine.`,
           severity: 'warning',
+          citations: [
+            { id: 'totals.incomes', label: 'Revenus periode', value: `${Math.round(summary.totals.incomes)}` },
+            { id: 'totals.expenses', label: 'Depenses periode', value: `${Math.round(summary.totals.expenses)}` },
+          ],
         }
 
   const ratioInsight: DashboardAdvisorInsight =
@@ -39,12 +47,18 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
           title: 'Ratio depenses/revenus eleve',
           detail: 'Objectif indicatif: rester sous 85% pour absorber les imprévus.',
           severity: 'warning',
+          citations: [
+            { id: 'totals.spendRatio', label: 'Ratio depenses/revenus', value: `${Math.round(spendRatio * 100)}%` },
+          ],
         }
       : {
           id: 'local-spend-ratio-healthy',
           title: 'Ratio depenses/revenus maitrise',
           detail: 'Votre marge actuelle laisse de la place pour une reserve de securite.',
           severity: 'info',
+          citations: [
+            { id: 'totals.spendRatio', label: 'Ratio depenses/revenus', value: `${Math.round(spendRatio * 100)}%` },
+          ],
         }
 
   const expenseInsight: DashboardAdvisorInsight = financialContext.focus.topExpenseLabel
@@ -53,12 +67,25 @@ const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisor
         title: `Focus depense: ${financialContext.focus.topExpenseLabel}`,
         detail: `Poste principal sur la periode: ${Math.round(financialContext.focus.topExpenseAmount ?? 0)} sur ${financialContext.focus.topExpenseCount ?? 0} transactions.`,
         severity: 'info',
+        citations: [
+          {
+            id: 'topExpenseGroups[0].total',
+            label: 'Montant poste principal',
+            value: `${Math.round(financialContext.focus.topExpenseAmount ?? 0)}`,
+          },
+          {
+            id: 'topExpenseGroups[0].count',
+            label: 'Transactions poste principal',
+            value: `${financialContext.focus.topExpenseCount ?? 0}`,
+          },
+        ],
       }
     : {
         id: 'local-empty-expenses',
         title: 'Aucune depense exploitable',
         detail: 'Aucune donnee depense n\'a ete detectee sur la periode selectionnee.',
         severity: 'warning',
+        citations: [{ id: 'topExpenseGroups', label: 'Top depenses detectees', value: '0' }],
       }
 
   return [trendInsight, ratioInsight, expenseInsight]
@@ -94,6 +121,10 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
       targetLabel: '-10% sur 30 jours',
       currentLabel: `${monthlyExpenseBaseline}`,
     }),
+    citations: [
+      { id: 'totals.expenses', label: 'Depenses mensuelles (baseline)', value: `${monthlyExpenseBaseline}` },
+      { id: 'topExpenseGroups[0].total', label: 'Poste principal estime', value: `${topExpenseAmount}` },
+    ],
   }
 
   const cashflowBuffer: DashboardAdvisorAction = {
@@ -110,6 +141,7 @@ const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorA
       targetLabel: '4 virements effectues ce mois',
       currentLabel: '0/4 effectue',
     }),
+    citations: [{ id: 'totals.netCashflow', label: 'Marge mensuelle estimee', value: `${Math.round(net)}` }],
   }
 
   return [trimTopExpense, cashflowBuffer]
@@ -164,6 +196,16 @@ export const createAdvisorRoute = () =>
         generatedAt: new Date().toISOString(),
         ...(result.plan.degradedMessage ? { degradedMessage: result.plan.degradedMessage } : {}),
         ...(result.summary.assets.length === 0 ? { emptyMessage: 'Aucune donnee exploitable' } : {}),
+        dataStatus:
+          result.summary.assets.length === 0 || result.summary.topExpenseGroups.length === 0
+            ? {
+                mode: 'insufficient',
+                message: 'Donnees insuffisantes: recommandations affichees avec citations minimales.',
+              }
+            : {
+                mode: 'sufficient',
+                message: null,
+              },
         metrics: {
           latencyMs: Date.now() - startedAt,
           fallbackRate: result.plan.fallback ? 1 : 0,

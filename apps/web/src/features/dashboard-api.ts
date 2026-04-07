@@ -123,6 +123,10 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
     fallbackReason: null,
     requestId: 'demo-advisor-request',
     generatedAt: '2026-04-06T09:00:00.000Z',
+    dataStatus: {
+      mode: 'sufficient',
+      message: null,
+    },
     metrics: {
       latencyMs: 4,
       fallbackRate: 0,
@@ -138,12 +142,17 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
             ? 'Le cockpit demo montre une marge positive sur la periode.'
             : 'Le cockpit demo montre un deficit temporaire sur la periode.',
         severity: net >= 0 ? 'info' : 'warning',
+        citations: [
+          { id: 'totals.incomes', label: 'Revenus periode', value: `${Math.round(summary.totals.incomes)}` },
+          { id: 'totals.expenses', label: 'Depenses periode', value: `${Math.round(summary.totals.expenses)}` },
+        ],
       },
       {
         id: 'demo-expense',
         title: 'Conseil generique',
         detail: 'Revoyez vos 3 principaux postes de depense avant tout arbitrage.',
         severity: 'info',
+        citations: [{ id: 'topExpenseGroups', label: 'Top depenses detectees', value: `${summary.topExpenseGroups.length}` }],
       },
     ],
     actions: [
@@ -159,6 +168,9 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
           targetLabel: '-10% sur 30 jours',
           currentLabel: 'Baseline demo: 620',
         },
+        citations: [
+          { id: 'totals.expenses', label: 'Depenses mensuelles (baseline)', value: `${Math.round(summary.totals.expenses)}` },
+        ],
       },
       {
         id: 'demo-action-safety-transfer',
@@ -172,6 +184,7 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
           targetLabel: '4 virements/mois',
           currentLabel: '0/4 effectue',
         },
+        citations: [{ id: 'totals.netCashflow', label: 'Marge mensuelle estimee', value: `${Math.round(net)}` }],
       },
     ],
   }
