@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "skills": {
+    "color-expert": {
+      "source": "meodai/skill.color-expert",
+      "sourceType": "github",
+      "computedHash": "4a27ea3430243efdc2059c7a265a58d1c22b621e8c6b6ca0f0ca6b7cba31f548"
+    },
+    "creative-direction": {
+      "source": "dylanfeltus/skills",
+      "sourceType": "github",
+      "computedHash": "fb063596b7f3ed22f6e9b2e692a6a3c5743810f7513076f62dc842f973f8f06d"
+    },
+    "design-tokens": {
+      "source": "dylanfeltus/skills",
+      "sourceType": "github",
+      "computedHash": "a5d55ed75e8feff1c8f45fa99b0a57804e590e384c6874ff4aa45b99c587841e"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "frontend-design-review": {
+      "source": "microsoft/skills",
+      "sourceType": "github",
+      "computedHash": "bdfcadec9604ec0225f337ffbcecb8c8a5ddf69b6b1a1335963df97a0665472e"
+    },
+    "frontend-skill": {
+      "source": "openai/skills",
+      "sourceType": "github",
+      "computedHash": "2074b8fa089e7ac633689b7202965513a5fd069fd1baf2ea49a928bb85bb4c9c"
+    },
+    "motion-design-patterns": {
+      "source": "dylanfeltus/skills",
+      "sourceType": "github",
+      "computedHash": "c862e76c9a8c678c3a00af9b4f971a3d761ca1c9415a4e0dfb7c683d374c709d"
+    },
+    "typography-audit": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "computedHash": "adf3f2d66f13c564e7e81d817f8a7664c3791120be624e9f535eee860aacde66"
+    },
+    "ui-animation": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "computedHash": "c0df66c159771b0a92f74d9b2a3c6653bb75a35c31e5a7f82a866af52b23f651"
+    },
+    "ui-audit": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "computedHash": "36a81c0bf4801c650fbc0f8d83f17b57cfae22a080f7c39030d67aa000a8ee53"
+    },
+    "ui-design": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "computedHash": "77472a417c72b6ecd6c6c172b36166cf6b72fa59fbb65369499815de8cdede64"
+    },
+    "visual-qa": {
+      "source": "dylanfeltus/skills",
+      "sourceType": "github",
+      "computedHash": "1a0697c31a2bebaabbc6bb8b98c1e452e8b3112eb31014bfd98d9f9adef0ccc3"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+    }
+  }
+}
