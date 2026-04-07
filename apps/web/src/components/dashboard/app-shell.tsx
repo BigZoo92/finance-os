@@ -17,6 +17,7 @@ import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
+import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
 import {
   normalizeDashboardDerivedRecomputeActionError,
   patchTransactionClassification,
@@ -24,6 +25,7 @@ import {
 } from '@/features/dashboard-api'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import {
+  dashboardAdvisorQueryOptionsWithMode,
   dashboardDerivedRecomputeStatusQueryOptionsWithMode,
   type DemoTransactionsScenario,
   dashboardQueryKeys,
@@ -88,6 +90,7 @@ import { WealthHistory } from './wealth-history'
 import { ExpenseStructureCard } from './expense-structure-card'
 import { NewsFeed } from './news-feed'
 import { buildHighValueSignalDigest } from './high-value-signals'
+import { AiAdvisorPanel } from './ai-advisor-panel'
 import { rankPersonalSignalsByRelevance } from './relevance-scoring'
 import { getTrendDirection, summarizeCashflowDirection } from './trend-visuals'
 
@@ -538,11 +541,19 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
   const isDemo = authViewState === 'demo'
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
   const authModeOptions: { mode?: AuthMode } = authMode ? { mode: authMode } : {}
+  const aiAdvisorFlags = getAiAdvisorUiFlags()
+  const aiAdvisorVisible = aiAdvisorFlags.enabled && (!aiAdvisorFlags.adminOnly || isAdmin)
   const isAuthUnavailable = authQuery.data?.error === 'auth_unavailable'
   const summaryQuery = useQuery(
     dashboardSummaryQueryOptionsWithMode({
       range,
       ...authModeOptions,
+    })
+  )
+  const advisorQuery = useQuery(
+    dashboardAdvisorQueryOptionsWithMode({
+      range,
+      ...(aiAdvisorVisible && authMode ? { mode: authMode } : {}),
     })
   )
   const transactionsQuery = useInfiniteQuery(
@@ -1959,6 +1970,15 @@ export function DashboardAppShell({ range }: { range: DashboardRange }) {
               ))}
             </CardContent>
           </Card>
+
+          {aiAdvisorVisible ? (
+            <AiAdvisorPanel
+              advisor={advisorQuery.data}
+              isPending={advisorQuery.isPending}
+              isError={advisorQuery.isError}
+              errorMessage={advisorQuery.isError ? toErrorMessage(advisorQuery.error) : null}
+            />
+          ) : null}
 
           <Card>
             <CardHeader>

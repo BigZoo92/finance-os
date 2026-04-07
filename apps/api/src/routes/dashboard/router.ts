@@ -5,6 +5,7 @@ import { createGoalsRoute } from './routes/goals'
 import { createNewsRoute } from './routes/news'
 import { createSummaryRoute } from './routes/summary'
 import { createAnalyticsRoute } from './routes/analytics'
+import { createAdvisorRoute } from './routes/advisor'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
@@ -46,6 +47,7 @@ export const createDashboardRoutes = ({
     .use(createSummaryRoute())
     .use(createNewsRoute())
     .use(createAnalyticsRoute())
+    .use(createAdvisorRoute())
     .use(createDerivedRecomputeRoute())
     .use(createGoalsRoute())
     .use(createTransactionsRoute())
