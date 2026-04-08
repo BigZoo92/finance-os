@@ -103,6 +103,23 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 - [docs/agentic/release-map.md](docs/agentic/release-map.md)
 - Repo-local skills live under `.agents/skills/`.
 
+## Skills System
+
+Full inventory with trust tiers, overlaps, and usage guide: [docs/SKILLS-INVENTORY.md](docs/SKILLS-INVENTORY.md)
+
+### Skill categories (`.claude/skills/`)
+| Category | Path | Count | Purpose |
+|---|---|---|---|
+| Finance-OS local | `finance-os/` | 7 | Repo-specific invariants — highest priority |
+| GitNexus guides | `gitnexus/` | 6 | Code intelligence workflows |
+| GitNexus generated | `generated/` | 20 | Auto-indexed domain clusters |
+| External recommended | root-level dirs | 17 | Best practices (React, TanStack, Redis, Drizzle, CI/CD, security, perf, testing) |
+| Impeccable (UI) | root-level dirs | 33 | UI refinement and design system |
+| Experimental | `experimental/` | 1 | Unproven — use with caution |
+
+### Priority rule
+When a local Finance-OS skill and an external skill cover the same topic, the local skill takes precedence. External skills provide general best practices that supplement — not override — local invariants.
+
 ## Context Documentation
 
 Comprehensive reference docs for agents and external chats (maintained by agents + human):

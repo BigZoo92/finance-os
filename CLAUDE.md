@@ -24,16 +24,48 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
 - do risky local investigations or prototypes on non-autopilot branches
 - critique UI structure, copy, accessibility, and color decisions
 
+## Skills System
+
+**Full inventory**: [docs/SKILLS-INVENTORY.md](docs/SKILLS-INVENTORY.md) — trust tiers, overlap arbitration, usage guide.
+
+### Priority rule
+Local Finance-OS skills > recommended external > optional external > experimental. Local skills encode non-negotiable repo invariants; external skills supplement them.
+
+### Finance-OS Local Skills (always load for matching domain)
+| Skill | Load when |
+|---|---|
+| `finance-os-core-invariants` | Any change touching auth, routes, env vars, data access, logging |
+| `finance-os-web-ssr-auth` | Auth flows, route loaders, SSR, demo/admin transitions |
+| `finance-os-powens-integration` | Bank connections, Powens client, token encryption |
+| `finance-os-worker-sync` | Background worker, sync jobs, Redis queue |
+| `finance-os-deploy-ghcr-dokploy` | CI/CD, Docker, releases, Dokploy |
+| `finance-os-observability-failsoft` | Widget health, fallbacks, metrics, logging |
+| `finance-os-ui-cockpit` | UI components, pages, animations, design system |
+
+### Quick Skill Selection by Task
+| Task | Primary | Supplement |
+|---|---|---|
+| React component | `finance-os-ui-cockpit` | `vercel-react-best-practices`, `vercel-composition-patterns` |
+| TanStack Start route | `finance-os-web-ssr-auth` | `tanstack-start-best-practices`, `tanstack-integration-best-practices` |
+| API / Elysia | `finance-os-core-invariants` | `security-and-hardening` |
+| Drizzle / PostgreSQL | `drizzle-best-practices` | `postgresql-code-review` |
+| Redis / Worker | `finance-os-worker-sync` | `redis-development` |
+| PR review | `code-review`, `finance-os-core-invariants` | `postgresql-code-review` if DB changes |
+| Security audit | `finance-os-core-invariants` | `security-and-hardening`, `sast-security-scan` (experimental) |
+| Performance | `performance`, `core-web-vitals` | Impeccable `optimize` |
+| Deploy / release | `finance-os-deploy-ghcr-dokploy` | `ci-cd-and-automation` |
+
 ## UI and Color Work
 
 - Use `skill.color-expert` when the task is about palette direction, contrast, theme systems, expressive color usage, or visual harmonization.
+- Use `finance-os-ui-cockpit` as the primary skill for all UI work — it encodes the luxury cockpit identity, required widget states, and anti-patterns.
 - Keep Finance-OS UI intentional and non-generic; do not flatten color decisions into safe default SaaS styling.
 - Read `DESIGN.md` before any UI work — it is the source of truth for visual identity, palette, typography, and composition rules.
 - Read `docs/frontend/design-system.md` before creating or modifying components — it documents tokens, patterns, and responsive conventions.
 - Read `docs/frontend/information-architecture.md` before adding or reorganizing pages/routes.
 - Read `docs/frontend/motion-and-interactions.md` before adding animations or transitions.
 - When modifying UI, update the relevant documentation in the same change.
-- **Impeccable** (`pbakaus/impeccable`, 21 skills) is installed for UI refinement. Use it as a complement to DESIGN.md and the design system, not as a replacement. Key skills for this repo:
+- **Impeccable** (33 skills) is installed for UI refinement. Use as complement to `finance-os-ui-cockpit` and DESIGN.md, not as a replacement. Key skills:
   - `polish` / `critique` / `audit` — pre-ship quality pass
   - `arrange` / `typeset` / `colorize` — layout, typography, and color fixes
   - `distill` / `bolder` / `quieter` — calibrate visual intensity
