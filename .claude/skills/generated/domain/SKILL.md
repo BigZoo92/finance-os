@@ -1,11 +1,11 @@
 ---
 name: domain
-description: "Skill for the Domain area of finance-os. 67 symbols across 15 files."
+description: "Skill for the Domain area of finance-os. 71 symbols across 19 files."
 ---
 
 # Domain
 
-67 symbols | 15 files | Cohesion: 99%
+71 symbols | 19 files | Cohesion: 97%
 
 ## When to Use
 
@@ -42,6 +42,7 @@ Start here when exploring this area:
 
 | Symbol | Type | File | Line |
 |--------|------|------|------|
+| `PowensManualSyncRateLimitError` | Class | `apps/api/src/routes/integrations/powens/domain/powens-sync-errors.ts` | 0 |
 | `createGoalsRoute` | Function | `apps/api/src/routes/dashboard/routes/goals.ts` | 10 |
 | `createCreateDashboardGoalUseCase` | Function | `apps/api/src/routes/dashboard/domain/dashboard-goals.ts` | 121 |
 | `createUpdateDashboardGoalUseCase` | Function | `apps/api/src/routes/dashboard/domain/dashboard-goals.ts` | 139 |
@@ -61,7 +62,6 @@ Start here when exploring this area:
 | `toEpochDay` | Function | `apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts` | 67 |
 | `hasStableAmount` | Function | `apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts` | 76 |
 | `groupByRecurringSignal` | Function | `apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts` | 90 |
-| `detectRecurringCommitmentSuggestions` | Function | `apps/api/src/routes/dashboard/domain/detect-recurring-commitments.ts` | 125 |
 
 ## Execution Flows
 
@@ -73,10 +73,17 @@ Start here when exploring this area:
 | `CreateGetDashboardDerivedRecomputeStatusUseCase → ToIsoString` | intra_community | 4 |
 | `CreateUpdateDashboardGoalUseCase → GetGoalRowById` | intra_community | 3 |
 | `DetectRecurringCommitmentSuggestions → NormalizeLabel` | intra_community | 3 |
+| `CreateRequestSyncUseCase → Ttl` | intra_community | 3 |
 | `CreateGoalsRoute → GetGoalRowById` | intra_community | 3 |
 | `CreateCreateDashboardGoalUseCase → GetGoalRowById` | intra_community | 3 |
 | `CreateCreateDashboardGoalUseCase → ToIsoString` | intra_community | 3 |
-| `CreateArchiveDashboardGoalUseCase → GetGoalRowById` | intra_community | 3 |
+
+## Connected Areas
+
+| Area | Connections |
+|------|-------------|
+| Repositories | 1 calls |
+| Routes | 1 calls |
 
 ## How to Explore
 

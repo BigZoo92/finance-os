@@ -274,12 +274,18 @@ export const parsePowensTransactionAmount = (raw: unknown) => {
     return null
   }
 
-  if (typeof raw.amount === 'number' && Number.isFinite(raw.amount)) {
-    return raw.amount.toFixed(2)
-  }
+  const candidates = [raw.amount, raw.value, raw.gross_value]
 
-  if (typeof raw.amount === 'string' && raw.amount.trim().length > 0) {
-    const parsed = Number(raw.amount)
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      return candidate.toFixed(2)
+    }
+
+    if (typeof candidate !== 'string' || candidate.trim().length === 0) {
+      continue
+    }
+
+    const parsed = Number(candidate)
     if (Number.isFinite(parsed)) {
       return parsed.toFixed(2)
     }

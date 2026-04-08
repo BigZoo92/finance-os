@@ -1,9 +1,9 @@
 ---
-name: cluster-77
-description: "Skill for the Cluster_77 area of finance-os. 10 symbols across 1 files."
+name: cluster-46
+description: "Skill for the Cluster_46 area of finance-os. 10 symbols across 1 files."
 ---
 
-# Cluster_77
+# Cluster_46
 
 10 symbols | 1 files | Cohesion: 90%
 
@@ -11,7 +11,7 @@ description: "Skill for the Cluster_77 area of finance-os. 10 symbols across 1 f
 
 - Working with code in `apps/`
 - Understanding how apiRequest, ApiRequestError work
-- Modifying cluster_77-related functionality
+- Modifying cluster_46-related functionality
 
 ## Key Files
 
@@ -53,10 +53,10 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| Cluster_78 | 2 calls |
+| Cluster_47 | 2 calls |
 
 ## How to Explore
 
 1. `gitnexus_context({name: "apiRequest"})` — see callers and callees
-2. `gitnexus_query({query: "cluster_77"})` — find related execution flows
+2. `gitnexus_query({query: "cluster_46"})` — find related execution flows
 3. Read key files listed above for implementation details

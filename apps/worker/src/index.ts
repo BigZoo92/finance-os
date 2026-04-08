@@ -650,6 +650,7 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
       .values(dedupedWithPowensId)
       .onConflictDoUpdate({
         target: [schema.transaction.powensConnectionId, schema.transaction.powensTransactionId],
+        targetWhere: sql`${schema.transaction.powensTransactionId} is not null`,
         set: {
           powensAccountId: sql`excluded.powens_account_id`,
           bookingDate: sql`excluded.booking_date`,
@@ -675,6 +676,7 @@ const upsertTransactionsBatch = async (rows: TransactionInsert[]) => {
           schema.transaction.amount,
           schema.transaction.labelHash,
         ],
+        targetWhere: sql`${schema.transaction.powensTransactionId} is null`,
         set: {
           currency: sql`excluded.currency`,
           label: sql`excluded.label`,

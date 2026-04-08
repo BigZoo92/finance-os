@@ -28,9 +28,9 @@ description: "Skill for the Mocks area of finance-os. 16 symbols across 5 files.
 Start here when exploring this area:
 
 - **`getDashboardSummaryMock`** (Function) — `apps/api/src/mocks/dashboardSummary.mock.ts:59`
-- **`hashString`** (Function) — `apps/api/src/mocks/demo-scenario-library.ts:51`
-- **`normalizeProfile`** (Function) — `apps/api/src/mocks/demo-scenario-library.ts:62`
-- **`matchPersonaScenario`** (Function) — `apps/api/src/mocks/demo-scenario-library.ts:75`
+- **`hashString`** (Function) — `apps/api/src/mocks/demo-scenario-library.ts:55`
+- **`normalizeProfile`** (Function) — `apps/api/src/mocks/demo-scenario-library.ts:66`
+- **`matchPersonaScenario`** (Function) — `apps/api/src/mocks/demo-scenario-library.ts:79`
 - **`getDashboardAnalyticsMockTransactions`** (Function) — `apps/api/src/mocks/dashboardAnalytics.mock.ts:94`
 
 ## Key Symbols
@@ -38,12 +38,12 @@ Start here when exploring this area:
 | Symbol | Type | File | Line |
 |--------|------|------|------|
 | `getDashboardSummaryMock` | Function | `apps/api/src/mocks/dashboardSummary.mock.ts` | 59 |
-| `hashString` | Function | `apps/api/src/mocks/demo-scenario-library.ts` | 51 |
-| `normalizeProfile` | Function | `apps/api/src/mocks/demo-scenario-library.ts` | 62 |
-| `matchPersonaScenario` | Function | `apps/api/src/mocks/demo-scenario-library.ts` | 75 |
+| `hashString` | Function | `apps/api/src/mocks/demo-scenario-library.ts` | 55 |
+| `normalizeProfile` | Function | `apps/api/src/mocks/demo-scenario-library.ts` | 66 |
+| `matchPersonaScenario` | Function | `apps/api/src/mocks/demo-scenario-library.ts` | 79 |
 | `getDashboardAnalyticsMockTransactions` | Function | `apps/api/src/mocks/dashboardAnalytics.mock.ts` | 94 |
 | `getDashboardTransactionsMock` | Function | `apps/api/src/mocks/transactions.mock.ts` | 222 |
-| `resolveDemoTransactionsFixture` | Function | `apps/api/src/mocks/demo-transactions-fixture.ts` | 252 |
+| `resolveDemoTransactionsFixture` | Function | `apps/api/src/mocks/demo-transactions-fixture.ts` | 333 |
 | `toMoney` | Function | `apps/api/src/mocks/dashboardSummary.mock.ts` | 17 |
 | `toDateOnly` | Function | `apps/api/src/mocks/dashboardSummary.mock.ts` | 19 |
 | `getRangeStartDate` | Function | `apps/api/src/mocks/dashboardSummary.mock.ts` | 21 |
@@ -52,7 +52,7 @@ Start here when exploring this area:
 | `toDateOnly` | Function | `apps/api/src/mocks/dashboardAnalytics.mock.ts` | 86 |
 | `getRangeStartDate` | Function | `apps/api/src/mocks/dashboardAnalytics.mock.ts` | 88 |
 | `isBeforeCursor` | Function | `apps/api/src/mocks/transactions.mock.ts` | 206 |
-| `readFixtureItems` | Function | `apps/api/src/mocks/demo-transactions-fixture.ts` | 201 |
+| `readFixtureItems` | Function | `apps/api/src/mocks/demo-transactions-fixture.ts` | 261 |
 
 ## Execution Flows
 

@@ -1,9 +1,9 @@
 ---
-name: cluster-78
-description: "Skill for the Cluster_78 area of finance-os. 7 symbols across 1 files."
+name: cluster-47
+description: "Skill for the Cluster_47 area of finance-os. 7 symbols across 1 files."
 ---
 
-# Cluster_78
+# Cluster_47
 
 7 symbols | 1 files | Cohesion: 88%
 
@@ -11,7 +11,7 @@ description: "Skill for the Cluster_78 area of finance-os. 7 symbols across 1 fi
 
 - Working with code in `apps/`
 - Understanding how getApiBaseUrl, toApiUrl work
-- Modifying cluster_78-related functionality
+- Modifying cluster_47-related functionality
 
 ## Key Files
 
@@ -49,5 +49,5 @@ Start here when exploring this area:
 ## How to Explore
 
 1. `gitnexus_context({name: "getApiBaseUrl"})` — see callers and callees
-2. `gitnexus_query({query: "cluster_78"})` — find related execution flows
+2. `gitnexus_query({query: "cluster_47"})` — find related execution flows
 3. Read key files listed above for implementation details

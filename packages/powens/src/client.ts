@@ -41,6 +41,8 @@ export interface PowensTransaction {
   date?: string
   rdate?: string
   amount?: number | string
+  value?: number | string
+  gross_value?: number | string
   currency?: string | { id?: string } | null
   wording?: string
   raw?: string
