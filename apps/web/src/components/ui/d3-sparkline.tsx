@@ -138,7 +138,7 @@ export function D3Sparkline({
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={gradientFrom} stopOpacity={0.3} />
+            <stop offset="0%" stopColor={gradientFrom} stopOpacity={0.5} />
             <stop offset="100%" stopColor={gradientTo} stopOpacity={0} />
           </linearGradient>
         </defs>
@@ -149,7 +149,7 @@ export function D3Sparkline({
               d={areaPath}
               fill={`url(#${gradientId})`}
               className="transition-opacity duration-300"
-              style={{ opacity: hoveredIdx !== null ? 0.6 : 0.4 }}
+              style={{ opacity: hoveredIdx !== null ? 0.8 : 0.6 }}
             />
           )}
 
