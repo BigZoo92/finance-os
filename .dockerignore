@@ -1,20 +1,51 @@
+# ── VCS & IDE ──────────────────────────────────
 .git
 .gitignore
 .vscode
+
+# ── Dependencies (re-installed in image) ──────
 node_modules
 **/node_modules
+.pnpm-store
+
+# ── Build artifacts (rebuilt in image) ─────────
 apps/web/.output
-**/.DS_Store
 coverage
 dist
 .tmp
+.turbo
+**/.next
 
-# Prevent leaking local secrets into images.
+# ── Secrets ────────────────────────────────────
 .env
 .env.*
 !.env.example
 !.env.prod.example
+cookies.txt
 
+# ── AI / agent tooling ────────────────────────
+.claude/
+.gitnexus/
+skills/
+skills-lock.json
+CLAUDE.md
+AGENTS.md
+codex.patch
+
+# ── Documentation (not needed at runtime) ─────
+docs/
+DESIGN.md
+*.md
+!packages/*/README.md
+
+# ── Infrastructure & scripts (not needed in images)
+docker-compose*.yml
+infra/dokploy
+scripts/
+
+# ── OS & logs ──────────────────────────────────
+**/.DS_Store
 pnpm-debug.log*
 npm-debug.log*
 yarn-error.log*
+Thumbs.db
