@@ -40,6 +40,12 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
   - `adapt` / `harden` — responsive design + edge-case resilience
   - `normalize` / `extract` — design system alignment and token extraction
 
+## Context Documentation
+
+For full project context (stack, features, design, env vars, architecture), read `docs/context/`:
+- [STACK.md](docs/context/STACK.md), [FEATURES.md](docs/context/FEATURES.md), [DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md), [CONVENTIONS.md](docs/context/CONVENTIONS.md), [ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md), [EXTERNAL-SERVICES.md](docs/context/EXTERNAL-SERVICES.md), [APP-ARCHITECTURES.md](docs/context/APP-ARCHITECTURES.md)
+- Update these docs when changes affect stack, features, env vars, or services.
+
 ## Output Bias
 
 - Be concise and high-signal.

@@ -103,6 +103,20 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 - [docs/agentic/release-map.md](docs/agentic/release-map.md)
 - Repo-local skills live under `.agents/skills/`.
 
+## Context Documentation
+
+Comprehensive reference docs for agents and external chats (maintained by agents + human):
+
+- [docs/context/STACK.md](docs/context/STACK.md) — Full technical stack, architecture graphs, CI/CD pipeline, deployment
+- [docs/context/FEATURES.md](docs/context/FEATURES.md) — All business features in detail (Powens, goals, transactions, news, etc.)
+- [docs/context/DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md) — Artistic direction, color palette, typography, motion, layout patterns
+- [docs/context/CONVENTIONS.md](docs/context/CONVENTIONS.md) — Best practices, coding conventions, review process, security rules
+- [docs/context/ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md) — All environment variables, feature flags, where to set them, how to generate
+- [docs/context/EXTERNAL-SERVICES.md](docs/context/EXTERNAL-SERVICES.md) — All external services and APIs (Powens, HN, Redis, GHCR, Dokploy)
+- [docs/context/APP-ARCHITECTURES.md](docs/context/APP-ARCHITECTURES.md) — Per-app and per-package architecture with Mermaid graphs
+
+> When code changes alter stack, features, env vars, or external integrations, update the relevant `docs/context/*.md` in the same change.
+
 ## GitNexus Context Layer
 
 Knowledge graph over the full codebase (`gitnexus@1.4.10`, devDep). Available as MCP server for both Claude Code and Codex.
