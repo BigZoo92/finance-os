@@ -1,6 +1,6 @@
 # Finance-OS -- Stack Technique
 
-> **Derniere mise a jour** : 2026-04-08
+> **Derniere mise a jour** : 2026-04-09
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute modification structurelle de la stack doit etre refletee ici.
 
@@ -34,8 +34,8 @@ graph TB
     subgraph "External"
         Powens["Powens API
         PSD2 Bank Aggregation"]
-        HN["Hacker News API
-        Financial News"]
+        NewsProviders["News providers
+        HN + GDELT + ECB + Fed + SEC + FRED"]
     end
 
     Browser -->|"HTTPS"| Web
@@ -45,7 +45,7 @@ graph TB
     Worker -->|"Drizzle ORM"| PG
     Worker -->|"BLPOP job queue"| Redis
     Worker -->|"REST + OAuth2"| Powens
-    API -->|"REST"| HN
+    API -->|"REST + RSS + XML + HTML head scrape"| NewsProviders
     API -->|"Enqueue jobs"| Redis
 ```
 
@@ -106,6 +106,8 @@ finance-os/
 | **Elysia** | latest | HTTP framework TypeScript |
 | **Drizzle ORM** | latest | Query builder type-safe |
 | **node-redis** | latest | Client Redis |
+| **Cheerio** | latest | Extraction metadata `<head>` / Open Graph |
+| **fast-xml-parser** | latest | Parsing RSS/XML institutionnel |
 | **Zod** | 4.1 | Validation payloads |
 
 **Runtime** : Bun 1.2+
@@ -118,6 +120,7 @@ finance-os/
 | **node-redis** | BLPOP consumer (job queue) |
 | **Drizzle ORM** | Acces DB |
 | **@finance-os/powens** | Client Powens + crypto |
+| **Internal HTTP scheduler** | Declenche les ingestions news cache-first |
 
 ### Base de donnees
 
@@ -223,7 +226,7 @@ graph LR
 
     subgraph "API Routes (Elysia)"
         Auth["/auth/* (login, logout, me)"]
-        Dash["/dashboard/* (summary, transactions, analytics, goals, news, advisor)"]
+        Dash["/dashboard/* (summary, transactions, analytics, goals, news, news/context, advisor)"]
         Integ["/integrations/powens/* (connect-url, callback, sync, status, diagnostics)"]
         Enrich["/enrichment/* (notes, bulk-triage)"]
         Notif["/notifications/push/* (settings, subscription, delivery)"]

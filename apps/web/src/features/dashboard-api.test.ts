@@ -1,87 +1,100 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiRequestError } from '@/lib/api'
 
-const apiRequestMock = vi.fn()
-const apiFetchMock = vi.fn()
+const { apiFetchMock, getDemoDashboardNewsMock, MockApiRequestError } = vi.hoisted(() => {
+  class HoistedApiRequestError extends Error {
+    status: number | 'network_error'
+    code?: string
+    requestId?: string
 
-vi.mock('@/lib/api', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api')>('@/lib/api')
+    constructor({
+      message,
+      status,
+      code,
+      requestId,
+    }: {
+      message: string
+      status: number | 'network_error'
+      code?: string
+      requestId?: string
+    }) {
+      super(message)
+      this.name = 'ApiRequestError'
+      this.status = status
+      if (code !== undefined) {
+        this.code = code
+      }
+      if (requestId !== undefined) {
+        this.requestId = requestId
+      }
+    }
+  }
 
   return {
-    ...actual,
-    apiRequest: (...args: Parameters<typeof actual.apiRequest>) => apiRequestMock(...args),
-    apiFetch: (...args: Parameters<typeof actual.apiFetch>) => apiFetchMock(...args),
+    apiFetchMock: vi.fn(),
+    getDemoDashboardNewsMock: vi.fn(),
+    MockApiRequestError: HoistedApiRequestError,
   }
 })
 
-import {
-  normalizeDashboardDerivedRecomputeActionError,
-  postDashboardDerivedRecompute,
-} from './dashboard-api'
-import { getDemoDashboardDerivedRecomputeStatus } from './demo-data'
-import { dashboardDerivedRecomputeStatusQueryOptionsWithMode } from './dashboard-query-options'
+vi.mock('@/lib/api', () => ({
+  apiFetch: (...args: unknown[]) => apiFetchMock(...args),
+  apiRequest: vi.fn(),
+  ApiRequestError: MockApiRequestError,
+}))
 
-describe('dashboard derived recompute API', () => {
+vi.mock('./demo-data', () => ({
+  getDemoDashboardNews: () => getDemoDashboardNewsMock(),
+  getDemoDashboardSummary: vi.fn(),
+  getDemoDashboardTransactions: vi.fn(),
+}))
+
+import { fetchDashboardNews } from './dashboard-api'
+
+describe('fetchDashboardNews', () => {
   beforeEach(() => {
-    apiRequestMock.mockReset()
     apiFetchMock.mockReset()
+    getDemoDashboardNewsMock.mockReset()
   })
 
-  it('propagates a generated x-request-id on recompute actions', async () => {
-    apiRequestMock.mockResolvedValue({
-      ok: true,
-      data: getDemoDashboardDerivedRecomputeStatus(),
-      response: new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: {
-          'x-request-id': 'derived-recompute-server-id',
-        },
-      }),
-      url: 'http://api:3001/dashboard/derived-recompute',
+  it('forwards rich filter params to the cache-only news endpoint', async () => {
+    apiFetchMock.mockResolvedValue({ source: 'cache', items: [] })
+
+    await fetchDashboardNews({
+      topic: 'macro',
+      source: 'ECB',
+      sourceType: 'central_bank',
+      domain: 'macroeconomy',
+      eventType: 'policy_decision',
+      minSeverity: 60,
+      region: 'europe',
+      ticker: 'MSFT',
+      sector: 'Cloud software',
+      direction: 'risk',
+      from: '2026-04-01T00:00:00.000Z',
+      to: '2026-04-09T00:00:00.000Z',
+      limit: 24,
     })
 
-    await postDashboardDerivedRecompute()
-
-    expect(apiRequestMock).toHaveBeenCalledTimes(1)
-    expect(apiRequestMock.mock.calls[0]?.[0]).toBe('/dashboard/derived-recompute')
-
-    const init = apiRequestMock.mock.calls[0]?.[1] as RequestInit
-    const headers = new Headers(init.headers)
-
-    expect(init.method).toBe('POST')
-    expect(headers.get('x-request-id')).toMatch(/^derived-recompute-/)
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      '/dashboard/news?topic=macro&source=ECB&sourceType=central_bank&domain=macroeconomy&eventType=policy_decision&minSeverity=60&region=europe&ticker=MSFT&sector=Cloud+software&direction=risk&from=2026-04-01T00%3A00%3A00.000Z&to=2026-04-09T00%3A00%3A00.000Z&limit=24'
+    )
   })
 
-  it('normalizes retryable safe errors for recompute failures', () => {
-    const normalized = normalizeDashboardDerivedRecomputeActionError(
-      new ApiRequestError({
-        message: 'Derived recompute failed. Snapshot remains unchanged.',
-        status: 500,
-        code: 'DERIVED_RECOMPUTE_FAILED',
-        url: 'http://api:3001/dashboard/derived-recompute',
-        path: '/dashboard/derived-recompute',
-        requestId: 'req-derived-web-err',
+  it('falls back to deterministic demo data on API failure', async () => {
+    const demoPayload = { source: 'demo_fixture', items: [{ id: 'demo-news' }] }
+    getDemoDashboardNewsMock.mockReturnValue(demoPayload)
+    apiFetchMock.mockRejectedValue(
+      new MockApiRequestError({
+        message: 'provider unavailable',
+        status: 503,
       })
     )
 
-    expect(normalized).toEqual({
-      message: 'Derived recompute failed. Snapshot remains unchanged.',
-      code: 'DERIVED_RECOMPUTE_FAILED',
-      requestId: 'req-derived-web-err',
-      retryable: true,
-      offline: false,
+    const result = await fetchDashboardNews({
+      topic: 'macro',
     })
-  })
 
-  it('skips the recompute status API call entirely in demo mode', () => {
-    const queryOptions = dashboardDerivedRecomputeStatusQueryOptionsWithMode({
-      mode: 'demo',
-    })
-    const queryFn = queryOptions.queryFn as () => ReturnType<
-      typeof getDemoDashboardDerivedRecomputeStatus
-    >
-
-    expect(queryFn()).toEqual(getDemoDashboardDerivedRecomputeStatus())
-    expect(apiFetchMock).not.toHaveBeenCalled()
+    expect(result).toBe(demoPayload)
+    expect(getDemoDashboardNewsMock).toHaveBeenCalledTimes(1)
   })
 })

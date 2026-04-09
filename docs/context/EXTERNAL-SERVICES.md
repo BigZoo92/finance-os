@@ -1,6 +1,6 @@
 # Finance-OS -- Services Externes
 
-> **Derniere mise a jour** : 2026-04-08
+> **Derniere mise a jour** : 2026-04-09
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici tout nouveau service externe integre.
 
@@ -19,8 +19,8 @@ graph LR
     subgraph "Services externes"
         Powens["Powens
         Agregation bancaire PSD2"]
-        HN["Hacker News Algolia
-        Actualites financieres"]
+        NewsBackbone["News backbone
+        HN + GDELT + ECB + Fed + SEC + FRED"]
         GHCR["GitHub Container Registry
         Images Docker"]
         Dokploy["Dokploy
@@ -30,7 +30,7 @@ graph LR
     end
 
     Worker -->|"OAuth2 + REST"| Powens
-    API -->|"REST (public)"| HN
+    API -->|"REST + RSS + XML + HTML head scrape"| NewsBackbone
     GHA -->|"Push images"| GHCR
     GHA -->|"Deploy API"| Dokploy
 ```
@@ -75,26 +75,108 @@ graph LR
 
 ---
 
-## 2. Hacker News Algolia API -- Actualites financieres
+## 2. Backbone news / signaux macro-financiers
+
+Le domaine news consomme plusieurs sources gratuites ou quasi-gratuites cote API.
+
+Le principe produit reste identique:
+
+- `GET /dashboard/news` = lecture cache-only
+- `POST /dashboard/news/ingest` = collecte live explicite
+- le worker peut declencher des ingestions recurrentes via l'API interne
+
+### 2.1 Hacker News Algolia
 
 | Detail | Valeur |
 |---|---|
-| **Type** | API REST publique (pas d'auth) |
-| **Role** | Source d'actualites financieres |
-| **URL** | `https://hn.algolia.com/api/v1/search_by_date?query=finance&tags=story` |
-| **Consommateur** | API (route `/dashboard/news`) |
-| **Gratuit** | Oui, pas de cle API |
+| **Type** | API REST publique |
+| **Role** | Tech / startup / AI / internet finance |
+| **URL** | `https://hn.algolia.com/api/v1/search_by_date` |
+| **Auth** | aucune |
+| **Consommateur** | API news provider `hn_algolia` |
+| **Notes** | source secondaire, utile pour signaux techno et model releases |
 
-### Fonctionnement
-- Requete simple sans authentification
-- Filtrage par pertinence finance (regex : crypto, ETF, macro, marches)
-- Deduplication SHA256 sur `titre + URL`
-- Stockage cache PostgreSQL avec seuil fraicheur 6h
+### 2.2 GDELT DOC 2.0
 
-### Resilience
-- Failsoft policy : `live -> cache -> demo`
-- En cas d'echec provider : retour donnees cachees
-- Feature flag : `LIVE_NEWS_INGESTION_ENABLED`
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST publique |
+| **Role** | Media global, geopolitique, macro, politique publique |
+| **URL** | `https://api.gdeltproject.org/api/v2/doc/doc` |
+| **Auth** | aucune |
+| **Consommateur** | API news provider `gdelt_doc` |
+| **Notes** | backbone large couverture; a rate-limiter prudemment |
+
+### 2.3 ECB RSS
+
+| Detail | Valeur |
+|---|---|
+| **Type** | RSS / XML public |
+| **Role** | Press releases, speeches, stat press, blog, publications |
+| **URLs typiques** | `/rss/press.html`, `/rss/statpress.html`, `/rss/pub.html`, `/rss/blog.html` |
+| **Auth** | aucune |
+| **Consommateur** | API news provider `ecb_rss` |
+
+### 2.4 ECB Data Portal
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API data publique |
+| **Role** | Releases et series macro structurees |
+| **URL** | `https://data-api.ecb.europa.eu/service/data/...` |
+| **Auth** | aucune |
+| **Consommateur** | API news provider `ecb_data` |
+| **Notes** | desactive par defaut, active via series explicites |
+
+### 2.5 Federal Reserve RSS
+
+| Detail | Valeur |
+|---|---|
+| **Type** | RSS / XML public |
+| **Role** | Monetary policy, speeches, press releases |
+| **URLs typiques** | `press_monetary.xml`, `press_all.xml`, `speeches_and_testimony.xml` |
+| **Auth** | aucune |
+| **Consommateur** | API news provider `fed_rss` |
+
+### 2.6 SEC EDGAR / data.sec.gov
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API / JSON public |
+| **Role** | Filings primaires, submissions, watchlist corporate |
+| **URL** | `https://data.sec.gov/` |
+| **Auth** | aucune cle |
+| **Consommateur** | API news provider `sec_edgar` |
+| **Notes** | `User-Agent` explicite requis; respecter fair access SEC |
+
+### 2.7 FRED
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST |
+| **Role** | Macro structuree (rates, CPI, jobs, yields) |
+| **URL** | `https://api.stlouisfed.org/fred/series/observations` |
+| **Auth** | `FRED_API_KEY` |
+| **Consommateur** | API news provider `fred` |
+| **Notes** | desactive par defaut sans cle |
+
+### 2.8 Open Graph / metadata article
+
+| Detail | Valeur |
+|---|---|
+| **Type** | Fetch HTML head uniquement |
+| **Role** | Cards premium, canonical URL, OG image, favicon, JSON-LD |
+| **Auth** | aucune |
+| **Consommateur** | `scrape-article-metadata.ts` |
+| **Notes** | pas de headless browser; timeout et max bytes stricts |
+
+### 2.9 Notes d'usage
+
+- Les providers sont touches a l'ingestion, pas a chaque lecture.
+- Chaque provider peut etre coupe individuellement par flag.
+- La source produit de verite pour l'architecture news est [NEWS-FETCH.md](NEWS-FETCH.md).
+- `Alpha Vantage` reste hors backbone par defaut.
+- `NewsAPI` gratuit n'est pas retenu comme dependance coeur.
 
 ---
 
@@ -234,7 +316,7 @@ graph LR
 | Service | Statut | Auth | Gratuit | Critique |
 |---|---|---|---|---|
 | Powens | **Actif** | OAuth2 + Client Credentials | Non (compte requis) | Oui (donnees bancaires) |
-| HN Algolia | **Actif** | Aucune | Oui | Non (best-effort) |
+| News backbone (HN/GDELT/ECB/Fed/SEC/FRED) | **Actif** | Mixte selon provider | Oui / cle FRED optionnelle | Non (cache-first, best-effort) |
 | Web Push | **Configure** | VAPID | Oui | Non |
 | LLM / IA | **Non integre** | -- | -- | Non |
 | GHCR | **Actif** | Token GitHub | Oui (repos publics) | Non (build-time) |

@@ -1,6 +1,15 @@
 import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
 import type { createRedisClient } from '@finance-os/redis'
+import type { NewsDuplicateCandidate } from './domain/news-dedupe'
+import type {
+  DashboardNewsFilters,
+  DashboardNewsSignalCard,
+  NewsContextBundle,
+  NewsPersistableSignalDraft,
+  NewsProviderHealth,
+  NewsProviderRunResult,
+} from './domain/news-types'
 
 export type ApiDb = ReturnType<typeof createDbClient>['db']
 export type ApiEnv = ReturnType<typeof getApiEnv>
@@ -92,17 +101,6 @@ export interface DashboardExpenseGroupRow {
   count: number
 }
 
-export interface DashboardNewsArticleRow {
-  id: number
-  title: string
-  summary: string | null
-  url: string
-  sourceName: string
-  topic: string
-  language: string
-  publishedAt: Date
-}
-
 export interface DashboardNewsCacheStateRow {
   lastSuccessAt: Date | null
   lastAttemptAt: Date | null
@@ -112,6 +110,11 @@ export interface DashboardNewsCacheStateRow {
   ingestionCount: number
   dedupeDropCount: number
   providerFailureCount: number
+  lastFetchedCount: number | null
+  lastInsertedCount: number | null
+  lastMergedCount: number | null
+  lastProviderCount: number | null
+  lastSignalCount: number | null
 }
 
 export interface DashboardDailyNetFlowRow {
@@ -509,17 +512,24 @@ export interface DashboardNewsResponse {
     cacheHitRate: number
     dedupeDropRate: number
     providerFailureRate: number
+    lastFetchedCount: number | null
+    lastInsertedCount: number | null
+    lastMergedCount: number | null
   }
-  items: Array<{
-    id: string
-    title: string
-    summary: string | null
-    url: string
-    sourceName: string
-    topic: string
-    language: string
-    publishedAt: string
-  }>
+  filters: {
+    applied: Omit<DashboardNewsFilters, 'limit'>
+  }
+  providers: NewsProviderHealth[]
+  clusters: NewsContextBundle['clusteredEvents']
+  contextPreview: Pick<
+    NewsContextBundle,
+    | 'topSignals'
+    | 'mostImpactedSectors'
+    | 'mostImpactedEntities'
+    | 'contradictorySignals'
+    | 'causalHypotheses'
+  >
+  items: DashboardNewsSignalCard[]
 }
 
 export interface DashboardGoalResponse {
@@ -568,25 +578,23 @@ export interface DashboardReadRepository {
     input: DashboardGoalPersistenceInput
   ) => Promise<DashboardGoalRow | null>
   archiveGoal: (goalId: number, archivedAt: Date) => Promise<DashboardGoalRow | null>
-  listNewsArticles: (params: {
-    topic?: string
-    sourceName?: string
-    limit: number
-  }) => Promise<DashboardNewsArticleRow[]>
-  upsertNewsArticles: (
-    rows: Array<{
-      providerArticleId: string
-      dedupeKey: string
-      title: string
-      summary: string | null
-      url: string
-      sourceName: string
-      topic: string
-      language: string
-      publishedAt: Date
-      metadata: Record<string, unknown> | null
-    }>
-  ) => Promise<{ insertedCount: number; dedupeDropCount: number }>
+}
+
+export interface DashboardNewsRepository {
+  listNewsArticles: (filters: DashboardNewsFilters) => Promise<DashboardNewsSignalCard[]>
+  countNewsArticles: () => Promise<number>
+  findNewsArticleCandidates: (params: {
+    canonicalUrlFingerprint: string | null
+    normalizedTitle: string
+    publishedAfter: Date
+    publishedBefore: Date
+  }) => Promise<NewsDuplicateCandidate[]>
+  insertNewsSignal: (signal: NewsPersistableSignalDraft) => Promise<number>
+  mergeNewsSignal: (params: {
+    articleId: number
+    signal: NewsPersistableSignalDraft
+    dedupeEvidence: Record<string, unknown> | null
+  }) => Promise<void>
   getNewsCacheState: () => Promise<DashboardNewsCacheStateRow | null>
   upsertNewsCacheState: (input: {
     lastSuccessAt?: Date | null
@@ -599,7 +607,14 @@ export interface DashboardReadRepository {
     dedupeDropCountIncrement?: number
     providerFailureCountIncrement?: number
     lastIngestDurationMs?: number
+    lastFetchedCount?: number | null
+    lastInsertedCount?: number | null
+    lastMergedCount?: number | null
+    lastProviderCount?: number | null
+    lastSignalCount?: number | null
   }) => Promise<void>
+  upsertNewsProviderState: (input: NewsProviderRunResult & { enabled: boolean }) => Promise<void>
+  listNewsProviderHealth: () => Promise<NewsProviderHealth[]>
 }
 
 export interface DashboardDerivedRecomputeRepository {
@@ -659,29 +674,29 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource: 'admin' | 'internal'
   }) => Promise<DashboardDerivedRecomputeStatusResponse>
-  getNews?: (input: {
-    topic?: string
-    sourceName?: string
-    limit: number
+  getNews?: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
+  getNewsContextBundle?: (input: {
     requestId: string
-  }) => Promise<DashboardNewsResponse>
+    range: '24h' | '7d' | '30d'
+  }) => Promise<NewsContextBundle>
   ingestNews?: (input: { requestId: string }) => Promise<{
     fetchedCount: number
     insertedCount: number
+    mergedCount: number
     dedupeDropCount: number
   }>
 }
 
 export interface DashboardNewsUseCases {
-  getNews: (input: {
-    topic?: string
-    sourceName?: string
-    limit: number
+  getNews: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
+  getNewsContextBundle: (input: {
     requestId: string
-  }) => Promise<DashboardNewsResponse>
+    range: '24h' | '7d' | '30d'
+  }) => Promise<NewsContextBundle>
   ingestNews: (input: { requestId: string }) => Promise<{
     fetchedCount: number
     insertedCount: number
+    mergedCount: number
     dedupeDropCount: number
   }>
 }
@@ -689,6 +704,7 @@ export interface DashboardNewsUseCases {
 export interface DashboardRouteRuntime {
   repositories: {
     readModel: DashboardReadRepository
+    news?: DashboardNewsRepository
     derivedRecompute: DashboardDerivedRecomputeRepository
   }
   useCases: DashboardUseCases

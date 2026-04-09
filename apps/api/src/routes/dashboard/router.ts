@@ -21,6 +21,28 @@ export const createDashboardRoutes = ({
   failsoftPolicyEnabled,
   failsoftSourceOrder,
   failsoftNewsEnabled,
+  aiContextBundleEnabled,
+  maxNewsItemsPerProvider,
+  metadataFetchEnabled,
+  metadataFetchTimeoutMs,
+  metadataFetchMaxBytes,
+  metadataFetchUserAgent,
+  newsProviderHnEnabled,
+  newsProviderHnQuery,
+  newsProviderGdeltEnabled,
+  newsProviderGdeltQuery,
+  newsProviderEcbRssEnabled,
+  newsProviderEcbRssFeedUrls,
+  newsProviderEcbDataEnabled,
+  newsProviderEcbDataSeriesKeys,
+  newsProviderFedEnabled,
+  newsProviderFedFeedUrls,
+  newsProviderSecEnabled,
+  newsProviderSecUserAgent,
+  newsProviderSecTickers,
+  newsProviderFredEnabled,
+  newsProviderFredApiKey,
+  newsProviderFredSeriesIds,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -30,6 +52,28 @@ export const createDashboardRoutes = ({
   failsoftPolicyEnabled: boolean
   failsoftSourceOrder: FailsoftSource[]
   failsoftNewsEnabled: boolean
+  aiContextBundleEnabled: boolean
+  maxNewsItemsPerProvider: number
+  metadataFetchEnabled: boolean
+  metadataFetchTimeoutMs: number
+  metadataFetchMaxBytes: number
+  metadataFetchUserAgent: string
+  newsProviderHnEnabled: boolean
+  newsProviderHnQuery: string
+  newsProviderGdeltEnabled: boolean
+  newsProviderGdeltQuery: string
+  newsProviderEcbRssEnabled: boolean
+  newsProviderEcbRssFeedUrls: string[]
+  newsProviderEcbDataEnabled: boolean
+  newsProviderEcbDataSeriesKeys: string[]
+  newsProviderFedEnabled: boolean
+  newsProviderFedFeedUrls: string[]
+  newsProviderSecEnabled: boolean
+  newsProviderSecUserAgent: string
+  newsProviderSecTickers: string[]
+  newsProviderFredEnabled: boolean
+  newsProviderFredApiKey: string | undefined
+  newsProviderFredSeriesIds: string[]
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -40,6 +84,28 @@ export const createDashboardRoutes = ({
     failsoftPolicyEnabled,
     failsoftSourceOrder,
     failsoftNewsEnabled,
+    aiContextBundleEnabled,
+    maxNewsItemsPerProvider,
+    metadataFetchEnabled,
+    metadataFetchTimeoutMs,
+    metadataFetchMaxBytes,
+    metadataFetchUserAgent,
+    newsProviderHnEnabled,
+    newsProviderHnQuery,
+    newsProviderGdeltEnabled,
+    newsProviderGdeltQuery,
+    newsProviderEcbRssEnabled,
+    newsProviderEcbRssFeedUrls,
+    newsProviderEcbDataEnabled,
+    newsProviderEcbDataSeriesKeys,
+    newsProviderFedEnabled,
+    newsProviderFedFeedUrls,
+    newsProviderSecEnabled,
+    newsProviderSecUserAgent,
+    newsProviderSecTickers,
+    newsProviderFredEnabled,
+    newsProviderFredApiKey,
+    newsProviderFredSeriesIds,
   })
 
   return new Elysia({ prefix: '/dashboard' })

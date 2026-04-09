@@ -11,6 +11,7 @@ Scope: `apps/api/**`
 - Demo must short-circuit before any DB, Redis, or Powens access. `GET /auth/me` must stay `200`, `Cache-Control: no-store`, and must never hit DB or Powens.
 - Keep dashboard summary read models coherent across low-level accounts/connections and the higher-level unified `assets` collection used for patrimoine-style views.
 - Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
+- Keep the dashboard news pipeline (`/dashboard/news`, `/dashboard/news/context`, `/dashboard/news/ingest`, cache-state semantics, provider health, metadata scraping, dataset fallback) aligned with [../../docs/context/NEWS-FETCH.md](../../docs/context/NEWS-FETCH.md), and update that document whenever this feature changes.
 - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
 - Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
 - Keep Powens status and fail-soft behavior contract-stable:

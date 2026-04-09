@@ -27,11 +27,31 @@ const toSearchParams = (params: Record<string, string | number | undefined>) => 
 export const fetchDashboardNews = async (params?: {
   topic?: string
   source?: string
+  sourceType?: string
+  domain?: string
+  eventType?: string
+  minSeverity?: number
+  region?: string
+  ticker?: string
+  sector?: string
+  direction?: 'risk' | 'opportunity' | 'mixed'
+  from?: string
+  to?: string
   limit?: number
 }) => {
   const query = toSearchParams({
     topic: params?.topic,
     source: params?.source,
+    sourceType: params?.sourceType,
+    domain: params?.domain,
+    eventType: params?.eventType,
+    minSeverity: params?.minSeverity,
+    region: params?.region,
+    ticker: params?.ticker,
+    sector: params?.sector,
+    direction: params?.direction,
+    from: params?.from,
+    to: params?.to,
     limit: params?.limit,
   })
 
@@ -54,6 +74,25 @@ export const fetchDashboardNews = async (params?: {
 
     return getDemoDashboardNews()
   }
+}
+
+export const postDashboardNewsIngest = async () => {
+  return apiFetch<{
+    ok: boolean
+    requestId: string
+    fetchedCount: number
+    insertedCount: number
+    mergedCount: number
+    dedupeDropCount: number
+  }>('/dashboard/news/ingest', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      trigger: 'manual',
+    }),
+  })
 }
 
 export const fetchDashboardSummary = async (range: DashboardRange) => {

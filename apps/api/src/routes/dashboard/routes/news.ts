@@ -1,8 +1,13 @@
 import { Elysia } from 'elysia'
-import { getAuth, getRequestMeta } from '../../../auth/context'
+import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
+import { requireAdminOrInternalToken } from '../../../auth/guard'
 import { getDashboardRuntime } from '../context'
 import { selectDashboardNewsDataset } from '../domain/dashboard-dataset-selector'
-import { dashboardNewsIngestBodySchema, dashboardNewsQuerySchema } from '../schemas'
+import {
+  dashboardNewsContextQuerySchema,
+  dashboardNewsIngestBodySchema,
+  dashboardNewsQuerySchema,
+} from '../schemas'
 
 export const createNewsRoute = () =>
   new Elysia()
@@ -24,6 +29,18 @@ export const createNewsRoute = () =>
             return dashboard.useCases.getNews({
               ...(context.query.topic ? { topic: context.query.topic } : {}),
               ...(context.query.source ? { sourceName: context.query.source } : {}),
+              ...(context.query.sourceType ? { sourceType: context.query.sourceType } : {}),
+              ...(context.query.domain ? { domain: context.query.domain } : {}),
+              ...(context.query.eventType ? { eventType: context.query.eventType } : {}),
+              ...(context.query.minSeverity !== undefined
+                ? { minSeverity: context.query.minSeverity }
+                : {}),
+              ...(context.query.region ? { region: context.query.region } : {}),
+              ...(context.query.ticker ? { ticker: context.query.ticker } : {}),
+              ...(context.query.sector ? { sector: context.query.sector } : {}),
+              ...(context.query.direction ? { direction: context.query.direction } : {}),
+              ...(context.query.from ? { from: context.query.from } : {}),
+              ...(context.query.to ? { to: context.query.to } : {}),
               limit: context.query.limit ?? 20,
               requestId: requestMeta.requestId,
             })
@@ -34,17 +51,56 @@ export const createNewsRoute = () =>
         query: dashboardNewsQuerySchema,
       }
     )
+    .get(
+      '/news/context',
+      async context => {
+        const auth = getAuth(context)
+        const internalAuth = getInternalAuth(context)
+        const requestMeta = getRequestMeta(context)
+
+        if (auth.mode !== 'admin' && !internalAuth.hasValidToken) {
+          context.set.status = 403
+          return {
+            ok: false,
+            code: 'DEMO_MODE_FORBIDDEN',
+            message: 'Admin session or internal token required.',
+            requestId: requestMeta.requestId,
+          }
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getNewsContextBundle) {
+          context.set.status = 503
+          return {
+            ok: false,
+            code: 'NEWS_CONTEXT_UNAVAILABLE',
+            message: 'News context bundle runtime is unavailable.',
+            requestId: requestMeta.requestId,
+          }
+        }
+
+        return dashboard.useCases.getNewsContextBundle({
+          requestId: requestMeta.requestId,
+          range: context.query.range ?? '7d',
+        })
+      },
+      {
+        query: dashboardNewsContextQuerySchema,
+      }
+    )
     .post(
       '/news/ingest',
       async context => {
-        const auth = getAuth(context)
         const requestMeta = getRequestMeta(context)
 
-        if (auth.mode !== 'admin') {
+        try {
+          requireAdminOrInternalToken(context)
+        } catch {
           context.set.status = 403
           return {
+            ok: false,
             code: 'DEMO_MODE_FORBIDDEN',
-            message: 'Admin session required for live ingestion.',
+            message: 'Admin session or internal token required for live ingestion.',
             requestId: requestMeta.requestId,
           }
         }

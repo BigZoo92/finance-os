@@ -113,19 +113,19 @@ const ensureFile = relativePath => {
 const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const getSection = (text, heading) => {
-  const regex = new RegExp(`${escapeRegExp(heading)}\\n([\\s\\S]*?)(?=\\n## |$)`)
+  const regex = new RegExp(`${escapeRegExp(heading)}\\r?\\n([\\s\\S]*?)(?=\\r?\\n## |$)`)
   const match = text.match(regex)
   return match ? match[1].trim() : ''
 }
 
 const parseFrontmatter = text => {
-  const match = text.match(/^---\n([\s\S]*?)\n---\n/)
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
   if (!match) {
     return null
   }
 
   const data = {}
-  for (const rawLine of match[1].split('\n')) {
+  for (const rawLine of match[1].split(/\r?\n/)) {
     const line = rawLine.trim()
     if (!line) {
       continue

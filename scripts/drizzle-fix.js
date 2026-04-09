@@ -1,5 +1,5 @@
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const dir = path.join('packages', 'db', 'drizzle', 'meta')
 const files = fs.readdirSync(dir).filter(f => f.endsWith('.json') && f !== '_journal.json')

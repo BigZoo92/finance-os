@@ -3,6 +3,7 @@ import { Elysia } from 'elysia'
 import { createDashboardRuntimePlugin } from '../plugin'
 import { createAnalyticsRoute } from './analytics'
 import type { DashboardRouteRuntime, DashboardSummaryResponse } from '../types'
+import type { DashboardAnalyticsResponse } from '../domain/analytics-contract'
 
 const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => ({
   range,
@@ -138,7 +139,7 @@ describe('createAnalyticsRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
-    const payload = (await response.json()) as any
+    const payload = (await response.json()) as DashboardAnalyticsResponse
 
     expect(response.status).toBe(200)
     expect(payload.source).toBe('demoAdapter')
@@ -170,7 +171,7 @@ describe('createAnalyticsRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/analytics?range=7d'))
-    const payload = (await response.json()) as any
+    const payload = (await response.json()) as DashboardAnalyticsResponse
 
     expect(response.status).toBe(200)
     expect(payload.source).toBe('adminAdapter')
@@ -192,7 +193,7 @@ describe('createAnalyticsRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/analytics?range=90d'))
-    const payload = (await response.json()) as any
+    const payload = (await response.json()) as DashboardAnalyticsResponse
 
     expect(response.status).toBe(200)
     expect(payload.source).toBe('demoAdapter')
@@ -207,7 +208,7 @@ describe('createAnalyticsRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
-    const payload = (await response.json()) as any
+    const payload = (await response.json()) as DashboardAnalyticsResponse
 
     expect(response.status).toBe(200)
     expect(payload.availability.timeseries).toBe(false)
@@ -226,7 +227,7 @@ describe('createAnalyticsRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
-    const payload = (await response.json()) as any
+    const payload = (await response.json()) as DashboardAnalyticsResponse
 
     expect(response.status).toBe(200)
     expect(payload.portfolioAllocation.items).toEqual([
@@ -342,7 +343,7 @@ describe('createAnalyticsRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/analytics?range=30d'))
-    const payload = (await response.json()) as any
+    const payload = (await response.json()) as DashboardAnalyticsResponse
 
     expect(response.status).toBe(200)
     expect(payload.recurringSpend.fixedCharges.totalMonthly).toBe(51)

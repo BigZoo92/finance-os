@@ -17,6 +17,10 @@ import { buildRuntimeHealthWithFlags, resolveRuntimeVersion } from '@finance-os/
 import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
+import {
+  startDashboardNewsScheduler,
+  triggerDashboardNewsIngest,
+} from './news-ingest-scheduler'
 import { logWorkerEvent } from './observability/logger'
 import {
   buildProviderRawImportRow,
@@ -79,6 +83,7 @@ const WORKER_STATUS_PORT = 3002
 
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let schedulerTimer: ReturnType<typeof setInterval> | null = null
+let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
 let keepRunning = true
 
@@ -145,10 +150,6 @@ const startStatusServer = () => {
 }
 
 const formatDate = (value: Date) => value.toISOString().slice(0, 10)
-
-const subtractDays = (value: Date, days: number) => {
-  return new Date(value.getTime() - days * 24 * 60 * 60 * 1000)
-}
 
 const toStringValue = (value: unknown) => {
   if (typeof value === 'string') {
@@ -1243,6 +1244,28 @@ const startScheduler = () => {
   })
 }
 
+const startNewsScheduler = () => {
+  newsSchedulerTimer = startDashboardNewsScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    autoIngestEnabled: env.NEWS_AUTO_INGEST_ENABLED,
+    intervalMs: env.NEWS_FETCH_INTERVAL_MS,
+    trigger: () =>
+      triggerDashboardNewsIngest({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker news scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
 const consumeJobs = async () => {
   while (keepRunning) {
     try {
@@ -1319,6 +1342,7 @@ const start = async () => {
   }, env.WORKER_HEARTBEAT_MS)
 
   startScheduler()
+  startNewsScheduler()
   await consumeJobs()
 }
 
@@ -1338,6 +1362,11 @@ const shutdown = async (signal: string) => {
   if (schedulerTimer) {
     clearInterval(schedulerTimer)
     schedulerTimer = null
+  }
+
+  if (newsSchedulerTimer) {
+    clearInterval(newsSchedulerTimer)
+    newsSchedulerTimer = null
   }
 
   statusServer?.close()

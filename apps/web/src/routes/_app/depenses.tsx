@@ -163,8 +163,8 @@ function DepensesPage() {
         <CardContent>
           {transactionsQuery.isPending ? (
             <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+              {Array.from({ length: 5 }, (_, index) => `expense-transaction-skeleton-${index + 1}`).map(key => (
+                <div key={key} className="h-12 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
           ) : transactions.length === 0 ? (

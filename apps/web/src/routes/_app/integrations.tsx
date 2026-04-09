@@ -166,8 +166,8 @@ function IntegrationsPage() {
         <CardContent className="space-y-3">
           {statusQuery.isPending ? (
             <div className="space-y-3">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
+              {Array.from({ length: 2 }, (_, index) => `integration-status-skeleton-${index + 1}`).map(key => (
+                <div key={key} className="h-20 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
           ) : statusConnections.length === 0 ? (
@@ -234,8 +234,8 @@ function IntegrationsPage() {
         <CardContent className="space-y-2">
           {syncRunsQuery.isPending ? (
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded bg-muted" />
+              {Array.from({ length: 3 }, (_, index) => `integration-sync-skeleton-${index + 1}`).map(key => (
+                <div key={key} className="h-12 animate-pulse rounded bg-muted" />
               ))}
             </div>
           ) : syncRuns.length === 0 ? (

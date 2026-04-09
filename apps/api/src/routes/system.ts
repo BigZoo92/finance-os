@@ -1,4 +1,5 @@
 import { buildRuntimeHealthWithFlags, resolveRuntimeVersion } from '@finance-os/prelude'
+import type { Elysia } from 'elysia'
 
 type SystemRouteEnv = {
   NODE_ENV: string
@@ -19,7 +20,7 @@ const getRuntimeVersion = (env: SystemRouteEnv) =>
     safeModeActive: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
   })
 
-export const registerSystemRoutes = (app: any, env: SystemRouteEnv) => {
+export const registerSystemRoutes = (app: Elysia, env: SystemRouteEnv) => {
   return app
     .get('/health', () => {
       return buildRuntimeHealthWithFlags('api', {

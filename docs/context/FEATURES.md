@@ -1,6 +1,6 @@
 # Finance-OS -- Features Metier
 
-> **Derniere mise a jour** : 2026-04-08
+> **Derniere mise a jour** : 2026-04-09
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle feature ou evolution significative.
 
@@ -220,20 +220,51 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 
 ---
 
-## 9. Fil d'actualites financieres
+## 9. Plateforme news / signaux macro-financiers
 
-**Routes** : `GET /dashboard/news`, `POST /dashboard/news/ingest`
-**Source** : Hacker News Algolia API (articles finance)
+**Routes** : `GET /dashboard/news`, `GET /dashboard/news/context`, `POST /dashboard/news/ingest`
+**Rapport detaille** : [NEWS-FETCH.md](NEWS-FETCH.md)
 
 ### Fonctionnement
-- Ingestion depuis HN Algolia : `https://hn.algolia.com/api/v1/search_by_date?query=finance&tags=story`
-- Classification par topic : crypto, ETF/fonds, macro, marches
-- Deduplication SHA256 sur titre+URL
-- Cache PostgreSQL avec seuil de fraicheur (6h)
-- Filtres par topic et source
-- Score de pertinence avec raisons
-- Resilience : live -> cache -> demo (failsoft policy)
-- Statut de resilience affiche : ok, degrade, indisponible
+- Lecture `GET /dashboard/news` strictement cache-only
+- Ingestion live explicite via `POST /dashboard/news/ingest`
+- Scheduler worker optionnel via `NEWS_AUTO_INGEST_ENABLED`
+- Providers multi-source:
+  - Hacker News Algolia
+  - GDELT DOC 2.0
+  - ECB RSS
+  - ECB Data Portal
+  - Federal Reserve RSS
+  - SEC EDGAR / data.sec.gov
+  - FRED
+- Normalisation metier deterministic:
+  - taxonomie de domaines
+  - `eventType`
+  - `severity`, `confidence`, `novelty`
+  - `marketImpactScore`, `relevanceScore`
+  - risques, opportunites, secteurs, themes, tickers, entites
+- Deduplication cross-source:
+  - canonical URL
+  - titre normalise
+  - similarite textuelle
+  - fenetre temporelle
+  - entites partagees
+- Scraping metadata article:
+  - Open Graph
+  - canonical
+  - favicon
+  - JSON-LD `Article` / `NewsArticle`
+- Restitution UI:
+  - signal leaders
+  - flux enrichi
+  - provenance
+  - clusters d'evenements
+  - provider health
+  - context preview pour IA future
+- Fail-soft:
+  - cache stale/degrade visible
+  - fallback fixture/admin_fallback cote API
+  - fallback demo cote web si l'appel API casse
 
 ---
 
@@ -283,7 +314,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - Dashboard affiche les donnees cachees (wealth snapshots, transactions)
 - Navigation entre routes possible
 - Mutations bloquees avec message explicite
-- Failsoft policy : live -> cache -> demo
+- Failsoft policy : lecture cache -> fallback demo, ingestion live explicite separee
 - Indicateurs de fraicheur/degradation par widget
 
 ---
@@ -369,7 +400,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 | Sync Powens | Desactivee | Active |
 | Categorisation | Lecture seule | Edition |
 | Budgets | Lecture seule | Edition |
-| News | Mocks ou cache | Live + cache |
+| News | Fixtures deterministes | Ingestion live + cache enrichi |
 | Conseiller IA | Mocks | Local (pas d'API LLM) |
 | Notifications | Desactivees | Actives |
 | Export | Non disponible | CSV + PDF |
@@ -390,6 +421,8 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 | `asset` | Actifs (provider + manuels) |
 | `investment_position` | Positions d'investissement |
 | `enrichment_note` | Notes utilisateur par transaction |
-| `news_article` | Cache articles financiers |
-| `news_cache_state` | Etat du cache news (singleton) |
+| `news_article` | Signal canonique enrichi |
+| `news_article_source_ref` | Provenance cross-source par signal |
+| `news_cache_state` | Etat global du cache news |
+| `news_provider_state` | Health et compteurs par provider |
 | `derived_recompute_run` | Statut recompute background |

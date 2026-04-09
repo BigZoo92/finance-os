@@ -1,6 +1,6 @@
 # Finance-OS -- Architecture par App & Package
 
-> **Derniere mise a jour** : 2026-04-08
+> **Derniere mise a jour** : 2026-04-09
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Mettre a jour lors d'ajout de modules, routes, ou packages.
 
@@ -190,17 +190,21 @@ graph TB
                 Transactions["get-transactions use case"]
                 Analytics["get-analytics use case"]
                 Goals["goals CRUD use cases"]
-                News["get-news + ingest use cases"]
+                News["get-news + context bundle
+                + ingest use cases"]
                 Advisor["get-advisor use case"]
                 Recompute["derived-recompute use case"]
             end
             subgraph "repositories/"
                 ReadModel["dashboard read repository"]
                 GoalRepo["goals repository"]
-                NewsRepo["news repository + cache state"]
+                NewsRepo["news repository
+                cache state + provider health
+                + source refs"]
             end
             subgraph "services/"
-                LiveNews["fetch-live-news (HN Algolia)"]
+                LiveNews["multi-source ingestion service
+                providers + metadata scrape"]
             end
         end
 
@@ -275,7 +279,7 @@ Route handler (HTTP in/out)
 | Prefixe | Domaine | Routes |
 |---|---|---|
 | `/auth` | Authentification | login, logout, me |
-| `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, advisor, derived-recompute |
+| `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, news/context, advisor, derived-recompute |
 | `/integrations/powens` | Banques | connect-url, callback, sync, status, audit-trail, backlog, sync-runs, diagnostics |
 | `/enrichment` | Enrichissement | notes, bulk-triage |
 | `/notifications/push` | Notifications | settings, subscription, delivery |
@@ -321,6 +325,9 @@ graph TB
             AutoSync["setInterval
             POWENS_SYNC_INTERVAL_MS
             Enqueue powens.syncAll"]
+            NewsSync["setInterval
+            NEWS_FETCH_INTERVAL_MS
+            POST /dashboard/news/ingest"]
         end
 
         subgraph "Heartbeat"
@@ -346,6 +353,7 @@ graph TB
     UpsertTx --> Integrity
     Integrity --> Status
     Status --> Unlock
+    Entry --> NewsSync
 ```
 
 ### Types de jobs
@@ -380,7 +388,7 @@ packages/db/
       goals.ts         # personal_goal
       assets.ts        # asset, investment_position
       recurring.ts     # recurring_commitment, recurring_commitment_transaction_link
-      news.ts          # news_article, news_cache_state
+      news.ts          # news_article, news_article_source_ref, news_cache_state, news_provider_state
       derived.ts       # derived_recompute_run, derived_transaction_snapshot
       enrichment.ts    # enrichment_note
     index.ts           # Main export (client + schema)
@@ -398,7 +406,9 @@ packages/db/
 | `personal_goal` | `id` (UUID) | standalone |
 | `asset` | `id` | -> investment_position |
 | `investment_position` | `id` | -> asset |
-| `news_article` | `dedupe_key` (SHA256) | standalone |
+| `news_article` | `dedupe_key` (stable signal key) | -> news_article_source_ref |
+| `news_article_source_ref` | `(provider, provider_article_id)` | -> news_article |
+| `news_provider_state` | `provider` | standalone |
 | `recurring_commitment` | `id` | -> recurring_commitment_transaction_link |
 
 ---

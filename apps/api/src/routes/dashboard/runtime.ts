@@ -14,9 +14,17 @@ import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/fai
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
 import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
+import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
+import { createLiveNewsIngestionService } from './services/fetch-live-news'
+import { createEcbDataNewsProvider } from './services/providers/ecb-data-news-provider'
+import { createEcbRssNewsProvider } from './services/providers/ecb-rss-news-provider'
+import { createFedRssNewsProvider } from './services/providers/fed-rss-news-provider'
+import { createFredNewsProvider } from './services/providers/fred-news-provider'
+import { createGdeltNewsProvider } from './services/providers/gdelt-news-provider'
+import { createHnNewsProvider } from './services/providers/hn-news-provider'
+import { createSecEdgarNewsProvider } from './services/providers/sec-edgar-news-provider'
 import { listStaticManualAssets } from './services/list-static-manual-assets'
-import { fetchLiveNews } from './services/fetch-live-news'
 import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
 import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
 
@@ -29,6 +37,28 @@ export const createDashboardRouteRuntime = ({
   failsoftPolicyEnabled,
   failsoftSourceOrder,
   failsoftNewsEnabled,
+  aiContextBundleEnabled,
+  maxNewsItemsPerProvider,
+  metadataFetchEnabled,
+  metadataFetchTimeoutMs,
+  metadataFetchMaxBytes,
+  metadataFetchUserAgent,
+  newsProviderHnEnabled,
+  newsProviderHnQuery,
+  newsProviderGdeltEnabled,
+  newsProviderGdeltQuery,
+  newsProviderEcbRssEnabled,
+  newsProviderEcbRssFeedUrls,
+  newsProviderEcbDataEnabled,
+  newsProviderEcbDataSeriesKeys,
+  newsProviderFedEnabled,
+  newsProviderFedFeedUrls,
+  newsProviderSecEnabled,
+  newsProviderSecUserAgent,
+  newsProviderSecTickers,
+  newsProviderFredEnabled,
+  newsProviderFredApiKey,
+  newsProviderFredSeriesIds,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -38,8 +68,31 @@ export const createDashboardRouteRuntime = ({
   failsoftPolicyEnabled: boolean
   failsoftSourceOrder: FailsoftSource[]
   failsoftNewsEnabled: boolean
+  aiContextBundleEnabled: boolean
+  maxNewsItemsPerProvider: number
+  metadataFetchEnabled: boolean
+  metadataFetchTimeoutMs: number
+  metadataFetchMaxBytes: number
+  metadataFetchUserAgent: string
+  newsProviderHnEnabled: boolean
+  newsProviderHnQuery: string
+  newsProviderGdeltEnabled: boolean
+  newsProviderGdeltQuery: string
+  newsProviderEcbRssEnabled: boolean
+  newsProviderEcbRssFeedUrls: string[]
+  newsProviderEcbDataEnabled: boolean
+  newsProviderEcbDataSeriesKeys: string[]
+  newsProviderFedEnabled: boolean
+  newsProviderFedFeedUrls: string[]
+  newsProviderSecEnabled: boolean
+  newsProviderSecUserAgent: string
+  newsProviderSecTickers: string[]
+  newsProviderFredEnabled: boolean
+  newsProviderFredApiKey: string | undefined
+  newsProviderFredSeriesIds: string[]
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
+  const newsRepository = createDashboardNewsRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
   const powensJobs = createPowensJobQueueRepository(redisClient)
 
@@ -96,18 +149,63 @@ export const createDashboardRouteRuntime = ({
     featureEnabled,
     repository: derivedRecompute,
   })
+
+  const liveNewsIngestion = createLiveNewsIngestionService({
+    repository: newsRepository,
+    providers: [
+      createHnNewsProvider({
+        enabled: newsProviderHnEnabled,
+        query: newsProviderHnQuery,
+      }),
+      createGdeltNewsProvider({
+        enabled: newsProviderGdeltEnabled,
+        query: newsProviderGdeltQuery,
+      }),
+      createEcbRssNewsProvider({
+        enabled: newsProviderEcbRssEnabled,
+        feedUrls: newsProviderEcbRssFeedUrls,
+      }),
+      createEcbDataNewsProvider({
+        enabled: newsProviderEcbDataEnabled,
+        seriesKeys: newsProviderEcbDataSeriesKeys,
+      }),
+      createFedRssNewsProvider({
+        enabled: newsProviderFedEnabled,
+        feedUrls: newsProviderFedFeedUrls,
+      }),
+      createSecEdgarNewsProvider({
+        enabled: newsProviderSecEnabled,
+        userAgent: newsProviderSecUserAgent,
+        watchlistTickers: newsProviderSecTickers,
+      }),
+      createFredNewsProvider({
+        enabled: newsProviderFredEnabled,
+        apiKey: newsProviderFredApiKey,
+        seriesIds: newsProviderFredSeriesIds,
+      }),
+    ],
+    maxItemsPerProvider: maxNewsItemsPerProvider,
+    metadataFetchEnabled,
+    metadataFetchTimeoutMs,
+    metadataFetchMaxBytes,
+    metadataUserAgent: metadataFetchUserAgent,
+  })
+
   const news = createDashboardNewsUseCases({
-    readModel,
-    fetchLiveNews,
+    repository: newsRepository,
+    runLiveIngestion: liveNewsIngestion.run,
     liveIngestionEnabled: liveNewsIngestionEnabled,
     failsoftPolicyEnabled,
-    failsoftSourceOrder: failsoftSourceOrder.length > 0 ? failsoftSourceOrder : DEFAULT_FAILSOFT_SOURCE_ORDER,
+    failsoftSourceOrder:
+      failsoftSourceOrder.length > 0 ? failsoftSourceOrder : DEFAULT_FAILSOFT_SOURCE_ORDER,
     failsoftNewsEnabled,
+    aiContextBundleEnabled,
   })
 
   return {
     repositories: {
       readModel,
+      news: newsRepository,
       derivedRecompute,
     },
     useCases: {
@@ -122,6 +220,7 @@ export const createDashboardRouteRuntime = ({
       getDerivedRecomputeStatus,
       runDerivedRecompute,
       getNews: news.getNews,
+      getNewsContextBundle: news.getNewsContextBundle,
       ingestNews: news.ingestNews,
     },
   }

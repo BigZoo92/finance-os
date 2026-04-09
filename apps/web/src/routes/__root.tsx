@@ -117,11 +117,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="fr" className="dark">
       <head>
         <HeadContent />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: getPublicRuntimeEnvScript(),
-          }}
-        />
+        <script>{getPublicRuntimeEnvScript()}</script>
       </head>
       <body>
         <a

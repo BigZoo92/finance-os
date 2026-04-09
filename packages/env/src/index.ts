@@ -72,6 +72,20 @@ const toFailsoftSourceOrderEnv = (value: string | undefined) => {
   return parsed.length > 0 ? Array.from(new Set(parsed)) : defaultOrder
 }
 
+const toStringArrayEnv = (value: string | undefined, fallback: string[] = []) => {
+  const normalized = toOptionalEnv(value)
+  if (!normalized) {
+    return fallback
+  }
+
+  const parsed = normalized
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean)
+
+  return parsed.length > 0 ? parsed : fallback
+}
+
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '')
 
 const toDecodedBuffer = (value: string): Buffer | null => {
@@ -432,6 +446,85 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_AI_CONTEXT_BUNDLE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_MAX_PROVIDER_ITEMS_PER_RUN: z.coerce.number().int().positive().default(20),
+    NEWS_METADATA_FETCH_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_METADATA_FETCH_TIMEOUT_MS: z.coerce.number().int().positive().default(2500),
+    NEWS_METADATA_FETCH_MAX_BYTES: z.coerce.number().int().positive().default(131072),
+    NEWS_SCRAPER_USER_AGENT: z.string().min(1).optional(),
+    SEC_USER_AGENT: z.string().min(1).optional(),
+    NEWS_PROVIDER_HN_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_PROVIDER_HN_QUERY: z.string().default('finance OR markets OR inflation OR AI'),
+    NEWS_PROVIDER_GDELT_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_PROVIDER_GDELT_QUERY: z
+      .string()
+      .default('(finance OR inflation OR rates OR sanctions OR cybersecurity OR "artificial intelligence")'),
+    NEWS_PROVIDER_ECB_RSS_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_PROVIDER_ECB_RSS_FEED_URLS: z
+      .string()
+      .optional()
+      .transform(value =>
+        toStringArrayEnv(value, [
+          'https://www.ecb.europa.eu/rss/press.html',
+          'https://www.ecb.europa.eu/rss/statpress.html',
+          'https://www.ecb.europa.eu/rss/pub.html',
+          'https://www.ecb.europa.eu/rss/blog.html',
+        ])
+      ),
+    NEWS_PROVIDER_ECB_DATA_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    NEWS_PROVIDER_ECB_DATA_SERIES_KEYS: z
+      .string()
+      .optional()
+      .transform(value => toStringArrayEnv(value, ['EXR/D.USD.EUR.SP00.A'])),
+    NEWS_PROVIDER_FED_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_PROVIDER_FED_FEED_URLS: z
+      .string()
+      .optional()
+      .transform(value =>
+        toStringArrayEnv(value, [
+          'https://www.federalreserve.gov/feeds/press_monetary.xml',
+          'https://www.federalreserve.gov/feeds/press_all.xml',
+          'https://www.federalreserve.gov/feeds/speeches_and_testimony.xml',
+        ])
+      ),
+    NEWS_PROVIDER_SEC_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_PROVIDER_SEC_TICKERS: z
+      .string()
+      .optional()
+      .transform(value => toStringArrayEnv(value, ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA'])),
+    NEWS_PROVIDER_FRED_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    NEWS_PROVIDER_FRED_SERIES_IDS: z
+      .string()
+      .optional()
+      .transform(value => toStringArrayEnv(value, ['FEDFUNDS', 'CPIAUCSL', 'UNRATE', 'DGS10'])),
+    FRED_API_KEY: z.string().min(1).optional(),
     FAILSOFT_POLICY_ENABLED: z
       .string()
       .optional()
@@ -503,6 +596,7 @@ export const getApiEnv = () => {
   const webUrl = normalizeUrl(parsed.WEB_URL ?? parsed.WEB_ORIGIN ?? parsed.APP_URL)
   const appUrl = normalizeUrl(parsed.APP_URL ?? webUrl)
   const apiUrl = normalizeUrl(parsed.API_URL ?? `${appUrl}/api`)
+  const defaultNewsUserAgent = `finance-os-news/1.0 (+${appUrl})`
 
   const {
     AUTH_ADMIN_PASSWORD_HASH: _authAdminPasswordHash,
@@ -520,6 +614,8 @@ export const getApiEnv = () => {
     WEB_URL: webUrl,
     API_URL: apiUrl,
     WEB_ORIGIN: webUrl,
+    NEWS_SCRAPER_USER_AGENT: parsed.NEWS_SCRAPER_USER_AGENT ?? defaultNewsUserAgent,
+    SEC_USER_AGENT: parsed.SEC_USER_AGENT ?? parsed.NEWS_SCRAPER_USER_AGENT ?? defaultNewsUserAgent,
   }
 }
 
@@ -528,6 +624,8 @@ export const getWorkerEnv = () =>
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+    API_INTERNAL_URL: z.string().url('API_INTERNAL_URL must be a valid URL'),
+    PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     WORKER_HEARTBEAT_MS: z.coerce.number().int().positive().default(30000),
     POWENS_SYNC_INTERVAL_MS: z.coerce
       .number()
@@ -559,6 +657,11 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => toBooleanEnv(value)),
+    NEWS_AUTO_INGEST_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    NEWS_FETCH_INTERVAL_MS: z.coerce.number().int().positive().default(4 * 60 * 60 * 1000),
     SYNC_STATUS_PERSISTENCE_ENABLED: z
       .string()
       .optional()

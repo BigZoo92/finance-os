@@ -1,6 +1,6 @@
 # AGENTS.md - Finance-OS
 
-Last updated: 2026-04-06
+Last updated: 2026-04-09
 
 Use the nearest `AGENTS.md` before editing. Keep this root file small and durable; push local detail into nested `AGENTS.md`, `.agents/skills/`, and `docs/agentic/`.
 
@@ -47,6 +47,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - merge-on-green may only promote and merge an autopilot PR after real non-stub files land on the branch, all `.github/agent-stubs/**` files are gone from the PR diff, and the branch is up to date with green CI
   - failed CI on an autopilot implementation PR must be summarized back onto the PR thread so Codex sees the runner error instead of relying on partial local checks
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
+- When modifying the dashboard news feature (fetch, ingestion, cache, fallback, fixtures, schema, or UI wiring), update [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) in the same change.
 - Design system and frontend identity invariants:
   - Always consult `DESIGN.md` before modifying any UI component, layout, or visual styling.
   - Always consult `docs/frontend/design-system.md` before creating or modifying a shared component.
@@ -126,6 +127,7 @@ Comprehensive reference docs for agents and external chats (maintained by agents
 
 - [docs/context/STACK.md](docs/context/STACK.md) — Full technical stack, architecture graphs, CI/CD pipeline, deployment
 - [docs/context/FEATURES.md](docs/context/FEATURES.md) — All business features in detail (Powens, goals, transactions, news, etc.)
+- [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) — End-to-end news pipeline: provider, ingestion, cache, fail-soft, web consumption, tests, and known gaps
 - [docs/context/DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md) — Artistic direction, color palette, typography, motion, layout patterns
 - [docs/context/CONVENTIONS.md](docs/context/CONVENTIONS.md) — Best practices, coding conventions, review process, security rules
 - [docs/context/ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md) — All environment variables, feature flags, where to set them, how to generate

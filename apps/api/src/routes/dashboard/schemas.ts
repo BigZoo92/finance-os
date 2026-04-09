@@ -37,11 +37,25 @@ export const dashboardTransactionsQuerySchema = t.Object({
 export const dashboardNewsQuerySchema = t.Object({
   topic: t.Optional(t.String({ minLength: 1, maxLength: 32 })),
   source: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+  sourceType: t.Optional(t.String({ minLength: 1, maxLength: 32 })),
+  domain: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  eventType: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  minSeverity: t.Optional(t.Numeric({ minimum: 0, maximum: 100 })),
+  region: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  ticker: t.Optional(t.String({ minLength: 1, maxLength: 16 })),
+  sector: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+  direction: t.Optional(t.Union([t.Literal('risk'), t.Literal('opportunity'), t.Literal('mixed')])),
+  from: t.Optional(t.String({ format: 'date-time' })),
+  to: t.Optional(t.String({ format: 'date-time' })),
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 50 })),
 })
 
 export const dashboardNewsIngestBodySchema = t.Object({
   trigger: t.Optional(t.Union([t.Literal('manual'), t.Literal('scheduled')])),
+})
+
+export const dashboardNewsContextQuerySchema = t.Object({
+  range: t.Optional(t.Union([t.Literal('24h'), t.Literal('7d'), t.Literal('30d')])),
 })
 
 export const dashboardTransactionClassificationParamsSchema = t.Object({

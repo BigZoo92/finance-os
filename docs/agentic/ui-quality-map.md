@@ -4,7 +4,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 
 ## Primary UI Surfaces
 
-- Dashboard shell and major state handling: [../../apps/web/src/components/dashboard/app-shell.tsx](../../apps/web/src/components/dashboard/app-shell.tsx)
+- Dashboard shell and major state handling: [../../apps/web/src/routes/_app.tsx](../../apps/web/src/routes/_app.tsx)
 - Personal goals surface: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
 - Powens callback flow UI: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Shared UI exports: [../../packages/ui/src/components/index.ts](../../packages/ui/src/components/index.ts)

@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { env } from '../../../env'
-import { type DemoTransactionsScenario } from '../../../mocks/demo-scenario-library'
+import type { DemoTransactionsScenario } from '../../../mocks/demo-scenario-library'
 import { resolveDemoTransactionsFixture } from '../../../mocks/demo-transactions-fixture'
 import { getDashboardTransactionsMock } from '../../../mocks/transactions.mock'
 import { logApiEvent } from '../../../observability/logger'

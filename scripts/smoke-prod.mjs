@@ -10,7 +10,7 @@ const readArg = (name, fallback) => {
     return withEquals.slice(name.length + 1)
   }
 
-  const index = args.findIndex(arg => arg === name)
+  const index = args.indexOf(name)
   if (index >= 0) {
     return args[index + 1] ?? fallback
   }
@@ -113,11 +113,11 @@ if (!baseUrl) {
 }
 
 if (!VALID_AUTH_MODES.has(requestedAuthMode)) {
-  finalizeFailure(`Invalid auth mode \"${requestedAuthMode}\". Use demo, admin, or auto.`)
+  finalizeFailure(`Invalid auth mode "${requestedAuthMode}". Use demo, admin, or auto.`)
 }
 
 if (!VALID_SUMMARY_RANGES.has(summaryRange)) {
-  finalizeFailure(`Invalid summary range \"${summaryRange}\". Use 7d, 30d, or 90d.`)
+  finalizeFailure(`Invalid summary range "${summaryRange}". Use 7d, 30d, or 90d.`)
 }
 
 const withAuthHeaders = (headers = {}) => {

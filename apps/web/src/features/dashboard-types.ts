@@ -254,8 +254,138 @@ export type DashboardDerivedRecomputeActionError = {
   offline: boolean
 }
 
+export type DashboardNewsSignalCard = {
+  id: string
+  title: string
+  summary: string | null
+  contentSnippet: string | null
+  url: string
+  canonicalUrl: string | null
+  sourceName: string
+  sourceDomain: string | null
+  sourceType: 'media' | 'regulator' | 'central_bank' | 'filing' | 'macro_data' | 'company' | 'gov' | 'industry' | 'blog' | 'tech_forum'
+  topic: string
+  language: string
+  publishedAt: string
+  domains: string[]
+  categories: string[]
+  subcategories: string[]
+  eventType: string
+  severity: number
+  severityLabel: 'low' | 'medium' | 'high' | 'critical'
+  confidence: number
+  novelty: number
+  marketImpactScore: number
+  relevanceScore: number
+  direction: 'risk' | 'opportunity' | 'mixed'
+  riskFlags: string[]
+  opportunityFlags: string[]
+  affectedEntities: Array<{
+    name: string
+    type: string
+    role: 'primary' | 'affected' | 'reference'
+    confidence: number
+  }>
+  affectedTickers: string[]
+  affectedSectors: string[]
+  affectedThemes: string[]
+  transmissionHypotheses: Array<{
+    id: string
+    label: string
+    direction: 'risk' | 'opportunity' | 'mixed'
+    confidence: number
+  }>
+  whyItMatters: string[]
+  scoringReasons: string[]
+  metadataCard: {
+    title: string
+    description: string | null
+    canonicalUrl: string | null
+    imageUrl: string | null
+    siteName: string | null
+    displayUrl: string
+    faviconUrl: string | null
+    publishedAt: string | null
+    author: string | null
+    articleType: string | null
+  } | null
+  metadataFetchStatus: 'not_requested' | 'pending' | 'fetched' | 'failed' | 'skipped'
+  eventClusterId: string
+  provenance: {
+    sourceCount: number
+    providerCount: number
+    providers: string[]
+    sourceDomains: string[]
+  }
+  sources: Array<{
+    provider: string
+    providerArticleId: string
+    sourceName: string
+    sourceDomain: string | null
+    sourceType: string
+    publishedAt: string
+    providerUrl: string | null
+  }>
+}
+
+export type DashboardNewsProviderHealth = {
+  provider: string
+  label: string
+  enabled: boolean
+  status: 'healthy' | 'degraded' | 'failing' | 'idle'
+  lastSuccessAt: string | null
+  lastAttemptAt: string | null
+  lastFailureAt: string | null
+  lastErrorCode: string | null
+  lastErrorMessage: string | null
+  successCount: number
+  failureCount: number
+  skippedCount: number
+  lastFetchedCount: number
+  lastInsertedCount: number
+  lastMergedCount: number
+  cooldownUntil: string | null
+}
+
+export type DashboardNewsContextPreview = {
+  topSignals: Array<{
+    id: string
+    title: string
+    publishedAt: string
+    eventType: string
+    direction: 'risk' | 'opportunity' | 'mixed'
+    severity: number
+    confidence: number
+    novelty: number
+    marketImpactScore: number
+    relevanceScore: number
+    sourceCount: number
+    providerCount: number
+    affectedEntities: string[]
+    affectedSectors: string[]
+    affectedTickers: string[]
+    whyItMatters: string[]
+    supportingUrls: string[]
+  }>
+  mostImpactedSectors: Array<{ sector: string; score: number }>
+  mostImpactedEntities: Array<{ entity: string; score: number }>
+  contradictorySignals: Array<{
+    topic: string
+    bullishCount: number
+    bearishCount: number
+    signalIds: string[]
+  }>
+  causalHypotheses: string[]
+}
+
 export type DashboardNewsResponse = {
   source: 'demo_fixture' | 'cache'
+  dataset?: {
+    version: string
+    source: 'demo_fixture' | 'admin_live' | 'admin_fallback'
+    mode: 'demo' | 'admin'
+    isDemoData: boolean
+  }
   resilience: {
     domain: 'alerts' | 'news' | 'insights'
     status: 'ok' | 'degraded' | 'unavailable'
@@ -282,15 +412,26 @@ export type DashboardNewsResponse = {
     cacheHitRate: number
     dedupeDropRate: number
     providerFailureRate: number
+    lastFetchedCount: number | null
+    lastInsertedCount: number | null
+    lastMergedCount: number | null
   }
-  items: Array<{
-    id: string
+  filters: {
+    applied: Record<string, string | number>
+  }
+  providers: DashboardNewsProviderHealth[]
+  clusters: Array<{
+    clusterId: string
     title: string
-    summary: string | null
-    url: string
-    sourceName: string
-    topic: string
-    language: string
-    publishedAt: string
+    eventType: string
+    direction: 'risk' | 'opportunity' | 'mixed'
+    signalCount: number
+    sourceCount: number
+    latestPublishedAt: string
+    topDomains: string[]
+    topSectors: string[]
+    headlineIds: string[]
   }>
+  contextPreview: DashboardNewsContextPreview
+  items: DashboardNewsSignalCard[]
 }

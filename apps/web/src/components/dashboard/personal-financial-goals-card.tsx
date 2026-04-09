@@ -666,16 +666,18 @@ export function PersonalFinancialGoalsCard({
       </div>
 
       {editorState ? (
-        <div
-          className="fixed inset-0 z-50 bg-black/45 p-4 backdrop-blur-sm"
-          onClick={closeDrawer}
-        >
+        <div className="fixed inset-0 z-50 bg-black/45 p-4 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="Close goal editor"
+            className="absolute inset-0"
+            onClick={closeDrawer}
+          />
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="goal-editor-title"
-            className="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl"
-            onClick={event => event.stopPropagation()}
+            className="relative ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl"
           >
             <div className="border-b border-border/70 px-5 py-4">
               <div className="flex items-start justify-between gap-3">

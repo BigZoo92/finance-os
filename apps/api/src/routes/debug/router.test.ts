@@ -3,6 +3,22 @@ import { Elysia } from 'elysia'
 import { createDebugRoutes } from './router'
 import type { PowensRoutesDependencies } from '../integrations/powens/types'
 
+type DebugHealthResponse = {
+  ok: boolean
+  checks: {
+    database: {
+      status: string
+      latencyMs?: number
+      details?: string
+    }
+    redis: {
+      status: string
+      latencyMs?: number
+      details?: string
+    }
+  }
+}
+
 const createDebugTestApp = ({
   mode,
   dbExecute,
@@ -85,7 +101,7 @@ describe('createDebugRoutes', () => {
   it('returns explicit database and redis health checks', async () => {
     const app = createDebugTestApp({ mode: 'admin', hasInternalToken: true })
     const response = await app.handle(new Request('http://finance-os.local/debug/health'))
-    const payload = (await response.json()) as Record<string, any>
+    const payload = (await response.json()) as DebugHealthResponse
 
     expect(response.status).toBe(200)
     expect(payload.ok).toBe(true)
@@ -104,7 +120,7 @@ describe('createDebugRoutes', () => {
       },
     })
     const response = await app.handle(new Request('http://finance-os.local/debug/health'))
-    const payload = (await response.json()) as Record<string, any>
+    const payload = (await response.json()) as DebugHealthResponse
 
     expect(response.status).toBe(200)
     expect(payload.ok).toBe(false)

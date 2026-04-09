@@ -12,6 +12,7 @@ description: "Skill for the Dashboard area of finance-os. 93 symbols across 12 f
 - Working with code in `apps/`
 - Understanding how DashboardAppShell, handleBlockedSyncClick, logDigest work
 - Modifying dashboard-related functionality
+- News work now spans a structured signal platform: cache-only reads, multi-source ingestion, provider health, event clusters, and IA context preview. Cross-check `docs/context/NEWS-FETCH.md` before editing news paths.
 
 ## Key Files
 

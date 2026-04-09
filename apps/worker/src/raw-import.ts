@@ -8,7 +8,7 @@ import {
   derivePowensTransactionMerchant,
   derivePowensTransactionProviderObjectAt,
 } from '@finance-os/powens'
-import { schema } from '@finance-os/db'
+import type { schema } from '@finance-os/db'
 
 const SENSITIVE_PAYLOAD_KEYS = new Set([
   'access_token',
@@ -68,19 +68,6 @@ const stableSerialize = (value: unknown): string => {
 
 const buildPayloadChecksum = (payload: unknown) => {
   return createHash('sha256').update(stableSerialize(payload), 'utf8').digest('hex')
-}
-
-const toStringValue = (value: unknown) => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : null
-  }
-
-  if (typeof value === 'number' || typeof value === 'bigint') {
-    return String(value)
-  }
-
-  return null
 }
 
 const buildFallbackExternalObjectId = (payload: unknown) => {

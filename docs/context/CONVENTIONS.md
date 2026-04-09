@@ -1,6 +1,6 @@
 # Finance-OS -- Conventions & Bonnes Pratiques
 
-> **Derniere mise a jour** : 2026-04-08
+> **Derniere mise a jour** : 2026-04-09
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute convention ajoutee ou modifiee doit etre refletee ici.
 
@@ -24,7 +24,7 @@ Ces regles ne sont **jamais** negociables :
 - Une erreur provider ne bloque pas le rendu du dashboard
 - Donnees stale preferees a donnees manquantes
 - Messages de fallback explicites pour les etats degrades
-- Politique failsoft configurable : `live -> cache -> demo`
+- Politique failsoft configurable : ingestion live explicite, lecture cache -> demo
 
 ### 1.3 Privacy by design
 - **Aucun secret dans les variables `VITE_*`** (exposees au client)
@@ -86,6 +86,8 @@ Routes (HTTP) -> Domain (orchestration) -> Repositories (persistence) -> Service
 - **Domain** : logique metier pure, use cases, pas d'acces direct DB
 - **Repositories** : acces donnees, split demo/real
 - **Services** : integration providers externes
+- Pour le domaine news: `GET /dashboard/news` et `GET /dashboard/news/context` restent cache-only; seuls `POST /dashboard/news/ingest` et le scheduler worker touchent les providers live.
+- Les providers publics soumis a fair-access doivent recevoir un `User-Agent` explicite et des timeouts stricts; le scraping article se limite au `head` HTML.
 
 ### 3.2 Dependency injection
 Chaque module de routes suit ce pattern :

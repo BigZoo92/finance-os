@@ -37,8 +37,12 @@ export const detectTransactionGaps = ({
 
   const gaps: TransactionGap[] = []
   for (let index = 1; index < normalized.length; index += 1) {
-    const previous = normalized[index - 1]!
-    const current = normalized[index]!
+    const previous = normalized[index - 1]
+    const current = normalized[index]
+    if (!previous || !current) {
+      continue
+    }
+
     const diffDays = current.dayValue - previous.dayValue
     if (diffDays <= thresholdDays) {
       continue

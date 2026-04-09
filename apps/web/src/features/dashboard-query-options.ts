@@ -29,8 +29,38 @@ export const dashboardQueryKeys = {
   all: ['dashboard'] as const,
   summary: (range: DashboardRange) => [...dashboardQueryKeys.all, 'summary', range] as const,
   derivedRecomputeStatus: () => [...dashboardQueryKeys.all, 'derived-recompute'] as const,
-  news: (params?: { topic?: string; source?: string; limit?: number }) =>
-    [...dashboardQueryKeys.all, 'news', params?.topic ?? null, params?.source ?? null, params?.limit ?? 20] as const,
+  news: (params?: {
+    topic?: string
+    source?: string
+    sourceType?: string
+    domain?: string
+    eventType?: string
+    minSeverity?: number
+    region?: string
+    ticker?: string
+    sector?: string
+    direction?: 'risk' | 'opportunity' | 'mixed'
+    from?: string
+    to?: string
+    limit?: number
+  }) =>
+    [
+      ...dashboardQueryKeys.all,
+      'news',
+      params?.topic ?? null,
+      params?.source ?? null,
+      params?.sourceType ?? null,
+      params?.domain ?? null,
+      params?.eventType ?? null,
+      params?.minSeverity ?? null,
+      params?.region ?? null,
+      params?.ticker ?? null,
+      params?.sector ?? null,
+      params?.direction ?? null,
+      params?.from ?? null,
+      params?.to ?? null,
+      params?.limit ?? 20,
+    ] as const,
   advisor: (range: DashboardRange) => [...dashboardQueryKeys.all, 'advisor', range] as const,
   transactions: (params: {
     range: DashboardRange
@@ -58,16 +88,46 @@ export const dashboardNewsQueryOptionsWithMode = ({
   mode,
   topic,
   source,
+  sourceType,
+  domain,
+  eventType,
+  minSeverity,
+  region,
+  ticker,
+  sector,
+  direction,
+  from,
+  to,
   limit = 20,
 }: {
   mode?: AuthMode
   topic?: string
   source?: string
+  sourceType?: string
+  domain?: string
+  eventType?: string
+  minSeverity?: number
+  region?: string
+  ticker?: string
+  sector?: string
+  direction?: 'risk' | 'opportunity' | 'mixed'
+  from?: string
+  to?: string
   limit?: number
 }) => {
   const keyParams = {
     ...(topic ? { topic } : {}),
     ...(source ? { source } : {}),
+    ...(sourceType ? { sourceType } : {}),
+    ...(domain ? { domain } : {}),
+    ...(eventType ? { eventType } : {}),
+    ...(minSeverity !== undefined ? { minSeverity } : {}),
+    ...(region ? { region } : {}),
+    ...(ticker ? { ticker } : {}),
+    ...(sector ? { sector } : {}),
+    ...(direction ? { direction } : {}),
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
     limit,
   }
 

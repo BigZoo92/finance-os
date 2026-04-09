@@ -92,24 +92,35 @@ export function D3Sparkline({
     )
     animatedRef.current = true
     return () => anim.cancel()
-  }, [animate, line])
+  }, [animate])
 
-  const handleTouch = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+  const setClosestHoveredPoint = useCallback((clientX: number) => {
     if (!showTooltip || !points.length || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const touch = e.touches[0]
-    if (!touch) return
-    const touchX = touch.clientX - rect.left - margin.left
+    const pointerX = clientX - rect.left - margin.left
     let closest = 0
     let minDist = Infinity
     for (let i = 0; i < points.length; i++) {
       const pt = points[i]
       if (!pt) continue
-      const dist = Math.abs(pt.x - touchX)
-      if (dist < minDist) { minDist = dist; closest = i }
+      const dist = Math.abs(pt.x - pointerX)
+      if (dist < minDist) {
+        minDist = dist
+        closest = i
+      }
     }
     setHoveredIdx(closest)
   }, [points, showTooltip, margin.left])
+
+  const handleTouch = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+    const touch = e.touches[0]
+    if (!touch) return
+    setClosestHoveredPoint(touch.clientX)
+  }, [setClosestHoveredPoint])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    setClosestHoveredPoint(e.clientX)
+  }, [setClosestHoveredPoint])
 
   if (!data.length || !line || !area || width <= 0) {
     return (
@@ -132,7 +143,11 @@ export function D3Sparkline({
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
         height={height}
+        role="img"
+        aria-label="Sparkline trend chart"
         className="overflow-visible touch-none"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIdx(null)}
         onTouchMove={handleTouch}
         onTouchEnd={() => setHoveredIdx(null)}
       >
@@ -166,7 +181,7 @@ export function D3Sparkline({
 
           {showDots && points.map((pt, i) => (
             <circle
-              key={i}
+              key={`${pt.date}-${pt.value}`}
               cx={pt.x}
               cy={pt.y}
               r={hoveredIdx === i ? 4 : 2}
@@ -182,20 +197,6 @@ export function D3Sparkline({
               <circle cx={hovered.x} cy={hovered.y} r={5} fill="var(--background)" stroke={color} strokeWidth={2} />
             </>
           )}
-
-          {showTooltip && points.map((pt, i) => (
-            <rect
-              key={`h-${i}`}
-              x={pt.x - innerW / data.length / 2}
-              y={0}
-              width={innerW / data.length}
-              height={innerH}
-              fill="transparent"
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              className="cursor-crosshair"
-            />
-          ))}
         </g>
       </svg>
 
@@ -242,7 +243,12 @@ export function MiniSparkline({
   const trendColor = last !== undefined && first !== undefined && last >= first ? 'var(--positive)' : 'var(--negative)'
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className={`inline-block ${className ?? ''}`} style={{ width, height }}>
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      aria-hidden="true"
+      className={`inline-block ${className ?? ''}`}
+      style={{ width, height }}
+    >
       <path d={path} fill="none" stroke={color === 'auto' ? trendColor : color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )

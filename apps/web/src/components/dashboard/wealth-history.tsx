@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
 import type { DashboardRange, DashboardSummaryResponse } from '@/features/dashboard-types'
 
@@ -270,6 +270,35 @@ export function WealthHistory({
     change: summary.change,
     periodLabel: currentPeriodLabel,
   })
+  const handleChartMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
+    if (points.length === 0) {
+      return
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (rect.width <= 0) {
+      return
+    }
+
+    const relativeX = ((event.clientX - rect.left) / rect.width) * SVG_WIDTH
+    let closestIndex = 0
+    let minDistance = Number.POSITIVE_INFINITY
+
+    for (let index = 0; index < points.length; index += 1) {
+      const point = points[index]
+      if (!point) {
+        continue
+      }
+
+      const distance = Math.abs(point.x - relativeX)
+      if (distance < minDistance) {
+        minDistance = distance
+        closestIndex = index
+      }
+    }
+
+    setActiveIndex(closestIndex)
+  }, [points])
 
   return (
     <Card className="xl:col-span-2">
@@ -387,6 +416,7 @@ export function WealthHistory({
                 aria-label={`Evolution du patrimoine sur ${RANGE_LABEL[range].toLowerCase()}`}
                 className="h-28 w-full"
                 preserveAspectRatio="none"
+                onMouseMove={handleChartMouseMove}
                 onMouseLeave={() => setActiveIndex(null)}
               >
                 <path
@@ -408,9 +438,6 @@ export function WealthHistory({
                       fill={active ? 'var(--color-chart-2)' : 'hsl(var(--background))'}
                       stroke="var(--color-chart-2)"
                       strokeWidth={active ? 2 : 1.5}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onFocus={() => setActiveIndex(index)}
-                      onBlur={() => setActiveIndex(null)}
                     >
                       <title>
                         {formatDay(point.snapshot.date)} · {formatCompactMoney(point.snapshot.balance)}

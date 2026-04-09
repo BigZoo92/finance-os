@@ -20,7 +20,6 @@ import { createDebugRoutes } from './routes/debug/router'
 import { registerSystemRoutes } from './routes/system'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createEnrichmentRoutes } from './routes/enrichment/router'
-import { createNotificationsRoutes } from './routes/notifications/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -238,7 +237,7 @@ const assertRequiredProductionRoutes = ({
   throw new Error(`Missing required API routes: ${missingRoutes.join(', ')}`)
 }
 
-const registerAppRoutes = (app: Elysia<any>) => {
+const registerAppRoutes = (app: Elysia) => {
   const withFeatureRoutes = app
     .use(
       createAuthRoutes({
@@ -256,6 +255,28 @@ const registerAppRoutes = (app: Elysia<any>) => {
         failsoftPolicyEnabled: env.FAILSOFT_POLICY_ENABLED,
         failsoftSourceOrder: env.FAILSOFT_SOURCE_ORDER,
         failsoftNewsEnabled: env.FAILSOFT_NEWS_ENABLED,
+        aiContextBundleEnabled: env.NEWS_AI_CONTEXT_BUNDLE_ENABLED,
+        maxNewsItemsPerProvider: env.NEWS_MAX_PROVIDER_ITEMS_PER_RUN,
+        metadataFetchEnabled: env.NEWS_METADATA_FETCH_ENABLED,
+        metadataFetchTimeoutMs: env.NEWS_METADATA_FETCH_TIMEOUT_MS,
+        metadataFetchMaxBytes: env.NEWS_METADATA_FETCH_MAX_BYTES,
+        metadataFetchUserAgent: env.NEWS_SCRAPER_USER_AGENT,
+        newsProviderHnEnabled: env.NEWS_PROVIDER_HN_ENABLED,
+        newsProviderHnQuery: env.NEWS_PROVIDER_HN_QUERY,
+        newsProviderGdeltEnabled: env.NEWS_PROVIDER_GDELT_ENABLED,
+        newsProviderGdeltQuery: env.NEWS_PROVIDER_GDELT_QUERY,
+        newsProviderEcbRssEnabled: env.NEWS_PROVIDER_ECB_RSS_ENABLED,
+        newsProviderEcbRssFeedUrls: env.NEWS_PROVIDER_ECB_RSS_FEED_URLS,
+        newsProviderEcbDataEnabled: env.NEWS_PROVIDER_ECB_DATA_ENABLED,
+        newsProviderEcbDataSeriesKeys: env.NEWS_PROVIDER_ECB_DATA_SERIES_KEYS,
+        newsProviderFedEnabled: env.NEWS_PROVIDER_FED_ENABLED,
+        newsProviderFedFeedUrls: env.NEWS_PROVIDER_FED_FEED_URLS,
+        newsProviderSecEnabled: env.NEWS_PROVIDER_SEC_ENABLED,
+        newsProviderSecUserAgent: env.SEC_USER_AGENT,
+        newsProviderSecTickers: env.NEWS_PROVIDER_SEC_TICKERS,
+        newsProviderFredEnabled: env.NEWS_PROVIDER_FRED_ENABLED,
+        newsProviderFredApiKey: env.FRED_API_KEY,
+        newsProviderFredSeriesIds: env.NEWS_PROVIDER_FRED_SERIES_IDS,
       })
     )
     .use(
@@ -279,7 +300,7 @@ const registerAppRoutes = (app: Elysia<any>) => {
       })
     )
 
-  const withSystemRoutes = registerSystemRoutes(withFeatureRoutes, env)
+  const withSystemRoutes = registerSystemRoutes(withFeatureRoutes as unknown as Elysia, env)
 
   return withSystemRoutes.get('/db/health', async () => {
     const result = await sql<{ now: string }[]>`
@@ -477,8 +498,8 @@ const app = new Elysia()
       requestId,
     })
   })
-  .use(registerAppRoutes(new Elysia()))
-  .use(registerAppRoutes(new Elysia({ prefix: '/api' })))
+  .use(registerAppRoutes(new Elysia() as unknown as Elysia))
+  .use(registerAppRoutes(new Elysia({ prefix: '/api' }) as unknown as Elysia))
   .get('/__routes', ({ request, set }) => {
     if (!canAccessRoutesDebug(request)) {
       set.status = 403
@@ -561,7 +582,7 @@ const app = new Elysia()
     let status = 500
     let responseCode = 'INTERNAL_ERROR'
     let message = 'Internal server error'
-    let details: unknown = undefined
+    let details: unknown
 
     if (isDemoModeForbiddenError(context.error)) {
       status = 403

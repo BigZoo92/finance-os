@@ -10,7 +10,7 @@ const getArg = (name, fallback) => {
     return withEquals.slice(name.length + 1)
   }
 
-  const index = args.findIndex(arg => arg === name)
+  const index = args.indexOf(name)
   if (index >= 0) {
     return args[index + 1] ?? fallback
   }

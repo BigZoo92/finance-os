@@ -8,7 +8,6 @@ import type {
   ApiDb,
   DashboardDerivedRecomputeRepository,
   DashboardDerivedRecomputeRowCounts,
-  DashboardDerivedRecomputeRunRow,
 } from '../types'
 
 const RECOMPUTE_LOCK_NAMESPACE = 240326

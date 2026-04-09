@@ -143,8 +143,14 @@ export const detectRecurringCommitmentSuggestions = (input: {
     const dayDiffs: number[] = []
 
     for (let index = 1; index < sortedTransactions.length; index += 1) {
-      const previousDay = toEpochDay(sortedTransactions[index - 1]!.bookingDate)
-      const currentDay = toEpochDay(sortedTransactions[index]!.bookingDate)
+      const previousTransaction = sortedTransactions[index - 1]
+      const currentTransaction = sortedTransactions[index]
+      if (!previousTransaction || !currentTransaction) {
+        continue
+      }
+
+      const previousDay = toEpochDay(previousTransaction.bookingDate)
+      const currentDay = toEpochDay(currentTransaction.bookingDate)
       const diff = currentDay - previousDay
 
       if (Number.isFinite(diff) && diff > 0) {

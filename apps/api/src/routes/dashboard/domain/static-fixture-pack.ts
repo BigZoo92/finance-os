@@ -1,10 +1,10 @@
 import type { DashboardNewsResponse } from '../types'
 
-export const DASHBOARD_STATIC_FIXTURE_PACK_VERSION = 'dashboard-fixture-pack:2026-04-06'
+export const DASHBOARD_STATIC_FIXTURE_PACK_VERSION = 'dashboard-fixture-pack:2026-04-09'
 
 export type DashboardFixtureDomain = 'alerts' | 'news' | 'insights'
 
-const FIXTURE_TIMESTAMP = '2026-04-06T09:00:00.000Z'
+const FIXTURE_TIMESTAMP = '2026-04-09T09:00:00.000Z'
 
 export const DASHBOARD_STATIC_FIXTURE_META = {
   version: DASHBOARD_STATIC_FIXTURE_PACK_VERSION,
@@ -12,58 +12,303 @@ export const DASHBOARD_STATIC_FIXTURE_META = {
   domains: ['alerts', 'news', 'insights'] as const,
 }
 
-export const getDashboardNewsFixture = (requestId: string): DashboardNewsResponse => ({
-  source: 'demo_fixture',
-  resilience: {
-    domain: 'news',
-    status: 'ok',
-    source: 'demo',
-    requestId,
-    reasonCode: null,
-    policy: {
-      enabled: true,
-      sourceOrder: ['demo'],
-    },
-    slo: {
-      degradedRate: 0,
-      hardFailRate: 0,
-      staleAgeSeconds: null,
-    },
-  },
-  dataset: {
-    version: DASHBOARD_STATIC_FIXTURE_META.version,
-    source: 'demo_fixture',
-    mode: 'demo',
-    isDemoData: true,
-  },
-  lastUpdatedAt: FIXTURE_TIMESTAMP,
-  staleCache: false,
-  providerError: null,
-  metrics: {
-    cacheHitRate: 1,
-    dedupeDropRate: 0,
-    providerFailureRate: 0,
-  },
-  items: [
+export const getDashboardNewsFixture = (requestId: string): DashboardNewsResponse => {
+  const items: DashboardNewsResponse['items'] = [
     {
       id: 'fixture-news-1',
-      title: 'Diversified ETFs hold range while inflation cools',
-      summary: 'Broad-market ETFs stayed resilient as investors priced a gradual policy path.',
+      title: 'ECB blog highlights slower inflation impulse across the euro area',
+      summary: 'A softer price pulse and weaker industrial demand reinforce a more data-dependent policy path.',
+      contentSnippet: 'The update points to a cooler inflation impulse with uneven demand conditions across sectors.',
       url: 'https://example.com/fixture-news-1',
-      sourceName: 'Finance-OS Fixture Wire',
-      topic: 'etf',
+      canonicalUrl: 'https://example.com/fixture-news-1',
+      sourceName: 'ECB blog',
+      sourceDomain: 'ecb.europa.eu',
+      sourceType: 'central_bank',
+      topic: 'macroeconomy',
       language: 'en',
-      publishedAt: '2026-04-06T07:40:00.000Z',
+      publishedAt: '2026-04-09T07:40:00.000Z',
+      domains: ['macroeconomy', 'central_banks', 'monetary_policy'],
+      categories: ['macro'],
+      subcategories: ['central-bank'],
+      eventType: 'policy_speech',
+      severity: 72,
+      severityLabel: 'high',
+      confidence: 90,
+      novelty: 61,
+      marketImpactScore: 74,
+      relevanceScore: 86,
+      direction: 'mixed',
+      riskFlags: ['inflation_risk', 'policy_risk'],
+      opportunityFlags: ['rate_relief'],
+      affectedEntities: [
+        {
+          name: 'European Central Bank',
+          type: 'institution',
+          role: 'primary',
+          confidence: 90,
+        },
+      ],
+      affectedTickers: [],
+      affectedSectors: ['Financials', 'Real estate'],
+      affectedThemes: ['inflation', 'rates'],
+      transmissionHypotheses: [
+        {
+          id: 'rates-repricing',
+          label: 'Rate path repricing can move duration, FX and growth expectations.',
+          direction: 'mixed',
+          confidence: 82,
+        },
+      ],
+      whyItMatters: [
+        'Central-bank communication can move rates, FX and duration-sensitive assets quickly.',
+      ],
+      scoringReasons: ['macro policy relevance', 'high-sensitivity event type'],
+      metadataCard: {
+        title: 'ECB blog highlights slower inflation impulse across the euro area',
+        description: 'A softer inflation pulse can reset rate expectations and growth sensitivity.',
+        canonicalUrl: 'https://example.com/fixture-news-1',
+        imageUrl: null,
+        siteName: 'ECB',
+        displayUrl: 'example.com',
+        faviconUrl: null,
+        publishedAt: '2026-04-09T07:40:00.000Z',
+        author: null,
+        articleType: 'Article',
+      },
+      metadataFetchStatus: 'fetched',
+      eventClusterId: 'fixture-cluster-macro',
+      provenance: {
+        sourceCount: 1,
+        providerCount: 1,
+        providers: ['ecb_rss'],
+        sourceDomains: ['ecb.europa.eu'],
+      },
+      sources: [
+        {
+          provider: 'ecb_rss',
+          providerArticleId: 'fixture-news-1',
+          sourceName: 'ECB blog',
+          sourceDomain: 'ecb.europa.eu',
+          sourceType: 'central_bank',
+          publishedAt: '2026-04-09T07:40:00.000Z',
+          providerUrl: 'https://example.com/fixture-news-1',
+        },
+      ],
     },
     {
       id: 'fixture-news-2',
-      title: 'Blue-chip tech leads low-volatility session',
-      summary: 'Large-cap technology names outperformed with stable breadth and lower dispersion.',
+      title: 'Anthropic ships a security-focused model release for enterprise workflows',
+      summary: 'The launch could pressure pricing across AI tooling while lifting enterprise automation demand.',
+      contentSnippet: 'New controls and workflow integrations increase relevance for cyber and cloud vendors.',
       url: 'https://example.com/fixture-news-2',
+      canonicalUrl: 'https://example.com/fixture-news-2',
       sourceName: 'Finance-OS Fixture Wire',
-      topic: 'stocks',
+      sourceDomain: 'example.com',
+      sourceType: 'media',
+      topic: 'ai',
       language: 'en',
-      publishedAt: '2026-04-06T06:25:00.000Z',
+      publishedAt: '2026-04-09T06:10:00.000Z',
+      domains: ['technology', 'ai', 'cybersecurity', 'model_releases'],
+      categories: ['technology'],
+      subcategories: ['ai', 'cybersecurity'],
+      eventType: 'model_release',
+      severity: 65,
+      severityLabel: 'high',
+      confidence: 68,
+      novelty: 79,
+      marketImpactScore: 69,
+      relevanceScore: 81,
+      direction: 'opportunity',
+      riskFlags: ['execution_risk'],
+      opportunityFlags: ['innovation_upside', 'productivity_upside'],
+      affectedEntities: [
+        {
+          name: 'Anthropic',
+          type: 'company',
+          role: 'primary',
+          confidence: 88,
+        },
+        {
+          name: 'Microsoft',
+          type: 'company',
+          role: 'affected',
+          confidence: 76,
+        },
+      ],
+      affectedTickers: ['MSFT'],
+      affectedSectors: ['AI software', 'Cybersecurity', 'Cloud software'],
+      affectedThemes: ['ai', 'cyber'],
+      transmissionHypotheses: [
+        {
+          id: 'competitive-repricing',
+          label: 'New product capabilities can shift pricing power and market-share assumptions.',
+          direction: 'opportunity',
+          confidence: 74,
+        },
+      ],
+      whyItMatters: [
+        'Innovation catalysts can pull forward productivity and market-share assumptions.',
+        'Likely spillover sectors: AI software, Cybersecurity, Cloud software.',
+      ],
+      scoringReasons: ['technology regime shift relevance', 'multi-sector spillover'],
+      metadataCard: {
+        title: 'Anthropic ships a security-focused model release for enterprise workflows',
+        description: 'A product launch with cross-sector relevance across cloud, AI and cyber vendors.',
+        canonicalUrl: 'https://example.com/fixture-news-2',
+        imageUrl: null,
+        siteName: 'Finance-OS Fixture Wire',
+        displayUrl: 'example.com',
+        faviconUrl: null,
+        publishedAt: '2026-04-09T06:10:00.000Z',
+        author: null,
+        articleType: 'Article',
+      },
+      metadataFetchStatus: 'fetched',
+      eventClusterId: 'fixture-cluster-ai',
+      provenance: {
+        sourceCount: 1,
+        providerCount: 1,
+        providers: ['gdelt_doc'],
+        sourceDomains: ['example.com'],
+      },
+      sources: [
+        {
+          provider: 'gdelt_doc',
+          providerArticleId: 'fixture-news-2',
+          sourceName: 'Finance-OS Fixture Wire',
+          sourceDomain: 'example.com',
+          sourceType: 'media',
+          publishedAt: '2026-04-09T06:10:00.000Z',
+          providerUrl: 'https://example.com/fixture-news-2',
+        },
+      ],
     },
-  ],
-})
+  ]
+  const macroItem = items[0]
+  const aiItem = items[1]
+
+  if (!macroItem || !aiItem) {
+    throw new Error('Dashboard news fixture is misconfigured')
+  }
+
+  return {
+    source: 'demo_fixture',
+    resilience: {
+      domain: 'news',
+      status: 'ok',
+      source: 'demo',
+      requestId,
+      reasonCode: null,
+      policy: {
+        enabled: true,
+        sourceOrder: ['demo'],
+      },
+      slo: {
+        degradedRate: 0,
+        hardFailRate: 0,
+        staleAgeSeconds: null,
+      },
+    },
+    dataset: {
+      version: DASHBOARD_STATIC_FIXTURE_META.version,
+      source: 'demo_fixture',
+      mode: 'demo',
+      isDemoData: true,
+    },
+    lastUpdatedAt: FIXTURE_TIMESTAMP,
+    staleCache: false,
+    providerError: null,
+    metrics: {
+      cacheHitRate: 1,
+      dedupeDropRate: 0,
+      providerFailureRate: 0,
+      lastFetchedCount: items.length,
+      lastInsertedCount: items.length,
+      lastMergedCount: 0,
+    },
+    filters: {
+      applied: {},
+    },
+    providers: [
+      {
+        provider: 'ecb_rss',
+        label: 'ECB RSS',
+        enabled: true,
+        status: 'healthy',
+        lastSuccessAt: FIXTURE_TIMESTAMP,
+        lastAttemptAt: FIXTURE_TIMESTAMP,
+        lastFailureAt: null,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        successCount: 1,
+        failureCount: 0,
+        skippedCount: 0,
+        lastFetchedCount: 1,
+        lastInsertedCount: 1,
+        lastMergedCount: 0,
+        cooldownUntil: null,
+      },
+    ],
+    clusters: [
+      {
+        clusterId: 'fixture-cluster-macro',
+        title: macroItem.title,
+        eventType: macroItem.eventType,
+        direction: macroItem.direction,
+        signalCount: 1,
+        sourceCount: 1,
+        latestPublishedAt: macroItem.publishedAt,
+        topDomains: macroItem.domains,
+        topSectors: macroItem.affectedSectors,
+        headlineIds: [macroItem.id],
+      },
+      {
+        clusterId: 'fixture-cluster-ai',
+        title: aiItem.title,
+        eventType: aiItem.eventType,
+        direction: aiItem.direction,
+        signalCount: 1,
+        sourceCount: 1,
+        latestPublishedAt: aiItem.publishedAt,
+        topDomains: aiItem.domains,
+        topSectors: aiItem.affectedSectors,
+        headlineIds: [aiItem.id],
+      },
+    ],
+    contextPreview: {
+      topSignals: items.map(item => ({
+        id: item.id,
+        title: item.title,
+        publishedAt: item.publishedAt,
+        eventType: item.eventType,
+        direction: item.direction,
+        severity: item.severity,
+        confidence: item.confidence,
+        novelty: item.novelty,
+        marketImpactScore: item.marketImpactScore,
+        relevanceScore: item.relevanceScore,
+        sourceCount: item.provenance.sourceCount,
+        providerCount: item.provenance.providerCount,
+        affectedEntities: item.affectedEntities.map(entity => entity.name),
+        affectedSectors: item.affectedSectors,
+        affectedTickers: item.affectedTickers,
+        whyItMatters: item.whyItMatters,
+        supportingUrls: item.sources.map(source => source.providerUrl).filter((value): value is string => Boolean(value)),
+      })),
+      mostImpactedSectors: [
+        { sector: 'AI software', score: 81 },
+        { sector: 'Financials', score: 74 },
+      ],
+      mostImpactedEntities: [
+        { entity: 'European Central Bank', score: 74 },
+        { entity: 'Anthropic', score: 69 },
+      ],
+      contradictorySignals: [],
+      causalHypotheses: [
+        'Rate path repricing can move duration, FX and growth expectations.',
+        'New product capabilities can shift pricing power and market-share assumptions.',
+      ],
+    },
+    items,
+  }
+}

@@ -1,6 +1,6 @@
 # Finance-OS -- Variables d'environnement & Feature Flags
 
-> **Derniere mise a jour** : 2026-04-08
+> **Derniere mise a jour** : 2026-04-09
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle variable ajoutee.
 
@@ -39,7 +39,7 @@
 | `API_HOST` | `0.0.0.0` | Dokploy | API | Binding API |
 | `API_PORT` | `3001` | Dokploy | API | Port API |
 | `API_URL` | `http://127.0.0.1:3001` | Local | -- | URL API (dev) |
-| `API_INTERNAL_URL` | `http://finance-os-api:3001` | Dokploy | Web (SSR) | URL interne API pour proxy Nitro |
+| `API_INTERNAL_URL` | `http://finance-os-api:3001` | Dokploy | Web (SSR), Worker | URL interne API pour proxy Nitro et appels internes worker |
 | `APP_URL` | -- | Dokploy | API | URL publique de l'app |
 | `WEB_URL` | = `APP_URL` | Dokploy | API | URL du serveur web |
 | `WEB_ORIGIN` | = `WEB_URL` | Dokploy | API (CORS) | Origin web pour CORS |
@@ -145,6 +145,8 @@
 | `WORKER_HEALTHCHECK_FILE` | `/tmp/worker-heartbeat` | Dokploy | Worker | Fichier heartbeat pour liveness k8s |
 | `WORKER_HEALTHCHECK_MAX_AGE_MS` | `120000` | Dokploy | Worker | Age max heartbeat (ms) |
 | `WORKER_AUTO_SYNC_ENABLED` | `false` | Dokploy | Worker | Activer auto-sync scheduler |
+| `NEWS_AUTO_INGEST_ENABLED` | `true` | Dokploy | Worker | Activer le scheduler d'ingestion news |
+| `NEWS_FETCH_INTERVAL_MS` | `14400000` | Dokploy | Worker | Intervalle du scheduler news (4h par defaut) |
 
 ---
 
@@ -163,10 +165,46 @@
 | `ENRICHMENT_BULK_TRIAGE_ENABLED` | `true` | Dokploy | API | Bulk triage enrichment |
 | `EXTERNAL_INTEGRATIONS_SAFE_MODE` | `false` | Dokploy | API, Worker | **Kill-switch** : desactive toutes les integrations Powens |
 | `LIVE_NEWS_INGESTION_ENABLED` | `true` | Dokploy | API | Ingestion news live |
+| `NEWS_AI_CONTEXT_BUNDLE_ENABLED` | `true` | Dokploy | API | Expose le bundle de contexte IA cache-only |
+| `NEWS_MAX_PROVIDER_ITEMS_PER_RUN` | `20` | Dokploy | API | Cap par provider et par run |
+| `NEWS_METADATA_FETCH_ENABLED` | `true` | Dokploy | API | Active le scraping de metadata article |
+| `NEWS_METADATA_FETCH_TIMEOUT_MS` | `2500` | Dokploy | API | Timeout du scraping metadata |
+| `NEWS_METADATA_FETCH_MAX_BYTES` | `131072` | Dokploy | API | Taille max lue pour le head HTML |
+| `NEWS_SCRAPER_USER_AGENT` | `finance-os-news/1.0 (+APP_URL)` | Dokploy, Local | API | User-Agent pour metadata scraping |
+| `SEC_USER_AGENT` | `= NEWS_SCRAPER_USER_AGENT` | Dokploy, Local | API | User-Agent explicite pour SEC / data.sec.gov |
+| `DASHBOARD_NEWS_FORCE_FIXTURE_FALLBACK` | `false` | Dokploy, Local | API | Kill-switch debug : force `GET /dashboard/news` admin a servir le fixture pack (`admin_fallback`) ; lu directement via `process.env` |
 
 ---
 
-## 11. Failsoft Policy
+## 11. News providers
+
+| Variable | Default | Ou la definir | Consommateur | Description |
+|---|---|---|---|---|
+| `NEWS_PROVIDER_HN_ENABLED` | `true` | Dokploy, Local | API | Active Hacker News Algolia |
+| `NEWS_PROVIDER_HN_QUERY` | `finance OR markets OR inflation OR AI` | Dokploy, Local | API | Requete HN |
+| `NEWS_PROVIDER_GDELT_ENABLED` | `true` | Dokploy, Local | API | Active GDELT DOC 2.0 |
+| `NEWS_PROVIDER_GDELT_QUERY` | `(finance OR inflation OR rates OR sanctions OR cybersecurity OR "artificial intelligence")` | Dokploy, Local | API | Requete GDELT |
+| `NEWS_PROVIDER_ECB_RSS_ENABLED` | `true` | Dokploy, Local | API | Active les feeds ECB RSS |
+| `NEWS_PROVIDER_ECB_RSS_FEED_URLS` | feeds ECB par defaut | Dokploy, Local | API | Liste CSV des feeds RSS ECB |
+| `NEWS_PROVIDER_ECB_DATA_ENABLED` | `false` | Dokploy, Local | API | Active ECB Data Portal |
+| `NEWS_PROVIDER_ECB_DATA_SERIES_KEYS` | `EXR/D.USD.EUR.SP00.A` | Dokploy, Local | API | Liste CSV des series ECB |
+| `NEWS_PROVIDER_FED_ENABLED` | `true` | Dokploy, Local | API | Active Federal Reserve RSS |
+| `NEWS_PROVIDER_FED_FEED_URLS` | feeds Fed par defaut | Dokploy, Local | API | Liste CSV des feeds Fed |
+| `NEWS_PROVIDER_SEC_ENABLED` | `true` | Dokploy, Local | API | Active SEC EDGAR / data.sec.gov |
+| `NEWS_PROVIDER_SEC_TICKERS` | `AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA` | Dokploy, Local | API | Watchlist ticker SEC |
+| `NEWS_PROVIDER_FRED_ENABLED` | `false` | Dokploy, Local | API | Active FRED |
+| `NEWS_PROVIDER_FRED_SERIES_IDS` | `FEDFUNDS,CPIAUCSL,UNRATE,DGS10` | Dokploy, Local | API | Liste CSV des series FRED |
+| `FRED_API_KEY` | -- | Dokploy, Local | API | Cle API FRED, requise si provider active |
+
+Notes:
+
+- `FRED_API_KEY` est un secret.
+- `SEC_USER_AGENT` doit etre defini avec une vraie signature produit/contact en prod.
+- `NEWS_PROVIDER_ECB_DATA_ENABLED` et `NEWS_PROVIDER_FRED_ENABLED` restent desactives par defaut pour garder un cout reseau raisonnable.
+
+---
+
+## 12. Failsoft Policy
 
 | Flag | Default | Ou la definir | Consommateur | Description |
 |---|---|---|---|---|
@@ -178,7 +216,7 @@
 
 ---
 
-## 12. Feature Flags (Frontend / Vite)
+## 13. Feature Flags (Frontend / Vite)
 
 > **Rappel** : les variables `VITE_*` sont exposees au client. Ne JAMAIS y mettre de secret.
 
@@ -200,7 +238,7 @@
 
 ---
 
-## 13. Push Notifications
+## 14. Push Notifications
 
 | Variable | Default | Ou la definir | Consommateur | Sensible | Comment generer |
 |---|---|---|---|---|---|
@@ -212,7 +250,7 @@
 
 ---
 
-## 14. Monitoring & Alertes (ops-alerts sidecar)
+## 15. Monitoring & Alertes (ops-alerts sidecar)
 
 | Variable | Default | Ou la definir | Description |
 |---|---|---|---|
@@ -233,7 +271,7 @@
 
 ---
 
-## 15. Docker Build (arguments de build)
+## 16. Docker Build (arguments de build)
 
 | Argument | Default | Ou la definir | Description |
 |---|---|---|---|
@@ -246,7 +284,7 @@
 
 ---
 
-## 16. Docker Compose
+## 17. Docker Compose
 
 | Variable | Default | Ou la definir | Description |
 |---|---|---|---|
@@ -257,7 +295,7 @@
 
 ---
 
-## 17. GitHub Actions Secrets & Variables
+## 18. GitHub Actions Secrets & Variables
 
 ### Secrets (GitHub Settings > Secrets)
 
