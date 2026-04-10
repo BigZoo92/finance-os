@@ -12,6 +12,7 @@
 | `/depenses` | **Dépenses** | Transactions, structure des dépenses, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
 | `/patrimoine` | **Patrimoine** | Actifs, historique patrimoine, soldes par connexion | `dashboardSummary` |
 | `/investissements` | **Investissements** | Positions d'investissement, valorisation, P&L | `dashboardSummary` (positions) |
+| `/marches` | **Marches & Macro** | Panorama marche, macro, watchlist mondiale, signaux et bundle IA futur | `marketsOverview` |
 | `/objectifs` | **Objectifs** | Objectifs financiers personnels (CRUD) | `financialGoals` |
 | `/actualites` | **Actualités** | Flux d'actualités financières, conseiller IA | `dashboardNews`, `dashboardAdvisor` |
 | `/integrations` | **Intégrations** | Connexions Powens, sync runs, diagnostics, audit trail | `powensStatus`, `powensSyncRuns`, `powensDiagnostics`, `powensAuditTrail` |
@@ -71,7 +72,7 @@
 ```
 
 - Bottom navigation avec les 5 pages principales + "Plus" (drawer)
-- Le drawer "Plus" affiche toutes les 8 pages avec descriptions
+- Le drawer "Plus" affiche toutes les 10 pages avec descriptions
 - Indicateur actif : barre ambre en haut du tab
 
 ## Principes de navigation
@@ -108,7 +109,7 @@
                                     └────────────┘
 ```
 
-Le cockpit est le point d'entrée. Il redirige naturellement vers les pages dédiées via les cartes de synthèse. Les intégrations et paramètres sont séparés de la surface métier car ils concernent l'infrastructure, pas les finances.
+Le cockpit est le point d'entrée. Il redirige naturellement vers les pages dédiées via les cartes de synthèse. `Marches & Macro` sert de surface de contexte exogène : elle complète `Actualités` avec un snapshot de marché lisible mais reste séparée du cockpit personnel. Les intégrations et paramètres sont séparés de la surface métier car ils concernent l'infrastructure, pas les finances.
 
 ## Guidelines pour les futures évolutions
 

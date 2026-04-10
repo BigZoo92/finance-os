@@ -1,42 +1,42 @@
 ---
 name: repositories
-description: "Skill for the Repositories area of finance-os. 38 symbols across 13 files."
+description: "Skill for the Repositories area of finance-os. 50 symbols across 15 files."
 ---
 
 # Repositories
 
-38 symbols | 13 files | Cohesion: 96%
+50 symbols | 15 files | Cohesion: 97%
 
 ## When to Use
 
 - Working with code in `apps/`
-- Understanding how createRunDashboardDerivedRecomputeUseCase, exchangeCodeForToken, createHandlePowensCallbackUseCase work
+- Understanding how createRunDashboardDerivedRecomputeUseCase, createDashboardNewsUseCases, listSourceRefsByArticleIds work
 - Modifying repositories-related functionality
 
 ## Key Files
 
 | File | Symbols |
 |------|---------|
-| `apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts` | toCursorPredicate, listTransactions, listTransactionSyncMetadata, listNewsArticles, upsertNewsArticles (+5) |
+| `apps/api/src/routes/dashboard/repositories/dashboard-news-repository.ts` | jsonbArrayContains, listSourceRefsByArticleIds, listNewsArticles, countNewsArticles, getNewsCacheState (+8) |
 | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | buildFallbackTransactionKey, sameInstant, createRun, updateRunProgress, markRunFailed (+3) |
 | `apps/api/src/routes/dashboard/domain/derived-recompute.ts` | toSnapshotVersion, DashboardDerivedRecomputeDisabledError, DashboardDerivedRecomputeAlreadyRunningError, DashboardDerivedRecomputeFailedError, createRunDashboardDerivedRecomputeUseCase |
-| `apps/api/src/routes/integrations/powens/repositories/powens-connection-repository.ts` | upsertConnectedConnection, syncRunKey, isPowensSyncRun, listSyncRuns |
+| `apps/api/src/routes/integrations/powens/repositories/powens-connection-repository.ts` | upsertConnectedConnection, syncRunKey, isPowensSyncRun, listSyncRuns, listConnectionStatuses |
+| `apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts` | toCursorPredicate, listTransactions, listTransactionSyncMetadata, normalizeMerchantOverride, updateTransactionClassification |
+| `apps/api/src/routes/dashboard/domain/dashboard-news.ts` | toRangeWindowStart, createDashboardNewsUseCases |
+| `apps/api/src/routes/dashboard/services/fetch-live-news.ts` | buildPersistableSignal, run |
 | `packages/powens/src/client.ts` | PowensApiError, exchangeCodeForToken |
 | `apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts` | toMoney, createGetDashboardTransactionsUseCase |
-| `apps/api/src/routes/integrations/powens/domain/create-handle-callback-use-case.ts` | createHandlePowensCallbackUseCase |
 | `apps/api/src/routes/integrations/powens/repositories/powens-job-queue-repository.ts` | enqueueConnectionSync |
-| `apps/api/src/routes/dashboard/domain/dashboard-news.ts` | createDashboardNewsUseCases |
-| `apps/api/src/routes/dashboard/routes/transaction-classification.ts` | createTransactionClassificationRoute |
 
 ## Entry Points
 
 Start here when exploring this area:
 
 - **`createRunDashboardDerivedRecomputeUseCase`** (Function) — `apps/api/src/routes/dashboard/domain/derived-recompute.ts:130`
-- **`exchangeCodeForToken`** (Function) — `packages/powens/src/client.ts:232`
+- **`createDashboardNewsUseCases`** (Function) — `apps/api/src/routes/dashboard/domain/dashboard-news.ts:18`
+- **`listSourceRefsByArticleIds`** (Function) — `apps/api/src/routes/dashboard/repositories/dashboard-news-repository.ts:56`
+- **`exchangeCodeForToken`** (Function) — `packages/powens/src/client.ts:234`
 - **`createHandlePowensCallbackUseCase`** (Function) — `apps/api/src/routes/integrations/powens/domain/create-handle-callback-use-case.ts:15`
-- **`createGetDashboardTransactionsUseCase`** (Function) — `apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts:56`
-- **`createDashboardNewsUseCases`** (Function) — `apps/api/src/routes/dashboard/domain/dashboard-news.ts:9`
 
 ## Key Symbols
 
@@ -45,28 +45,32 @@ Start here when exploring this area:
 | `DashboardDerivedRecomputeDisabledError` | Class | `apps/api/src/routes/dashboard/domain/derived-recompute.ts` | 82 |
 | `DashboardDerivedRecomputeAlreadyRunningError` | Class | `apps/api/src/routes/dashboard/domain/derived-recompute.ts` | 93 |
 | `DashboardDerivedRecomputeFailedError` | Class | `apps/api/src/routes/dashboard/domain/derived-recompute.ts` | 104 |
-| `PowensApiError` | Class | `packages/powens/src/client.ts` | 127 |
+| `PowensApiError` | Class | `packages/powens/src/client.ts` | 129 |
 | `createRunDashboardDerivedRecomputeUseCase` | Function | `apps/api/src/routes/dashboard/domain/derived-recompute.ts` | 130 |
-| `exchangeCodeForToken` | Function | `packages/powens/src/client.ts` | 232 |
+| `createDashboardNewsUseCases` | Function | `apps/api/src/routes/dashboard/domain/dashboard-news.ts` | 18 |
+| `listSourceRefsByArticleIds` | Function | `apps/api/src/routes/dashboard/repositories/dashboard-news-repository.ts` | 56 |
+| `exchangeCodeForToken` | Function | `packages/powens/src/client.ts` | 234 |
 | `createHandlePowensCallbackUseCase` | Function | `apps/api/src/routes/integrations/powens/domain/create-handle-callback-use-case.ts` | 15 |
 | `createGetDashboardTransactionsUseCase` | Function | `apps/api/src/routes/dashboard/domain/create-get-dashboard-transactions-use-case.ts` | 56 |
-| `createDashboardNewsUseCases` | Function | `apps/api/src/routes/dashboard/domain/dashboard-news.ts` | 9 |
 | `createTransactionClassificationRoute` | Function | `apps/api/src/routes/dashboard/routes/transaction-classification.ts` | 10 |
 | `createUpdateTransactionClassificationUseCase` | Function | `apps/api/src/routes/dashboard/domain/create-update-transaction-classification-use-case.ts` | 33 |
 | `createSyncRunsRoute` | Function | `apps/api/src/routes/integrations/powens/routes/sync-runs.ts` | 9 |
-| `createGetDashboardGoalsUseCase` | Function | `apps/api/src/routes/dashboard/domain/dashboard-goals.ts` | 107 |
-| `createRun` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 72 |
-| `updateRunProgress` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 91 |
-| `markRunFailed` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 101 |
-| `acquireRunLock` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 117 |
-| `releaseRunLock` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 125 |
-| `recomputeFromSourceOfTruth` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 131 |
-| `enqueueConnectionSync` | Method | `apps/api/src/routes/integrations/powens/repositories/powens-job-queue-repository.ts` | 7 |
+| `createListStatusesUseCase` | Function | `apps/api/src/routes/integrations/powens/domain/create-list-statuses-use-case.ts` | 6 |
+| `createRun` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 71 |
+| `updateRunProgress` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 90 |
+| `markRunFailed` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 100 |
+| `acquireRunLock` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 116 |
+| `releaseRunLock` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 124 |
+| `recomputeFromSourceOfTruth` | Method | `apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts` | 130 |
 
 ## Execution Flows
 
 | Flow | Type | Steps |
 |------|------|-------|
+| `Run → SourcePriority` | intra_community | 3 |
+| `Run → MergeUniqueByJson` | intra_community | 3 |
+| `CreateDashboardNewsUseCases → JsonbArrayContains` | intra_community | 3 |
+| `CreateDashboardNewsUseCases → ListSourceRefsByArticleIds` | intra_community | 3 |
 | `CreateGetDashboardTransactionsUseCase → ToCursorPredicate` | intra_community | 3 |
 | `CreateHandlePowensCallbackUseCase → PowensApiError` | intra_community | 3 |
 | `CreateTransactionClassificationRoute → NormalizeMerchantOverride` | intra_community | 3 |

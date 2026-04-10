@@ -1,6 +1,6 @@
 # Finance-OS -- Architecture par App & Package
 
-> **Derniere mise a jour** : 2026-04-09
+> **Derniere mise a jour** : 2026-04-10
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Mettre a jour lors d'ajout de modules, routes, ou packages.
 
@@ -82,8 +82,8 @@ graph TB
             Login["login.tsx -- /login"]
             Callback["powens/callback.tsx"]
             Soon["depenses, patrimoine, investissements,
-            objectifs, actualites, integrations,
-            sante, parametres (soon)"]
+            objectifs, actualites, marches, integrations,
+            sante, parametres"]
             System["health, healthz, version"]
         end
 
@@ -94,6 +94,9 @@ graph TB
             DashF["dashboard-*.ts
             API, query options, types,
             demo adapter"]
+            MarketsF["markets/
+            API, query options, demo fallback,
+            source/freshness shaping"]
             GoalsF["goals/
             API, query options"]
             PowensF["powens/
@@ -115,6 +118,9 @@ graph TB
             expense-structure, goals,
             budgets, projections, news,
             ai-advisor, powens-cards...)"]
+            Markets["markets/
+            premium dataviz, heat strip,
+            D3 ribbon + signal board"]
             UILocal["ui/
             d3-sparkline"]
             PWA["pwa-install-prompt.tsx"]
@@ -192,6 +198,8 @@ graph TB
                 Goals["goals CRUD use cases"]
                 News["get-news + context bundle
                 + ingest use cases"]
+                Markets["get-markets overview/watchlist/macro
+                + refresh + context bundle"]
                 Advisor["get-advisor use case"]
                 Recompute["derived-recompute use case"]
             end
@@ -201,10 +209,15 @@ graph TB
                 NewsRepo["news repository
                 cache state + provider health
                 + source refs"]
+                MarketsRepo["markets repository
+                quote snapshots + macro observations
+                + cache/provider state + bundle"]
             end
             subgraph "services/"
                 LiveNews["multi-source ingestion service
                 providers + metadata scrape"]
+                LiveMarkets["market refresh service
+                EODHD + FRED + Twelve Data"]
             end
         end
 
@@ -279,7 +292,7 @@ Route handler (HTTP in/out)
 | Prefixe | Domaine | Routes |
 |---|---|---|
 | `/auth` | Authentification | login, logout, me |
-| `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, news/context, advisor, derived-recompute |
+| `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, news/context, markets, advisor, derived-recompute |
 | `/integrations/powens` | Banques | connect-url, callback, sync, status, audit-trail, backlog, sync-runs, diagnostics |
 | `/enrichment` | Enrichissement | notes, bulk-triage |
 | `/notifications/push` | Notifications | settings, subscription, delivery |
@@ -328,6 +341,9 @@ graph TB
             NewsSync["setInterval
             NEWS_FETCH_INTERVAL_MS
             POST /dashboard/news/ingest"]
+            MarketSync["setInterval
+            MARKET_DATA_REFRESH_INTERVAL_MS
+            POST /dashboard/markets/refresh"]
         end
 
         subgraph "Heartbeat"
@@ -354,6 +370,7 @@ graph TB
     Integrity --> Status
     Status --> Unlock
     Entry --> NewsSync
+    Entry --> MarketSync
 ```
 
 ### Types de jobs
@@ -389,6 +406,7 @@ packages/db/
       assets.ts        # asset, investment_position
       recurring.ts     # recurring_commitment, recurring_commitment_transaction_link
       news.ts          # news_article, news_article_source_ref, news_cache_state, news_provider_state
+      markets.ts       # market_quote_snapshot, market_macro_observation, market_cache_state, market_provider_state, market_context_bundle_snapshot
       derived.ts       # derived_recompute_run, derived_transaction_snapshot
       enrichment.ts    # enrichment_note
     index.ts           # Main export (client + schema)
@@ -409,6 +427,9 @@ packages/db/
 | `news_article` | `dedupe_key` (stable signal key) | -> news_article_source_ref |
 | `news_article_source_ref` | `(provider, provider_article_id)` | -> news_article |
 | `news_provider_state` | `provider` | standalone |
+| `market_quote_snapshot` | `instrument_id` | standalone |
+| `market_macro_observation` | `(series_id, observation_date)` | standalone |
+| `market_provider_state` | `provider` | standalone |
 | `recurring_commitment` | `id` | -> recurring_commitment_transaction_link |
 
 ---

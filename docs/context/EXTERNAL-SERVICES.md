@@ -1,6 +1,6 @@
 # Finance-OS -- Services Externes
 
-> **Derniere mise a jour** : 2026-04-09
+> **Derniere mise a jour** : 2026-04-10
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici tout nouveau service externe integre.
 
@@ -21,6 +21,8 @@ graph LR
         Agregation bancaire PSD2"]
         NewsBackbone["News backbone
         HN + GDELT + ECB + Fed + SEC + FRED"]
+        MarketBackbone["Market backbone
+        EODHD + FRED + Twelve Data"]
         GHCR["GitHub Container Registry
         Images Docker"]
         Dokploy["Dokploy
@@ -31,6 +33,8 @@ graph LR
 
     Worker -->|"OAuth2 + REST"| Powens
     API -->|"REST + RSS + XML + HTML head scrape"| NewsBackbone
+    API -->|"REST quotes + macro observations"| MarketBackbone
+    Worker -->|"Internal POST /dashboard/markets/refresh"| API
     GHA -->|"Push images"| GHCR
     GHA -->|"Deploy API"| Dokploy
 ```
@@ -180,6 +184,64 @@ Le principe produit reste identique:
 
 ---
 
+## 2.10 Backbone marches & macro
+
+Le domaine marches suit le meme principe que news:
+
+- `GET /dashboard/markets/*` = lecture cache-only
+- `POST /dashboard/markets/refresh` = collecte live explicite
+- le worker peut declencher un refresh recurrent via l'API interne
+- aucune cle provider ni appel provider cote web
+
+### 2.10.1 EODHD
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST |
+| **Role** | Source primaire globale pour prix EOD / differees |
+| **URLs** | `https://eodhd.com/api/eod/{SYMBOL}` ; docs: `https://eodhd.com/financial-apis/api-for-historical-data-and-volumes/` |
+| **Auth** | `EODHD_API_KEY` |
+| **Consommateur** | API market refresh service |
+| **Notes** | Le plan free expose 20 appels/jour et 1 an d'historique EOD gratuit; EODHD rappelle aussi que les donnees ne sont pas necessairement real-time ni exactes pour le trading. |
+
+### 2.10.2 Twelve Data
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST |
+| **Role** | Overlay optionnel plus frais sur certains symboles US |
+| **URLs** | `https://api.twelvedata.com/quote`, `https://api.twelvedata.com/time_series`, docs: `https://twelvedata.com/docs` |
+| **Auth** | `TWELVEDATA_API_KEY` |
+| **Consommateur** | API market refresh service |
+| **Notes** | Le plan Basic affiche 8 credits API par minute et 800/jour; la couverture gratuite globale reste partielle, donc Twelve Data n'est pas utilise comme source globale primaire. |
+
+### 2.10.3 FRED (macro)
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST |
+| **Role** | Source officielle pour series macro structurees |
+| **URL** | `https://api.stlouisfed.org/fred/series/observations` |
+| **Auth** | `FRED_API_KEY` |
+| **Consommateur** | API market refresh service, API news provider `fred` |
+| **Notes** | Cle enregistree obligatoire; la meme cle sert au domaine news et au domaine marches. |
+
+### 2.10.4 Strategie de merge / fallback
+
+- EODHD fournit le baseline global EOD / differe.
+- Twelve Data n'ecrase qu'un symbole US explicitement eligible et seulement quand une quote exploitable est disponible.
+- FRED ne sert qu'aux series macro.
+- Chaque quote persiste `provider`, `baseline_provider`, `overlay_provider`, `source_mode`, `source_delay_label`, `source_reason`, `quote_as_of`, `captured_at`.
+- Les `GET /dashboard/markets/*` ne touchent jamais les providers live: ils lisent PostgreSQL ou basculent vers un fixture deterministic en demo / fallback admin.
+
+### 2.10.5 Limites produit assumees
+
+- Pas de crypto dans cette feature.
+- Les indices globaux sont souvent representes par des ETF proxies quand le mapping gratuit d'un indice cash est trop fragile.
+- Les donnees EOD / differees doivent etre affichees comme telles dans l'UI, sans ambiguite.
+
+---
+
 ## 3. Web Push Protocol -- Notifications
 
 | Detail | Valeur |
@@ -317,6 +379,7 @@ Le principe produit reste identique:
 |---|---|---|---|---|
 | Powens | **Actif** | OAuth2 + Client Credentials | Non (compte requis) | Oui (donnees bancaires) |
 | News backbone (HN/GDELT/ECB/Fed/SEC/FRED) | **Actif** | Mixte selon provider | Oui / cle FRED optionnelle | Non (cache-first, best-effort) |
+| Market backbone (EODHD/FRED/Twelve Data) | **Actif** | Cle(s) serveur | Oui / partiel selon plan | Non (cache-first, best-effort) |
 | Web Push | **Configure** | VAPID | Oui | Non |
 | LLM / IA | **Non integre** | -- | -- | Non |
 | GHCR | **Actif** | Token GitHub | Oui (repos publics) | Non (build-time) |

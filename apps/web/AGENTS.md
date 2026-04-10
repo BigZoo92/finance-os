@@ -15,6 +15,7 @@ Scope: `apps/web/**`
   - alert copy must remain fail-soft and action-guiding (informative in demo, actionable in admin) without implying hard-blocking errors.
 - Keep dashboard derived recompute status and trigger behavior in the shared dashboard feature helpers so admin gating, retry-safe errors, and demo mocks stay consistent with the API contract.
 - Keep the news experience (`/_app/actualites`, `news-feed.tsx`, `dashboard-query-options.ts`, `dashboard-api.ts`, demo fixtures, client fallback behavior, provider health, clusters, and context preview) aligned with [../../docs/context/NEWS-FETCH.md](../../docs/context/NEWS-FETCH.md), and update that document whenever this feature changes.
+- Keep the markets experience (`/_app/marches`, `src/components/markets/*`, `src/features/markets/*`, demo fixtures, source/freshness badges, D3 visuals, and refresh affordances) aligned with [../../docs/context/MARKETS-MACRO.md](../../docs/context/MARKETS-MACRO.md); demo must stay deterministic, admin reads must stay snapshot-first, and the UI must never imply fake real-time precision.
 - Keep dashboard health signals in [src/components/dashboard/dashboard-health.ts](src/components/dashboard/dashboard-health.ts) and [src/components/dashboard/dashboard-health-panel.tsx](src/components/dashboard/dashboard-health-panel.tsx); demo must stay deterministic from the fixture matrix, admin must derive one global summary plus selective widget badges from loader/query data only.
 - Keep the Powens manual sync cooldown UI in [src/features/powens/manual-sync-cooldown.ts](src/features/powens/manual-sync-cooldown.ts) as client-only state behind runtime-safe `VITE_*` config; it must never become authoritative or weaken demo/admin gating.
 - Keep Powens connection badges driven by [src/features/powens/sync-status.ts](src/features/powens/sync-status.ts): admin should prefer the persisted last-sync snapshot from `/integrations/powens/status`, fall back to runtime status when `SYNC_STATUS_PERSISTENCE_ENABLED=false`, and keep demo deterministic without DB/provider writes.
@@ -49,13 +50,14 @@ Scope: `apps/web/**`
   - `/depenses` — transactions, budgets, projections, structure dépenses
   - `/patrimoine` — actifs, historique patrimoine, soldes par connexion
   - `/investissements` — positions, valorisation
+  - `/marches` — panorama marche, macro, watchlist mondiale, signaux
   - `/objectifs` — objectifs financiers (CRUD)
   - `/actualites` — news feed, IA advisor
   - `/integrations` — connexions Powens, sync runs, diagnostics, audit trail
   - `/sante` — vue consolidée de l'état système
   - `/parametres` — notifications push, derived recompute, exports
 - **Design system compliance**: Always use tokens from `packages/ui/src/styles/globals.css` and patterns from `docs/frontend/design-system.md`. Financial amounts use `.font-financial`. Colors use semantic tokens (`positive`, `negative`, `warning`). Surface depth uses `surface-0/1/2`.
-- **Sidebar navigation**: The navigation items are defined in `NAV_ITEMS` in `src/components/shell/app-sidebar.tsx`. When adding/removing pages, update both the route file and the nav items. Nav is split into `main` (finances) and `system` sections.
+- **Sidebar navigation**: The navigation items are defined in `NAV_ITEMS` in `src/components/shell/nav-items.ts`. When adding/removing pages, update the route file, `nav-items.ts`, and the command palette `PAGES` in `src/components/shell/command-palette.tsx`. Nav is split into `main` (finances) and `system` sections.
 - **Motion conventions**: Follow `docs/frontend/motion-and-interactions.md`. CSS transitions first, `motion` library only when needed. Use token durations/easing, not hardcoded values. Page transitions use `AnimatePresence` in `_app.tsx`.
 - **Charts**: Use D3.js for all data visualization. `src/components/ui/d3-sparkline.tsx` provides `D3Sparkline` (interactive) and `MiniSparkline` (inline). Do not add Recharts, Victory, or similar heavy chart libraries.
 - **ASCII identity**: Use `src/components/ui/ascii-brand.tsx` for visual accents. Never overuse — ASCII serves the interface, not the other way around.
@@ -72,6 +74,6 @@ Scope: `apps/web/**`
 ## Pitfalls
 
 - Avoid `useEffect` request orchestration for route data.
-- Do not bypass shared query options in [src/features/auth-query-options.ts](src/features/auth-query-options.ts), [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts), [src/features/goals/query-options.ts](src/features/goals/query-options.ts), or [src/features/powens/query-options.ts](src/features/powens/query-options.ts).
+- Do not bypass shared query options in [src/features/auth-query-options.ts](src/features/auth-query-options.ts), [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts), [src/features/markets/query-options.ts](src/features/markets/query-options.ts), [src/features/goals/query-options.ts](src/features/goals/query-options.ts), or [src/features/powens/query-options.ts](src/features/powens/query-options.ts).
 - Do not read non-sensitive runtime `VITE_*` values directly from `import.meta.env` in app code when they must remain runtime-overridable in production; use [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) instead.
 - When UI behavior changes, update [../../docs/agentic/ui-quality-map.md](../../docs/agentic/ui-quality-map.md) if the guidance or entry points changed.

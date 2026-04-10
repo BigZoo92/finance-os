@@ -7,4 +7,5 @@ export * from './technical-probe'
 
 export * from './enrichment'
 
+export * from './markets'
 export * from './news'

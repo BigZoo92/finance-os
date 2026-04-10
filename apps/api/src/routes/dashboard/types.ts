@@ -10,6 +10,16 @@ import type {
   NewsProviderHealth,
   NewsProviderRunResult,
 } from './domain/news-types'
+import type {
+  DashboardMarketsContextBundleResponse,
+  DashboardMarketsMacroResponse,
+  DashboardMarketsOverviewResponse,
+  DashboardMarketsWatchlistResponse,
+  MarketContextBundle,
+  MarketMacroObservationPersistInput,
+  MarketProviderRunResult,
+  MarketQuotePersistInput,
+} from './domain/markets-types'
 
 export type ApiDb = ReturnType<typeof createDbClient>['db']
 export type ApiEnv = ReturnType<typeof getApiEnv>
@@ -617,6 +627,107 @@ export interface DashboardNewsRepository {
   listNewsProviderHealth: () => Promise<NewsProviderHealth[]>
 }
 
+export interface DashboardMarketsRepository {
+  listQuoteSnapshots: () => Promise<
+    Array<{
+      instrumentId: string
+      label: string
+      symbol: string
+      providerSymbol: string
+      assetClass: string
+      region: string
+      exchange: string
+      currency: string
+      sourceProvider: 'eodhd' | 'fred' | 'twelve_data'
+      baselineProvider: 'eodhd' | 'fred' | 'twelve_data'
+      overlayProvider: 'eodhd' | 'fred' | 'twelve_data' | null
+      sourceMode: 'eod' | 'delayed' | 'intraday'
+      sourceDelayLabel: string
+      sourceReason: string
+      quoteDate: string
+      quoteAsOf: Date | null
+      capturedAt: Date
+      marketState: 'open' | 'closed'
+      marketOpen: boolean | null
+      isDelayed: boolean
+      freshnessMinutes: number | null
+      price: number
+      previousClose: number | null
+      dayChangePct: number | null
+      weekChangePct: number | null
+      monthChangePct: number | null
+      ytdChangePct: number | null
+      history: Array<{ date: string; value: number; provider: string }>
+    }>
+  >
+  syncQuoteSnapshots: (quotes: MarketQuotePersistInput[]) => Promise<void>
+  listMacroObservations: () => Promise<
+    Array<{
+      seriesId: string
+      observationDate: string
+      value: number
+    }>
+  >
+  upsertMacroObservations: (observations: MarketMacroObservationPersistInput[]) => Promise<void>
+  getMarketCacheState: () => Promise<{
+    lastSuccessAt: Date | null
+    lastAttemptAt: Date | null
+    lastFailureAt: Date | null
+    lastErrorCode: string | null
+    lastErrorMessage: string | null
+    refreshCount: number
+    providerFailureCount: number
+    lastInstrumentCount: number | null
+    lastMacroObservationCount: number | null
+    lastSignalCount: number | null
+    lastRefreshDurationMs: number | null
+  } | null>
+  upsertMarketCacheState: (input: {
+    lastSuccessAt?: Date | null
+    lastAttemptAt?: Date | null
+    lastFailureAt?: Date | null
+    lastErrorCode?: string | null
+    lastErrorMessage?: string | null
+    lastRequestId?: string | null
+    refreshCountIncrement?: number
+    providerFailureCountIncrement?: number
+    lastInstrumentCount?: number | null
+    lastMacroObservationCount?: number | null
+    lastSignalCount?: number | null
+    lastRefreshDurationMs?: number | null
+  }) => Promise<void>
+  upsertMarketProviderState: (input: MarketProviderRunResult & { enabled: boolean }) => Promise<void>
+  listMarketProviderHealth: () => Promise<
+    Array<{
+      provider: 'eodhd' | 'fred' | 'twelve_data'
+      label: string
+      role: 'prices' | 'macro' | 'overlay'
+      enabled: boolean
+      status: 'healthy' | 'degraded' | 'failing' | 'idle'
+      lastSuccessAt: string | null
+      lastAttemptAt: string | null
+      lastFailureAt: string | null
+      lastErrorCode: string | null
+      lastErrorMessage: string | null
+      lastFetchedCount: number
+      successCount: number
+      failureCount: number
+      skippedCount: number
+      freshnessLabel: string
+    }>
+  >
+  saveContextBundle: (input: {
+    generatedAt: Date
+    schemaVersion: string
+    bundle: MarketContextBundle
+  }) => Promise<void>
+  getContextBundle: () => Promise<{
+    generatedAt: string
+    schemaVersion: string
+    bundle: MarketContextBundle
+  } | null>
+}
+
 export interface DashboardDerivedRecomputeRepository {
   getLatestRun: () => Promise<DashboardDerivedRecomputeRunRow | null>
   getCurrentSnapshotRun: () => Promise<DashboardDerivedRecomputeRunRow | null>
@@ -685,6 +796,20 @@ export interface DashboardUseCases {
     mergedCount: number
     dedupeDropCount: number
   }>
+  getMarketsOverview?: (input: { requestId: string }) => Promise<DashboardMarketsOverviewResponse>
+  getMarketsWatchlist?: (input: { requestId: string }) => Promise<DashboardMarketsWatchlistResponse>
+  getMarketsMacro?: (input: { requestId: string }) => Promise<DashboardMarketsMacroResponse>
+  getMarketsContextBundle?: (input: {
+    requestId: string
+  }) => Promise<DashboardMarketsContextBundleResponse>
+  refreshMarkets?: (input: { requestId: string }) => Promise<{
+    requestId: string
+    refreshedAt: string
+    quoteCount: number
+    macroObservationCount: number
+    signalCount: number
+    providerResults: MarketProviderRunResult[]
+  }>
 }
 
 export interface DashboardNewsUseCases {
@@ -701,10 +826,28 @@ export interface DashboardNewsUseCases {
   }>
 }
 
+export interface DashboardMarketsUseCases {
+  getOverview: (input: { requestId: string }) => Promise<DashboardMarketsOverviewResponse>
+  getWatchlist: (input: { requestId: string }) => Promise<DashboardMarketsWatchlistResponse>
+  getMacro: (input: { requestId: string }) => Promise<DashboardMarketsMacroResponse>
+  getContextBundle: (input: {
+    requestId: string
+  }) => Promise<DashboardMarketsContextBundleResponse>
+  refreshMarkets: (input: { requestId: string }) => Promise<{
+    requestId: string
+    refreshedAt: string
+    quoteCount: number
+    macroObservationCount: number
+    signalCount: number
+    providerResults: MarketProviderRunResult[]
+  }>
+}
+
 export interface DashboardRouteRuntime {
   repositories: {
     readModel: DashboardReadRepository
     news?: DashboardNewsRepository
+    markets?: DashboardMarketsRepository
     derivedRecompute: DashboardDerivedRecomputeRepository
   }
   useCases: DashboardUseCases

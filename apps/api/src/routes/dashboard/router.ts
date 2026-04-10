@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'
 import { createDashboardRuntimePlugin } from './plugin'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
 import { createGoalsRoute } from './routes/goals'
+import { createMarketsRoute } from './routes/markets'
 import { createNewsRoute } from './routes/news'
 import { createSummaryRoute } from './routes/summary'
 import { createAnalyticsRoute } from './routes/analytics'
@@ -43,6 +44,18 @@ export const createDashboardRoutes = ({
   newsProviderFredEnabled,
   newsProviderFredApiKey,
   newsProviderFredSeriesIds,
+  marketDataEnabled,
+  marketDataRefreshEnabled,
+  marketDataForceFixtureFallback,
+  marketDataStaleAfterMinutes,
+  marketDataEodhdEnabled,
+  marketDataTwelveDataEnabled,
+  marketDataFredEnabled,
+  marketDataUsFreshOverlayEnabled,
+  marketDataDefaultWatchlistIds,
+  marketDataFredSeriesIds,
+  eodhdApiKey,
+  twelveDataApiKey,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -74,6 +87,18 @@ export const createDashboardRoutes = ({
   newsProviderFredEnabled: boolean
   newsProviderFredApiKey: string | undefined
   newsProviderFredSeriesIds: string[]
+  marketDataEnabled: boolean
+  marketDataRefreshEnabled: boolean
+  marketDataForceFixtureFallback: boolean
+  marketDataStaleAfterMinutes: number
+  marketDataEodhdEnabled: boolean
+  marketDataTwelveDataEnabled: boolean
+  marketDataFredEnabled: boolean
+  marketDataUsFreshOverlayEnabled: boolean
+  marketDataDefaultWatchlistIds: string[]
+  marketDataFredSeriesIds: string[]
+  eodhdApiKey: string | undefined
+  twelveDataApiKey: string | undefined
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -106,12 +131,28 @@ export const createDashboardRoutes = ({
     newsProviderFredEnabled,
     newsProviderFredApiKey,
     newsProviderFredSeriesIds,
+    marketDataEnabled,
+    marketDataRefreshEnabled,
+    marketDataStaleAfterMinutes,
+    marketDataEodhdEnabled,
+    marketDataTwelveDataEnabled,
+    marketDataFredEnabled,
+    marketDataUsFreshOverlayEnabled,
+    marketDataDefaultWatchlistIds,
+    marketDataFredSeriesIds,
+    eodhdApiKey,
+    twelveDataApiKey,
   })
 
   return new Elysia({ prefix: '/dashboard' })
     .use(createDashboardRuntimePlugin(runtime))
     .use(createSummaryRoute())
     .use(createNewsRoute())
+    .use(
+      createMarketsRoute({
+        marketDataForceFixtureFallback,
+      })
+    )
     .use(createAnalyticsRoute())
     .use(createAdvisorRoute())
     .use(createDerivedRecomputeRoute())

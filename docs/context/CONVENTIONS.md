@@ -1,6 +1,6 @@
 # Finance-OS -- Conventions & Bonnes Pratiques
 
-> **Derniere mise a jour** : 2026-04-09
+> **Derniere mise a jour** : 2026-04-10
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute convention ajoutee ou modifiee doit etre refletee ici.
 
@@ -87,6 +87,9 @@ Routes (HTTP) -> Domain (orchestration) -> Repositories (persistence) -> Service
 - **Repositories** : acces donnees, split demo/real
 - **Services** : integration providers externes
 - Pour le domaine news: `GET /dashboard/news` et `GET /dashboard/news/context` restent cache-only; seuls `POST /dashboard/news/ingest` et le scheduler worker touchent les providers live.
+- Pour le domaine marches: `GET /dashboard/markets/overview`, `/watchlist`, `/macro` et `/context-bundle` restent cache-only; seuls `POST /dashboard/markets/refresh` et le scheduler worker touchent les providers live.
+- Les quotes marches doivent garder une provenance explicite (`provider`, `baselineProvider`, `overlayProvider`, `mode`, `delayLabel`, `reason`, `freshnessMinutes`) afin d'eviter tout merge opaque.
+- Aucun composant web ne doit appeler directement EODHD, FRED ou Twelve Data.
 - Les providers publics soumis a fair-access doivent recevoir un `User-Agent` explicite et des timeouts stricts; le scraping article se limite au `head` HTML.
 
 ### 3.2 Dependency injection

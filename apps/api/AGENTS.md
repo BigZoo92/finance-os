@@ -12,6 +12,7 @@ Scope: `apps/api/**`
 - Keep dashboard summary read models coherent across low-level accounts/connections and the higher-level unified `assets` collection used for patrimoine-style views.
 - Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
 - Keep the dashboard news pipeline (`/dashboard/news`, `/dashboard/news/context`, `/dashboard/news/ingest`, cache-state semantics, provider health, metadata scraping, dataset fallback) aligned with [../../docs/context/NEWS-FETCH.md](../../docs/context/NEWS-FETCH.md), and update that document whenever this feature changes.
+- Keep the dashboard markets pipeline (`/dashboard/markets/overview`, `/dashboard/markets/watchlist`, `/dashboard/markets/macro`, `/dashboard/markets/context-bundle`, `/dashboard/markets/refresh`) aligned with [../../docs/context/MARKETS-MACRO.md](../../docs/context/MARKETS-MACRO.md): demo must stay deterministic, `GET` reads remain cache-only, `POST /refresh` stays admin/internal-token only, and quote provenance/freshness metadata must remain explicit.
 - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
 - Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
 - Keep Powens status and fail-soft behavior contract-stable:
@@ -29,10 +30,11 @@ Scope: `apps/api/**`
 - `pnpm api:typecheck`
 - `bun test apps/api/src/auth/routes.test.ts`
 - `bun test <changed-api-test-file>` for any changed Bun test file under `apps/api/src`
+- `bun test apps/api/src/routes/dashboard/domain/market-analytics.test.ts` when markets logic changes
 - `pnpm smoke:api` when public routes, proxy compatibility, or auth routing changes
 
 ## Pitfalls
 
 - Do not move DB or provider work into route files.
 - Do not remove route guards or startup route assertions without replacing them with equivalent protection.
-- Keep `/auth/me`, `/dashboard/*` including `/dashboard/goals*` and `/dashboard/derived-recompute`, and `/integrations/powens/*` aligned with [../../docs/agentic/contracts-map.md](../../docs/agentic/contracts-map.md).
+- Keep `/auth/me`, `/dashboard/*` including `/dashboard/goals*`, `/dashboard/markets*`, and `/dashboard/derived-recompute`, and `/integrations/powens/*` aligned with [../../docs/agentic/contracts-map.md](../../docs/agentic/contracts-map.md).

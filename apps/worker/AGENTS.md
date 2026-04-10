@@ -21,11 +21,13 @@ Scope: `apps/worker/**`
 - Worker changes must not degrade the fail-soft behavior of the web or API runtimes.
 - Keep the persisted Powens last-sync snapshot minimal and end-of-job only: transition logs, Redis counters, and DB writes for `lastSyncStatus` / `lastSyncReasonCode` must stay correlated by request id and must all short-circuit when `SYNC_STATUS_PERSISTENCE_ENABLED=false`.
 - Keep the worker's localhost-only `GET /health` and `GET /version` contract aligned with the shared system contract used by api and web.
+- Keep the optional market refresh scheduler (`src/market-refresh-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/markets/refresh` over `API_INTERNAL_URL`, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or raw provider payloads.
 
 ## Verify
 
 - `pnpm worker:typecheck`
 - There is no worker package test script today; when changing sync behavior, add or update focused tests in the touched package if possible and document any manual verification gaps.
+- `bun test apps/worker/src/market-refresh-scheduler.test.ts` when market refresh scheduling changes
 
 ## Pitfalls
 

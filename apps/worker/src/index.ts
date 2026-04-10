@@ -18,6 +18,10 @@ import { createRedisClient } from '@finance-os/redis'
 import { eq, sql } from 'drizzle-orm'
 import { env } from './env'
 import {
+  startDashboardMarketsScheduler,
+  triggerDashboardMarketsRefresh,
+} from './market-refresh-scheduler'
+import {
   startDashboardNewsScheduler,
   triggerDashboardNewsIngest,
 } from './news-ingest-scheduler'
@@ -84,6 +88,7 @@ const WORKER_STATUS_PORT = 3002
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let schedulerTimer: ReturnType<typeof setInterval> | null = null
 let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
+let marketSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
 let keepRunning = true
 
@@ -1266,6 +1271,28 @@ const startNewsScheduler = () => {
   })
 }
 
+const startMarketScheduler = () => {
+  marketSchedulerTimer = startDashboardMarketsScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    autoRefreshEnabled: env.MARKET_DATA_AUTO_REFRESH_ENABLED,
+    intervalMs: env.MARKET_DATA_REFRESH_INTERVAL_MS,
+    trigger: () =>
+      triggerDashboardMarketsRefresh({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker market scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
 const consumeJobs = async () => {
   while (keepRunning) {
     try {
@@ -1343,6 +1370,7 @@ const start = async () => {
 
   startScheduler()
   startNewsScheduler()
+  startMarketScheduler()
   await consumeJobs()
 }
 
@@ -1367,6 +1395,11 @@ const shutdown = async (signal: string) => {
   if (newsSchedulerTimer) {
     clearInterval(newsSchedulerTimer)
     newsSchedulerTimer = null
+  }
+
+  if (marketSchedulerTimer) {
+    clearInterval(marketSchedulerTimer)
+    marketSchedulerTimer = null
   }
 
   statusServer?.close()

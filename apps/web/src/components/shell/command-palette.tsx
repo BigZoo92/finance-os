@@ -6,8 +6,9 @@ import { AnimatePresence, motion } from 'motion/react'
 const PAGES = [
   { to: '/', label: 'Cockpit', glyph: '◈', keywords: 'accueil home dashboard vue ensemble' },
   { to: '/depenses', label: 'Dépenses', glyph: '↔', keywords: 'transactions budgets projections' },
-  { to: '/patrimoine', label: 'Patrimoine', glyph: '◆', keywords: 'actifs soldes assets wealth' },
+  { to: '/patrimoine', label: 'Patrimoine', glyph: '◊', keywords: 'actifs soldes assets wealth' },
   { to: '/investissements', label: 'Investissements', glyph: '△', keywords: 'positions portfolio bourse' },
+  { to: '/marches', label: 'Marchés', glyph: '≈', keywords: 'macro watchlist regime taux inflation fred eodhd' },
   { to: '/objectifs', label: 'Objectifs', glyph: '◎', keywords: 'goals épargne cibles' },
   { to: '/actualites', label: 'Actualités', glyph: '▣', keywords: 'news feed IA advisor' },
   { to: '/integrations', label: 'Intégrations', glyph: '⊞', keywords: 'powens sync banque connexion' },
@@ -40,7 +41,6 @@ export function CommandPalette() {
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -50,7 +50,6 @@ export function CommandPalette() {
             onClick={() => setOpen(false)}
           />
 
-          {/* Command dialog */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -59,19 +58,18 @@ export function CommandPalette() {
             className="fixed left-1/2 top-[20%] z-[101] w-[90vw] max-w-[520px] -translate-x-1/2"
           >
             <Command
-              className="rounded-2xl border border-border/60 bg-card shadow-2xl overflow-hidden"
+              className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl"
               loop
             >
-              {/* ASCII accent */}
               <div className="border-b border-border/40 px-4 pt-3 pb-1">
-                <span className="font-mono text-xs text-primary/40 select-none" aria-hidden="true">
+                <span className="select-none font-mono text-xs text-primary/40" aria-hidden="true">
                   ┌─ FINANCE OS ── Navigation rapide ─────────────────┐
                 </span>
               </div>
 
               <Command.Input
-                placeholder="Rechercher une page…"
-                className="w-full bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
+                placeholder="Rechercher une page..."
+                className="w-full bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
                 autoFocus
               />
 
@@ -80,7 +78,10 @@ export function CommandPalette() {
                   Aucune page trouvée.
                 </Command.Empty>
 
-                <Command.Group heading="Pages" className="px-2 pt-2 pb-1 text-xs uppercase tracking-widest text-muted-foreground/50 font-medium">
+                <Command.Group
+                  heading="Pages"
+                  className="px-2 pt-2 pb-1 text-xs font-medium uppercase tracking-widest text-muted-foreground/50"
+                >
                   {PAGES.map(page => (
                     <Command.Item
                       key={page.to}
@@ -88,7 +89,10 @@ export function CommandPalette() {
                       onSelect={() => handleSelect(page.to)}
                       className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors data-[selected=true]:bg-accent/60 data-[selected=true]:text-accent-foreground"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 text-sm" aria-hidden="true">
+                      <span
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 text-sm"
+                        aria-hidden="true"
+                      >
                         {page.glyph}
                       </span>
                       <span className="font-medium">{page.label}</span>
@@ -97,9 +101,8 @@ export function CommandPalette() {
                 </Command.Group>
               </Command.List>
 
-              {/* Footer */}
-              <div className="border-t border-border/40 px-4 py-2 flex items-center justify-between">
-                <span className="font-mono text-xs text-muted-foreground/40 select-none" aria-hidden="true">
+              <div className="flex items-center justify-between border-t border-border/40 px-4 py-2">
+                <span className="select-none font-mono text-xs text-muted-foreground/40" aria-hidden="true">
                   └──────────────────────────────────────────────────┘
                 </span>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground/50">
@@ -121,7 +124,9 @@ export function CommandPaletteTrigger() {
   return (
     <button
       type="button"
-      onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+      onClick={() =>
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
+      }
       className="hidden items-center gap-2 rounded-lg border border-border/60 bg-surface-1 px-3 py-1.5 text-xs text-muted-foreground transition-all duration-150 hover:bg-surface-2 hover:text-foreground md:inline-flex"
     >
       <span>Rechercher</span>

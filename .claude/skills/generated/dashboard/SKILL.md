@@ -1,11 +1,11 @@
 ---
 name: dashboard
-description: "Skill for the Dashboard area of finance-os. 75 symbols across 11 files."
+description: "Skill for the Dashboard area of finance-os. 83 symbols across 13 files."
 ---
 
 # Dashboard
 
-75 symbols | 11 files | Cohesion: 97%
+83 symbols | 13 files | Cohesion: 98%
 
 ## When to Use
 
@@ -23,10 +23,10 @@ description: "Skill for the Dashboard area of finance-os. 75 symbols across 11 f
 | `apps/web/src/components/dashboard/month-end-projection-card.tsx` | asUtcDate, normalizeRecurringLabel, estimateMonthGap, hasStableAmount, calculateMonthlyRecurringOverview (+3) |
 | `apps/web/src/components/dashboard/monthly-category-budgets-card.tsx` | formatMoney, readBudgets, writeBudgets, getDemoBudgetsForVisibleMonths, MonthlyCategoryBudgetsCard (+2) |
 | `apps/web/src/components/dashboard/expense-structure-card.tsx` | fmtMoney, fmtPct, buildExpenseStructureExplanation, ExpenseStructureCard, fmtMonth (+1) |
+| `apps/web/src/components/dashboard/news-signal-card.tsx` | formatDateTime, getPrimaryImageUrl, getPrimaryFaviconUrl, getSourceInitial, NewsSignalCard |
 | `apps/web/src/components/dashboard/relevance-scoring.ts` | clamp, tokenize, rankNewsByRelevance, rankPersonalSignalsByRelevance |
 | `apps/web/src/components/dashboard/powens-connections-card.tsx` | formatDateTime, toErrorMessage, formatSyncMetadata, PowensConnectionsCard |
 | `apps/web/src/components/dashboard/latest-sync-status.ts` | toTimestamp, formatDateTime, getLatestSyncStatus |
-| `apps/web/src/components/dashboard/api-status-card.tsx` | toErrorMessage, toApiStatus, ApiStatusCard |
 
 ## Entry Points
 
@@ -52,16 +52,16 @@ Start here when exploring this area:
 | `MonthlyCategoryBudgetsCard` | Function | `apps/web/src/components/dashboard/monthly-category-budgets-card.tsx` | 141 |
 | `handleAddBudget` | Function | `apps/web/src/components/dashboard/monthly-category-budgets-card.tsx` | 195 |
 | `handleDeleteBudget` | Function | `apps/web/src/components/dashboard/monthly-category-budgets-card.tsx` | 218 |
+| `buildDashboardHealthModel` | Function | `apps/web/src/components/dashboard/dashboard-health.ts` | 568 |
 | `calculateMonthlyRecurringOverview` | Function | `apps/web/src/components/dashboard/month-end-projection-card.tsx` | 94 |
 | `calculateMonthEndProjection` | Function | `apps/web/src/components/dashboard/month-end-projection-card.tsx` | 184 |
-| `buildDashboardHealthModel` | Function | `apps/web/src/components/dashboard/dashboard-health.ts` | 568 |
-| `rankNewsByRelevance` | Function | `apps/web/src/components/dashboard/relevance-scoring.ts` | 32 |
-| `rankPersonalSignalsByRelevance` | Function | `apps/web/src/components/dashboard/relevance-scoring.ts` | 97 |
+| `NewsSignalCard` | Function | `apps/web/src/components/dashboard/news-signal-card.tsx` | 29 |
+| `rankNewsByRelevance` | Function | `apps/web/src/components/dashboard/relevance-scoring.ts` | 44 |
+| `rankPersonalSignalsByRelevance` | Function | `apps/web/src/components/dashboard/relevance-scoring.ts` | 134 |
 | `PowensConnectionsCard` | Function | `apps/web/src/components/dashboard/powens-connections-card.tsx` | 52 |
 | `buildExpenseStructureExplanation` | Function | `apps/web/src/components/dashboard/expense-structure-card.tsx` | 45 |
 | `ExpenseStructureCard` | Function | `apps/web/src/components/dashboard/expense-structure-card.tsx` | 53 |
 | `getLatestSyncStatus` | Function | `apps/web/src/components/dashboard/latest-sync-status.ts` | 39 |
-| `ApiStatusCard` | Function | `apps/web/src/components/dashboard/api-status-card.tsx` | 40 |
 
 ## Execution Flows
 

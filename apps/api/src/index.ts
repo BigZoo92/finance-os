@@ -277,6 +277,18 @@ const registerAppRoutes = (app: Elysia) => {
         newsProviderFredEnabled: env.NEWS_PROVIDER_FRED_ENABLED,
         newsProviderFredApiKey: env.FRED_API_KEY,
         newsProviderFredSeriesIds: env.NEWS_PROVIDER_FRED_SERIES_IDS,
+        marketDataEnabled: env.MARKET_DATA_ENABLED,
+        marketDataRefreshEnabled: env.MARKET_DATA_REFRESH_ENABLED,
+        marketDataForceFixtureFallback: env.MARKET_DATA_FORCE_FIXTURE_FALLBACK,
+        marketDataStaleAfterMinutes: env.MARKET_DATA_STALE_AFTER_MINUTES,
+        marketDataEodhdEnabled: env.MARKET_DATA_EODHD_ENABLED,
+        marketDataTwelveDataEnabled: env.MARKET_DATA_TWELVEDATA_ENABLED,
+        marketDataFredEnabled: env.MARKET_DATA_FRED_ENABLED,
+        marketDataUsFreshOverlayEnabled: env.MARKET_DATA_US_FRESH_OVERLAY_ENABLED,
+        marketDataDefaultWatchlistIds: env.MARKET_DATA_DEFAULT_WATCHLIST_IDS,
+        marketDataFredSeriesIds: env.MARKET_DATA_FRED_SERIES_IDS,
+        eodhdApiKey: env.EODHD_API_KEY,
+        twelveDataApiKey: env.TWELVEDATA_API_KEY,
       })
     )
     .use(

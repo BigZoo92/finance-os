@@ -21,6 +21,7 @@ import { Route as AppSanteRouteImport } from './routes/_app/sante'
 import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
 import { Route as AppParametresRouteImport } from './routes/_app/parametres'
 import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
+import { Route as AppMarchesRouteImport } from './routes/_app/marches'
 import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
 import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
@@ -85,6 +86,11 @@ const AppObjectifsRoute = AppObjectifsRouteImport.update({
   path: '/objectifs',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMarchesRoute = AppMarchesRouteImport.update({
+  id: '/marches',
+  path: '/marches',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInvestissementsRoute = AppInvestissementsRouteImport.update({
   id: '/investissements',
   path: '/investissements',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/depenses': typeof AppDepensesRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
+  '/marches': typeof AppMarchesRoute
   '/objectifs': typeof AppObjectifsRoute
   '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/depenses': typeof AppDepensesRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
+  '/marches': typeof AppMarchesRoute
   '/objectifs': typeof AppObjectifsRoute
   '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_app/depenses': typeof AppDepensesRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/investissements': typeof AppInvestissementsRoute
+  '/_app/marches': typeof AppMarchesRoute
   '/_app/objectifs': typeof AppObjectifsRoute
   '/_app/parametres': typeof AppParametresRoute
   '/_app/patrimoine': typeof AppPatrimoineRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/depenses'
     | '/integrations'
     | '/investissements'
+    | '/marches'
     | '/objectifs'
     | '/parametres'
     | '/patrimoine'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/depenses'
     | '/integrations'
     | '/investissements'
+    | '/marches'
     | '/objectifs'
     | '/parametres'
     | '/patrimoine'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/_app/depenses'
     | '/_app/integrations'
     | '/_app/investissements'
+    | '/_app/marches'
     | '/_app/objectifs'
     | '/_app/parametres'
     | '/_app/patrimoine'
@@ -310,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppObjectifsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/marches': {
+      id: '/_app/marches'
+      path: '/marches'
+      fullPath: '/marches'
+      preLoaderRoute: typeof AppMarchesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/investissements': {
       id: '/_app/investissements'
       path: '/investissements'
@@ -346,6 +365,7 @@ interface AppRouteChildren {
   AppDepensesRoute: typeof AppDepensesRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppInvestissementsRoute: typeof AppInvestissementsRoute
+  AppMarchesRoute: typeof AppMarchesRoute
   AppObjectifsRoute: typeof AppObjectifsRoute
   AppParametresRoute: typeof AppParametresRoute
   AppPatrimoineRoute: typeof AppPatrimoineRoute
@@ -358,6 +378,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDepensesRoute: AppDepensesRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppInvestissementsRoute: AppInvestissementsRoute,
+  AppMarchesRoute: AppMarchesRoute,
   AppObjectifsRoute: AppObjectifsRoute,
   AppParametresRoute: AppParametresRoute,
   AppPatrimoineRoute: AppPatrimoineRoute,

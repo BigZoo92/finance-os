@@ -1,9 +1,9 @@
 ---
-name: cluster-16
-description: "Skill for the Cluster_16 area of finance-os. 7 symbols across 1 files."
+name: cluster-17
+description: "Skill for the Cluster_17 area of finance-os. 7 symbols across 1 files."
 ---
 
-# Cluster_16
+# Cluster_17
 
 7 symbols | 1 files | Cohesion: 80%
 
@@ -11,7 +11,7 @@ description: "Skill for the Cluster_16 area of finance-os. 7 symbols across 1 fi
 
 - Working with code in `apps/`
 - Understanding how toStringValue, safeString, parseCurrency work
-- Modifying cluster_16-related functionality
+- Modifying cluster_17-related functionality
 
 ## Key Files
 
@@ -23,13 +23,13 @@ description: "Skill for the Cluster_16 area of finance-os. 7 symbols across 1 fi
 
 | Symbol | Type | File | Line |
 |--------|------|------|------|
-| `toStringValue` | Function | `apps/worker/src/index.ts` | 152 |
-| `safeString` | Function | `apps/worker/src/index.ts` | 164 |
-| `parseCurrency` | Function | `apps/worker/src/index.ts` | 173 |
-| `parseAccountType` | Function | `apps/worker/src/index.ts` | 191 |
-| `parseEnabledFlag` | Function | `apps/worker/src/index.ts` | 219 |
-| `upsertAccounts` | Function | `apps/worker/src/index.ts` | 462 |
-| `buildTransactionInsert` | Function | `apps/worker/src/index.ts` | 687 |
+| `toStringValue` | Function | `apps/worker/src/index.ts` | 153 |
+| `safeString` | Function | `apps/worker/src/index.ts` | 165 |
+| `parseCurrency` | Function | `apps/worker/src/index.ts` | 174 |
+| `parseAccountType` | Function | `apps/worker/src/index.ts` | 192 |
+| `parseEnabledFlag` | Function | `apps/worker/src/index.ts` | 220 |
+| `upsertAccounts` | Function | `apps/worker/src/index.ts` | 463 |
+| `buildTransactionInsert` | Function | `apps/worker/src/index.ts` | 690 |
 
 ## Execution Flows
 
@@ -46,5 +46,5 @@ description: "Skill for the Cluster_16 area of finance-os. 7 symbols across 1 fi
 ## How to Explore
 
 1. `gitnexus_context({name: "toStringValue"})` — see callers and callees
-2. `gitnexus_query({query: "cluster_16"})` — find related execution flows
+2. `gitnexus_query({query: "cluster_17"})` — find related execution flows
 3. Read key files listed above for implementation details

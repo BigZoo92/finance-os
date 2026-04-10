@@ -1,11 +1,11 @@
 ---
 name: cluster-1
-description: "Skill for the Cluster_1 area of finance-os. 12 symbols across 2 files."
+description: "Skill for the Cluster_1 area of finance-os. 13 symbols across 2 files."
 ---
 
 # Cluster_1
 
-12 symbols | 2 files | Cohesion: 88%
+13 symbols | 2 files | Cohesion: 89%
 
 ## When to Use
 
@@ -17,7 +17,7 @@ description: "Skill for the Cluster_1 area of finance-os. 12 symbols across 2 fi
 
 | File | Symbols |
 |------|---------|
-| `apps/worker/src/index.ts` | pingDatabase, resolveWorkerVersion, sendJson, startStatusServer, toSafeErrorMessage (+6) |
+| `apps/worker/src/index.ts` | pingDatabase, resolveWorkerVersion, sendJson, startStatusServer, toSafeErrorMessage (+7) |
 | `packages/redis/src/index.ts` | connect |
 
 ## Entry Points
@@ -31,17 +31,18 @@ Start here when exploring this area:
 | Symbol | Type | File | Line |
 |--------|------|------|------|
 | `connect` | Function | `packages/redis/src/index.ts` | 9 |
-| `pingDatabase` | Function | `apps/worker/src/index.ts` | 84 |
-| `resolveWorkerVersion` | Function | `apps/worker/src/index.ts` | 92 |
-| `sendJson` | Function | `apps/worker/src/index.ts` | 104 |
-| `startStatusServer` | Function | `apps/worker/src/index.ts` | 116 |
-| `toSafeErrorMessage` | Function | `apps/worker/src/index.ts` | 241 |
-| `updateHeartbeatFile` | Function | `apps/worker/src/index.ts` | 261 |
-| `syncAllConnections` | Function | `apps/worker/src/index.ts` | 1131 |
-| `handleJob` | Function | `apps/worker/src/index.ts` | 1171 |
-| `startScheduler` | Function | `apps/worker/src/index.ts` | 1194 |
-| `consumeJobs` | Function | `apps/worker/src/index.ts` | 1243 |
-| `start` | Function | `apps/worker/src/index.ts` | 1279 |
+| `pingDatabase` | Function | `apps/worker/src/index.ts` | 89 |
+| `resolveWorkerVersion` | Function | `apps/worker/src/index.ts` | 97 |
+| `sendJson` | Function | `apps/worker/src/index.ts` | 109 |
+| `startStatusServer` | Function | `apps/worker/src/index.ts` | 121 |
+| `toSafeErrorMessage` | Function | `apps/worker/src/index.ts` | 242 |
+| `updateHeartbeatFile` | Function | `apps/worker/src/index.ts` | 262 |
+| `syncAllConnections` | Function | `apps/worker/src/index.ts` | 1134 |
+| `handleJob` | Function | `apps/worker/src/index.ts` | 1174 |
+| `startScheduler` | Function | `apps/worker/src/index.ts` | 1197 |
+| `startNewsScheduler` | Function | `apps/worker/src/index.ts` | 1246 |
+| `consumeJobs` | Function | `apps/worker/src/index.ts` | 1268 |
+| `start` | Function | `apps/worker/src/index.ts` | 1304 |
 
 ## Execution Flows
 

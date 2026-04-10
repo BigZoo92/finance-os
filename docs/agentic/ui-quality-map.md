@@ -5,6 +5,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 ## Primary UI Surfaces
 
 - Dashboard shell and major state handling: [../../apps/web/src/routes/_app.tsx](../../apps/web/src/routes/_app.tsx)
+- Marches & Macro surface: [../../apps/web/src/routes/_app/marches.tsx](../../apps/web/src/routes/_app/marches.tsx), [../../apps/web/src/components/markets/markets-dashboard.tsx](../../apps/web/src/components/markets/markets-dashboard.tsx)
 - Personal goals surface: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
 - Powens callback flow UI: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Shared UI exports: [../../packages/ui/src/components/index.ts](../../packages/ui/src/components/index.ts)
@@ -18,6 +19,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Keep dashboard state driven by loaders, query options, and URL search params rather than ad hoc local request state.
 - Dashboard health states should stay progressive: one global summary, inline badges only on selected decision-critical widgets, and an optional diagnosis drawer instead of repeating the same warning across the whole page.
 - Powens connection status UI should prefer the persisted last-sync snapshot for concise badges, but it must degrade cleanly to runtime-only placeholders when the server kill-switch disables persistence.
+- Markets charts should stay premium but disciplined: D3 custom visuals, explicit axis/freshness cues when needed, and no fake real-time motion or chart junk.
 
 ## UI Change Expectations
 
@@ -34,6 +36,8 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Admin mode still exposes Powens connect/sync affordances without layout regressions.
 - Ops overview should keep Powens callback observability compact: show freshness plus safe-mode state without exposing callback payload contents.
 - The dashboard health summary should stay coherent across demo/admin: demo comes from the fixture matrix, admin comes from aggregate plus domain-level health, and global vs inline signals must not contradict each other.
+- The `/marches` page should keep hero, panorama, macro, watchlist, signals, and provenance sections legible in demo, admin-live, and admin-fallback states.
+- Market source badges should clearly distinguish `EOD`, `differe`, and `overlay US`, and the freshness legend should stay understandable without opening devtools.
 - Powens connection cards should use explicit badges (`OK`, `KO`, `En cours`, `Inconnu`), keep the short reason readable in the main card, and reserve the exact last-attempt time for a tooltip or similarly lightweight affordance.
 - Empty and error states remain actionable and legible.
 - Tables, cards, and buttons stay keyboard accessible.

@@ -58,6 +58,10 @@ export const dashboardNewsContextQuerySchema = t.Object({
   range: t.Optional(t.Union([t.Literal('24h'), t.Literal('7d'), t.Literal('30d')])),
 })
 
+export const dashboardMarketsRefreshBodySchema = t.Object({
+  trigger: t.Optional(t.Union([t.Literal('manual'), t.Literal('scheduled')])),
+})
+
 export const dashboardTransactionClassificationParamsSchema = t.Object({
   transactionId: t.Numeric({ minimum: 1 }),
 })

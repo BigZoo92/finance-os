@@ -1,42 +1,45 @@
 ---
 name: cluster-47
-description: "Skill for the Cluster_47 area of finance-os. 7 symbols across 1 files."
+description: "Skill for the Cluster_47 area of finance-os. 10 symbols across 1 files."
 ---
 
 # Cluster_47
 
-7 symbols | 1 files | Cohesion: 88%
+10 symbols | 1 files | Cohesion: 90%
 
 ## When to Use
 
 - Working with code in `apps/`
-- Understanding how getApiBaseUrl, toApiUrl work
+- Understanding how apiRequest, ApiRequestError work
 - Modifying cluster_47-related functionality
 
 ## Key Files
 
 | File | Symbols |
 |------|---------|
-| `apps/web/src/lib/api.ts` | toOptionalEnv, readServerRuntimeEnv, getClientApiBaseUrl, resolveApiBaseUrl, getApiBaseUrl (+2) |
+| `apps/web/src/lib/api.ts` | ApiRequestError, withDefined, getSsrRequestContext, truncate, toApiErrorPayload (+5) |
 
 ## Entry Points
 
 Start here when exploring this area:
 
-- **`getApiBaseUrl`** (Function) — `apps/web/src/lib/api.ts:184`
-- **`toApiUrl`** (Function) — `apps/web/src/lib/api.ts:196`
+- **`apiRequest`** (Function) — `apps/web/src/lib/api.ts:333`
+- **`ApiRequestError`** (Class) — `apps/web/src/lib/api.ts:50`
 
 ## Key Symbols
 
 | Symbol | Type | File | Line |
 |--------|------|------|------|
-| `getApiBaseUrl` | Function | `apps/web/src/lib/api.ts` | 184 |
-| `toApiUrl` | Function | `apps/web/src/lib/api.ts` | 196 |
-| `toOptionalEnv` | Function | `apps/web/src/lib/api.ts` | 94 |
-| `readServerRuntimeEnv` | Function | `apps/web/src/lib/api.ts` | 116 |
-| `getClientApiBaseUrl` | Function | `apps/web/src/lib/api.ts` | 136 |
-| `resolveApiBaseUrl` | Function | `apps/web/src/lib/api.ts` | 139 |
-| `toAbsolutePathPrefix` | Function | `apps/web/src/lib/api.ts` | 188 |
+| `ApiRequestError` | Class | `apps/web/src/lib/api.ts` | 50 |
+| `apiRequest` | Function | `apps/web/src/lib/api.ts` | 333 |
+| `withDefined` | Function | `apps/web/src/lib/api.ts` | 103 |
+| `getSsrRequestContext` | Function | `apps/web/src/lib/api.ts` | 124 |
+| `truncate` | Function | `apps/web/src/lib/api.ts` | 211 |
+| `toApiErrorPayload` | Function | `apps/web/src/lib/api.ts` | 219 |
+| `resolveMethod` | Function | `apps/web/src/lib/api.ts` | 245 |
+| `toHintFromStatus` | Function | `apps/web/src/lib/api.ts` | 249 |
+| `resolveServerInternalToken` | Function | `apps/web/src/lib/api.ts` | 279 |
+| `createRequestHeaders` | Function | `apps/web/src/lib/api.ts` | 286 |
 
 ## Execution Flows
 
@@ -46,8 +49,14 @@ Start here when exploring this area:
 | `ApiRequest → GetClientApiBaseUrl` | cross_community | 3 |
 | `ApiRequest → ToAbsolutePathPrefix` | cross_community | 3 |
 
+## Connected Areas
+
+| Area | Connections |
+|------|-------------|
+| Cluster_48 | 2 calls |
+
 ## How to Explore
 
-1. `gitnexus_context({name: "getApiBaseUrl"})` — see callers and callees
+1. `gitnexus_context({name: "apiRequest"})` — see callers and callees
 2. `gitnexus_query({query: "cluster_47"})` — find related execution flows
 3. Read key files listed above for implementation details

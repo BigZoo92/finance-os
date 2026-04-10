@@ -14,6 +14,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/api/src/routes/system.test.ts](../../apps/api/src/routes/system.test.ts)
 - API dashboard normalization:
   - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
+  - [../../apps/api/src/routes/dashboard/domain/market-analytics.test.ts](../../apps/api/src/routes/dashboard/domain/market-analytics.test.ts)
   - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
   - [../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts)
   - [../../apps/api/src/routes/integrations/powens/routes/status.test.ts](../../apps/api/src/routes/integrations/powens/routes/status.test.ts)
@@ -29,11 +30,13 @@ Use this map to choose the smallest verification set that still matches the risk
   - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
   - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
   - [../../apps/web/src/features/dashboard-api.test.ts](../../apps/web/src/features/dashboard-api.test.ts)
+  - [../../apps/web/src/features/markets/api.test.ts](../../apps/web/src/features/markets/api.test.ts)
   - [../../apps/web/src/features/powens/manual-sync-cooldown.test.ts](../../apps/web/src/features/powens/manual-sync-cooldown.test.ts)
   - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
   - [../../apps/web/src/features/goals/api.test.ts](../../apps/web/src/features/goals/api.test.ts)
 - Worker import normalization:
   - [../../apps/worker/src/raw-import.test.ts](../../apps/worker/src/raw-import.test.ts)
+  - [../../apps/worker/src/market-refresh-scheduler.test.ts](../../apps/worker/src/market-refresh-scheduler.test.ts)
   - [../../apps/worker/src/sync-status-persistence.test.ts](../../apps/worker/src/sync-status-persistence.test.ts)
   - [../../apps/worker/src/transaction-gap-detection.test.ts](../../apps/worker/src/transaction-gap-detection.test.ts)
 
@@ -105,6 +108,16 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm api:typecheck`
   - `pnpm web:typecheck`
   - `pnpm web:build`
+- Dashboard markets / macro contract, persistence, scheduler, or UI changes:
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm --filter @finance-os/env typecheck`
+  - `pnpm api:typecheck`
+  - `pnpm worker:typecheck`
+  - `bun test apps/api/src/routes/dashboard/domain/market-analytics.test.ts`
+  - `bun test apps/worker/src/market-refresh-scheduler.test.ts`
+  - `pnpm web:typecheck`
+  - `pnpm web:build`
+  - `pnpm db:generate` when the schema changed
 - Dashboard derived recompute contract, persistence, or admin UI changes:
   - `pnpm --filter @finance-os/db typecheck`
   - `pnpm --filter @finance-os/powens typecheck`
@@ -142,6 +155,8 @@ Use this map to choose the smallest verification set that still matches the risk
 - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
 - Demo/admin parity acceptance: verify the touched flow against [policy-verification-bundle.md](policy-verification-bundle.md) for explicit pass criteria on each path plus required negative tests.
 - Transactions freshness UX: latest transactions card shows "Last updated" plus distinct freshness badges (`fresh`, `stale-but-usable`, `syncing`, `sync-failed-with-safe-data`, `no-data-first-connect`) without blocking the table behind a spinner-only state.
+- Marches & Macro: demo mode must show the deterministic fixture with zero admin actions, while admin mode must preserve explicit source badges (`EOD`, `differe`, `overlay US`) and a usable degraded fallback when live/cache data is missing.
+- Marches & Macro: the `/marches` layout should keep loading, empty, degraded, error, offline, and permission-gated states readable on mobile and desktop without chart overflow.
 - Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
 - Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
 - Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.

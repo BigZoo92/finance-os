@@ -19,8 +19,8 @@ description: "Skill for the Powens area of finance-os. 30 symbols across 5 files
 |------|---------|
 | `apps/web/src/features/powens/manual-sync-cooldown.ts` | createInitialCooldownStoreState, stopCooldownTicker, syncCooldownClock, ensureCooldownTicker, normalizeDurationSeconds (+8) |
 | `apps/web/src/features/powens/reconnect-banner.ts` | canUseLocalStorage, readReconnectBannerDeferredSnapshot, writeReconnectBannerDeferredSnapshot, clearReconnectBannerDeferredSnapshot, parseBooleanUiFlag (+1) |
-| `apps/web/src/features/powens/sync-status.ts` | formatAttemptTime, toSnapshotFreshnessLabel, toTooltipLabel, getPowensConnectionSyncBadgeModel |
 | `apps/web/src/routes/powens/callback.tsx` | toErrorState, renderLayout, PowensCallbackPendingPage, PowensCallbackPage |
+| `apps/web/src/features/powens/sync-status.ts` | formatAttemptTime, toSnapshotFreshnessLabel, toTooltipLabel, getPowensConnectionSyncBadgeModel |
 | `apps/web/src/features/powens/internal-notifications.ts` | toIsoTimestamp, toConnectionDetail, getPowensInternalNotifications |
 
 ## Entry Points
@@ -52,11 +52,11 @@ Start here when exploring this area:
 | `syncCooldownClock` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 97 |
 | `ensureCooldownTicker` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 116 |
 | `normalizeDurationSeconds` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 126 |
-| `formatAttemptTime` | Function | `apps/web/src/features/powens/sync-status.ts` | 17 |
-| `toSnapshotFreshnessLabel` | Function | `apps/web/src/features/powens/sync-status.ts` | 33 |
-| `toTooltipLabel` | Function | `apps/web/src/features/powens/sync-status.ts` | 38 |
-| `canUseLocalStorage` | Function | `apps/web/src/features/powens/reconnect-banner.ts` | 66 |
 | `toErrorState` | Function | `apps/web/src/routes/powens/callback.tsx` | 26 |
+| `renderLayout` | Function | `apps/web/src/routes/powens/callback.tsx` | 64 |
+| `PowensCallbackPendingPage` | Function | `apps/web/src/routes/powens/callback.tsx` | 82 |
+| `PowensCallbackPage` | Function | `apps/web/src/routes/powens/callback.tsx` | 147 |
+| `formatAttemptTime` | Function | `apps/web/src/features/powens/sync-status.ts` | 17 |
 
 ## Execution Flows
 

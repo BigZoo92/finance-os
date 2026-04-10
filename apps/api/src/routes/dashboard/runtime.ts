@@ -10,12 +10,15 @@ import {
 } from './domain/derived-recompute'
 import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
 import { createDashboardNewsUseCases } from './domain/dashboard-news'
+import { createDashboardMarketsUseCases } from './domain/dashboard-markets'
 import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/failsoft-policy'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
 import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
+import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
 import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
+import { createLiveMarketDataRefreshService } from './services/fetch-live-market-data'
 import { createLiveNewsIngestionService } from './services/fetch-live-news'
 import { createEcbDataNewsProvider } from './services/providers/ecb-data-news-provider'
 import { createEcbRssNewsProvider } from './services/providers/ecb-rss-news-provider'
@@ -59,6 +62,17 @@ export const createDashboardRouteRuntime = ({
   newsProviderFredEnabled,
   newsProviderFredApiKey,
   newsProviderFredSeriesIds,
+  marketDataEnabled,
+  marketDataRefreshEnabled,
+  marketDataStaleAfterMinutes,
+  marketDataEodhdEnabled,
+  marketDataTwelveDataEnabled,
+  marketDataFredEnabled,
+  marketDataUsFreshOverlayEnabled,
+  marketDataDefaultWatchlistIds,
+  marketDataFredSeriesIds,
+  eodhdApiKey,
+  twelveDataApiKey,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -90,9 +104,21 @@ export const createDashboardRouteRuntime = ({
   newsProviderFredEnabled: boolean
   newsProviderFredApiKey: string | undefined
   newsProviderFredSeriesIds: string[]
+  marketDataEnabled: boolean
+  marketDataRefreshEnabled: boolean
+  marketDataStaleAfterMinutes: number
+  marketDataEodhdEnabled: boolean
+  marketDataTwelveDataEnabled: boolean
+  marketDataFredEnabled: boolean
+  marketDataUsFreshOverlayEnabled: boolean
+  marketDataDefaultWatchlistIds: string[]
+  marketDataFredSeriesIds: string[]
+  eodhdApiKey: string | undefined
+  twelveDataApiKey: string | undefined
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const newsRepository = createDashboardNewsRepository({ db })
+  const marketsRepository = createDashboardMarketsRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
   const powensJobs = createPowensJobQueueRepository(redisClient)
 
@@ -202,10 +228,36 @@ export const createDashboardRouteRuntime = ({
     aiContextBundleEnabled,
   })
 
+  const marketRefresh = createLiveMarketDataRefreshService({
+    marketDataEodhdEnabled,
+    marketDataTwelveDataEnabled,
+    marketDataFredEnabled,
+    marketDataUsFreshOverlayEnabled,
+    eodhdApiKey,
+    twelveDataApiKey,
+    fredApiKey: newsProviderFredApiKey,
+  })
+
+  const markets = createDashboardMarketsUseCases({
+    repository: marketsRepository,
+    runLiveRefresh: marketRefresh.run,
+    marketDataEnabled,
+    marketDataRefreshEnabled,
+    staleAfterMinutes: marketDataStaleAfterMinutes,
+    defaultWatchlistIds: marketDataDefaultWatchlistIds,
+    fredSeriesIds: marketDataFredSeriesIds,
+    providerEnabledMap: {
+      eodhd: marketDataEodhdEnabled,
+      twelve_data: marketDataTwelveDataEnabled && marketDataUsFreshOverlayEnabled,
+      fred: marketDataFredEnabled,
+    },
+  })
+
   return {
     repositories: {
       readModel,
       news: newsRepository,
+      markets: marketsRepository,
       derivedRecompute,
     },
     useCases: {
@@ -222,6 +274,11 @@ export const createDashboardRouteRuntime = ({
       getNews: news.getNews,
       getNewsContextBundle: news.getNewsContextBundle,
       ingestNews: news.ingestNews,
+      getMarketsOverview: markets.getOverview,
+      getMarketsWatchlist: markets.getWatchlist,
+      getMarketsMacro: markets.getMacro,
+      getMarketsContextBundle: markets.getContextBundle,
+      refreshMarkets: markets.refreshMarkets,
     },
   }
 }

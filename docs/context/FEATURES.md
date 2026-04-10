@@ -1,6 +1,6 @@
 # Finance-OS -- Features Metier
 
-> **Derniere mise a jour** : 2026-04-09
+> **Derniere mise a jour** : 2026-04-10
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle feature ou evolution significative.
 
@@ -268,6 +268,56 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 
 ---
 
+## 9.bis Marches & Macro
+
+**Route** : `/marches`
+**Routes API** : `GET /dashboard/markets/overview`, `GET /dashboard/markets/watchlist`, `GET /dashboard/markets/macro`, `GET /dashboard/markets/context-bundle`, `POST /dashboard/markets/refresh`
+**Rapport detaille** : [MARKETS-MACRO.md](MARKETS-MACRO.md)
+
+### Fonctionnement
+- Lecture SSR-first via loader TanStack puis Query (`/marches`)
+- Lecture `GET /dashboard/markets/*` strictement cache-only
+- Refresh live explicite via `POST /dashboard/markets/refresh`
+- Scheduler worker optionnel via `MARKET_DATA_AUTO_REFRESH_ENABLED`
+- Providers:
+  - EODHD = baseline global EOD / differe
+  - Twelve Data = overlay optionnel plus frais sur certains symboles US
+  - FRED = series macro officielles
+
+### Dataset initial
+- Panorama global: `SPY`, `QQQ`, `VGK`, `EWJ`, `IEMG`, `CW8`
+- Watchlist PEA / Euronext: `CW8`, `MEUD`, `AEEM`, `MJP`, `AIR`, `MC`
+- Cross-asset lisible: `IEF`, `GLD`, `EZA`
+- Macro FRED: `FEDFUNDS`, `SOFR`, `DGS2`, `DGS10`, `T10Y2Y`, `CPIAUCSL`, `UNRATE`
+- Pas de crypto
+
+### Restitution UI
+- Hero premium avec resume marche, fraicheur et source primaire
+- Heat strip panorama
+- Macro pulse panel avec mini-series D3
+- Relative performance ribbon D3
+- Watchlist mondiale dense mais lisible
+- Signal board deterministic (pas de fake AI)
+- Legend de provenance / fraicheur
+
+### Context bundle IA futur
+- Objet stable `MarketContextBundle`
+- Contient couverture, key movers, market breadth, regime hints, macro regime, risk flags, provenance, freshness et caveats
+- Aucune generation LLM aujourd'hui
+- Reutilisable plus tard pour un advisor IA sans repenser le pipeline
+
+### Demo / Admin
+- Demo: fixture deterministic, read-only, zero DB, zero provider
+- Admin: lecture PostgreSQL snapshot-first, refresh live sur action explicite ou scheduler worker
+- Fallback admin: si cache / provider indisponible, l'UI reste usable avec source `admin_fallback`
+
+### Limites assumees
+- Les indices cash non verifies en gratuit sont remplaces par des ETF proxies explicites
+- Les badges de fraicheur doivent afficher honnetement `EOD`, `differe` ou `overlay US`
+- La couverture Twelve Data gratuite n'est pas traitee comme une source globale de reference
+
+---
+
 ## 10. Conseiller IA (MVP)
 
 **Route** : `GET /dashboard/advisor`
@@ -401,6 +451,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 | Categorisation | Lecture seule | Edition |
 | Budgets | Lecture seule | Edition |
 | News | Fixtures deterministes | Ingestion live + cache enrichi |
+| Marches & Macro | Fixtures deterministes | Cache DB + refresh live |
 | Conseiller IA | Mocks | Local (pas d'API LLM) |
 | Notifications | Desactivees | Actives |
 | Export | Non disponible | CSV + PDF |
@@ -425,4 +476,9 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 | `news_article_source_ref` | Provenance cross-source par signal |
 | `news_cache_state` | Etat global du cache news |
 | `news_provider_state` | Health et compteurs par provider |
+| `market_quote_snapshot` | Snapshot canonique d'un instrument avec source et fraicheur |
+| `market_macro_observation` | Observations macro FRED persistantes |
+| `market_cache_state` | Etat global du cache marches |
+| `market_provider_state` | Health et compteurs par provider marches |
+| `market_context_bundle_snapshot` | Snapshot du bundle IA marches |
 | `derived_recompute_run` | Statut recompute background |

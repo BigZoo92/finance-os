@@ -525,6 +525,77 @@ export const getApiEnv = () => {
       .optional()
       .transform(value => toStringArrayEnv(value, ['FEDFUNDS', 'CPIAUCSL', 'UNRATE', 'DGS10'])),
     FRED_API_KEY: z.string().min(1).optional(),
+    MARKET_DATA_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_REFRESH_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_FAILSOFT_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_EODHD_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_TWELVEDATA_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_FRED_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_US_FRESH_OVERLAY_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    MARKET_DATA_FORCE_FIXTURE_FALLBACK: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    MARKET_DATA_STALE_AFTER_MINUTES: z.coerce.number().int().positive().default(16 * 60),
+    MARKET_DATA_REFRESH_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(900),
+    MARKET_DATA_DEFAULT_WATCHLIST_IDS: z
+      .string()
+      .optional()
+      .transform(value =>
+        toStringArrayEnv(value, [
+          'spy-us',
+          'qqq-us',
+          'vgk-us',
+          'ewj-us',
+          'iemg-us',
+          'cw8-pa',
+          'meud-pa',
+          'aeem-pa',
+          'mjp-pa',
+          'air-pa',
+          'mc-pa',
+          'ief-us',
+          'gld-us',
+          'eza-us',
+        ])
+      ),
+    MARKET_DATA_FRED_SERIES_IDS: z
+      .string()
+      .optional()
+      .transform(value =>
+        toStringArrayEnv(value, [
+          'FEDFUNDS',
+          'SOFR',
+          'DGS2',
+          'DGS10',
+          'T10Y2Y',
+          'CPIAUCSL',
+          'UNRATE',
+        ])
+      ),
+    EODHD_API_KEY: z.string().min(1).optional(),
+    TWELVEDATA_API_KEY: z.string().min(1).optional(),
     FAILSOFT_POLICY_ENABLED: z
       .string()
       .optional()
@@ -662,6 +733,15 @@ export const getWorkerEnv = () =>
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     NEWS_FETCH_INTERVAL_MS: z.coerce.number().int().positive().default(4 * 60 * 60 * 1000),
+    MARKET_DATA_AUTO_REFRESH_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    MARKET_DATA_REFRESH_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(6 * 60 * 60 * 1000),
     SYNC_STATUS_PERSISTENCE_ENABLED: z
       .string()
       .optional()

@@ -1,6 +1,6 @@
 # Finance-OS -- Variables d'environnement & Feature Flags
 
-> **Derniere mise a jour** : 2026-04-09
+> **Derniere mise a jour** : 2026-04-10
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle variable ajoutee.
 
@@ -147,6 +147,8 @@
 | `WORKER_AUTO_SYNC_ENABLED` | `false` | Dokploy | Worker | Activer auto-sync scheduler |
 | `NEWS_AUTO_INGEST_ENABLED` | `true` | Dokploy | Worker | Activer le scheduler d'ingestion news |
 | `NEWS_FETCH_INTERVAL_MS` | `14400000` | Dokploy | Worker | Intervalle du scheduler news (4h par defaut) |
+| `MARKET_DATA_AUTO_REFRESH_ENABLED` | `false` | Dokploy | Worker | Activer le scheduler de refresh marches |
+| `MARKET_DATA_REFRESH_INTERVAL_MS` | `21600000` | Dokploy | Worker | Intervalle du scheduler marches (6h par defaut) |
 
 ---
 
@@ -194,13 +196,38 @@
 | `NEWS_PROVIDER_SEC_TICKERS` | `AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA` | Dokploy, Local | API | Watchlist ticker SEC |
 | `NEWS_PROVIDER_FRED_ENABLED` | `false` | Dokploy, Local | API | Active FRED |
 | `NEWS_PROVIDER_FRED_SERIES_IDS` | `FEDFUNDS,CPIAUCSL,UNRATE,DGS10` | Dokploy, Local | API | Liste CSV des series FRED |
-| `FRED_API_KEY` | -- | Dokploy, Local | API | Cle API FRED, requise si provider active |
+| `FRED_API_KEY` | -- | Dokploy, Local | API | Cle API FRED, requise si FRED news ou marches est active |
 
 Notes:
 
-- `FRED_API_KEY` est un secret.
+- `FRED_API_KEY` est un secret partage entre le domaine news et le domaine marches.
 - `SEC_USER_AGENT` doit etre defini avec une vraie signature produit/contact en prod.
 - `NEWS_PROVIDER_ECB_DATA_ENABLED` et `NEWS_PROVIDER_FRED_ENABLED` restent desactives par defaut pour garder un cout reseau raisonnable.
+
+---
+
+## 11.bis Market data
+
+| Variable | Default | Ou la definir | Consommateur | Description |
+|---|---|---|---|---|
+| `MARKET_DATA_ENABLED` | `true` | Dokploy, Local | API | Active la feature marches |
+| `MARKET_DATA_REFRESH_ENABLED` | `true` | Dokploy, Local | API | Autorise `POST /dashboard/markets/refresh` |
+| `MARKET_DATA_EODHD_ENABLED` | `true` | Dokploy, Local | API | Active le baseline EODHD |
+| `MARKET_DATA_TWELVEDATA_ENABLED` | `true` | Dokploy, Local | API | Active l'overlay Twelve Data |
+| `MARKET_DATA_FRED_ENABLED` | `true` | Dokploy, Local | API | Active les series macro FRED |
+| `MARKET_DATA_US_FRESH_OVERLAY_ENABLED` | `true` | Dokploy, Local | API | Autorise l'overlay US plus frais |
+| `MARKET_DATA_FORCE_FIXTURE_FALLBACK` | `false` | Dokploy, Local | API | Force le fallback fixture admin pour debug/demo ops |
+| `MARKET_DATA_STALE_AFTER_MINUTES` | `960` | Dokploy, Local | API | Seuil de staleness cache marches |
+| `MARKET_DATA_DEFAULT_WATCHLIST_IDS` | watchlist repo par defaut | Dokploy, Local | API | Liste CSV des instruments suivis |
+| `MARKET_DATA_FRED_SERIES_IDS` | `FEDFUNDS,SOFR,DGS2,DGS10,T10Y2Y,CPIAUCSL,UNRATE` | Dokploy, Local | API | Liste CSV des series macro |
+| `EODHD_API_KEY` | -- | Dokploy, Local | API | Cle API EODHD |
+| `TWELVEDATA_API_KEY` | -- | Dokploy, Local | API | Cle API Twelve Data |
+
+Notes:
+
+- `EODHD_API_KEY`, `TWELVEDATA_API_KEY` et `FRED_API_KEY` restent strictement serveur.
+- `MARKET_DATA_DEFAULT_WATCHLIST_IDS` attend les ids internes (`spy-us`, `cw8-pa`, etc.), pas les symboles provider bruts.
+- `MARKET_DATA_FORCE_FIXTURE_FALLBACK=true` est utile pour valider le rendu degrade admin sans couper la feature.
 
 ---
 
