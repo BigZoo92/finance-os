@@ -316,11 +316,16 @@ Champs extraits:
 - `og:title`
 - `og:description`
 - `og:image`
+- `og:image:url`
+- `og:image:secure_url`
+- `og:image:alt`
 - `og:site_name`
 - `og:url`
 - `twitter:title`
 - `twitter:description`
 - `twitter:image`
+- `twitter:image:src`
+- `twitter:image:alt`
 - `icon` / `favicon`
 - JSON-LD `Article` / `NewsArticle`
 
@@ -329,6 +334,18 @@ Le resultat est stocke dans:
 - `metadataFetchStatus`
 - `metadataCard`
 - `metadataFetchedAt`
+
+Le `metadataCard` conserve maintenant:
+
+- `imageUrl` + `imageCandidates[]`
+- `faviconUrl` + `faviconCandidates[]`
+- `imageAlt`
+
+But:
+
+- fournir une meilleure image hero si plusieurs meta tags existent
+- garder des fallbacks si `og:image` ou l'icone principale est indisponible
+- permettre une UI plus visuelle sans headless browser ni scraping du body
 
 ---
 
@@ -476,6 +493,7 @@ Le composant `NewsFeed` expose maintenant:
 - filtres de lecture
 - signal leaders
 - flux enrichi avec `why it matters`
+- cards visuelles adossees aux images metadata, favicons et provenance source
 - provenance visible
 - metadata cards
 - clusters d'evenements

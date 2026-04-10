@@ -9,6 +9,58 @@ import {
   dashboardNewsQuerySchema,
 } from '../schemas'
 
+const toSafeNewsIngestionError = ({
+  error,
+  requestId,
+}: {
+  error: unknown
+  requestId: string
+}) => {
+  const errorCode =
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    typeof error.code === 'string'
+      ? error.code
+      : error instanceof Error
+        ? error.message
+        : null
+
+  if (errorCode === 'FEATURE_DISABLED') {
+    return {
+      status: 503,
+      body: {
+        ok: false,
+        code: 'NEWS_INGESTION_DISABLED',
+        message: 'Live news ingestion is disabled.',
+        requestId,
+      },
+    }
+  }
+
+  if (errorCode === 'NEWS_PROVIDER_UNAVAILABLE') {
+    return {
+      status: 503,
+      body: {
+        ok: false,
+        code: 'NEWS_PROVIDER_UNAVAILABLE',
+        message: 'All enabled news providers failed. Using cached data.',
+        requestId,
+      },
+    }
+  }
+
+  return {
+    status: 503,
+    body: {
+      ok: false,
+      code: 'NEWS_INGESTION_FAILED',
+      message: 'News ingestion failed before completion. Check API logs with the requestId.',
+      requestId,
+    },
+  }
+}
+
 export const createNewsRoute = () =>
   new Elysia()
     .get(
@@ -123,14 +175,13 @@ export const createNewsRoute = () =>
             requestId: requestMeta.requestId,
             ...result,
           }
-        } catch {
-          context.set.status = 503
-          return {
-            ok: false,
-            code: 'NEWS_PROVIDER_UNAVAILABLE',
-            message: 'Live provider unavailable. Using cached data.',
+        } catch (error) {
+          const safeError = toSafeNewsIngestionError({
+            error,
             requestId: requestMeta.requestId,
-          }
+          })
+          context.set.status = safeError.status
+          return safeError.body
         }
       },
       {

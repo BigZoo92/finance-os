@@ -262,12 +262,12 @@ describe('createNewsRoute', () => {
     expect(payload.code).toBe('NEWS_INGESTION_UNAVAILABLE')
   })
 
-  it('returns 503 with a safe envelope when providers fail', async () => {
+  it('returns 503 with a safe envelope when all providers fail', async () => {
     const app = createNewsTestApp({
       mode: 'admin',
       runtime: createDashboardRuntime({
         ingestNews: async () => {
-          throw new Error('provider-down')
+          throw new Error('NEWS_PROVIDER_UNAVAILABLE')
         },
       }),
     })
@@ -287,6 +287,34 @@ describe('createNewsRoute', () => {
 
     expect(response.status).toBe(503)
     expect(payload.code).toBe('NEWS_PROVIDER_UNAVAILABLE')
+  })
+
+  it('returns a generic ingestion failure envelope for non-provider errors', async () => {
+    const app = createNewsTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        ingestNews: async () => {
+          throw new Error('column "source_domain" does not exist')
+        },
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/news/ingest', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'manual',
+        }),
+      })
+    )
+    const payload = (await response.json()) as { code: string; message: string }
+
+    expect(response.status).toBe(503)
+    expect(payload.code).toBe('NEWS_INGESTION_FAILED')
+    expect(payload.message).toContain('requestId')
   })
 
   it('allows live ingestion from admin mode and returns counters', async () => {

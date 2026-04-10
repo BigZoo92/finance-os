@@ -5,6 +5,7 @@ import { postDashboardNewsIngest } from '@/features/dashboard-api'
 import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { rankNewsByRelevance } from './relevance-scoring'
+import { NewsSignalCard } from './news-signal-card'
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -223,86 +224,7 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
               ) : null}
 
               {rankedItems.map(({ item, score, reasons }) => (
-                <article key={item.id} className="rounded-3xl border border-border/60 bg-background/80 p-4 shadow-sm">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{item.eventType}</Badge>
-                        <Badge variant="outline">{item.sourceType}</Badge>
-                        <Badge variant="outline">impact {item.marketImpactScore}</Badge>
-                        <Badge variant="outline">confidence {item.confidence}</Badge>
-                        <Badge variant="outline">novelty {item.novelty}</Badge>
-                      </div>
-                      <div>
-                        <a href={item.url} target="_blank" rel="noreferrer" className="text-base font-semibold leading-snug hover:underline">
-                          {item.title}
-                        </a>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {item.sourceName}
-                          {item.sourceDomain ? ` / ${item.sourceDomain}` : ''}
-                          {' / '}
-                          {new Date(item.publishedAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <p className="text-sm text-foreground/90">
-                        {item.summary ?? item.contentSnippet ?? 'Aucun resume provider disponible.'}
-                      </p>
-                    </div>
-
-                    <div className="min-w-[220px] rounded-2xl border border-border/50 bg-surface-1 p-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">UI rank</p>
-                      <p className="mt-2 text-2xl font-semibold">{score}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">Raisons: {reasons.join(', ')}</p>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap gap-2">
-                        {item.domains.slice(0, 4).map(domainEntry => (
-                          <Badge key={`${item.id}-${domainEntry}`} variant="ghost">{domainEntry}</Badge>
-                        ))}
-                        {item.affectedSectors.slice(0, 3).map(sectorEntry => (
-                          <Badge key={`${item.id}-${sectorEntry}`} variant="outline">{sectorEntry}</Badge>
-                        ))}
-                        {item.affectedTickers.slice(0, 3).map(tickerEntry => (
-                          <Badge key={`${item.id}-${tickerEntry}`} variant="outline">{tickerEntry}</Badge>
-                        ))}
-                      </div>
-                      <div className="rounded-2xl bg-surface-1 p-3">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Why it matters</p>
-                        <ul className="mt-2 space-y-1 text-sm text-foreground/90">
-                          {item.whyItMatters.slice(0, 3).map(reason => (
-                            <li key={reason}>- {reason}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="rounded-2xl bg-surface-1 p-3">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Provenance</p>
-                        <p className="mt-2 text-sm font-medium">
-                          {item.provenance.sourceCount} source{item.provenance.sourceCount > 1 ? 's' : ''} / {item.provenance.providerCount} provider{item.provenance.providerCount > 1 ? 's' : ''}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {item.sources.slice(0, 3).map(sourceEntry => sourceEntry.sourceName).join(' / ')}
-                        </p>
-                      </div>
-                      {item.metadataCard ? (
-                        <div className="rounded-2xl border border-border/50 bg-surface-1 p-3">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Metadata card</p>
-                          <p className="mt-2 text-sm font-medium">{item.metadataCard.siteName ?? item.metadataCard.displayUrl}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {item.metadataCard.description ?? 'Card enrichie depuis les meta tags de la page source.'}
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </article>
+                <NewsSignalCard key={item.id} item={item} score={score} reasons={reasons} />
               ))}
             </CardContent>
           </Card>

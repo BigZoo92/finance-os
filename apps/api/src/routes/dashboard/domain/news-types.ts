@@ -51,9 +51,12 @@ export interface NewsMetadataCard {
   description: string | null
   canonicalUrl: string | null
   imageUrl: string | null
+  imageCandidates: string[]
+  imageAlt: string | null
   siteName: string | null
   displayUrl: string
   faviconUrl: string | null
+  faviconCandidates: string[]
   publishedAt: string | null
   author: string | null
   articleType: string | null

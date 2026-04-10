@@ -8,7 +8,7 @@ afterEach(() => {
 })
 
 describe('scrapeArticleMetadata', () => {
-  it('extracts OG fields, canonical URLs, favicon, and JSON-LD article metadata', async () => {
+  it('extracts multiple image and favicon candidates from meta tags and JSON-LD', async () => {
     globalThis.fetch = (async () =>
       new Response(
         `<!doctype html>
@@ -17,9 +17,13 @@ describe('scrapeArticleMetadata', () => {
             <title>Fallback title</title>
             <link rel="canonical" href="/article/canonical" />
             <link rel="icon" href="/favicon.ico" />
+            <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
             <meta property="og:title" content="Macro signal headline" />
             <meta property="og:description" content="Important context for a macro release." />
+            <meta property="og:image:secure_url" content="https://cdn.signals.example/og-image-secure.png" />
             <meta property="og:image" content="/og-image.png" />
+            <meta property="og:image:alt" content="Macro chart preview" />
+            <meta name="twitter:image:src" content="/twitter-image.png" />
             <meta property="og:site_name" content="Signal Desk" />
             <meta property="article:published_time" content="2026-04-09T07:30:00.000Z" />
             <script type="application/ld+json">
@@ -27,7 +31,10 @@ describe('scrapeArticleMetadata', () => {
                 "@context": "https://schema.org",
                 "@type": "NewsArticle",
                 "author": { "name": "Jane Macro" },
-                "datePublished": "2026-04-09T07:30:00.000Z"
+                "datePublished": "2026-04-09T07:30:00.000Z",
+                "image": [
+                  "https://signals.example/json-ld-image.png"
+                ]
               }
             </script>
           </head>
@@ -54,10 +61,21 @@ describe('scrapeArticleMetadata', () => {
       title: 'Macro signal headline',
       description: 'Important context for a macro release.',
       canonicalUrl: 'https://signals.example/article/canonical',
-      imageUrl: 'https://signals.example/og-image.png',
+      imageUrl: 'https://cdn.signals.example/og-image-secure.png',
+      imageCandidates: [
+        'https://cdn.signals.example/og-image-secure.png',
+        'https://signals.example/og-image.png',
+        'https://signals.example/twitter-image.png',
+        'https://signals.example/json-ld-image.png',
+      ],
+      imageAlt: 'Macro chart preview',
       siteName: 'Signal Desk',
       displayUrl: 'signals.example',
       faviconUrl: 'https://signals.example/favicon.ico',
+      faviconCandidates: [
+        'https://signals.example/favicon.ico',
+        'https://signals.example/apple-touch-icon.png',
+      ],
       publishedAt: '2026-04-09T07:30:00.000Z',
       author: 'Jane Macro',
       articleType: 'NewsArticle',
@@ -85,5 +103,9 @@ describe('scrapeArticleMetadata', () => {
     expect(result.status).toBe('skipped')
     expect(result.card.displayUrl).toBe('signals.example')
     expect(result.card.title).toBe('signals.example')
+    expect(result.card.faviconUrl).toBe('https://signals.example/favicon.ico')
+    expect(result.card.faviconCandidates).toEqual([
+      'https://signals.example/favicon.ico',
+    ])
   })
 })

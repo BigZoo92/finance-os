@@ -3,12 +3,16 @@ import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
 import type {
   DashboardNewsFilters,
   DashboardNewsSignalCard,
-  NewsMetadataCard,
+  NewsMetadataFetchStatus,
   NewsPersistableSignalDraft,
   NewsProviderHealth,
   NewsProviderRunResult,
 } from '../domain/news-types'
 import { inferDirection, toIsoOrNull, toScoreLabel, uniqueStrings } from '../domain/news-helpers'
+import {
+  normalizeNewsMetadataCard,
+  selectPreferredNewsMetadata,
+} from '../domain/news-metadata'
 import { NEWS_PROVIDER_LABELS, type NewsProviderId } from '../domain/news-taxonomy'
 import type { ApiDb, DashboardNewsCacheStateRow } from '../types'
 import type { NewsDuplicateCandidate } from '../domain/news-dedupe'
@@ -213,7 +217,7 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
         transmissionHypotheses: row.transmissionHypotheses ?? [],
         whyItMatters: row.whyItMatters ?? [],
         scoringReasons: row.scoringReasons ?? [],
-        metadataCard: (row.metadataCard as NewsMetadataCard | null) ?? null,
+        metadataCard: normalizeNewsMetadataCard(row.metadataCard),
         metadataFetchStatus: row.metadataFetchStatus as DashboardNewsSignalCard['metadataFetchStatus'],
         eventClusterId: row.eventClusterId,
         provenance: {
@@ -337,7 +341,8 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
           rawProviderPayload: signal.rawProviderPayload,
           provenance: signal.provenance,
           metadataFetchStatus: signal.metadataFetchStatus,
-          metadataCard: signal.metadataCard as unknown as Record<string, unknown> | null,
+          metadataCard:
+            (normalizeNewsMetadataCard(signal.metadataCard) as unknown as Record<string, unknown> | null),
           metadataFetchedAt: signal.metadataFetchedAt,
           ingestedAt: signal.ingestedAt,
           lastEnrichedAt: signal.lastEnrichedAt,
@@ -453,6 +458,15 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
           sourcePriority(params.signal.sourceType) > sourcePriority(existing.sourceType) ||
           (params.signal.summary?.length ?? 0) > (existing.summary?.length ?? 0)
 
+        const selectedMetadata = selectPreferredNewsMetadata({
+          existingStatus: existing.metadataFetchStatus as NewsMetadataFetchStatus,
+          existingCard: existing.metadataCard,
+          existingFetchedAt: existing.metadataFetchedAt,
+          incomingStatus: params.signal.metadataFetchStatus,
+          incomingCard: params.signal.metadataCard,
+          incomingFetchedAt: params.signal.metadataFetchedAt,
+        })
+
         await tx
           .update(schema.newsArticle)
           .set({
@@ -517,15 +531,10 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
               ...(existing.scoringReasons ?? []),
               ...params.signal.scoringReasons,
             ]),
-            metadataFetchStatus:
-              existing.metadataFetchStatus === 'fetched'
-                ? existing.metadataFetchStatus
-                : params.signal.metadataFetchStatus,
+            metadataFetchStatus: selectedMetadata.status,
             metadataCard:
-              existing.metadataFetchStatus === 'fetched' && existing.metadataCard
-                ? existing.metadataCard
-                : (params.signal.metadataCard as unknown as Record<string, unknown> | null),
-            metadataFetchedAt: existing.metadataFetchedAt ?? params.signal.metadataFetchedAt,
+              (selectedMetadata.card as unknown as Record<string, unknown> | null),
+            metadataFetchedAt: selectedMetadata.fetchedAt,
             provenance: {
               sourceCount: existingSourceRefs.length + params.signal.sourceRefs.length,
               providerCount: providerSet.size,

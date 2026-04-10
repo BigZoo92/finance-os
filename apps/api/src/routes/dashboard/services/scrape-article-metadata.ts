@@ -1,5 +1,10 @@
 import { load } from 'cheerio'
-import { canonicalizeUrl, extractHostname, trimToLength } from '../domain/news-helpers'
+import {
+  canonicalizeUrl,
+  extractHostname,
+  trimToLength,
+  uniqueStrings,
+} from '../domain/news-helpers'
 import type { NewsMetadataCard, NewsMetadataFetchStatus } from '../domain/news-types'
 
 const HEAD_END_PATTERN = /<\/head>/i
@@ -51,6 +56,21 @@ const resolveMetaContent = ($: ReturnType<typeof load>, selectors: string[]) => 
   return null
 }
 
+const collectMetaContents = ($: ReturnType<typeof load>, selectors: string[]) => {
+  const values: string[] = []
+
+  for (const selector of selectors) {
+    $(selector).each((_, element) => {
+      const value = $(element).attr('content')?.trim()
+      if (value) {
+        values.push(value)
+      }
+    })
+  }
+
+  return uniqueStrings(values)
+}
+
 const resolveLinkHref = ($: ReturnType<typeof load>, selectors: string[]) => {
   for (const selector of selectors) {
     const value = $(selector).attr('href')?.trim()
@@ -60,6 +80,21 @@ const resolveLinkHref = ($: ReturnType<typeof load>, selectors: string[]) => {
   }
 
   return null
+}
+
+const collectLinkHrefs = ($: ReturnType<typeof load>, selectors: string[]) => {
+  const values: string[] = []
+
+  for (const selector of selectors) {
+    $(selector).each((_, element) => {
+      const value = $(element).attr('href')?.trim()
+      if (value) {
+        values.push(value)
+      }
+    })
+  }
+
+  return uniqueStrings(values)
 }
 
 const resolveAbsoluteUrl = (baseUrl: string, candidate: string | null) => {
@@ -74,6 +109,56 @@ const resolveAbsoluteUrl = (baseUrl: string, candidate: string | null) => {
   }
 }
 
+const resolveAbsoluteUrls = (baseUrl: string, candidates: Array<string | null>) => {
+  return uniqueStrings(
+    candidates.map(candidate => resolveAbsoluteUrl(baseUrl, candidate))
+  )
+}
+
+const buildDefaultFaviconUrl = (value: string) => {
+  try {
+    return new URL('/favicon.ico', value).toString()
+  } catch {
+    return null
+  }
+}
+
+const flattenJsonLdEntries = (value: unknown): Array<Record<string, unknown>> => {
+  if (Array.isArray(value)) {
+    return value.flatMap(entry => flattenJsonLdEntries(entry))
+  }
+
+  if (!value || typeof value !== 'object') {
+    return []
+  }
+
+  const entry = value as Record<string, unknown>
+  const graph = Array.isArray(entry['@graph']) ? flattenJsonLdEntries(entry['@graph']) : []
+
+  return [entry, ...graph]
+}
+
+const extractJsonLdImageCandidates = (value: unknown): string[] => {
+  if (typeof value === 'string') {
+    return [value]
+  }
+
+  if (Array.isArray(value)) {
+    return uniqueStrings(value.flatMap(entry => extractJsonLdImageCandidates(entry)))
+  }
+
+  if (!value || typeof value !== 'object') {
+    return []
+  }
+
+  const image = value as Record<string, unknown>
+
+  return uniqueStrings([
+    typeof image.url === 'string' ? image.url : null,
+    typeof image.contentUrl === 'string' ? image.contentUrl : null,
+  ])
+}
+
 const parseJsonLd = ($: ReturnType<typeof load>) => {
   const scripts = $('script[type="application/ld+json"]').toArray()
   for (const script of scripts) {
@@ -83,8 +168,8 @@ const parseJsonLd = ($: ReturnType<typeof load>) => {
     }
 
     try {
-      const parsed = JSON.parse(raw) as Record<string, unknown> | Array<Record<string, unknown>>
-      const entries = Array.isArray(parsed) ? parsed : [parsed]
+      const parsed = JSON.parse(raw) as unknown
+      const entries = flattenJsonLdEntries(parsed)
       for (const entry of entries) {
         const type = typeof entry['@type'] === 'string' ? entry['@type'] : null
         if (type !== 'Article' && type !== 'NewsArticle') {
@@ -104,6 +189,7 @@ const parseJsonLd = ($: ReturnType<typeof load>) => {
                 : null,
           publishedAt:
             typeof entry.datePublished === 'string' ? entry.datePublished : null,
+          imageCandidates: extractJsonLdImageCandidates(entry.image),
         }
       }
     } catch {}
@@ -112,18 +198,25 @@ const parseJsonLd = ($: ReturnType<typeof load>) => {
   return null
 }
 
-const buildMinimalCard = (url: string): NewsMetadataCard => ({
-  title: extractHostname(url) ?? url,
-  description: null,
-  canonicalUrl: canonicalizeUrl(url),
-  imageUrl: null,
-  siteName: extractHostname(url),
-  displayUrl: extractHostname(url) ?? url,
-  faviconUrl: null,
-  publishedAt: null,
-  author: null,
-  articleType: null,
-})
+const buildMinimalCard = (url: string): NewsMetadataCard => {
+  const defaultFaviconUrl = buildDefaultFaviconUrl(url)
+
+  return {
+    title: extractHostname(url) ?? url,
+    description: null,
+    canonicalUrl: canonicalizeUrl(url),
+    imageUrl: null,
+    imageCandidates: [],
+    imageAlt: null,
+    siteName: extractHostname(url),
+    displayUrl: extractHostname(url) ?? url,
+    faviconUrl: defaultFaviconUrl,
+    faviconCandidates: defaultFaviconUrl ? [defaultFaviconUrl] : [],
+    publishedAt: null,
+    author: null,
+    articleType: null,
+  }
+}
 
 export const scrapeArticleMetadata = async ({
   url,
@@ -199,21 +292,38 @@ export const scrapeArticleMetadata = async ({
       resolveLinkHref($, ['link[rel="canonical"]']) ??
         resolveMetaContent($, ['meta[property="og:url"]'])
     )
-    const imageUrl = resolveAbsoluteUrl(
-      url,
-      resolveMetaContent($, [
+    const imageCandidates = resolveAbsoluteUrls(url, [
+      ...collectMetaContents($, [
+        'meta[property="og:image:secure_url"]',
+        'meta[property="og:image:url"]',
         'meta[property="og:image"]',
+        'meta[name="twitter:image:src"]',
         'meta[name="twitter:image"]',
-      ])
-    )
-    const faviconUrl = resolveAbsoluteUrl(
-      url,
-      resolveLinkHref($, [
+        'meta[itemprop="image"]',
+      ]),
+      ...collectLinkHrefs($, ['link[rel="image_src"]']),
+      ...(jsonLd?.imageCandidates ?? []),
+    ])
+    const imageUrl = imageCandidates[0] ?? null
+    const imageAlt =
+      resolveMetaContent($, [
+        'meta[property="og:image:alt"]',
+        'meta[name="twitter:image:alt"]',
+      ]) ?? null
+    const defaultFaviconUrl = buildDefaultFaviconUrl(url)
+    const faviconCandidates = resolveAbsoluteUrls(url, [
+      ...collectLinkHrefs($, [
         'link[rel="icon"]',
         'link[rel="shortcut icon"]',
         'link[rel="apple-touch-icon"]',
-      ])
-    )
+        'link[rel="apple-touch-icon-precomposed"]',
+        'link[rel="mask-icon"]',
+        'link[rel="fluid-icon"]',
+      ]),
+      ...collectMetaContents($, ['meta[name="msapplication-TileImage"]']),
+      defaultFaviconUrl,
+    ])
+    const faviconUrl = faviconCandidates[0] ?? null
     const siteName =
       resolveMetaContent($, ['meta[property="og:site_name"]']) ??
       extractHostname(canonicalUrl ?? url)
@@ -234,9 +344,12 @@ export const scrapeArticleMetadata = async ({
         description: descriptionValue ? trimToLength(descriptionValue, 320) : null,
         canonicalUrl: canonicalUrl ?? minimalCard.canonicalUrl,
         imageUrl,
+        imageCandidates,
+        imageAlt,
         siteName,
         displayUrl: extractHostname(canonicalUrl ?? url) ?? url,
         faviconUrl,
+        faviconCandidates,
         publishedAt,
         author,
         articleType: jsonLd?.articleType ?? null,
