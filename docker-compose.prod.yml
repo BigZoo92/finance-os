@@ -141,6 +141,7 @@ services:
       TZ: ${TZ:-UTC}
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: ${REDIS_URL:-}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://finance-os-api:3001}
       WORKER_HEARTBEAT_MS: ${WORKER_HEARTBEAT_MS:-30000}
       WORKER_HEALTHCHECK_FILE: /var/run/finance-os/worker-heartbeat
       WORKER_HEALTHCHECK_MAX_AGE_MS: ${WORKER_HEALTHCHECK_MAX_AGE_MS:-120000}
