@@ -19,8 +19,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY apps/worker/package.json apps/worker/package.json
+COPY packages/ai/package.json packages/ai/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
+COPY packages/finance-engine/package.json packages/finance-engine/package.json
 COPY packages/powens/package.json packages/powens/package.json
 COPY packages/prelude/package.json packages/prelude/package.json
 COPY packages/redis/package.json packages/redis/package.json
@@ -55,8 +57,10 @@ RUN pnpm install --frozen-lockfile --prod --filter @finance-os/api...
 
 FROM deps-api AS bundle-api
 COPY apps/api apps/api
+COPY packages/ai packages/ai
 COPY packages/db packages/db
 COPY packages/env packages/env
+COPY packages/finance-engine packages/finance-engine
 COPY packages/powens packages/powens
 COPY packages/prelude packages/prelude
 COPY packages/redis packages/redis
@@ -79,8 +83,10 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=bundle-api --chown=app:app /app/node_modules ./node_modules
 COPY --from=bundle-api --chown=app:app /app/apps/api ./apps/api
+COPY --from=bundle-api --chown=app:app /app/packages/ai ./packages/ai
 COPY --from=bundle-api --chown=app:app /app/packages/db ./packages/db
 COPY --from=bundle-api --chown=app:app /app/packages/env ./packages/env
+COPY --from=bundle-api --chown=app:app /app/packages/finance-engine ./packages/finance-engine
 COPY --from=bundle-api --chown=app:app /app/packages/powens ./packages/powens
 COPY --from=bundle-api --chown=app:app /app/packages/prelude ./packages/prelude
 COPY --from=bundle-api --chown=app:app /app/packages/redis ./packages/redis
