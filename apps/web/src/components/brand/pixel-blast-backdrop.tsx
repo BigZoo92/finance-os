@@ -1,13 +1,20 @@
 /**
- * PixelBlastBackdrop — brand-tuned PixelBlast wrapper for pages where we
- * want a more graphic, signal-y background (e.g. login, special marketing
- * moments).
+ * PixelBlastBackdrop — brand-tuned PixelBlast wrapper.
  *
- * Finance-OS constraints:
+ * Defaults follow the React Bits official demo:
+ *  https://reactbits.dev/backgrounds/pixel-blast
+ *
+ *  - `variant="square"` — more graphic / signal-y than circle
+ *  - `liquid={false}`   — no pointer-warping of the background. Hover
+ *    leaves the canvas alone; ONLY clicks emit a clean propagating ripple.
+ *    This is what makes the demo feel elegant — the warp mode we had
+ *    before was aggressive and distracted from the login form.
+ *  - `edgeFade: 0.25`   — softer corner fade than the canvas default.
+ *
+ * Finance-OS constraints layered on top:
  *  - SSR-safe (client-only render via `mounted` gate)
  *  - Respects `prefers-reduced-motion` (falls back to static aurora mesh)
- *  - Uses CSS-var default colors so dark/light both work
- *  - Performance-friendly defaults (low pattern density, ripples off)
+ *  - Rose default palette (`#ff4f9f`) instead of the demo's mauve
  */
 import { useEffect, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
@@ -25,11 +32,10 @@ type PixelBlastBackdropProps = {
   pixelSize?: number
   /** Animation speed (0 = frozen). */
   speed?: number
-  /** Whether to enable the cursor ripples (click / hover). */
+  /** Ripples on click. Leave `true` for a premium, interactive feel. */
   enableRipples?: boolean
-  /** When `true` (default) the canvas receives pointer events so the user's
-   *  mouse triggers liquid warping + ripples. Set to `false` to make the
-   *  backdrop purely decorative. */
+  /** When `true` (default) the canvas receives pointer events so clicking
+   *  it emits a ripple. Set to `false` for a purely decorative backdrop. */
   interactive?: boolean
 }
 
@@ -37,9 +43,9 @@ export function PixelBlastBackdrop({
   className = '',
   color = '#ff4f9f',
   opacity = 0.55,
-  variant = 'circle',
-  pixelSize = 6,
-  speed = 0.45,
+  variant = 'square',
+  pixelSize = 4,
+  speed = 0.5,
   enableRipples = true,
   interactive = true,
 }: PixelBlastBackdropProps) {
@@ -57,10 +63,6 @@ export function PixelBlastBackdrop({
     )
   }
 
-  // When interactive, the wrapper accepts pointer events so PixelBlast's
-  // internal cursor ripples + liquid warping react to click / hover.
-  // Foreground UI should sit in a sibling with its own stacking context —
-  // it will naturally capture its own pointer events first.
   return (
     <div
       aria-hidden="true"
@@ -71,19 +73,21 @@ export function PixelBlastBackdrop({
         variant={variant}
         pixelSize={pixelSize}
         color={color}
-        patternScale={3.5}
-        patternDensity={1.0}
-        pixelSizeJitter={0.5}
+        patternScale={2}
+        patternDensity={1}
+        pixelSizeJitter={0}
         enableRipples={enableRipples}
-        rippleSpeed={0.55}
-        rippleThickness={0.14}
-        rippleIntensityScale={2.2}
-        liquid
+        rippleSpeed={0.4}
+        rippleThickness={0.12}
+        rippleIntensityScale={1.5}
+        /* NO liquid warping — the demo keeps this off for a good reason.
+           Clicks still produce ripples (enableRipples above). */
+        liquid={false}
         liquidStrength={0.12}
         liquidRadius={1.2}
         liquidWobbleSpeed={5}
         speed={speed}
-        edgeFade={0.4}
+        edgeFade={0.25}
         transparent
       />
     </div>

@@ -62,6 +62,19 @@ type TextPressureProps = {
    *  become aria-hidden so screen readers read this instead of individual
    *  characters. */
   ariaLabel?: string
+  /**
+   * Explicit CSS font-size. When provided the dynamic container-width
+   * algorithm is bypassed entirely — the title renders at this size on
+   * every frame (no layout jump between first render and resize).
+   *
+   * Accepts any valid CSS value (e.g. `"clamp(32px,5vw,56px)"`, `"48px"`,
+   * a raw number which is interpreted as px).
+   *
+   * Use this on page headers / small surfaces where you want predictable
+   * sizing. Keep it omitted on heroes where the responsive container-fit
+   * algorithm should drive the type size.
+   */
+  fontSize?: string | number
 }
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => {
@@ -102,6 +115,7 @@ export function TextPressure({
   gradient,
   as = 'h1',
   ariaLabel,
+  fontSize: fontSizeOverride,
 }: TextPressureProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const titleRef = useRef<HTMLHeadingElement | null>(null)
@@ -149,10 +163,20 @@ export function TextPressure({
     }
   }, [])
 
+  const hasExplicitFontSize = fontSizeOverride !== undefined
+
   const setSize = useCallback(() => {
     if (!containerRef.current || !titleRef.current) return
-    const { width: containerW, height: containerH } = containerRef.current.getBoundingClientRect()
+    // When a caller forces the fontSize, we keep the width/scale algorithm
+    // out of the way entirely — no jump between first render and mount,
+    // no dependency on container width.
+    if (hasExplicitFontSize) {
+      setScaleY(1)
+      setLineHeight(1)
+      return
+    }
 
+    const { width: containerW, height: containerH } = containerRef.current.getBoundingClientRect()
     let newFontSize = containerW / Math.max(chars.length / 2, 1)
     newFontSize = Math.max(newFontSize, minFontSize)
 
@@ -169,7 +193,7 @@ export function TextPressure({
         setLineHeight(yRatio)
       }
     })
-  }, [chars.length, minFontSize, scale])
+  }, [chars.length, minFontSize, scale, hasExplicitFontSize])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -284,7 +308,7 @@ export function TextPressure({
         className={`tp-${scopeId} ${flex ? 'flex justify-between' : ''} ${stroke ? 'stroke' : ''} ${gradientMode ? 'gradient' : ''} uppercase select-none ${className}`}
         style={{
           fontFamily,
-          fontSize,
+          fontSize: hasExplicitFontSize ? fontSizeOverride : fontSize,
           lineHeight,
           transform: `scale(1, ${scaleY})`,
           transformOrigin: 'center top',

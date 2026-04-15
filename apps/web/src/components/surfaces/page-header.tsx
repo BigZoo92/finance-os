@@ -1,13 +1,19 @@
 /**
  * PageHeader — canonical header for internal pages.
  *
- * When `title` is a plain string, we render it via TextPressure (Compressa
- * VF variable font) so every main heading in the cockpit shares the same
- * signature motion as the "/ cockpit" hero. Screen readers read the full
- * title once (handled inside TextPressure via `aria-label` + `sr-only`).
+ * For plain-string titles we render TextPressure with an **explicit** CSS
+ * `clamp()` fontSize, a solid inline flow (`flex=false`), and the width
+ * axis disabled (`width=false`). This keeps:
  *
- * When `title` is a ReactNode we fall back to a plain `<h1>` so pages that
- * need a custom composition (e.g. a balance display) keep control.
+ *   - sizing identical across pages (no `getBoundingClientRect` dependency
+ *     = no layout jump when navigating between routes);
+ *   - titles bounded in width (the wght axis at hover only grows letters
+ *     modestly — no dramatic wdth blow-up that used to clip on long words
+ *     like "Investissements" or "Intégrations");
+ *   - responsive typography via a single clamp token (mobile → desktop).
+ *
+ * When `title` is a ReactNode the component falls back to a plain `<h1>`
+ * with Inter so custom layouts (e.g. a balance display) stay in control.
  */
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
@@ -37,6 +43,14 @@ export function PageHeader({
 }: PageHeaderProps) {
   const titleIsString = typeof title === 'string'
 
+  // One clamp token per size. `clamp(min, preferred, max)` guarantees the
+  // title never falls below `min` on narrow viewports and never exceeds
+  // `max` on wide ones — no dependency on container width, so navigation
+  // between pages keeps the title visually anchored at the same spot.
+  const fontSize = compact
+    ? 'clamp(26px, 4vw, 38px)'
+    : 'clamp(32px, 5vw, 52px)'
+
   return (
     <motion.header
       initial={{ opacity: 0, y: 8 }}
@@ -52,36 +66,26 @@ export function PageHeader({
           </p>
         )}
         {titleIsString ? (
-          // Inline-block with a capped max-width so TextPressure measures a
-          // sensible container width and produces a readable fontSize. Short
-          // titles like "Santé" don't get stretched edge-to-edge, long ones
-          // like "Investissements" stay bounded.
-          //
-          // Generous vertical + horizontal padding is NECESSARY because the
-          // pressure-expanded letters overflow their natural bounding box at
-          // hover. Without this padding, letters get clipped by neighboring
-          // content. `overflow-visible` on the component lets them breathe.
-          <div
-            className={`mt-1 inline-block w-full px-1 py-2 ${
-              compact
-                ? 'h-[56px] max-w-[320px] sm:max-w-[360px] md:h-[64px]'
-                : 'h-[60px] max-w-[420px] sm:h-[72px] sm:max-w-[480px] md:h-[88px] md:max-w-[560px]'
-            }`}
-          >
+          // The wrapper is only there to reserve vertical breathing room
+          // so the pressure-expanded letters never clip the description
+          // below. Horizontal breathing is a bit of right-padding.
+          <div className="mt-1.5 overflow-visible pr-2">
             <TextPressure
               as="h1"
               text={title as string}
               ariaLabel={title as string}
-              minFontSize={compact ? 32 : 40}
-              width
+              fontSize={fontSize}
+              /* Width axis OFF — it's the axis that causes the big
+                 horizontal overflow when letters pressure-expand. We keep
+                 the weight axis so letters still bold up near the cursor,
+                 which is a subtle, readable flourish. */
+              width={false}
               weight
               italic={false}
-              flex
-              scale
+              flex={false}
+              scale={false}
               gradient="linear-gradient(92deg, var(--aurora-a) 0%, var(--aurora-b) 50%, var(--aurora-c) 100%)"
-              /* keep flex (so the per-character algorithm stays accurate) but
-                 switch justify so the title hugs the left edge of its container. */
-              className="justify-start text-left"
+              className="text-left leading-[1.02] tracking-tight"
             />
           </div>
         ) : (
