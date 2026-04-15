@@ -20,16 +20,18 @@ Le workflow de release est tag-only et immuable.
 
 Etapes:
 
-1. `pnpm install --frozen-lockfile`
-2. `pnpm -r --if-present lint`
-3. `pnpm -r --if-present typecheck`
-4. `pnpm -r --if-present test`
-5. `pnpm -r --if-present build`
+1. provisionner `pnpm`, `Node.js` et `Bun` (`vars.BUN_VERSION`, fallback `1.2.22`)
+2. `pnpm install --frozen-lockfile`
+3. `pnpm -r --if-present lint`
+4. `pnpm -r --if-present typecheck`
+5. `pnpm -r --if-present test`
+6. `pnpm -r --if-present build`
 
 Commande locale equivalente:
 
 - `pnpm check:ci`
 - ce script force `CI=true` puis rejoue exactement le meme ordre et les memes commandes que `.github/workflows/ci.yml`
+- ce script suppose aussi `bun` disponible dans le `PATH`, car plusieurs suites du workspace utilisent `bun test`
 
 ### Codex environment parity
 

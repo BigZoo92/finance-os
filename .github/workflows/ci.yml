@@ -39,6 +39,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ vars.BUN_VERSION || '1.2.22' }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Lint
