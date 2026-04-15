@@ -65,6 +65,7 @@
 - Reset the Codex environment cache when lockfiles or workspace dependencies changed.
 - If possible, allow agent internet during environment setup so `pnpm install --frozen-lockfile` can refill a cold cache.
 - Prefer using the repo script [../scripts/codex-env-setup.sh](../scripts/codex-env-setup.sh) as the Codex environment setup command so install semantics match CI and missing workspace dependencies are caught early.
+- That setup script also forces `ONNXRUNTIME_NODE_INSTALL=skip` and `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` so `gitnexus` skips optional Linux CUDA downloads that often fail in restricted Codex containers.
 - The setup now runs [../scripts/verify-workspace-install.mjs](../scripts/verify-workspace-install.mjs), which resolves declared dependencies across the repo generically instead of maintaining a hand-written package allowlist.
 
 ## Issue-comment workflow runs on my own comment

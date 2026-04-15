@@ -37,7 +37,8 @@ Commande locale equivalente:
 
 - The happy path is now PR-thread patch apply, not manual extraction.
 - Use [../scripts/codex-env-setup.sh](/c:/Users/giver/dev/finance-os/scripts/codex-env-setup.sh) whenever you need local parity for a manual takeover, a local reproduction, or a Codex environment reset.
-- It runs the same frozen-lockfile install as CI and then executes [../scripts/verify-workspace-install.mjs](/c:/Users/giver/dev/finance-os/scripts/verify-workspace-install.mjs) to fail early if declared workspace dependencies are missing from the environment cache.
+- It runs the same frozen-lockfile install shape as CI, but forces `ONNXRUNTIME_NODE_INSTALL=skip` and `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` so `gitnexus` does not try to download optional ONNX/CUDA artifacts from non-registry hosts inside restricted Codex containers.
+- It then executes [../scripts/verify-workspace-install.mjs](/c:/Users/giver/dev/finance-os/scripts/verify-workspace-install.mjs) to fail early if declared workspace dependencies are missing from the environment cache.
 - Once the environment setup succeeds, any manual local takeover on an `implement:` PR should run `pnpm check:ci` before claiming the branch is ready.
 
 ### Release
