@@ -95,11 +95,13 @@ export function CockpitHero<T extends string>({
           />
         </p>
 
-        <div className="mt-2 h-[140px] sm:h-[180px] md:h-[220px] lg:h-[240px]">
+        {/* Container has generous vertical + horizontal breathing so the
+            pressure-expanded letters don't get clipped at hover. */}
+        <div className="mt-2 h-[120px] px-1 py-3 sm:h-[160px] md:h-[200px] lg:h-[220px] md:px-2">
           <TextPressure
             text="COCKPIT"
             ariaLabel="Cockpit"
-            minFontSize={72}
+            minFontSize={56}
             width
             weight
             italic={false}

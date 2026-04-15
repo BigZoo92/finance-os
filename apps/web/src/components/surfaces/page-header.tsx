@@ -56,18 +56,23 @@ export function PageHeader({
           // sensible container width and produces a readable fontSize. Short
           // titles like "Santé" don't get stretched edge-to-edge, long ones
           // like "Investissements" stay bounded.
+          //
+          // Generous vertical + horizontal padding is NECESSARY because the
+          // pressure-expanded letters overflow their natural bounding box at
+          // hover. Without this padding, letters get clipped by neighboring
+          // content. `overflow-visible` on the component lets them breathe.
           <div
-            className={`mt-1.5 inline-block w-full ${
+            className={`mt-1 inline-block w-full px-1 py-2 ${
               compact
-                ? 'h-[52px] max-w-[360px] md:h-[60px]'
-                : 'h-[68px] max-w-[480px] sm:h-[80px] md:h-[96px] md:max-w-[560px]'
+                ? 'h-[56px] max-w-[320px] sm:max-w-[360px] md:h-[64px]'
+                : 'h-[60px] max-w-[420px] sm:h-[72px] sm:max-w-[480px] md:h-[88px] md:max-w-[560px]'
             }`}
           >
             <TextPressure
               as="h1"
               text={title as string}
               ariaLabel={title as string}
-              minFontSize={compact ? 36 : 52}
+              minFontSize={compact ? 32 : 40}
               width
               weight
               italic={false}

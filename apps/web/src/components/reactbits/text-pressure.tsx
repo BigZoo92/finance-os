@@ -17,6 +17,25 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 
+/**
+ * True on devices whose primary pointer is coarse (touch). We freeze the
+ * per-character animation there: it eats battery/frames and there is no
+ * real "hover" metaphor on touch, so the animated font-variation-settings
+ * just flash erratically while the user scrolls.
+ */
+function useIsCoarsePointer() {
+  const [coarse, setCoarse] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(pointer: coarse)')
+    const update = () => setCoarse(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return coarse
+}
+
 type TextPressureProps = {
   text?: string
   fontFamily?: string
@@ -95,6 +114,7 @@ export function TextPressure({
   const [scaleY, setScaleY] = useState(1)
   const [lineHeight, setLineHeight] = useState(1)
   const prefersReducedMotion = useReducedMotion()
+  const coarsePointer = useIsCoarsePointer()
   const scopeId = useId().replace(/:/g, '')
 
   const chars = useMemo(() => text.split(''), [text])
@@ -161,10 +181,11 @@ export function TextPressure({
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (prefersReducedMotion) {
-      // Freeze characters in their default shape
+    if (prefersReducedMotion || coarsePointer) {
+      // Freeze at a premium static setting — on touch devices there is no
+      // real hover so the animation just flickers while scrolling.
       spansRef.current.forEach(span => {
-        if (span) span.style.fontVariationSettings = `'wght' 500, 'wdth' 100, 'ital' 0`
+        if (span) span.style.fontVariationSettings = `'wght' 700, 'wdth' 100, 'ital' 0`
       })
       return
     }
@@ -201,7 +222,7 @@ export function TextPressure({
 
     animate()
     return () => cancelAnimationFrame(rafId)
-  }, [width, weight, italic, alpha, prefersReducedMotion])
+  }, [width, weight, italic, alpha, prefersReducedMotion, coarsePointer])
 
   // Scoped @font-face + stroke styles — id prevents collision with other `.stroke` usages.
   // Gradient mode: each <span> paints the same gradient clipped to its own
@@ -249,7 +270,11 @@ export function TextPressure({
   const resolvedAriaLabel = ariaLabel ?? text
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-transparent">
+    // overflow-visible lets the pressure-expanded letters escape their
+    // natural box without being clipped. The outer layout is expected to
+    // reserve some padding (both horizontal and vertical) so the growth
+    // stays within the page canvas.
+    <div ref={containerRef} className="relative w-full h-full overflow-visible bg-transparent">
       {styleElement}
       {/* Screen readers read the whole word once instead of one span per letter */}
       <span className="sr-only">{resolvedAriaLabel}</span>

@@ -30,10 +30,8 @@ import type { DashboardManualAssetResponse, DashboardRange } from '@/features/da
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import { getTrendDirection } from '@/components/dashboard/trend-visuals'
 import { formatDateTime, formatMoney } from '@/lib/format'
-import { D3Sparkline } from '@/components/ui/d3-sparkline'
+import { D3Sparkline, MiniSparkline } from '@/components/ui/d3-sparkline'
 import { RangePill } from '@/components/surfaces/range-pill'
-import { CircularEmblem } from '@/components/brand/circular-emblem'
-import ShapeBlur from '@/components/reactbits/shape-blur'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (value: string | undefined): DashboardRange =>
@@ -242,65 +240,58 @@ function PatrimoinePage() {
     saveManualAssetMutation.mutate()
   }
 
+  const rangeLabel = range === '7d' ? '7 jours' : range === '90d' ? '90 jours' : '30 jours'
+  const firstBalance = adapted.dailyWealthSnapshots[0]?.balance ?? adapted.totals.balance
+  const deltaPct = firstBalance > 0 ? (delta / firstBalance) * 100 : 0
+  const miniTrendData = sparkData.map(p => p.value)
+
   return (
     <div className="space-y-10">
-      {/* Hero — balance display with ShapeBlur backdrop + CircularEmblem orbit */}
-      <section className="relative isolate overflow-hidden rounded-[28px] border border-border/60 px-5 py-8 md:px-10 md:py-10" style={{ background: 'var(--surface-0)' }}>
-        <div className="pointer-events-none absolute inset-0 opacity-70">
-          <ShapeBlur
-            variation={3}
-            shapeSize={1.4}
-            roundness={0.5}
-            borderSize={0.04}
-            circleSize={0.5}
-            circleEdge={1}
-          />
-        </div>
-        <div className="pointer-events-none absolute -right-12 -bottom-16 hidden h-72 w-72 rounded-full opacity-50 md:block" style={{ background: 'radial-gradient(circle, oklch(from var(--accent-2) l c h / 28%), transparent 65%)' }} />
+      {/* ──────────────────────────────────────────────────────────────────
+         HERO — portfolio viewer card.
+         Structure:
+           · subtle aurora mesh + dotted grid behind
+           · top row : eyebrow (left) · RangePill (right)
+           · main    : BIG balance (solid rose, premium drop-shadow)
+                      + delta pill + mini trend inline
+           · bottom  : full-width sparkline that contextualises the amount
+         The card is bordered and rounded like a hardware-style viewer.
+         ────────────────────────────────────────────────────────────────── */}
+      <section
+        className="relative isolate overflow-hidden rounded-[28px] border border-border/60"
+        style={{ background: 'var(--surface-0)' }}
+      >
+        {/* Layer 1 — aurora wash + dotted grid, soft and fading to clean */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-aurora-mesh-soft opacity-90" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, oklch(from var(--foreground) l c h / 7%) 1px, transparent 1px)',
+            backgroundSize: '26px 26px',
+            maskImage: 'linear-gradient(180deg, black 0%, transparent 60%)',
+            WebkitMaskImage: 'linear-gradient(180deg, black 0%, transparent 60%)',
+          }}
+        />
+        {/* Layer 2 — bottom fade so the sparkline sits on a clean base */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
+          style={{
+            background:
+              'linear-gradient(180deg, transparent 0%, oklch(from var(--surface-0) l c h / 80%) 45%, var(--surface-0) 100%)',
+          }}
+        />
 
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="min-w-0"
-          >
-            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-primary/85">
-              <span aria-hidden="true">◊</span>
-              Patrimoine
+        {/* Content grid */}
+        <div className="relative px-5 pt-6 md:px-10 md:pt-8">
+          {/* Top row — eyebrow + RangePill */}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.24em] text-primary/85">
+              <span aria-hidden="true" className="text-base leading-none">◊</span>
+              Patrimoine <span className="text-muted-foreground/40">·</span> net
             </p>
-            <h2 className="mt-1 text-4xl font-bold tracking-tighter md:text-6xl">
-              {summaryQuery.isPending ? (
-                <span className="inline-block h-10 w-48 animate-shimmer rounded-xl" />
-              ) : (
-                <span className="font-financial text-aurora">{formatMoney(adapted.totals.balance)}</span>
-              )}
-            </h2>
-            {!summaryQuery.isPending ? (
-              <div className="mt-2 flex items-center gap-2">
-                <Badge
-                  variant={
-                    trend === 'up' ? 'positive' : trend === 'down' ? 'destructive' : 'outline'
-                  }
-                  className="text-xs"
-                >
-                  {trend === 'up'
-                    ? `+${formatMoney(delta)}`
-                    : trend === 'down'
-                      ? formatMoney(delta)
-                      : 'stable'}
-                </Badge>
-                <span className="text-xs text-muted-foreground/55">
-                  sur {range === '7d' ? '7 jours' : range === '90d' ? '90 jours' : '30 jours'}
-                </span>
-              </div>
-            ) : null}
-          </motion.div>
-
-          <div className="flex items-center gap-6">
-            <CircularEmblem text="· PATRIMOINE · NET · ACTIFS · LIQUIDES " size={132}>
-              <span className="font-mono text-2xl text-primary" aria-hidden="true">◊</span>
-            </CircularEmblem>
             <RangePill
               layoutId="patrimoine-range"
               ariaLabel="Période"
@@ -309,30 +300,107 @@ function PatrimoinePage() {
               onChange={next => navigate({ search: { range: next } })}
             />
           </div>
-        </div>
-      </section>
 
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-medium text-muted-foreground/50">Evolution patrimoine</p>
+          {/* Main — balance + delta + mini trend */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-6"
+          >
+            <div className="min-w-0">
+              {summaryQuery.isPending ? (
+                <span className="block h-14 w-60 animate-shimmer rounded-xl md:h-20" />
+              ) : (
+                <h2
+                  className="font-financial text-[44px] font-semibold leading-[1.05] tracking-tighter text-foreground md:text-[72px]"
+                  style={{
+                    textShadow:
+                      '0 1px 0 oklch(from var(--primary) l c h / 18%), 0 0 40px oklch(from var(--primary) l c h / 14%)',
+                  }}
+                >
+                  {formatMoney(adapted.totals.balance)}
+                </h2>
+              )}
+
+              {!summaryQuery.isPending && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant={trend === 'up' ? 'positive' : trend === 'down' ? 'destructive' : 'outline'}
+                    className="gap-1 text-[11px]"
+                  >
+                    <span aria-hidden="true">
+                      {trend === 'up' ? '▲' : trend === 'down' ? '▼' : '●'}
+                    </span>
+                    {trend === 'up'
+                      ? `+${formatMoney(delta)}`
+                      : trend === 'down'
+                        ? formatMoney(delta)
+                        : 'stable'}
+                  </Badge>
+                  {Math.abs(deltaPct) > 0.01 && trend !== 'neutral' && (
+                    <span
+                      className={`font-financial text-[12px] font-medium ${
+                        trend === 'up' ? 'text-positive' : 'text-negative'
+                      }`}
+                    >
+                      {trend === 'up' ? '+' : ''}
+                      {deltaPct.toFixed(2)} %
+                    </span>
+                  )}
+                  <span className="text-[11.5px] text-muted-foreground/70">· sur {rangeLabel}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Right — mini sparkline in a framed mono readout */}
+            {miniTrendData.length > 1 && (
+              <div className="inline-flex items-center gap-3 rounded-xl border border-border/50 bg-card/60 px-3 py-2 backdrop-blur">
+                <div className="flex flex-col">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70">
+                    trend
+                  </span>
+                  <span
+                    className={`font-mono text-[11px] ${
+                      trend === 'up' ? 'text-positive' : trend === 'down' ? 'text-negative' : 'text-foreground/80'
+                    }`}
+                  >
+                    {rangeLabel}
+                  </span>
+                </div>
+                <MiniSparkline
+                  data={miniTrendData}
+                  width={108}
+                  height={32}
+                  color={trend === 'up' ? 'var(--positive)' : trend === 'down' ? 'var(--negative)' : 'var(--primary)'}
+                />
+              </div>
+            )}
+          </motion.div>
         </div>
-        {sparkData.length > 1 ? (
-          <D3Sparkline
-            data={sparkData}
-            height={180}
-            showArea
-            showTooltip
-            showDots
-            animate
-            formatValue={value => formatMoney(value)}
-          />
-        ) : (
-          <div className="flex h-[160px] items-center justify-center rounded-2xl border border-dashed border-border/30">
-            <span className="font-mono text-xs text-muted-foreground/40">
-              [ donnees insuffisantes ]
-            </span>
-          </div>
-        )}
+
+        {/* Bottom — full-width D3 sparkline integrated in the hero */}
+        <div className="relative mt-6 px-2 pb-2 md:px-4 md:pb-3">
+          {sparkData.length > 1 ? (
+            <D3Sparkline
+              data={sparkData}
+              height={120}
+              showArea
+              showTooltip
+              animate
+              color="var(--primary)"
+              gradientFrom="var(--primary)"
+              gradientTo="transparent"
+              formatValue={v => formatMoney(v)}
+            />
+          ) : (
+            <div className="flex h-[120px] items-center justify-center rounded-2xl border border-dashed border-border/40 bg-surface-1/60">
+              <span className="font-mono text-xs text-muted-foreground/50">
+                [ données insuffisantes pour afficher la tendance ]
+              </span>
+            </div>
+          )}
+        </div>
       </section>
 
       <section>

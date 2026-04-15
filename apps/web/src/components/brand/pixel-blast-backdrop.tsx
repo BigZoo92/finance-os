@@ -25,8 +25,12 @@ type PixelBlastBackdropProps = {
   pixelSize?: number
   /** Animation speed (0 = frozen). */
   speed?: number
-  /** Whether to enable the cursor ripples. */
+  /** Whether to enable the cursor ripples (click / hover). */
   enableRipples?: boolean
+  /** When `true` (default) the canvas receives pointer events so the user's
+   *  mouse triggers liquid warping + ripples. Set to `false` to make the
+   *  backdrop purely decorative. */
+  interactive?: boolean
 }
 
 export function PixelBlastBackdrop({
@@ -37,6 +41,7 @@ export function PixelBlastBackdrop({
   pixelSize = 6,
   speed = 0.45,
   enableRipples = true,
+  interactive = true,
 }: PixelBlastBackdropProps) {
   const prefersReducedMotion = useReducedMotion()
   const [mounted, setMounted] = useState(false)
@@ -52,8 +57,16 @@ export function PixelBlastBackdrop({
     )
   }
 
+  // When interactive, the wrapper accepts pointer events so PixelBlast's
+  // internal cursor ripples + liquid warping react to click / hover.
+  // Foreground UI should sit in a sibling with its own stacking context —
+  // it will naturally capture its own pointer events first.
   return (
-    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 ${className}`} style={{ opacity }}>
+    <div
+      aria-hidden="true"
+      className={`absolute inset-0 ${interactive ? '' : 'pointer-events-none'} ${className}`}
+      style={{ opacity }}
+    >
       <PixelBlast
         variant={variant}
         pixelSize={pixelSize}
@@ -62,12 +75,12 @@ export function PixelBlastBackdrop({
         patternDensity={1.0}
         pixelSizeJitter={0.5}
         enableRipples={enableRipples}
-        rippleSpeed={0.42}
-        rippleThickness={0.12}
-        rippleIntensityScale={1.6}
+        rippleSpeed={0.55}
+        rippleThickness={0.14}
+        rippleIntensityScale={2.2}
         liquid
-        liquidStrength={0.08}
-        liquidRadius={1.0}
+        liquidStrength={0.12}
+        liquidRadius={1.2}
         liquidWobbleSpeed={5}
         speed={speed}
         edgeFade={0.4}
