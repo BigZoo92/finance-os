@@ -11,6 +11,8 @@ import { formatMoney, formatQuantity } from '@/lib/format'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { ActionDock } from '@/components/surfaces/action-dock'
+import { pushToast } from '@/lib/toast-store'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -169,6 +171,38 @@ function InvestissementsPage() {
             </div>
           )}
       </Panel>
+
+      {/* Action dock — magnification toolbar for actions */}
+      <ActionDock
+        items={[
+          {
+            icon: <span aria-hidden="true">⟳</span>,
+            label: 'Rafraîchir',
+            tone: 'brand',
+            onClick: () => pushToast({ title: 'Rafraîchissement', description: 'Données revalidées.', tone: 'info' }),
+          },
+          {
+            icon: <span aria-hidden="true">↧</span>,
+            label: 'Exporter',
+            tone: 'violet',
+            disabled: positions.length === 0,
+            onClick: () => pushToast({ title: 'Export CSV', description: 'Fonctionnalité bientôt disponible.', tone: 'info' }),
+          },
+          {
+            icon: <span aria-hidden="true">▣</span>,
+            label: 'Nouvelle position',
+            tone: 'positive',
+            onClick: () => pushToast({ title: 'Création manuelle', description: 'Allez sur Patrimoine pour ajouter un actif.', tone: 'info' }),
+          },
+          {
+            icon: <span aria-hidden="true">✕</span>,
+            label: 'Réinitialiser',
+            tone: 'negative',
+            onClick: () => pushToast({ title: 'Réinitialisation', description: 'Filtres remis à zéro.', tone: 'info' }),
+          },
+        ]}
+        className="mt-4"
+      />
     </div>
   )
 }

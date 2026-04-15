@@ -16,6 +16,9 @@ import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import { AsciiStatusLine, AsciiDivider } from '@/components/ui/ascii-brand'
 import { PageHeader } from '@/components/surfaces/page-header'
+import { useReducedMotion } from 'motion/react'
+import { useEffect, useState } from 'react'
+import PixelBlast from '@/components/reactbits/pixel-blast'
 
 export const Route = createFileRoute('/_app/sante')({
   loader: async ({ context }) => {
@@ -42,6 +45,10 @@ type HealthSignal = {
 }
 
 function SantePage() {
+  const prefersReducedMotion = useReducedMotion()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
@@ -130,15 +137,41 @@ function SantePage() {
         description="État consolidé des intégrations, de la synchronisation et du pipeline dérivé."
       />
 
-      {/* Overall status hero */}
-      <Card className={
-        overallStatus === 'error'
-          ? 'border-negative/30 bg-negative/5'
-          : overallStatus === 'warning'
-            ? 'border-warning/30 bg-warning/5'
-            : 'border-positive/30 bg-positive/5'
-      }>
-        <CardContent className="flex items-center gap-4 p-6">
+      {/* Overall status hero — PixelBlast in the OK state, calm gradient otherwise */}
+      <Card
+        className={`relative overflow-hidden ${
+          overallStatus === 'error'
+            ? 'border-negative/30 bg-negative/5'
+            : overallStatus === 'warning'
+              ? 'border-warning/30 bg-warning/5'
+              : 'border-positive/30 bg-positive/5'
+        }`}
+      >
+        {/* PixelBlast WebGL layer — only when system is OK and motion allowed */}
+        {overallStatus === 'ok' && mounted && !prefersReducedMotion && (
+          <div className="pointer-events-none absolute inset-0 opacity-60">
+            <PixelBlast
+              variant="circle"
+              pixelSize={6}
+              color="#5fe39d"
+              patternScale={3}
+              patternDensity={1.0}
+              pixelSizeJitter={0.4}
+              enableRipples
+              rippleSpeed={0.4}
+              rippleThickness={0.12}
+              rippleIntensityScale={1.5}
+              liquid
+              liquidStrength={0.06}
+              liquidRadius={1.0}
+              liquidWobbleSpeed={5}
+              speed={0.5}
+              edgeFade={0.35}
+              transparent
+            />
+          </div>
+        )}
+        <CardContent className="relative flex items-center gap-4 p-6">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

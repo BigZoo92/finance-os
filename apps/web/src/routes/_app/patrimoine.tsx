@@ -32,6 +32,8 @@ import { getTrendDirection } from '@/components/dashboard/trend-visuals'
 import { formatDateTime, formatMoney } from '@/lib/format'
 import { D3Sparkline } from '@/components/ui/d3-sparkline'
 import { RangePill } from '@/components/surfaces/range-pill'
+import { CircularEmblem } from '@/components/brand/circular-emblem'
+import ShapeBlur from '@/components/reactbits/shape-blur'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (value: string | undefined): DashboardRange =>
@@ -242,52 +244,73 @@ function PatrimoinePage() {
 
   return (
     <div className="space-y-10">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-primary/75">
-            <span aria-hidden="true">◊</span>
-            Patrimoine
-          </p>
-          <h2 className="mt-1 text-4xl font-bold tracking-tighter md:text-5xl">
-            {summaryQuery.isPending ? (
-              <span className="inline-block h-10 w-48 animate-shimmer rounded-xl" />
-            ) : (
-              <span className="font-financial text-aurora">{formatMoney(adapted.totals.balance)}</span>
-            )}
-          </h2>
-          {!summaryQuery.isPending ? (
-            <div className="mt-2 flex items-center gap-2">
-              <Badge
-                variant={
-                  trend === 'up' ? 'positive' : trend === 'down' ? 'destructive' : 'outline'
-                }
-                className="text-xs"
-              >
-                {trend === 'up'
-                  ? `+${formatMoney(delta)}`
-                  : trend === 'down'
-                    ? formatMoney(delta)
-                    : 'stable'}
-              </Badge>
-              <span className="text-xs text-muted-foreground/50">
-                sur {range === '7d' ? '7 jours' : range === '90d' ? '90 jours' : '30 jours'}
-              </span>
-            </div>
-          ) : null}
-        </motion.div>
+      {/* Hero — balance display with ShapeBlur backdrop + CircularEmblem orbit */}
+      <section className="relative isolate overflow-hidden rounded-[28px] border border-border/60 px-5 py-8 md:px-10 md:py-10" style={{ background: 'var(--surface-0)' }}>
+        <div className="pointer-events-none absolute inset-0 opacity-70">
+          <ShapeBlur
+            variation={3}
+            shapeSize={1.4}
+            roundness={0.5}
+            borderSize={0.04}
+            circleSize={0.5}
+            circleEdge={1}
+          />
+        </div>
+        <div className="pointer-events-none absolute -right-12 -bottom-16 hidden h-72 w-72 rounded-full opacity-50 md:block" style={{ background: 'radial-gradient(circle, oklch(from var(--accent-2) l c h / 28%), transparent 65%)' }} />
 
-        <RangePill
-          layoutId="patrimoine-range"
-          ariaLabel="Période"
-          options={RANGES.map(r => ({ label: r.label, value: r.value }))}
-          value={range}
-          onChange={next => navigate({ search: { range: next } })}
-        />
-      </div>
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="min-w-0"
+          >
+            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-primary/85">
+              <span aria-hidden="true">◊</span>
+              Patrimoine
+            </p>
+            <h2 className="mt-1 text-4xl font-bold tracking-tighter md:text-6xl">
+              {summaryQuery.isPending ? (
+                <span className="inline-block h-10 w-48 animate-shimmer rounded-xl" />
+              ) : (
+                <span className="font-financial text-aurora">{formatMoney(adapted.totals.balance)}</span>
+              )}
+            </h2>
+            {!summaryQuery.isPending ? (
+              <div className="mt-2 flex items-center gap-2">
+                <Badge
+                  variant={
+                    trend === 'up' ? 'positive' : trend === 'down' ? 'destructive' : 'outline'
+                  }
+                  className="text-xs"
+                >
+                  {trend === 'up'
+                    ? `+${formatMoney(delta)}`
+                    : trend === 'down'
+                      ? formatMoney(delta)
+                      : 'stable'}
+                </Badge>
+                <span className="text-xs text-muted-foreground/55">
+                  sur {range === '7d' ? '7 jours' : range === '90d' ? '90 jours' : '30 jours'}
+                </span>
+              </div>
+            ) : null}
+          </motion.div>
+
+          <div className="flex items-center gap-6">
+            <CircularEmblem text="· PATRIMOINE · NET · ACTIFS · LIQUIDES " size={132}>
+              <span className="font-mono text-2xl text-primary" aria-hidden="true">◊</span>
+            </CircularEmblem>
+            <RangePill
+              layoutId="patrimoine-range"
+              ariaLabel="Période"
+              options={RANGES.map(r => ({ label: r.label, value: r.value }))}
+              value={range}
+              onChange={next => navigate({ search: { range: next } })}
+            />
+          </div>
+        </div>
+      </section>
 
       <section>
         <div className="mb-3 flex items-center justify-between">

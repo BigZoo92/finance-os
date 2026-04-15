@@ -21,7 +21,20 @@
       "!**/.next",
       "!**/.output",
       "!**/routeTree.gen.ts",
-      "!**/routeTree.gen.tsx"
+      "!**/routeTree.gen.tsx",
+      "!apps/web/src/components/reactbits/antigravity.tsx",
+      "!apps/web/src/components/reactbits/chroma-grid.tsx",
+      "!apps/web/src/components/reactbits/circular-text.tsx",
+      "!apps/web/src/components/reactbits/dock.tsx",
+      "!apps/web/src/components/reactbits/folder.tsx",
+      "!apps/web/src/components/reactbits/glass-surface.tsx",
+      "!apps/web/src/components/reactbits/liquid-ether.tsx",
+      "!apps/web/src/components/reactbits/magic-bento.tsx",
+      "!apps/web/src/components/reactbits/pixel-blast.tsx",
+      "!apps/web/src/components/reactbits/pixel-trail.tsx",
+      "!apps/web/src/components/reactbits/pixel-transition.tsx",
+      "!apps/web/src/components/reactbits/shape-blur.tsx",
+      "!apps/web/src/components/reactbits/staggered-menu.tsx"
     ]
   },
   "formatter": {

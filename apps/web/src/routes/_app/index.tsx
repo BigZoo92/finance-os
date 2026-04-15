@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useRef } from 'react'
 import { z } from 'zod'
 import { Badge } from '@finance-os/ui/components'
 import { motion } from 'motion/react'
@@ -15,14 +14,10 @@ import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter
 import { getTrendDirection, summarizeCashflowDirection } from '@/components/dashboard/trend-visuals'
 import { formatMoney } from '@/lib/format'
 import { D3Sparkline } from '@/components/ui/d3-sparkline'
-import { AuroraBackdrop } from '@/components/brand/aurora-backdrop'
+import { CockpitHero } from '@/components/surfaces/cockpit-hero'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { Panel } from '@/components/surfaces/panel'
-import { RangePill } from '@/components/surfaces/range-pill'
 import { StatusDot } from '@/components/surfaces/status-dot'
-import { TextPressure } from '@/components/reactbits/text-pressure'
-import { RotatingText } from '@/components/reactbits/rotating-text'
-import { VariableProximity } from '@/components/reactbits/variable-proximity'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (v: string | undefined): DashboardRange => (v === '7d' || v === '90d' ? v : '30d')
@@ -60,7 +55,6 @@ function CockpitPage() {
   const { range: searchRange } = Route.useSearch()
   const range = resolveRange(searchRange)
   const navigate = Route.useNavigate()
-  const heroRef = useRef<HTMLDivElement>(null)
 
   const authQuery = useQuery(authMeQueryOptions())
   const vs = resolveAuthViewState({
@@ -102,77 +96,18 @@ function CockpitPage() {
 
   return (
     <div className="space-y-10 md:space-y-12">
-      {/* ─── Hero — TextPressure "Cockpit" + aurora backdrop ─── */}
-      <section
-        ref={heroRef}
-        className="relative isolate overflow-hidden rounded-3xl border border-border/50 px-5 py-8 md:px-10 md:py-10"
-        style={{ background: 'linear-gradient(160deg, var(--surface-1) 0%, var(--surface-0) 65%)' }}
-      >
-        <AuroraBackdrop intensity={0.42} />
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.24em] text-primary/80">
-              <span aria-hidden="true">◈</span>
-              <span>Finance OS</span>
-              <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-              <RotatingText
-                texts={COCKPIT_ROTATIONS}
-                rotationInterval={4200}
-                mainClassName="text-muted-foreground/70"
-              />
-            </p>
+      {/* ── Hero — LiquidEther + TextPressure "COCKPIT" + CircularText halo ── */}
+      <CockpitHero
+        rotations={COCKPIT_ROTATIONS}
+        range={range}
+        rangeOptions={RANGES}
+        onRangeChange={next => navigate({ search: { range: next } })}
+        isDemo={isDemo}
+        isAdmin={isAdmin}
+      />
 
-            <div className="mt-3 select-none" style={{ minHeight: '96px' }}>
-              <div className="text-primary">
-                <TextPressure
-                  text="Cockpit"
-                  minFontSize={72}
-                  width
-                  weight
-                  italic={false}
-                  flex
-                  textColor="currentColor"
-                  className="!text-transparent bg-[linear-gradient(92deg,var(--aurora-a)_0%,var(--aurora-b)_55%,var(--aurora-c)_100%)] bg-clip-text"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {isDemo && (
-                <Badge variant="warning" className="gap-1.5">
-                  <StatusDot tone="warn" pulse size={6} />
-                  Mode démo
-                </Badge>
-              )}
-              {isAdmin && (
-                <Badge variant="violet" className="gap-1.5">
-                  <StatusDot tone="violet" size={6} />
-                  Mode admin
-                </Badge>
-              )}
-              <Badge variant="ghost" className="font-mono text-[10px] tracking-[0.16em]">
-                · période : {range}
-              </Badge>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-start gap-2 md:items-end">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">
-              horizon
-            </span>
-            <RangePill
-              layoutId="cockpit-range"
-              ariaLabel="Période"
-              options={RANGES}
-              value={range}
-              onChange={next => navigate({ search: { range: next } })}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Wealth chart + KPI rail ─── */}
-      <section ref={heroRef} className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
+      {/* ── Wealth chart + KPI rail ── */}
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
         <Panel
           title={
             <span>
@@ -248,20 +183,10 @@ function CockpitPage() {
         </div>
       </section>
 
-      {/* ─── Insights — top expenses / connections / goals ─── */}
+      {/* ── Insights — top expenses / connections / goals ── */}
       <section className="grid gap-5 md:gap-6 lg:grid-cols-3">
-        {/* Top expenses */}
         <Panel
-          title={
-            <VariableProximity
-              label="Top dépenses"
-              containerRef={heroRef}
-              fromFontVariationSettings="'wght' 600, 'opsz' 14"
-              toFontVariationSettings="'wght' 900, 'opsz' 32"
-              radius={90}
-              className="text-sm font-semibold tracking-tight"
-            />
-          }
+          title="Top dépenses"
           icon={<span className="text-base text-negative" aria-hidden="true">↔</span>}
           tone="negative"
         >
@@ -298,7 +223,6 @@ function CockpitPage() {
           </div>
         </Panel>
 
-        {/* Connections */}
         <Panel
           title="Connexions"
           icon={<span className="text-base text-accent-2" aria-hidden="true">⊞</span>}
@@ -334,7 +258,6 @@ function CockpitPage() {
           </div>
         </Panel>
 
-        {/* Goals */}
         <Panel
           title="Objectifs"
           icon={<span className="text-base text-primary" aria-hidden="true">◎</span>}
@@ -384,7 +307,7 @@ function CockpitPage() {
         </Panel>
       </section>
 
-      {/* ─── Status bar — mono cockpit footer ─── */}
+      {/* ── Status bar — mono cockpit footer ── */}
       <footer className="rounded-2xl border border-border/50 bg-card/60 px-5 py-3 backdrop-blur-md">
         <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
           <Stat

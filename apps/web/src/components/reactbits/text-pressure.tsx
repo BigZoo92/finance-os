@@ -33,6 +33,9 @@ type TextPressureProps = {
   strokeWidth?: number
   className?: string
   minFontSize?: number
+  /** When provided, applies a CSS `background-image` clipped to the text
+   *  silhouette (text-fill becomes transparent). Overrides `textColor`. */
+  gradient?: string
 }
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => {
@@ -70,6 +73,7 @@ export function TextPressure({
   strokeWidth = 2,
   className = '',
   minFontSize = 48,
+  gradient,
 }: TextPressureProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const titleRef = useRef<HTMLHeadingElement | null>(null)
@@ -190,7 +194,8 @@ export function TextPressure({
     return () => cancelAnimationFrame(rafId)
   }, [width, weight, italic, alpha, prefersReducedMotion])
 
-  // Scoped @font-face + stroke styles — id prevents collision with other `.stroke` usages
+  // Scoped @font-face + stroke styles — id prevents collision with other `.stroke` usages.
+  // Gradient mode applies background-clip: text on the whole h1.
   const styleElement = useMemo(
     () => (
       <style>{`
@@ -209,17 +214,26 @@ export function TextPressure({
           -webkit-text-stroke-width: ${strokeWidth}px;
           -webkit-text-stroke-color: ${strokeColor};
         }
+        .tp-${scopeId}.gradient,
+        .tp-${scopeId}.gradient span {
+          color: transparent !important;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          -webkit-background-clip: text;
+        }
       `}</style>
     ),
     [fontFamily, fontUrl, scopeId, textColor, strokeColor, strokeWidth],
   )
+
+  const gradientMode = typeof gradient === 'string' && gradient.length > 0
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-transparent">
       {styleElement}
       <h1
         ref={titleRef}
-        className={`tp-${scopeId} ${className} ${flex ? 'flex justify-between' : ''} ${stroke ? 'stroke' : ''} uppercase text-center select-none`}
+        className={`tp-${scopeId} ${className} ${flex ? 'flex justify-between' : ''} ${stroke ? 'stroke' : ''} ${gradientMode ? 'gradient' : ''} uppercase text-center select-none`}
         style={{
           fontFamily,
           fontSize,
@@ -228,7 +242,11 @@ export function TextPressure({
           transformOrigin: 'center top',
           margin: 0,
           fontWeight: 100,
-          color: stroke ? undefined : textColor,
+          ...(gradientMode
+            ? { backgroundImage: gradient }
+            : stroke
+              ? {}
+              : { color: textColor }),
         }}
       >
         {chars.map((char, i) => (

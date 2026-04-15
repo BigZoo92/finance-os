@@ -26,6 +26,7 @@ import { AiAdvisorPanel } from '@/components/dashboard/ai-advisor-panel'
 import { NewsFeed } from '@/components/dashboard/news-feed'
 import { toErrorMessage } from '@/lib/format'
 import { PageHeader } from '@/components/surfaces/page-header'
+import PixelTransition from '@/components/reactbits/pixel-transition'
 
 const advisorThreadKey = 'default'
 
@@ -259,6 +260,79 @@ function ActualitesPage() {
         title="Actualités"
         description="Flux macro-financier, signaux externes et advisor IA ancré sur des artefacts persistants."
       />
+
+      {/* Featured PixelTransition strip — hover/tap each card to flip it */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <PixelTransition
+          className="!w-full !rounded-2xl !border-border/60 !bg-card !text-foreground"
+          gridSize={9}
+          pixelColor="oklch(from var(--primary) l c h / 95%)"
+          animationStepDuration={0.32}
+          aspectRatio="38%"
+          firstContent={
+            <div className="flex h-full w-full flex-col justify-between p-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-primary/85">▣ signal</p>
+              <p className="text-[15px] font-semibold leading-snug text-foreground">
+                Macro · taux & inflation
+              </p>
+            </div>
+          }
+          secondContent={
+            <div className="flex h-full w-full flex-col justify-between bg-[linear-gradient(135deg,oklch(from_var(--aurora-a)_l_c_h/95%),oklch(from_var(--aurora-c)_l_c_h/95%))] p-5 text-primary-foreground">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em]">deep dive</p>
+              <p className="text-[13px] leading-snug">
+                Surveillez la prochaine réunion FED, les attentes sur les taux courts et l'impact sur vos liquidités.
+              </p>
+            </div>
+          }
+        />
+        <PixelTransition
+          className="!w-full !rounded-2xl !border-border/60 !bg-card !text-foreground"
+          gridSize={9}
+          pixelColor="oklch(from var(--accent-2) l c h / 95%)"
+          animationStepDuration={0.32}
+          aspectRatio="38%"
+          firstContent={
+            <div className="flex h-full w-full flex-col justify-between p-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent-2/85">▣ signal</p>
+              <p className="text-[15px] font-semibold leading-snug text-foreground">
+                Marchés · breadth & volat.
+              </p>
+            </div>
+          }
+          secondContent={
+            <div className="flex h-full w-full flex-col justify-between bg-[linear-gradient(135deg,oklch(from_var(--accent-2)_l_c_h/95%),oklch(from_var(--aurora-b)_l_c_h/95%))] p-5 text-primary-foreground">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em]">deep dive</p>
+              <p className="text-[13px] leading-snug">
+                Plus de 60 % des indices clés sont en hausse cette semaine. Vol implicite contenue.
+              </p>
+            </div>
+          }
+        />
+        <PixelTransition
+          className="!w-full !rounded-2xl !border-border/60 !bg-card !text-foreground"
+          gridSize={9}
+          pixelColor="oklch(from var(--positive) l c h / 95%)"
+          animationStepDuration={0.32}
+          aspectRatio="38%"
+          firstContent={
+            <div className="flex h-full w-full flex-col justify-between p-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-positive/90">▣ signal</p>
+              <p className="text-[15px] font-semibold leading-snug text-foreground">
+                Advisor · revue mensuelle
+              </p>
+            </div>
+          }
+          secondContent={
+            <div className="flex h-full w-full flex-col justify-between bg-[linear-gradient(135deg,oklch(from_var(--positive)_l_c_h/90%),oklch(from_var(--chart-4)_l_c_h/90%))] p-5 text-primary-foreground">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em]">deep dive</p>
+              <p className="text-[13px] leading-snug">
+                3 recommandations actives, 2 anomalies détectées. Lancez un nouveau brief depuis le panneau ci-dessous.
+              </p>
+            </div>
+          }
+        />
+      </div>
 
       <div className="grid gap-6">
         <div>

@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
 import { PageHeader } from '@/components/surfaces/page-header'
+import Folder from '@/components/reactbits/folder'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -206,16 +207,27 @@ function ParametresPage() {
         </CardContent>
       </Card>
 
-      {/* Export section */}
+      {/* Export section — Folder visual on the right */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Exports</CardTitle>
           <CardDescription>Exporter vos données financières</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <p className="text-sm text-muted-foreground">
-            Les exports CSV et PDF sont disponibles depuis la page Dépenses pour les transactions de la période sélectionnée.
+            Les exports CSV et PDF sont disponibles depuis la page Dépenses pour les transactions de la période sélectionnée. Cliquez sur le dossier pour visualiser les artefacts disponibles.
           </p>
+          <div className="flex justify-center md:justify-end">
+            <Folder
+              color="#ff4f9f"
+              size={1.4}
+              items={[
+                <span key="csv" className="block px-3 py-2 text-[10px] font-mono text-foreground/80">transactions.csv</span>,
+                <span key="pdf" className="block px-3 py-2 text-[10px] font-mono text-foreground/80">portfolio.pdf</span>,
+                <span key="json" className="block px-3 py-2 text-[10px] font-mono text-foreground/80">summary.json</span>,
+              ]}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

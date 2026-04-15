@@ -26,6 +26,7 @@ import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status
 import { pushToast } from '@/lib/toast-store'
 import { formatDateTime, formatDuration, toErrorMessage } from '@/lib/format'
 import { PageHeader } from '@/components/surfaces/page-header'
+import { ActionDock } from '@/components/surfaces/action-dock'
 
 export const Route = createFileRoute('/_app/integrations')({
   loader: async ({ context }) => {
@@ -329,6 +330,44 @@ function IntegrationsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Action dock */}
+      <ActionDock
+        items={[
+          {
+            icon: <span aria-hidden="true">⊞</span>,
+            label: 'Connecter banque',
+            tone: 'brand',
+            disabled: !isAdmin || isIntegrationsSafeMode || connectMutation.isPending,
+            onClick: () => connectMutation.mutate(),
+          },
+          {
+            icon: <span aria-hidden="true">⟳</span>,
+            label: 'Sync immédiate',
+            tone: 'violet',
+            disabled: manualSyncUiState.blocked || syncMutation.isPending,
+            onClick: () => syncMutation.mutate({}),
+          },
+          {
+            icon: <span aria-hidden="true">♡</span>,
+            label: 'Diagnostiquer',
+            tone: 'positive',
+            disabled: diagnosticsQuery.isFetching,
+            onClick: () => diagnosticsQuery.refetch(),
+          },
+          {
+            icon: <span aria-hidden="true">▣</span>,
+            label: 'Audit trail',
+            tone: 'plain',
+            disabled: auditEvents.length === 0,
+            onClick: () => {
+              const target = document.querySelector('[data-section="audit"]')
+              target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            },
+          },
+        ]}
+        className="mt-6"
+      />
     </div>
   )
 }

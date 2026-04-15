@@ -5,6 +5,7 @@ import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { MarketsDashboard } from '@/components/markets/markets-dashboard'
+import { TopMoversChroma } from '@/components/markets/top-movers-chroma'
 import { postMarketsRefresh } from '@/features/markets/api'
 import { marketQueryKeys, marketsOverviewQueryOptions } from '@/features/markets/query-options'
 import { toErrorMessage } from '@/lib/format'
@@ -66,16 +67,19 @@ function MarchesPage() {
   }
 
   return (
-    <MarketsDashboard
-      overview={overviewQuery.data}
-      isAdmin={authMode === 'admin'}
-      refreshPending={refreshMutation.isPending}
-      onRefresh={() => {
-        if (authMode !== 'admin' || refreshMutation.isPending) {
-          return
-        }
-        refreshMutation.mutate()
-      }}
-    />
+    <div className="space-y-8">
+      <TopMoversChroma items={overviewQuery.data.panorama.items} />
+      <MarketsDashboard
+        overview={overviewQuery.data}
+        isAdmin={authMode === 'admin'}
+        refreshPending={refreshMutation.isPending}
+        onRefresh={() => {
+          if (authMode !== 'admin' || refreshMutation.isPending) {
+            return
+          }
+          refreshMutation.mutate()
+        }}
+      />
+    </div>
   )
 }

@@ -8,8 +8,9 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
-import { AuroraBackdrop } from '@/components/brand/aurora-backdrop'
+import { AuroraCanvas } from '@/components/brand/aurora-canvas'
 import { BrandMark } from '@/components/brand/brand-mark'
+import { CircularEmblem } from '@/components/brand/circular-emblem'
 import { BorderGlow } from '@/components/reactbits/border-glow'
 import { ShinyText } from '@/components/reactbits/shiny-text'
 
@@ -77,18 +78,29 @@ function LoginPage() {
       id="main-content"
       className="relative min-h-screen overflow-hidden bg-background p-6 text-foreground md:p-10"
     >
-      <AuroraBackdrop intensity={0.6} />
+      <AuroraCanvas opacity={0.7} mouseForce={26} />
+      {/* Soft fade so the text doesn't compete with the canvas */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            'radial-gradient(closest-corner at 50% 50%, transparent 0%, oklch(from var(--background) l c h / 35%) 60%, oklch(from var(--background) l c h / 75%) 100%)',
+        }}
+      />
 
       <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md flex-col items-center justify-center">
-        {/* Brand */}
+        {/* Brand — circular emblem orbits the brand mark */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="mb-8 flex flex-col items-center gap-3"
         >
-          <BrandMark size="xl" />
-          <div className="text-center">
+          <CircularEmblem text="· FINANCE · OS · COCKPIT · PREMIUM " size={172} spinDuration={26}>
+            <BrandMark size="xl" />
+          </CircularEmblem>
+          <div className="mt-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               <ShinyText text="Finance OS" speed={4} />
             </h1>
