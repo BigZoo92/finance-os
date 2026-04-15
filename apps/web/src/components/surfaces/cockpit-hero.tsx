@@ -95,15 +95,18 @@ export function CockpitHero<T extends string>({
           />
         </p>
 
-        <div className="mt-2" style={{ height: 'clamp(96px, 15vw, 176px)' }}>
+        <div className="mt-2 h-[140px] sm:h-[180px] md:h-[220px] lg:h-[240px]">
           <TextPressure
             text="COCKPIT"
-            minFontSize={88}
+            ariaLabel="Cockpit"
+            minFontSize={72}
             width
             weight
             italic={false}
             flex
+            scale
             gradient="linear-gradient(92deg, var(--aurora-a) 0%, var(--aurora-b) 50%, var(--aurora-c) 100%)"
+            className="text-center"
           />
         </div>
 

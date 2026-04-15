@@ -20,6 +20,22 @@ import { PushNotificationCard } from '@/components/dashboard/push-notification-c
 import { pushToast } from '@/lib/toast-store'
 import { formatDateTime, toErrorMessage } from '@/lib/format'
 
+/**
+ * FolderPaper — a single sheet inside the Folder visual. White background
+ * (the folder forces its paper surfaces to white), so we use dark text and
+ * a rose accent for the label so it stays legible when the folder opens.
+ */
+function FolderPaper({ label, hint }: { label: string; hint: string }) {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-2">
+      <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ff4f9f]">
+        {label}
+      </span>
+      <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-neutral-500">{hint}</span>
+    </div>
+  )
+}
+
 export const Route = createFileRoute('/_app/parametres')({
   loader: async ({ context }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
@@ -207,24 +223,35 @@ function ParametresPage() {
         </CardContent>
       </Card>
 
-      {/* Export section — Folder visual on the right */}
+      {/* Export section — Folder visual in its own dedicated lane so the
+          paper animation has room to breathe without masking readable text */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Exports</CardTitle>
           <CardDescription>Exporter vos données financières</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-          <p className="text-sm text-muted-foreground">
-            Les exports CSV et PDF sont disponibles depuis la page Dépenses pour les transactions de la période sélectionnée. Cliquez sur le dossier pour visualiser les artefacts disponibles.
-          </p>
-          <div className="flex justify-center md:justify-end">
+        <CardContent className="grid gap-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-start">
+          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+            <p>
+              Les exports CSV et PDF sont disponibles depuis la page Dépenses pour les transactions
+              de la période sélectionnée.
+            </p>
+            <p className="text-[12.5px] text-muted-foreground/80">
+              Cliquez sur le dossier pour déplier un aperçu des artefacts disponibles.
+            </p>
+          </div>
+          {/* Dedicated, tall visual lane — the folder's open-state papers translate
+              upward ~70%, so we reserve enough vertical room that nothing important
+              sits above or below them. The inner items use dark text on white paper
+              so the labels stay legible when the folder opens. */}
+          <div className="flex h-[220px] items-center justify-center md:justify-end">
             <Folder
               color="#ff4f9f"
-              size={1.4}
+              size={1.1}
               items={[
-                <span key="csv" className="block px-3 py-2 text-[10px] font-mono text-foreground/80">transactions.csv</span>,
-                <span key="pdf" className="block px-3 py-2 text-[10px] font-mono text-foreground/80">portfolio.pdf</span>,
-                <span key="json" className="block px-3 py-2 text-[10px] font-mono text-foreground/80">summary.json</span>,
+                <FolderPaper key="csv" label="CSV" hint="transactions" />,
+                <FolderPaper key="pdf" label="PDF" hint="portfolio" />,
+                <FolderPaper key="json" label="JSON" hint="summary" />,
               ]}
             />
           </div>

@@ -36,6 +36,13 @@ type TextPressureProps = {
   /** When provided, applies a CSS `background-image` clipped to the text
    *  silhouette (text-fill becomes transparent). Overrides `textColor`. */
   gradient?: string
+  /** Semantic tag to render. Default `h1`. Pass `div` when nesting inside
+   *  another heading, or `h2` for section titles. */
+  as?: 'h1' | 'h2' | 'h3' | 'div' | 'p'
+  /** Accessible label. Defaults to `text`. When set, the visible spans
+   *  become aria-hidden so screen readers read this instead of individual
+   *  characters. */
+  ariaLabel?: string
 }
 
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => {
@@ -74,6 +81,8 @@ export function TextPressure({
   className = '',
   minFontSize = 48,
   gradient,
+  as = 'h1',
+  ariaLabel,
 }: TextPressureProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const titleRef = useRef<HTMLHeadingElement | null>(null)
@@ -195,7 +204,12 @@ export function TextPressure({
   }, [width, weight, italic, alpha, prefersReducedMotion])
 
   // Scoped @font-face + stroke styles — id prevents collision with other `.stroke` usages.
-  // Gradient mode applies background-clip: text on the whole h1.
+  // Gradient mode: each <span> paints the same gradient clipped to its own
+  // letter silhouette. We inherit the custom property from the parent so the
+  // gradient is declared once on the <h1>, and we use `background-size: 100%`
+  // on the span with `background-attachment: fixed`-style behaviour approximated
+  // by `background-origin: border-box` + responsive `background-size` tuned
+  // per-span.
   const styleElement = useMemo(
     () => (
       <style>{`
@@ -214,12 +228,16 @@ export function TextPressure({
           -webkit-text-stroke-width: ${strokeWidth}px;
           -webkit-text-stroke-color: ${strokeColor};
         }
-        .tp-${scopeId}.gradient,
-        .tp-${scopeId}.gradient span {
+        .tp-${scopeId}.gradient {
           color: transparent !important;
           -webkit-text-fill-color: transparent;
-          background-clip: text;
+        }
+        .tp-${scopeId}.gradient span {
+          background-image: var(--tp-gradient);
           -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent !important;
+          -webkit-text-fill-color: transparent;
         }
       `}</style>
     ),
@@ -227,13 +245,18 @@ export function TextPressure({
   )
 
   const gradientMode = typeof gradient === 'string' && gradient.length > 0
+  const Tag = as
+  const resolvedAriaLabel = ariaLabel ?? text
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-transparent">
       {styleElement}
-      <h1
-        ref={titleRef}
-        className={`tp-${scopeId} ${className} ${flex ? 'flex justify-between' : ''} ${stroke ? 'stroke' : ''} ${gradientMode ? 'gradient' : ''} uppercase text-center select-none`}
+      {/* Screen readers read the whole word once instead of one span per letter */}
+      <span className="sr-only">{resolvedAriaLabel}</span>
+      <Tag
+        ref={titleRef as React.Ref<HTMLHeadingElement & HTMLParagraphElement & HTMLDivElement>}
+        aria-label={resolvedAriaLabel}
+        className={`tp-${scopeId} ${flex ? 'flex justify-between' : ''} ${stroke ? 'stroke' : ''} ${gradientMode ? 'gradient' : ''} uppercase select-none ${className}`}
         style={{
           fontFamily,
           fontSize,
@@ -243,7 +266,7 @@ export function TextPressure({
           margin: 0,
           fontWeight: 100,
           ...(gradientMode
-            ? { backgroundImage: gradient }
+            ? ({ ['--tp-gradient' as string]: gradient } as React.CSSProperties)
             : stroke
               ? {}
               : { color: textColor }),
@@ -258,11 +281,12 @@ export function TextPressure({
             }}
             data-char={char}
             className="inline-block"
+            aria-hidden="true"
           >
             {char}
           </span>
         ))}
-      </h1>
+      </Tag>
     </div>
   )
 }

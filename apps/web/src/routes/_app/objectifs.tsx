@@ -45,6 +45,7 @@ function ObjectifsPage() {
 
   const prefersReducedMotion = useReducedMotion()
   const [mounted, setMounted] = useState(false)
+  const [hovering, setHovering] = useState(false)
   useEffect(() => setMounted(true), [])
 
   return (
@@ -56,10 +57,13 @@ function ObjectifsPage() {
         description="Suivi de vos cibles d'épargne et de patrimoine personnel, avec projections."
       />
 
-      {/* Hero — Antigravity particle ring + circular emblem displaying overall progress */}
-      <section className="relative isolate overflow-hidden rounded-[28px] border border-border/60" style={{ background: 'var(--surface-0)' }}>
+      {/* Hero — Antigravity particle ring (hover-only) + circular emblem */}
+      <section
+        className="group/hero relative isolate overflow-hidden rounded-[28px] border border-border/60"
+        style={{ background: 'var(--surface-0)' }}
+      >
         <div className="pointer-events-none absolute inset-0 h-full">
-          {mounted && !prefersReducedMotion && (
+          {mounted && !prefersReducedMotion && hovering && (
             <Antigravity
               count={220}
               magnetRadius={9}
@@ -69,10 +73,16 @@ function ObjectifsPage() {
               particleSize={1.6}
               particleVariance={1.4}
               color="#ff7ab8"
-              autoAnimate
+              autoAnimate={false}
               particleShape="capsule"
               fieldStrength={12}
               rotationSpeed={0.04}
+            />
+          )}
+          {!hovering && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-aurora-mesh opacity-80"
             />
           )}
           {/* Soft fade so foreground is readable */}
@@ -86,7 +96,14 @@ function ObjectifsPage() {
           />
         </div>
 
-        <div className="relative grid gap-8 px-6 py-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-12 md:py-14">
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative hover surface, no keyboard semantics exposed */}
+        <div
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          onFocus={() => setHovering(true)}
+          onBlur={() => setHovering(false)}
+          className="relative grid gap-8 px-6 py-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-12 md:py-14"
+        >
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-primary/85">Overall</p>
             <p className="mt-1 text-5xl font-bold tracking-tighter md:text-6xl">

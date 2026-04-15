@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Badge, Separator } from '@finance-os/ui/components'
 import type { DashboardNewsSignalCard as DashboardNewsSignalCardModel } from '@/features/dashboard-types'
+import { PixelImageReveal } from '@/components/surfaces/pixel-image-reveal'
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -142,12 +143,19 @@ export function NewsSignalCard({
         <div className="border-t border-border/60 xl:border-l xl:border-t-0">
           <div className="relative flex h-full min-h-[270px] flex-col justify-between overflow-hidden bg-[linear-gradient(180deg,color-mix(in_oklch,var(--surface-1)_80%,var(--primary))_0%,color-mix(in_oklch,var(--background)_90%,black)_100%)] p-5 text-white">
             {showImage ? (
-              <img
-                src={primaryImageUrl ?? undefined}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                onError={() => setImageFailed(true)}
-              />
+              <PixelImageReveal
+                gridSize={12}
+                duration={0.6}
+                pixelColor="oklch(from var(--primary) l c h / 95%)"
+                className="absolute inset-0"
+              >
+                <img
+                  src={primaryImageUrl ?? undefined}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                  onError={() => setImageFailed(true)}
+                />
+              </PixelImageReveal>
             ) : null}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,8,13,0.18)_0%,rgba(6,8,13,0.58)_45%,rgba(6,8,13,0.92)_100%)]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(246,185,59,0.26),transparent_46%)]" />

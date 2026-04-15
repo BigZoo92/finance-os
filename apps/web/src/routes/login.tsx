@@ -8,7 +8,7 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
-import { AuroraCanvas } from '@/components/brand/aurora-canvas'
+import { PixelBlastBackdrop } from '@/components/brand/pixel-blast-backdrop'
 import { BrandMark } from '@/components/brand/brand-mark'
 import { CircularEmblem } from '@/components/brand/circular-emblem'
 import { BorderGlow } from '@/components/reactbits/border-glow'
@@ -78,7 +78,7 @@ function LoginPage() {
       id="main-content"
       className="relative min-h-screen overflow-hidden bg-background p-6 text-foreground md:p-10"
     >
-      <AuroraCanvas opacity={0.7} mouseForce={26} />
+      <PixelBlastBackdrop opacity={0.55} variant="circle" pixelSize={6} speed={0.4} />
       {/* Soft fade so the text doesn't compete with the canvas */}
       <div
         aria-hidden="true"
