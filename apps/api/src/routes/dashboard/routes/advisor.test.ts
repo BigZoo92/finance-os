@@ -368,6 +368,23 @@ describe('createAdvisorRoute', () => {
     expect(payload.currentStage).toBe('news_refresh')
   })
 
+  it('returns JSON null when no manual refresh operation exists yet', async () => {
+    const app = createAdvisorTestApp({
+      mode: 'admin',
+      runtime: createDashboardRuntime({
+        getLatestAdvisorManualOperation: async () => null,
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/manual-refresh-and-run')
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('application/json')
+    expect(await response.text()).toBe('null')
+  })
+
   it('queues manual refresh-and-run in admin mode', async () => {
     const app = createAdvisorTestApp({ mode: 'admin' })
 

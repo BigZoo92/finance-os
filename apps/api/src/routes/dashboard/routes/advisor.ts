@@ -107,6 +107,13 @@ const ensureAdminMutationAccess = ({
   }
 }
 
+const buildJsonNullResponse = () =>
+  new Response('null', {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+    },
+  })
+
 export const createAdvisorRoute = ({
   advisorEnabled,
   adminOnly,
@@ -377,10 +384,12 @@ export const createAdvisorRoute = ({
 
       const auth = getAuth(context)
       const requestMeta = getRequestMeta(context)
-      return dashboard.useCases.getLatestAdvisorManualOperation({
+      const operation = await dashboard.useCases.getLatestAdvisorManualOperation({
         mode: auth.mode,
         requestId: requestMeta.requestId,
       })
+
+      return operation ?? buildJsonNullResponse()
     })
     .get(
       '/advisor/manual-refresh-and-run/:operationId',
