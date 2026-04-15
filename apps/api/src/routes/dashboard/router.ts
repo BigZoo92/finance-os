@@ -7,6 +7,7 @@ import { createNewsRoute } from './routes/news'
 import { createSummaryRoute } from './routes/summary'
 import { createAnalyticsRoute } from './routes/analytics'
 import { createAdvisorRoute } from './routes/advisor'
+import { createManualAssetsRoute } from './routes/manual-assets'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
@@ -56,6 +57,26 @@ export const createDashboardRoutes = ({
   marketDataFredSeriesIds,
   eodhdApiKey,
   twelveDataApiKey,
+  aiAdvisorEnabled,
+  aiAdvisorAdminOnly,
+  aiAdvisorForceLocalOnly,
+  aiChatEnabled,
+  aiChallengerEnabled,
+  aiRelabelEnabled,
+  aiOpenAiApiKey,
+  aiOpenAiBaseUrl,
+  aiOpenAiClassifierModel,
+  aiOpenAiDailyModel,
+  aiOpenAiDeepModel,
+  aiAnthropicApiKey,
+  aiAnthropicBaseUrl,
+  aiAnthropicChallengerModel,
+  aiBudgetDailyUsd,
+  aiBudgetMonthlyUsd,
+  aiBudgetDisableChallengerRatio,
+  aiBudgetDisableDeepAnalysisRatio,
+  aiMaxChatMessagesContext,
+  aiUsdToEurRate,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -99,6 +120,26 @@ export const createDashboardRoutes = ({
   marketDataFredSeriesIds: string[]
   eodhdApiKey: string | undefined
   twelveDataApiKey: string | undefined
+  aiAdvisorEnabled: boolean
+  aiAdvisorAdminOnly: boolean
+  aiAdvisorForceLocalOnly: boolean
+  aiChatEnabled: boolean
+  aiChallengerEnabled: boolean
+  aiRelabelEnabled: boolean
+  aiOpenAiApiKey: string | undefined
+  aiOpenAiBaseUrl: string | undefined
+  aiOpenAiClassifierModel: string
+  aiOpenAiDailyModel: string
+  aiOpenAiDeepModel: string
+  aiAnthropicApiKey: string | undefined
+  aiAnthropicBaseUrl: string | undefined
+  aiAnthropicChallengerModel: string
+  aiBudgetDailyUsd: number
+  aiBudgetMonthlyUsd: number
+  aiBudgetDisableChallengerRatio: number
+  aiBudgetDisableDeepAnalysisRatio: number
+  aiMaxChatMessagesContext: number
+  aiUsdToEurRate: number
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -142,6 +183,26 @@ export const createDashboardRoutes = ({
     marketDataFredSeriesIds,
     eodhdApiKey,
     twelveDataApiKey,
+    aiAdvisorEnabled,
+    aiAdvisorAdminOnly,
+    aiAdvisorForceLocalOnly,
+    aiChatEnabled,
+    aiChallengerEnabled,
+    aiRelabelEnabled,
+    aiOpenAiApiKey,
+    aiOpenAiBaseUrl,
+    aiOpenAiClassifierModel,
+    aiOpenAiDailyModel,
+    aiOpenAiDeepModel,
+    aiAnthropicApiKey,
+    aiAnthropicBaseUrl,
+    aiAnthropicChallengerModel,
+    aiBudgetDailyUsd,
+    aiBudgetMonthlyUsd,
+    aiBudgetDisableChallengerRatio,
+    aiBudgetDisableDeepAnalysisRatio,
+    aiMaxChatMessagesContext,
+    aiUsdToEurRate,
   })
 
   return new Elysia({ prefix: '/dashboard' })
@@ -154,7 +215,15 @@ export const createDashboardRoutes = ({
       })
     )
     .use(createAnalyticsRoute())
-    .use(createAdvisorRoute())
+    .use(createManualAssetsRoute())
+    .use(
+      createAdvisorRoute({
+        advisorEnabled: aiAdvisorEnabled,
+        adminOnly: aiAdvisorAdminOnly,
+        chatEnabled: aiChatEnabled,
+        relabelEnabled: aiRelabelEnabled,
+      })
+    )
     .use(createDerivedRecomputeRoute())
     .use(createGoalsRoute())
     .use(createTransactionsRoute())

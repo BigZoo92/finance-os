@@ -22,6 +22,7 @@ Scope: `apps/worker/**`
 - Keep the persisted Powens last-sync snapshot minimal and end-of-job only: transition logs, Redis counters, and DB writes for `lastSyncStatus` / `lastSyncReasonCode` must stay correlated by request id and must all short-circuit when `SYNC_STATUS_PERSISTENCE_ENABLED=false`.
 - Keep the worker's localhost-only `GET /health` and `GET /version` contract aligned with the shared system contract used by api and web.
 - Keep the optional market refresh scheduler (`src/market-refresh-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/markets/refresh` over `API_INTERNAL_URL`, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or raw provider payloads.
+- Keep the optional advisor daily scheduler (`src/advisor-daily-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/advisor/run-daily` over `API_INTERNAL_URL`, must use the internal token path when configured, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or prompt payloads. The current recommended posture keeps this scheduler disabled by env and relies on the admin manual mission.
 
 ## Verify
 

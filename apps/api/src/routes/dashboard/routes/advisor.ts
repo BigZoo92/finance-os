@@ -1,318 +1,686 @@
 import { Elysia } from 'elysia'
-import { getAuth, getRequestMeta } from '../../../auth/context'
-import { logApiEvent } from '../../../observability/logger'
-import { buildAdvisorFinancialContext } from '../domain/build-advisor-financial-context'
-import { createGetDashboardAdvisorUseCase, readDashboardAdvisorFlags } from '../domain/create-get-dashboard-advisor-use-case'
+import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
+import { requireAdminOrInternalToken } from '../../../auth/guard'
 import { getDashboardRuntime } from '../context'
-import { dashboardSummaryQuerySchema } from '../schemas'
-import type {
-  DashboardAdvisorAction,
-  DashboardAdvisorInsight,
-  DashboardAdvisorResponse,
-  DashboardSummaryResponse,
-} from '../types'
+import {
+  dashboardAdvisorChatBodySchema,
+  dashboardAdvisorChatQuerySchema,
+  dashboardAdvisorListQuerySchema,
+  dashboardAdvisorManualOperationParamsSchema,
+  dashboardAdvisorRunBodySchema,
+  dashboardSummaryQuerySchema,
+} from '../schemas'
 
-const ADVISOR_IMPACT_MAX = 600
-const ADVISOR_MIN_BASELINE = 50
-
-const clampImpactEstimate = (value: number): number => Math.max(10, Math.min(ADVISOR_IMPACT_MAX, Math.round(value)))
-
-const buildLocalInsights = (summary: DashboardSummaryResponse): DashboardAdvisorInsight[] => {
-  const financialContext = buildAdvisorFinancialContext(summary)
-  const net = financialContext.totals.netCashflow
-  const spendRatio = financialContext.totals.spendRatio
-
-  const trendInsight: DashboardAdvisorInsight =
-    net >= 0
-      ? {
-          id: 'local-cashflow-positive',
-          title: 'Cashflow positif sur la periode',
-          detail: `Vos revenus depassent les depenses de ${Math.round(net)}. Gardez ce rythme avec une epargne automatique.`,
-          severity: 'info',
-          citations: [
-            { id: 'totals.incomes', label: 'Revenus periode', value: `${Math.round(summary.totals.incomes)}` },
-            { id: 'totals.expenses', label: 'Depenses periode', value: `${Math.round(summary.totals.expenses)}` },
-          ],
-        }
-      : {
-          id: 'local-cashflow-negative',
-          title: 'Cashflow negatif detecte',
-          detail: `Les depenses depassent les revenus de ${Math.round(Math.abs(net))}. Reduisez une categorie variable cette semaine.`,
-          severity: 'warning',
-          citations: [
-            { id: 'totals.incomes', label: 'Revenus periode', value: `${Math.round(summary.totals.incomes)}` },
-            { id: 'totals.expenses', label: 'Depenses periode', value: `${Math.round(summary.totals.expenses)}` },
-          ],
-        }
-
-  const ratioInsight: DashboardAdvisorInsight =
-    spendRatio > 0.9
-      ? {
-          id: 'local-spend-ratio-high',
-          title: 'Ratio depenses/revenus eleve',
-          detail: 'Objectif indicatif: rester sous 85% pour absorber les imprevus.',
-          severity: 'warning',
-          citations: [
-            { id: 'totals.spendRatio', label: 'Ratio depenses/revenus', value: `${Math.round(spendRatio * 100)}%` },
-          ],
-        }
-      : {
-          id: 'local-spend-ratio-healthy',
-          title: 'Ratio depenses/revenus maitrise',
-          detail: 'Votre marge actuelle laisse de la place pour une reserve de securite.',
-          severity: 'info',
-          citations: [
-            { id: 'totals.spendRatio', label: 'Ratio depenses/revenus', value: `${Math.round(spendRatio * 100)}%` },
-          ],
-        }
-
-  const expenseInsight: DashboardAdvisorInsight = financialContext.focus.topExpenseLabel
-    ? {
-        id: 'local-top-expense',
-        title: `Focus depense: ${financialContext.focus.topExpenseLabel}`,
-        detail: `Poste principal sur la periode: ${Math.round(financialContext.focus.topExpenseAmount ?? 0)} sur ${financialContext.focus.topExpenseCount ?? 0} transactions.`,
-        severity: 'info',
-        citations: [
-          {
-            id: 'topExpenseGroups[0].total',
-            label: 'Montant poste principal',
-            value: `${Math.round(financialContext.focus.topExpenseAmount ?? 0)}`,
-          },
-          {
-            id: 'topExpenseGroups[0].count',
-            label: 'Transactions poste principal',
-            value: `${financialContext.focus.topExpenseCount ?? 0}`,
-          },
-        ],
-      }
-    : {
-        id: 'local-empty-expenses',
-        title: 'Aucune depense exploitable',
-        detail: 'Aucune donnee depense n\'a ete detectee sur la periode selectionnee.',
-        severity: 'warning',
-        citations: [{ id: 'topExpenseGroups', label: 'Top depenses detectees', value: '0' }],
-      }
-
-  return [trendInsight, ratioInsight, expenseInsight]
+const buildAdvisorRouteError = ({
+  context,
+  status,
+  code,
+  message,
+}: {
+  context: object & { set: { status?: number | string } }
+  status: number
+  code: string
+  message: string
+}) => {
+  const requestId = getRequestMeta(context).requestId
+  context.set.status = status
+  return {
+    ok: false,
+    code,
+    message,
+    requestId,
+  }
 }
 
-const buildActionTracking = (params: {
-  metricLabel: string
-  targetLabel: string
-  currentLabel: string
-}): DashboardAdvisorAction['tracking'] => ({
-  status: 'suggested',
-  metricLabel: params.metricLabel,
-  targetLabel: params.targetLabel,
-  currentLabel: params.currentLabel,
-})
-
-const buildDecisionWorkflow = (params: {
-  goal: string
-  checkpoints: DashboardAdvisorAction['decisionWorkflow']['checkpoints']
-  nextReviewLabel: string
-}): DashboardAdvisorAction['decisionWorkflow'] => ({
-  goal: params.goal,
-  checkpoints: params.checkpoints,
-  nextReviewLabel: params.nextReviewLabel,
-})
-
-const buildLocalActions = (summary: DashboardSummaryResponse): DashboardAdvisorAction[] => {
-  const financialContext = buildAdvisorFinancialContext(summary)
-  const net = financialContext.totals.netCashflow
-  const topExpenseAmount = Math.max(0, Math.round(financialContext.focus.topExpenseAmount ?? 0))
-  const monthlyExpenseBaseline = Math.max(ADVISOR_MIN_BASELINE, Math.round(summary.totals.expenses))
-
-  const trimTopExpense: DashboardAdvisorAction = {
-    id: 'action-trim-top-expense-10pct',
-    title: 'Reduire le principal poste variable de 10%',
-    detail: financialContext.focus.topExpenseLabel
-      ? `Commencez par ${financialContext.focus.topExpenseLabel} avec un plafond hebdomadaire explicite.`
-      : 'Choisissez un poste variable non essentiel et fixez un plafond hebdomadaire explicite.',
-    estimatedMonthlyImpact: clampImpactEstimate(Math.max(15, Math.round(topExpenseAmount * 0.1))),
-    effort: 'medium',
-    decisionWorkflow: buildDecisionWorkflow({
-      goal: 'Baisser la depense variable dominante sans effet tunnel.',
-      checkpoints: [
-        {
-          id: 'trim-top-expense-baseline',
-          label: 'Fixer un plafond hebdomadaire clair',
-          rationale: 'Un budget explicite rend la decision actionnable chaque semaine.',
-        },
-        {
-          id: 'trim-top-expense-tradeoff',
-          label: 'Choisir une alternative moins couteuse',
-          rationale: 'Definir un compromis concret evite la fatigue de decision.',
-        },
-        {
-          id: 'trim-top-expense-review',
-          label: 'Comparer reel vs plafond en fin de semaine',
-          rationale: 'La boucle de revue permet un ajustement progressif sans blocage.',
-        },
-      ],
-      nextReviewLabel: 'Revue dans 7 jours',
-    }),
-    tracking: buildActionTracking({
-      metricLabel: 'Depense variable mensuelle',
-      targetLabel: '-10% sur 30 jours',
-      currentLabel: `${monthlyExpenseBaseline}`,
-    }),
-    citations: [
-      { id: 'totals.expenses', label: 'Depenses mensuelles (baseline)', value: `${monthlyExpenseBaseline}` },
-      { id: 'topExpenseGroups[0].total', label: 'Poste principal estime', value: `${topExpenseAmount}` },
-    ],
+const ensureAdvisorAccess = ({
+  context,
+  advisorEnabled,
+  adminOnly,
+}: {
+  context: object & { set: { status?: number | string } }
+  advisorEnabled: boolean
+  adminOnly: boolean
+}) => {
+  if (!advisorEnabled) {
+    return buildAdvisorRouteError({
+      context,
+      status: 503,
+      code: 'ADVISOR_DISABLED',
+      message: 'AI advisor is disabled by feature flag.',
+    })
   }
 
-  const cashflowBuffer: DashboardAdvisorAction = {
-    id: 'action-cashflow-buffer',
-    title: 'Programmer un transfert securite chaque semaine',
-    detail:
-      net >= 0
-        ? 'Automatisez un virement vers votre reserve juste apres les revenus principaux.'
-        : 'Demarrez avec un petit montant fixe pour recreer une reserve sans bloquer le budget.',
-    estimatedMonthlyImpact: clampImpactEstimate(net >= 0 ? Math.max(20, Math.round(net * 0.25)) : 20),
-    effort: 'low',
-    decisionWorkflow: buildDecisionWorkflow({
-      goal: 'Ancrer une reserve de securite sans destabiliser le budget courant.',
-      checkpoints: [
-        {
-          id: 'cashflow-buffer-amount',
-          label: 'Choisir un montant automatique realiste',
-          rationale: 'Un montant atteignable augmente la regularite des virements.',
-        },
-        {
-          id: 'cashflow-buffer-trigger',
-          label: 'Declencher juste apres les revenus principaux',
-          rationale: 'Automatiser apres entree d argent limite le risque d oubli.',
-        },
-        {
-          id: 'cashflow-buffer-follow-up',
-          label: 'Verifier le nombre de virements realises',
-          rationale: 'Le suivi simple confirme l execution avant d augmenter le montant.',
-        },
-      ],
-      nextReviewLabel: 'Point de suivi fin de mois',
-    }),
-    tracking: buildActionTracking({
-      metricLabel: 'Reserve de securite',
-      targetLabel: '4 virements effectues ce mois',
-      currentLabel: '0/4 effectue',
-    }),
-    citations: [{ id: 'totals.netCashflow', label: 'Marge mensuelle estimee', value: `${Math.round(net)}` }],
+  const auth = getAuth(context)
+  const internalAuth = getInternalAuth(context)
+  if (adminOnly && auth.mode !== 'admin' && !internalAuth.hasValidToken) {
+    return buildAdvisorRouteError({
+      context,
+      status: 403,
+      code: 'ADVISOR_ADMIN_ONLY',
+      message: 'AI advisor is restricted to admin sessions.',
+    })
   }
 
-  return [trimTopExpense, cashflowBuffer]
+  return null
 }
 
-export const createAdvisorRoute = () =>
-  new Elysia().get(
-    '/advisor',
-    async context => {
-      const auth = getAuth(context)
-      const requestMeta = getRequestMeta(context)
-      const range = context.query.range ?? '30d'
-      const startedAt = Date.now()
-      const flags = readDashboardAdvisorFlags()
+const ensureFeatureEnabled = ({
+  context,
+  enabled,
+  code,
+  message,
+}: {
+  context: object & { set: { status?: number | string } }
+  enabled: boolean
+  code: string
+  message: string
+}) => {
+  if (enabled) {
+    return null
+  }
 
-      logApiEvent({
-        level: 'info',
-        msg: 'advisor_request',
-        requestId: requestMeta.requestId,
-        auth_mode: auth.mode,
-        range,
+  return buildAdvisorRouteError({
+    context,
+    status: 503,
+    code,
+    message,
+  })
+}
+
+const ensureAdminMutationAccess = ({
+  context,
+  message,
+}: {
+  context: object & { set: { status?: number | string } }
+  message: string
+}) => {
+  try {
+    requireAdminOrInternalToken(context)
+    return null
+  } catch {
+    return buildAdvisorRouteError({
+      context,
+      status: 403,
+      code: 'DEMO_MODE_FORBIDDEN',
+      message,
+    })
+  }
+}
+
+export const createAdvisorRoute = ({
+  advisorEnabled,
+  adminOnly,
+  chatEnabled,
+  relabelEnabled,
+}: {
+  advisorEnabled: boolean
+  adminOnly: boolean
+  chatEnabled: boolean
+  relabelEnabled: boolean
+} = {
+  advisorEnabled: true,
+  adminOnly: false,
+  chatEnabled: true,
+  relabelEnabled: true,
+}) =>
+  new Elysia()
+    .get(
+      '/advisor',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorOverview) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorOverview({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+        })
+      },
+      {
+        query: dashboardSummaryQuerySchema,
+      }
+    )
+    .get('/advisor/daily-brief', async context => {
+      const accessError = ensureAdvisorAccess({
+        context,
+        advisorEnabled,
+        adminOnly,
       })
-
-      if (!flags.advisorEnabled) {
-        context.set.status = 503
-        return {
-          code: 'ADVISOR_DISABLED',
-          message: 'AI advisor is disabled by feature flag.',
-          requestId: requestMeta.requestId,
-        }
-      }
-
-      if (flags.adminOnly && auth.mode !== 'admin') {
-        context.set.status = 403
-        return {
-          code: 'ADVISOR_ADMIN_ONLY',
-          message: 'AI advisor is restricted to admin sessions.',
-          requestId: requestMeta.requestId,
-        }
+      if (accessError) {
+        return accessError
       }
 
       const dashboard = getDashboardRuntime(context)
-      const getAdvisor = createGetDashboardAdvisorUseCase({ getSummary: dashboard.useCases.getSummary })
-      const result = await getAdvisor({ mode: auth.mode, range })
-
-      const response: DashboardAdvisorResponse = {
-        mode: result.plan.mode,
-        source: result.plan.source,
-        fallback: result.plan.fallback,
-        fallbackReason: result.plan.fallbackReason,
-        requestId: requestMeta.requestId,
-        generatedAt: new Date().toISOString(),
-        ...(result.plan.degradedMessage ? { degradedMessage: result.plan.degradedMessage } : {}),
-        ...(result.summary.assets.length === 0 ? { emptyMessage: 'Aucune donnee exploitable' } : {}),
-        dataStatus:
-          result.summary.assets.length === 0 || result.summary.topExpenseGroups.length === 0
-            ? {
-                mode: 'insufficient',
-                message: 'Donnees insuffisantes: recommandations affichees avec citations minimales.',
-              }
-            : {
-                mode: 'sufficient',
-                message: null,
-              },
-        metrics: {
-          latencyMs: Date.now() - startedAt,
-          fallbackRate: result.plan.fallback ? 1 : 0,
-          errorRate: result.plan.fallbackReason === 'provider_unavailable' ? 1 : 0,
-          insightAcceptedRate: 0,
-        },
-        insights: buildLocalInsights(result.summary),
-        actions: buildLocalActions(result.summary),
-      }
-
-      if (response.fallbackReason === 'provider_unavailable') {
-        logApiEvent({
-          level: 'error',
-          msg: 'advisor_error',
-          requestId: requestMeta.requestId,
-          auth_mode: auth.mode,
-          safe_error_code: response.fallbackReason,
-          summary_source: result.plan.summarySource,
-          latency_ms: response.metrics.latencyMs,
+      if (!dashboard.useCases.getAdvisorDailyBrief) {
+        return buildAdvisorRouteError({
+          context,
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor daily brief runtime is unavailable.',
         })
       }
 
-      if (response.fallback) {
-        logApiEvent({
-          level: 'warn',
-          msg: 'advisor_fallback',
-          requestId: requestMeta.requestId,
-          auth_mode: auth.mode,
-          fallback_reason: response.fallbackReason,
-          summary_source: result.plan.summarySource,
-          latency_ms: response.metrics.latencyMs,
-        })
-      }
-
-      logApiEvent({
-        level: 'info',
-        msg: 'advisor_response',
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.getAdvisorDailyBrief({
+        mode: auth.mode,
         requestId: requestMeta.requestId,
-        auth_mode: auth.mode,
-        advisor_source: response.source,
-        summary_source: result.plan.summarySource,
-        fallback_rate: response.metrics.fallbackRate,
-        error_rate: response.metrics.errorRate,
-        insight_accepted_rate: response.metrics.insightAcceptedRate,
-        latency_ms: response.metrics.latencyMs,
       })
+    })
+    .get(
+      '/advisor/recommendations',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
 
-      return response
-    },
-    {
-      query: dashboardSummaryQuerySchema,
-    }
-  )
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorRecommendations) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor recommendations runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorRecommendations({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.limit !== undefined ? { limit: context.query.limit } : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorListQuerySchema,
+      }
+    )
+    .get(
+      '/advisor/runs',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorRuns) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor run history runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorRuns({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.limit !== undefined ? { limit: context.query.limit } : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorListQuerySchema,
+      }
+    )
+    .get(
+      '/advisor/assumptions',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorAssumptions) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor assumptions runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorAssumptions({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.limit !== undefined ? { limit: context.query.limit } : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorListQuerySchema,
+      }
+    )
+    .get(
+      '/advisor/signals',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorSignals) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor signals runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorSignals({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.limit !== undefined ? { limit: context.query.limit } : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorListQuerySchema,
+      }
+    )
+    .get('/advisor/spend', async context => {
+      const accessError = ensureAdvisorAccess({
+        context,
+        advisorEnabled,
+        adminOnly,
+      })
+      if (accessError) {
+        return accessError
+      }
+
+      const dashboard = getDashboardRuntime(context)
+      if (!dashboard.useCases.getAdvisorSpend) {
+        return buildAdvisorRouteError({
+          context,
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor spend runtime is unavailable.',
+        })
+      }
+
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.getAdvisorSpend({
+        mode: auth.mode,
+        requestId: requestMeta.requestId,
+      })
+    })
+    .get('/advisor/manual-refresh-and-run', async context => {
+      const accessError = ensureAdvisorAccess({
+        context,
+        advisorEnabled,
+        adminOnly,
+      })
+      if (accessError) {
+        return accessError
+      }
+
+      const adminError = ensureAdminMutationAccess({
+        context,
+        message: 'Admin session or internal token required for manual advisor orchestration.',
+      })
+      if (adminError) {
+        return adminError
+      }
+
+      const dashboard = getDashboardRuntime(context)
+      if (!dashboard.useCases.getLatestAdvisorManualOperation) {
+        return buildAdvisorRouteError({
+          context,
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor manual orchestration runtime is unavailable.',
+        })
+      }
+
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.getLatestAdvisorManualOperation({
+        mode: auth.mode,
+        requestId: requestMeta.requestId,
+      })
+    })
+    .get(
+      '/advisor/manual-refresh-and-run/:operationId',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const adminError = ensureAdminMutationAccess({
+          context,
+          message: 'Admin session or internal token required for manual advisor orchestration.',
+        })
+        if (adminError) {
+          return adminError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorManualOperationById) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor manual orchestration runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        const operation = await dashboard.useCases.getAdvisorManualOperationById({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          operationId: context.params.operationId,
+        })
+
+        if (!operation) {
+          return buildAdvisorRouteError({
+            context,
+            status: 404,
+            code: 'ADVISOR_MANUAL_OPERATION_NOT_FOUND',
+            message: 'Advisor manual operation not found.',
+          })
+        }
+
+        return operation
+      },
+      {
+        params: dashboardAdvisorManualOperationParamsSchema,
+      }
+    )
+    .post(
+      '/advisor/manual-refresh-and-run',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const adminError = ensureAdminMutationAccess({
+          context,
+          message: 'Admin session or internal token required for manual advisor orchestration.',
+        })
+        if (adminError) {
+          return adminError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.runAdvisorManualRefreshAndAnalysis) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor manual orchestration runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.runAdvisorManualRefreshAndAnalysis({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          triggerSource: 'manual',
+        })
+      }
+    )
+    .get(
+      '/advisor/chat',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const chatError = ensureFeatureEnabled({
+          context,
+          enabled: chatEnabled,
+          code: 'ADVISOR_CHAT_DISABLED',
+          message: 'Advisor chat is disabled by feature flag.',
+        })
+        if (chatError) {
+          return chatError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorChat) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor chat runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorChat({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.threadKey ? { threadKey: context.query.threadKey } : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorChatQuerySchema,
+      }
+    )
+    .post(
+      '/advisor/chat',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const chatError = ensureFeatureEnabled({
+          context,
+          enabled: chatEnabled,
+          code: 'ADVISOR_CHAT_DISABLED',
+          message: 'Advisor chat is disabled by feature flag.',
+        })
+        if (chatError) {
+          return chatError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.postAdvisorChat) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor chat runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.postAdvisorChat({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.body.threadKey ? { threadKey: context.body.threadKey } : {}),
+          message: context.body.message,
+        })
+      },
+      {
+        body: dashboardAdvisorChatBodySchema,
+      }
+    )
+    .get('/advisor/evals', async context => {
+      const accessError = ensureAdvisorAccess({
+        context,
+        advisorEnabled,
+        adminOnly,
+      })
+      if (accessError) {
+        return accessError
+      }
+
+      const dashboard = getDashboardRuntime(context)
+      if (!dashboard.useCases.getAdvisorEvals) {
+        return buildAdvisorRouteError({
+          context,
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor eval runtime is unavailable.',
+        })
+      }
+
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.getAdvisorEvals({
+        mode: auth.mode,
+        requestId: requestMeta.requestId,
+      })
+    })
+    .post(
+      '/advisor/run-daily',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const adminError = ensureAdminMutationAccess({
+          context,
+          message: 'Admin session or internal token required for advisor runs.',
+        })
+        if (adminError) {
+          return adminError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.runAdvisorDaily) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor run runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.runAdvisorDaily({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          triggerSource: context.body.trigger ?? 'manual',
+        })
+      },
+      {
+        body: dashboardAdvisorRunBodySchema,
+      }
+    )
+    .post(
+      '/advisor/relabel-transactions',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const relabelError = ensureFeatureEnabled({
+          context,
+          enabled: relabelEnabled,
+          code: 'ADVISOR_RELABEL_DISABLED',
+          message: 'Advisor transaction relabeling is disabled by feature flag.',
+        })
+        if (relabelError) {
+          return relabelError
+        }
+
+        const adminError = ensureAdminMutationAccess({
+          context,
+          message: 'Admin session or internal token required for relabeling.',
+        })
+        if (adminError) {
+          return adminError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.relabelAdvisorTransactions) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor relabel runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.relabelAdvisorTransactions({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          triggerSource: context.body.trigger ?? 'manual',
+        })
+      },
+      {
+        body: dashboardAdvisorRunBodySchema,
+      }
+    )

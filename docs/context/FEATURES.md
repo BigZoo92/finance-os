@@ -1,6 +1,6 @@
 # Finance-OS -- Features Metier
 
-> **Derniere mise a jour** : 2026-04-10
+> **Derniere mise a jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle feature ou evolution significative.
 
@@ -75,8 +75,12 @@ Utilisateur clique "Connecter une banque"
 ### 2.2 Synchronisation
 
 **Deux modes** :
-- **Automatique** : scheduler dans le Worker (configurable, 2x/jour par defaut, min 12h en prod)
+- **Automatique** : scheduler dans le Worker (optionnel, configurable)
 - **Manuelle** : bouton dashboard avec cooldown (300s par defaut, rate-limit Redis)
+
+**Mode recommande actuellement** :
+- `WORKER_AUTO_SYNC_ENABLED=false`
+- sync Powens declenchee via la mission manuelle advisor ou les actions admin explicites
 
 **Pipeline de sync** :
 1. Worker dequeue le job Redis (BLPOP)
@@ -188,6 +192,8 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - Types : cash, investissement, manuel
 - Origines : provider (Powens), saisie manuelle
 - Supporte les actifs non-bancaires (immobilier, crypto, art...)
+- En mode admin, aucun actif manuel n'est injecte en dur par defaut
+- Les actifs manuels admin se gerent via `/dashboard/manual-assets` et apparaissent ensuite dans les vues patrimoine
 
 ### Positions d'investissement
 - Quantite, cout de base, valeur courante
@@ -318,20 +324,93 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 
 ---
 
-## 10. Conseiller IA (MVP)
+## 10. Conseiller IA / Quant
 
-**Route** : `GET /dashboard/advisor`
-**Feature flags** : `VITE_AI_ADVISOR_ENABLED`, `VITE_AI_ADVISOR_ADMIN_ONLY`
+**Routes** :
+
+- `GET /dashboard/advisor`
+- `GET /dashboard/advisor/daily-brief`
+- `GET /dashboard/advisor/recommendations`
+- `GET /dashboard/advisor/runs`
+- `GET /dashboard/advisor/assumptions`
+- `GET /dashboard/advisor/signals`
+- `GET /dashboard/advisor/spend`
+- `GET /dashboard/advisor/chat`
+- `POST /dashboard/advisor/chat`
+- `GET /dashboard/advisor/evals`
+- `GET /dashboard/advisor/manual-refresh-and-run`
+- `GET /dashboard/advisor/manual-refresh-and-run/:operationId`
+- `POST /dashboard/advisor/manual-refresh-and-run`
+- `POST /dashboard/advisor/run-daily`
+- `POST /dashboard/advisor/relabel-transactions`
+
+**Feature flags** :
+
+- Frontend: `VITE_AI_ADVISOR_ENABLED`, `VITE_AI_ADVISOR_ADMIN_ONLY`
+- API/Worker: `AI_ADVISOR_ENABLED`, `AI_ADVISOR_ADMIN_ONLY`, `AI_ADVISOR_FORCE_LOCAL_ONLY`
+
+### Architecture produit
+
+- Moteur deterministe dans `packages/finance-engine`
+- Couche provider/prompt/schema/pricing dans `packages/ai`
+- OpenAI = classification, daily brief, chat grounded
+- Anthropic = challenger review
+- Artefacts persistes en base:
+  - snapshots portefeuille
+  - briefs quotidiens
+  - recommandations et contre-analyses
+  - signaux macro/news
+  - suggestions de relabel transaction
+  - threads/messages de chat
+  - runs, steps, usages modele, ledger de cout, evals
 
 ### Fonctionnement actuel
-- Insights generes localement (pas d'API LLM externe pour l'instant)
-- Contexte : solde, revenus, depenses, cashflow net, ratio depenses, actifs, top depenses
-- Recommandations actionnables avec estimation d'effort (low/medium/high) et impact mensuel
-- Workflow de decision avec checkpoints
-- Statuts : suggere / en cours / termine
-- Citations liees aux donnees comptables
-- Fonctionne en demo et admin (mocks deterministes en demo)
-- Fallback local si provider indisponible
+
+- Le mode recommande est **manuel-first**
+- Le bouton admin `Tout rafraichir et analyser` sur `/actualites` orchestre:
+  - refresh des donnees personnelles reelles
+  - refresh news
+  - refresh marche
+  - run advisor complet
+  - persistance des runs, couts, artefacts et evals
+- Les schedulers `AI_DAILY_AUTO_RUN_ENABLED` et `WORKER_AUTO_SYNC_ENABLED` restent desactives dans ce mode
+- Le moteur deterministe calcule:
+  - allocation
+  - cash drag
+  - concentration
+  - diversification
+  - emergency fund / runway
+  - rendements attendus nominaux/reels
+  - proxies de volatilite, downside risk, Sharpe, Sortino, max drawdown
+  - signaux de drift et scenarios simples
+- Les recommandations candidates sont d'abord produites de facon deterministe
+- OpenAI reformule un brief quotidien structure et relabel les transactions ambiguës
+- Claude challenger relit les recommandations prioritaires et peut les confirmer, les adoucir ou les flagger
+- Le chat repond a partir des artefacts persistants, hypotheses et signaux deja stockes
+- Les couts IA sont historises et exposes dans l'UI
+
+### Demo / Admin
+
+- Demo:
+  - zero DB
+  - zero provider
+  - zero mutation
+  - brief/recommandations/chat deterministes
+- Admin:
+  - lecture DB et artefacts persistants
+  - runs manuels via orchestration complete ou planifies plus tard via worker
+  - degrades intelligentes si budget ou provider bloque
+
+### Notes d'exploitation
+
+- Le conseiller n'est jamais un "LLM unique qui lit tout"
+- Les hypotheses et limites sont persistantes et consultables
+- Les budgets peuvent couper le challenger ou les analyses plus profondes avant blocage total
+- Voir aussi:
+  - `docs/AI-ARCHITECTURE.md`
+  - `docs/AI-SETUP.md`
+  - `docs/AI-COSTS.md`
+  - `docs/AI-EVALS.md`
 
 ---
 

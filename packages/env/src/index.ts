@@ -616,6 +616,49 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_ADVISOR_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_ADVISOR_ADMIN_ONLY: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_ADVISOR_FORCE_LOCAL_ONLY: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_CHAT_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_CHALLENGER_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_RELABEL_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_OPENAI_API_KEY: z.string().min(1).optional(),
+    AI_OPENAI_BASE_URL: z.string().url('AI_OPENAI_BASE_URL must be a valid URL').optional(),
+    AI_OPENAI_CLASSIFIER_MODEL: z.string().default('gpt-5.4-nano'),
+    AI_OPENAI_DAILY_MODEL: z.string().default('gpt-5.4-mini'),
+    AI_OPENAI_DEEP_MODEL: z.string().default('gpt-5.4'),
+    AI_ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    AI_ANTHROPIC_BASE_URL: z
+      .string()
+      .url('AI_ANTHROPIC_BASE_URL must be a valid URL')
+      .optional(),
+    AI_ANTHROPIC_CHALLENGER_MODEL: z.string().default('claude-sonnet-4-6'),
+    AI_USD_TO_EUR_RATE: z.coerce.number().positive().default(0.92),
+    AI_BUDGET_DAILY_USD: z.coerce.number().nonnegative().default(2),
+    AI_BUDGET_MONTHLY_USD: z.coerce.number().nonnegative().default(40),
+    AI_BUDGET_DISABLE_CHALLENGER_RATIO: z.coerce.number().min(0).max(1).default(0.75),
+    AI_BUDGET_DISABLE_DEEP_ANALYSIS_RATIO: z.coerce.number().min(0).max(1).default(0.5),
+    AI_SPEND_ALERT_DAILY_THRESHOLD_PCT: z.coerce.number().min(0).max(1).default(0.8),
+    AI_SPEND_ALERT_MONTHLY_THRESHOLD_PCT: z.coerce.number().min(0).max(1).default(0.8),
+    AI_MAX_CHAT_MESSAGES_CONTEXT: z.coerce.number().int().min(1).max(20).default(8),
     ENRICHMENT_BULK_TRIAGE_ENABLED: z
       .string()
       .optional()
@@ -733,6 +776,11 @@ export const getWorkerEnv = () =>
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     NEWS_FETCH_INTERVAL_MS: z.coerce.number().int().positive().default(4 * 60 * 60 * 1000),
+    AI_DAILY_AUTO_RUN_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_DAILY_INTERVAL_MS: z.coerce.number().int().positive().default(24 * 60 * 60 * 1000),
     MARKET_DATA_AUTO_REFRESH_ENABLED: z
       .string()
       .optional()
@@ -765,5 +813,13 @@ export const getWorkerEnv = () =>
     PUSH_DELIVERY_PROVIDER_URL: z.string().url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL').optional(),
     PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+    AI_ADVISOR_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_ADVISOR_FORCE_LOCAL_ONLY: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     ...powensShape,
   })

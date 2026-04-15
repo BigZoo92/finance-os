@@ -1,13 +1,26 @@
 import { apiFetch, apiRequest, ApiRequestError } from '@/lib/api'
 import { getDemoDashboardNews, getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
 import type {
+  DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorChatPostResponse,
+  DashboardAdvisorChatThreadResponse,
+  DashboardAdvisorEvalsResponse,
+  DashboardAdvisorManualOperationResponse,
+  DashboardAdvisorManualRefreshAndRunPostResponse,
+  DashboardAdvisorOverviewResponse,
+  DashboardAdvisorRecommendationsResponse,
+  DashboardAdvisorRunDailyResponse,
+  DashboardAdvisorRunsResponse,
+  DashboardAdvisorSignalsResponse,
+  DashboardAdvisorSpendAnalyticsResponse,
   DashboardDerivedRecomputeActionError,
+  DashboardManualAssetResponse,
+  DashboardManualAssetsResponse,
   DashboardNewsResponse,
   DashboardRange,
   DashboardDerivedRecomputeStatusResponse,
   DashboardSummaryResponse,
   DashboardTransactionsResponse,
-  DashboardAdvisorResponse,
 } from './dashboard-types'
 
 const toSearchParams = (params: Record<string, string | number | undefined>) => {
@@ -161,134 +174,382 @@ export const fetchDashboardTransactions = async (params: {
 }
 
 
-export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisorResponse => {
+const DEMO_ADVISOR_GENERATED_AT = '2026-04-14T08:00:00.000Z'
+
+export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisorOverviewResponse => {
   const summary = getDemoDashboardSummary(range)
   const net = summary.totals.incomes - summary.totals.expenses
 
   return {
     mode: 'demo',
-    source: 'local',
-    fallback: false,
-    fallbackReason: null,
+    source: 'demo_fixture',
     requestId: 'demo-advisor-request',
-    generatedAt: '2026-04-06T09:00:00.000Z',
-    dataStatus: {
-      mode: 'sufficient',
-      message: null,
+    generatedAt: DEMO_ADVISOR_GENERATED_AT,
+    status: 'ready',
+    degradedMessage: 'Mode demo: artefacts deterministes, aucune requete provider.',
+    latestRun: null,
+    brief: {
+      id: 1,
+      runId: 0,
+      title: net >= 0 ? 'Cashflow positif en demo' : 'Cashflow sous tension en demo',
+      summary:
+        net >= 0
+          ? 'Le jeu de donnees demo montre une marge positive et un besoin principal de mieux allouer le cash.'
+          : 'Le jeu de donnees demo montre une marge contrainte: priorite a la reduction des depenses variables.',
+      keyFacts: [
+        `Cashflow net estime: ${Math.round(net)} EUR`,
+        `Depenses periode: ${Math.round(summary.totals.expenses)} EUR`,
+      ],
+      opportunities: ['Automatiser une allocation mensuelle', 'Revoir le poste de depense principal'],
+      risks: ['Cash drag si trop de liquidites', 'Marge insuffisante si les depenses remontent'],
+      watchItems: ['Mettre a jour le snapshot admin pour artefacts reels'],
+      recommendationNotes: [],
+      provider: null,
+      model: null,
+      createdAt: DEMO_ADVISOR_GENERATED_AT,
     },
-    metrics: {
-      latencyMs: 4,
-      fallbackRate: 0,
-      errorRate: 0,
-      insightAcceptedRate: 0,
-    },
-    insights: [
+    topRecommendations: [
       {
-        id: 'demo-cashflow',
-        title: net >= 0 ? 'Cashflow positif' : 'Cashflow negatif',
-        detail:
-          net >= 0
-            ? 'Le cockpit demo montre une marge positive sur la periode.'
-            : 'Le cockpit demo montre un deficit temporaire sur la periode.',
-        severity: net >= 0 ? 'info' : 'warning',
-        citations: [
-          { id: 'totals.incomes', label: 'Revenus periode', value: `${Math.round(summary.totals.incomes)}` },
-          { id: 'totals.expenses', label: 'Depenses periode', value: `${Math.round(summary.totals.expenses)}` },
+        id: 1,
+        runId: 0,
+        recommendationKey: 'demo-cash-optimization',
+        type: 'allocation',
+        category: 'cash_optimization',
+        title: 'Reduire le cash qui dort',
+        description: 'Le mode demo suggere un arbitrage progressif du cash excedentaire.',
+        whyNow: 'Le cash drag penalise le rendement reel sur longue duree.',
+        evidence: [
+          `Balance totale: ${Math.round(summary.totals.balance)} EUR`,
+          `Cashflow net: ${Math.round(net)} EUR`,
         ],
-      },
-      {
-        id: 'demo-expense',
-        title: 'Conseil generique',
-        detail: 'Revoyez vos 3 principaux postes de depense avant tout arbitrage.',
-        severity: 'info',
-        citations: [{ id: 'topExpenseGroups', label: 'Top depenses detectees', value: `${summary.topExpenseGroups.length}` }],
-      },
-    ],
-    actions: [
-      {
-        id: 'demo-action-cap-variable',
-        title: 'Limiter un poste variable de 10%',
-        detail: 'Choisissez un poste non essentiel et fixez un plafond hebdomadaire visible.',
-        estimatedMonthlyImpact: 60,
-        effort: 'medium',
-        decisionWorkflow: {
-          goal: 'Baisser une depense variable sans surcharge mentale.',
-          checkpoints: [
-            {
-              id: 'demo-cap-variable-budget',
-              label: 'Fixer un plafond hebdomadaire',
-              rationale: 'Un plafond clair transforme l intention en choix concret.',
-            },
-            {
-              id: 'demo-cap-variable-choice',
-              label: 'Prevoir une alternative moins couteuse',
-              rationale: 'La decision est plus simple quand une option de repli existe deja.',
-            },
-            {
-              id: 'demo-cap-variable-review',
-              label: 'Mesurer ecart reel vs plafond',
-              rationale: 'Le suivi hebdomadaire permet un ajustement progressif.',
-            },
-          ],
-          nextReviewLabel: 'Revue dans 7 jours',
+        assumptions: ['Scenario demo uniquement', 'Pas de provider live'],
+        confidence: 0.66,
+        riskLevel: 'low',
+        expectedImpact: {
+          summary: 'Amelioration graduelle du rendement attendu',
+          value: 1.1,
+          unit: 'pct',
         },
-        tracking: {
-          status: 'suggested',
-          metricLabel: 'Depense variable mensuelle',
-          targetLabel: '-10% sur 30 jours',
-          currentLabel: 'Baseline demo: 620',
-        },
-        citations: [
-          { id: 'totals.expenses', label: 'Depenses mensuelles (baseline)', value: `${Math.round(summary.totals.expenses)}` },
-        ],
-      },
-      {
-        id: 'demo-action-safety-transfer',
-        title: 'Activer un virement reserve hebdomadaire',
-        detail: 'Automatisez un petit montant chaque semaine pour securiser la tresorerie.',
-        estimatedMonthlyImpact: 40,
         effort: 'low',
-        decisionWorkflow: {
-          goal: 'Consolider une reserve avec une routine reguliere.',
-          checkpoints: [
-            {
-              id: 'demo-safety-transfer-amount',
-              label: 'Choisir un montant atteignable',
-              rationale: 'Un montant modeste augmente la chance de repetition.',
-            },
-            {
-              id: 'demo-safety-transfer-trigger',
-              label: 'Programmer apres l entree de revenus',
-              rationale: 'Le timing reduit les arbitrages de fin de mois.',
-            },
-            {
-              id: 'demo-safety-transfer-follow-up',
-              label: 'Verifier le nombre de virements realises',
-              rationale: 'Le compteur mensuel valide la discipline avant d augmenter la cible.',
-            },
-          ],
-          nextReviewLabel: 'Point fin de mois',
+        reversibility: 'high',
+        blockingFactors: [],
+        alternatives: ['DCA mensuel', 'Renforcer le fonds d urgence'],
+        deterministicMetricsUsed: ['totals.balance', 'totals.incomes', 'totals.expenses'],
+        llmModelsUsed: [],
+        challengerStatus: 'skipped',
+        priorityScore: 72,
+        expiresAt: null,
+        createdAt: DEMO_ADVISOR_GENERATED_AT,
+        challenge: null,
+      },
+      {
+        id: 2,
+        runId: 0,
+        recommendationKey: 'demo-spend-review',
+        type: 'spend_review',
+        category: 'spend_reduction',
+        title: 'Revoir le principal poste variable',
+        description: 'Le mode demo conseille une baisse progressive du premier poste variable.',
+        whyNow: 'C est l action la plus reversible si la marge se tend.',
+        evidence: [`Top depenses detectees: ${summary.topExpenseGroups.length}`],
+        assumptions: ['Pas de clustering marchand live'],
+        confidence: 0.61,
+        riskLevel: 'low',
+        expectedImpact: {
+          summary: 'Baisse potentielle des depenses mensuelles',
+          value: 60,
+          unit: 'eur_per_month',
         },
-        tracking: {
-          status: 'suggested',
-          metricLabel: 'Reserve de securite',
-          targetLabel: '4 virements/mois',
-          currentLabel: '0/4 effectue',
-        },
-        citations: [{ id: 'totals.netCashflow', label: 'Marge mensuelle estimee', value: `${Math.round(net)}` }],
+        effort: 'medium',
+        reversibility: 'high',
+        blockingFactors: [],
+        alternatives: ['Renegocier les abonnements'],
+        deterministicMetricsUsed: ['topExpenseGroups'],
+        llmModelsUsed: [],
+        challengerStatus: 'skipped',
+        priorityScore: 64,
+        expiresAt: null,
+        createdAt: DEMO_ADVISOR_GENERATED_AT,
+        challenge: null,
       },
     ],
+    snapshot: {
+      id: 1,
+      runId: 0,
+      asOfDate: DEMO_ADVISOR_GENERATED_AT.slice(0, 10),
+      range,
+      currency: 'EUR',
+      riskProfile: 'balanced',
+      metrics: {
+        totalValue: summary.totals.balance,
+        netMonthlyCashflow: net,
+        cashAllocationPct: 24,
+        expectedAnnualReturnPct: 5.2,
+        diversificationScore: 63,
+      },
+      allocationBuckets: [],
+      assetClassAllocations: [],
+      driftSignals: [],
+      scenarios: [],
+      diagnostics: {},
+    },
+    spend: {
+      dailyUsdSpent: 0,
+      monthlyUsdSpent: 0,
+      dailyBudgetUsd: 2,
+      monthlyBudgetUsd: 40,
+      challengerAllowed: true,
+      deepAnalysisAllowed: true,
+      blocked: false,
+      reasons: [],
+    },
+    signalCounts: {
+      macro: 0,
+      news: 0,
+    },
+    assumptionCount: 2,
+    chatEnabled: true,
+  }
+}
+
+export const getDemoDashboardAdvisorRecommendations = (
+  range: DashboardRange
+): DashboardAdvisorRecommendationsResponse => ({
+  items: getDemoDashboardAdvisor(range).topRecommendations,
+})
+
+export const getDemoDashboardAdvisorAssumptions = (): DashboardAdvisorAssumptionsResponse => ({
+  items: [
+    {
+      id: 1,
+      runId: 0,
+      assumptionKey: 'demo_inflation',
+      source: 'default',
+      value: 2.5,
+      justification: 'Hypothese demo prudente pour les projections reelles.',
+      createdAt: DEMO_ADVISOR_GENERATED_AT,
+    },
+    {
+      id: 2,
+      runId: 0,
+      assumptionKey: 'demo_cash_rate',
+      source: 'default',
+      value: 1.75,
+      justification: 'Reference demo pour illustrer le cash drag.',
+      createdAt: DEMO_ADVISOR_GENERATED_AT,
+    },
+  ],
+})
+
+export const getDemoDashboardAdvisorSignals = (): DashboardAdvisorSignalsResponse => ({
+  macroSignals: [],
+  newsSignals: [],
+})
+
+export const getDemoDashboardAdvisorSpend = (): DashboardAdvisorSpendAnalyticsResponse => ({
+  summary: getDemoDashboardAdvisor('30d').spend,
+  daily: [],
+  byFeature: [],
+  byModel: [],
+  anomalies: [],
+})
+
+export const getDemoDashboardAdvisorRuns = (): DashboardAdvisorRunsResponse => ({
+  items: [],
+})
+
+export const getDemoDashboardAdvisorChat = (
+  threadKey = 'demo-thread'
+): DashboardAdvisorChatThreadResponse => ({
+  threadId: threadKey,
+  title: 'Finance Assistant',
+  messages: [],
+})
+
+export const getDemoDashboardAdvisorEvals = (): DashboardAdvisorEvalsResponse => ({
+  cases: [],
+  latestRun: null,
+})
+
+export const getDemoDashboardManualAssets = (): DashboardManualAssetsResponse => {
+  const summary = getDemoDashboardSummary('30d')
+  return {
+    items: summary.assets
+      .filter(asset => asset.origin === 'manual')
+      .map(asset => ({
+        assetId: asset.assetId,
+        type: asset.type,
+        origin: asset.origin,
+        source: asset.source,
+        name: asset.name,
+        currency: asset.currency,
+        valuation: asset.valuation,
+        valuationAsOf: asset.valuationAsOf,
+        enabled: asset.enabled,
+        note:
+          asset.metadata && typeof asset.metadata.note === 'string' ? asset.metadata.note : null,
+        category:
+          asset.metadata && typeof asset.metadata.category === 'string'
+            ? asset.metadata.category
+            : null,
+        metadata: asset.metadata,
+        createdAt: DEMO_ADVISOR_GENERATED_AT,
+        updatedAt: DEMO_ADVISOR_GENERATED_AT,
+      })),
   }
 }
 
 export const fetchDashboardAdvisor = async (range: DashboardRange) => {
   const query = toSearchParams({ range })
+  return apiFetch<DashboardAdvisorOverviewResponse>(`/dashboard/advisor?${query}`)
+}
 
-  try {
-    return await apiFetch<DashboardAdvisorResponse>(`/dashboard/advisor?${query}`)
-  } catch {
-    return getDemoDashboardAdvisor(range)
-  }
+export const fetchDashboardAdvisorRecommendations = async (limit = 12) => {
+  const query = toSearchParams({ limit })
+  return apiFetch<DashboardAdvisorRecommendationsResponse>(
+    `/dashboard/advisor/recommendations?${query}`
+  )
+}
+
+export const fetchDashboardAdvisorAssumptions = async (limit = 24) => {
+  const query = toSearchParams({ limit })
+  return apiFetch<DashboardAdvisorAssumptionsResponse>(`/dashboard/advisor/assumptions?${query}`)
+}
+
+export const fetchDashboardAdvisorSignals = async (limit = 24) => {
+  const query = toSearchParams({ limit })
+  return apiFetch<DashboardAdvisorSignalsResponse>(`/dashboard/advisor/signals?${query}`)
+}
+
+export const fetchDashboardAdvisorSpend = async () => {
+  return apiFetch<DashboardAdvisorSpendAnalyticsResponse>('/dashboard/advisor/spend')
+}
+
+export const fetchDashboardAdvisorRuns = async (limit = 12) => {
+  const query = toSearchParams({ limit })
+  return apiFetch<DashboardAdvisorRunsResponse>(`/dashboard/advisor/runs?${query}`)
+}
+
+export const fetchDashboardAdvisorLatestManualOperation = async () => {
+  return apiFetch<DashboardAdvisorManualOperationResponse | null>(
+    '/dashboard/advisor/manual-refresh-and-run'
+  )
+}
+
+export const fetchDashboardAdvisorManualOperationById = async (operationId: string) => {
+  return apiFetch<DashboardAdvisorManualOperationResponse>(
+    `/dashboard/advisor/manual-refresh-and-run/${operationId}`
+  )
+}
+
+export const fetchDashboardAdvisorChat = async (threadKey = 'default') => {
+  const query = toSearchParams({ threadKey })
+  return apiFetch<DashboardAdvisorChatThreadResponse>(`/dashboard/advisor/chat?${query}`)
+}
+
+export const fetchDashboardAdvisorEvals = async () => {
+  return apiFetch<DashboardAdvisorEvalsResponse>('/dashboard/advisor/evals')
+}
+
+export const postDashboardAdvisorRunDaily = async () => {
+  return apiFetch<DashboardAdvisorRunDailyResponse>('/dashboard/advisor/run-daily', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      trigger: 'manual',
+    }),
+  })
+}
+
+export const postDashboardAdvisorManualRefreshAndRun = async () => {
+  return apiFetch<DashboardAdvisorManualRefreshAndRunPostResponse>(
+    '/dashboard/advisor/manual-refresh-and-run',
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+    }
+  )
+}
+
+export const postDashboardAdvisorChat = async (params: {
+  threadKey?: string
+  message: string
+}) => {
+  return apiFetch<DashboardAdvisorChatPostResponse>('/dashboard/advisor/chat', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...(params.threadKey ? { threadKey: params.threadKey } : {}),
+      message: params.message,
+    }),
+  })
+}
+
+export const fetchDashboardManualAssets = async () => {
+  return apiFetch<DashboardManualAssetsResponse>('/dashboard/manual-assets')
+}
+
+export const postDashboardManualAsset = async (input: {
+  assetType: 'cash' | 'investment' | 'manual'
+  name: string
+  currency: string
+  valuation: number
+  valuationAsOf: string | null
+  note: string | null
+  category: string | null
+  enabled: boolean
+}) => {
+  return apiFetch<DashboardManualAssetResponse>('/dashboard/manual-assets', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+}
+
+export const patchDashboardManualAsset = async (params: {
+  assetId: number
+  assetType: 'cash' | 'investment' | 'manual'
+  name: string
+  currency: string
+  valuation: number
+  valuationAsOf: string | null
+  note: string | null
+  category: string | null
+  enabled: boolean
+}) => {
+  return apiFetch<DashboardManualAssetResponse>(`/dashboard/manual-assets/${params.assetId}`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      assetType: params.assetType,
+      name: params.name,
+      currency: params.currency,
+      valuation: params.valuation,
+      valuationAsOf: params.valuationAsOf,
+      note: params.note,
+      category: params.category,
+      enabled: params.enabled,
+    }),
+  })
+}
+
+export const deleteDashboardManualAsset = async (assetId: number) => {
+  return apiFetch<{ ok: boolean; requestId: string; assetId: number }>(
+    `/dashboard/manual-assets/${assetId}`,
+    {
+      method: 'DELETE',
+    }
+  )
 }
 
 export const patchTransactionClassification = async (params: {

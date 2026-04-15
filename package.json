@@ -21,7 +21,7 @@
     "check:write": "biome check --write .",
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
-    "api:dev": "bun --watch apps/api/src/index.ts",
+    "api:dev": "pnpm --filter @finance-os/api dev",
     "api:start": "pnpm --filter @finance-os/api start",
     "api:typecheck": "pnpm --filter @finance-os/api typecheck",
     "infra:up": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml up -d",

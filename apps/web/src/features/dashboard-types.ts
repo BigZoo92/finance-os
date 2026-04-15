@@ -438,3 +438,355 @@ export type DashboardNewsResponse = {
   contextPreview: DashboardNewsContextPreview
   items: DashboardNewsSignalCard[]
 }
+
+export type DashboardAdvisorUsageSummaryResponse = {
+  totalCalls: number
+  totalInputTokens: number
+  totalOutputTokens: number
+  totalCostUsd: number
+  totalCostEur: number
+}
+
+export type DashboardAdvisorBudgetStateResponse = {
+  dailyUsdSpent: number
+  monthlyUsdSpent: number
+  dailyBudgetUsd: number
+  monthlyBudgetUsd: number
+  challengerAllowed: boolean
+  deepAnalysisAllowed: boolean
+  blocked: boolean
+  reasons: string[]
+}
+
+export type DashboardAdvisorRunSummaryResponse = {
+  id: number
+  runType: 'daily' | 'chat' | 'relabel' | 'eval'
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+  triggerSource: string
+  requestId: string
+  startedAt: string
+  finishedAt: string | null
+  durationMs: number | null
+  degraded: boolean
+  fallbackReason: string | null
+  errorCode: string | null
+  errorMessage: string | null
+  budgetState: DashboardAdvisorBudgetStateResponse | null
+  usageSummary: DashboardAdvisorUsageSummaryResponse
+}
+
+export type DashboardAdvisorSnapshotResponse = {
+  id: number
+  runId: number
+  asOfDate: string
+  range: DashboardRange
+  currency: string
+  riskProfile: string
+  metrics: Record<string, unknown>
+  allocationBuckets: Array<Record<string, unknown>>
+  assetClassAllocations: Array<Record<string, unknown>>
+  driftSignals: Array<Record<string, unknown>>
+  scenarios: Array<Record<string, unknown>>
+  diagnostics: Record<string, unknown>
+}
+
+export type DashboardAdvisorDailyBriefResponse = {
+  id: number
+  runId: number
+  title: string
+  summary: string
+  keyFacts: string[]
+  opportunities: string[]
+  risks: string[]
+  watchItems: string[]
+  recommendationNotes: Array<Record<string, unknown>>
+  provider: string | null
+  model: string | null
+  createdAt: string
+}
+
+export type DashboardAdvisorRecommendationChallengeResponse = {
+  id: number
+  status: 'confirmed' | 'softened' | 'flagged' | 'skipped'
+  summary: string
+  contradictions: string[]
+  missingSignals: string[]
+  confidenceAdjustment: number
+  provider: string | null
+  model: string | null
+  createdAt: string
+}
+
+export type DashboardAdvisorRecommendationResponse = {
+  id: number
+  runId: number
+  recommendationKey: string
+  type: string
+  category: string
+  title: string
+  description: string
+  whyNow: string
+  evidence: string[]
+  assumptions: string[]
+  confidence: number
+  riskLevel: 'low' | 'medium' | 'high'
+  expectedImpact: Record<string, unknown>
+  effort: 'low' | 'medium' | 'high'
+  reversibility: 'high' | 'medium' | 'low'
+  blockingFactors: string[]
+  alternatives: string[]
+  deterministicMetricsUsed: string[]
+  llmModelsUsed: string[]
+  challengerStatus: 'confirmed' | 'softened' | 'flagged' | 'skipped'
+  priorityScore: number
+  expiresAt: string | null
+  createdAt: string
+  challenge: DashboardAdvisorRecommendationChallengeResponse | null
+}
+
+export type DashboardAdvisorAssumptionResponse = {
+  id: number
+  runId: number
+  assumptionKey: string
+  source: string
+  value: unknown
+  justification: string
+  createdAt: string
+}
+
+export type DashboardAdvisorMacroSignalResponse = {
+  id: number
+  runId: number
+  signalKey: string
+  title: string
+  direction: string
+  severity: number
+  confidence: number
+  facts: string[]
+  hypotheses: string[]
+  implications: string[]
+  sourceRefs: Array<Record<string, unknown>>
+  createdAt: string
+}
+
+export type DashboardAdvisorNewsSignalResponse = {
+  id: number
+  runId: number
+  signalKey: string
+  title: string
+  eventType: string
+  direction: string
+  severity: number
+  confidence: number
+  publishedAt: string | null
+  supportingUrls: string[]
+  affectedEntities: string[]
+  affectedSectors: string[]
+  whyItMatters: string[]
+  createdAt: string
+}
+
+export type DashboardAdvisorTransactionLabelSuggestionResponse = {
+  id: number
+  runId: number
+  transactionId: number | null
+  suggestionKey: string
+  status: string
+  suggestionSource: string
+  suggestedKind: string
+  suggestedCategory: string
+  suggestedSubcategory: string | null
+  suggestedTags: string[]
+  confidence: number
+  rationale: string[]
+  provider: string | null
+  model: string | null
+  createdAt: string
+  reviewedAt: string | null
+}
+
+export type DashboardAdvisorSpendSeriesPointResponse = {
+  date: string
+  usd: number
+  eur: number
+}
+
+export type DashboardAdvisorSpendBreakdownResponse = {
+  key: string
+  label: string
+  usd: number
+  eur: number
+}
+
+export type DashboardAdvisorSpendAnalyticsResponse = {
+  summary: DashboardAdvisorBudgetStateResponse
+  daily: DashboardAdvisorSpendSeriesPointResponse[]
+  byFeature: DashboardAdvisorSpendBreakdownResponse[]
+  byModel: DashboardAdvisorSpendBreakdownResponse[]
+  anomalies: Array<{
+    severity: 'warning' | 'critical'
+    kind: 'daily_budget' | 'monthly_budget' | 'usage_spike'
+    message: string
+  }>
+}
+
+export type DashboardAdvisorChatMessageResponse = {
+  id: number
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  citations: Array<Record<string, unknown>>
+  assumptions: string[]
+  caveats: string[]
+  simulations: Array<Record<string, unknown>>
+  provider: string | null
+  model: string | null
+  createdAt: string
+}
+
+export type DashboardAdvisorChatThreadResponse = {
+  threadId: string
+  title: string
+  messages: DashboardAdvisorChatMessageResponse[]
+}
+
+export type DashboardAdvisorEvalCaseResponse = {
+  id: number
+  caseKey: string
+  category: string
+  description: string
+  input: Record<string, unknown>
+  expectation: Record<string, unknown>
+  active: boolean
+}
+
+export type DashboardAdvisorEvalRunResponse = {
+  id: number
+  runId: number | null
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+  totalCases: number
+  passedCases: number
+  failedCases: number
+  summary: Record<string, unknown>
+  createdAt: string
+}
+
+export type DashboardAdvisorOverviewResponse = {
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'persisted' | 'preview'
+  requestId: string
+  generatedAt: string
+  status: 'ready' | 'needs_run' | 'degraded'
+  degradedMessage: string | null
+  latestRun: DashboardAdvisorRunSummaryResponse | null
+  brief: DashboardAdvisorDailyBriefResponse | null
+  topRecommendations: DashboardAdvisorRecommendationResponse[]
+  snapshot: DashboardAdvisorSnapshotResponse | null
+  spend: DashboardAdvisorBudgetStateResponse
+  signalCounts: {
+    macro: number
+    news: number
+  }
+  assumptionCount: number
+  chatEnabled: boolean
+}
+
+export type DashboardAdvisorRecommendationsResponse = {
+  items: DashboardAdvisorRecommendationResponse[]
+}
+
+export type DashboardAdvisorRunsResponse = {
+  items: DashboardAdvisorRunSummaryResponse[]
+}
+
+export type DashboardAdvisorAssumptionsResponse = {
+  items: DashboardAdvisorAssumptionResponse[]
+}
+
+export type DashboardAdvisorSignalsResponse = {
+  macroSignals: DashboardAdvisorMacroSignalResponse[]
+  newsSignals: DashboardAdvisorNewsSignalResponse[]
+}
+
+export type DashboardAdvisorEvalsResponse = {
+  cases: DashboardAdvisorEvalCaseResponse[]
+  latestRun: DashboardAdvisorEvalRunResponse | null
+}
+
+export type DashboardAdvisorManualOperationStepResponse = {
+  id: number
+  stepKey: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run'
+  label: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+  startedAt: string | null
+  finishedAt: string | null
+  durationMs: number | null
+  errorCode: string | null
+  errorMessage: string | null
+  details: Record<string, unknown> | null
+}
+
+export type DashboardAdvisorManualOperationResponse = {
+  operationId: string
+  requestId: string
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded'
+  currentStage: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run' | null
+  statusMessage: string | null
+  triggerSource: string
+  startedAt: string
+  finishedAt: string | null
+  durationMs: number | null
+  degraded: boolean
+  errorCode: string | null
+  errorMessage: string | null
+  advisorRunId: number | null
+  advisorRun: DashboardAdvisorRunSummaryResponse | null
+  steps: DashboardAdvisorManualOperationStepResponse[]
+  outputDigest: Record<string, unknown> | null
+}
+
+export type DashboardAdvisorRunDailyResponse = {
+  ok: boolean
+  requestId: string
+  run: DashboardAdvisorRunSummaryResponse
+}
+
+export type DashboardAdvisorRelabelResponse = {
+  ok: boolean
+  requestId: string
+  run: DashboardAdvisorRunSummaryResponse
+  suggestions: DashboardAdvisorTransactionLabelSuggestionResponse[]
+}
+
+export type DashboardAdvisorChatPostResponse = {
+  ok: boolean
+  requestId: string
+  thread: DashboardAdvisorChatThreadResponse
+}
+
+export type DashboardAdvisorManualRefreshAndRunPostResponse = {
+  ok: boolean
+  requestId: string
+  alreadyRunning: boolean
+  operation: DashboardAdvisorManualOperationResponse
+}
+
+export type DashboardManualAssetResponse = {
+  assetId: number
+  type: 'cash' | 'investment' | 'manual'
+  origin: 'provider' | 'manual'
+  source: string
+  name: string
+  currency: string
+  valuation: number
+  valuationAsOf: string | null
+  enabled: boolean
+  note: string | null
+  category: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardManualAssetsResponse = {
+  items: DashboardManualAssetResponse[]
+}

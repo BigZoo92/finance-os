@@ -102,3 +102,57 @@ export const dashboardGoalBodySchema = t.Object({
   targetDate: t.Union([t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' }), t.Null()]),
   note: t.Union([t.String({ maxLength: 280 }), t.Null()]),
 })
+
+export const dashboardAdvisorListQuerySchema = t.Object({
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+})
+
+export const dashboardAdvisorChatQuerySchema = t.Object({
+  threadKey: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+})
+
+export const dashboardAdvisorChatBodySchema = t.Object({
+  threadKey: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+  message: t.String({
+    minLength: 1,
+    maxLength: 4000,
+    pattern: '^(?=.*\\S).+$',
+  }),
+})
+
+export const dashboardAdvisorRunBodySchema = t.Object({
+  trigger: t.Optional(
+    t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('internal')])
+  ),
+})
+
+export const dashboardAdvisorManualOperationParamsSchema = t.Object({
+  operationId: t.String({
+    minLength: 1,
+    maxLength: 80,
+    pattern: '^[A-Za-z0-9-]+$',
+  }),
+})
+
+export const dashboardManualAssetParamsSchema = t.Object({
+  assetId: t.Numeric({ minimum: 1 }),
+})
+
+export const dashboardManualAssetBodySchema = t.Object({
+  assetType: t.Union([t.Literal('cash'), t.Literal('investment'), t.Literal('manual')]),
+  name: t.String({
+    minLength: 1,
+    maxLength: 120,
+    pattern: '^(?=.*\\S).+$',
+  }),
+  currency: t.String({
+    minLength: 3,
+    maxLength: 8,
+    pattern: '^[A-Za-z]{3,8}$',
+  }),
+  valuation: t.Numeric({ minimum: 0, maximum: 999999999999.99 }),
+  valuationAsOf: t.Union([t.String({ format: 'date-time' }), t.Null()]),
+  note: t.Union([t.String({ maxLength: 280 }), t.Null()]),
+  category: t.Union([t.String({ maxLength: 64 }), t.Null()]),
+  enabled: t.Boolean(),
+})

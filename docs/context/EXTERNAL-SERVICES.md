@@ -1,6 +1,6 @@
 # Finance-OS -- Services Externes
 
-> **Derniere mise a jour** : 2026-04-10
+> **Derniere mise a jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici tout nouveau service externe integre.
 
@@ -263,19 +263,53 @@ Le domaine marches suit le meme principe que news:
 
 ---
 
-## 4. Conseiller IA -- LLM
+## 4. Conseiller IA -- LLM Providers
 
 | Detail | Valeur |
 |---|---|
-| **Type** | Local uniquement (pas d'API externe) |
-| **Role** | Insights et recommandations financieres |
-| **Etat** | MVP -- generation locale, pas d'appel LLM |
+| **Type** | APIs LLM serveur uniquement |
+| **Role** | Daily brief structure, relabel transaction, chat grounded, challenger |
+| **Providers actifs** | OpenAI, Anthropic |
+| **Etat** | Production app-level integration, cost-tracked |
 
-### Etat actuel
-- Pas d'integration OpenAI, Anthropic, ou autre provider LLM
-- Insights generes localement a partir du contexte financier
-- Fallback systematique vers donnees mock
-- Feature flags : `VITE_AI_ADVISOR_ENABLED`, `VITE_AI_ADVISOR_ADMIN_ONLY`
+### OpenAI
+
+| Detail | Valeur |
+|---|---|
+| **Usage** | classification, daily brief, grounded chat |
+| **Auth** | `AI_OPENAI_API_KEY` |
+| **Config** | `AI_OPENAI_*` |
+| **Client** | `packages/ai/src/providers/openai-responses-client.ts` |
+
+### Anthropic
+
+| Detail | Valeur |
+|---|---|
+| **Usage** | challenger / contre-analyse |
+| **Auth** | `AI_ANTHROPIC_API_KEY` |
+| **Config** | `AI_ANTHROPIC_*` |
+| **Client** | `packages/ai/src/providers/anthropic-messages-client.ts` |
+
+### Gouvernance
+
+- Aucun secret LLM cote client
+- Les prix sont versionnes dans `packages/ai/src/pricing/registry.ts`
+- Les usages/couts sont traces dans `ai_model_usage` et `ai_cost_ledger`
+- Le mode recommande actuel reste manuel-first via `/dashboard/advisor/manual-refresh-and-run`
+- Les flags UI restent:
+  - `VITE_AI_ADVISOR_ENABLED`
+  - `VITE_AI_ADVISOR_ADMIN_ONLY`
+- Les flags serveur incluent:
+  - `AI_ADVISOR_ENABLED`
+  - `AI_CHAT_ENABLED`
+  - `AI_CHALLENGER_ENABLED`
+  - `AI_RELABEL_ENABLED`
+
+### Providers prepares mais non actives
+
+- slot provider local pour Gemma / on-prem
+- ingestion Twitter/X
+- extension crypto
 
 ---
 

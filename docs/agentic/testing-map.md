@@ -118,6 +118,23 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm web:typecheck`
   - `pnpm web:build`
   - `pnpm db:generate` when the schema changed
+- Advisor AI / finance engine / cost-ledger / grounded chat changes:
+  - `pnpm --filter @finance-os/finance-engine typecheck`
+  - `pnpm --filter @finance-os/ai typecheck`
+  - `pnpm --filter @finance-os/db typecheck`
+  - `pnpm --filter @finance-os/env typecheck`
+  - `pnpm api:typecheck`
+  - `pnpm worker:typecheck`
+  - `pnpm web:typecheck`
+  - `bun test packages/finance-engine/src`
+  - `bun test packages/ai/src`
+  - `bun test apps/api/src/routes/dashboard/routes/advisor.test.ts`
+  - `bun test apps/api/src/routes/dashboard/routes/manual-assets.test.ts`
+  - `bun test apps/api/src/routes/dashboard/domain/advisor/create-manual-refresh-and-run-use-case.test.ts`
+  - `bun test apps/api/src/routes/dashboard/domain/advisor/create-dashboard-advisor-use-cases.test.ts`
+  - `bun test apps/worker/src/advisor-daily-scheduler.test.ts`
+  - `bun test apps/worker/src/powens-auto-sync-scheduler.test.ts`
+  - `pnpm web:build`
 - Dashboard derived recompute contract, persistence, or admin UI changes:
   - `pnpm --filter @finance-os/db typecheck`
   - `pnpm --filter @finance-os/powens typecheck`
@@ -159,6 +176,9 @@ Use this map to choose the smallest verification set that still matches the risk
 - Marches & Macro: the `/marches` layout should keep loading, empty, degraded, error, offline, and permission-gated states readable on mobile and desktop without chart overflow.
 - Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
 - Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
+- Advisor IA: verifier les etats `loading`, `empty`, `degraded`, `error`, `admin-only`, `demo deterministic`, et confirmer que le chat demo n'ecrit rien.
+- Advisor mission manuelle: verifier `idle`, `running`, `completed`, `degraded`, `failed`, ainsi que le verrou anti-double-clic et le detail des etapes.
+- Actifs manuels admin: verifier l'empty state, l'ajout, la modification, la suppression, et l'absence d'actifs manuels hardcodes en admin.
 - Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
 - Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
 - Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.

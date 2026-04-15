@@ -40,11 +40,45 @@ const goalSelection = {
   updatedAt: schema.personalGoal.updatedAt,
 } as const
 
+const manualAssetSelection = {
+  assetId: schema.asset.id,
+  assetType: schema.asset.assetType,
+  origin: schema.asset.origin,
+  source: schema.asset.source,
+  provider: schema.asset.provider,
+  providerConnectionId: schema.asset.providerConnectionId,
+  providerInstitutionName: schema.powensConnection.providerInstitutionName,
+  powensConnectionId: schema.asset.powensConnectionId,
+  powensAccountId: schema.asset.powensAccountId,
+  name: schema.asset.name,
+  currency: schema.asset.currency,
+  valuation: schema.asset.valuation,
+  valuationAsOf: schema.asset.valuationAsOf,
+  enabled: schema.asset.enabled,
+  metadata: schema.asset.metadata,
+  createdAt: schema.asset.createdAt,
+  updatedAt: schema.asset.updatedAt,
+} as const
+
 const getGoalRowById = async ({ db, goalId }: { db: ApiDb; goalId: number }) => {
   const [row] = await db
     .select(goalSelection)
     .from(schema.personalGoal)
     .where(eq(schema.personalGoal.id, goalId))
+    .limit(1)
+
+  return row ?? null
+}
+
+const getManualAssetRowById = async ({ db, assetId }: { db: ApiDb; assetId: number }) => {
+  const [row] = await db
+    .select(manualAssetSelection)
+    .from(schema.asset)
+    .leftJoin(
+      schema.powensConnection,
+      eq(schema.asset.powensConnectionId, schema.powensConnection.powensConnectionId)
+    )
+    .where(and(eq(schema.asset.id, assetId), eq(schema.asset.origin, 'manual')))
     .limit(1)
 
   return row ?? null
@@ -84,6 +118,29 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
         .orderBy(desc(schema.financialAccount.updatedAt), desc(schema.financialAccount.id))
     },
 
+    async listPowensConnections() {
+      return db
+        .select({
+          powensConnectionId: schema.powensConnection.powensConnectionId,
+          source: schema.powensConnection.source,
+          provider: schema.powensConnection.provider,
+          providerConnectionId: schema.powensConnection.providerConnectionId,
+          providerInstitutionId: schema.powensConnection.providerInstitutionId,
+          providerInstitutionName: schema.powensConnection.providerInstitutionName,
+          status: schema.powensConnection.status,
+          lastSyncStatus: schema.powensConnection.lastSyncStatus,
+          lastSyncReasonCode: schema.powensConnection.lastSyncReasonCode,
+          lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
+          lastSyncAt: schema.powensConnection.lastSyncAt,
+          lastSuccessAt: schema.powensConnection.lastSuccessAt,
+          lastFailedAt: schema.powensConnection.lastFailedAt,
+          lastError: schema.powensConnection.lastError,
+          syncMetadata: schema.powensConnection.syncMetadata,
+        })
+        .from(schema.powensConnection)
+        .orderBy(desc(schema.powensConnection.updatedAt), desc(schema.powensConnection.id))
+    },
+
     async listAssets() {
       return db
         .select({
@@ -109,6 +166,98 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           eq(schema.asset.powensConnectionId, schema.powensConnection.powensConnectionId)
         )
         .orderBy(desc(schema.asset.updatedAt), desc(schema.asset.id))
+    },
+
+    async listManualAssets() {
+      return db
+        .select(manualAssetSelection)
+        .from(schema.asset)
+        .leftJoin(
+          schema.powensConnection,
+          eq(schema.asset.powensConnectionId, schema.powensConnection.powensConnectionId)
+        )
+        .where(eq(schema.asset.origin, 'manual'))
+        .orderBy(desc(schema.asset.updatedAt), desc(schema.asset.id))
+    },
+
+    async createManualAsset(input) {
+      const now = new Date()
+      const [created] = await db
+        .insert(schema.asset)
+        .values({
+          assetType: input.assetType,
+          origin: 'manual',
+          source: 'manual',
+          name: input.name,
+          currency: input.currency,
+          valuation: input.valuation,
+          valuationAsOf: input.valuationAsOf,
+          enabled: input.enabled,
+          metadata:
+            input.note === null && input.category === null
+              ? null
+              : {
+                  ...(input.note !== null ? { note: input.note } : {}),
+                  ...(input.category !== null ? { category: input.category } : {}),
+                },
+          updatedAt: now,
+        })
+        .returning({ id: schema.asset.id })
+
+      if (!created) {
+        throw new Error('Failed to create manual asset')
+      }
+
+      const row = await getManualAssetRowById({
+        db,
+        assetId: created.id,
+      })
+      if (!row) {
+        throw new Error('Failed to reload manual asset')
+      }
+
+      return row
+    },
+
+    async updateManualAsset(assetId, input) {
+      const [updated] = await db
+        .update(schema.asset)
+        .set({
+          assetType: input.assetType,
+          name: input.name,
+          currency: input.currency,
+          valuation: input.valuation,
+          valuationAsOf: input.valuationAsOf,
+          enabled: input.enabled,
+          metadata:
+            input.note === null && input.category === null
+              ? null
+              : {
+                  ...(input.note !== null ? { note: input.note } : {}),
+                  ...(input.category !== null ? { category: input.category } : {}),
+                },
+          updatedAt: new Date(),
+        })
+        .where(and(eq(schema.asset.id, assetId), eq(schema.asset.origin, 'manual')))
+        .returning({ id: schema.asset.id })
+
+      if (!updated) {
+        return null
+      }
+
+      return getManualAssetRowById({
+        db,
+        assetId: updated.id,
+      })
+    },
+
+    async deleteManualAsset(assetId) {
+      const deleted = await db
+        .delete(schema.asset)
+        .where(and(eq(schema.asset.id, assetId), eq(schema.asset.origin, 'manual')))
+        .returning({ id: schema.asset.id })
+
+      return deleted.length > 0
     },
 
     async listInvestmentPositions() {

@@ -1,6 +1,6 @@
 # Finance-OS -- Architecture par App & Package
 
-> **Derniere mise a jour** : 2026-04-10
+> **Derniere mise a jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Mettre a jour lors d'ajout de modules, routes, ou packages.
 
@@ -200,7 +200,12 @@ graph TB
                 + ingest use cases"]
                 Markets["get-markets overview/watchlist/macro
                 + refresh + context bundle"]
-                Advisor["get-advisor use case"]
+                Advisor["advisor use cases
+                overview + brief + recs + runs
+                + chat + relabel + evals
+                + manual full mission"]
+                ManualAssets["manual-assets CRUD
+                on unified asset store"]
                 Recompute["derived-recompute use case"]
             end
             subgraph "repositories/"
@@ -212,12 +217,20 @@ graph TB
                 MarketsRepo["markets repository
                 quote snapshots + macro observations
                 + cache/provider state + bundle"]
+                AdvisorRepo["advisor repository
+                runs + artifacts + cost ledger
+                + chat + evals
+                + manual operation status"]
             end
             subgraph "services/"
                 LiveNews["multi-source ingestion service
                 providers + metadata scrape"]
                 LiveMarkets["market refresh service
                 EODHD + FRED + Twelve Data"]
+                AiProviders["OpenAI Responses + Anthropic Messages
+                clients + pricing registry"]
+                FinanceEngine["packages/finance-engine
+                deterministic metrics + recommendations"]
             end
         end
 
@@ -270,6 +283,9 @@ graph TB
     DashRouter --> DashRuntime
     DashRuntime --> ReadModel
     DashRuntime --> Summary
+    DashRuntime --> AdvisorRepo
+    DashRuntime --> AiProviders
+    DashRuntime --> FinanceEngine
     PowRouter --> HandleCallback
     HandleCallback --> PowClient
     HandleCallback --> ConnectionRepo
@@ -292,7 +308,7 @@ Route handler (HTTP in/out)
 | Prefixe | Domaine | Routes |
 |---|---|---|
 | `/auth` | Authentification | login, logout, me |
-| `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, news/context, markets, advisor, derived-recompute |
+| `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, news/context, markets, advisor, manual-assets, derived-recompute |
 | `/integrations/powens` | Banques | connect-url, callback, sync, status, audit-trail, backlog, sync-runs, diagnostics |
 | `/enrichment` | Enrichissement | notes, bulk-triage |
 | `/notifications/push` | Notifications | settings, subscription, delivery |
@@ -337,13 +353,20 @@ graph TB
         subgraph "Scheduler"
             AutoSync["setInterval
             POWENS_SYNC_INTERVAL_MS
-            Enqueue powens.syncAll"]
+            Enqueue powens.syncAll
+            (optionnel)"]
             NewsSync["setInterval
             NEWS_FETCH_INTERVAL_MS
-            POST /dashboard/news/ingest"]
+            POST /dashboard/news/ingest
+            (optionnel)"]
             MarketSync["setInterval
             MARKET_DATA_REFRESH_INTERVAL_MS
-            POST /dashboard/markets/refresh"]
+            POST /dashboard/markets/refresh
+            (optionnel)"]
+            AdvisorDaily["setInterval
+            AI_DAILY_INTERVAL_MS
+            POST /dashboard/advisor/run-daily
+            (optionnel)"]
         end
 
         subgraph "Heartbeat"
@@ -371,7 +394,13 @@ graph TB
     Status --> Unlock
     Entry --> NewsSync
     Entry --> MarketSync
+    Entry --> AdvisorDaily
 ```
+
+Posture recommandee actuelle:
+
+- la mission complete advisor est lancee manuellement depuis l'API/web
+- les schedulers Powens/news/markets/advisor restent prets pour plus tard, mais desactives par env dans la configuration recommandee
 
 ### Types de jobs
 

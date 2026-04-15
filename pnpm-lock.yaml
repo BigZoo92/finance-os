@@ -29,12 +29,18 @@ importers:
       '@elysiajs/cors':
         specifier: ^1.4.1
         version: 1.4.1(elysia@1.4.28(@sinclair/typebox@0.34.48)(exact-mirror@0.2.7(@sinclair/typebox@0.34.48))(file-type@21.3.0)(openapi-types@12.1.3)(typescript@5.9.3))
+      '@finance-os/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@finance-os/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@finance-os/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@finance-os/finance-engine':
+        specifier: workspace:*
+        version: link:../../packages/finance-engine
       '@finance-os/powens':
         specifier: workspace:*
         version: link:../../packages/powens
@@ -245,6 +251,8 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
 
+  packages/ai: {}
+
   packages/config-ts: {}
 
   packages/db:
@@ -271,6 +279,8 @@ importers:
       zod:
         specifier: ^3.25.76
         version: 3.25.76
+
+  packages/finance-engine: {}
 
   packages/powens: {}
 

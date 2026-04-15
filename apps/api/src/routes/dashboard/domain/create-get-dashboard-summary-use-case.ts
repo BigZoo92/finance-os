@@ -45,25 +45,6 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
       metadata: Record<string, unknown> | null
     }>
   >
-  listStaticManualAssets?: () => Promise<
-    Array<{
-      assetId: number
-      assetType: 'cash' | 'investment' | 'manual'
-      origin: 'provider' | 'manual'
-      source: string
-      provider: string | null
-      providerConnectionId: string | null
-      providerInstitutionName: string | null
-      powensConnectionId: string | null
-      powensAccountId: string | null
-      name: string
-      currency: string
-      valuation: string | null
-      valuationAsOf: Date | null
-      enabled: boolean
-      metadata: Record<string, unknown> | null
-    }>
-  >
   listInvestmentPositions: () => Promise<
     Array<{
       positionId: number
@@ -183,7 +164,6 @@ const buildDailyWealthSnapshots = ({
 export const createGetDashboardSummaryUseCase = ({
   listAccountsWithConnections,
   listAssets,
-  listStaticManualAssets = async () => [],
   listInvestmentPositions,
   getFlowTotals,
   listDailyNetFlows,
@@ -195,10 +175,9 @@ export const createGetDashboardSummaryUseCase = ({
     const fromDate = getRangeStartDate(range, currentDate)
     const toDate = toDateOnly(currentDate)
 
-    const [accounts, assets, staticManualAssets, positions, flowTotals, dailyNetFlows, topExpenseGroups] = await Promise.all([
+    const [accounts, assets, positions, flowTotals, dailyNetFlows, topExpenseGroups] = await Promise.all([
       listAccountsWithConnections(),
       listAssets(),
-      listStaticManualAssets(),
       listInvestmentPositions(),
       getFlowTotals(fromDate),
       listDailyNetFlows(fromDate),
@@ -227,8 +206,7 @@ export const createGetDashboardSummaryUseCase = ({
     >()
 
     const accountSummaries: DashboardSummaryResponse['accounts'] = []
-    const assetRows = [...assets, ...staticManualAssets]
-    const assetSummaries: DashboardSummaryResponse['assets'] = assetRows
+    const assetSummaries: DashboardSummaryResponse['assets'] = assets
       .filter(asset => asset.enabled)
       .map(asset => ({
         assetId: asset.assetId,

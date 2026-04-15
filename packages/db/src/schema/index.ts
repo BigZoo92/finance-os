@@ -1,4 +1,5 @@
 export * from './assets'
+export * from './ai'
 export * from './derived-recompute'
 export * from './goals'
 export * from './powens'

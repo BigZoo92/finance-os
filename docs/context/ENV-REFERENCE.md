@@ -1,6 +1,6 @@
 # Finance-OS -- Variables d'environnement & Feature Flags
 
-> **Derniere mise a jour** : 2026-04-10
+> **Derniere mise a jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle variable ajoutee.
 
@@ -144,8 +144,8 @@
 | `WORKER_HEARTBEAT_MS` | `30000` | Dokploy | Worker | Intervalle heartbeat (ms) |
 | `WORKER_HEALTHCHECK_FILE` | `/tmp/worker-heartbeat` | Dokploy | Worker | Fichier heartbeat pour liveness k8s |
 | `WORKER_HEALTHCHECK_MAX_AGE_MS` | `120000` | Dokploy | Worker | Age max heartbeat (ms) |
-| `WORKER_AUTO_SYNC_ENABLED` | `false` | Dokploy | Worker | Activer auto-sync scheduler |
-| `NEWS_AUTO_INGEST_ENABLED` | `true` | Dokploy | Worker | Activer le scheduler d'ingestion news |
+| `WORKER_AUTO_SYNC_ENABLED` | `false` | Dokploy | Worker | Activer auto-sync scheduler. Laisser `false` pour le mode manuel recommande |
+| `NEWS_AUTO_INGEST_ENABLED` | `true` | Dokploy | Worker | Activer le scheduler d'ingestion news. Mettre `false` pour le mode manuel-first recommande |
 | `NEWS_FETCH_INTERVAL_MS` | `14400000` | Dokploy | Worker | Intervalle du scheduler news (4h par defaut) |
 | `MARKET_DATA_AUTO_REFRESH_ENABLED` | `false` | Dokploy | Worker | Activer le scheduler de refresh marches |
 | `MARKET_DATA_REFRESH_INTERVAL_MS` | `21600000` | Dokploy | Worker | Intervalle du scheduler marches (6h par defaut) |
@@ -243,7 +243,38 @@ Notes:
 
 ---
 
-## 13. Feature Flags (Frontend / Vite)
+## 13. AI Advisor / LLM (server only)
+
+| Variable | Default | Ou la definir | Consommateur | Sensible | Description |
+|---|---|---|---|---|---|
+| `AI_ADVISOR_ENABLED` | `true` | Dokploy, `.env` | API, Worker | Non | Active le sous-systeme advisor |
+| `AI_ADVISOR_ADMIN_ONLY` | `false` | Dokploy, `.env` | API | Non | Restreint les surfaces advisor aux sessions admin. Mettre `true` pour le mode manuel admin-only recommande |
+| `AI_ADVISOR_FORCE_LOCAL_ONLY` | `false` | Dokploy, `.env` | API, Worker | Non | Coupe les appels LLM et force le chemin deterministe |
+| `AI_CHAT_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le chat grounded |
+| `AI_CHALLENGER_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le challenger Anthropic |
+| `AI_RELABEL_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le relabel transaction ambigu |
+| `AI_OPENAI_API_KEY` | -- | Dokploy, `.env` | API | **Oui** | Cle API OpenAI |
+| `AI_OPENAI_BASE_URL` | -- | Dokploy, `.env` | API | Non | Gateway/proxy OpenAI optionnel |
+| `AI_OPENAI_CLASSIFIER_MODEL` | `gpt-5.4-nano` | Dokploy, `.env` | API | Non | Modele volume / classification |
+| `AI_OPENAI_DAILY_MODEL` | `gpt-5.4-mini` | Dokploy, `.env` | API | Non | Modele principal daily brief / chat |
+| `AI_OPENAI_DEEP_MODEL` | `gpt-5.4` | Dokploy, `.env` | API | Non | Modele reserve aux analyses plus profondes |
+| `AI_ANTHROPIC_API_KEY` | -- | Dokploy, `.env` | API | **Oui** | Cle API Anthropic |
+| `AI_ANTHROPIC_BASE_URL` | -- | Dokploy, `.env` | API | Non | Gateway/proxy Anthropic optionnel |
+| `AI_ANTHROPIC_CHALLENGER_MODEL` | `claude-sonnet-4-6` | Dokploy, `.env` | API | Non | Modele challenger |
+| `AI_USD_TO_EUR_RATE` | `0.92` | Dokploy, `.env` | API | Non | Conversion explicite pour reporting |
+| `AI_BUDGET_DAILY_USD` | `2` | Dokploy, `.env` | API | Non | Budget journalier IA |
+| `AI_BUDGET_MONTHLY_USD` | `40` | Dokploy, `.env` | API | Non | Budget mensuel IA |
+| `AI_BUDGET_DISABLE_CHALLENGER_RATIO` | `0.75` | Dokploy, `.env` | API | Non | Coupe Claude avant depassement total |
+| `AI_BUDGET_DISABLE_DEEP_ANALYSIS_RATIO` | `0.5` | Dokploy, `.env` | API | Non | Coupe les runs plus profonds avant le challenger |
+| `AI_SPEND_ALERT_DAILY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget journalier |
+| `AI_SPEND_ALERT_MONTHLY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget mensuel |
+| `AI_MAX_CHAT_MESSAGES_CONTEXT` | `8` | Dokploy, `.env` | API | Non | Taille max du contexte chat persiste |
+| `AI_DAILY_AUTO_RUN_ENABLED` | `false` | Dokploy, `.env` | Worker | Non | Scheduler quotidien advisor. Doit rester `false` dans le mode manuel recommande |
+| `AI_DAILY_INTERVAL_MS` | `86400000` | Dokploy, `.env` | Worker | Non | Intervalle du scheduler advisor |
+
+---
+
+## 14. Feature Flags (Frontend / Vite)
 
 > **Rappel** : les variables `VITE_*` sont exposees au client. Ne JAMAIS y mettre de secret.
 
@@ -261,11 +292,11 @@ Notes:
 | `VITE_PWA_NOTIFICATIONS_ENABLED` | -- | GitHub vars | Notifications push UI |
 | `VITE_PWA_CRITICAL_ENABLED` | -- | GitHub vars | Alertes critiques push |
 | `VITE_AI_ADVISOR_ENABLED` | -- | GitHub vars | Feature conseiller IA |
-| `VITE_AI_ADVISOR_ADMIN_ONLY` | -- | GitHub vars | Restreindre IA aux admins |
+| `VITE_AI_ADVISOR_ADMIN_ONLY` | -- | GitHub vars | Restreindre IA aux admins. Recommande `true` pour le mode manuel actuel |
 
 ---
 
-## 14. Push Notifications
+## 15. Push Notifications
 
 | Variable | Default | Ou la definir | Consommateur | Sensible | Comment generer |
 |---|---|---|---|---|---|
@@ -277,7 +308,7 @@ Notes:
 
 ---
 
-## 15. Monitoring & Alertes (ops-alerts sidecar)
+## 16. Monitoring & Alertes (ops-alerts sidecar)
 
 | Variable | Default | Ou la definir | Description |
 |---|---|---|---|
@@ -298,7 +329,7 @@ Notes:
 
 ---
 
-## 16. Docker Build (arguments de build)
+## 17. Docker Build (arguments de build)
 
 | Argument | Default | Ou la definir | Description |
 |---|---|---|---|
@@ -311,7 +342,7 @@ Notes:
 
 ---
 
-## 17. Docker Compose
+## 18. Docker Compose
 
 | Variable | Default | Ou la definir | Description |
 |---|---|---|---|
@@ -322,7 +353,7 @@ Notes:
 
 ---
 
-## 18. GitHub Actions Secrets & Variables
+## 19. GitHub Actions Secrets & Variables
 
 ### Secrets (GitHub Settings > Secrets)
 

@@ -274,7 +274,7 @@ describe('createGetDashboardSummaryUseCase', () => {
     })
   })
 
-  it('appends static manual assets outside provider to the summary totals', async () => {
+  it('does not inject hardcoded manual admin assets outside the repository results', async () => {
     const getSummary = createGetDashboardSummaryUseCase({
       listAccountsWithConnections: async () => [],
       listAssets: async () => [
@@ -296,25 +296,6 @@ describe('createGetDashboardSummaryUseCase', () => {
           metadata: null,
         },
       ],
-      listStaticManualAssets: async () => [
-        {
-          assetId: -1001,
-          assetType: 'manual',
-          origin: 'manual',
-          source: 'manual',
-          provider: null,
-          providerConnectionId: null,
-          providerInstitutionName: null,
-          powensConnectionId: null,
-          powensAccountId: null,
-          name: 'Residence principale',
-          currency: 'EUR',
-          valuation: '250000.00',
-          valuationAsOf: null,
-          enabled: true,
-          metadata: { note: 'Estimation statique hors provider' },
-        },
-      ],
       listInvestmentPositions: async () => [],
       getFlowTotals: async () => ({ income: '0', expenses: '0' }),
       listDailyNetFlows: async () => [],
@@ -324,8 +305,8 @@ describe('createGetDashboardSummaryUseCase', () => {
 
     const summary = await getSummary('7d')
 
-    expect(summary.assets.map(asset => asset.assetId)).toEqual([1, -1001])
-    expect(summary.totals.balance).toBe(250100)
+    expect(summary.assets.map(asset => asset.assetId)).toEqual([1])
+    expect(summary.totals.balance).toBe(100)
   })
 
 })

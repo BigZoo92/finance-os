@@ -6,6 +6,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 
 - Dashboard shell and major state handling: [../../apps/web/src/routes/_app.tsx](../../apps/web/src/routes/_app.tsx)
 - Marches & Macro surface: [../../apps/web/src/routes/_app/marches.tsx](../../apps/web/src/routes/_app/marches.tsx), [../../apps/web/src/components/markets/markets-dashboard.tsx](../../apps/web/src/components/markets/markets-dashboard.tsx)
+- Actualites + advisor surface: [../../apps/web/src/routes/_app/actualites.tsx](../../apps/web/src/routes/_app/actualites.tsx), [../../apps/web/src/components/dashboard/ai-advisor-panel.tsx](../../apps/web/src/components/dashboard/ai-advisor-panel.tsx)
 - Personal goals surface: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
 - Powens callback flow UI: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Shared UI exports: [../../packages/ui/src/components/index.ts](../../packages/ui/src/components/index.ts)
@@ -39,6 +40,10 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - The `/marches` page should keep hero, panorama, macro, watchlist, signals, and provenance sections legible in demo, admin-live, and admin-fallback states.
 - Market source badges should clearly distinguish `EOD`, `differe`, and `overlay US`, and the freshness legend should stay understandable without opening devtools.
 - Powens connection cards should use explicit badges (`OK`, `KO`, `En cours`, `Inconnu`), keep the short reason readable in the main card, and reserve the exact last-attempt time for a tooltip or similarly lightweight affordance.
+- Advisor panel should keep daily brief, recommendations, signals, spend, runs, and chat readable as one coherent narrative instead of collapsing into unrelated cards.
+- Advisor page should make `admin-only` or runtime-disabled states explicit instead of hiding the feature silently.
+- Advisor demo mode must read as deliberately deterministic, not as a broken or half-loaded admin state.
+- Patrimoine manual-assets section should keep a clear empty state when no admin manual asset exists yet.
 - Empty and error states remain actionable and legible.
 - Tables, cards, and buttons stay keyboard accessible.
 - Mobile and desktop layouts still load without overflow surprises.

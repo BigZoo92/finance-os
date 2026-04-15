@@ -22,9 +22,14 @@ import {
   triggerDashboardMarketsRefresh,
 } from './market-refresh-scheduler'
 import {
+  startDashboardAdvisorScheduler,
+  triggerDashboardAdvisorDailyRun,
+} from './advisor-daily-scheduler'
+import {
   startDashboardNewsScheduler,
   triggerDashboardNewsIngest,
 } from './news-ingest-scheduler'
+import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
 import { logWorkerEvent } from './observability/logger'
 import {
   buildProviderRawImportRow,
@@ -89,6 +94,7 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let schedulerTimer: ReturnType<typeof setInterval> | null = null
 let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let marketSchedulerTimer: ReturnType<typeof setInterval> | null = null
+let advisorSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
 let keepRunning = true
 
@@ -1201,51 +1207,33 @@ const handleJob = async (job: PowensJob) => {
 }
 
 const startScheduler = () => {
-  if (env.EXTERNAL_INTEGRATIONS_SAFE_MODE) {
-    logWorkerEvent({
-      level: 'warn',
-      msg: 'worker scheduler disabled',
-      reason: 'EXTERNAL_INTEGRATIONS_SAFE_MODE=true',
-    })
-    return
-  }
-
-  if (!env.WORKER_AUTO_SYNC_ENABLED) {
-    logWorkerEvent({
-      level: 'warn',
-      msg: 'worker scheduler disabled',
-      reason: 'WORKER_AUTO_SYNC_ENABLED=false',
-    })
-    return
-  }
-
   const schedulerIntervalMs =
     env.NODE_ENV === 'production'
       ? Math.max(env.POWENS_SYNC_INTERVAL_MS, env.POWENS_SYNC_MIN_INTERVAL_PROD_MS)
       : env.POWENS_SYNC_INTERVAL_MS
 
-  schedulerTimer = setInterval(async () => {
-    try {
-      await redisClient.client.rPush(
-        POWENS_JOB_QUEUE_KEY,
-        serializePowensJob({
-          type: 'powens.syncAll',
-          requestId: `wrk-${randomUUID()}`,
+  schedulerTimer = startPowensAutoSyncScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    autoSyncEnabled: env.WORKER_AUTO_SYNC_ENABLED,
+    intervalMs: schedulerIntervalMs,
+    trigger: async () => {
+      try {
+        await redisClient.client.rPush(
+          POWENS_JOB_QUEUE_KEY,
+          serializePowensJob({
+            type: 'powens.syncAll',
+            requestId: `wrk-${randomUUID()}`,
+          })
+        )
+      } catch (error) {
+        logWorkerEvent({
+          level: 'error',
+          msg: 'worker failed to enqueue scheduled sync',
+          errMessage: toSafeErrorMessage(error),
         })
-      )
-    } catch (error) {
-      logWorkerEvent({
-        level: 'error',
-        msg: 'worker failed to enqueue scheduled sync',
-        errMessage: toSafeErrorMessage(error),
-      })
-    }
-  }, schedulerIntervalMs)
-
-  logWorkerEvent({
-    level: 'info',
-    msg: 'worker scheduler started',
-    schedulerIntervalMs,
+      }
+    },
+    log: logWorkerEvent,
   })
 }
 
@@ -1287,6 +1275,29 @@ const startMarketScheduler = () => {
       logWorkerEvent({
         ...event,
         ...(event.msg === 'worker market scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
+const startAdvisorScheduler = () => {
+  advisorSchedulerTimer = startDashboardAdvisorScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    advisorEnabled: env.AI_ADVISOR_ENABLED,
+    autoRunEnabled: env.AI_DAILY_AUTO_RUN_ENABLED,
+    intervalMs: env.AI_DAILY_INTERVAL_MS,
+    trigger: () =>
+      triggerDashboardAdvisorDailyRun({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker advisor scheduler started'
           ? { apiInternalUrl: env.API_INTERNAL_URL }
           : {}),
       }),
@@ -1371,6 +1382,7 @@ const start = async () => {
   startScheduler()
   startNewsScheduler()
   startMarketScheduler()
+  startAdvisorScheduler()
   await consumeJobs()
 }
 
@@ -1400,6 +1412,11 @@ const shutdown = async (signal: string) => {
   if (marketSchedulerTimer) {
     clearInterval(marketSchedulerTimer)
     marketSchedulerTimer = null
+  }
+
+  if (advisorSchedulerTimer) {
+    clearInterval(advisorSchedulerTimer)
+    advisorSchedulerTimer = null
   }
 
   statusServer?.close()

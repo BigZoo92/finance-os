@@ -20,6 +20,7 @@ import { createDebugRoutes } from './routes/debug/router'
 import { registerSystemRoutes } from './routes/system'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createEnrichmentRoutes } from './routes/enrichment/router'
+import { createNotificationsRoutes } from './routes/notifications/router'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -189,6 +190,8 @@ const REQUIRED_PRODUCTION_ROUTE_SIGNATURES: RouteSignature[] = [
   { method: 'GET', path: '/api/version' },
   { method: 'GET', path: '/auth/me' },
   { method: 'GET', path: '/api/auth/me' },
+  { method: 'GET', path: '/notifications/push/settings' },
+  { method: 'GET', path: '/api/notifications/push/settings' },
   { method: 'POST', path: '/integrations/powens/callback' },
   { method: 'POST', path: '/api/integrations/powens/callback' },
 ]
@@ -289,6 +292,26 @@ const registerAppRoutes = (app: Elysia) => {
         marketDataFredSeriesIds: env.MARKET_DATA_FRED_SERIES_IDS,
         eodhdApiKey: env.EODHD_API_KEY,
         twelveDataApiKey: env.TWELVEDATA_API_KEY,
+        aiAdvisorEnabled: env.AI_ADVISOR_ENABLED,
+        aiAdvisorAdminOnly: env.AI_ADVISOR_ADMIN_ONLY,
+        aiAdvisorForceLocalOnly: env.AI_ADVISOR_FORCE_LOCAL_ONLY,
+        aiChatEnabled: env.AI_CHAT_ENABLED,
+        aiChallengerEnabled: env.AI_CHALLENGER_ENABLED,
+        aiRelabelEnabled: env.AI_RELABEL_ENABLED,
+        aiOpenAiApiKey: env.AI_OPENAI_API_KEY,
+        aiOpenAiBaseUrl: env.AI_OPENAI_BASE_URL,
+        aiOpenAiClassifierModel: env.AI_OPENAI_CLASSIFIER_MODEL,
+        aiOpenAiDailyModel: env.AI_OPENAI_DAILY_MODEL,
+        aiOpenAiDeepModel: env.AI_OPENAI_DEEP_MODEL,
+        aiAnthropicApiKey: env.AI_ANTHROPIC_API_KEY,
+        aiAnthropicBaseUrl: env.AI_ANTHROPIC_BASE_URL,
+        aiAnthropicChallengerModel: env.AI_ANTHROPIC_CHALLENGER_MODEL,
+        aiBudgetDailyUsd: env.AI_BUDGET_DAILY_USD,
+        aiBudgetMonthlyUsd: env.AI_BUDGET_MONTHLY_USD,
+        aiBudgetDisableChallengerRatio: env.AI_BUDGET_DISABLE_CHALLENGER_RATIO,
+        aiBudgetDisableDeepAnalysisRatio: env.AI_BUDGET_DISABLE_DEEP_ANALYSIS_RATIO,
+        aiMaxChatMessagesContext: env.AI_MAX_CHAT_MESSAGES_CONTEXT,
+        aiUsdToEurRate: env.AI_USD_TO_EUR_RATE,
       })
     )
     .use(
@@ -302,6 +325,12 @@ const registerAppRoutes = (app: Elysia) => {
       createEnrichmentRoutes({
         db,
         bulkEnabled: env.ENRICHMENT_BULK_TRIAGE_ENABLED,
+      })
+    )
+    .use(
+      createNotificationsRoutes({
+        redis: redisClient.client,
+        env,
       })
     )
     .use(

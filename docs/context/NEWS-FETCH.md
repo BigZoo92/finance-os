@@ -1,6 +1,6 @@
 # Finance-OS -- News Fetch
 
-> **Derniere mise a jour** : 2026-04-09
+> **Derniere mise a jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute modification touchant `/dashboard/news`, `/dashboard/news/context`, `/dashboard/news/ingest`, `apps/api/src/routes/dashboard/domain/dashboard-news.ts`, `apps/api/src/routes/dashboard/services/fetch-live-news.ts`, `apps/api/src/routes/dashboard/services/providers/**`, `apps/api/src/routes/dashboard/services/scrape-article-metadata.ts`, `apps/api/src/routes/dashboard/repositories/dashboard-news-repository.ts`, `apps/worker/src/news-ingest-scheduler.ts`, `packages/db/src/schema/news.ts`, `apps/web/src/features/dashboard-api.ts`, `apps/web/src/features/dashboard-query-options.ts`, `apps/web/src/features/demo-data.ts`, `apps/web/src/components/dashboard/news-feed.tsx`, `apps/web/src/components/dashboard/relevance-scoring.ts`, ou les flags news/failsoft doit mettre a jour ce document dans le meme changement.
 
@@ -13,6 +13,7 @@ La feature news n'est plus un simple feed HN. C'est maintenant une **plateforme 
 - `GET /dashboard/news` reste **cache-only**.
 - `POST /dashboard/news/ingest` reste le point d'entree live explicite.
 - Le worker peut maintenant lancer des ingestions recurrentes via `NEWS_AUTO_INGEST_ENABLED`.
+- Le mode recommande actuel pour l'advisor garde `NEWS_AUTO_INGEST_ENABLED=false` et reutilise cette route depuis la mission manuelle complete.
 - L'ingestion est **multi-source**, **deterministe**, **sans LLM externe**, avec:
   - normalisation metier,
   - taxonomie hierarchique,
@@ -21,6 +22,7 @@ La feature news n'est plus un simple feed HN. C'est maintenant une **plateforme 
   - scraping leger de metadata article,
   - health par provider,
   - context bundle pour future IA.
+- Le `NewsContextBundle` est maintenant consomme par le pipeline advisor quotidien pour persister des `ai_macro_signal` et `ai_news_signal`, sans changer l'invariant cache-only de `GET /dashboard/news`.
 
 Le principe produit ne change pas:
 
@@ -123,6 +125,8 @@ Le `POST` accepte:
 - session admin
 - ou token interne valide (`x-internal-token`)
 
+Le bouton advisor `Tout rafraichir et analyser` ne contourne pas ce contrat: il orchestre la meme logique d'ingestion cote serveur, puis attend un etat de fraicheur utilisable avant de lancer l'analyse advisor.
+
 ### 3.4 Scheduler worker
 
 Le worker ajoute un scheduler dedie:
@@ -139,6 +143,27 @@ Invariants:
 - pas de provider call direct depuis le worker
 - le worker repasse par le contrat HTTP interne
 - lock Redis pour eviter les overlaps
+
+### 3.5 Integration advisor
+
+Le pipeline advisor ne modifie pas l'invariant de la feature news:
+
+- `GET /dashboard/news` reste cache-only
+- `POST /dashboard/news/ingest` reste le seul point d'entree live
+- aucun provider news n'est appele depuis le chat advisor ou les routes read-only advisor
+
+Ce qui change:
+
+- `createDashboardAdvisorUseCases()` lit `getNewsContextBundle({ range: '7d' })`
+- les hypotheses causales et top signals du bundle sont transformees en:
+  - `ai_macro_signal`
+  - `ai_news_signal`
+- ces signaux servent ensuite au:
+  - daily brief
+  - challenger
+  - chat grounded
+
+Autrement dit, la news stack reste une source structuree et cachee, et l'advisor consomme ses artefacts au lieu d'aller reparcourir le web en direct.
 
 ---
 

@@ -1,25 +1,188 @@
-import { afterEach, describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
 import { createDashboardRuntimePlugin } from '../plugin'
 import { createAdvisorRoute } from './advisor'
-import type { DashboardAdvisorResponse, DashboardRouteRuntime } from '../types'
+import type {
+  DashboardAdvisorChatPostResponse,
+  DashboardAdvisorManualRefreshAndRunPostResponse,
+  DashboardAdvisorOverviewResponse,
+  DashboardAdvisorManualOperationResponse,
+  DashboardAdvisorRecommendationsResponse,
+  DashboardAdvisorRunDailyResponse,
+} from '../advisor-contract'
+import type { DashboardRouteRuntime } from '../types'
 
-const createDashboardRuntime = (overrides?: Partial<DashboardRouteRuntime['useCases']>): DashboardRouteRuntime => ({
+const sampleBudgetState = {
+  dailyUsdSpent: 0,
+  monthlyUsdSpent: 0,
+  dailyBudgetUsd: 2,
+  monthlyBudgetUsd: 40,
+  challengerAllowed: true,
+  deepAnalysisAllowed: true,
+  blocked: false,
+  reasons: [],
+}
+
+const sampleRun = {
+  id: 1,
+  runType: 'daily' as const,
+  status: 'completed' as const,
+  triggerSource: 'manual',
+  requestId: 'req-advisor-test',
+  startedAt: '2026-04-14T08:00:00.000Z',
+  finishedAt: '2026-04-14T08:00:03.000Z',
+  durationMs: 3000,
+  degraded: false,
+  fallbackReason: null,
+  errorCode: null,
+  errorMessage: null,
+  budgetState: sampleBudgetState,
+  usageSummary: {
+    totalCalls: 1,
+    totalInputTokens: 500,
+    totalOutputTokens: 250,
+    totalCostUsd: 0.02,
+    totalCostEur: 0.0184,
+  },
+}
+
+const sampleOverview = (mode: 'demo' | 'admin'): DashboardAdvisorOverviewResponse => ({
+  mode,
+  source: mode === 'demo' ? 'demo_fixture' : 'persisted',
+  requestId: 'req-advisor-test',
+  generatedAt: '2026-04-14T08:00:03.000Z',
+  status: 'ready',
+  degradedMessage: null,
+  latestRun: mode === 'demo' ? null : sampleRun,
+  brief: {
+    id: 1,
+    runId: 1,
+    title: 'Brief test',
+    summary: 'Resume de test.',
+    keyFacts: ['Cash drag visible'],
+    opportunities: ['Reallouer le cash excedentaire'],
+    risks: ['Concentration sur une ligne'],
+    watchItems: ['Surveiller le budget IA'],
+    recommendationNotes: [],
+    provider: mode === 'demo' ? null : 'openai',
+    model: mode === 'demo' ? null : 'gpt-5.4-mini',
+    createdAt: '2026-04-14T08:00:03.000Z',
+  },
+  topRecommendations: [
+    {
+      id: 1,
+      runId: 1,
+      recommendationKey: 'cash-drag',
+      type: 'rebalance',
+      category: 'cash_optimization',
+      title: 'Reduire le cash qui dort',
+      description: 'Le niveau de cash depasse la bande cible.',
+      whyNow: 'Le cash drag pese sur le rendement reel attendu.',
+      evidence: ['Cash allocation 26%', 'Target cash midpoint 12%'],
+      assumptions: ['Inflation 2.5%'],
+      confidence: 0.72,
+      riskLevel: 'low',
+      expectedImpact: {
+        summary: 'Ameliore le rendement attendu',
+        value: 1.2,
+        unit: 'pct',
+      },
+      effort: 'low',
+      reversibility: 'high',
+      blockingFactors: [],
+      alternatives: ['DCA progressif'],
+      deterministicMetricsUsed: ['cashAllocationPct', 'cashDragPct'],
+      llmModelsUsed: mode === 'demo' ? [] : ['gpt-5.4-mini'],
+      challengerStatus: 'skipped',
+      priorityScore: 78,
+      expiresAt: null,
+      createdAt: '2026-04-14T08:00:03.000Z',
+      challenge: null,
+    },
+  ],
+  snapshot: {
+    id: 1,
+    runId: 1,
+    asOfDate: '2026-04-14',
+    range: '30d',
+    currency: 'EUR',
+    riskProfile: 'balanced',
+    metrics: {
+      cashAllocationPct: 26,
+      expectedAnnualReturnPct: 5.4,
+    },
+    allocationBuckets: [],
+    assetClassAllocations: [],
+    driftSignals: [],
+    scenarios: [],
+    diagnostics: {},
+  },
+  spend: sampleBudgetState,
+  signalCounts: {
+    macro: 0,
+    news: 0,
+  },
+  assumptionCount: 1,
+  chatEnabled: true,
+})
+
+const sampleManualOperation: DashboardAdvisorManualOperationResponse = {
+  operationId: 'manual-op-1',
+  requestId: 'req-advisor-test',
+  status: 'running',
+  currentStage: 'news_refresh',
+  statusMessage: 'Rafraichissement news',
+  triggerSource: 'manual',
+  startedAt: '2026-04-14T08:00:00.000Z',
+  finishedAt: null,
+  durationMs: null,
+  degraded: false,
+  errorCode: null,
+  errorMessage: null,
+  advisorRunId: null,
+  advisorRun: null,
+  steps: [
+    {
+      id: 1,
+      stepKey: 'personal_sync',
+      label: 'Synchronisation donnees personnelles',
+      status: 'completed',
+      startedAt: '2026-04-14T08:00:00.000Z',
+      finishedAt: '2026-04-14T08:00:05.000Z',
+      durationMs: 5000,
+      errorCode: null,
+      errorMessage: null,
+      details: {
+        totalCount: 1,
+      },
+    },
+    {
+      id: 2,
+      stepKey: 'news_refresh',
+      label: 'Rafraichissement news',
+      status: 'running',
+      startedAt: '2026-04-14T08:00:05.000Z',
+      finishedAt: null,
+      durationMs: null,
+      errorCode: null,
+      errorMessage: null,
+      details: null,
+    },
+  ],
+  outputDigest: null,
+}
+
+const createDashboardRuntime = (
+  overrides?: Partial<DashboardRouteRuntime['useCases']>
+): DashboardRouteRuntime => ({
   repositories: {
     readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
     derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
   },
   useCases: {
-    getSummary: async range => ({
-      range,
-      totals: { balance: 1000, incomes: 1500, expenses: 900 },
-      connections: [],
-      accounts: [],
-      assets: [],
-      positions: [],
-      dailyWealthSnapshots: [],
-      topExpenseGroups: [],
-    }),
+    getSummary: async () => {
+      throw new Error('not used')
+    },
     getTransactions: async () => {
       throw new Error('not used')
     },
@@ -37,125 +200,220 @@ const createDashboardRuntime = (overrides?: Partial<DashboardRouteRuntime['useCa
     runDerivedRecompute: async () => {
       throw new Error('not used')
     },
+    getAdvisorOverview: async ({ mode }) => sampleOverview(mode),
+    getAdvisorDailyBrief: async ({ mode }) => sampleOverview(mode).brief,
+    getAdvisorRecommendations: async (): Promise<DashboardAdvisorRecommendationsResponse> => ({
+      items: sampleOverview('admin').topRecommendations,
+    }),
+    getAdvisorRuns: async () => ({ items: [sampleRun] }),
+    getAdvisorAssumptions: async () => ({
+      items: [
+        {
+          id: 1,
+          runId: 1,
+          assumptionKey: 'inflation',
+          source: 'default',
+          value: 2.5,
+          justification: 'Default inflation assumption.',
+          createdAt: '2026-04-14T08:00:03.000Z',
+        },
+      ],
+    }),
+    getAdvisorSignals: async () => ({
+      macroSignals: [],
+      newsSignals: [],
+    }),
+    getAdvisorSpend: async () => ({
+      summary: sampleBudgetState,
+      daily: [],
+      byFeature: [],
+      byModel: [],
+      anomalies: [],
+    }),
+    getLatestAdvisorManualOperation: async () => sampleManualOperation,
+    getAdvisorManualOperationById: async () => sampleManualOperation,
+    runAdvisorManualRefreshAndAnalysis:
+      async (): Promise<DashboardAdvisorManualRefreshAndRunPostResponse> => ({
+        ok: true,
+        requestId: 'req-advisor-test',
+        alreadyRunning: false,
+        operation: sampleManualOperation,
+      }),
+    runAdvisorDaily: async (): Promise<DashboardAdvisorRunDailyResponse> => ({
+      ok: true,
+      requestId: 'req-advisor-test',
+      run: sampleRun,
+    }),
+    relabelAdvisorTransactions: async () => ({
+      ok: true,
+      requestId: 'req-advisor-test',
+      run: sampleRun,
+      suggestions: [],
+    }),
+    getAdvisorChat: async () => ({
+      threadId: 'default',
+      title: 'Finance Assistant',
+      messages: [],
+    }),
+    postAdvisorChat: async ({ message }): Promise<DashboardAdvisorChatPostResponse> => ({
+      ok: true,
+      requestId: 'req-advisor-test',
+      thread: {
+        threadId: 'default',
+        title: 'Finance Assistant',
+        messages: [
+          {
+            id: 1,
+            role: 'user',
+            content: message,
+            citations: [],
+            assumptions: [],
+            caveats: [],
+            simulations: [],
+            provider: null,
+            model: null,
+            createdAt: '2026-04-14T08:00:03.000Z',
+          },
+        ],
+      },
+    }),
+    getAdvisorEvals: async () => ({
+      cases: [],
+      latestRun: null,
+    }),
     ...overrides,
   },
 })
 
-const createAdvisorTestApp = ({ mode, runtime }: { mode: 'admin' | 'demo'; runtime?: DashboardRouteRuntime }) =>
+const createAdvisorTestApp = ({
+  mode,
+  routeConfig,
+  runtime,
+}: {
+  mode: 'admin' | 'demo'
+  routeConfig?: Parameters<typeof createAdvisorRoute>[0]
+  runtime?: DashboardRouteRuntime
+}) =>
   new Elysia()
     .derive(() => ({
       auth: { mode } as const,
+      internalAuth: {
+        hasValidToken: false,
+        tokenSource: null,
+      },
       requestMeta: {
         requestId: 'req-advisor-test',
         startedAtMs: Date.now(),
       },
     }))
     .use(createDashboardRuntimePlugin(runtime ?? createDashboardRuntime()))
-    .use(createAdvisorRoute())
-
-afterEach(() => {
-  delete process.env.AI_ADVISOR_ENABLED
-  delete process.env.AI_ADVISOR_ADMIN_ONLY
-  delete process.env.AI_ADVISOR_FORCE_LOCAL_ONLY
-})
+    .use(createAdvisorRoute(routeConfig))
 
 describe('createAdvisorRoute', () => {
-  it('returns deterministic local insights in demo mode', async () => {
+  it('returns advisor overview in demo mode', async () => {
     const app = createAdvisorTestApp({ mode: 'demo' })
 
     const response = await app.handle(new Request('http://finance-os.local/advisor?range=30d'))
-    const payload = (await response.json()) as DashboardAdvisorResponse
+    const payload = (await response.json()) as DashboardAdvisorOverviewResponse
 
     expect(response.status).toBe(200)
     expect(payload.mode).toBe('demo')
-    expect(payload.source).toBe('local')
-    expect(payload.fallback).toBe(false)
-    expect(['sufficient', 'insufficient']).toContain(payload.dataStatus.mode)
-    expect(payload.insights.length).toBeGreaterThan(0)
-    expect(payload.insights[0]?.citations.length).toBeGreaterThan(0)
-    expect(payload.actions.length).toBeGreaterThan(0)
-    expect(payload.actions[0]?.citations.length).toBeGreaterThan(0)
-    expect(payload.actions[0]?.tracking.status).toBe('suggested')
-    expect(payload.actions[0]?.decisionWorkflow.checkpoints.length).toBeGreaterThan(0)
+    expect(payload.source).toBe('demo_fixture')
+    expect(payload.topRecommendations.length).toBeGreaterThan(0)
   })
 
-  it('returns admin response from real summary path', async () => {
+  it('returns recommendations list', async () => {
     const app = createAdvisorTestApp({ mode: 'admin' })
 
-    const response = await app.handle(new Request('http://finance-os.local/advisor?range=7d'))
-    const payload = (await response.json()) as DashboardAdvisorResponse
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/recommendations?limit=5')
+    )
+    const payload = (await response.json()) as DashboardAdvisorRecommendationsResponse
 
     expect(response.status).toBe(200)
-    expect(payload.mode).toBe('admin')
-    expect(payload.source).toBe('provider')
-    expect(payload.fallback).toBe(false)
+    expect(payload.items.length).toBe(1)
+    expect(payload.items[0]?.recommendationKey).toBe('cash-drag')
   })
 
-  it('returns local fallback when admin summary path throws', async () => {
-    const app = createAdvisorTestApp({
-      mode: 'admin',
-      runtime: createDashboardRuntime({
-        getSummary: async () => {
-          throw new Error('db-down')
-        },
-      }),
-    })
-
-    const response = await app.handle(new Request('http://finance-os.local/advisor'))
-    const payload = (await response.json()) as DashboardAdvisorResponse
-
-    expect(response.status).toBe(200)
-    expect(payload.source).toBe('local')
-    expect(payload.fallback).toBe(true)
-    expect(payload.degradedMessage).toBe('Conseils limites, source externe indisponible')
-  })
-
-  it('caps estimated advisor action impact to a bounded range', async () => {
-    const app = createAdvisorTestApp({
-      mode: 'admin',
-      runtime: createDashboardRuntime({
-        getSummary: async range => ({
-          range,
-          totals: { balance: 4_000, incomes: 10_000, expenses: 8_000 },
-          connections: [],
-          accounts: [],
-          assets: [],
-          positions: [],
-          dailyWealthSnapshots: [],
-          topExpenseGroups: [{ category: 'travel', merchant: 'airline', label: 'Travel', total: 12_000, count: 4 }],
-        }),
-      }),
-    })
-
-    const response = await app.handle(new Request('http://finance-os.local/advisor?range=30d'))
-    const payload = (await response.json()) as DashboardAdvisorResponse
-
-    expect(response.status).toBe(200)
-    expect(payload.actions.length).toBeGreaterThan(0)
-    for (const action of payload.actions) {
-      expect(action.estimatedMonthlyImpact).toBeGreaterThanOrEqual(10)
-      expect(action.estimatedMonthlyImpact).toBeLessThanOrEqual(600)
-    }
-  })
-
-
-  it('uses local fallback path when force-local flag is enabled for admin', async () => {
-    process.env.AI_ADVISOR_FORCE_LOCAL_ONLY = '1'
-    const app = createAdvisorTestApp({ mode: 'admin' })
-
-    const response = await app.handle(new Request('http://finance-os.local/advisor'))
-    const payload = (await response.json()) as DashboardAdvisorResponse
-
-    expect(response.status).toBe(200)
-    expect(payload.mode).toBe('admin')
-    expect(payload.source).toBe('local')
-    expect(payload.fallback).toBe(true)
-    expect(payload.fallbackReason).toBe('force_local_only')
-  })
-
-  it('blocks demo when admin-only flag is enabled', async () => {
-    process.env.AI_ADVISOR_ADMIN_ONLY = '1'
+  it('blocks run-daily in demo mode', async () => {
     const app = createAdvisorTestApp({ mode: 'demo' })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/run-daily', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'manual',
+        }),
+      })
+    )
+    const payload = (await response.json()) as { code: string }
+
+    expect(response.status).toBe(403)
+    expect(payload.code).toBe('DEMO_MODE_FORBIDDEN')
+  })
+
+  it('returns the latest manual refresh operation in admin mode', async () => {
+    const app = createAdvisorTestApp({ mode: 'admin' })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/manual-refresh-and-run')
+    )
+    const payload = (await response.json()) as DashboardAdvisorManualOperationResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.operationId).toBe('manual-op-1')
+    expect(payload.currentStage).toBe('news_refresh')
+  })
+
+  it('queues manual refresh-and-run in admin mode', async () => {
+    const app = createAdvisorTestApp({ mode: 'admin' })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/manual-refresh-and-run', {
+        method: 'POST',
+      })
+    )
+    const payload = (await response.json()) as DashboardAdvisorManualRefreshAndRunPostResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(true)
+    expect(payload.alreadyRunning).toBe(false)
+    expect(payload.operation.operationId).toBe('manual-op-1')
+  })
+
+  it('returns chat payload in demo mode without admin gating', async () => {
+    const app = createAdvisorTestApp({ mode: 'demo' })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/chat', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'Pourquoi ce conseil ?',
+        }),
+      })
+    )
+    const payload = (await response.json()) as DashboardAdvisorChatPostResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.thread.messages[0]?.content).toBe('Pourquoi ce conseil ?')
+  })
+
+  it('blocks demo when admin-only mode is enabled', async () => {
+    const app = createAdvisorTestApp({
+      mode: 'demo',
+      routeConfig: {
+        advisorEnabled: true,
+        adminOnly: true,
+        chatEnabled: true,
+        relabelEnabled: true,
+      },
+    })
 
     const response = await app.handle(new Request('http://finance-os.local/advisor'))
     const payload = (await response.json()) as { code: string }

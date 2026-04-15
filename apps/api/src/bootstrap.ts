@@ -1,10 +1,16 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createDbClient } from '@finance-os/db'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { env } from './env'
 import { logApiEvent } from './observability/logger'
 
 const shouldRunMigrations = process.env.RUN_DB_MIGRATIONS !== 'false'
-const migrationsFolder = process.env.DRIZZLE_MIGRATIONS_FOLDER ?? 'packages/db/drizzle'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const migrationsFolder = path.resolve(__dirname, '../../../packages/db/drizzle')
 
 const runMigrations = async () => {
   logApiEvent({

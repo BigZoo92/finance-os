@@ -1,6 +1,6 @@
 # Finance-OS -- Stack Technique
 
-> **Derniere mise a jour** : 2026-04-10
+> **Derniere mise a jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute modification structurelle de la stack doit etre refletee ici.
 
@@ -50,7 +50,8 @@ graph TB
     API -->|"REST + RSS + XML + HTML head scrape"| NewsProviders
     API -->|"REST quotes + macro snapshots"| MarketProviders
     API -->|"Enqueue jobs"| Redis
-    Worker -->|"Internal POST /dashboard/news/ingest + /dashboard/markets/refresh"| API
+    Worker -->|"Internal POST /dashboard/news/ingest + /dashboard/markets/refresh + /dashboard/advisor/run-daily (optionnel)"| API
+    Browser -->|"POST /dashboard/advisor/manual-refresh-and-run (admin manual mission)"| API
 ```
 
 ---
@@ -67,6 +68,8 @@ finance-os/
     ui/           # Design system - shadcn/ui + Radix + Tailwind v4
     db/           # Schema + migrations - Drizzle ORM + PostgreSQL
     env/          # Validation env vars - Zod schemas centralises
+    ai/           # Providers LLM, prompts, schemas, pricing, budget, evals
+    finance-engine/ # Moteur deterministe finance/quant
     powens/       # Client Powens - HTTP client + crypto AES-256-GCM
     redis/        # Wrapper Redis - node-redis
     prelude/      # Utilitaires - Logger JSON structure, helpers
@@ -231,7 +234,7 @@ graph LR
 
     subgraph "API Routes (Elysia)"
         Auth["/auth/* (login, logout, me)"]
-        Dash["/dashboard/* (summary, transactions, analytics, goals, news, news/context, markets, advisor)"]
+        Dash["/dashboard/* (summary, transactions, analytics, goals, news, news/context, markets, advisor*, manual-assets)"]
         Integ["/integrations/powens/* (connect-url, callback, sync, status, diagnostics)"]
         Enrich["/enrichment/* (notes, bulk-triage)"]
         Notif["/notifications/push/* (settings, subscription, delivery)"]
@@ -244,6 +247,12 @@ graph LR
 ```
 
 Toutes les routes API sont enregistrees en double : `/path` et `/api/path` pour compatibilite proxy.
+
+Posture recommandee actuelle:
+
+- advisor manuel-first via `POST /dashboard/advisor/manual-refresh-and-run`
+- `AI_DAILY_AUTO_RUN_ENABLED=false`
+- `WORKER_AUTO_SYNC_ENABLED=false`
 
 ---
 
