@@ -25,6 +25,7 @@ import {
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 import { pushToast } from '@/lib/toast-store'
 import { formatDateTime, formatDuration, toErrorMessage } from '@/lib/format'
+import { PageHeader } from '@/components/surfaces/page-header'
 
 export const Route = createFileRoute('/_app/integrations')({
   loader: async ({ context }) => {
@@ -121,31 +122,35 @@ function IntegrationsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Intégrations</h2>
-          <p className="text-sm text-muted-foreground">Connexions Powens, synchronisation et diagnostics</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => syncMutation.mutate({})}
-            disabled={manualSyncUiState.blocked || syncMutation.isPending}
-          >
-            {syncMutation.isPending ? 'Sync...' : 'Lancer une sync'}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => connectMutation.mutate()}
-            disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
-          >
-            {connectMutation.isPending ? 'Ouverture...' : 'Connecter une banque'}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Connexions bancaires"
+        icon="⊞"
+        title="Intégrations"
+        description="Connexions Powens, orchestration de la synchronisation et diagnostics opérationnels."
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => syncMutation.mutate({})}
+              disabled={manualSyncUiState.blocked || syncMutation.isPending}
+            >
+              <span aria-hidden="true">⟳</span>
+              {syncMutation.isPending ? 'Sync…' : 'Lancer une sync'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="aurora"
+              onClick={() => connectMutation.mutate()}
+              disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
+            >
+              {connectMutation.isPending ? 'Ouverture…' : 'Connecter une banque'}
+            </Button>
+          </>
+        }
+      />
 
       {isIntegrationsSafeMode && (
         <Card className="border-warning/40 bg-warning/5">

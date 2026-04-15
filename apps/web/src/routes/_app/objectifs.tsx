@@ -5,6 +5,7 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-financial-goals-card'
+import { PageHeader } from '@/components/surfaces/page-header'
 
 export const Route = createFileRoute('/_app/objectifs')({
   loader: async ({ context }) => {
@@ -28,10 +29,12 @@ function ObjectifsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Objectifs</h2>
-        <p className="text-sm text-muted-foreground">Suivi de vos objectifs financiers personnels</p>
-      </div>
+      <PageHeader
+        eyebrow="Épargne & cibles"
+        icon="◎"
+        title="Objectifs"
+        description="Suivi de vos cibles d'épargne et de patrimoine personnel, avec projections."
+      />
 
       <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
     </div>

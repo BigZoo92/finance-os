@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
+import { PageHeader } from '@/components/surfaces/page-header'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -133,10 +134,12 @@ function ParametresPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Paramètres</h2>
-        <p className="text-sm text-muted-foreground">Notifications, exports et configuration système</p>
-      </div>
+      <PageHeader
+        eyebrow="Système"
+        icon="⚙"
+        title="Paramètres"
+        description="Notifications, exports, recompute dérivé et configuration de votre cockpit."
+      />
 
       {/* Push notifications */}
       <PushNotificationCard

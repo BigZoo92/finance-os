@@ -10,6 +10,8 @@ import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
 import { toErrorMessage } from '@/lib/format'
+import { BrandMark } from '@/components/brand/brand-mark'
+import { StatusDot } from '@/components/surfaces/status-dot'
 import { ThemeToggle } from './theme-toggle'
 import { CommandPaletteTrigger } from './command-palette'
 
@@ -22,6 +24,7 @@ export function Topbar() {
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
   const isDemo = authViewState === 'demo'
+  const isAdmin = authViewState === 'admin'
   const isPending = authViewState === 'pending'
 
   const logoutMutation = useMutation({
@@ -45,49 +48,61 @@ export function Topbar() {
   })
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/50 bg-background/80 px-4 backdrop-blur-xl lg:px-6">
-      <div className="flex items-center gap-3">
-        {/* Mobile brand */}
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow-sm lg:hidden">
-          ◈
+    <header className="sticky top-0 z-30 h-14 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <div className="flex h-full items-center justify-between px-4 lg:px-6">
+        <div className="flex items-center gap-3">
+          <div className="lg:hidden">
+            <BrandMark size="sm" halo={false} />
+          </div>
+          <CommandPaletteTrigger />
         </div>
 
-        <CommandPaletteTrigger />
+        <div className="flex items-center gap-1.5">
+          {isDemo && (
+            <Badge variant="warning" className="hidden h-6 items-center gap-1.5 sm:inline-flex">
+              <StatusDot tone="warn" pulse size={6} />
+              <span className="font-mono text-[10px] tracking-[0.14em]">DÉMO</span>
+            </Badge>
+          )}
+          {isAdmin && (
+            <Badge variant="violet" className="hidden h-6 items-center gap-1.5 sm:inline-flex">
+              <StatusDot tone="violet" size={6} />
+              <span className="font-mono text-[10px] tracking-[0.14em]">ADMIN</span>
+            </Badge>
+          )}
+
+          <PwaInstallButton />
+          <ThemeToggle />
+
+          {isPending ? (
+            <div className="h-8 w-20 animate-shimmer rounded-lg" />
+          ) : isDemo ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="soft"
+              onClick={() => navigate({ to: '/login', search: { reason: undefined } })}
+            >
+              Se connecter
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              {logoutMutation.isPending ? 'Déconnexion…' : 'Déconnexion'}
+            </Button>
+          )}
+        </div>
       </div>
-
-      <div className="flex items-center gap-1.5">
-        <PwaInstallButton />
-        <ThemeToggle />
-
-        {isDemo && (
-          <Badge variant="warning" className="text-xs">
-            DÉMO
-          </Badge>
-        )}
-
-        {isPending ? (
-          <div className="h-8 w-20 animate-pulse rounded-lg bg-muted" />
-        ) : isDemo ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="default"
-            onClick={() => navigate({ to: '/login', search: { reason: undefined } })}
-          >
-            Se connecter
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            {logoutMutation.isPending ? 'Déconnexion…' : 'Déconnexion'}
-          </Button>
-        )}
-      </div>
+      {/* Hair brand rule — subtle rose-violet shimmer at the very bottom */}
+      <div
+        aria-hidden="true"
+        className="h-px bg-[linear-gradient(90deg,transparent,oklch(from_var(--primary)_l_c_h/35%)_35%,oklch(from_var(--accent-2)_l_c_h/30%)_65%,transparent)]"
+      />
     </header>
   )
 }
@@ -103,7 +118,6 @@ function PwaInstallButton() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true)
       return
@@ -134,7 +148,7 @@ function PwaInstallButton() {
       size="sm"
       variant="outline"
       onClick={handleInstall}
-      className="hidden sm:inline-flex gap-1.5 border-accent-2/30 text-accent-2 hover:bg-accent-2/10 hover:border-accent-2/50"
+      className="hidden sm:inline-flex gap-1.5 border-accent-2/35 text-accent-2 hover:bg-accent-2/10 hover:border-accent-2/55 hover:text-accent-2"
     >
       <span aria-hidden="true">↓</span>
       Installer

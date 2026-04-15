@@ -25,6 +25,7 @@ import { resolveAuthViewState } from '@/features/auth-view-state'
 import { AiAdvisorPanel } from '@/components/dashboard/ai-advisor-panel'
 import { NewsFeed } from '@/components/dashboard/news-feed'
 import { toErrorMessage } from '@/lib/format'
+import { PageHeader } from '@/components/surfaces/page-header'
 
 const advisorThreadKey = 'default'
 
@@ -252,12 +253,12 @@ function ActualitesPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Actualites</h2>
-        <p className="text-sm text-muted-foreground">
-          Flux macro-financier, signaux externes et advisor IA ancre sur les artefacts persistants.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Signaux & advisor"
+        icon="▣"
+        title="Actualités"
+        description="Flux macro-financier, signaux externes et advisor IA ancré sur des artefacts persistants."
+      />
 
       <div className="grid gap-6">
         <div>

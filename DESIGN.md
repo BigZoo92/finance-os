@@ -1,109 +1,165 @@
-# Finance-OS — Design Direction
+# Finance-OS — Direction artistique
 
-> Source de vérité pour l'identité visuelle, les principes UX/UI et la direction artistique.
+> **Source de vérité visuelle.** Toute modification UI doit partir d'ici.
+> Complément : [`docs/frontend/design-system.md`](docs/frontend/design-system.md)
+> (tokens, composants, patterns) et [`docs/context/DESIGN-DIRECTION.md`](docs/context/DESIGN-DIRECTION.md)
+> (contexte produit plus large).
 
-## Vision
+## Vision — "Aurora Pink"
 
-Finance-OS est un cockpit financier personnel haut de gamme. Pas un dashboard SaaS, pas un tableau admin. C'est un **système vivant, élégant et précis** — l'impression d'un OS personnel, dense mais maîtrisé.
+Finance-OS est un **cockpit financier personnel haut de gamme**. Pas un
+dashboard SaaS, pas un tableau admin générique. C'est un produit personnel,
+dense mais maîtrisé, qui donne l'impression d'un OS intime — chaud, vivant,
+précis.
 
-## Principes fondateurs
+La direction actuelle, "Aurora Pink", s'inspire de l'aurore urbaine, du néon
+parisien au coucher de soleil et des interfaces ciné-SF contemporaines
+(Dune, Blade Runner 2049), retenues pour un usage quotidien.
 
-### 1. Clarté avant densité
-Chaque page compréhensible en quelques secondes. L'essentiel d'abord, le détail accessible sans saturer.
+**Parti pris en une phrase :** *un cockpit dense et chaud où le rose pulse
+comme une signature, le violet étend l'intention en secondaire, et les
+données restent lisibles comme un tableau de bord d'avion.*
 
-### 2. Hiérarchie typographique forte
-Taille, poids et espacement créent la hiérarchie — pas les bordures. Montants financiers en `font-financial` (JetBrains Mono, tabular figures).
+## Principes
 
-### 3. Respiration intentionnelle
-L'espace blanc guide le regard et réduit la charge cognitive. `space-y-8` entre sections, `gap-4` à `gap-6` dans les grilles.
+1. **Clarté avant densité.** Chaque page compréhensible en quelques secondes.
+2. **Hiérarchie typographique forte.** Taille, poids, espacement. Jamais les
+   bordures. Montants en `font-financial` (JetBrains Mono, tabular).
+3. **Respiration intentionnelle.** `space-y-10` entre sections, `gap-6` en
+   grille. L'espace guide le regard.
+4. **Motion qui communique.** Anime pour signaler un état, pas pour décorer.
+   Respecte `prefers-reduced-motion` partout.
+5. **Identité distinctive.** La palette Aurora Pink + l'accent ASCII + le
+   composite TextPressure/RotatingText en hero font que Finance-OS ne peut
+   être confondu avec aucun clone shadcn.
 
-### 4. Motion qui communique
-Animations pour signaler un changement d'état, pas pour décorer. Page transitions (`AnimatePresence`), navigation indicators (`layoutId` spring), progress bars animées.
+## Palette Aurora Pink
 
-### 5. Identité distinctive
-Finance-OS n'est pas un clone shadcn. Signature ambre/or (`oklch ~75°`), surfaces à 3 niveaux de profondeur, accents ASCII comme ponctuation visuelle.
+### Couleurs fondatrices (OKLCH)
 
-## Identité visuelle
+| Rôle | Dark mode | Light mode | Usage |
+|------|-----------|------------|-------|
+| `--primary` | `oklch(0.72 0.19 355)` rose magenta | `oklch(0.58 0.21 355)` rose profond | Signature brand, CTA, actifs nav |
+| `--accent-2` | `oklch(0.70 0.22 295)` violet électrique | `oklch(0.52 0.24 295)` plum riche | Accent secondaire, admin badges |
+| `--background` | `oklch(0.12 0.02 325)` midnight plum | `oklch(0.975 0.006 355)` pearl chaud | Fond de page |
+| `--card` | `oklch(0.16 0.025 325)` | `oklch(0.99 0.004 355)` | Surfaces containers |
+| `--surface-0/1/2/3` | 4 niveaux progressifs | 4 niveaux progressifs | Élévation |
 
-### Palette de couleurs (OKLch)
+### Triade Aurora (gradients décoratifs)
 
-| Rôle | Dark mode | Light mode |
-|------|-----------|------------|
-| Background | `oklch(0.13 0.015 260)` — navy-slate | `oklch(0.98 0.004 75)` — warm off-white |
-| Card | `oklch(0.17 0.012 260)` | `oklch(1 0 0)` |
-| Primary | `oklch(0.78 0.155 75)` — ambre/or | `oklch(0.62 0.17 70)` |
-| Positive | Emerald teal | Emerald |
-| Negative | Soft coral | Coral/red |
-| Warning | Amber | Amber |
+- `--aurora-a` : rose, pôle brand
+- `--aurora-b` : magenta-plum, passage
+- `--aurora-c` : indigo-violet, ancrage froid
 
-### Typographie
+Utilisée dans `.text-aurora`, `.bg-aurora-mesh`, Button `variant="aurora"`,
+BrandMark, RangePill actif, bordure `BorderGlow`.
 
-- **Inter Variable** — Corps, titres, navigation. Feature settings : `cv11`, `ss01`, `ss03`.
-- **JetBrains Mono Variable** — Montants (`.font-financial`), accents ASCII, code. `tnum`, `zero`.
+### Sémantique finance (toujours dissociée de la brand)
 
-### Accents ASCII
+| Token | Dark | Light | Usage strict |
+|-------|------|-------|-------------|
+| `--positive` | emerald `H=160` | emerald foncé | Revenus, gains, haussier |
+| `--negative` | coral `H=25` | coral foncé | Dépenses, pertes, baissier |
+| `--warning` | amber `H=75` | amber foncé | Attente, cooldown, dégradation |
 
-Les glyphes ASCII (◈, ↔, ◆, △, ◎, ▣, ⊞, ⚙, ♡) servent d'accent visuel distinctif dans la navigation et les en-têtes de section. Composants disponibles :
-- `AsciiLogo` — logo ASCII du produit
-- `AsciiDivider` — séparateurs typographiques (thin/bold)
-- `AsciiFrame` — cadre corner pour mettre en valeur un élément
-- `AsciiStatusLine` — ligne de statut monospace style terminal
-- `SectionGlyph` — glyphe de section individuel
+**Règle non négociable :** jamais de rose ou de violet pour communiquer un
+statut financier. Le rose = identité, pas signal.
 
-Les accents ASCII doivent rester **au service** de l'interface. Jamais de mur d'ASCII art, jamais au détriment de la lisibilité.
+### Chart palette
 
-### Textures CSS
+7 couleurs harmonieuses, rose → violet → indigo → emerald → gold → plum →
+coral (`--chart-1` à `--chart-7`). Utiliser par ordre dans les séries pour
+garder la cohérence.
 
-- `.texture-scanlines` — lignes de scan subtiles (retro-digital)
-- `.texture-grain` — bruit de grain en overlay
-- `.bg-grid-dots` — grille de points pour sections hero
-- `.animate-shimmer` — chargement shimmer premium (remplace `animate-pulse`)
+## Typographie
 
-### Surfaces et profondeur
+- **Inter Variable** (`--font-sans`) — corps, titres, navigation. Features :
+  `cv11`, `ss01`, `ss03`. Axes variables utilisables : `wght`, `opsz`.
+- **JetBrains Mono Variable** (`--font-mono`) — montants via `.font-financial`
+  (auto `tnum`, `zero`), accents ASCII, code, status lines cockpit.
+- **Compressa VF** (chargée à la demande par le composant `TextPressure`) —
+  uniquement pour le titre hero du cockpit, où la pression typographique
+  fait partie de la signature.
 
-3 niveaux : `surface-0` (fond), `surface-1` (éléments dans cartes), `surface-2` (hover/élevé). Les cartes utilisent `rounded-2xl` avec shadow subtile et hover shadow lift.
+## Composants signature (React Bits)
 
-## Charts et data-viz
+Les composants React Bits officiels (TS + Tailwind) sont copiés dans
+`apps/web/src/components/reactbits/` avec attribution, puis adaptés aux
+tokens Aurora Pink. Voir
+[`apps/web/src/components/reactbits/README.md`](apps/web/src/components/reactbits/README.md).
 
-- **D3.js** pour tous les graphiques — liberté créative maximale
-- `D3Sparkline` — sparkline interactive avec tooltip, crosshair, gradient area fill, animation d'entrée
-- `MiniSparkline` — mini sparkline inline pour tableaux et KPI cards
-- Courbes en `curveCatmullRom` (smooth, naturel)
-- Palette chart : 7 couleurs harmonieuses (`chart-1` → `chart-7`)
+| Composant | Emplacement canonique | Pourquoi |
+|---|---|---|
+| `TextPressure` | Hero cockpit ("Cockpit") | Pression variable-font = signature unique |
+| `RotatingText` | Sous-titre cockpit | Rotation contenue de la tagline |
+| `ShinyText` | Titre login | Moment de brillance sur la marque |
+| `VariableProximity` | Titres de section (hover-flourish) | Respiration discrète |
+| `CountUp` | KPI tiles | Révélation numérique premium |
+| `SpotlightCard` | KPI tiles (`KpiTile`) | Suivi du curseur sur les données |
+| `BorderGlow` | Login / hero signature | Halo rose→violet animé |
+| `AuroraShape` | Backdrop hero + login | Blob décoratif léger (pas de WebGL) |
 
-## Navigation et shell
+**Règle d'or :** un composant React Bits n'est utilisé que s'il renforce
+l'identité ou la lisibilité dans une surface concrète. Pas de "démo
+technique".
 
-- **Sidebar desktop** (240px / 68px collapsed) avec sections finances/système, ASCII accents, logo
-- **Bottom nav mobile** avec 5 tabs + drawer "Plus"
-- **Command palette** (`Cmd+K`) — recherche et navigation rapide
-- **Theme toggle** — dark/light avec persistence localStorage
-- **Page transitions** — `AnimatePresence` avec fade + translateY
+## Surfaces canoniques Finance-OS
 
-## Micro-interactions
+| Composant | Rôle |
+|---|---|
+| `BrandMark` | Logo avec halo conic rotatif (4 tailles) |
+| `AuroraBackdrop` | Wash ambiant radial + grille pointillée pour hero |
+| `KpiTile` | KPI unique source de vérité (SpotlightCard + CountUp) |
+| `Panel` | Workhorse data-dense, rail coloré optionnel, header `tone` |
+| `RangePill` | Segmented control animé via `layoutId` |
+| `PageHeader` | Eyebrow + titre display + description + actions |
+| `StatusDot` | Indicateur `ok / warn / err / idle / live / brand / violet` |
 
-- Navigation active indicator : spring `layoutId` (sidebar + mobile tabs)
-- Range filter pill : `layoutId` animated pill background
-- Sidebar collapse : `motion.span` rotation du chevron
-- Mobile icon scale bounce : `motion.span` scale sur tab actif
-- KPI cards : stagger d'entrée avec `motion.div` delay
-- Top expenses list : stagger d'entrée latéral
-- Progress bars objectifs : animated width + gradient
-- Button active : `active:scale-[0.97]` press effect
-- Card hover : shadow lift transition
+Ces composants sont la **première intention** sur toute nouvelle surface.
+Ne pas coder à la main un KPI, un panel ou un range-pill si l'une de ces
+primitives convient.
 
-## Ce qu'il faut éviter
+## Motion
 
-- AI slop (gradients arc-en-ciel, glow partout, glassmorphism gratuit)
-- Clone SaaS (sidebar 30 items, shadcn default non modifié)
-- Surcharge (15 badges par ligne, cartes identiques)
-- ASCII forcé (jamais de mur ASCII, toujours au service de l'UI)
-- Animations bloquantes (stagger lists, parallax, scroll jacking)
-- Dépendances non justifiées
+- `--ease-out-expo` pour les entrées premium
+- `--ease-spring` pour les micro-interactions
+- `--ease-aurora` pour les transitions brand (reveal, gradient drift)
+- Durées : `fast 120ms`, `normal 200ms`, `slow 350ms`, `enter 280ms`, `exit 180ms`
+- Animations décoratives (`halo-spin`, `aurora-drift`, `pulse-glow`) gelées
+  sous `prefers-reduced-motion`
+
+## Textures / effets
+
+- `.bg-aurora-mesh` — wash brand pour hero
+- `.bg-aurora-mesh-soft` — version atténuée pour l'ambiance globale du shell
+- `.bg-grid-dots` — grille pointillée (hero, empty states)
+- `.bg-stripe-pattern` — bandes diagonales brand (démo/admin strips)
+- `.texture-scanlines` / `.texture-grain` — accents retro-cockpit
+- `.glass-surface` — glassmorphism tinted brand, usage parcimonieux
+- `.hair-rule` — séparateur en gradient doux
+- `.animate-shimmer` — loading premium, remplace `animate-pulse`
+- `.text-aurora` — texte en gradient rose→magenta→violet
+- `.focus-glow` — ring de focus brand
+
+## Ce qu'on évite
+
+- **AI slop** : gradients arc-en-ciel, glow gratuit, glassmorphism partout.
+- **Clone SaaS** : sidebar à 30 items, shadcn par défaut non modifié.
+- **Sur-design** : KPI tiles qui luttent contre les chiffres.
+- **Mur ASCII** : les glyphes restent au service, jamais du motif.
+- **Rose sémantique** : le rose signale l'identité, pas un état métier.
+- **Animations bloquantes** : scroll-jacking, parallax, stagger > 400ms.
+- **Dépendances non justifiées** : React Bits est installé manuellement
+  (copie TS-Tailwind officielle), pas un package npm.
 
 ## Relation marque ↔ design system ↔ produit
 
-1. **Marque** (ambre/or, Inter/JetBrains Mono, ASCII accents, surface depth) → identité
-2. **Design system** (`packages/ui` + `globals.css`) → tokens et composants
-3. **Produit** (`apps/web`) → application aux surfaces métier
+1. **Marque Aurora Pink** (rose + violet + Inter/JetBrains Mono + ASCII + Compressa hero) → identité
+2. **Design system** (`packages/ui` + `globals.css` + `apps/web/src/components/{surfaces,brand,reactbits}`) → tokens et primitives
+3. **Produit** (`apps/web/src/routes/_app/*`) → surfaces métier qui composent ces primitives
 
-Toute modification visuelle doit être documentée. Tout nouveau composant s'appuie sur les tokens existants.
+Toute modification visuelle doit :
+- partir des tokens (`var(--primary)`, `var(--accent-2)`, `var(--aurora-*)`)
+- réutiliser les surfaces (`KpiTile`, `Panel`, `PageHeader`, `RangePill`)
+- garder les sémantiques finance intactes
+- mettre à jour cette doc + `docs/frontend/*.md` dans le même change.

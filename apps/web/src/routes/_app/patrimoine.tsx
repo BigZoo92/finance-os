@@ -31,6 +31,7 @@ import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter
 import { getTrendDirection } from '@/components/dashboard/trend-visuals'
 import { formatDateTime, formatMoney } from '@/lib/format'
 import { D3Sparkline } from '@/components/ui/d3-sparkline'
+import { RangePill } from '@/components/surfaces/range-pill'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (value: string | undefined): DashboardRange =>
@@ -247,14 +248,15 @@ function PatrimoinePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary/60">
+          <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-primary/75">
+            <span aria-hidden="true">◊</span>
             Patrimoine
           </p>
-          <h2 className="mt-1 text-4xl font-bold tracking-tighter">
+          <h2 className="mt-1 text-4xl font-bold tracking-tighter md:text-5xl">
             {summaryQuery.isPending ? (
               <span className="inline-block h-10 w-48 animate-shimmer rounded-xl" />
             ) : (
-              <span className="font-financial">{formatMoney(adapted.totals.balance)}</span>
+              <span className="font-financial text-aurora">{formatMoney(adapted.totals.balance)}</span>
             )}
           </h2>
           {!summaryQuery.isPending ? (
@@ -278,30 +280,13 @@ function PatrimoinePage() {
           ) : null}
         </motion.div>
 
-        <div className="inline-flex items-center gap-1 rounded-full border border-border/40 bg-card/80 p-1 backdrop-blur-sm">
-          {RANGES.map(item => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => navigate({ search: { range: item.value } })}
-              className={`relative rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 ${
-                range === item.value
-                  ? 'text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {range === item.value ? (
-                <motion.div
-                  layoutId="patrimoine-range-pill"
-                  className="absolute inset-0 rounded-full bg-primary shadow-[0_0_12px_oklch(from_var(--primary)_l_c_h/25%)]"
-                  style={{ zIndex: -1 }}
-                  transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
-                />
-              ) : null}
-              {item.label}
-            </button>
-          ))}
-        </div>
+        <RangePill
+          layoutId="patrimoine-range"
+          ariaLabel="Période"
+          options={RANGES.map(r => ({ label: r.label, value: r.value }))}
+          value={range}
+          onChange={next => navigate({ search: { range: next } })}
+        />
       </div>
 
       <section>

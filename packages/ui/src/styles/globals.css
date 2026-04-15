@@ -5,7 +5,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ─── Finance-OS Design Tokens ─────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────
+ * Finance-OS — "Aurora Pink" design tokens
+ * ─────────────────────────────────────────────────────────────────
+ * Direction artistique : cockpit financier personnel, dense, chaud
+ * et précis. Rose magenta comme signature de marque, violet
+ * électrique en accent secondaire. Palette pensée pour la lisibilité
+ * des données, sur dark et light, avec des couleurs sémantiques
+ * finance toujours dissociées de la couleur d'identité.
+ *
+ * Source de vérité visuelle : DESIGN.md + docs/frontend/design-system.md
+ * ─────────────────────────────────────────────────────────────── */
 
 @theme inline {
   /* Semantic colors */
@@ -33,13 +43,22 @@
   --color-surface-0: var(--surface-0);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
 
   /* Financial semantic colors */
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-warning: var(--warning);
 
-  /* Chart palette — 7 harmonious colors for data viz */
+  /* Brand accents — pink primary + electric violet secondary */
+  --color-accent-2: var(--accent-2);
+  --color-accent-2-foreground: var(--accent-2-foreground);
+  --color-aurora-a: var(--aurora-a);
+  --color-aurora-b: var(--aurora-b);
+  --color-aurora-c: var(--aurora-c);
+
+  /* Chart palette — 7 harmonious colors for data viz.
+   * Pink → violet → indigo → emerald → gold → plum → coral */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -54,6 +73,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 10px);
+  --radius-3xl: calc(var(--radius) + 18px);
 
   /* Sidebar */
   --color-sidebar: var(--sidebar);
@@ -65,7 +85,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Typography — custom font families */
+  /* Typography */
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
   --font-display: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -75,24 +95,27 @@
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-aurora: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Motion — durations */
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --duration-slow: 350ms;
-  --duration-enter: 250ms;
+  --duration-enter: 280ms;
   --duration-exit: 180ms;
 
-  /* Shadow system */
-  --shadow-xs: 0 1px 2px oklch(0 0 0 / 5%);
-  --shadow-sm: 0 1px 3px oklch(0 0 0 / 8%), 0 1px 2px oklch(0 0 0 / 4%);
-  --shadow-md: 0 4px 6px oklch(0 0 0 / 7%), 0 2px 4px oklch(0 0 0 / 4%);
-  --shadow-lg: 0 10px 15px oklch(0 0 0 / 8%), 0 4px 6px oklch(0 0 0 / 4%);
-  --shadow-glow: 0 0 20px oklch(0.75 0.12 75 / 15%);
-
-  /* Secondary accent — electric indigo for strong DA pairing with amber */
-  --color-accent-2: var(--accent-2);
-  --color-accent-2-foreground: var(--accent-2-foreground);
+  /* Shadow system — reworked to carry the pink signature */
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 6%);
+  --shadow-sm: 0 1px 3px oklch(0 0 0 / 10%), 0 1px 2px oklch(0 0 0 / 5%);
+  --shadow-md: 0 4px 10px oklch(0 0 0 / 8%), 0 2px 4px oklch(0 0 0 / 4%);
+  --shadow-lg: 0 12px 28px oklch(0 0 0 / 10%), 0 4px 8px oklch(0 0 0 / 4%);
+  --shadow-xl: 0 24px 48px oklch(0 0 0 / 14%), 0 8px 16px oklch(0 0 0 / 6%);
+  --shadow-brand: 0 0 0 1px oklch(from var(--primary) l c h / 12%),
+                   0 14px 40px -10px oklch(from var(--primary) l c h / 28%);
+  --shadow-glow: 0 0 20px oklch(from var(--primary) l c h / 22%),
+                  0 0 4px oklch(from var(--primary) l c h / 14%);
+  --shadow-glow-violet: 0 0 20px oklch(from var(--accent-2) l c h / 22%),
+                         0 0 4px oklch(from var(--accent-2) l c h / 14%);
 }
 
 @layer base {
@@ -105,174 +128,235 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  /* Respect reduced motion globally for decorative animations */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-/* ─── Light Theme — warm ivory, not clinical white ────────────── */
+/* ─── Light theme — warm pearl with pink undertone ─────────────── */
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  /* Surfaces — warm ivory base, not pure white */
-  --background: oklch(0.955 0.008 75);
-  --foreground: oklch(0.14 0.02 260);
-  --card: oklch(0.975 0.006 75);
-  --card-foreground: oklch(0.14 0.02 260);
-  --popover: oklch(0.975 0.006 75);
-  --popover-foreground: oklch(0.14 0.02 260);
+  /* Surfaces — warm pearl, not clinical white */
+  --background: oklch(0.975 0.006 355);
+  --foreground: oklch(0.16 0.02 325);
+  --card: oklch(0.99 0.004 355);
+  --card-foreground: oklch(0.16 0.02 325);
+  --popover: oklch(0.99 0.003 355);
+  --popover-foreground: oklch(0.16 0.02 325);
 
-  /* Surface depth — subtle warm gradient */
-  --surface-0: oklch(0.945 0.008 75);
-  --surface-1: oklch(0.965 0.006 75);
-  --surface-2: oklch(0.98 0.004 75);
+  /* Surface depth — subtle warm gradient, deeper than card */
+  --surface-0: oklch(0.965 0.008 355);
+  --surface-1: oklch(0.985 0.005 355);
+  --surface-2: oklch(1 0 0);
+  --surface-3: oklch(0.995 0.003 355);
 
-  /* Primary — amber/gold signature, darker for light bg contrast */
-  --primary: oklch(0.55 0.18 65);
-  --primary-foreground: oklch(0.98 0.01 75);
+  /* Primary — magenta rose, deep enough for WCAG AA on light */
+  --primary: oklch(0.58 0.21 355);
+  --primary-foreground: oklch(0.985 0.008 355);
 
-  /* Secondary */
-  --secondary: oklch(0.925 0.008 260);
-  --secondary-foreground: oklch(0.20 0.02 260);
-
-  /* Muted — warmer, more visible */
-  --muted: oklch(0.92 0.008 75);
-  --muted-foreground: oklch(0.42 0.02 260);
-
-  /* Accent */
-  --accent: oklch(0.935 0.015 75);
-  --accent-foreground: oklch(0.20 0.025 70);
-
-  /* Accent 2 — electric indigo */
-  --accent-2: oklch(0.50 0.22 270);
-  --accent-2-foreground: oklch(0.97 0.01 270);
-
-  /* Destructive */
-  --destructive: oklch(0.52 0.24 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
-
-  /* Utility — darker borders for better definition */
-  --border: oklch(0.87 0.008 75);
-  --input: oklch(0.87 0.008 75);
-  --ring: oklch(0.55 0.18 65);
-
-  /* Financial — darker for readability on warm bg */
-  --positive: oklch(0.45 0.18 155);
-  --negative: oklch(0.50 0.24 25);
-  --warning: oklch(0.60 0.18 70);
-
-  /* Chart colors — warm-to-cool spectrum */
-  --chart-1: oklch(0.72 0.16 70);
-  --chart-2: oklch(0.62 0.17 70);
-  --chart-3: oklch(0.55 0.12 200);
-  --chart-4: oklch(0.65 0.15 155);
-  --chart-5: oklch(0.58 0.18 310);
-  --chart-6: oklch(0.60 0.10 260);
-  --chart-7: oklch(0.50 0.14 25);
-
-  /* Sidebar */
-  --sidebar: oklch(0.975 0.004 75);
-  --sidebar-foreground: oklch(0.16 0.015 260);
-  --sidebar-primary: oklch(0.62 0.17 70);
-  --sidebar-primary-foreground: oklch(0.98 0.01 75);
-  --sidebar-accent: oklch(0.96 0.012 75);
-  --sidebar-accent-foreground: oklch(0.25 0.02 70);
-  --sidebar-border: oklch(0.91 0.005 260);
-  --sidebar-ring: oklch(0.62 0.17 70);
-}
-
-/* ─── Dark Theme ──────────────────────────────────────────────── */
-
-.dark {
-  /* Surfaces — deep navy-slate with subtle blue undertone */
-  --background: oklch(0.13 0.015 260);
-  --foreground: oklch(0.93 0.008 75);
-  --card: oklch(0.17 0.012 260);
-  --card-foreground: oklch(0.93 0.008 75);
-  --popover: oklch(0.17 0.012 260);
-  --popover-foreground: oklch(0.93 0.008 75);
-
-  /* Surface depth */
-  --surface-0: oklch(0.13 0.015 260);
-  --surface-1: oklch(0.17 0.012 260);
-  --surface-2: oklch(0.21 0.010 260);
-
-  /* Primary — warm amber/gold, brighter in dark mode */
-  --primary: oklch(0.78 0.155 75);
-  --primary-foreground: oklch(0.15 0.02 75);
-
-  /* Secondary */
-  --secondary: oklch(0.22 0.010 260);
-  --secondary-foreground: oklch(0.90 0.008 75);
+  /* Secondary surface */
+  --secondary: oklch(0.93 0.012 325);
+  --secondary-foreground: oklch(0.20 0.025 325);
 
   /* Muted */
-  --muted: oklch(0.22 0.010 260);
-  --muted-foreground: oklch(0.58 0.015 260);
+  --muted: oklch(0.93 0.01 325);
+  --muted-foreground: oklch(0.44 0.025 325);
 
-  /* Accent */
-  --accent: oklch(0.22 0.02 75);
-  --accent-foreground: oklch(0.90 0.01 75);
+  /* Accent (brand-adjacent surface) */
+  --accent: oklch(0.945 0.02 355);
+  --accent-foreground: oklch(0.25 0.04 355);
 
-  /* Accent 2 — brighter indigo for dark */
-  --accent-2: oklch(0.68 0.19 270);
-  --accent-2-foreground: oklch(0.15 0.02 270);
+  /* Accent 2 — electric violet (complementary, H≈295) */
+  --accent-2: oklch(0.52 0.24 295);
+  --accent-2-foreground: oklch(0.98 0.01 295);
 
-  /* Destructive — softer coral in dark mode */
-  --destructive: oklch(0.68 0.18 22);
-  --destructive-foreground: oklch(0.15 0.02 22);
+  /* Aurora triad — decorative gradients & backgrounds */
+  --aurora-a: oklch(0.65 0.22 355); /* rose */
+  --aurora-b: oklch(0.58 0.24 320); /* magenta-plum */
+  --aurora-c: oklch(0.55 0.22 275); /* indigo-violet */
+
+  /* Destructive — keep coral distinct from brand pink (H≈25 vs 355) */
+  --destructive: oklch(0.54 0.24 25);
+  --destructive-foreground: oklch(0.98 0.008 25);
 
   /* Utility */
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.78 0.155 75);
+  --border: oklch(0.88 0.012 325);
+  --input: oklch(0.88 0.012 325);
+  --ring: oklch(0.58 0.21 355);
 
-  /* Financial */
-  --positive: oklch(0.70 0.17 155);
-  --negative: oklch(0.68 0.18 22);
-  --warning: oklch(0.78 0.155 75);
+  /* Financial semantic — deliberately NOT pink/violet */
+  --positive: oklch(0.46 0.18 160);
+  --negative: oklch(0.54 0.24 25);
+  --warning: oklch(0.62 0.18 70);
 
-  /* Chart colors */
-  --chart-1: oklch(0.78 0.155 75);
-  --chart-2: oklch(0.74 0.14 70);
-  --chart-3: oklch(0.72 0.12 200);
-  --chart-4: oklch(0.72 0.15 155);
-  --chart-5: oklch(0.74 0.16 310);
-  --chart-6: oklch(0.72 0.10 260);
-  --chart-7: oklch(0.70 0.14 25);
+  /* Chart palette — warm-to-cool, rose → violet → indigo → emerald */
+  --chart-1: oklch(0.62 0.22 355); /* rose */
+  --chart-2: oklch(0.56 0.22 295); /* violet */
+  --chart-3: oklch(0.54 0.20 255); /* indigo */
+  --chart-4: oklch(0.60 0.15 200); /* teal */
+  --chart-5: oklch(0.56 0.15 160); /* emerald */
+  --chart-6: oklch(0.62 0.16 70);  /* gold */
+  --chart-7: oklch(0.58 0.22 25);  /* coral */
 
   /* Sidebar */
-  --sidebar: oklch(0.15 0.015 260);
-  --sidebar-foreground: oklch(0.93 0.008 75);
-  --sidebar-primary: oklch(0.78 0.155 75);
-  --sidebar-primary-foreground: oklch(0.15 0.02 75);
-  --sidebar-accent: oklch(0.22 0.02 75);
-  --sidebar-accent-foreground: oklch(0.90 0.01 75);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.78 0.155 75);
+  --sidebar: oklch(0.985 0.005 355);
+  --sidebar-foreground: oklch(0.18 0.02 325);
+  --sidebar-primary: oklch(0.58 0.21 355);
+  --sidebar-primary-foreground: oklch(0.98 0.008 355);
+  --sidebar-accent: oklch(0.955 0.015 355);
+  --sidebar-accent-foreground: oklch(0.26 0.04 355);
+  --sidebar-border: oklch(0.91 0.008 325);
+  --sidebar-ring: oklch(0.58 0.21 355);
 }
 
-/* ─── Utility Classes ─────────────────────────────────────────── */
+/* ─── Dark theme — midnight plum, pink signature glow ──────────── */
+
+.dark {
+  /* Surfaces — deep midnight plum, not generic slate */
+  --background: oklch(0.12 0.02 325);
+  --foreground: oklch(0.96 0.01 355);
+  --card: oklch(0.16 0.025 325);
+  --card-foreground: oklch(0.96 0.01 355);
+  --popover: oklch(0.16 0.025 325);
+  --popover-foreground: oklch(0.96 0.01 355);
+
+  /* Surface depth — progressive elevation with subtle pink tilt */
+  --surface-0: oklch(0.12 0.02 325);
+  --surface-1: oklch(0.16 0.025 325);
+  --surface-2: oklch(0.20 0.028 325);
+  --surface-3: oklch(0.24 0.03 325);
+
+  /* Primary — vivid rose magenta, brighter in dark */
+  --primary: oklch(0.72 0.19 355);
+  --primary-foreground: oklch(0.14 0.04 355);
+
+  /* Secondary */
+  --secondary: oklch(0.22 0.028 325);
+  --secondary-foreground: oklch(0.94 0.008 355);
+
+  /* Muted */
+  --muted: oklch(0.22 0.028 325);
+  --muted-foreground: oklch(0.64 0.02 325);
+
+  /* Accent (brand-adjacent surface) */
+  --accent: oklch(0.24 0.05 355);
+  --accent-foreground: oklch(0.94 0.01 355);
+
+  /* Accent 2 — electric violet */
+  --accent-2: oklch(0.70 0.22 295);
+  --accent-2-foreground: oklch(0.14 0.04 295);
+
+  /* Aurora triad */
+  --aurora-a: oklch(0.72 0.21 355);
+  --aurora-b: oklch(0.60 0.24 315);
+  --aurora-c: oklch(0.64 0.22 270);
+
+  /* Destructive — coral, clearly warmer than the brand pink */
+  --destructive: oklch(0.68 0.20 25);
+  --destructive-foreground: oklch(0.14 0.04 25);
+
+  /* Utility */
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.72 0.19 355);
+
+  /* Financial semantic */
+  --positive: oklch(0.72 0.17 160);
+  --negative: oklch(0.70 0.19 25);
+  --warning: oklch(0.80 0.16 75);
+
+  /* Chart palette */
+  --chart-1: oklch(0.74 0.21 355); /* rose */
+  --chart-2: oklch(0.70 0.22 295); /* violet */
+  --chart-3: oklch(0.70 0.17 255); /* indigo */
+  --chart-4: oklch(0.74 0.14 200); /* teal */
+  --chart-5: oklch(0.72 0.15 160); /* emerald */
+  --chart-6: oklch(0.78 0.15 75);  /* gold */
+  --chart-7: oklch(0.70 0.20 25);  /* coral */
+
+  /* Sidebar */
+  --sidebar: oklch(0.14 0.022 325);
+  --sidebar-foreground: oklch(0.96 0.01 355);
+  --sidebar-primary: oklch(0.72 0.19 355);
+  --sidebar-primary-foreground: oklch(0.14 0.04 355);
+  --sidebar-accent: oklch(0.24 0.05 355);
+  --sidebar-accent-foreground: oklch(0.94 0.01 355);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.72 0.19 355);
+}
+
+/* ─── Utility classes ─────────────────────────────────────────── */
 
 /* Financial number formatting — use on monetary amounts */
 .font-financial {
   font-family: var(--font-mono);
-  font-feature-settings: "tnum", "zero";
+  font-feature-settings: "tnum", "zero", "ss01";
   letter-spacing: -0.01em;
+}
+
+/* Tabular numerics even in sans — for dashboards */
+.font-tnum {
+  font-feature-settings: "tnum", "zero";
 }
 
 /* Premium glow on primary elements */
 .glow-primary {
-  box-shadow: 0 0 20px oklch(0.78 0.12 75 / 15%), 0 0 4px oklch(0.78 0.12 75 / 8%);
+  box-shadow: var(--shadow-glow);
+}
+.glow-violet {
+  box-shadow: var(--shadow-glow-violet);
 }
 
-/* Subtle surface gradient for premium card feel */
+/* Surface gradient for premium card feel */
 .surface-elevated {
   background: linear-gradient(
-    135deg,
-    var(--card) 0%,
-    oklch(from var(--card) l calc(c + 0.005) h) 100%
+    160deg,
+    oklch(from var(--card) calc(l + 0.012) c h) 0%,
+    var(--card) 60%,
+    oklch(from var(--card) calc(l - 0.006) c h) 100%
   );
 }
 
-/* Scanline texture — subtle retro-digital accent */
+/* Aurora mesh — decorative brand wash for hero / empty-state surfaces */
+.bg-aurora-mesh {
+  background-image:
+    radial-gradient(60% 80% at 20% 15%, oklch(from var(--aurora-a) l c h / 18%) 0%, transparent 55%),
+    radial-gradient(50% 70% at 85% 25%, oklch(from var(--aurora-b) l c h / 14%) 0%, transparent 60%),
+    radial-gradient(70% 80% at 60% 110%, oklch(from var(--aurora-c) l c h / 20%) 0%, transparent 55%);
+  background-attachment: local;
+}
+.bg-aurora-mesh-soft {
+  background-image:
+    radial-gradient(55% 70% at 15% 10%, oklch(from var(--aurora-a) l c h / 10%) 0%, transparent 60%),
+    radial-gradient(60% 70% at 95% 0%, oklch(from var(--aurora-b) l c h / 8%) 0%, transparent 60%),
+    radial-gradient(70% 80% at 50% 120%, oklch(from var(--aurora-c) l c h / 10%) 0%, transparent 60%);
+}
+
+/* Dotted grid background — for hero sections */
+.bg-grid-dots {
+  background-image: radial-gradient(circle, oklch(from var(--foreground) l c h / 8%) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Diagonal line pattern — for admin/demo mode strips */
+.bg-stripe-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    oklch(from var(--primary) l c h / 8%) 0,
+    oklch(from var(--primary) l c h / 8%) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+/* Subtle scanline texture — retro-cockpit accent */
 .texture-scanlines {
   background-image: repeating-linear-gradient(
     0deg,
@@ -288,7 +372,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.03;
+  opacity: 0.04;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
@@ -311,13 +395,92 @@
   animation: shimmer 1.8s ease-in-out infinite;
 }
 
-/* Dotted grid background — for hero sections */
-.bg-grid-dots {
-  background-image: radial-gradient(circle, oklch(from var(--foreground) l c h / 6%) 1px, transparent 1px);
-  background-size: 20px 20px;
+/* Pulse glow — subtle attention on alerts / sync-in-progress */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 35%); }
+  50% { box-shadow: 0 0 0 8px oklch(from var(--primary) l c h / 0%); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2.2s ease-out infinite;
+}
+
+/* Aurora drift — slow brand gradient animation for hero accents */
+@keyframes aurora-drift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-aurora {
+  background-size: 220% 220%;
+  animation: aurora-drift 18s ease-in-out infinite;
+}
+
+/* Glass surface — frosted brand-tinted glassmorphism, used sparingly */
+.glass-surface {
+  background: linear-gradient(
+    135deg,
+    oklch(from var(--card) l c h / 72%) 0%,
+    oklch(from var(--card) l c h / 58%) 100%
+  );
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid oklch(from var(--foreground) l c h / 8%);
+}
+
+/* Hair separator — subtle gradient line */
+.hair-rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(from var(--foreground) l c h / 14%) 50%,
+    transparent 100%
+  );
 }
 
 /* Focus glow ring */
 .focus-glow:focus-visible {
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px oklch(from var(--primary) l c h / 40%), 0 0 12px oklch(from var(--primary) l c h / 15%);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px oklch(from var(--primary) l c h / 45%),
+    0 0 14px oklch(from var(--primary) l c h / 22%);
+}
+
+/* Brand gradient text — use sparingly for hero titles */
+.text-aurora {
+  background-image: linear-gradient(
+    92deg,
+    var(--aurora-a) 0%,
+    var(--aurora-b) 48%,
+    var(--aurora-c) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% 100%;
+}
+
+/* Conic rotating halo — for brand marks */
+@keyframes halo-spin {
+  to { transform: rotate(360deg); }
+}
+.halo-spin {
+  animation: halo-spin 12s linear infinite;
+}
+
+/* Safe-area insets for PWA */
+.safe-area-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+.safe-area-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+/* Numeric diff animation helper */
+@keyframes number-flip {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-number-flip {
+  animation: number-flip 320ms var(--ease-out-expo);
 }

@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 
 type Theme = 'dark' | 'light'
@@ -39,35 +40,41 @@ export function useTheme() {
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme()
+  const prefersReducedMotion = useReducedMotion()
 
   return (
     <button
       type="button"
       onClick={toggle}
-      className="relative flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-all duration-200 hover:bg-accent/50"
+      className="group relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-transparent text-sm text-muted-foreground transition-all duration-200 hover:border-primary/20 hover:bg-accent/40 hover:text-primary"
       title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
       aria-label="Basculer le thème"
     >
-      {/* Sun */}
-      <span
-        className={`absolute transition-all duration-300 ${
-          theme === 'dark'
-            ? 'scale-0 rotate-90 opacity-0'
-            : 'scale-100 rotate-0 opacity-100'
-        }`}
-      >
-        ☀
-      </span>
-      {/* Moon */}
-      <span
-        className={`absolute transition-all duration-300 ${
-          theme === 'dark'
-            ? 'scale-100 rotate-0 opacity-100'
-            : 'scale-0 -rotate-90 opacity-0'
-        }`}
-      >
-        ☾
-      </span>
+      <AnimatePresence initial={false} mode="wait">
+        {theme === 'dark' ? (
+          <motion.span
+            key="moon"
+            initial={prefersReducedMotion ? false : { opacity: 0, rotate: -90, scale: 0.6 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            {...(prefersReducedMotion ? {} : { exit: { opacity: 0, rotate: 90, scale: 0.6 } })}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="text-base"
+          >
+            ☾
+          </motion.span>
+        ) : (
+          <motion.span
+            key="sun"
+            initial={prefersReducedMotion ? false : { opacity: 0, rotate: 90, scale: 0.6 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            {...(prefersReducedMotion ? {} : { exit: { opacity: 0, rotate: -90, scale: 0.6 } })}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="text-base"
+          >
+            ☀
+          </motion.span>
+        )}
+      </AnimatePresence>
     </button>
   )
 }

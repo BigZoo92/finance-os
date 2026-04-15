@@ -1,14 +1,30 @@
-# Finance-OS -- Direction Artistique
+# Finance-OS — Direction Artistique
 
-> **Derniere mise a jour** : 2026-04-08
+> **Dernière mise à jour** : 2026-04-15
 > **Maintenu par** : agents (Claude, Codex) + humain
-> Source de verite pour l'identite visuelle. Toute modification UI doit s'aligner sur ce document.
+> Source de vérité pour l'identité visuelle. Toute modification UI doit s'aligner sur ce document.
+>
+> La référence détaillée reste [`DESIGN.md`](../../DESIGN.md) et
+> [`docs/frontend/design-system.md`](../frontend/design-system.md) ;
+> ce document est le résumé tenu pour les chats externes et les agents
+> qui n'ont pas accès à la racine du repo.
 
 ---
 
-## Vision
+## Vision — Aurora Pink
 
-Finance-OS est un **cockpit de finances personnelles haut de gamme** : un systeme vivant, elegant et precis. L'esthetique doit evoquer un tableau de bord financier professionnel, pas un SaaS generique.
+Finance-OS est un **cockpit financier personnel haut de gamme**.
+Pas un SaaS B2B. Pas un dashboard admin générique.
+
+La direction artistique actuelle, **Aurora Pink**, s'inspire de l'aurore
+urbaine, du néon parisien au coucher de soleil, et des interfaces ciné-SF
+contemporaines, retenues pour un usage quotidien. Le rose est la signature
+de la marque ; le violet l'étend en secondaire ; les données financières
+gardent leurs couleurs sémantiques intactes.
+
+**Parti pris en une phrase :** *un cockpit dense et chaud où le rose pulse
+comme une signature, le violet étend l'intention en secondaire, et les
+données restent lisibles comme un tableau de bord d'avion.*
 
 ---
 
@@ -16,351 +32,126 @@ Finance-OS est un **cockpit de finances personnelles haut de gamme** : un system
 
 | Principe | Description |
 |---|---|
-| **Clarte avant densite** | L'information est structuree pour une lecture rapide. Pas de surcharge. |
-| **Hierarchie typographique forte** | Les niveaux de lecture sont immediatement perceptibles. |
+| **Clarté avant densité** | L'information structurée pour une lecture rapide. Pas de surcharge. |
+| **Hiérarchie typographique forte** | Les niveaux de lecture sont immédiatement perceptibles. |
 | **Respiration intentionnelle** | Les espaces blancs sont des choix de design, pas du vide. |
-| **Motion communicative** | L'animation sert la comprehension, jamais la decoration. |
-| **Identite distinctive** | Finance-OS ne ressemble pas a un template SaaS. |
+| **Motion communicative** | L'animation sert la compréhension, jamais la décoration. |
+| **Identité distinctive** | Finance-OS ne ressemble pas à un template SaaS. |
 
 ---
 
-## Palette de couleurs (OKLch)
+## Palette — OKLCH
 
-L'ensemble du systeme utilise l'espace colorimetrique **OKLch** (perceptuellement uniforme), ideal pour le dark mode.
-
-### Tokens semantiques
+### Tokens sémantiques
 
 | Token | Light | Dark |
 |---|---|---|
-| `--background` | `oklch(0.955 0.008 75)` ivoire chaud | `oklch(0.13 0.015 260)` navy-slate profond |
-| `--foreground` | `oklch(0.20 0.02 260)` quasi noir | `oklch(0.93 0.01 80)` blanc chaud |
-| `--card` | `oklch(0.98 0.005 80)` | `oklch(0.17 0.015 260)` |
-| `--primary` | `oklch(0.65 0.18 75)` ambre/or | `oklch(0.75 0.16 75)` ambre/or clair |
-| `--secondary` | `oklch(0.94 0.01 260)` | `oklch(0.22 0.015 260)` |
-| `--destructive` | `oklch(0.55 0.22 25)` corail | `oklch(0.65 0.20 25)` corail clair |
-| `--border` | `oklch(0.88 0.015 75)` | `oklch(1 0 0 / 8%)` blanc transparent |
-| `--ring` | `oklch(0.70 0.16 75)` focus ambre | `oklch(0.75 0.16 75)` |
+| `--background` | `oklch(0.975 0.006 355)` pearl chaud | `oklch(0.12 0.02 325)` midnight plum |
+| `--foreground` | `oklch(0.16 0.02 325)` quasi-noir plum | `oklch(0.96 0.01 355)` blanc rosé |
+| `--card` | `oklch(0.99 0.004 355)` | `oklch(0.16 0.025 325)` |
+| `--primary` | `oklch(0.58 0.21 355)` rose profond | `oklch(0.72 0.19 355)` rose magenta |
+| `--accent-2` | `oklch(0.52 0.24 295)` plum riche | `oklch(0.70 0.22 295)` violet électrique |
+| `--destructive` | `oklch(0.54 0.24 25)` coral | `oklch(0.68 0.20 25)` coral clair |
+| `--border` | `oklch(0.88 0.012 325)` | `oklch(1 0 0 / 9%)` |
+| `--ring` | `oklch(0.58 0.21 355)` rose | `oklch(0.72 0.19 355)` rose |
 
-### Couleurs financieres
+### Aurora triad (gradients brand)
+
+| Token | Rôle |
+|---|---|
+| `--aurora-a` | Pôle rose |
+| `--aurora-b` | Passage magenta-plum |
+| `--aurora-c` | Ancrage indigo-violet |
+
+Usage : `.text-aurora`, `.bg-aurora-mesh`, `Button variant="aurora"`,
+`BrandMark`, `RangePill`, `BorderGlow`.
+
+### Couleurs financières
 
 | Token | Valeur | Usage |
 |---|---|---|
-| `--positive` | emerald-500 | Revenus, tendances positives |
-| `--negative` | corail (destructive) | Depenses, tendances negatives |
-| `--warning` | amber | Cooldown, alertes moderees |
-| `--info` | sky | Sync en cours, informations |
+| `--positive` | emerald H=160° | Revenus, tendances positives |
+| `--negative` | coral H=25° (≠ rose brand) | Dépenses, tendances négatives |
+| `--warning` | amber H=70-75° | Cooldown, alertes modérées |
 
-### Couleur primaire : Ambre/Or
+**Règle non négociable :** jamais de rose ou de violet pour communiquer un
+statut financier. Le rose = identité, pas signal.
 
-- Hue OKLch ~75 degres
-- C'est la signature visuelle de Finance-OS
-- Utilisee pour : actions primaires, focus rings, etats actifs, accents
-- **Jamais de bleu generique SaaS** comme couleur primaire
+### Couleur primaire : rose magenta
 
-### Palette de graphiques (7 series)
+- Hue OKLCH ~355°
+- Signature visuelle de Finance-OS
+- Utilisée pour : actions primaires, focus rings, états actifs, accents
+- **Jamais d'amber/or, plus jamais de bleu SaaS** comme couleur primaire
 
-```
-chart-1 -> chart-7 : palette harmonieuse basee sur la famille ambre/or
-```
+### Couleur secondaire : violet électrique
 
----
+- Hue OKLCH ~295°
+- Utilisée pour : admin badges, accents complémentaires, accent-2 surfaces
+- Pair idéalement avec le rose pour le dégradé Aurora (rose → magenta → violet)
 
-## Profondeur de surface
+### Palette de graphiques (7 séries)
 
-3 niveaux de profondeur pour la hierarchie visuelle :
-
-| Niveau | Token | Usage |
-|---|---|---|
-| Surface-0 | `--surface-0` | Arriere-plan page |
-| Surface-1 | `--surface-1` | Cartes, elements de contenu |
-| Surface-2 | `--surface-2` | Hover, elements eleves, popovers |
+`--chart-1` à `--chart-7` : rose → violet → indigo → teal → emerald → gold → coral.
+Ordre stable pour garantir la cohérence entre les widgets.
 
 ---
 
 ## Typographie
 
-| Role | Font | Exemple |
-|---|---|---|
-| Corps et titres | **Inter Variable** | Texte general, labels, headings |
-| Montants financiers | **JetBrains Mono Variable** | `12 450,00 EUR` |
-| Display | **Inter Variable** | Grands titres decoratifs |
-
-### Classe utilitaire
-```css
-.font-financial {
-  font-family: var(--font-mono);  /* JetBrains Mono */
-  font-variant-numeric: tabular-nums;
-}
-```
-
-### Echelle typographique
-- `text-xs` (12px), `text-sm` (14px), `text-base` (16px)
-- `text-2xl`, `text-3xl`, `text-4xl` pour les KPI et grands chiffres
-- Poids : `font-medium`, `font-semibold`, `font-bold`
+- **Inter Variable** — Sans-serif, corps + titres. Axes variables : `wght`, `opsz`. Features : `cv11`, `ss01`, `ss03`.
+- **JetBrains Mono Variable** — Mono, montants via `.font-financial`, glyphes ASCII, terminal accents.
+- **Compressa VF** — Chargée à la demande, **uniquement** par le composant `TextPressure` pour le hero "Cockpit".
 
 ---
 
-## Accents ASCII
+## Composants signature
 
-Finance-OS utilise des **accents ASCII** comme ponctuation visuelle distinctive :
+### React Bits (TS + Tailwind)
 
-```
-◈  ↔  ◆  △  ◎  ▣  ⊞  ⚙  ♡
-```
+Copiés manuellement et adaptés dans `apps/web/src/components/reactbits/`
+avec attribution MIT + Commons Clause. Installés : `TextPressure`,
+`RotatingText`, `ShinyText`, `VariableProximity`, `CountUp`, `SpotlightCard`,
+`BorderGlow`, `AuroraShape`.
 
-Usage : separateurs, labels de section, indicateurs d'etat. Ne jamais forcer -- utiliser quand ca sert la lisibilite.
+### Surfaces canoniques Finance-OS
 
----
-
-## Theme Dark Mode
-
-- Activation par classe `.dark` sur `<html>`
-- **Le dark mode est le mode par defaut**
-- Theme color PWA : `#0b1020`
-- Pas de blanc pur -- fond `oklch(0.13 0.015 260)` (navy-slate profond)
-- Texte `oklch(0.93 0.01 80)` (blanc chaud, pas blanc pur)
-- La sidebar a ses propres tokens separes pour distinction visuelle
+- **`BrandMark`** — logo avec halo conic rotatif
+- **`AuroraBackdrop`** — wash ambiant pour hero
+- **`KpiTile`** — KPI unique source de vérité (SpotlightCard + CountUp)
+- **`Panel`** — workhorse data-dense avec rail coloré optionnel
+- **`RangePill`** — segmented control animé brand
+- **`PageHeader`** — eyebrow + titre display + description + actions
+- **`StatusDot`** — indicateur `ok/warn/err/idle/live/brand/violet`
 
 ---
 
-## Textures CSS
+## Motion
 
-| Classe | Effet |
-|---|---|
-| `.texture-scanlines` | Effet retro digital (lignes horizontales subtiles) |
-| `.texture-grain` | Bruit subtil overlay |
-| `.bg-grid-dots` | Fond pointille |
-| `.animate-shimmer` | Animation skeleton loading |
-| `.glow-primary` | Halo premium sur elements primaires |
-| `.surface-elevated` | Gradient carte eleve |
+- Courbes : `--ease-out-expo` (entrées), `--ease-spring` (micro-interactions), `--ease-aurora` (brand drift)
+- Durées : `fast 120ms`, `normal 200ms`, `slow 350ms`, `enter 280ms`, `exit 180ms`
+- Animations décoratives (`halo-spin`, `aurora-drift`, `pulse-glow`,
+  `animate-shimmer`) figées automatiquement sous `prefers-reduced-motion`
 
 ---
 
-## Composants UI
+## Anti-patterns
 
-### Bibliotheque
-- **shadcn/ui** style "new-york" avec **Radix UI** comme primitives headless
-- **CVA** (Class Variance Authority) pour la gestion des variantes
-- **tailwind-merge** + **clsx** via utilitaire `cn()`
-
-### Composants disponibles
-
-| Composant | Variantes | Particularites |
-|---|---|---|
-| **Button** | 6 variantes x 7 tailles | Active scale 97%, SVG auto-size, focus ring 60% |
-| **Badge** | 6 variantes, rounded-full | Pills pour statuts, couleurs contextuelles |
-| **Card** | Header/Title/Description/Action/Content/Footer | Container queries pour responsive interne |
-| **Input** | File support, selection colors | Etats disabled, aria-invalid |
-| **Avatar** | Image + Fallback + Badge + Group | Radix-based |
-| **Separator** | Horizontal/Vertical | Divider line |
-
-### Pattern CVA
-
-```tsx
-const buttonVariants = cva("base-classes", {
-  variants: {
-    variant: { default: "...", destructive: "...", ghost: "..." },
-    size: { default: "h-9 px-4", sm: "h-8 px-3", lg: "h-11 px-6" },
-  },
-  defaultVariants: { variant: "default", size: "default" },
-})
-```
-
-### Attributs data
-- `data-slot` : debugging et styling flexible
-- `data-variant`, `data-size` : scoping additionnel
+- **AI slop** : gradients arc-en-ciel, glow gratuit, glassmorphism partout
+- **Clone SaaS** : sidebar à 30 items, shadcn par défaut
+- **Rose sémantique** : le rose signale l'identité, pas un état métier
+- **Mur ASCII** : les glyphes au service, jamais du motif
+- **Animations bloquantes** : scroll-jacking, parallax excessif
+- **Dépendances non justifiées** : React Bits est copie manuelle, pas un package npm
 
 ---
 
-## Icones
+## Historique
 
-- **lucide-react** exclusivement
-- Sizing via `[&_svg]:size-4` (auto-sizing dans les composants)
-- Tailles : `size-3` (small), `size-4` (default), `size-5` (large)
-- `pointer-events-none` + `shrink-0` sur tous les SVG
-
----
-
-## Motion & Interactions
-
-### Philosophie
-**Le mouvement sert la comprehension, jamais la decoration.**
-
-### Dependances
-- **motion/react** (Framer Motion v12+) : page transitions, layout animations, springs
-- **CSS transitions** : hover, focus, color changes
-- **CSS keyframes** : shimmer, pulse
-- **Regle** : CSS d'abord, motion seulement si CSS insuffisant (layout, spring, exit)
-
-### Courbes d'animation
-
-| Courbe | Bezier | Usage |
-|---|---|---|
-| `--ease-out-expo` | `cubic-bezier(0.16, 1, 0.3, 1)` | Entrees rapides |
-| `--ease-out-quart` | `cubic-bezier(0.25, 1, 0.5, 1)` | Standard |
-| `--ease-in-out-quart` | `cubic-bezier(0.76, 0, 0.24, 1)` | Symétrique |
-| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Rebond subtil |
-
-### Durees
-
-| Token | Valeur | Usage |
-|---|---|---|
-| `--duration-fast` | 120ms | Hover, micro-interactions |
-| `--duration-normal` | 200ms | Transitions standard |
-| `--duration-slow` | 350ms | Transitions complexes |
-| `--duration-enter` | 250ms | Entrees |
-| `--duration-exit` | 180ms | Sorties (plus rapide) |
-
-### Micro-interactions implementees
-- Sidebar active indicator (layoutId spring)
-- Mobile tab indicator
-- Barres de progression animees
-- Page-enter fade + translateY
-- Mobile drawer bottom-sheet
-- Sidebar collapse (CSS transition)
-- Hover states subtils
-- Focus ring 3px avec 50% opacite
-
-### Interdit
-- Stagger animations sur les listes
-- Parallax
-- SVG morphing
-- Auto-play loops
-- Scroll-jacking
-- Librairies d'animation tierces (autre que motion/react)
-
-### Inspirations
-- **Apple Stocks** : transitions claires
-- **Linear** : sidebar indicators
-- **Vercel Dashboard** : motion restrainte
-
-### Anti-inspirations
-- Dribbble-style spectacle
-- "Everything bounces"
-- Delay chains
-- Shape morphing
-
----
-
-## Layout
-
-### Structure desktop
-
-```
-+--sidebar (240px / 68px collapsed)--+--main content (max-w-7xl, mx-auto)--+
-|                                     |                                      |
-| Logo                                | Topbar (search + avatar)             |
-| Navigation                          | Range selector + auth indicator      |
-| (5 items + soon badges)             | Secondary nav (ancres sections)      |
-|                                     |                                      |
-|                                     | Sections dashboard                   |
-|                                     | (grilles responsives)                |
-+-------------------------------------+--------------------------------------+
-```
-
-### Structure mobile
-- Sidebar cachee (bottom nav 5 items + drawer)
-- Touch targets minimum 44px
-- Safe area respectee
-- Tables en scroll horizontal
-
-### Grilles responsives
-
-| Breakpoint | Columns | Usage |
-|---|---|---|
-| Default (mobile) | 1 | Stack vertical |
-| `sm:` (640px) | 2 | Grilles simples |
-| `md:` (768px) | 2 | Sidebar visible |
-| `lg:` (1024px) | 2 | Grilles dashboard |
-| `xl:` (1280px) | 4 | Full dashboard grid |
-
-### Container queries
-- `@container/card-header` pour le responsive interne aux cards
-
----
-
-## Spacing
-
-| Token | Valeur | Usage |
-|---|---|---|
-| Base | 4px | Unite de spacing |
-| `gap-2` | 8px | Espacement elements proches |
-| `gap-3` | 12px | Espacement cards |
-| `gap-4` | 16px | Espacement sections |
-| `gap-6` | 24px | Espacement majeur |
-| Card padding | `py-6 px-6` | Contenu des cards |
-| Section spacing | `space-y-8` | Entre sections |
-
-### Radius
-
-| Token | Valeur |
-|---|---|
-| `--radius-sm` | Badges |
-| Base (`--radius`) | `0.625rem` (10px) |
-| `--radius-2xl` | Bottom sheets |
-
----
-
-## Ombres
-
-| Token | Usage |
-|---|---|
-| `--shadow-xs` | Elements subtils |
-| `--shadow-sm` | Cards |
-| `--shadow-md` | Popovers |
-| `--shadow-lg` | Modals |
-| `--shadow-glow` | Effet premium (halo ambre) |
-
----
-
-## Data visualization
-
-- **Pas de librairie tierce** (pas de recharts, d3 chart lib, visx)
-- Sparklines SVG custom : viewbox `320x112`, stroke 3px, caps arrondis
-- Couleur : `var(--color-chart-2)`
-- Hover interactif avec point highlighting
-- Tables de donnees minimalistes : borders sur rows uniquement, headers muted
-- Montants alignes a droite en `font-financial`
-- Couleurs semantiques : `text-destructive` (depenses), `text-emerald-500` (revenus)
-
----
-
-## Etats UI
-
-Chaque widget doit supporter ces etats :
-
-| Etat | Pattern |
-|---|---|
-| **Loading** | "Chargement..." + skeleton pulse |
-| **Empty** | Texte muted centre ("Aucune donnee exploitable") |
-| **Success** | Donnees normales |
-| **Degraded** | Donnees stale avec badge warning |
-| **Error** | Texte destructive + request ID + bouton retry |
-| **Offline** | Message "Reseau requis" |
-| **Permission-gated** | Admin-only avec CTA login |
-
----
-
-## Patterns recurrents
-
-| Pattern | Implementation |
-|---|---|
-| **Metric cards** | Grand chiffre + label + indicateur tendance (up/down/flat) |
-| **Status badges** | Couleur par etat (emerald/amber/sky/destructive) |
-| **Range selector** | Boutons 7j/30j/90j |
-| **Toast notifications** | Fixed bottom-right, titre + description, couleurs par severite |
-| **Banners** | Pleine largeur, gradient, CTA, role alert |
-| **PWA install prompt** | Fixed bottom-center, cooldown 7j |
-| **Empty states** | Texte muted, message contextuel |
-
----
-
-## A eviter absolument
-
-- AI slop / esthetique generique IA
-- Clone de template SaaS
-- Blanc pur (`#fff`) en dark mode
-- Animations bloquantes
-- Dependencies de visualization injustifiees
-- Emojis dans l'interface (sauf demande explicite)
-- Couleur primaire bleue
+- **2026-04-15** — Refonte complète "Aurora Pink" : rose magenta primary,
+  violet accent-2, midnight plum dark / pearl chaud light, intégration
+  React Bits (TextPressure, RotatingText, etc.), nouvelles surfaces
+  canoniques (`KpiTile`, `Panel`, `PageHeader`, `RangePill`, `BrandMark`,
+  `AuroraBackdrop`, `StatusDot`).
+- **Avant 2026-04** — Ancienne direction amber/or + navy-slate. Toutes les
+  occurrences doivent avoir été migrées vers Aurora Pink.

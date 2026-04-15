@@ -15,6 +15,7 @@ import { pushSettingsQueryOptionsWithMode } from '@/features/notifications/query
 import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import { AsciiStatusLine, AsciiDivider } from '@/components/ui/ascii-brand'
+import { PageHeader } from '@/components/surfaces/page-header'
 
 export const Route = createFileRoute('/_app/sante')({
   loader: async ({ context }) => {
@@ -122,10 +123,12 @@ function SantePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Santé</h2>
-        <p className="text-sm text-muted-foreground">Vue consolidée de l'état du système</p>
-      </div>
+      <PageHeader
+        eyebrow="Diagnostics"
+        icon="♡"
+        title="Santé"
+        description="État consolidé des intégrations, de la synchronisation et du pipeline dérivé."
+      />
 
       {/* Overall status hero */}
       <Card className={

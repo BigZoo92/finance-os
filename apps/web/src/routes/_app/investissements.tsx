@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
-import { Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -9,6 +8,9 @@ import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query
 import type { DashboardRange } from '@/features/dashboard-types'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import { formatMoney, formatQuantity } from '@/lib/format'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -61,33 +63,35 @@ function InvestissementsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Investissements</h2>
-        <p className="text-sm text-muted-foreground">Positions d'investissement et valorisation</p>
+      <PageHeader
+        eyebrow="Positions & valorisation"
+        icon="△"
+        title="Investissements"
+        description="Vue des positions d'investissement, coût d'acquisition et PnL latent."
+      />
+
+      {/* Totals */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <KpiTile
+          label="Valorisation totale"
+          value={totalValue}
+          display={formatMoney(totalValue)}
+          tone="brand"
+          size="lg"
+          loading={summaryQuery.isPending}
+          hint={`${positions.length} position${positions.length !== 1 ? 's' : ''} active${positions.length !== 1 ? 's' : ''}`}
+        />
+        <KpiTile
+          label="Période"
+          display={range}
+          tone="violet"
+          loading={summaryQuery.isPending}
+          hint="Cette vue ne filtre pas encore par date."
+        />
       </div>
 
-      {/* Total */}
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Valorisation totale</p>
-          {summaryQuery.isPending ? (
-            <div className="mt-2 h-10 w-48 animate-pulse rounded bg-muted" />
-          ) : (
-            <p className="mt-1 font-financial text-4xl font-semibold tracking-tight">
-              {formatMoney(totalValue)}
-            </p>
-          )}
-          <p className="mt-1 text-xs text-muted-foreground">{positions.length} position{positions.length !== 1 ? 's' : ''} active{positions.length !== 1 ? 's' : ''}</p>
-        </CardContent>
-      </Card>
-
       {/* Positions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Positions</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Panel title="Positions" icon={<span aria-hidden="true">△</span>} tone="brand">
           {summaryQuery.isPending ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }, (_, index) => `investments-position-skeleton-${index + 1}`).map(key => (
@@ -164,8 +168,7 @@ function InvestissementsPage() {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </Panel>
     </div>
   )
 }

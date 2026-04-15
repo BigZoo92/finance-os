@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { RangePill } from '@/components/surfaces/range-pill'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -110,41 +112,33 @@ function DepensesPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Dépenses</h2>
-          <p className="text-sm text-muted-foreground">Transactions, budgets et projections</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={transactions.length === 0}
-            onClick={() => exportTransactionsCsv(transactions, range)}
-          >
-            Export CSV
-          </Button>
-          <div className="inline-flex items-center rounded-lg border border-border bg-surface-1 p-1">
-            {RANGE_OPTIONS.map(option => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => navigate({ search: { range: option.value } })}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                  range === option.value
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                style={{ transitionDuration: 'var(--duration-fast)' }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Transactions & budgets"
+        icon="↔"
+        title="Dépenses"
+        description="Vos transactions, structure de dépenses, budgets catégoriels et projection de fin de mois."
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={transactions.length === 0}
+              onClick={() => exportTransactionsCsv(transactions, range)}
+            >
+              <span aria-hidden="true">↓</span>
+              Export CSV
+            </Button>
+            <RangePill
+              layoutId="depenses-range"
+              ariaLabel="Période"
+              options={RANGE_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
+              value={range}
+              onChange={next => navigate({ search: { range: next } })}
+            />
+          </>
+        }
+      />
 
       {/* Expense structure + budgets */}
       <div className="grid gap-6 md:grid-cols-2">

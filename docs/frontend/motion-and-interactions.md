@@ -22,6 +22,7 @@ La motion dans Finance-OS sert **la compréhension**, jamais la décoration. Cha
 | `--ease-out-quart` | `cubic-bezier(0.25, 1, 0.5, 1)` | Transitions standard |
 | `--ease-in-out-quart` | `cubic-bezier(0.76, 0, 0.24, 1)` | Transitions bidirectionnelles |
 | `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Micro-interactions (attention) |
+| `--ease-aurora` | `cubic-bezier(0.22, 1, 0.36, 1)` | Transitions brand (gradient drift, halo) |
 
 ## Durées (tokens CSS)
 
@@ -30,8 +31,33 @@ La motion dans Finance-OS sert **la compréhension**, jamais la décoration. Cha
 | `--duration-fast` | 120ms | Hover states, couleurs |
 | `--duration-normal` | 200ms | Transitions de propriété standard |
 | `--duration-slow` | 350ms | Sidebar collapse, expansions |
-| `--duration-enter` | 250ms | Entrées de page, modals |
+| `--duration-enter` | 280ms | Entrées de page, modals |
 | `--duration-exit` | 180ms | Fermetures (sorties plus rapides) |
+
+## Animations décoratives brand (Aurora Pink)
+
+| Classe | Rôle | Durée |
+|--------|------|-------|
+| `.animate-aurora` | Drift lent du gradient brand sur les hero / shapes | 18s loop |
+| `.halo-spin` | Rotation lente du halo conic du `BrandMark` | 18s loop |
+| `.animate-pulse-glow` | Respiration subtile sur alertes actives | 2.2s loop |
+| `.animate-shimmer` | Loading premium rose-tinted | 1.8s loop |
+| `.animate-number-flip` | Révélation verticale d'un nombre (KPI diff) | 320ms |
+
+Ces animations sont **figées automatiquement** sous `prefers-reduced-motion`
+via le layer `@layer base` de `globals.css` (toute durée ramenée à 0.01ms).
+
+## Composants motion signature (React Bits adaptés)
+
+| Composant | Motion clé | Perf |
+|---|---|---|
+| `TextPressure` | RequestAnimationFrame + `font-variation-settings` | Coût CPU : faible, plafonné par le navigateur. Désactivé sous reduced-motion. |
+| `RotatingText` | AnimatePresence + stagger per-character | Light. Auto-pause reduced-motion. |
+| `SpotlightCard` | Radial gradient suivant curseur | CSS-only. Désactivé reduced-motion. |
+| `BorderGlow` | Conic mask animé + box-shadow calc | Moyen — limite à 1 instance à la fois. Désactivé reduced-motion. |
+| `CountUp` | Motion spring sur useMotionValue | Light. Tween skippé reduced-motion. |
+| `VariableProximity` | RAF + fontVariationSettings | Light. Gèle au repos reduced-motion. |
+| `AuroraShape` | `.animate-aurora` CSS | Quasi-gratuit. |
 
 ## Micro-interactions implémentées
 
