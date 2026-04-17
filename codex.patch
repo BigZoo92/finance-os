@@ -1,19 +1,13 @@
-diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
-index aa5c1ca..6dd141e 100644
---- a/apps/desktop/src-tauri/tauri.conf.json
-+++ b/apps/desktop/src-tauri/tauri.conf.json
-@@ -28,13 +28,6 @@
-     ]
-   },
-   "bundle": {
--    "active": true,
--    "targets": [
--      "deb",
--      "appimage"
--    ],
--    "icon": [
--      "icons/icon.png"
--    ]
-+    "active": false
-   }
+diff --git a/apps/desktop/src-tauri/capabilities/default.json b/apps/desktop/src-tauri/capabilities/default.json
+index 5e37a9f..6069305 100644
+--- a/apps/desktop/src-tauri/capabilities/default.json
++++ b/apps/desktop/src-tauri/capabilities/default.json
+@@ -2,7 +2,5 @@
+   "identifier": "default",
+   "description": "Default capability for Finance-OS desktop shell.",
+   "windows": ["main"],
+-  "permissions": [
+-    "core:default"
+-  ]
++  "permissions": []
  }
