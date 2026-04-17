@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "cargo tauri dev",
+    "web:dev": "pnpm -C ../.. web:dev",
+    "web:build": "pnpm -C ../.. web:build",
     "ios:init": "cargo tauri ios init",
     "ios:dev": "cargo tauri ios dev",
     "ios:build": "cargo tauri ios build"
