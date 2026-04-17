@@ -1,3 +1,4 @@
+use tauri::Manager;
 use tracing::{error, info};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
