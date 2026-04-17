@@ -1,21 +1,30 @@
+diff --git a/apps/desktop/src-tauri/src/lib.rs b/apps/desktop/src-tauri/src/lib.rs
+index 3351ae3..65cf388 100644
+--- a/apps/desktop/src-tauri/src/lib.rs
++++ b/apps/desktop/src-tauri/src/lib.rs
+@@ -13,7 +13,7 @@ pub fn run() {
+ 
+   tauri::Builder::default()
+     .setup(|app| {
+-      if let Some(window) = app.get_webview_window("main") {
++      if let Some(window) = app.handle().get_webview_window("main") {
+         info!(
+           target: "desktop.window",
+           label = window.label(),
 diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
-index 2ad5f11..14808f9 100644
+index 14808f9..3d9aff2 100644
 --- a/apps/desktop/src-tauri/tauri.conf.json
 +++ b/apps/desktop/src-tauri/tauri.conf.json
-@@ -11,7 +11,7 @@
+@@ -6,10 +6,10 @@
+     "beforeDevCommand": "pnpm web:dev",
+     "beforeBuildCommand": "pnpm web:build",
+     "devUrl": "http://localhost:3000",
+-    "frontendDist": "./static"
++    "frontendDist": "./static",
++    "withGlobalTauri": false
+   },
    "app": {
-     "withGlobalTauri": false,
+-    "withGlobalTauri": false,
      "security": {
--      "freezePrototype": true
-+      "csp": null
+       "csp": null
      },
-     "windows": [
-       {
-@@ -31,5 +31,6 @@
-     "icon": [
-       "icons/icon.png"
-     ]
--  }
-+  },
-+  "$schema": "https://schema.tauri.app/config/2"
- }

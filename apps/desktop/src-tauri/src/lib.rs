@@ -13,7 +13,7 @@ pub fn run() {
 
   tauri::Builder::default()
     .setup(|app| {
-      if let Some(window) = app.get_webview_window("main") {
+      if let Some(window) = app.handle().get_webview_window("main") {
         info!(
           target: "desktop.window",
           label = window.label(),

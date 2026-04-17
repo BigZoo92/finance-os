@@ -6,10 +6,10 @@
     "beforeDevCommand": "pnpm web:dev",
     "beforeBuildCommand": "pnpm web:build",
     "devUrl": "http://localhost:3000",
-    "frontendDist": "./static"
+    "frontendDist": "./static",
+    "withGlobalTauri": false
   },
   "app": {
-    "withGlobalTauri": false,
     "security": {
       "csp": null
     },
