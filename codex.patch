@@ -1,11 +1,13 @@
-diff --git a/apps/desktop/src-tauri/capabilities/default.json b/apps/desktop/src-tauri/capabilities/default.json
-index 6069305..0d62fa2 100644
---- a/apps/desktop/src-tauri/capabilities/default.json
-+++ b/apps/desktop/src-tauri/capabilities/default.json
-@@ -2,5 +2,5 @@
-   "identifier": "default",
-   "description": "Default capability for Finance-OS desktop shell.",
-   "windows": ["main"],
--  "permissions": []
-+  "permissions": ["core:default"]
- }
+diff --git a/apps/desktop/src-tauri/src/lib.rs b/apps/desktop/src-tauri/src/lib.rs
+index 0311ad8..3351ae3 100644
+--- a/apps/desktop/src-tauri/src/lib.rs
++++ b/apps/desktop/src-tauri/src/lib.rs
+@@ -23,7 +23,7 @@ pub fn run() {
+ 
+       Ok(())
+     })
+-    .run(tauri::generate_context!("tauri.conf.json"))
++    .run(tauri::generate_context!())
+     .unwrap_or_else(|error| {
+       error!(target: "desktop.startup", error = %error, message = "desktop shell exited with error");
+       panic!("failed to run finance-os desktop shell: {error}");
