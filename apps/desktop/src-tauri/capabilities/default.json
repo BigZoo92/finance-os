@@ -2,5 +2,5 @@
   "identifier": "default",
   "description": "Default capability for Finance-OS desktop shell.",
   "windows": ["main"],
-  "permissions": []
+  "permissions": ["core:default"]
 }
