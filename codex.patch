@@ -1,35 +1,28 @@
 diff --git a/apps/desktop/src-tauri/capabilities/default.json b/apps/desktop/src-tauri/capabilities/default.json
-index e4c7012..a13a3cb 100644
+index a13a3cb..81730b5 100644
 --- a/apps/desktop/src-tauri/capabilities/default.json
 +++ b/apps/desktop/src-tauri/capabilities/default.json
-@@ -1,7 +1,11 @@
+@@ -1,6 +1,6 @@
  {
    "$schema": "https://schema.tauri.app/capability/2",
--  "identifier": "default",
-+  "identifier": "main-capability",
+-  "identifier": "main-capability",
++  "identifier": "default",
    "description": "Default capability for Finance-OS desktop shell.",
--  "windows": ["main"],
--  "permissions": ["core:default"]
-+  "windows": [
-+    "main"
-+  ],
-+  "permissions": [
-+    "core:default"
-+  ]
- }
+   "windows": [
+     "main"
 diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
-index dc5753f..72b7d75 100644
+index 72b7d75..dc5753f 100644
 --- a/apps/desktop/src-tauri/tauri.conf.json
 +++ b/apps/desktop/src-tauri/tauri.conf.json
-@@ -12,7 +12,10 @@
+@@ -12,10 +12,7 @@
    "app": {
      "withGlobalTauri": false,
      "security": {
--      "freezePrototype": true
-+      "freezePrototype": true,
-+      "capabilities": [
-+        "main-capability"
-+      ]
+-      "freezePrototype": true,
+-      "capabilities": [
+-        "main-capability"
+-      ]
++      "freezePrototype": true
      },
      "windows": [
        {
