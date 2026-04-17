@@ -23,7 +23,7 @@ pub fn run() {
 
       Ok(())
     })
-    .run(tauri::generate_context!())
+    .run(tauri::generate_context!("tauri.conf.json"))
     .unwrap_or_else(|error| {
       error!(target: "desktop.startup", error = %error, message = "desktop shell exited with error");
       panic!("failed to run finance-os desktop shell: {error}");
