@@ -5,6 +5,7 @@ Use these files as markdown-first entry points before re-exploring the repo.
 ## Maps
 
 - [architecture-map.md](architecture-map.md): runtime entrypoints, package anchors, and where local rules live
+- [execution-map.md](execution-map.md): end-to-end runtime flows for dashboard, Powens callback, and worker sync
 - [contracts-map.md](contracts-map.md): required HTTP contracts and their implementation files
 - [testing-map.md](testing-map.md): current automated coverage, scope-based verification, and manual gaps
 - [ui-quality-map.md](ui-quality-map.md): UI quality bar, key surfaces, and manual UI checks
