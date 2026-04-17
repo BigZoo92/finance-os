@@ -1,13 +1,14 @@
-diff --git a/apps/desktop/src-tauri/src/lib.rs b/apps/desktop/src-tauri/src/lib.rs
-index 3351ae3..0311ad8 100644
---- a/apps/desktop/src-tauri/src/lib.rs
-+++ b/apps/desktop/src-tauri/src/lib.rs
-@@ -23,7 +23,7 @@ pub fn run() {
- 
-       Ok(())
-     })
--    .run(tauri::generate_context!())
-+    .run(tauri::generate_context!("tauri.conf.json"))
-     .unwrap_or_else(|error| {
-       error!(target: "desktop.startup", error = %error, message = "desktop shell exited with error");
-       panic!("failed to run finance-os desktop shell: {error}");
+diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
+index 28bdddf..096c9aa 100644
+--- a/apps/desktop/src-tauri/tauri.conf.json
++++ b/apps/desktop/src-tauri/tauri.conf.json
+@@ -31,8 +31,7 @@
+     "active": true,
+     "targets": "all",
+     "icon": [
+-      "../../web/public/logo192.png",
+-      "../../web/public/favicon.ico"
++      "../../web/public/logo192.png"
+     ]
+   }
+ }
