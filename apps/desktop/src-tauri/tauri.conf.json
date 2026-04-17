@@ -7,7 +7,7 @@
     "beforeDevCommand": "pnpm web:dev",
     "beforeBuildCommand": "pnpm web:build",
     "devUrl": "http://localhost:3000",
-    "frontendDist": "../../web/.output/public"
+    "frontendDist": "./static"
   },
   "app": {
     "withGlobalTauri": false,
