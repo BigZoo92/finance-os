@@ -1,0 +1,926 @@
+diff --git a/.github/agent-stubs/improve-821.md b/.github/agent-stubs/improve-821.md
+deleted file mode 100644
+index ef75e48e7e83f8134d8e50841f9542dea0b62db3..0000000000000000000000000000000000000000
+--- a/.github/agent-stubs/improve-821.md
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# Autopilot stub for improve #821
+-
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/821
+-
+-This file is a temporary bootstrap marker for branch/PR creation.
+-Delete this file in the first real implementation patch.
+\ No newline at end of file
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 508a19d0534768da618e7330e3c94709f9ca1c4a..84bbd15daf1e045bae360a10db59e63004ab8db0 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -35,25 +35,72 @@ jobs:
+       - name: Setup Node.js
+         uses: actions/setup-node@v4
+         with:
+           node-version: 22
+           cache: pnpm
+           cache-dependency-path: pnpm-lock.yaml
+ 
+       - name: Setup Bun
+         uses: oven-sh/setup-bun@v2
+         with:
+           bun-version: ${{ vars.BUN_VERSION || '1.2.22' }}
+ 
+       - name: Install dependencies
+         run: pnpm install --frozen-lockfile
+       - name: Lint
+         run: pnpm -r --if-present lint
+ 
+       - name: Typecheck
+         run: pnpm -r --if-present typecheck
+ 
+       - name: Test
+         run: pnpm -r --if-present test
+ 
+       - name: Build
+         run: pnpm -r --if-present build
++
++
++  tauri-validate:
++    name: Tauri Validate
++    runs-on: ubuntu-latest
++    timeout-minutes: 30
++    env:
++      CI: true
++      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
++    steps:
++      - name: Checkout
++        uses: actions/checkout@v4
++
++      - name: Setup pnpm
++        uses: pnpm/action-setup@v4
++        with:
++          version: 10.15.0
++          run_install: false
++
++      - name: Setup Node.js
++        uses: actions/setup-node@v4
++        with:
++          node-version: 22
++          cache: pnpm
++          cache-dependency-path: pnpm-lock.yaml
++
++      - name: Setup Rust
++        uses: dtolnay/rust-toolchain@stable
++
++      - name: Install linux dependencies for Tauri
++        run: |
++          sudo apt-get update
++          sudo apt-get install -y \
++            libwebkit2gtk-4.1-dev \
++            libgtk-3-dev \
++            libayatana-appindicator3-dev \
++            librsvg2-dev \
++            patchelf
++
++      - name: Install dependencies
++        run: pnpm install --frozen-lockfile
++
++      - name: Install tauri CLI
++        run: cargo install tauri-cli --locked --version ^2
++
++      - name: Build desktop shell
++        run: pnpm desktop:build
+diff --git a/.gitignore b/.gitignore
+index 4361d6379a9b57066d82718236b0283840fd68d7..0d8b7726665f70113278dd43ddbde62fd8361c4a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,21 +1,25 @@
+ node_modules
+ .pnpm-store
+ .env
+ .env.*
+ !.env.example
+ !.env.prod.example
+ 
+ dist
+ build
+ coverage
+ .turbo
+ .next
+ .output
+ 
+ .DS_Store
+ .vscode/*.code-workspace
+ 
+ docker-data
+ 
+ # GitNexus local index (generated, machine-specific)
+ .gitnexus/
++
++# Tauri / Rust desktop artifacts
++apps/desktop/src-tauri/target
++apps/desktop/src-tauri/gen
+diff --git a/AGENTS.md b/AGENTS.md
+index 6f452460d81a37899866480fabb522aaff2dcdac..6c6f750b3e619a99fbf5143f956faec1814a1c4e 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -64,50 +64,51 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
+ ## Global Verification
+ 
+ - Start with the smallest checks that match the changed scope.
+ - Use canonical repo-wide commands from [package.json](package.json):
+   - `pnpm check:ci`
+   - `pnpm lint`
+   - `pnpm typecheck`
+   - `pnpm -r --if-present test`
+   - `pnpm -r --if-present build`
+ - Use [scripts/smoke-api.mjs](scripts/smoke-api.mjs) and [scripts/smoke-prod.mjs](scripts/smoke-prod.mjs) when route, proxy, or deploy behavior changes.
+ - For production Compose alerting or health-monitor changes, run `node --test infra/docker/ops-alerts/monitor.test.mjs` in addition to the relevant runtime checks.
+ - Validate the agentic foundation after changing `AGENTS.md`, `.agents/skills/`, or `docs/agentic/`:
+   - `node .agents/skills/scripts/validate-agent-foundation.mjs`
+ 
+ ## Global Review
+ 
+ - `P0`: security issue, secret leak, Powens token/code exposure, data loss, or broken demo/admin split
+ - `P1`: contract regression, missing demo path, missing behavior-change tests, SSR auth flash regression, unsafe logging, or broken observability wiring
+ - `P2`: local cleanup or style feedback
+ - Always check dual-path correctness, `VITE_*` safety, logging safety, observability wiring, and test evidence for behavior changes.
+ - UI changes require rationale plus screenshot notes; see [docs/agentic/code_review.md](docs/agentic/code_review.md).
+ 
+ ## Local Guides
+ 
+ - [apps/api/AGENTS.md](apps/api/AGENTS.md)
++- [apps/desktop/AGENTS.md](apps/desktop/AGENTS.md)
+ - [apps/web/AGENTS.md](apps/web/AGENTS.md)
+ - [apps/worker/AGENTS.md](apps/worker/AGENTS.md)
+ - [infra/docker/AGENTS.md](infra/docker/AGENTS.md)
+ - [packages/db/AGENTS.md](packages/db/AGENTS.md)
+ - [packages/env/AGENTS.md](packages/env/AGENTS.md)
+ - [packages/powens/AGENTS.md](packages/powens/AGENTS.md)
+ - [packages/redis/AGENTS.md](packages/redis/AGENTS.md)
+ - [packages/ui/AGENTS.md](packages/ui/AGENTS.md)
+ - [packages/prelude/AGENTS.md](packages/prelude/AGENTS.md)
+ 
+ ## Agentic Maps
+ 
+ - [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
+ - [docs/agentic/architecture-map.md](docs/agentic/architecture-map.md)
+ - [docs/agentic/contracts-map.md](docs/agentic/contracts-map.md)
+ - [docs/agentic/testing-map.md](docs/agentic/testing-map.md)
+ - [docs/agentic/ui-quality-map.md](docs/agentic/ui-quality-map.md)
+ - [docs/agentic/release-map.md](docs/agentic/release-map.md)
+ - Repo-local skills live under `.agents/skills/`.
+ 
+ ## Skills System
+ 
+ Full inventory with trust tiers, overlaps, and usage guide: [docs/SKILLS-INVENTORY.md](docs/SKILLS-INVENTORY.md)
+ 
+ ### Skill categories (`.claude/skills/`)
+diff --git a/apps/desktop/AGENTS.md b/apps/desktop/AGENTS.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..bf5209f42687b23810600e2c3da8bc7e42c4a19d
+--- /dev/null
++++ b/apps/desktop/AGENTS.md
+@@ -0,0 +1,22 @@
++# AGENTS.md - apps/desktop
++
++Scope: `apps/desktop/**`
++
++## Local Rules
++
++- Keep the desktop target as a thin Tauri 2 shell around the existing web app; do not fork UI/business logic here.
++- Keep demo/admin behavior unchanged: demo remains default deterministic mode, admin stays behind existing auth/session gates from web+api.
++- Keep native permissions least-privilege. Do not add shell/fs/http plugins unless the feature explicitly requires them and includes a security review.
++- Keep runtime logging structured and low-noise; startup/failure logs should be machine-readable.
++- Keep iOS work scoped to scaffold/documentation only unless a task explicitly requests native mobile implementation.
++
++## Verify
++
++- `pnpm desktop:dev`
++- `pnpm desktop:build`
++
++## Pitfalls
++
++- Do not add secrets to client-side env (`VITE_*`).
++- Do not introduce desktop-only privileged backdoors.
++- Do not bypass `apps/web` as the core product source of truth.
+diff --git a/apps/desktop/package.json b/apps/desktop/package.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..b979bba8a35d153a1969a0945486cfcfee1222e4
+--- /dev/null
++++ b/apps/desktop/package.json
+@@ -0,0 +1,12 @@
++{
++  "name": "@finance-os/desktop",
++  "private": true,
++  "version": "0.0.0",
++  "type": "module",
++  "scripts": {
++    "dev": "cargo tauri dev",
++    "ios:init": "cargo tauri ios init",
++    "ios:dev": "cargo tauri ios dev",
++    "ios:build": "cargo tauri ios build"
++  }
++}
+diff --git a/apps/desktop/src-tauri/Cargo.toml b/apps/desktop/src-tauri/Cargo.toml
+new file mode 100644
+index 0000000000000000000000000000000000000000..bf4fd4601fe6f291cb35044aa80e1b00a2504a99
+--- /dev/null
++++ b/apps/desktop/src-tauri/Cargo.toml
+@@ -0,0 +1,20 @@
++[package]
++name = "finance_os_desktop"
++version = "0.1.0"
++description = "Finance-OS desktop shell"
++authors = ["Finance-OS"]
++edition = "2021"
++
++[lib]
++name = "finance_os_desktop_lib"
++crate-type = ["staticlib", "cdylib", "rlib"]
++
++[build-dependencies]
++tauri-build = { version = "2", features = [] }
++
++[dependencies]
++serde = { version = "1", features = ["derive"] }
++serde_json = "1"
++tauri = { version = "2", features = [] }
++tracing = "0.1"
++tracing-subscriber = { version = "0.3", features = ["fmt", "json"] }
+diff --git a/apps/desktop/src-tauri/build.rs b/apps/desktop/src-tauri/build.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..795b9b7c83dbfc6bf454958eef78f93e211703d2
+--- /dev/null
++++ b/apps/desktop/src-tauri/build.rs
+@@ -0,0 +1,3 @@
++fn main() {
++  tauri_build::build()
++}
+diff --git a/apps/desktop/src-tauri/capabilities/default.json b/apps/desktop/src-tauri/capabilities/default.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..51ecb0bb7165fba1cd892612f41320bf3c1fcda6
+--- /dev/null
++++ b/apps/desktop/src-tauri/capabilities/default.json
+@@ -0,0 +1,9 @@
++{
++  "$schema": "../gen/schemas/desktop-schema.json",
++  "identifier": "default",
++  "description": "Default capability for Finance-OS desktop shell.",
++  "windows": ["main"],
++  "permissions": [
++    "core:default"
++  ]
++}
+diff --git a/apps/desktop/src-tauri/src/lib.rs b/apps/desktop/src-tauri/src/lib.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..aa9db53c8ca2fa26bd9bc477a689733091ebcea1
+--- /dev/null
++++ b/apps/desktop/src-tauri/src/lib.rs
+@@ -0,0 +1,30 @@
++use tracing::{error, info};
++
++#[cfg_attr(mobile, tauri::mobile_entry_point)]
++pub fn run() {
++  tracing_subscriber::fmt()
++    .with_target(true)
++    .with_ansi(false)
++    .json()
++    .init();
++
++  info!(target: "desktop.startup", mode = "tauri", message = "Finance-OS desktop shell starting");
++
++  tauri::Builder::default()
++    .setup(|app| {
++      if let Some(window) = app.get_webview_window("main") {
++        info!(
++          target: "desktop.window",
++          label = window.label(),
++          message = "main window ready"
++        );
++      }
++
++      Ok(())
++    })
++    .run(tauri::generate_context!())
++    .unwrap_or_else(|error| {
++      error!(target: "desktop.startup", error = %error, message = "desktop shell exited with error");
++      panic!("failed to run finance-os desktop shell: {error}");
++    });
++}
+diff --git a/apps/desktop/src-tauri/src/main.rs b/apps/desktop/src-tauri/src/main.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..48b56046e2a2d938081eb06464ec796bc5ef295b
+--- /dev/null
++++ b/apps/desktop/src-tauri/src/main.rs
+@@ -0,0 +1,3 @@
++fn main() {
++  finance_os_desktop_lib::run();
++}
+diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..f0b9a34c35145c9b71b79a5c579f3f78f22b6e42
+--- /dev/null
++++ b/apps/desktop/src-tauri/tauri.conf.json
+@@ -0,0 +1,37 @@
++{
++  "$schema": "https://schema.tauri.app/config/2",
++  "productName": "Finance-OS",
++  "version": "0.1.0",
++  "identifier": "com.financeos.desktop",
++  "build": {
++    "beforeDevCommand": "pnpm web:dev",
++    "beforeBuildCommand": "pnpm web:build",
++    "devUrl": "http://localhost:3000",
++    "frontendDist": "../../web/dist"
++  },
++  "app": {
++    "withGlobalTauri": false,
++    "security": {
++      "freezePrototype": true
++    },
++    "windows": [
++      {
++        "label": "main",
++        "title": "Finance-OS",
++        "width": 1440,
++        "height": 900,
++        "minWidth": 1024,
++        "minHeight": 720,
++        "resizable": true,
++        "fullscreen": false
++      }
++    ]
++  },
++  "bundle": {
++    "active": true,
++    "targets": "all",
++    "icon": [
++      "../../web/public/favicon.ico"
++    ]
++  }
++}
+diff --git a/docs/agentic/architecture-map.md b/docs/agentic/architecture-map.md
+index 85fc35a153144c0367b0dd64f9e0b178188d368e..d5ac64f7fcc6c22f4e603aa8ff0b34854eea97bc 100644
+--- a/docs/agentic/architecture-map.md
++++ b/docs/agentic/architecture-map.md
+@@ -2,97 +2,102 @@
+ 
+ Start here when you need the shortest path to the right runtime entrypoint.
+ 
+ ## Runtime Entry Points
+ 
+ - API runtime: [../../apps/api/src/index.ts](../../apps/api/src/index.ts)
+   - local rules: [../../apps/api/AGENTS.md](../../apps/api/AGENTS.md)
+   - auth routes: [../../apps/api/src/auth/routes.ts](../../apps/api/src/auth/routes.ts)
+   - dashboard feature root: [../../apps/api/src/routes/dashboard/router.ts](../../apps/api/src/routes/dashboard/router.ts)
+   - dashboard markets routes: [../../apps/api/src/routes/dashboard/routes/markets.ts](../../apps/api/src/routes/dashboard/routes/markets.ts)
+   - dashboard markets orchestration: [../../apps/api/src/routes/dashboard/domain/dashboard-markets.ts](../../apps/api/src/routes/dashboard/domain/dashboard-markets.ts)
+   - dashboard derived recompute route: [../../apps/api/src/routes/dashboard/routes/derived-recompute.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.ts)
+   - dashboard goals routes: [../../apps/api/src/routes/dashboard/routes/goals.ts](../../apps/api/src/routes/dashboard/routes/goals.ts)
+   - Powens feature root: [../../apps/api/src/routes/integrations/powens/router.ts](../../apps/api/src/routes/integrations/powens/router.ts)
+ - Web runtime: [../../apps/web/src/routes/__root.tsx](../../apps/web/src/routes/__root.tsx)
+   - local rules: [../../apps/web/AGENTS.md](../../apps/web/AGENTS.md)
+   - SSR API client: [../../apps/web/src/lib/api.ts](../../apps/web/src/lib/api.ts)
+   - safe public runtime config bridge: [../../apps/web/src/lib/public-runtime-env.ts](../../apps/web/src/lib/public-runtime-env.ts)
+   - dashboard shell: [../../apps/web/src/routes/_app.tsx](../../apps/web/src/routes/_app.tsx)
+   - markets page: [../../apps/web/src/routes/_app/marches.tsx](../../apps/web/src/routes/_app/marches.tsx), [../../apps/web/src/components/markets/markets-dashboard.tsx](../../apps/web/src/components/markets/markets-dashboard.tsx)
+   - Powens manual sync UI cooldown guard: [../../apps/web/src/features/powens/manual-sync-cooldown.ts](../../apps/web/src/features/powens/manual-sync-cooldown.ts)
+   - dashboard shared query state and admin actions: [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/features/dashboard-api.ts](../../apps/web/src/features/dashboard-api.ts)
+   - temporary legacy dashboard adapter (now emits `migration.stage` diagnostics to support incremental rollout decisions): [../../apps/web/src/features/dashboard-legacy-adapter.ts](../../apps/web/src/features/dashboard-legacy-adapter.ts)
+   - financial goals card: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
+   - Powens callback route: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
++- Desktop runtime: [../../apps/desktop/src-tauri/src/main.rs](../../apps/desktop/src-tauri/src/main.rs)
++  - local rules: [../../apps/desktop/AGENTS.md](../../apps/desktop/AGENTS.md)
++  - tauri config and capability boundary: [../../apps/desktop/src-tauri/tauri.conf.json](../../apps/desktop/src-tauri/tauri.conf.json), [../../apps/desktop/src-tauri/capabilities/default.json](../../apps/desktop/src-tauri/capabilities/default.json)
++  - architecture context: [../context/TAURI-DESKTOP.md](../context/TAURI-DESKTOP.md)
+ - Worker runtime: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
+   - local rules: [../../apps/worker/AGENTS.md](../../apps/worker/AGENTS.md)
+   - market refresh scheduler: [../../apps/worker/src/market-refresh-scheduler.ts](../../apps/worker/src/market-refresh-scheduler.ts)
+   - localhost-only system status endpoints: `GET /health` and `GET /version` from the worker runtime
+ - Production deploy and observability rules: [../../infra/docker/AGENTS.md](../../infra/docker/AGENTS.md)
+ - Production ops alerting sidecar: [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs)
+   - wired from [../../docker-compose.prod.yml](../../docker-compose.prod.yml) using the existing API image
+   - monitors 5xx bursts, healthcheck failures, worker heartbeat freshness, and low disk free percent via a webhook channel
+ 
+ ## Package Anchors
+ 
+ - DB schema and client: [../../packages/db/src/index.ts](../../packages/db/src/index.ts), [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts), [../../packages/db/src/schema/assets.ts](../../packages/db/src/schema/assets.ts), [../../packages/db/src/schema/recurring-commitments.ts](../../packages/db/src/schema/recurring-commitments.ts)
+   - raw provider import staging now lives beside the normalized Powens tables in the DB schema and is filled from the worker sync loop before/alongside business upserts
+   - normalized business transactions keep stable read-model fields only; provider payload JSON now stays in `provider_raw_import` instead of the `transaction` table
+   - boundary reminder: treat persistence as four lanes — `raw` provider snapshots, `normalized` read-model business rows, deterministic `derived` helper fields, and user `manual` edits that stay authoritative
+   - unified financial accounts now live in the Powens schema with generic source/provider connection keys plus current Powens compatibility ids so worker upserts and dashboard reads can track accounts through their source connection
+   - unified patrimoine-style assets live in the asset schema and are refreshed from worker cash-account syncs plus future manual/provider-specific writers
+   - recurring fixed charges and subscriptions now have a dedicated model with manual validation state plus transaction links in `recurring_commitment*` tables
+ - Env parsing: [../../packages/env/src/index.ts](../../packages/env/src/index.ts)
+ - Powens client and crypto: [../../packages/powens/src/client.ts](../../packages/powens/src/client.ts), [../../packages/powens/src/crypto.ts](../../packages/powens/src/crypto.ts)
+ - Redis factory: [../../packages/redis/src/index.ts](../../packages/redis/src/index.ts)
+ - Shared UI: [../../packages/ui/src/components/index.ts](../../packages/ui/src/components/index.ts)
+ - Low-level helpers: [../../packages/prelude/src/index.ts](../../packages/prelude/src/index.ts)
+ - TS config presets: [../../packages/config-ts/package.json](../../packages/config-ts/package.json)
+ - `packages/domain` exists today but has no active source files; read the concrete app/package code instead of assuming shared domain logic lives there.
+ 
+ ## Layering Expectations
+ 
+ - API route files parse and shape HTTP only. Domain files orchestrate. Repository files persist. Service files talk to providers or deterministic helpers. Runtime and plugin files wire dependencies.
+ - Web route loaders prewarm Query and keep SSR auth-consistent. Feature modules own query keys and request functions.
+ - Worker owns provider sync loops, raw provider import staging, locks, metrics, and a localhost-only system status surface; it should not become a second public API layer.
+ 
+ ## Naming Conventions
+ 
+ - Keep runtime-oriented file names explicit and stable:
+   - `routes/*` for HTTP handlers
+   - `domain/*` for business orchestration
+   - `repositories/*` for persistence reads/writes
+   - `services/*` for provider or side-effect integrations
+   - `runtime.ts` for dependency wiring
+ - Dashboard API modules should keep the `dashboard-*` prefix when they are feature-level building blocks shared across multiple route files.
+ - Web TanStack Query helpers should keep `*-query-options.ts` naming so route loaders and components can discover shared query contracts quickly.
+ - Adapter files that bridge legacy and new read models should keep an explicit `*-adapter.ts` suffix and expose migration intent in their diagnostics/event names.
+ - Optional TypeScript properties must omit absent keys entirely (never assign `undefined`) to stay compatible with `exactOptionalPropertyTypes`.
+ 
+ ## Core Relations
+ 
+ - `apps/web` is the only public entrypoint and proxies `/api/*` internally to `apps/api`; this is a strict runtime boundary and deployment assumption.
++- `apps/desktop` wraps the existing web runtime through Tauri 2 and must not duplicate product logic, auth policy, or provider access rules.
+ - API auth derivation (`apps/api/src/auth/*`) gates all admin/provider behavior and drives the demo/admin split consumed by dashboard and Powens routes.
+ - Dashboard read-model flow is:
+   1. API route modules under `routes/dashboard/routes/*`
+   2. domain logic under `routes/dashboard/domain/*`
+   3. repository aggregation under `routes/dashboard/repositories/*`
+   4. web query options under `apps/web/src/features/*query-options.ts`
+   5. final rendering in dashboard UI components.
+ - Powens integration flow is:
+   1. API Powens runtime/routes under `apps/api/src/routes/integrations/powens/*`
+   2. shared client/crypto in `packages/powens`
+   3. worker sync orchestration in `apps/worker`
+   4. normalized + raw-import persistence in `packages/db` schema modules
+   5. dashboard consumers via API read repositories.
+ - Observability joins all layers: request IDs originate at API/web edges, flow through route/domain/service boundaries, and are validated in deploy-time smoke/monitoring checks.
+ 
+ ## First Reads By Change Type
+ 
+ - Auth or session change: [../../apps/api/src/auth/routes.ts](../../apps/api/src/auth/routes.ts), [../../apps/api/src/auth/derive.ts](../../apps/api/src/auth/derive.ts), [../../apps/web/src/features/auth-ssr.ts](../../apps/web/src/features/auth-ssr.ts)
+ - Dashboard read-model change: [../../apps/api/src/routes/dashboard/routes/summary.ts](../../apps/api/src/routes/dashboard/routes/summary.ts), [../../apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts](../../apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts), [../../apps/web/src/features/dashboard-query-options.ts](../../apps/web/src/features/dashboard-query-options.ts), [../../apps/web/src/features/dashboard-legacy-adapter.ts](../../apps/web/src/features/dashboard-legacy-adapter.ts)
+ - Dashboard derived recompute change: [../../apps/api/src/routes/dashboard/routes/derived-recompute.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.ts), [../../apps/api/src/routes/dashboard/domain/derived-recompute.ts](../../apps/api/src/routes/dashboard/domain/derived-recompute.ts), [../../apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts](../../apps/api/src/routes/dashboard/repositories/dashboard-derived-recompute-repository.ts), [../../apps/web/src/features/dashboard-api.ts](../../apps/web/src/features/dashboard-api.ts), [../../apps/web/src/routes/_app/parametres.tsx](../../apps/web/src/routes/_app/parametres.tsx)
+ - Dashboard goals change: [../../apps/api/src/routes/dashboard/routes/goals.ts](../../apps/api/src/routes/dashboard/routes/goals.ts), [../../apps/api/src/routes/dashboard/domain/dashboard-goals.ts](../../apps/api/src/routes/dashboard/domain/dashboard-goals.ts), [../../apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts](../../apps/api/src/routes/dashboard/repositories/dashboard-read-repository.ts), [../../apps/web/src/features/goals/query-options.ts](../../apps/web/src/features/goals/query-options.ts), [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
+ - Dashboard markets / macro change: [../../apps/api/src/routes/dashboard/routes/markets.ts](../../apps/api/src/routes/dashboard/routes/markets.ts), [../../apps/api/src/routes/dashboard/domain/dashboard-markets.ts](../../apps/api/src/routes/dashboard/domain/dashboard-markets.ts), [../../apps/api/src/routes/dashboard/repositories/dashboard-markets-repository.ts](../../apps/api/src/routes/dashboard/repositories/dashboard-markets-repository.ts), [../../apps/api/src/routes/dashboard/services/fetch-live-market-data.ts](../../apps/api/src/routes/dashboard/services/fetch-live-market-data.ts), [../../apps/web/src/features/markets/query-options.ts](../../apps/web/src/features/markets/query-options.ts), [../../apps/web/src/components/markets/markets-dashboard.tsx](../../apps/web/src/components/markets/markets-dashboard.tsx)
+ - Powens flow change: [../../apps/api/src/routes/integrations/powens/runtime.ts](../../apps/api/src/routes/integrations/powens/runtime.ts), [../../apps/api/src/routes/integrations/powens/routes/callback.ts](../../apps/api/src/routes/integrations/powens/routes/callback.ts), [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx), [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
+ - Release or deploy change: [release-map.md](release-map.md)
+diff --git a/docs/agentic/testing-map.md b/docs/agentic/testing-map.md
+index c492bc5a9c7cd7ecb753380601648cd11c34b6dd..b1ec54564745bd35ea834a659035cebcd038f803 100644
+--- a/docs/agentic/testing-map.md
++++ b/docs/agentic/testing-map.md
+@@ -164,25 +164,38 @@ Use this map to choose the smallest verification set that still matches the risk
+ 
+ - There is no worker package test suite today.
+ - Worker raw-import, transaction-gap detection, and sync-integrity detection now have focused Bun coverage, but normalized transaction persistence still relies on package typechecks plus CI migration checks rather than a dedicated end-to-end worker suite.
+ - Dashboard read-model routes and Powens route handlers have limited direct contract tests today.
+ - UI regression coverage is mostly manual for dashboard surfaces.
+ 
+ ## Manual Checks Worth Doing
+ 
+ - Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
+ - Demo/admin parity acceptance: verify the touched flow against [policy-verification-bundle.md](policy-verification-bundle.md) for explicit pass criteria on each path plus required negative tests.
+ - Transactions freshness UX: latest transactions card shows "Last updated" plus distinct freshness badges (`fresh`, `stale-but-usable`, `syncing`, `sync-failed-with-safe-data`, `no-data-first-connect`) without blocking the table behind a spinner-only state.
+ - Marches & Macro: demo mode must show the deterministic fixture with zero admin actions, while admin mode must preserve explicit source badges (`EOD`, `differe`, `overlay US`) and a usable degraded fallback when live/cache data is missing.
+ - Marches & Macro: the `/marches` layout should keep loading, empty, degraded, error, offline, and permission-gated states readable on mobile and desktop without chart overflow.
+ - Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
+ - Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
+ - Advisor IA: verifier les etats `loading`, `empty`, `degraded`, `error`, `admin-only`, `demo deterministic`, et confirmer que le chat demo n'ecrit rien.
+ - Advisor mission manuelle: verifier `idle`, `running`, `completed`, `degraded`, `failed`, ainsi que le verrou anti-double-clic et le detail des etapes.
+ - Actifs manuels admin: verifier l'empty state, l'ajout, la modification, la suppression, et l'absence d'actifs manuels hardcodes en admin.
+ - Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
+ - Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
+ - Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.
+ - Admin mode: the goals drawer can create, update, and archive goals, with recoverable error messaging and a visible request id when a write fails.
+ - Powens callback: invalid auth/state fails safely, valid admin/state flow returns success and queues sync.
+ - Release-sensitive changes: run the smoke scripts in [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs) and [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) with the right env; prod smoke now covers `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status`, plus optional demo/admin auth context via `SMOKE_AUTH_MODE`.
+ - Rollback readiness: verify kill-switch behavior and emergency downgrade steps from [policy-verification-bundle.md](policy-verification-bundle.md) before marking medium-high risk work as release-ready.
++
++
++## Desktop / Tauri scope
++
++Use when `apps/desktop/**`, Tauri config, or desktop CI wiring changes.
++
++- Required checks:
++  - `pnpm desktop:build`
++  - `pnpm check:ci`
++- CI evidence:
++  - `.github/workflows/ci.yml` job `tauri-validate`
++- Notes:
++  - iOS commands are scaffold-only and should be validated on macOS/Xcode hosts, not Linux CI.
+diff --git a/docs/context/STACK.md b/docs/context/STACK.md
+index e5bb6903b07feb76c5e83a95ac29f85ad35a346a..6001123e9a7b76c30358175968fd18ef0b83f830 100644
+--- a/docs/context/STACK.md
++++ b/docs/context/STACK.md
+@@ -1,37 +1,37 @@
+ # Finance-OS -- Stack Technique
+ 
+ > **Derniere mise a jour** : 2026-04-15
+ > **Maintenu par** : agents (Claude, Codex) + humain
+ > Toute modification structurelle de la stack doit etre refletee ici.
+ 
+ ---
+ 
+ ## Vue d'ensemble
+ 
+ Finance-OS est un **cockpit de finances personnelles** self-hosted, mono-utilisateur.
+-Architecture monorepo avec 3 runtimes (Web, API, Worker) et 5 packages partages.
++Architecture monorepo avec 4 runtimes (Web, API, Worker, Desktop Tauri) et packages partages.
+ 
+ ```mermaid
+ graph TB
+     subgraph "Client"
+         Browser["Browser / PWA"]
+     end
+ 
+     subgraph "Runtimes"
+         Web["Web (React + TanStack Start)
+         Port 3000 - Node/Nitro SSR"]
+         API["API (Elysia)
+         Port 3001 - Bun"]
+         Worker["Worker (Bun)
+         Background jobs"]
+     end
+ 
+     subgraph "Infrastructure"
+         PG["PostgreSQL 16"]
+         Redis["Redis 7"]
+     end
+ 
+     subgraph "External"
+         Powens["Powens API
+         PSD2 Bank Aggregation"]
+         NewsProviders["News providers
+@@ -42,50 +42,51 @@ graph TB
+ 
+     Browser -->|"HTTPS"| Web
+     Web -->|"/api/* proxy (Nitro)"| API
+     API -->|"Drizzle ORM"| PG
+     API -->|"node-redis"| Redis
+     Worker -->|"Drizzle ORM"| PG
+     Worker -->|"BLPOP job queue"| Redis
+     Worker -->|"REST + OAuth2"| Powens
+     API -->|"REST + RSS + XML + HTML head scrape"| NewsProviders
+     API -->|"REST quotes + macro snapshots"| MarketProviders
+     API -->|"Enqueue jobs"| Redis
+     Worker -->|"Internal POST /dashboard/news/ingest + /dashboard/markets/refresh + /dashboard/advisor/run-daily (optionnel)"| API
+     Browser -->|"POST /dashboard/advisor/manual-refresh-and-run (admin manual mission)"| API
+ ```
+ 
+ ---
+ 
+ ## Monorepo
+ 
+ ```
+ finance-os/
+   apps/
+     web/          # Frontend - React 19, TanStack Start, Nitro SSR
+     api/          # Backend  - Elysia sur Bun
+     worker/       # Jobs     - Consumer Redis sur Bun
++    desktop/      # Shell natif - Tauri 2 (reuse apps/web)
+   packages/
+     ui/           # Design system - shadcn/ui + Radix + Tailwind v4
+     db/           # Schema + migrations - Drizzle ORM + PostgreSQL
+     env/          # Validation env vars - Zod schemas centralises
+     ai/           # Providers LLM, prompts, schemas, pricing, budget, evals
+     finance-engine/ # Moteur deterministe finance/quant
+     powens/       # Client Powens - HTTP client + crypto AES-256-GCM
+     redis/        # Wrapper Redis - node-redis
+     prelude/      # Utilitaires - Logger JSON structure, helpers
+     config-ts/    # Configs TypeScript partagees (base, web, server)
+   infra/
+     docker/       # Dockerfile multi-stage, compose dev
+   docs/           # Documentation technique et contexte
+   .github/
+     workflows/    # CI (ci.yml) + Release (release.yml)
+ ```
+ 
+ ---
+ 
+ ## Stack par couche
+ 
+ ### Frontend (apps/web)
+ 
+ | Technologie | Version | Role |
+ |---|---|---|
+@@ -108,98 +109,110 @@ finance-os/
+ **Runtime** : Node.js 22 (SSR via Nitro)
+ 
+ ### Backend API (apps/api)
+ 
+ | Technologie | Version | Role |
+ |---|---|---|
+ | **Elysia** | latest | HTTP framework TypeScript |
+ | **Drizzle ORM** | latest | Query builder type-safe |
+ | **node-redis** | latest | Client Redis |
+ | **Cheerio** | latest | Extraction metadata `<head>` / Open Graph |
+ | **fast-xml-parser** | latest | Parsing RSS/XML institutionnel |
+ | **Zod** | 4.1 | Validation payloads |
+ 
+ **Runtime** : Bun 1.2+
+ 
+ ### Worker (apps/worker)
+ 
+ | Technologie | Role |
+ |---|---|
+ | **Bun** | Runtime |
+ | **node-redis** | BLPOP consumer (job queue) |
+ | **Drizzle ORM** | Acces DB |
+ | **@finance-os/powens** | Client Powens + crypto |
+ | **Internal HTTP scheduler** | Declenche les ingestions news et refresh marches cache-first |
+ 
++
++### Desktop shell (apps/desktop)
++
++| Technologie | Version | Role |
++|---|---|---|
++| **Tauri** | 2.x | Shell desktop autour de `apps/web` |
++| **Rust** | stable | Runtime natif (window lifecycle + logs structures) |
++| **Tauri CLI** | 2.x | workflow dev/build desktop + mobile scaffold |
++
++**Runtime** : WebView natif (desktop), sans logique produit dupliquee.
++
+ ### Base de donnees
+ 
+ | Technologie | Version | Role |
+ |---|---|---|
+ | **PostgreSQL** | 16-alpine | Stockage principal |
+ | **Drizzle ORM** | latest | Schema-as-code, migrations |
+ | **Drizzle Kit** | latest | CLI migrations |
+ 
+ ### Cache & Queue
+ 
+ | Technologie | Version | Role |
+ |---|---|---|
+ | **Redis** | 7-alpine | Job queue (lists), metriques (counters), locks (TTL keys), push subscriptions (hashes) |
+ 
+ ### Securite & Crypto
+ 
+ | Technologie | Role |
+ |---|---|
+ | **PBKDF2-SHA256** | Hash mot de passe (210k iterations, 32 bytes, timing-safe) |
+ | **Argon2** | Support legacy (via Bun.password) |
+ | **HMAC-SHA256** | Signature session cookies + callback state Powens |
+ | **AES-256-GCM** | Chiffrement tokens Powens at rest |
+ 
+ ---
+ 
+ ## Pipeline CI/CD
+ 
+ ```mermaid
+ graph LR
+     Push["git push main"] --> CI["CI Workflow
+-    lint + typecheck + test + build"]
++    lint + typecheck + test + build
++    + tauri desktop build"]
+     Tag["git tag vX.Y.Z"] --> Release["Release Workflow"]
+     Release --> CI2["CI (rerun)"]
+     CI2 --> Build["Docker Build
+     3 images (web, api, worker)"]
+     Build --> GHCR["Push GHCR
+     tag: vX.Y.Z + sha-commit"]
+     GHCR --> Sync["Sync Dokploy
+     compose + env vars"]
+     Sync --> Deploy["Dokploy Deploy
+     compose.deploy"]
+     Deploy --> Smoke["Smoke Tests
+     /health, /auth/me, /dashboard/summary"]
+ ```
+ 
+ | Etape | Outil | Details |
+ |---|---|---|
+-| **CI** | GitHub Actions | `pnpm check:ci` = frozen lockfile + lint + typecheck + test + build |
++| **CI** | GitHub Actions | `pnpm check:ci` (web/api/worker) + job `tauri-validate` (`pnpm desktop:build`) |
+ | **Build** | Docker multi-stage | 4 targets: build-web, web, api, worker |
+ | **Registry** | GHCR | Images immutables, jamais `latest` |
+ | **Deploy** | Dokploy | Docker Compose, source Raw (pas de rebuild) |
+ | **Smoke** | `smoke-prod.mjs` | /health, /auth/me, /dashboard/summary, /powens/status |
+ | **Rollback** | Tag precedent | Changer `APP_IMAGE_TAG` dans Dokploy |
+ 
+ ---
+ 
+ ## Architecture de deploiement
+ 
+ ```mermaid
+ graph TB
+     subgraph "Dokploy (VPS)"
+         subgraph "Docker Compose"
+             Web2["web :3000
+             (Node/Nitro)"]
+             API2["api :3001
+             (Bun/Elysia)"]
+             Worker2["worker
+             (Bun)"]
+             PG2["postgres :5432"]
+             Redis2["redis :6379"]
+             Alerts["ops-alerts
+             (sidecar)"]
+         end
+@@ -285,25 +298,28 @@ sequenceDiagram
+     participant Worker
+     participant Powens
+ 
+     API->>Redis: RPUSH powens:jobs (syncConnection)
+     Worker->>Redis: BLPOP powens:jobs (5s timeout)
+     Worker->>Redis: SET lock:connection:{id} (15min TTL)
+     Worker->>Powens: GET /accounts
+     Worker->>Powens: GET /transactions (paginated)
+     Worker->>DB: Upsert accounts + transactions (batch 800)
+     Worker->>Redis: Record sync metrics
+     Worker->>Redis: DEL lock:connection:{id}
+ ```
+ 
+ ---
+ 
+ ## Versions cles
+ 
+ | Outil | Version |
+ |---|---|
+ | Node.js | 22.15.0 |
+ | Bun | 1.2.22 |
+ | pnpm | 10.15.0 |
+ | TypeScript | strict, ES2023, exactOptionalPropertyTypes |
+ | PostgreSQL | 16-alpine |
+ | Redis | 7-alpine |
++
++
++Voir aussi: [TAURI-DESKTOP.md](TAURI-DESKTOP.md) pour les commandes desktop/mobile scaffolding.
+diff --git a/docs/context/TAURI-DESKTOP.md b/docs/context/TAURI-DESKTOP.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..290811a71f79b4248af2bad9de67ca4ee164e9ee
+--- /dev/null
++++ b/docs/context/TAURI-DESKTOP.md
+@@ -0,0 +1,69 @@
++# Tauri 2 Desktop Integration
++
++> Derniere mise a jour: 2026-04-17
++
++## Objectif
++
++Finance-OS desktop reste un **shell Tauri 2** autour de l'application web existante (`apps/web`).
++Aucune logique produit ne doit diverger entre browser et desktop sans contrainte plateforme explicite.
++
++## Architecture
++
++- Frontend reutilise: `apps/web`
++- Shell natif: `apps/desktop/src-tauri`
++- API/backend model: inchange (`apps/web` continue a utiliser `/api/*` et les memes gardes demo/admin)
++
++## Preconditions outillage
++
++- Rust toolchain stable (`rustup`, `cargo`)
++- Tauri CLI (`cargo install tauri-cli --locked --version ^2`)
++- Linux desktop build deps: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `patchelf`
++
++## Commandes locales
++
++Depuis la racine du repo:
++
++- `pnpm desktop:dev` — demarre Tauri Desktop + web dev server (via `beforeDevCommand`)
++- `pnpm desktop:build` — build production desktop (web build + bundle Tauri)
++- `pnpm desktop:typecheck` — information/versioning Tauri CLI
++
++## iOS-ready path (scaffold uniquement)
++
++Tauri 2 expose un chemin mobile. Dans ce step, on documente le workflow sans promettre un export magique:
++
++- `pnpm desktop:ios:init` — initialise le projet iOS (macOS + Xcode requis)
++- `pnpm desktop:ios:dev` — lance un run dev iOS
++- `pnpm desktop:ios:build` — build iOS
++
++Limitations actuelles:
++
++- Non valide sous Linux CI (outil Apple absent)
++- Pas de logique mobile native specifique dans cette PR
++- Le produit reste pilote par l'experience web existante
++
++## Securite runtime
++
++- `withGlobalTauri=false` pour eviter une surface globale JS inutile
++- capability par defaut minimale (`core:default` seulement)
++- aucun plugin shell/fs/http ajoute
++- aucun secret ajoute en `VITE_*`
++
++## Observabilite
++
++Le runtime Rust emit des logs JSON structures sur:
++
++- startup du shell desktop
++- readiness de fenetre principale
++- echec fatal de boot
++
++Ces logs sont volontairement limites pour eviter le bruit.
++
++## CI
++
++Le workflow CI ajoute un job `tauri-validate` dedie:
++
++- installation deps Linux Tauri
++- `pnpm install --frozen-lockfile`
++- `pnpm desktop:build`
++
++Le job web existant reste intact.
+diff --git a/package.json b/package.json
+index 93dfbf474aaabaa505cd573d0e3be8c1c105f3e2..cf783ed57d7c1a5d574eca5b322db36e51a6b708 100644
+--- a/package.json
++++ b/package.json
+@@ -28,35 +28,41 @@
+     "infra:down": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml down",
+     "infra:logs": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml logs -f",
+     "infra:ps": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml ps",
+     "db:generate": "pnpm --filter @finance-os/db db:generate",
+     "db:migrate": "pnpm --filter @finance-os/db db:migrate",
+     "db:studio": "pnpm --filter @finance-os/db db:studio",
+     "auth:hash": "pnpm --filter @finance-os/api auth:hash",
+     "auth:hash-b64": "pnpm --filter @finance-os/api auth:hash-b64",
+     "worker:dev": "bun --watch apps/worker/src/index.ts",
+     "worker:start": "pnpm --filter @finance-os/worker start",
+     "worker:typecheck": "pnpm --filter @finance-os/worker typecheck",
+     "web:dev": "pnpm --filter @finance-os/web dev",
+     "web:build": "pnpm --filter @finance-os/web build",
+     "web:start": "pnpm --filter @finance-os/web start",
+     "web:typecheck": "pnpm --filter @finance-os/web typecheck",
+     "web:test": "pnpm --filter @finance-os/web test",
+     "gitnexus:analyze": "npx gitnexus analyze --skills",
+     "gitnexus:analyze:full": "npx gitnexus analyze --embeddings --skills --verbose",
+     "gitnexus:analyze:force": "npx gitnexus analyze --embeddings --skills --verbose --force",
+     "gitnexus:status": "npx gitnexus status",
+     "gitnexus:list": "npx gitnexus list",
+     "gitnexus:mcp": "npx gitnexus mcp",
+     "gitnexus:serve": "npx gitnexus serve",
+     "gitnexus:wiki": "npx gitnexus wiki",
+     "gitnexus:clean": "npx gitnexus clean",
+-    "gitnexus:sync-generated-skills": "node scripts/sync-gitnexus-generated-skills.mjs"
++    "gitnexus:sync-generated-skills": "node scripts/sync-gitnexus-generated-skills.mjs",
++    "desktop:dev": "cd apps/desktop && cargo tauri dev",
++    "desktop:build": "cd apps/desktop && cargo tauri build",
++    "desktop:typecheck": "cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
++    "desktop:ios:init": "pnpm --filter @finance-os/desktop ios:init",
++    "desktop:ios:dev": "pnpm --filter @finance-os/desktop ios:dev",
++    "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build"
+   },
+   "devDependencies": {
+     "@biomejs/biome": "^2.4.4",
+     "@types/node": "^25.3.0",
+     "concurrently": "^9.2.1",
+     "gitnexus": "1.4.10",
+     "typescript": "^5.9.3"
+   }
+ }
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 84a7d110b4fc158104788bc721a6ae2227c1ee03..0a49acf355ea67ac03bc8263d22c44f67b519ecf 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -51,50 +51,52 @@ importers:
+         specifier: workspace:*
+         version: link:../../packages/redis
+       cheerio:
+         specifier: ^1.2.0
+         version: 1.2.0
+       dotenv:
+         specifier: ^17.3.1
+         version: 17.3.1
+       drizzle-orm:
+         specifier: ^0.45.1
+         version: 0.45.1(@types/pg@8.16.0)(bun-types@1.3.12)(pg@8.18.0)(postgres@3.4.8)
+       elysia:
+         specifier: latest
+         version: 1.4.28(@sinclair/typebox@0.34.48)(exact-mirror@0.2.7(@sinclair/typebox@0.34.48))(file-type@21.3.0)(openapi-types@12.1.3)(typescript@5.9.3)
+       fast-xml-parser:
+         specifier: ^5.5.11
+         version: 5.5.11
+       zod:
+         specifier: ^4.3.6
+         version: 4.3.6
+     devDependencies:
+       bun-types:
+         specifier: latest
+         version: 1.3.12
+ 
++  apps/desktop: {}
++
+   apps/web:
+     dependencies:
+       '@faker-js/faker':
+         specifier: ^10.0.0
+         version: 10.3.0
+       '@finance-os/ui':
+         specifier: workspace:*
+         version: link:../../packages/ui
+       '@fontsource-variable/inter':
+         specifier: ^5.2.8
+         version: 5.2.8
+       '@fontsource-variable/jetbrains-mono':
+         specifier: ^5.2.8
+         version: 5.2.8
+       '@react-three/drei':
+         specifier: ^10.7.7
+         version: 10.7.7(@react-three/fiber@9.6.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2))(@types/react@19.2.14)(@types/three@0.183.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
+       '@react-three/fiber':
+         specifier: ^9.6.0
+         version: 9.6.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(three@0.183.2)
+       '@t3-oss/env-core':
+         specifier: ^0.13.8
+         version: 0.13.10(typescript@5.9.3)(zod@4.3.6)
+       '@tailwindcss/vite':
+         specifier: ^4.1.18

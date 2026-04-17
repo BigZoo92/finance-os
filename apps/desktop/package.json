@@ -1,0 +1,12 @@
+{
+  "name": "@finance-os/desktop",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "cargo tauri dev",
+    "ios:init": "cargo tauri ios init",
+    "ios:dev": "cargo tauri ios dev",
+    "ios:build": "cargo tauri ios build"
+  }
+}

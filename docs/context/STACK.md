@@ -9,7 +9,7 @@
 ## Vue d'ensemble
 
 Finance-OS est un **cockpit de finances personnelles** self-hosted, mono-utilisateur.
-Architecture monorepo avec 3 runtimes (Web, API, Worker) et 5 packages partages.
+Architecture monorepo avec 4 runtimes (Web, API, Worker, Desktop Tauri) et packages partages.
 
 ```mermaid
 graph TB
@@ -64,6 +64,7 @@ finance-os/
     web/          # Frontend - React 19, TanStack Start, Nitro SSR
     api/          # Backend  - Elysia sur Bun
     worker/       # Jobs     - Consumer Redis sur Bun
+    desktop/      # Shell natif - Tauri 2 (reuse apps/web)
   packages/
     ui/           # Design system - shadcn/ui + Radix + Tailwind v4
     db/           # Schema + migrations - Drizzle ORM + PostgreSQL
@@ -130,6 +131,17 @@ finance-os/
 | **@finance-os/powens** | Client Powens + crypto |
 | **Internal HTTP scheduler** | Declenche les ingestions news et refresh marches cache-first |
 
+
+### Desktop shell (apps/desktop)
+
+| Technologie | Version | Role |
+|---|---|---|
+| **Tauri** | 2.x | Shell desktop autour de `apps/web` |
+| **Rust** | stable | Runtime natif (window lifecycle + logs structures) |
+| **Tauri CLI** | 2.x | workflow dev/build desktop + mobile scaffold |
+
+**Runtime** : WebView natif (desktop), sans logique produit dupliquee.
+
 ### Base de donnees
 
 | Technologie | Version | Role |
@@ -160,7 +172,8 @@ finance-os/
 ```mermaid
 graph LR
     Push["git push main"] --> CI["CI Workflow
-    lint + typecheck + test + build"]
+    lint + typecheck + test + build
+    + tauri desktop build"]
     Tag["git tag vX.Y.Z"] --> Release["Release Workflow"]
     Release --> CI2["CI (rerun)"]
     CI2 --> Build["Docker Build
@@ -177,7 +190,7 @@ graph LR
 
 | Etape | Outil | Details |
 |---|---|---|
-| **CI** | GitHub Actions | `pnpm check:ci` = frozen lockfile + lint + typecheck + test + build |
+| **CI** | GitHub Actions | `pnpm check:ci` (web/api/worker) + job `tauri-validate` (`pnpm desktop:build`) |
 | **Build** | Docker multi-stage | 4 targets: build-web, web, api, worker |
 | **Registry** | GHCR | Images immutables, jamais `latest` |
 | **Deploy** | Dokploy | Docker Compose, source Raw (pas de rebuild) |
@@ -307,3 +320,6 @@ sequenceDiagram
 | TypeScript | strict, ES2023, exactOptionalPropertyTypes |
 | PostgreSQL | 16-alpine |
 | Redis | 7-alpine |
+
+
+Voir aussi: [TAURI-DESKTOP.md](TAURI-DESKTOP.md) pour les commandes desktop/mobile scaffolding.
