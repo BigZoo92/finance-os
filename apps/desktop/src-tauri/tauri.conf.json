@@ -12,7 +12,10 @@
   "app": {
     "withGlobalTauri": false,
     "security": {
-      "freezePrototype": true
+      "freezePrototype": true,
+      "capabilities": [
+        "main-capability"
+      ]
     },
     "windows": [
       {
