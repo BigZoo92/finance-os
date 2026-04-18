@@ -66,6 +66,7 @@
 - If possible, allow agent internet during environment setup so `pnpm install --frozen-lockfile` can refill a cold cache.
 - Prefer using the repo script [../scripts/codex-env-setup.sh](../scripts/codex-env-setup.sh) as the Codex environment setup command so install semantics match CI and missing workspace dependencies are caught early.
 - That setup script also forces `ONNXRUNTIME_NODE_INSTALL=skip` and `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` so `gitnexus` skips optional Linux CUDA downloads that often fail in restricted Codex containers.
+- It now also installs Bun, Rust, the Tauri CLI, Linux desktop deps when `apt-get` is available, and runs `pnpm desktop:doctor` before you trust desktop parity.
 - The setup now runs [../scripts/verify-workspace-install.mjs](../scripts/verify-workspace-install.mjs), which resolves declared dependencies across the repo generically instead of maintaining a hand-written package allowlist.
 
 ## Issue-comment workflow runs on my own comment

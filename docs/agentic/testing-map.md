@@ -90,7 +90,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm check:ci` when the environment can install and run the full repo suite
 - Web loader, auth, or UI changes:
   - `pnpm web:typecheck`
-  - `pnpm web:test`
+  - `pnpm web:test` (`apps/web/vitest.config.mjs` keeps unit tests decoupled from production-only Vite plugins)
   - `pnpm web:build`
   - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-legacy-adapter.test.ts` when dashboard compatibility mapping/fallback behavior changes
   - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts` when goals action logging or request-id propagation changed
@@ -186,3 +186,17 @@ Use this map to choose the smallest verification set that still matches the risk
 - Powens callback: invalid auth/state fails safely, valid admin/state flow returns success and queues sync.
 - Release-sensitive changes: run the smoke scripts in [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs) and [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) with the right env; prod smoke now covers `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status`, plus optional demo/admin auth context via `SMOKE_AUTH_MODE`.
 - Rollback readiness: verify kill-switch behavior and emergency downgrade steps from [policy-verification-bundle.md](policy-verification-bundle.md) before marking medium-high risk work as release-ready.
+
+
+## Desktop / Tauri scope
+
+Use when `apps/desktop/**`, Tauri config, or desktop CI wiring changes.
+
+- Required checks:
+  - `pnpm desktop:doctor`
+  - `pnpm desktop:build`
+  - `pnpm check:ci`
+- CI evidence:
+  - `.github/workflows/ci.yml` job `tauri-validate`
+- Notes:
+  - iOS commands are scaffold-only and should be validated on macOS/Xcode hosts, not Linux CI.

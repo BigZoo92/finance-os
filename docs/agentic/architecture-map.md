@@ -24,6 +24,10 @@ Start here when you need the shortest path to the right runtime entrypoint.
   - temporary legacy dashboard adapter (now emits `migration.stage` diagnostics to support incremental rollout decisions): [../../apps/web/src/features/dashboard-legacy-adapter.ts](../../apps/web/src/features/dashboard-legacy-adapter.ts)
   - financial goals card: [../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx](../../apps/web/src/components/dashboard/personal-financial-goals-card.tsx)
   - Powens callback route: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
+- Desktop runtime: [../../apps/desktop/src-tauri/src/main.rs](../../apps/desktop/src-tauri/src/main.rs)
+  - local rules: [../../apps/desktop/AGENTS.md](../../apps/desktop/AGENTS.md)
+  - tauri config and capability boundary: [../../apps/desktop/src-tauri/tauri.conf.json](../../apps/desktop/src-tauri/tauri.conf.json), [../context/TAURI-DESKTOP.md](../context/TAURI-DESKTOP.md)
+  - architecture context: [../context/TAURI-DESKTOP.md](../context/TAURI-DESKTOP.md)
 - Worker runtime: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
   - local rules: [../../apps/worker/AGENTS.md](../../apps/worker/AGENTS.md)
   - market refresh scheduler: [../../apps/worker/src/market-refresh-scheduler.ts](../../apps/worker/src/market-refresh-scheduler.ts)
@@ -72,6 +76,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
 ## Core Relations
 
 - `apps/web` is the only public entrypoint and proxies `/api/*` internally to `apps/api`; this is a strict runtime boundary and deployment assumption.
+- `apps/desktop` wraps the existing web runtime through Tauri 2 and must not duplicate product logic, auth policy, or provider access rules.
 - API auth derivation (`apps/api/src/auth/*`) gates all admin/provider behavior and drives the demo/admin split consumed by dashboard and Powens routes.
 - Dashboard read-model flow is:
   1. API route modules under `routes/dashboard/routes/*`

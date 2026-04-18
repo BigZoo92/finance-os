@@ -78,4 +78,5 @@ Scope: `apps/web/**`
 - Avoid `useEffect` request orchestration for route data.
 - Do not bypass shared query options in [src/features/auth-query-options.ts](src/features/auth-query-options.ts), [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts), [src/features/markets/query-options.ts](src/features/markets/query-options.ts), [src/features/goals/query-options.ts](src/features/goals/query-options.ts), or [src/features/powens/query-options.ts](src/features/powens/query-options.ts).
 - Do not read non-sensitive runtime `VITE_*` values directly from `import.meta.env` in app code when they must remain runtime-overridable in production; use [src/lib/public-runtime-env.ts](src/lib/public-runtime-env.ts) instead.
+- Keep Vitest isolated from build-only Vite plugins: `pnpm web:test` runs through [vitest.config.mjs](vitest.config.mjs) rather than the app's production [vite.config.ts](vite.config.ts).
 - When UI behavior changes, update [../../docs/agentic/ui-quality-map.md](../../docs/agentic/ui-quality-map.md) if the guidance or entry points changed.

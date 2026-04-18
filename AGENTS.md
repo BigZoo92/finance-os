@@ -86,6 +86,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 ## Local Guides
 
 - [apps/api/AGENTS.md](apps/api/AGENTS.md)
+- [apps/desktop/AGENTS.md](apps/desktop/AGENTS.md)
 - [apps/web/AGENTS.md](apps/web/AGENTS.md)
 - [apps/worker/AGENTS.md](apps/worker/AGENTS.md)
 - [infra/docker/AGENTS.md](infra/docker/AGENTS.md)

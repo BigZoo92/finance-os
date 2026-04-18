@@ -12,7 +12,7 @@
     "start": "vite preview",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --config vitest.config.mjs"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",

@@ -1,52 +1,62 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
+import { spawnSync } from 'node:child_process'
 
-const isWindows = process.platform === "win32";
-const pnpmCommand = "pnpm";
+const pnpmExec = process.env.npm_execpath
+  ? {
+      command: process.execPath,
+      baseArgs: [process.env.npm_execpath],
+    }
+  : {
+      command: process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+      baseArgs: [],
+    }
 
 const steps = [
   {
-    name: "Install dependencies",
-    args: ["install", "--frozen-lockfile"],
+    name: 'Install dependencies',
+    args: ['install', '--frozen-lockfile'],
   },
   {
-    name: "Lint",
-    args: ["-r", "--if-present", "lint"],
+    name: 'Lint',
+    args: ['-r', '--if-present', 'lint'],
   },
   {
-    name: "Typecheck",
-    args: ["-r", "--if-present", "typecheck"],
+    name: 'Typecheck',
+    args: ['-r', '--if-present', 'typecheck'],
   },
   {
-    name: "Test",
-    args: ["-r", "--if-present", "test"],
+    name: 'Test',
+    args: ['-r', '--if-present', 'test'],
   },
   {
-    name: "Build",
-    args: ["-r", "--if-present", "build"],
+    name: 'Build',
+    args: ['-r', '--if-present', 'build'],
   },
-];
+  {
+    name: 'Build desktop shell',
+    args: ['desktop:build'],
+  },
+]
 
 for (const step of steps) {
-  console.log(`\n==> ${step.name}`);
-  console.log(`${pnpmCommand} ${step.args.join(" ")}`);
+  console.log(`\n==> ${step.name}`)
+  console.log(`pnpm ${step.args.join(' ')}`)
 
-  const result = spawnSync(pnpmCommand, step.args, {
-    stdio: "inherit",
-    shell: isWindows,
+  const result = spawnSync(pnpmExec.command, [...pnpmExec.baseArgs, ...step.args], {
+    stdio: 'inherit',
     env: {
       ...process.env,
-      CI: "true",
+      CI: 'true',
     },
-  });
+  })
 
   if (result.error) {
-    throw result.error;
+    throw result.error
   }
 
-  if (typeof result.status === "number" && result.status !== 0) {
-    process.exit(result.status);
+  if (typeof result.status === 'number' && result.status !== 0) {
+    process.exit(result.status)
   }
 }
 
-console.log("\ncheck:ci completed successfully.");
+console.log('\ncheck:ci completed successfully.')
