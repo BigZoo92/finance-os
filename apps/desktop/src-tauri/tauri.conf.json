@@ -22,11 +22,5 @@
         "fullscreen": false
       }
     ]
-  },
-  "bundle": {
-    "active": false,
-    "icon": [
-      "icons/icon.png"
-    ]
   }
 }

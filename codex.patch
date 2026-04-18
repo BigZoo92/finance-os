@@ -1,33 +1,32 @@
+diff --git a/apps/desktop/src-tauri/capabilities/default.json b/apps/desktop/src-tauri/capabilities/default.json
+deleted file mode 100644
+index 28966f7..0000000
+--- a/apps/desktop/src-tauri/capabilities/default.json
++++ /dev/null
+@@ -1,10 +0,0 @@
+-{
+-  "identifier": "default",
+-  "description": "Default capability for Finance-OS desktop shell.",
+-  "windows": [
+-    "main"
+-  ],
+-  "permissions": [
+-    "core:default"
+-  ]
+-}
 diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
-index 3d9aff2..7d74974 100644
+index 7d74974..bd2a332 100644
 --- a/apps/desktop/src-tauri/tauri.conf.json
 +++ b/apps/desktop/src-tauri/tauri.conf.json
-@@ -1,4 +1,5 @@
- {
-+  "$schema": "https://schema.tauri.app/config/2",
-   "productName": "Finance-OS",
-   "version": "0.1.0",
-   "identifier": "com.financeos.desktop",
-@@ -6,13 +7,9 @@
-     "beforeDevCommand": "pnpm web:dev",
-     "beforeBuildCommand": "pnpm web:build",
-     "devUrl": "http://localhost:3000",
--    "frontendDist": "./static",
--    "withGlobalTauri": false
-+    "frontendDist": "./static"
-   },
-   "app": {
--    "security": {
--      "csp": null
--    },
-     "windows": [
-       {
-         "label": "main",
-@@ -31,6 +28,5 @@
-     "icon": [
-       "icons/icon.png"
+@@ -22,11 +22,5 @@
+         "fullscreen": false
+       }
      ]
 -  },
--  "$schema": "https://schema.tauri.app/config/2"
-+  }
+-  "bundle": {
+-    "active": false,
+-    "icon": [
+-      "icons/icon.png"
+-    ]
+   }
  }
