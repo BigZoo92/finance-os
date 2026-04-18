@@ -235,7 +235,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          git apply --3way --whitespace=nowarn codex.patch >apply.stdout 2>apply.stderr
+          git apply --3way --recount --whitespace=nowarn codex.patch >apply.stdout 2>apply.stderr
           status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
@@ -403,6 +403,7 @@ jobs:
                 "",
                 "Reply again on this PR thread with exactly one AUTOPILOT_PATCH_V1 comment and exactly one fenced diff block.",
                 "Keep the marker and footer outside the fence. Start the patch with diff --git.",
+                "Generate the fenced diff from `git diff` on the current PR branch and validate the exact patch with `git apply --check` before replying.",
                 "",
                 failureMarker,
               ].join("\n"),

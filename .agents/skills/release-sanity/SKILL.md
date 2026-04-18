@@ -30,9 +30,10 @@ description: Validate whether a Finance-OS change can affect CI, release, deploy
 2. Trace whether the change affects CI, GHCR images, Dokploy, web-only public routing, the local deploy rules in [../../../infra/docker/AGENTS.md](../../../infra/docker/AGENTS.md), or autopilot PR-thread patch-apply assumptions.
 3. When `issue_comment` workflows are in scope, verify that Codex-author gating happens before side effects and that comment failures cannot create retry storms.
 4. When autopilot implementation flow is in scope, verify the draft PR request comment, PR-thread patch apply, single active PR lane, stub-only rejection, and merge-on-green rebase/merge assumptions together.
-5. Prefer validation and documentation over redesign; do not expand scope into workflow rewrites unless asked.
-6. Call out any smoke checks from [../../../scripts/smoke-api.mjs](../../../scripts/smoke-api.mjs) or [../../../scripts/smoke-prod.mjs](../../../scripts/smoke-prod.mjs) that should run, including the post-deploy `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` coverage plus any required `SMOKE_AUTH_MODE` or smoke-admin secrets.
-7. For medium-high risk changes, verify staged rollout and emergency downgrade readiness using [../../../docs/agentic/policy-verification-bundle.md](../../../docs/agentic/policy-verification-bundle.md).
+5. Confirm the PR request comment still requires a Git-generated diff that can pass `git apply --check`, and that the apply workflow preserves `--recount` tolerance for hunk-count drift without weakening the other guards.
+6. Prefer validation and documentation over redesign; do not expand scope into workflow rewrites unless asked.
+7. Call out any smoke checks from [../../../scripts/smoke-api.mjs](../../../scripts/smoke-api.mjs) or [../../../scripts/smoke-prod.mjs](../../../scripts/smoke-prod.mjs) that should run, including the post-deploy `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` coverage plus any required `SMOKE_AUTH_MODE` or smoke-admin secrets.
+8. For medium-high risk changes, verify staged rollout and emergency downgrade readiness using [../../../docs/agentic/policy-verification-bundle.md](../../../docs/agentic/policy-verification-bundle.md).
 
 ## Trigger Examples
 
