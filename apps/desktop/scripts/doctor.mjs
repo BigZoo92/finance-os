@@ -73,6 +73,22 @@ function getResultOutput(result) {
     .map(value => value.trim())[0]
 }
 
+function checkBun() {
+  const bunVersion = spawn('bun', ['--version'])
+
+  if (bunVersion.error?.code === 'ENOENT') {
+    addNote('bun not found in PATH (optional for desktop shell, required for full `pnpm check:ci`).')
+    return
+  }
+
+  if (bunVersion.error || bunVersion.status !== 0) {
+    addNote('bun check failed; `pnpm check:ci` may fail until Bun is installed.')
+    return
+  }
+
+  addNote(`bun detected: ${getResultOutput(bunVersion) ?? 'unknown version'}`)
+}
+
 function checkCargoAndTauriCli() {
   const cargoVersion = spawn('cargo', ['-V'])
 
@@ -162,6 +178,7 @@ function checkLinuxNativeDeps() {
 }
 
 checkPngIcon()
+checkBun()
 checkCargoAndTauriCli()
 checkLinuxNativeDeps()
 
