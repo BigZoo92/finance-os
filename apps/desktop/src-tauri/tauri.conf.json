@@ -1,4 +1,5 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
   "productName": "Finance-OS",
   "version": "0.1.0",
   "identifier": "com.financeos.desktop",
@@ -6,13 +7,9 @@
     "beforeDevCommand": "pnpm web:dev",
     "beforeBuildCommand": "pnpm web:build",
     "devUrl": "http://localhost:3000",
-    "frontendDist": "./static",
-    "withGlobalTauri": false
+    "frontendDist": "./static"
   },
   "app": {
-    "security": {
-      "csp": null
-    },
     "windows": [
       {
         "label": "main",
@@ -31,6 +28,5 @@
     "icon": [
       "icons/icon.png"
     ]
-  },
-  "$schema": "https://schema.tauri.app/config/2"
+  }
 }

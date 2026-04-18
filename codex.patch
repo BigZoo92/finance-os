@@ -1,30 +1,33 @@
-diff --git a/apps/desktop/src-tauri/src/lib.rs b/apps/desktop/src-tauri/src/lib.rs
-index 3351ae3..65cf388 100644
---- a/apps/desktop/src-tauri/src/lib.rs
-+++ b/apps/desktop/src-tauri/src/lib.rs
-@@ -13,7 +13,7 @@ pub fn run() {
- 
-   tauri::Builder::default()
-     .setup(|app| {
--      if let Some(window) = app.get_webview_window("main") {
-+      if let Some(window) = app.handle().get_webview_window("main") {
-         info!(
-           target: "desktop.window",
-           label = window.label(),
 diff --git a/apps/desktop/src-tauri/tauri.conf.json b/apps/desktop/src-tauri/tauri.conf.json
-index 14808f9..3d9aff2 100644
+index 3d9aff2..7d74974 100644
 --- a/apps/desktop/src-tauri/tauri.conf.json
 +++ b/apps/desktop/src-tauri/tauri.conf.json
-@@ -6,10 +6,10 @@
+@@ -1,4 +1,5 @@
+ {
++  "$schema": "https://schema.tauri.app/config/2",
+   "productName": "Finance-OS",
+   "version": "0.1.0",
+   "identifier": "com.financeos.desktop",
+@@ -6,13 +7,9 @@
      "beforeDevCommand": "pnpm web:dev",
      "beforeBuildCommand": "pnpm web:build",
      "devUrl": "http://localhost:3000",
--    "frontendDist": "./static"
-+    "frontendDist": "./static",
-+    "withGlobalTauri": false
+-    "frontendDist": "./static",
+-    "withGlobalTauri": false
++    "frontendDist": "./static"
    },
    "app": {
--    "withGlobalTauri": false,
-     "security": {
-       "csp": null
-     },
+-    "security": {
+-      "csp": null
+-    },
+     "windows": [
+       {
+         "label": "main",
+@@ -31,6 +28,5 @@
+     "icon": [
+       "icons/icon.png"
+     ]
+-  },
+-  "$schema": "https://schema.tauri.app/config/2"
++  }
+ }
