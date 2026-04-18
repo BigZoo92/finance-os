@@ -55,7 +55,8 @@
     "desktop:dev": "pnpm desktop:doctor && cd apps/desktop && cargo tauri dev",
     "desktop:build": "pnpm desktop:doctor && cd apps/desktop && cargo tauri build",
     "desktop:typecheck": "pnpm desktop:doctor && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
-    "desktop:ios:init": "pnpm --filter @finance-os/desktop ios:init",
+    "desktop:ios:targets": "rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios",
+    "desktop:ios:init": "pnpm desktop:ios:targets && pnpm --filter @finance-os/desktop ios:init",
     "desktop:ios:dev": "pnpm --filter @finance-os/desktop ios:dev",
     "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build"
   },
