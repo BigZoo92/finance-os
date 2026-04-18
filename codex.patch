@@ -1,0 +1,41 @@
+diff --git a/.github/agent-stubs/improve-823.md b/.github/agent-stubs/improve-823.md
+deleted file mode 100644
+index 3d5350c..0000000
+--- a/.github/agent-stubs/improve-823.md
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# Autopilot stub for improve #823
+-
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/823
+-
+-This file is a temporary bootstrap marker for branch/PR creation.
+-Delete this file in the first real implementation patch.
+\ No newline at end of file
+diff --git a/docs/context/TAURI-DESKTOP.md b/docs/context/TAURI-DESKTOP.md
+index 41c7033..c2b1943 100644
+--- a/docs/context/TAURI-DESKTOP.md
++++ b/docs/context/TAURI-DESKTOP.md
+@@ -40,7 +40,8 @@ Depuis la racine du repo:
+ 
+ Tauri 2 expose un chemin mobile. Dans ce step, on documente le workflow sans promettre un export magique:
+ 
+-- `pnpm desktop:ios:init` - initialise le projet iOS (macOS + Xcode requis)
++- `pnpm desktop:ios:targets` - ajoute les targets Rust iOS (`aarch64-apple-ios`, `aarch64-apple-ios-sim`, `x86_64-apple-ios`)
++- `pnpm desktop:ios:init` - initialise le projet iOS (macOS + Xcode requis) et passe d'abord par `desktop:ios:targets` pour eviter les erreurs de cible manquante
+ - `pnpm desktop:ios:dev` - lance un run dev iOS
+ - `pnpm desktop:ios:build` - build iOS
+ 
+diff --git a/package.json b/package.json
+index dbbff34..9857fe7 100644
+--- a/package.json
++++ b/package.json
+@@ -55,7 +55,8 @@
+     "desktop:dev": "pnpm desktop:doctor && cd apps/desktop && cargo tauri dev",
+     "desktop:build": "pnpm desktop:doctor && cd apps/desktop && cargo tauri build",
+     "desktop:typecheck": "pnpm desktop:doctor && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
+-    "desktop:ios:init": "pnpm --filter @finance-os/desktop ios:init",
++    "desktop:ios:targets": "rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios",
++    "desktop:ios:init": "pnpm desktop:ios:targets && pnpm --filter @finance-os/desktop ios:init",
+     "desktop:ios:dev": "pnpm --filter @finance-os/desktop ios:dev",
+     "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build"
+   },

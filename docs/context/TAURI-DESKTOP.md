@@ -40,7 +40,8 @@ Depuis la racine du repo:
 
 Tauri 2 expose un chemin mobile. Dans ce step, on documente le workflow sans promettre un export magique:
 
-- `pnpm desktop:ios:init` - initialise le projet iOS (macOS + Xcode requis)
+- `pnpm desktop:ios:targets` - ajoute les targets Rust iOS (`aarch64-apple-ios`, `aarch64-apple-ios-sim`, `x86_64-apple-ios`)
+- `pnpm desktop:ios:init` - initialise le projet iOS (macOS + Xcode requis) et passe d'abord par `desktop:ios:targets` pour eviter les erreurs de cible manquante
 - `pnpm desktop:ios:dev` - lance un run dev iOS
 - `pnpm desktop:ios:build` - build iOS
 
