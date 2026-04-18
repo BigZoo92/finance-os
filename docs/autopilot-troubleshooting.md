@@ -5,6 +5,7 @@
 - The happy path is now a GitHub patch comment again.
 - `Autopilot - Improve ready to draft PR` creates the draft `implement:` PR and posts an implementation request on that PR thread.
 - Codex should reply on that PR thread with `AUTOPILOT_PATCH_V1` plus exactly one fenced unified diff.
+- The safest reply is a Git-generated diff from the current PR branch; do not hand-edit hunk headers or counts.
 - `Autopilot - Apply Codex diff to PR branch` applies that patch onto the same PR branch.
 - If a PR still shows only `.github/agent-stubs/**` in `Files changed`, no real implementation reached the branch yet.
 
@@ -12,6 +13,7 @@
 
 - A generic review comment is not enough. The implementation reply must contain `AUTOPILOT_PATCH_V1` and exactly one fenced diff block.
 - The expected flow is: PR created -> Codex replies on PR thread with patch -> autopilot applies patch -> CI runs -> merge-on-green continues.
+- Before posting the reply, validate the exact fenced patch with `git apply --check` on the current PR branch.
 - If CI reports the PR is still stub-only, autopilot should leave the PR open and request another cleanup patch on the same PR thread instead of opening retry PRs.
 - A PR is only promoted out of draft when CI succeeds and the PR diff contains real non-stub changes with no `.github/agent-stubs/**` files left.
 
@@ -38,6 +40,8 @@
 
 - `Autopilot - Merge on green CI` promotes a draft PR once it detects real non-stub files on the branch and green CI.
 - A PR that remains draft with `autopilot:waiting-patch` usually means the branch still contains only the bootstrap stub or the Codex reply was malformed and could not be applied.
+- The patch-apply workflow now uses `git apply --recount` to recover minor hunk-count mismatches, but it still expects a real Git diff and will reject malformed fences or non-applying patches.
+- If patch apply fails with `corrupt patch`, regenerate the reply from `git diff`, then validate it with `git apply --check` before posting a new PR-thread comment.
 - Check that `GH_AUTOPILOT_TOKEN` can write pull requests and issues.
 - Check that the PR thread contains the implementation request comment and that Codex replied with `AUTOPILOT_PATCH_V1`.
 

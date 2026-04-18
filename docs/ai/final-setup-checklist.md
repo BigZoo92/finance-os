@@ -377,7 +377,7 @@ This preserves what is good while removing the manual hole that broke the lane.
 - If an `implement:` PR is stuck stub-only, check whether the PR thread contains the `AUTOPILOT_IMPLEMENTATION_REQUEST_V3` comment and whether Codex replied with `AUTOPILOT_PATCH_V1`.
 - If a legacy PR still says `autopilot:waiting-codex`, wait for the queue pump to migrate it, or close it without merge to requeue cleanly.
 - If Codex does not see the repo, reconnect GitHub to ChatGPT/Codex and trigger `repo:BigZoo92/finance-os import`.
-- If patch apply fails, the PR thread now gets a failure reason. Fix the patch format on the same PR thread.
+- If patch apply fails, the PR thread now gets a failure reason. Regenerate the patch from `git diff`, validate it with `git apply --check`, then reply again on the same PR thread.
 - If CI fails, treat the PR-thread CI summary as the source of truth, not a partial local Codex summary.
 - If you need to take over locally, use `scripts/codex-env-setup.sh` first, then run `pnpm check:ci` before declaring the branch ready.
 

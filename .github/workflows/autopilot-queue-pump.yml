@@ -148,6 +148,8 @@ jobs:
                   "- Modify at least one non-stub file in the same patch.",
                   "- Use exactly ONE fenced code block and ZERO other code fences.",
                   "- Keep AUTOPILOT_PATCH_V1 and the footer outside the code fence.",
+                  "- Generate the fenced diff from actual git changes on this PR branch. Do not hand-write hunk headers or line counts.",
+                  "- Before replying, validate the exact patch body with `git apply --check` on the current PR branch.",
                   "- Do NOT ask a human to extract, copy, or apply anything manually.",
                 ]
               );

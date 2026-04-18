@@ -41,6 +41,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - only one implementation lane may auto-start from a batch at a time; the rest stay queued
   - `issue_comment` workflows must gate on Codex-authored comments before doing work
   - implementation PRs are created automatically as draft `agent/impl-*` branches; Codex should implement by replying on the PR thread with `AUTOPILOT_PATCH_V1`, and autopilot applies that patch onto the same branch
+  - PR-thread implementation patches must be Git-generated diffs that pass `git apply --check`; autopilot may use `git apply --recount` to tolerate hunk-count drift, but hand-written malformed hunks still count as a workflow failure
   - once an implementation PR is created, the linked `spec:` and `improve:` issues are closed as `completed`; if that PR is closed without merge, autopilot reopens and requeues the linked work
   - only one autopilot implementation PR may stay open at a time; extra improve issues wait in `autopilot:queued-pr`
   - only one writer may own an active autopilot implementation branch at a time; if a human or Claude takes over locally, stop prompting Codex on that branch until the handoff is complete
