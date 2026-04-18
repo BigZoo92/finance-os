@@ -26,7 +26,7 @@ Start here when you need the shortest path to the right runtime entrypoint.
   - Powens callback route: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
 - Desktop runtime: [../../apps/desktop/src-tauri/src/main.rs](../../apps/desktop/src-tauri/src/main.rs)
   - local rules: [../../apps/desktop/AGENTS.md](../../apps/desktop/AGENTS.md)
-  - tauri config and capability boundary: [../../apps/desktop/src-tauri/tauri.conf.json](../../apps/desktop/src-tauri/tauri.conf.json), [../../apps/desktop/src-tauri/capabilities/default.json](../../apps/desktop/src-tauri/capabilities/default.json)
+  - tauri config and capability boundary: [../../apps/desktop/src-tauri/tauri.conf.json](../../apps/desktop/src-tauri/tauri.conf.json), [../context/TAURI-DESKTOP.md](../context/TAURI-DESKTOP.md)
   - architecture context: [../context/TAURI-DESKTOP.md](../context/TAURI-DESKTOP.md)
 - Worker runtime: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
   - local rules: [../../apps/worker/AGENTS.md](../../apps/worker/AGENTS.md)

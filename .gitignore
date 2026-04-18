@@ -23,3 +23,5 @@ docker-data
 # Tauri / Rust desktop artifacts
 apps/desktop/src-tauri/target
 apps/desktop/src-tauri/gen
+apps/desktop/src-tauri/static
+apps/desktop/src-tauri/icons/icon.ico

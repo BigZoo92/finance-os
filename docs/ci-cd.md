@@ -26,19 +26,22 @@ Etapes:
 4. `pnpm -r --if-present typecheck`
 5. `pnpm -r --if-present test`
 6. `pnpm -r --if-present build`
+7. job desktop separe: Rust + deps Linux Tauri + `pnpm desktop:build`
 
 Commande locale equivalente:
 
 - `pnpm check:ci`
-- ce script force `CI=true` puis rejoue exactement le meme ordre et les memes commandes que `.github/workflows/ci.yml`
-- ce script suppose aussi `bun` disponible dans le `PATH`, car plusieurs suites du workspace utilisent `bun test`
+- ce script force `CI=true`, rejoue la suite principale, puis ajoute `pnpm desktop:build` pour couvrir aussi le job `tauri-validate`
+- ce script suppose `bun`, `cargo`, `cargo tauri`, et sur Linux les deps natives Tauri disponibles dans le `PATH` / systeme
 
 ### Codex environment parity
 
 - The happy path is now PR-thread patch apply, not manual extraction.
 - Use [../scripts/codex-env-setup.sh](/c:/Users/giver/dev/finance-os/scripts/codex-env-setup.sh) whenever you need local parity for a manual takeover, a local reproduction, or a Codex environment reset.
 - It runs the same frozen-lockfile install shape as CI, but forces `ONNXRUNTIME_NODE_INSTALL=skip` and `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` so `gitnexus` does not try to download optional ONNX/CUDA artifacts from non-registry hosts inside restricted Codex containers.
+- It also installs Bun, Rust, the Tauri CLI, and on Linux the native desktop packages needed by `pnpm desktop:build`.
 - It then executes [../scripts/verify-workspace-install.mjs](/c:/Users/giver/dev/finance-os/scripts/verify-workspace-install.mjs) to fail early if declared workspace dependencies are missing from the environment cache.
+- It finishes with `pnpm desktop:doctor` so icon-format or missing-toolchain issues fail before a full build.
 - Once the environment setup succeeds, any manual local takeover on an `implement:` PR should run `pnpm check:ci` before claiming the branch is ready.
 
 ### Release

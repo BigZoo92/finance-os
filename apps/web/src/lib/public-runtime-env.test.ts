@@ -198,8 +198,27 @@ describe('public runtime env', () => {
     process.env.VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED = 'true'
     process.env.VITE_UI_RECONNECT_BANNER_ENABLED = 'false'
 
-    expect(getPublicRuntimeEnvScript()).toBe(
-      'window.__FINANCE_OS_PUBLIC_RUNTIME_ENV__={"VITE_APP_TITLE":"Finance \\u003cOS\\u003e","VITE_APP_ORIGIN":"https://build.example.test","VITE_API_BASE_URL":"/api","VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED":"false","VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS":"300","VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED":"true","VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED":"false","VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED":"true","VITE_UI_RECONNECT_BANNER_ENABLED":"false","VITE_PWA_NOTIFICATIONS_ENABLED":"true","VITE_PWA_CRITICAL_ENABLED":"true","VITE_AI_ADVISOR_ENABLED":"true","VITE_AI_ADVISOR_ADMIN_ONLY":"false"};'
-    )
+    const script = getPublicRuntimeEnvScript()
+    const prefix = 'window.__FINANCE_OS_PUBLIC_RUNTIME_ENV__='
+
+    expect(script.startsWith(prefix)).toBe(true)
+    expect(script.endsWith(';')).toBe(true)
+    expect(script).toContain('Finance \\u003cOS\\u003e')
+    expect(script).not.toContain('Finance <OS>')
+    expect(JSON.parse(script.slice(prefix.length, -1))).toEqual({
+      VITE_APP_TITLE: 'Finance <OS>',
+      VITE_APP_ORIGIN: 'https://build.example.test',
+      VITE_API_BASE_URL: '/api',
+      VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED: 'false',
+      VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS: '300',
+      VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED: 'true',
+      VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED: 'false',
+      VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: 'true',
+      VITE_UI_RECONNECT_BANNER_ENABLED: 'false',
+      VITE_PWA_NOTIFICATIONS_ENABLED: 'true',
+      VITE_PWA_CRITICAL_ENABLED: 'true',
+      VITE_AI_ADVISOR_ENABLED: 'true',
+      VITE_AI_ADVISOR_ADMIN_ONLY: 'false',
+    })
   })
 })

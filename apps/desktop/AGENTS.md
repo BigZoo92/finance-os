@@ -12,11 +12,14 @@ Scope: `apps/desktop/**`
 
 ## Verify
 
+- `pnpm desktop:doctor`
 - `pnpm desktop:dev`
 - `pnpm desktop:build`
+- `pnpm check:ci` when the environment also has Bun + Rust/Tauri prerequisites
 
 ## Pitfalls
 
 - Do not add secrets to client-side env (`VITE_*`).
 - Do not introduce desktop-only privileged backdoors.
 - Do not bypass `apps/web` as the core product source of truth.
+- Keep `src-tauri/icons/icon.png` as the source of truth; `src-tauri/icons/icon.ico` is generated for Windows builds and should not be hand-edited.

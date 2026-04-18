@@ -90,7 +90,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm check:ci` when the environment can install and run the full repo suite
 - Web loader, auth, or UI changes:
   - `pnpm web:typecheck`
-  - `pnpm web:test`
+  - `pnpm web:test` (`apps/web/vitest.config.mjs` keeps unit tests decoupled from production-only Vite plugins)
   - `pnpm web:build`
   - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-legacy-adapter.test.ts` when dashboard compatibility mapping/fallback behavior changes
   - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts` when goals action logging or request-id propagation changed
@@ -193,6 +193,7 @@ Use this map to choose the smallest verification set that still matches the risk
 Use when `apps/desktop/**`, Tauri config, or desktop CI wiring changes.
 
 - Required checks:
+  - `pnpm desktop:doctor`
   - `pnpm desktop:build`
   - `pnpm check:ci`
 - CI evidence:

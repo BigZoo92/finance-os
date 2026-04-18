@@ -51,9 +51,10 @@
     "gitnexus:wiki": "npx gitnexus wiki",
     "gitnexus:clean": "npx gitnexus clean",
     "gitnexus:sync-generated-skills": "node scripts/sync-gitnexus-generated-skills.mjs",
-    "desktop:dev": "cd apps/desktop && cargo tauri dev",
-    "desktop:build": "cd apps/desktop && cargo tauri build",
-    "desktop:typecheck": "cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
+    "desktop:doctor": "node apps/desktop/scripts/doctor.mjs",
+    "desktop:dev": "pnpm desktop:doctor && cd apps/desktop && cargo tauri dev",
+    "desktop:build": "pnpm desktop:doctor && cd apps/desktop && cargo tauri build",
+    "desktop:typecheck": "pnpm desktop:doctor && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
     "desktop:ios:init": "pnpm --filter @finance-os/desktop ios:init",
     "desktop:ios:dev": "pnpm --filter @finance-os/desktop ios:dev",
     "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build"
