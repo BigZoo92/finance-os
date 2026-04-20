@@ -1,39 +1,34 @@
-diff --git a/.github/agent-stubs/improve-830.md b/.github/agent-stubs/improve-830.md
+diff --git a/.github/agent-stubs/improve-834.md b/.github/agent-stubs/improve-834.md
 deleted file mode 100644
-index a1eacbd..0000000
---- a/.github/agent-stubs/improve-830.md
+index 09d60cb..0000000
+--- a/.github/agent-stubs/improve-834.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #830
+-# Autopilot stub for improve #834
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/830
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/834
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/docs/AI-ARCHITECTURE.md b/docs/AI-ARCHITECTURE.md
-index 7e65a9c..971006d 100644
---- a/docs/AI-ARCHITECTURE.md
-+++ b/docs/AI-ARCHITECTURE.md
-@@ -264,9 +264,9 @@ The daily brief UI surfaces both artifact quality and spend state so the operato
+diff --git a/docs/AI-SETUP.md b/docs/AI-SETUP.md
+index 9089290..4ea7c48 100644
+--- a/docs/AI-SETUP.md
++++ b/docs/AI-SETUP.md
+@@ -1,6 +1,6 @@
+ # AI Setup
  
- Prepared but not fully activated:
+-Last updated: 2026-04-15
++Last updated: 2026-04-20
  
--- local/on-prem provider slot for Gemma or similar
-+- local/on-prem provider slot for Gemma, Qwen, or similar
+ ## Goal
  
--Targeted Gemma integration roles (when enabled):
-+Targeted Gemma/Qwen integration roles (when enabled):
+@@ -53,7 +53,7 @@ Active now:
  
- - deterministic rewrite assistant for high-volume text normalization (category labels, merchant cleanup, summary compression)
- - fallback synthesis model for non-critical advisor prose when paid providers are unavailable or budget-capped
-diff --git a/packages/ai/src/types.ts b/packages/ai/src/types.ts
-index 51ec139..56b26c8 100644
---- a/packages/ai/src/types.ts
-+++ b/packages/ai/src/types.ts
-@@ -1,4 +1,4 @@
--export type AiProviderId = 'openai' | 'anthropic' | 'local' | 'mock'
-+export type AiProviderId = 'openai' | 'anthropic' | 'gemma' | 'qwen' | 'local' | 'mock'
+ Prepared for later, not fully activated:
  
- export type AiRunType = 'daily' | 'chat' | 'relabel' | 'eval'
- 
+-- Gemma/local provider slot
++- Gemma/Qwen/local provider slot
+   - targeted role 1: deterministic rewrite + normalization workloads (low-risk text shaping)
+   - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
+   - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout

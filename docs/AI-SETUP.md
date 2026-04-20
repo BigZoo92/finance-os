@@ -1,6 +1,6 @@
 # AI Setup
 
-Last updated: 2026-04-15
+Last updated: 2026-04-20
 
 ## Goal
 
@@ -53,7 +53,7 @@ Active now:
 
 Prepared for later, not fully activated:
 
-- Gemma/local provider slot
+- Gemma/Qwen/local provider slot
   - targeted role 1: deterministic rewrite + normalization workloads (low-risk text shaping)
   - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
   - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout
