@@ -54,6 +54,9 @@ Active now:
 Prepared for later, not fully activated:
 
 - Gemma/local provider slot
+  - targeted role 1: deterministic rewrite + normalization workloads (low-risk text shaping)
+  - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
+  - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout
 - Twitter/X ingestion
 - crypto ingestion
 

@@ -1,41 +1,58 @@
-diff --git a/.github/agent-stubs/improve-823.md b/.github/agent-stubs/improve-823.md
+diff --git a/.github/agent-stubs/improve-827.md b/.github/agent-stubs/improve-827.md
 deleted file mode 100644
-index 3d5350c..0000000
---- a/.github/agent-stubs/improve-823.md
+index a0ff1cd..0000000
+--- a/.github/agent-stubs/improve-827.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #823
+-# Autopilot stub for improve #827
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/823
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/827
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/docs/context/TAURI-DESKTOP.md b/docs/context/TAURI-DESKTOP.md
-index 41c7033..c2b1943 100644
---- a/docs/context/TAURI-DESKTOP.md
-+++ b/docs/context/TAURI-DESKTOP.md
-@@ -40,7 +40,8 @@ Depuis la racine du repo:
+diff --git a/docs/AI-ARCHITECTURE.md b/docs/AI-ARCHITECTURE.md
+index b2f07ae..7e65a9c 100644
+--- a/docs/AI-ARCHITECTURE.md
++++ b/docs/AI-ARCHITECTURE.md
+@@ -265,6 +265,12 @@ The daily brief UI surfaces both artifact quality and spend state so the operato
+ Prepared but not fully activated:
  
- Tauri 2 expose un chemin mobile. Dans ce step, on documente le workflow sans promettre un export magique:
+ - local/on-prem provider slot for Gemma or similar
++
++Targeted Gemma integration roles (when enabled):
++
++- deterministic rewrite assistant for high-volume text normalization (category labels, merchant cleanup, summary compression)
++- fallback synthesis model for non-critical advisor prose when paid providers are unavailable or budget-capped
++- local privacy-first sandbox for prompt/response tuning before promoting prompts to paid production paths
+ - additional macro/data providers
+ - Twitter/X signal ingestion
+ - crypto news/market ingestion
+diff --git a/docs/AI-SETUP.md b/docs/AI-SETUP.md
+index 06702d1..9089290 100644
+--- a/docs/AI-SETUP.md
++++ b/docs/AI-SETUP.md
+@@ -54,6 +54,9 @@ Active now:
+ Prepared for later, not fully activated:
  
--- `pnpm desktop:ios:init` - initialise le projet iOS (macOS + Xcode requis)
-+- `pnpm desktop:ios:targets` - ajoute les targets Rust iOS (`aarch64-apple-ios`, `aarch64-apple-ios-sim`, `x86_64-apple-ios`)
-+- `pnpm desktop:ios:init` - initialise le projet iOS (macOS + Xcode requis) et passe d'abord par `desktop:ios:targets` pour eviter les erreurs de cible manquante
- - `pnpm desktop:ios:dev` - lance un run dev iOS
- - `pnpm desktop:ios:build` - build iOS
+ - Gemma/local provider slot
++  - targeted role 1: deterministic rewrite + normalization workloads (low-risk text shaping)
++  - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
++  - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout
+ - Twitter/X ingestion
+ - crypto ingestion
  
-diff --git a/package.json b/package.json
-index dbbff34..9857fe7 100644
---- a/package.json
-+++ b/package.json
-@@ -55,7 +55,8 @@
-     "desktop:dev": "pnpm desktop:doctor && cd apps/desktop && cargo tauri dev",
-     "desktop:build": "pnpm desktop:doctor && cd apps/desktop && cargo tauri build",
-     "desktop:typecheck": "pnpm desktop:doctor && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
--    "desktop:ios:init": "pnpm --filter @finance-os/desktop ios:init",
-+    "desktop:ios:targets": "rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios",
-+    "desktop:ios:init": "pnpm desktop:ios:targets && pnpm --filter @finance-os/desktop ios:init",
-     "desktop:ios:dev": "pnpm --filter @finance-os/desktop ios:dev",
-     "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build"
-   },
+diff --git a/docs/context/EXTERNAL-SERVICES.md b/docs/context/EXTERNAL-SERVICES.md
+index fb6c14d..8461293 100644
+--- a/docs/context/EXTERNAL-SERVICES.md
++++ b/docs/context/EXTERNAL-SERVICES.md
+@@ -308,6 +308,9 @@ Le domaine marches suit le meme principe que news:
+ ### Providers prepares mais non actives
+ 
+ - slot provider local pour Gemma / on-prem
++  - role cible: normalisation/reformulation deterministe de texte non critique
++  - role cible: fallback de synthese en mode degrade quand les providers payants sont indisponibles
++  - role cible: sandbox local pour evaluer prompts et gardes-fous avant activation production
+ - ingestion Twitter/X
+ - extension crypto
+ 
