@@ -35,6 +35,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Autopilot challenge completes only when Codex posts a `Status: READY` comment on the `improve:` issue.
 - Autopilot implementation starts from the `implement:` draft PR thread: Codex replies there with `AUTOPILOT_PATCH_V1`, and the patch-apply workflow updates the same PR branch automatically.
 - The implementation request comment must require a Git-generated diff that passes `git apply --check`; the patch-apply workflow now uses `git apply --recount` so minor hunk-count drift does not block the lane.
+- Patch-comment parsing is now backed by [../../scripts/agentic/parse-autopilot-patch-comment.cjs](../../scripts/agentic/parse-autopilot-patch-comment.cjs) so the workflow validates marker placement from comment structure instead of rejecting diffs that merely mention the marker in changed file content.
 - Creating that implementation PR closes the linked `spec:` and `improve:` issues as completed; if the PR is later closed without merge, autopilot reopens and requeues the linked work.
 - The `implement:` PR is the only valid execution artifact. Do not implement from `batch:`, `spec:`, or `improve:` issue tasks.
 - Only one autopilot implementation PR should be open at a time. Additional improve issues queue under `autopilot:queued-pr` until the active lane closes.
@@ -53,6 +54,7 @@ This repo already has a working automation model. Treat this map as an entry poi
 
 - API smoke: [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs)
 - Prod smoke: [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) (`SMOKE_AUTH_MODE`, optional `SMOKE_ADMIN_EMAIL` / `SMOKE_ADMIN_PASSWORD`, optional `SMOKE_SUMMARY_RANGE`)
+- Autopilot patch-comment parser regression: `node --test scripts/agentic/parse-autopilot-patch-comment.test.mjs`
 - Required production route assertions live in [../../apps/api/src/index.ts](../../apps/api/src/index.ts)
 - The shared system contract is `GET /health` and `GET /version` across runtimes, with web retaining `GET /healthz` as a compatibility alias and worker exposing those routes on localhost only.
 
