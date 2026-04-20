@@ -265,6 +265,12 @@ The daily brief UI surfaces both artifact quality and spend state so the operato
 Prepared but not fully activated:
 
 - local/on-prem provider slot for Gemma or similar
+
+Targeted Gemma integration roles (when enabled):
+
+- deterministic rewrite assistant for high-volume text normalization (category labels, merchant cleanup, summary compression)
+- fallback synthesis model for non-critical advisor prose when paid providers are unavailable or budget-capped
+- local privacy-first sandbox for prompt/response tuning before promoting prompts to paid production paths
 - additional macro/data providers
 - Twitter/X signal ingestion
 - crypto news/market ingestion

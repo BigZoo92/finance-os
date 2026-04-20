@@ -308,6 +308,9 @@ Le domaine marches suit le meme principe que news:
 ### Providers prepares mais non actives
 
 - slot provider local pour Gemma / on-prem
+  - role cible: normalisation/reformulation deterministe de texte non critique
+  - role cible: fallback de synthese en mode degrade quand les providers payants sont indisponibles
+  - role cible: sandbox local pour evaluer prompts et gardes-fous avant activation production
 - ingestion Twitter/X
 - extension crypto
 
