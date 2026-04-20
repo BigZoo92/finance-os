@@ -1,4 +1,3 @@
 Falling back to direct application...
 Applied patch to 'docs/AI-ARCHITECTURE.md' cleanly.
-Applied patch to 'docs/AI-SETUP.md' cleanly.
-Applied patch to 'docs/context/EXTERNAL-SERVICES.md' cleanly.
+Applied patch to 'packages/ai/src/types.ts' cleanly.

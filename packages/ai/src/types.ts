@@ -1,4 +1,4 @@
-export type AiProviderId = 'openai' | 'anthropic' | 'local' | 'mock'
+export type AiProviderId = 'openai' | 'anthropic' | 'gemma' | 'qwen' | 'local' | 'mock'
 
 export type AiRunType = 'daily' | 'chat' | 'relabel' | 'eval'
 
