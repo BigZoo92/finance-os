@@ -12,6 +12,7 @@
     "dev:all": "pnpm infra:up && pnpm dev:apps",
     "build": "pnpm -r --if-present build",
     "check:ci": "node scripts/check-ci.mjs",
+    "test": "node --test scripts/agentic/*.test.mjs",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",

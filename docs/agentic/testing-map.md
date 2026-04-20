@@ -88,6 +88,10 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm worker:typecheck` when heartbeat wiring or worker env changed
   - `pnpm smoke:api` when healthcheck URLs, proxy routing, or probe targets changed
   - `pnpm check:ci` when the environment can install and run the full repo suite
+- Autopilot PR-thread patch parsing or issue-comment workflow changes:
+  - `node --test scripts/agentic/parse-autopilot-patch-comment.test.mjs`
+  - `node .agents/skills/scripts/validate-agent-foundation.mjs`
+  - `pnpm check:ci` when the environment can install and run the full repo suite
 - Web loader, auth, or UI changes:
   - `pnpm web:typecheck`
   - `pnpm web:test` (`apps/web/vitest.config.mjs` keeps unit tests decoupled from production-only Vite plugins)

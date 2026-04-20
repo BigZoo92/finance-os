@@ -14,6 +14,7 @@
 - A generic review comment is not enough. The implementation reply must contain `AUTOPILOT_PATCH_V1` and exactly one fenced diff block.
 - The expected flow is: PR created -> Codex replies on PR thread with patch -> autopilot applies patch -> CI runs -> merge-on-green continues.
 - Before posting the reply, validate the exact fenced patch with `git apply --check` on the current PR branch.
+- The apply workflow now validates the comment structure itself: the marker must be the only text before the fence, the footer must stay after the fence, and the diff body may legitimately contain the same marker string inside added or removed file content.
 - If CI reports the PR is still stub-only, autopilot should leave the PR open and request another cleanup patch on the same PR thread instead of opening retry PRs.
 - A PR is only promoted out of draft when CI succeeds and the PR diff contains real non-stub changes with no `.github/agent-stubs/**` files left.
 
@@ -41,6 +42,7 @@
 - `Autopilot - Merge on green CI` promotes a draft PR once it detects real non-stub files on the branch and green CI.
 - A PR that remains draft with `autopilot:waiting-patch` usually means the branch still contains only the bootstrap stub or the Codex reply was malformed and could not be applied.
 - The patch-apply workflow now uses `git apply --recount` to recover minor hunk-count mismatches, but it still expects a real Git diff and will reject malformed fences or non-applying patches.
+- Parser changes for the PR-thread patch format should keep `node --test scripts/agentic/parse-autopilot-patch-comment.test.mjs` green so regressions are caught before push.
 - If patch apply fails with `corrupt patch`, regenerate the reply from `git diff`, then validate it with `git apply --check` before posting a new PR-thread comment.
 - Check that `GH_AUTOPILOT_TOKEN` can write pull requests and issues.
 - Check that the PR thread contains the implementation request comment and that Codex replied with `AUTOPILOT_PATCH_V1`.

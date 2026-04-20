@@ -186,47 +186,20 @@ jobs:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
             const fs = require("fs");
-            const body = String(context.payload.comment?.body || "");
-            const fencedBlocks = [...body.matchAll(/```([a-zA-Z0-9_-]*)\s*[\r\n]([\s\S]*?)```/g)];
+            const path = require("path");
+            const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+            const {
+              parseAutopilotPatchComment,
+            } = require(path.join(workspace, "scripts/agentic/parse-autopilot-patch-comment.cjs"));
 
-            if (fencedBlocks.length !== 1) {
+            const parsed = parseAutopilotPatchComment(context.payload.comment?.body || "");
+            if (!parsed.valid) {
               core.setOutput("valid", "false");
-              core.setOutput("reason", "Expected exactly one fenced code block.");
+              core.setOutput("reason", parsed.reason);
               return;
             }
 
-            const language = String(fencedBlocks[0][1] || "").trim().toLowerCase();
-            let patchText = String(fencedBlocks[0][2] || "");
-            patchText = patchText
-              .replace(/\r\n/g, "\n")
-              .replace(/\r/g, "\n")
-              .replace(/^\n+/, "")
-              .replace(/\n*$/, "\n");
-
-            if (patchText.includes("AUTOPILOT_PATCH_V1")) {
-              core.setOutput("valid", "false");
-              core.setOutput("reason", "The patch marker must stay outside the code fence.");
-              return;
-            }
-
-            const firstMeaningfulLine =
-              patchText
-                .split("\n")
-                .find((line) => line.trim().length > 0) || "";
-
-            if (!firstMeaningfulLine.startsWith("diff --git ")) {
-              core.setOutput("valid", "false");
-              core.setOutput("reason", "The fenced block must start with diff --git.");
-              return;
-            }
-
-            if (language && language !== "diff") {
-              core.setOutput("valid", "false");
-              core.setOutput("reason", "Use a diff fence or an untyped fence only.");
-              return;
-            }
-
-            fs.writeFileSync("codex.patch", patchText, "utf8");
+            fs.writeFileSync("codex.patch", parsed.patchText, "utf8");
             core.setOutput("valid", "true");
 
       - name: Apply patch

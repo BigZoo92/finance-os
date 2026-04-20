@@ -70,6 +70,24 @@ Default split:
 - Codex owns the active autopilot `implement:` PR branch
 - Claude challenges and reviews
 
+## Model-role matrix
+
+Use this matrix to make tool ownership and escalation explicit:
+
+| Work type | Primary model | Secondary model | Default handoff |
+|---|---|---|---|
+| Batch/spec expansion and queue progression | Codex | Claude (review only) | Codex posts issue/PR-thread artifacts; Claude reviews assumptions asynchronously |
+| Improve-stage challenge and risk surfacing | Codex | Claude | Codex delivers challenger notes; Claude deepens adversarial review for high-risk items |
+| Implement-stage patching on active `implement:` PR | Codex | Claude (paused writer) | Codex is single writer; Claude is non-writing reviewer unless explicit human takeover |
+| CI-failure remediation on active autopilot PR | Codex | Claude | Codex posts next `AUTOPILOT_PATCH_V1`; Claude can propose diagnosis without pushing code |
+| Manual local branch implementation (non-autopilot) | Claude or human | Codex (optional reviewer) | Human decides owner; keep one writer per branch |
+
+Routing decision rule:
+
+- If the work item is attached to an active autopilot `implement:` PR, route writing tasks to Codex.
+- If the work item is architecture critique, quality challenge, or design review, route to Claude by default.
+- If a human intentionally takes over implementation on the autopilot branch, pause Codex writes until the takeover is complete.
+
 Escalation split for risky work:
 
 - Codex still owns the autopilot branch
