@@ -1,6 +1,6 @@
 # AI Evals
 
-Last updated: 2026-04-15
+Last updated: 2026-04-20
 
 ## Purpose
 
@@ -55,6 +55,21 @@ The current eval layer is deterministic and conservative:
 - it checks whether the generated state is compatible with explicit expectations
 - it does not ask another model to grade the answers
 - it treats degraded runs and budget-blocked runs as meaningful signals
+
+## Grounding + Transparency Guardrails
+
+To keep advisor outputs auditable, evals should explicitly verify transparency fields when present:
+
+- recommendation rationale references concrete portfolio, transaction, market, or news signals
+- confidence labels stay aligned with available evidence and degrade when key inputs are missing
+- assumptions are surfaced as explicit caveats instead of hidden in prose
+- unknown or missing data paths prefer cautious language over fabricated certainty
+
+When adding or tuning eval cases for recommendations/chat:
+
+1. include at least one expectation that checks evidence quality (not only formatting)
+2. include at least one expectation that checks uncertainty handling (`unknown`, caveat, or degraded status)
+3. ensure assertions remain deterministic in demo mode and do not require live provider calls
 
 ## Adding New Eval Cases
 
