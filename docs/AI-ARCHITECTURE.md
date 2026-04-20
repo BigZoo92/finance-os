@@ -264,9 +264,9 @@ The daily brief UI surfaces both artifact quality and spend state so the operato
 
 Prepared but not fully activated:
 
-- local/on-prem provider slot for Gemma or similar
+- local/on-prem provider slot for Gemma, Qwen, or similar
 
-Targeted Gemma integration roles (when enabled):
+Targeted Gemma/Qwen integration roles (when enabled):
 
 - deterministic rewrite assistant for high-volume text normalization (category labels, merchant cleanup, summary compression)
 - fallback synthesis model for non-critical advisor prose when paid providers are unavailable or budget-capped

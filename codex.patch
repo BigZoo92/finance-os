@@ -1,58 +1,39 @@
-diff --git a/.github/agent-stubs/improve-827.md b/.github/agent-stubs/improve-827.md
+diff --git a/.github/agent-stubs/improve-830.md b/.github/agent-stubs/improve-830.md
 deleted file mode 100644
-index a0ff1cd..0000000
---- a/.github/agent-stubs/improve-827.md
+index a1eacbd..0000000
+--- a/.github/agent-stubs/improve-830.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #827
+-# Autopilot stub for improve #830
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/827
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/830
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
 diff --git a/docs/AI-ARCHITECTURE.md b/docs/AI-ARCHITECTURE.md
-index b2f07ae..7e65a9c 100644
+index 7e65a9c..971006d 100644
 --- a/docs/AI-ARCHITECTURE.md
 +++ b/docs/AI-ARCHITECTURE.md
-@@ -265,6 +265,12 @@ The daily brief UI surfaces both artifact quality and spend state so the operato
+@@ -264,9 +264,9 @@ The daily brief UI surfaces both artifact quality and spend state so the operato
+ 
  Prepared but not fully activated:
  
- - local/on-prem provider slot for Gemma or similar
-+
-+Targeted Gemma integration roles (when enabled):
-+
-+- deterministic rewrite assistant for high-volume text normalization (category labels, merchant cleanup, summary compression)
-+- fallback synthesis model for non-critical advisor prose when paid providers are unavailable or budget-capped
-+- local privacy-first sandbox for prompt/response tuning before promoting prompts to paid production paths
- - additional macro/data providers
- - Twitter/X signal ingestion
- - crypto news/market ingestion
-diff --git a/docs/AI-SETUP.md b/docs/AI-SETUP.md
-index 06702d1..9089290 100644
---- a/docs/AI-SETUP.md
-+++ b/docs/AI-SETUP.md
-@@ -54,6 +54,9 @@ Active now:
- Prepared for later, not fully activated:
+-- local/on-prem provider slot for Gemma or similar
++- local/on-prem provider slot for Gemma, Qwen, or similar
  
- - Gemma/local provider slot
-+  - targeted role 1: deterministic rewrite + normalization workloads (low-risk text shaping)
-+  - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
-+  - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout
- - Twitter/X ingestion
- - crypto ingestion
+-Targeted Gemma integration roles (when enabled):
++Targeted Gemma/Qwen integration roles (when enabled):
  
-diff --git a/docs/context/EXTERNAL-SERVICES.md b/docs/context/EXTERNAL-SERVICES.md
-index fb6c14d..8461293 100644
---- a/docs/context/EXTERNAL-SERVICES.md
-+++ b/docs/context/EXTERNAL-SERVICES.md
-@@ -308,6 +308,9 @@ Le domaine marches suit le meme principe que news:
- ### Providers prepares mais non actives
+ - deterministic rewrite assistant for high-volume text normalization (category labels, merchant cleanup, summary compression)
+ - fallback synthesis model for non-critical advisor prose when paid providers are unavailable or budget-capped
+diff --git a/packages/ai/src/types.ts b/packages/ai/src/types.ts
+index 51ec139..56b26c8 100644
+--- a/packages/ai/src/types.ts
++++ b/packages/ai/src/types.ts
+@@ -1,4 +1,4 @@
+-export type AiProviderId = 'openai' | 'anthropic' | 'local' | 'mock'
++export type AiProviderId = 'openai' | 'anthropic' | 'gemma' | 'qwen' | 'local' | 'mock'
  
- - slot provider local pour Gemma / on-prem
-+  - role cible: normalisation/reformulation deterministe de texte non critique
-+  - role cible: fallback de synthese en mode degrade quand les providers payants sont indisponibles
-+  - role cible: sandbox local pour evaluer prompts et gardes-fous avant activation production
- - ingestion Twitter/X
- - extension crypto
+ export type AiRunType = 'daily' | 'chat' | 'relabel' | 'eval'
  
