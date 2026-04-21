@@ -579,7 +579,7 @@ infra/
     Dockerfile                    # Multi-stage: build-web, web, api, worker
     docker-compose.dev.yml        # Dev: postgres + redis
     healthchecks/                 # Scripts healthcheck containers
-docker-compose.prod.yml           # Prod: web + api + worker + postgres + redis + ops-alerts
+docker-compose.prod.yml           # Prod: web + api + worker + postgres + redis + ops-alerts (+ optional hermes-agent profile)
 docker-compose.prod.build.yml     # Build local
 docker-compose.prod.https.yml     # Caddy reverse proxy HTTPS
 ```
