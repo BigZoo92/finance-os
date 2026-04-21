@@ -37,6 +37,12 @@ describe('createGetDashboardTransactionsUseCase', () => {
       ],
       now: () => new Date('2026-03-20T10:10:00.000Z'),
       staleAfterMinutes: 30,
+      categorizationMigration: {
+        enabled: true,
+        rolloutPercent: 100,
+        alertDisagreementRate: 0.1,
+        shadowLatencyBudgetMs: 500,
+      },
     })
 
     const result = await useCase({
@@ -98,6 +104,12 @@ describe('createGetDashboardTransactionsUseCase', () => {
       },
       now: () => new Date('2026-03-22T09:05:00.000Z'),
       staleAfterMinutes: 30,
+      categorizationMigration: {
+        enabled: true,
+        rolloutPercent: 100,
+        alertDisagreementRate: 0.1,
+        shadowLatencyBudgetMs: 500,
+      },
     })
 
     const result = await useCase({
@@ -164,6 +176,12 @@ describe('createGetDashboardTransactionsUseCase', () => {
       ],
       now: () => new Date('2026-03-24T08:10:00.000Z'),
       staleAfterMinutes: 30,
+      categorizationMigration: {
+        enabled: true,
+        rolloutPercent: 100,
+        alertDisagreementRate: 0.1,
+        shadowLatencyBudgetMs: 500,
+      },
     })
 
     const result = await useCase({
@@ -175,5 +193,59 @@ describe('createGetDashboardTransactionsUseCase', () => {
     expect(result.items).toHaveLength(2)
     expect(result.freshness.syncStatus).toBe('sync-failed-with-safe-data')
     expect(result.freshness.degradedReason).toBe('powens_refresh_failed')
+  })
+
+  it('keeps legacy labeling while shadow compare is enabled but rollout is zero', async () => {
+    const snapshots: Array<{ disagreements: number; rolloutPercent: number }> = []
+    const useCase = createGetDashboardTransactionsUseCase({
+      listTransactions: async () => [
+        {
+          id: 101,
+          bookingDate: '2026-03-24',
+          amount: '-18.40',
+          currency: 'EUR',
+          label: 'CARREFOUR',
+          merchant: 'CARREFOUR',
+          providerCategory: 'Unknown',
+          customCategory: null,
+          customSubcategory: null,
+          category: 'Legacy',
+          subcategory: null,
+          incomeType: null,
+          tags: [],
+          powensConnectionId: 'conn-1',
+          powensAccountId: 'acc-1',
+          accountName: 'Compte courant',
+        },
+      ],
+      listTransactionSyncMetadata: async () => [],
+      now: () => new Date('2026-03-24T08:10:00.000Z'),
+      staleAfterMinutes: 30,
+      categorizationMigration: {
+        enabled: true,
+        rolloutPercent: 0,
+        alertDisagreementRate: 0.1,
+        shadowLatencyBudgetMs: 500,
+      },
+      onCategorizationMigrationEvaluated: snapshot => {
+        snapshots.push({
+          disagreements: snapshot.disagreements,
+          rolloutPercent: snapshot.rolloutPercent,
+        })
+      },
+    })
+
+    const result = await useCase({
+      range: '30d',
+      limit: 10,
+      cursor: undefined,
+    })
+
+    expect(result.items[0]?.category).toBe('Legacy')
+    expect(result.items[0]?.resolutionSource).toBe('fallback')
+    expect(snapshots[0]).toEqual({
+      disagreements: 1,
+      rolloutPercent: 0,
+    })
   })
 })

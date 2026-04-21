@@ -20,6 +20,10 @@ export const createDashboardRoutes = ({
   featureEnabled,
   liveNewsIngestionEnabled,
   transactionsSnapshotStaleAfterMinutes,
+  transactionsCategorizationMigrationEnabled,
+  transactionsCategorizationRolloutPercent,
+  transactionsCategorizationDisagreementAlertRate,
+  transactionsCategorizationShadowLatencyBudgetMs,
   failsoftPolicyEnabled,
   failsoftSourceOrder,
   failsoftNewsEnabled,
@@ -87,6 +91,10 @@ export const createDashboardRoutes = ({
   featureEnabled: boolean
   liveNewsIngestionEnabled: boolean
   transactionsSnapshotStaleAfterMinutes: number
+  transactionsCategorizationMigrationEnabled: boolean
+  transactionsCategorizationRolloutPercent: number
+  transactionsCategorizationDisagreementAlertRate: number
+  transactionsCategorizationShadowLatencyBudgetMs: number
   failsoftPolicyEnabled: boolean
   failsoftSourceOrder: FailsoftSource[]
   failsoftNewsEnabled: boolean
@@ -155,6 +163,10 @@ export const createDashboardRoutes = ({
     featureEnabled,
     liveNewsIngestionEnabled,
     transactionsSnapshotStaleAfterMinutes,
+    transactionsCategorizationMigrationEnabled,
+    transactionsCategorizationRolloutPercent,
+    transactionsCategorizationDisagreementAlertRate,
+    transactionsCategorizationShadowLatencyBudgetMs,
     failsoftPolicyEnabled,
     failsoftSourceOrder,
     failsoftNewsEnabled,

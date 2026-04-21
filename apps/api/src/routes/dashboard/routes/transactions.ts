@@ -6,6 +6,7 @@ import { resolveDemoTransactionsFixture } from '../../../mocks/demo-transactions
 import { getDashboardTransactionsMock } from '../../../mocks/transactions.mock'
 import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
+import { getCategorizationMigrationSnapshot } from '../domain/transaction-categorization-migration-observability'
 import { dashboardTransactionsQuerySchema } from '../schemas'
 
 const DEFAULT_LIMIT = 30
@@ -109,6 +110,19 @@ export const createTransactionsRoute = () =>
         })
 
         logResolutionStats('demo', payload.items)
+        const disagreements = payload.items.filter(item => item.resolutionSource === 'fallback').length
+        logApiEvent({
+          level: 'info',
+          msg: 'transaction categorization migration snapshot',
+          requestId,
+          path: 'demo',
+          total: payload.items.length,
+          rollout_percent: 0,
+          disagreements,
+          disagreement_rate: payload.items.length === 0 ? 0 : disagreements / payload.items.length,
+          over_alert_threshold: false,
+          shadow_disabled_reason: 'disabled',
+        })
 
         return {
           ...payload,
@@ -136,6 +150,16 @@ export const createTransactionsRoute = () =>
         cursor: context.query.cursor,
       })
       logResolutionStats('admin', payload.items)
+      const migrationSnapshot = getCategorizationMigrationSnapshot()
+      if (migrationSnapshot) {
+        logApiEvent({
+          level: migrationSnapshot.overAlertThreshold ? 'warn' : 'info',
+          msg: 'transaction categorization migration snapshot',
+          requestId,
+          path: 'admin',
+          ...migrationSnapshot,
+        })
+      }
 
       const shouldRequestBackgroundRefresh =
         env.TRANSACTIONS_SNAPSHOT_FIRST_ENABLED &&
@@ -192,3 +216,20 @@ export const createTransactionsRoute = () =>
       query: dashboardTransactionsQuerySchema,
     }
   )
+  .get('/transactions/migration-discrepancies', context => {
+    const auth = getAuth(context)
+    const internalAuth = getInternalAuth(context)
+    if (auth.mode !== 'admin' || !internalAuth.hasValidToken) {
+      context.set.status = 403
+      return {
+        code: 'forbidden',
+        message: 'Admin internal token required',
+      }
+    }
+
+    const snapshot = getCategorizationMigrationSnapshot()
+    return {
+      schemaVersion: '2026-04-21',
+      snapshot,
+    }
+  })

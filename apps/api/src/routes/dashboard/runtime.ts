@@ -16,6 +16,7 @@ import { createDashboardNewsUseCases } from './domain/dashboard-news'
 import { createDashboardMarketsUseCases } from './domain/dashboard-markets'
 import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/failsoft-policy'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
+import { recordCategorizationMigrationSnapshot } from './domain/transaction-categorization-migration-observability'
 import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardAdvisorRepository } from './repositories/dashboard-advisor-repository'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
@@ -41,6 +42,10 @@ export const createDashboardRouteRuntime = ({
   featureEnabled,
   liveNewsIngestionEnabled,
   transactionsSnapshotStaleAfterMinutes,
+  transactionsCategorizationMigrationEnabled,
+  transactionsCategorizationRolloutPercent,
+  transactionsCategorizationDisagreementAlertRate,
+  transactionsCategorizationShadowLatencyBudgetMs,
   failsoftPolicyEnabled,
   failsoftSourceOrder,
   failsoftNewsEnabled,
@@ -107,6 +112,10 @@ export const createDashboardRouteRuntime = ({
   featureEnabled: boolean
   liveNewsIngestionEnabled: boolean
   transactionsSnapshotStaleAfterMinutes: number
+  transactionsCategorizationMigrationEnabled: boolean
+  transactionsCategorizationRolloutPercent: number
+  transactionsCategorizationDisagreementAlertRate: number
+  transactionsCategorizationShadowLatencyBudgetMs: number
   failsoftPolicyEnabled: boolean
   failsoftSourceOrder: FailsoftSource[]
   failsoftNewsEnabled: boolean
@@ -189,6 +198,13 @@ export const createDashboardRouteRuntime = ({
     listTransactionSyncMetadata: readModel.listTransactionSyncMetadata,
     now: () => new Date(),
     staleAfterMinutes: transactionsSnapshotStaleAfterMinutes,
+    categorizationMigration: {
+      enabled: transactionsCategorizationMigrationEnabled,
+      rolloutPercent: transactionsCategorizationRolloutPercent,
+      alertDisagreementRate: transactionsCategorizationDisagreementAlertRate,
+      shadowLatencyBudgetMs: transactionsCategorizationShadowLatencyBudgetMs,
+    },
+    onCategorizationMigrationEvaluated: recordCategorizationMigrationSnapshot,
   })
   const requestTransactionsBackgroundRefresh: DashboardRouteRuntime['useCases']['requestTransactionsBackgroundRefresh'] =
     async ({ requestId }) => {

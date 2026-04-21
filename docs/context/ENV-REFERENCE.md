@@ -163,6 +163,10 @@
 | `DEMO_DATASET_STRATEGY` | `v1` | Dokploy | API | Dataset demo (legacy/minimal/v1) |
 | `DEMO_PERSONA_MATCHING_ENABLED` | `true` | Dokploy | API | Matching persona demo |
 | `TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES` | `30` | Dokploy | API | Seuil fraicheur snapshot (min) |
+| `TRANSACTIONS_CATEGORIZATION_MIGRATION_ENABLED` | `true` | Dokploy | API | Active le mode shadow + compare pour la migration de categorisation |
+| `TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT` | `0` | Dokploy | API | Pourcentage de cutover progressif vers le moteur deterministe (`0-100`) |
+| `TRANSACTIONS_CATEGORIZATION_ALERT_DISAGREEMENT_RATE` | `0.08` | Dokploy | API | Seuil d'alerte (ratio) si le desaccord shadow depasse le niveau acceptable |
+| `TRANSACTIONS_CATEGORIZATION_SHADOW_LATENCY_BUDGET_MS` | `150` | Dokploy | API | Kill-switch shadow si la comparaison depasse ce budget de latence |
 | `DERIVED_RECOMPUTE_ENABLED` | `true` | Dokploy | API | Pipeline recompute |
 | `ENRICHMENT_BULK_TRIAGE_ENABLED` | `true` | Dokploy | API | Bulk triage enrichment |
 | `EXTERNAL_INTEGRATIONS_SAFE_MODE` | `false` | Dokploy | API, Worker | **Kill-switch** : desactive toutes les integrations Powens |
