@@ -240,7 +240,8 @@ Chaque widget/feature doit couvrir :
 
 ### 8.2 Verification CI
 ```bash
-pnpm check:ci  # = frozen lockfile + lint + typecheck + test + build + desktop:build
+pnpm check:ci       # = frozen lockfile + lint + typecheck + test + build, plus desktop only when desktop scope is detected
+pnpm check:ci:full  # = force la suite complete, y compris desktop:build
 ```
 
 ### 8.3 Verification manuelle requise (medium-high risk)

@@ -26,23 +26,26 @@ Etapes:
 4. `pnpm -r --if-present typecheck`
 5. `pnpm -r --if-present test`
 6. `pnpm -r --if-present build`
-7. job desktop separe: Rust + deps Linux Tauri + `pnpm desktop:build`
+7. job desktop separe: Rust + deps Linux Tauri + `pnpm desktop:build`, mais seulement quand le scope touche le shell desktop ou le handoff build web -> desktop
 
 Commande locale equivalente:
 
 - `pnpm check:ci`
-- ce script force `CI=true`, rejoue la suite principale, puis ajoute `pnpm desktop:build` pour couvrir aussi le job `tauri-validate`
-- ce script suppose `bun`, `cargo`, `cargo tauri`, et sur Linux les deps natives Tauri disponibles dans le `PATH` / systeme
+- `pnpm check:ci` rejoue la suite principale et ajoute `pnpm desktop:build` seulement quand le scope desktop est detecte automatiquement
+- `pnpm check:ci:core` force seulement la suite principale
+- `pnpm check:ci:desktop` force seulement le build desktop apres install
+- `pnpm check:ci:full` force la suite principale + desktop, meme si le detecteur auto aurait skip Tauri
+- `pnpm check:ci:desktop` et `pnpm check:ci:full` supposent `bun`, `cargo`, `cargo tauri`, et sur Linux les deps natives Tauri disponibles dans le `PATH` / systeme
 
 ### Codex environment parity
 
 - The happy path is now PR-thread patch apply, not manual extraction.
 - Use [../scripts/codex-env-setup.sh](/c:/Users/giver/dev/finance-os/scripts/codex-env-setup.sh) whenever you need local parity for a manual takeover, a local reproduction, or a Codex environment reset.
 - It runs the same frozen-lockfile install shape as CI, but forces `ONNXRUNTIME_NODE_INSTALL=skip` and `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` so `gitnexus` does not try to download optional ONNX/CUDA artifacts from non-registry hosts inside restricted Codex containers.
-- It also installs Bun, Rust, the Tauri CLI, and on Linux the native desktop packages needed by `pnpm desktop:build`.
+- It always installs Bun and the JS workspace, but only installs Rust, `tauri-cli`, and Linux native Tauri packages when desktop scope is detected or explicitly forced with `./scripts/codex-env-setup.sh --desktop`.
 - It then executes [../scripts/verify-workspace-install.mjs](/c:/Users/giver/dev/finance-os/scripts/verify-workspace-install.mjs) to fail early if declared workspace dependencies are missing from the environment cache.
-- It finishes with `pnpm desktop:doctor` so icon-format or missing-toolchain issues fail before a full build.
-- Once the environment setup succeeds, any manual local takeover on an `implement:` PR should run `pnpm check:ci` before claiming the branch is ready.
+- When desktop scope is active, it finishes with `cargo fetch` and `pnpm desktop:doctor` so icon-format or missing-toolchain issues fail before a full build.
+- Once the environment setup succeeds, any manual local takeover on an `implement:` PR should run `pnpm check:ci` by default, or `pnpm check:ci:full` when you explicitly want forced desktop parity.
 
 ### Release
 

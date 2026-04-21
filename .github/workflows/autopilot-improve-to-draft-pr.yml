@@ -143,6 +143,7 @@ jobs:
             if (!has("agent:challenger")) return;
             if (!has("autopilot")) return;
             if (!has("ready")) return;
+            if (has("autopilot:manual-takeover")) return;
 
             const repoInfo = await github.rest.repos.get({ owner, repo });
             const defaultBranch = repoInfo.data.default_branch;

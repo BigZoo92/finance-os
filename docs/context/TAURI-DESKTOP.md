@@ -70,11 +70,12 @@ Ces logs sont volontairement limites pour eviter le bruit.
 
 ## CI
 
-Le workflow CI ajoute un job `tauri-validate` dedie:
+Le workflow CI ajoute un job `tauri-validate` dedie, mais seulement quand le scope touche vraiment le desktop shell ou le handoff build web -> desktop:
 
 - installation deps Linux Tauri
 - `pnpm install --frozen-lockfile`
 - `pnpm desktop:build` (inclut le preflight `desktop:doctor` pour remonter plus tot un probleme d'asset ou d'outillage)
-- pour la parite locale ou Codex, `pnpm check:ci` inclut aussi `pnpm desktop:build` une fois l'environnement desktop prepare
+- pour la parite locale ou Codex, `pnpm check:ci` reste la commande par defaut et ne lance `pnpm desktop:build` que si le detecteur desktop le demande
+- `pnpm check:ci:desktop` force seulement la validation desktop, et `pnpm check:ci:full` force la suite complete avec desktop meme si le detecteur auto aurait skip Tauri
 
 Le job web existant reste intact.

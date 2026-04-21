@@ -9,6 +9,7 @@ on:
 permissions:
   issues: write
   pull-requests: read
+  contents: read
 
 concurrency:
   group: autopilot-queue-pump
@@ -18,12 +19,18 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_AUTOPILOT_TOKEN }}
           script: |
+            const path = require("path");
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+            const {
+              parseAutopilotReadyComment,
+            } = require(path.join(workspace, "scripts/agentic/parse-autopilot-ready-comment.cjs"));
 
             async function addLabels(issueNumber, labels) {
               if (!Number.isInteger(issueNumber) || issueNumber <= 0 || labels.length === 0) return;
@@ -67,6 +74,15 @@ jobs:
                 body: bodyLines.join("\n"),
               });
               return true;
+            }
+
+            function isCodexAuthor(login) {
+              const normalized = String(login || "").toLowerCase();
+              return (
+                normalized.includes("codex") ||
+                normalized === "chatgpt-codex-connector" ||
+                normalized === "chatgpt-codex-connector[bot]"
+              );
             }
 
             async function reopenIssue(issueNumber) {
@@ -155,6 +171,98 @@ jobs:
               );
             }
 
+            function ageInMinutes(timestamp) {
+              const parsed = Date.parse(String(timestamp || ""));
+              if (!Number.isFinite(parsed)) return Number.POSITIVE_INFINITY;
+              return (Date.now() - parsed) / 60000;
+            }
+
+            async function detectBlockedCodexReview(pull) {
+              if (!Number.isInteger(pull?.number) || pull.number <= 0) return null;
+
+              const prIssue = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number: pull.number,
+              });
+              const labels = (prIssue.data.labels || []).map((label) =>
+                typeof label === "string" ? label : label.name
+              );
+              const labelSet = new Set(labels);
+
+              if (!labelSet.has("autopilot")) return null;
+              if (!labelSet.has("autopilot:waiting-patch") && !labelSet.has("autopilot:waiting-codex")) return null;
+              if (labelSet.has("autopilot:patch-applied")) return null;
+              if (labelSet.has("autopilot:manual-takeover")) return null;
+
+              if (ageInMinutes(pull.created_at) < 15) return null;
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pull.number,
+                per_page: 100,
+              });
+              const hasPatchComment = comments.some((comment) => {
+                if (!isCodexAuthor(comment.user?.login)) return false;
+                return String(comment.body || "").includes("AUTOPILOT_PATCH_V1");
+              });
+              if (hasPatchComment) return null;
+
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner,
+                repo,
+                pull_number: pull.number,
+                per_page: 100,
+              });
+              const codexReview = reviews.find((review) => isCodexAuthor(review.user?.login));
+              if (!codexReview) return null;
+
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: pull.number,
+                per_page: 100,
+              });
+              const filenames = files.map((file) => String(file.filename || ""));
+              const hasNonStub = filenames.some((filename) => !filename.startsWith(".github/agent-stubs/"));
+              if (hasNonStub) return null;
+
+              return {
+                labelSet,
+                reviewAuthor: String(codexReview.user?.login || ""),
+              };
+            }
+
+            async function markPrForManualTakeover(pull) {
+              const blocked = await detectBlockedCodexReview(pull);
+              if (!blocked) return false;
+
+              await ensureLabel("autopilot:manual-takeover", "d4c5f9", "Automatic Codex review blocked patch mode; continue on this branch manually");
+              await ensureLabel("needs:you", "d93f0b", "Human attention required");
+
+              await addLabels(pull.number, ["autopilot:manual-takeover", "needs:you"]);
+              await removeLabel(pull.number, "autopilot:waiting-patch");
+              await removeLabel(pull.number, "autopilot:waiting-codex");
+
+              await createCommentOnce(
+                pull.number,
+                "AUTOPILOT_MANUAL_TAKEOVER_REQUIRED_V1",
+                [
+                  "AUTOPILOT_MANUAL_TAKEOVER_REQUIRED_V1",
+                  "Autopilot detected an automatic Codex GitHub review on this stub-only PR before any AUTOPILOT_PATCH_V1 comment landed.",
+                  "",
+                  "Patch-mode implementation is unlikely to recover automatically on this PR with the current GitHub/Codex review behavior.",
+                  "Continue manually on this existing PR branch instead of waiting for another PR-thread patch reply.",
+                  "Use `scripts/codex-env-setup.sh --auto` for normal parity, or `--desktop` if this branch needs Tauri tooling.",
+                  "Push real non-stub commits to this same branch. Once the PR contains real implementation and CI is green, autopilot will continue automatically.",
+                ]
+              );
+
+              core.warning(`PR #${pull.number} was parked for manual takeover after an automatic Codex review blocked patch mode.`);
+              return true;
+            }
+
             if (context.eventName === "pull_request") {
               const pull = context.payload.pull_request;
               if (!String(pull.head?.ref || "").startsWith("agent/")) return;
@@ -219,6 +327,49 @@ jobs:
             await ensureLabel("autopilot:queued-pr", "fbca04", "Improve issue is waiting for the next implementation PR slot");
             await ensureLabel("autopilot:waiting-patch", "fbca04", "PR is waiting for a Codex implementation patch comment");
             await ensureLabel("autopilot:patch-applied", "0e8a16", "A Codex patch comment was applied to this PR branch");
+            await ensureLabel("autopilot:manual-takeover", "d4c5f9", "Automatic Codex review blocked patch mode; continue on this branch manually");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+
+            for (const issue of openIssues) {
+              if (issue.pull_request) continue;
+
+              const title = String(issue.title || "").toLowerCase();
+              if (!title.startsWith("improve:")) continue;
+
+              const labels = (issue.labels || []).map((label) =>
+                typeof label === "string" ? label : label.name
+              );
+              const labelSet = new Set(labels);
+
+              if (!labelSet.has("autopilot")) continue;
+              if (!labelSet.has("agent:challenger")) continue;
+              if (labelSet.has("ready")) continue;
+              if (labelSet.has("pr:created")) continue;
+              if (labelSet.has("autopilot:queued-pr")) continue;
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issue.number,
+                per_page: 100,
+              });
+
+              const hasReadyComment = comments.some((comment) => {
+                if (!isCodexAuthor(comment.user?.login)) return false;
+                return parseAutopilotReadyComment(String(comment.body || "")).valid;
+              });
+
+              if (!hasReadyComment) continue;
+
+              await addLabels(issue.number, ["ready"]);
+              core.info(`Backfilled ready on improve #${issue.number} from an existing Codex READY comment.`);
+            }
 
             const openPrs = await github.paginate(github.rest.pulls.list, {
               owner,
@@ -233,9 +384,27 @@ jobs:
 
             if (activeAgentPrs.length >= 1) {
               for (const pull of activeAgentPrs) {
+                await markPrForManualTakeover(pull);
                 await backfillImplementationRequest(pull);
               }
               core.info(`Queue pump idle: ${activeAgentPrs.length} agent PR(s) are already open.`);
+              return;
+            }
+
+            const manualTakeoverIssues = openIssues.filter((issue) => {
+              if (issue.pull_request) return false;
+
+              const title = String(issue.title || "").toLowerCase();
+              if (!title.startsWith("improve:")) return false;
+
+              const labels = (issue.labels || []).map((label) =>
+                typeof label === "string" ? label : label.name
+              );
+              return labels.includes("autopilot:manual-takeover");
+            });
+
+            if (manualTakeoverIssues.length >= 1) {
+              core.info(`Queue pump paused: improve #${manualTakeoverIssues[0].number} is waiting for manual takeover on its existing PR branch.`);
               return;
             }
 

@@ -90,6 +90,7 @@ Use this map to choose the smallest verification set that still matches the risk
   - `pnpm check:ci` when the environment can install and run the full repo suite
 - Autopilot PR-thread patch parsing or issue-comment workflow changes:
   - `node --test scripts/agentic/parse-autopilot-patch-comment.test.mjs`
+  - `node --test scripts/agentic/parse-autopilot-ready-comment.test.mjs`
   - `node .agents/skills/scripts/validate-agent-foundation.mjs`
   - `pnpm check:ci` when the environment can install and run the full repo suite
 - Web loader, auth, or UI changes:
@@ -199,8 +200,10 @@ Use when `apps/desktop/**`, Tauri config, or desktop CI wiring changes.
 - Required checks:
   - `pnpm desktop:doctor`
   - `pnpm desktop:build`
-  - `pnpm check:ci`
+  - `pnpm check:ci:desktop`
+  - `pnpm check:ci:full` when the change also needs the full repo suite
 - CI evidence:
   - `.github/workflows/ci.yml` job `tauri-validate`
 - Notes:
+  - `pnpm check:ci` is now the smart default and skips Tauri when no desktop-triggering files are detected; use the explicit desktop/full commands when the detector should be overridden.
   - iOS commands are scaffold-only and should be validated on macOS/Xcode hosts, not Linux CI.

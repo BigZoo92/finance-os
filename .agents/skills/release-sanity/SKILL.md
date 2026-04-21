@@ -32,9 +32,12 @@ description: Validate whether a Finance-OS change can affect CI, release, deploy
 4. When autopilot implementation flow is in scope, verify the draft PR request comment, PR-thread patch apply, single active PR lane, stub-only rejection, and merge-on-green rebase/merge assumptions together.
 5. Confirm the PR request comment still requires a Git-generated diff that can pass `git apply --check`, and that the apply workflow preserves `--recount` tolerance for hunk-count drift without weakening the other guards.
 6. If the PR-thread patch parser changes, keep `node --test scripts/agentic/parse-autopilot-patch-comment.test.mjs` green and verify the parser validates comment structure rather than diff content literals.
-7. Prefer validation and documentation over redesign; do not expand scope into workflow rewrites unless asked.
-8. Call out any smoke checks from [../../../scripts/smoke-api.mjs](../../../scripts/smoke-api.mjs) or [../../../scripts/smoke-prod.mjs](../../../scripts/smoke-prod.mjs) that should run, including the post-deploy `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` coverage plus any required `SMOKE_AUTH_MODE` or smoke-admin secrets.
-9. For medium-high risk changes, verify staged rollout and emergency downgrade readiness using [../../../docs/agentic/policy-verification-bundle.md](../../../docs/agentic/policy-verification-bundle.md).
+7. If the improve-to-ready parser changes, keep `node --test scripts/agentic/parse-autopilot-ready-comment.test.mjs` green and verify the queue pump can backfill missed `ready` labels from valid Codex challenger replies.
+8. If CI desktop-scope detection changes, keep `node --test scripts/desktop-scope.test.mjs` green and verify `pnpm check:ci`, `scripts/codex-env-setup.sh`, and `.github/workflows/ci.yml` still agree on when Tauri is required.
+9. If autopilot manual-takeover logic changes, verify blocked stub-only PRs are parked on the same branch, `Autopilot - CI failure to Codex` stays silent for those PRs, and merge-on-green removes `autopilot:manual-takeover` once real implementation commits land.
+10. Prefer validation and documentation over redesign; do not expand scope into workflow rewrites unless asked.
+11. Call out any smoke checks from [../../../scripts/smoke-api.mjs](../../../scripts/smoke-api.mjs) or [../../../scripts/smoke-prod.mjs](../../../scripts/smoke-prod.mjs) that should run, including the post-deploy `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` coverage plus any required `SMOKE_AUTH_MODE` or smoke-admin secrets.
+12. For medium-high risk changes, verify staged rollout and emergency downgrade readiness using [../../../docs/agentic/policy-verification-bundle.md](../../../docs/agentic/policy-verification-bundle.md).
 
 ## Trigger Examples
 

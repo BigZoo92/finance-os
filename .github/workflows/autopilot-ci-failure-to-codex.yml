@@ -58,6 +58,7 @@ jobs:
             );
 
             if (!labels.includes("autopilot")) return;
+            if (labels.includes("autopilot:manual-takeover")) return;
 
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               owner,

@@ -13,10 +13,13 @@
 
 - A generic review comment is not enough. The implementation reply must contain `AUTOPILOT_PATCH_V1` and exactly one fenced diff block.
 - The expected flow is: PR created -> Codex replies on PR thread with patch -> autopilot applies patch -> CI runs -> merge-on-green continues.
+- Codex GitHub automatic review can interfere with autopilot implementation PRs: review comments do not satisfy patch mode, so disable automatic GitHub reviews for this repo/team if Codex keeps reviewing draft `implement:` PRs instead of posting the patch reply.
+- If that review cannot be disabled, the queue pump now parks the PR under `autopilot:manual-takeover` instead of letting the lane wait forever for a patch comment that never arrives.
 - Before posting the reply, validate the exact fenced patch with `git apply --check` on the current PR branch.
 - The apply workflow now validates the comment structure itself: the marker must be the only text before the fence, the footer must stay after the fence, and the diff body may legitimately contain the same marker string inside added or removed file content.
 - If CI reports the PR is still stub-only, autopilot should leave the PR open and request another cleanup patch on the same PR thread instead of opening retry PRs.
 - A PR is only promoted out of draft when CI succeeds and the PR diff contains real non-stub changes with no `.github/agent-stubs/**` files left.
+- A PR labeled `autopilot:manual-takeover` should be continued on the same branch manually. Once real non-stub commits land and CI is green, autopilot still promotes and merges it automatically.
 
 ## Legacy waiting-codex PRs
 
@@ -26,8 +29,9 @@
 
 ## Improve issue did not become ready
 
-- An `improve:` issue becomes `ready` only when Codex replies directly on the issue with a comment ending in `Status: READY`.
+- An `improve:` issue becomes `ready` only when Codex replies directly on the issue with a comment containing the `Status: READY` / `What changed:` / `Risk:` / `Next:` footer.
 - If that did not happen, no `implement:` draft PR will be created yet.
+- The queue pump now backfills missed `ready` labels from existing Codex challenger replies, so older improves with a valid READY footer can recover on the next sweep after main is updated.
 - Do not implement directly from `improve:` issues. They are challenger prompts, not implementation entrypoints.
 - If you implement directly from an `improve:` issue, Codex may open an out-of-band PR that autopilot will ignore.
 
@@ -62,6 +66,7 @@
 - Ask Codex to rerun `pnpm check:ci` before replying with the next fix patch whenever the environment setup completed successfully.
 - The common failure pattern is TypeScript passing locally in a narrow scope while repo CI fails under `pnpm -r --if-present typecheck`.
 - A recurring Finance-OS-specific failure pattern is `exactOptionalPropertyTypes`: optional fields must be omitted when absent, not passed as `undefined`.
+- If a PR is parked under `autopilot:manual-takeover`, `Autopilot - CI failure to Codex` intentionally stays quiet; at that point the branch is in human/local ownership, not PR-thread patch mode.
 
 ## Local fallback / env parity
 
@@ -72,7 +77,8 @@
 - If possible, allow agent internet during environment setup so `pnpm install --frozen-lockfile` can refill a cold cache.
 - Prefer using the repo script [../scripts/codex-env-setup.sh](../scripts/codex-env-setup.sh) as the Codex environment setup command so install semantics match CI and missing workspace dependencies are caught early.
 - That setup script also forces `ONNXRUNTIME_NODE_INSTALL=skip` and `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` so `gitnexus` skips optional Linux CUDA downloads that often fail in restricted Codex containers.
-- It now also installs Bun, Rust, the Tauri CLI, Linux desktop deps when `apt-get` is available, and runs `pnpm desktop:doctor` before you trust desktop parity.
+- It now installs the Rust/Tauri toolchain only when desktop scope is detected or explicitly forced; otherwise it skips the expensive desktop bootstrap and leaves you on the core JS path.
+- If you need guaranteed desktop parity on a non-desktop branch, rerun it as `./scripts/codex-env-setup.sh --desktop` before trusting `pnpm check:ci:full` or `pnpm check:ci:desktop`.
 - The setup now runs [../scripts/verify-workspace-install.mjs](../scripts/verify-workspace-install.mjs), which resolves declared dependencies across the repo generically instead of maintaining a hand-written package allowlist.
 
 ## Issue-comment workflow runs on my own comment

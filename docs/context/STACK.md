@@ -190,7 +190,7 @@ graph LR
 
 | Etape | Outil | Details |
 |---|---|---|
-| **CI** | GitHub Actions | local parity via `pnpm check:ci` (main suite + `desktop:build`), with GitHub still running a dedicated `tauri-validate` job for the desktop shell |
+| **CI** | GitHub Actions | local parity via `pnpm check:ci` (main suite + desktop seulement si le scope l'exige), with GitHub still running a dedicated `tauri-validate` job when desktop-relevant files changed |
 | **Build** | Docker multi-stage | 4 targets: build-web, web, api, worker |
 | **Registry** | GHCR | Images immutables, jamais `latest` |
 | **Deploy** | Dokploy | Docker Compose, source Raw (pas de rebuild) |

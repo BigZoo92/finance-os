@@ -33,15 +33,17 @@ This repo already has a working automation model. Treat this map as an entry poi
 - Do not alter autopilot, CI, release, or PR automation unless that work is explicitly scoped.
 - Autopilot batch intake is strict 1:1 with the raw bullet list and only one spawned spec may auto-start at a time.
 - Autopilot challenge completes only when Codex posts a `Status: READY` comment on the `improve:` issue.
+- The improve READY parser is tolerant of markdown emphasis in Codex footer lines, and the queue pump backfills missed READY promotions from existing Codex improve comments.
 - Autopilot implementation starts from the `implement:` draft PR thread: Codex replies there with `AUTOPILOT_PATCH_V1`, and the patch-apply workflow updates the same PR branch automatically.
 - The implementation request comment must require a Git-generated diff that passes `git apply --check`; the patch-apply workflow now uses `git apply --recount` so minor hunk-count drift does not block the lane.
 - Patch-comment parsing is now backed by [../../scripts/agentic/parse-autopilot-patch-comment.cjs](../../scripts/agentic/parse-autopilot-patch-comment.cjs) so the workflow validates marker placement from comment structure instead of rejecting diffs that merely mention the marker in changed file content.
 - Creating that implementation PR closes the linked `spec:` and `improve:` issues as completed; if the PR is later closed without merge, autopilot reopens and requeues the linked work.
 - The `implement:` PR is the only valid execution artifact. Do not implement from `batch:`, `spec:`, or `improve:` issue tasks.
 - Only one autopilot implementation PR should be open at a time. Additional improve issues queue under `autopilot:queued-pr` until the active lane closes.
+- If an open autopilot PR stays stub-only and only receives an automatic Codex review instead of a patch comment, the queue pump now parks that PR under `autopilot:manual-takeover`; the same branch stays valid for manual continuation, and the queue remains paused until that PR is resolved.
 - The queue pump should backfill the implementation request comment onto legacy stuck PRs that still carry the old waiting label.
 - When CI fails on an autopilot implementation PR, autopilot must comment the failing job summary and log excerpt back onto the PR thread so Codex can continue from the real runner error with another patch reply.
-- Manual local takeover on an `implement:` PR should validate with `pnpm check:ci`, which now covers the main CI suite plus `pnpm desktop:build` when the environment has Bun, Rust, the Tauri CLI, and Linux desktop deps available.
+- Manual local takeover on an `implement:` PR should validate with `pnpm check:ci` by default; use `pnpm check:ci:full` when you need to force desktop parity even if the desktop-scope detector would normally skip Tauri.
 - Merge-on-green must recognize a real non-stub implementation on the branch, promote the PR out of draft, rebase it onto the latest base if needed, and only merge once no stub file remains.
 - Release automation now waits for the public `/health` endpoint after `compose.deploy` and runs `scripts/smoke-prod.mjs`; the smoke must cover `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status` on both root and `/api` compatibility paths, with demo/admin-aware assertions and GitHub step-summary plus `::error` output on failure.
 - Production Compose now includes an `ops-alerts` sidecar driven by [../../infra/docker/ops-alerts/monitor.mjs](../../infra/docker/ops-alerts/monitor.mjs); keep its webhook env, shared worker heartbeat volume, and readonly volume mounts aligned when changing deploy topology.

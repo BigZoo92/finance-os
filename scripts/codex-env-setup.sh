@@ -6,7 +6,26 @@ cd "$ROOT_DIR"
 
 PNPM_VERSION="${PNPM_VERSION:-10.15.0}"
 BUN_VERSION="${BUN_VERSION:-1.2.22}"
+SETUP_SCOPE="${FINANCE_OS_ENV_SCOPE:-auto}"
 export PATH="$HOME/.cargo/bin:$HOME/.bun/bin:$PATH"
+
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    --auto)
+      SETUP_SCOPE="auto"
+      ;;
+    --core)
+      SETUP_SCOPE="core"
+      ;;
+    --desktop)
+      SETUP_SCOPE="desktop"
+      ;;
+    *)
+      echo "Unknown scope: $1. Use --auto, --core, or --desktop." >&2
+      exit 1
+      ;;
+  esac
+fi
 
 has_cmd() {
   command -v "$1" >/dev/null 2>&1
@@ -82,12 +101,29 @@ install_tauri_cli() {
   echo "tauri CLI installed: $(cargo tauri -V)"
 }
 
+resolve_desktop_scope() {
+  case "$SETUP_SCOPE" in
+    desktop)
+      echo "true"
+      return
+      ;;
+    core)
+      echo "false"
+      return
+      ;;
+  esac
+
+  if [[ ! -f scripts/desktop-scope.mjs ]]; then
+    echo "true"
+    return
+  fi
+
+  node scripts/desktop-scope.mjs --required-only --base-ref="${FINANCE_OS_DESKTOP_BASE_REF:-origin/main}"
+}
+
 corepack enable
 corepack prepare "pnpm@${PNPM_VERSION}" --activate
 install_bun
-install_rust
-install_tauri_linux_deps
-install_tauri_cli
 
 # `gitnexus` pulls `onnxruntime-node`, whose Linux postinstall fetches optional CUDA assets
 # from non-registry hosts. Codex containers do not need those GPU binaries, and the fetch can
@@ -103,6 +139,16 @@ else
   echo "verify-workspace-install.mjs not present on this branch yet; skipping workspace verification"
 fi
 
-pnpm desktop:doctor
+DESKTOP_REQUIRED="$(resolve_desktop_scope)"
+if [[ "$DESKTOP_REQUIRED" == "true" ]]; then
+  install_rust
+  install_tauri_linux_deps
+  install_tauri_cli
+  cargo fetch --manifest-path apps/desktop/src-tauri/Cargo.toml
+  pnpm desktop:doctor
+else
+  echo "Desktop scope not required; skipping Rust/Tauri bootstrap."
+  echo "Use ./scripts/codex-env-setup.sh --desktop to force desktop parity."
+fi
 
 echo "Codex environment setup complete: workspace dependencies resolved."

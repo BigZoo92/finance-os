@@ -98,6 +98,7 @@ jobs:
             await ensureLabel("autopilot:ready-to-merge", "0e8a16", "PR is ready for automatic merge after green CI");
             await ensureLabel("pr:draft", "bfd4f2", "Pull request is still draft");
             await ensureLabel("needs:you", "d93f0b", "Human attention required");
+            await ensureLabel("autopilot:manual-takeover", "d4c5f9", "Automatic Codex review blocked patch mode; continue on this branch manually");
 
             const prs = await github.rest.pulls.list({
               owner,
@@ -203,7 +204,7 @@ jobs:
               }
 
               await addLabels(pr.number, ["autopilot:ready-to-merge"]);
-              for (const name of ["autopilot:waiting-codex", "autopilot:waiting-patch", "autopilot:patch-applied", "pr:draft", "needs:you"]) {
+              for (const name of ["autopilot:waiting-codex", "autopilot:waiting-patch", "autopilot:patch-applied", "pr:draft", "needs:you", "autopilot:manual-takeover"]) {
                 await removeLabel(pr.number, name);
               }
 

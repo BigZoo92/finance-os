@@ -15,6 +15,27 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 jobs:
+  desktop-scope:
+    name: Detect desktop scope
+    runs-on: ubuntu-latest
+    outputs:
+      required: ${{ steps.detect.outputs.required }}
+      reason: ${{ steps.detect.outputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Detect Tauri scope
+        id: detect
+        run: node scripts/desktop-scope.mjs --github-output="${GITHUB_OUTPUT}"
+
   validate:
     name: Validate
     runs-on: ubuntu-latest
@@ -61,6 +82,8 @@ jobs:
 
   tauri-validate:
     name: Tauri Validate
+    needs: desktop-scope
+    if: needs.desktop-scope.outputs.required == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
