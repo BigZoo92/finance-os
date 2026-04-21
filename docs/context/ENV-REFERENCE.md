@@ -352,6 +352,9 @@ Notes:
 |---|---|---|---|
 | `GHCR_IMAGE_NAME` | -- | Dokploy, GitHub | Image GHCR (ex: `ghcr.io/bigzoo92/finance-os`) |
 | `APP_IMAGE_TAG` | -- | Dokploy | Tag image Docker (ex: `v1.2.3`, jamais `latest`) |
+| `HERMES_AGENT_IMAGE` | `ghcr.io/nousresearch/hermes-agent:latest` | Dokploy | Image du sidecar Hermes (profile `hermes-agent`) |
+| `HERMES_AGENT_PORT` | `8080` | Dokploy | Port interne du sidecar Hermes |
+| `HERMES_AGENT_API_KEY` | -- | Dokploy | Cle API obligatoire pour Hermes (secrete) |
 | `PROXY_HTTP_PORT` | `3080` | Local | Port HTTP proxy (HTTPS local) |
 | `PROXY_HTTPS_PORT` | `3443` | Local | Port HTTPS proxy (HTTPS local) |
 

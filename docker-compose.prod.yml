@@ -231,6 +231,38 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  hermes-agent:
+    image: ${HERMES_AGENT_IMAGE:-ghcr.io/nousresearch/hermes-agent:latest}
+    profiles:
+      - hermes-agent
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-UTC}
+      API_SERVER_HOST: 127.0.0.1
+      API_SERVER_PORT: ${HERMES_AGENT_PORT:-8080}
+      API_SERVER_KEY: ${HERMES_AGENT_API_KEY:-}
+      HERMES_GATEWAY_ENABLED: "false"
+    command:
+      [
+        "sh",
+        "-lc",
+        "if [ -z \"$API_SERVER_KEY\" ]; then echo 'hermes-agent requires HERMES_AGENT_API_KEY' >&2; exit 1; fi; exec hermes api-server --host \"$API_SERVER_HOST\" --port \"$API_SERVER_PORT\" --api-key \"$API_SERVER_KEY\"",
+      ]
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - finance_os_internal
+    security_opt:
+      - no-new-privileges:true
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
