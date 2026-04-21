@@ -84,6 +84,9 @@ export const env = createEnv({
     VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED: createBooleanUiFlagSchema(
       'VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED'
     ).optional(),
+    VITE_CTA_POLICY_REGISTRY_V1: createBooleanUiFlagSchema('VITE_CTA_POLICY_REGISTRY_V1').optional(),
+    VITE_CTA_ORCHESTRATION_OFF: createBooleanUiFlagSchema('VITE_CTA_ORCHESTRATION_OFF').optional(),
+    VITE_CTA_EMERGENCY_DISABLE_LIST: z.string().min(1).optional(),
   },
 
   /**
