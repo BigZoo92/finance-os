@@ -4,14 +4,22 @@ Use these files as markdown-first entry points before re-exploring the repo.
 
 ## Maps
 
-- [architecture-map.md](architecture-map.md): runtime entrypoints, package anchors, and where local rules live
+- [architecture-canonical.md](architecture-canonical.md): canonical runtime entrypoints, boundaries, and architecture doc template
+- [contracts-canonical.md](contracts-canonical.md): canonical HTTP contract guidance and non-regression template
+- [testing-canonical.md](testing-canonical.md): canonical verification strategy and evidence requirements
+- [release-canonical.md](release-canonical.md): canonical CI/release/deploy guidance and rollout constraints
+- [design-guidance-canonical.md](design-guidance-canonical.md): canonical UI/UX quality guidance with required state matrix template
 - [execution-map.md](execution-map.md): end-to-end runtime flows for dashboard, Powens callback, and worker sync
-- [contracts-map.md](contracts-map.md): required HTTP contracts and their implementation files
-- [testing-map.md](testing-map.md): current automated coverage, scope-based verification, and manual gaps
-- [ui-quality-map.md](ui-quality-map.md): UI quality bar, key surfaces, and manual UI checks
-- [release-map.md](release-map.md): CI, autopilot, release, deploy, and smoke-test entrypoints
 - [code_review.md](code_review.md): practical review severity and checklist for this repo
 - [policy-verification-bundle.md](policy-verification-bundle.md): conventions, decision trees, and high-effort verification checklists for dual-path parity, observability, UI states, and rollback
+
+## Deprecated Redirect Stubs
+
+- [architecture-map.md](architecture-map.md)
+- [contracts-map.md](contracts-map.md)
+- [testing-map.md](testing-map.md)
+- [release-map.md](release-map.md)
+- [ui-quality-map.md](ui-quality-map.md)
 
 ## Local Guides
 
