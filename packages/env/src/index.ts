@@ -524,6 +524,14 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => toStringArrayEnv(value, ['FEDFUNDS', 'CPIAUCSL', 'UNRATE', 'DGS10'])),
+    NEWS_PROVIDER_X_TWITTER_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    NEWS_PROVIDER_X_TWITTER_QUERY: z
+      .string()
+      .default('(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet'),
+    NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: z.string().min(1).optional(),
     FRED_API_KEY: z.string().min(1).optional(),
     MARKET_DATA_ENABLED: z
       .string()

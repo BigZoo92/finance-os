@@ -45,6 +45,9 @@ export const createDashboardRoutes = ({
   newsProviderFredEnabled,
   newsProviderFredApiKey,
   newsProviderFredSeriesIds,
+  newsProviderXTwitterEnabled,
+  newsProviderXTwitterQuery,
+  newsProviderXTwitterBearerToken,
   marketDataEnabled,
   marketDataRefreshEnabled,
   marketDataForceFixtureFallback,
@@ -109,6 +112,9 @@ export const createDashboardRoutes = ({
   newsProviderFredEnabled: boolean
   newsProviderFredApiKey: string | undefined
   newsProviderFredSeriesIds: string[]
+  newsProviderXTwitterEnabled: boolean
+  newsProviderXTwitterQuery: string
+  newsProviderXTwitterBearerToken: string | undefined
   marketDataEnabled: boolean
   marketDataRefreshEnabled: boolean
   marketDataForceFixtureFallback: boolean
@@ -174,6 +180,9 @@ export const createDashboardRoutes = ({
     newsProviderFredEnabled,
     newsProviderFredApiKey,
     newsProviderFredSeriesIds,
+    newsProviderXTwitterEnabled,
+    newsProviderXTwitterQuery,
+    newsProviderXTwitterBearerToken,
     marketDataEnabled,
     marketDataRefreshEnabled,
     marketDataStaleAfterMinutes,

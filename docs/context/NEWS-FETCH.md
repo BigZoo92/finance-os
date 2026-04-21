@@ -48,6 +48,7 @@ Providers actuellement cables dans `apps/api/src/routes/dashboard/runtime.ts` :
 | Federal Reserve RSS | `fed_rss` | policy, speeches, press releases | aucune |
 | SEC EDGAR / data.sec.gov | `sec_edgar` | filings primaires et submissions | aucune cle, `User-Agent` requis |
 | FRED | `fred` | series macro structurees | `FRED_API_KEY` |
+| X/Twitter recent search | `x_twitter` | capter des signaux evenementiels tres recents (macro, guidance, cyber, geopolitique) | `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN` |
 
 ### 2.2 Providers prepares mais non cables
 
@@ -55,6 +56,10 @@ Providers actuellement cables dans `apps/api/src/routes/dashboard/runtime.ts` :
   - type deja reserve dans la taxonomie
   - non branche par defaut
   - volontairement exclu du backbone pour eviter une dependance centrale a une API a quotas serras
+- `x_twitter`
+  - branche dans le runtime mais **desactive par defaut**
+  - la foundation actuelle se limite a la recherche recente (`/2/tweets/search/recent`) avec query configurable
+  - tant que `NEWS_PROVIDER_X_TWITTER_ENABLED=false` ou que le bearer token est absent, le provider n'ingere aucun item
 
 ### 2.3 Sources explicitement non retenues comme coeur
 

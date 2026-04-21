@@ -31,6 +31,7 @@ import { createFredNewsProvider } from './services/providers/fred-news-provider'
 import { createGdeltNewsProvider } from './services/providers/gdelt-news-provider'
 import { createHnNewsProvider } from './services/providers/hn-news-provider'
 import { createSecEdgarNewsProvider } from './services/providers/sec-edgar-news-provider'
+import { createXTwitterNewsProvider } from './services/providers/x-twitter-news-provider'
 import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
 import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
 
@@ -65,6 +66,9 @@ export const createDashboardRouteRuntime = ({
   newsProviderFredEnabled,
   newsProviderFredApiKey,
   newsProviderFredSeriesIds,
+  newsProviderXTwitterEnabled,
+  newsProviderXTwitterQuery,
+  newsProviderXTwitterBearerToken,
   marketDataEnabled,
   marketDataRefreshEnabled,
   marketDataStaleAfterMinutes,
@@ -128,6 +132,9 @@ export const createDashboardRouteRuntime = ({
   newsProviderFredEnabled: boolean
   newsProviderFredApiKey: string | undefined
   newsProviderFredSeriesIds: string[]
+  newsProviderXTwitterEnabled: boolean
+  newsProviderXTwitterQuery: string
+  newsProviderXTwitterBearerToken: string | undefined
   marketDataEnabled: boolean
   marketDataRefreshEnabled: boolean
   marketDataStaleAfterMinutes: number
@@ -256,6 +263,11 @@ export const createDashboardRouteRuntime = ({
         enabled: newsProviderFredEnabled,
         apiKey: newsProviderFredApiKey,
         seriesIds: newsProviderFredSeriesIds,
+      }),
+      createXTwitterNewsProvider({
+        enabled: newsProviderXTwitterEnabled,
+        query: newsProviderXTwitterQuery,
+        bearerToken: newsProviderXTwitterBearerToken,
       }),
     ],
     maxItemsPerProvider: maxNewsItemsPerProvider,
