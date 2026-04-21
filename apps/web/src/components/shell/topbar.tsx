@@ -3,17 +3,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { postAuthLogout } from '@/features/auth-api'
+import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
+import {
+  computeCtaOrchestrationMetrics,
+  logCtaPolicyEvent,
+  orchestrateCtas,
+  readCtaPolicyRuntime,
+} from '@/features/cta-policy/policy-registry'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
-import { pushToast } from '@/lib/toast-store'
 import { toErrorMessage } from '@/lib/format'
+import { pushToast } from '@/lib/toast-store'
 import { BrandMark } from '@/components/brand/brand-mark'
 import { StatusDot } from '@/components/surfaces/status-dot'
-import { ThemeToggle } from './theme-toggle'
 import { CommandPaletteTrigger } from './command-palette'
+import { ThemeToggle } from './theme-toggle'
 
 export function Topbar() {
   const navigate = useNavigate()
@@ -71,7 +78,7 @@ export function Topbar() {
             </Badge>
           )}
 
-          <PwaInstallButton />
+          <PwaInstallButton mode={isAdmin ? 'admin' : 'demo'} />
           <ThemeToggle />
 
           {isPending ? (
@@ -111,7 +118,7 @@ export function Topbar() {
  * PWA install CTA — shows only when the browser supports installation
  * and the app isn't already installed.
  */
-function PwaInstallButton() {
+function PwaInstallButton({ mode }: { mode: AuthMode }) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
 
@@ -131,9 +138,88 @@ function PwaInstallButton() {
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  if (isInstalled || !installPrompt) return null
+  const policyContext = readCtaPolicyRuntime(mode, `web-cta-pwa-${mode}`)
+  const [decision] = orchestrateCtas({
+    policies: [
+      {
+        id: 'pwa_install',
+        priority: 100,
+        visibleIn: 'both',
+        cooldownMs: 0,
+        dedupeKey: () => 'pwa_install',
+        telemetryContract: { version: 'v1' },
+        evaluateEligibility: () => {
+          if (isInstalled) {
+            return { eligible: false, state: 'hidden', resolutionReason: 'ineligible' }
+          }
+
+          if (!installPrompt) {
+            if (mode === 'demo') {
+              return {
+                eligible: false,
+                state: 'hidden',
+                resolutionReason: 'dependency_failed',
+              }
+            }
+
+            return {
+              eligible: false,
+              state: 'disabled',
+              disabledReason: 'Installation indisponible pour le moment sur cet appareil.',
+              resolutionReason: 'dependency_failed',
+            }
+          }
+
+          return { eligible: true }
+        },
+      },
+    ],
+    context: policyContext,
+    cooldownSnapshot: new Map(),
+  })
+
+  if (decision) {
+    logCtaPolicyEvent({
+      event: 'cta_evaluated',
+      context: policyContext,
+      ctaId: decision.id,
+      resolutionReason: decision.resolutionReason,
+      state: decision.state,
+    })
+  }
+
+  if (!decision || decision.state === 'hidden') {
+    return null
+  }
+
+  const metrics = computeCtaOrchestrationMetrics([decision])
+  logCtaPolicyEvent({
+    event: metrics.conflicts > 0 ? 'cta_conflict_resolved' : 'cta_rendered',
+    context: policyContext,
+    ctaId: decision.id,
+    resolutionReason: decision.resolutionReason,
+    state: decision.state,
+  })
 
   const handleInstall = async () => {
+    if (!installPrompt || !decision.enabled) {
+      logCtaPolicyEvent({
+        event: 'cta_blocked',
+        context: policyContext,
+        ctaId: decision.id,
+        resolutionReason: decision.resolutionReason,
+        state: decision.state,
+      })
+      return
+    }
+
+    logCtaPolicyEvent({
+      event: 'cta_clicked',
+      context: policyContext,
+      ctaId: decision.id,
+      resolutionReason: decision.resolutionReason,
+      state: decision.state,
+    })
     await installPrompt.prompt()
     const result = await installPrompt.userChoice
     if (result.outcome === 'accepted') {
@@ -148,10 +234,12 @@ function PwaInstallButton() {
       size="sm"
       variant="outline"
       onClick={handleInstall}
-      className="hidden sm:inline-flex gap-1.5 border-accent-2/35 text-accent-2 hover:bg-accent-2/10 hover:border-accent-2/55 hover:text-accent-2"
+      disabled={!decision.enabled}
+      title={decision.disabledReason}
+      className="hidden gap-1.5 border-accent-2/35 text-accent-2 hover:border-accent-2/55 hover:bg-accent-2/10 hover:text-accent-2 disabled:opacity-55 sm:inline-flex"
     >
       <span aria-hidden="true">↓</span>
-      Installer
+      {decision.state === 'disabled' ? 'Installation indisponible' : 'Installer'}
     </Button>
   )
 }

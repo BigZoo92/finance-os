@@ -298,6 +298,9 @@ Notes:
 | `VITE_AI_ADVISOR_ENABLED` | -- | GitHub vars | Feature conseiller IA |
 | `VITE_AI_ADVISOR_ADMIN_ONLY` | -- | GitHub vars | Restreindre IA aux admins. Recommande `true` pour le mode manuel actuel |
 | `VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED` | `true` | GitHub vars | Active/desactive le panneau d'explicabilite benchmark social |
+| `VITE_CTA_POLICY_REGISTRY_V1` | `false` | GitHub vars | Active le registre CTA policy-first v1 (fallback legacy si desactive) |
+| `VITE_CTA_ORCHESTRATION_OFF` | `false` | GitHub vars | Kill-switch global pour couper l'orchestration CTA policy-first |
+| `VITE_CTA_EMERGENCY_DISABLE_LIST` | -- | GitHub vars | Liste CSV des CTA a desactiver en urgence (`cta_id_1,cta_id_2`) |
 
 ---
 
