@@ -425,4 +425,5 @@ jobs:
           SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
           SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
           SMOKE_SUMMARY_RANGE: ${{ vars.SMOKE_SUMMARY_RANGE }}
+          SMOKE_EXPECTED_RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: node scripts/smoke-prod.mjs --base="${SMOKE_BASE_URL}"

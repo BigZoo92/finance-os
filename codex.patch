@@ -1,60 +1,88 @@
-diff --git a/.github/agent-stubs/improve-867.md b/.github/agent-stubs/improve-867.md
+diff --git a/.github/agent-stubs/improve-879.md b/.github/agent-stubs/improve-879.md
 deleted file mode 100644
-index c1fad3f..0000000
---- a/.github/agent-stubs/improve-867.md
+index 787b192..0000000
+--- a/.github/agent-stubs/improve-879.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #867
+-# Autopilot stub for improve #879
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/867
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/879
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/routes/_app/depenses.tsx b/apps/web/src/routes/_app/depenses.tsx
-index a0532da..8333f67 100644
---- a/apps/web/src/routes/_app/depenses.tsx
-+++ b/apps/web/src/routes/_app/depenses.tsx
-@@ -218,17 +218,34 @@ function DepensesPage() {
-                 {transactions.map(tx => (
-                   <div
-                     key={tx.id}
--                    className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
-+                    className="rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
-                   >
--                    <div className="min-w-0 flex-1">
--                      <p className="truncate text-sm font-medium">{tx.label}</p>
--                      <p className="text-sm text-muted-foreground/60">
--                        {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
-+                    <div className="flex items-center justify-between gap-3">
-+                      <div className="min-w-0 flex-1">
-+                        <p className="truncate text-sm font-medium">{tx.label}</p>
-+                        <p className="text-sm text-muted-foreground/60">
-+                          {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
-+                          {tx.subcategory ? ` / ${tx.subcategory}` : ''}
-+                        </p>
-+                      </div>
-+                      <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
-+                        {formatMoney(tx.amount, tx.currency)}
-                       </p>
-                     </div>
--                    <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
--                      {formatMoney(tx.amount, tx.currency)}
--                    </p>
-+                    {isAdmin ? (
-+                      <div className="pt-2">
-+                        <Button
-+                          type="button"
-+                          variant="ghost"
-+                          size="sm"
-+                          className="h-7 px-2 text-xs"
-+                          disabled={classifyMutation.isPending}
-+                          onClick={() => classifyMutation.mutate(tx)}
-+                        >
-+                          Éditer la catégorie
-+                        </Button>
-+                      </div>
-+                    ) : null}
-                   </div>
-                 ))}
-               </div>
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 096ded7..401ae0c 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -425,4 +425,5 @@ jobs:
+           SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+           SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+           SMOKE_SUMMARY_RANGE: ${{ vars.SMOKE_SUMMARY_RANGE }}
++          SMOKE_EXPECTED_RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+         run: node scripts/smoke-prod.mjs --base="${SMOKE_BASE_URL}"
+diff --git a/scripts/smoke-prod.mjs b/scripts/smoke-prod.mjs
+index 5ff8ab2..89c56f3 100644
+--- a/scripts/smoke-prod.mjs
++++ b/scripts/smoke-prod.mjs
+@@ -39,6 +39,7 @@ const sessionCookie = readArg('--session-cookie', process.env.SMOKE_SESSION_COOK
+ const summaryRange = (readArg('--summary-range', process.env.SMOKE_SUMMARY_RANGE ?? '30d') || '30d')
+   .trim()
+   .toLowerCase()
++const expectedReleaseTag = readArg('--expected-release-tag', process.env.SMOKE_EXPECTED_RELEASE_TAG ?? '').trim()
+ const results = []
+ 
+ const VALID_AUTH_MODES = new Set(['demo', 'admin', 'auto'])
+@@ -337,7 +338,7 @@ const assertHealthPayload = ({ rawBody, expectedService }) => {
+   return true
+ }
+ 
+-const assertVersionPayload = ({ rawBody, expectedService }) => {
++const assertVersionPayload = ({ rawBody, expectedService, expectedTag }) => {
+   const parsed = asJson(rawBody)
+   if (!isObject(parsed)) {
+     return 'payload is not JSON'
+@@ -351,6 +352,16 @@ const assertVersionPayload = ({ rawBody, expectedService }) => {
+     return 'payload missing NODE_ENV'
+   }
+ 
++  if (expectedTag) {
++    if (typeof parsed.GIT_TAG !== 'string' || parsed.GIT_TAG.length === 0) {
++      return 'payload missing GIT_TAG'
++    }
++
++    if (parsed.GIT_TAG !== expectedTag) {
++      return `payload GIT_TAG=${parsed.GIT_TAG} does not match expected ${expectedTag}`
++    }
++  }
++
+   return true
+ }
+ 
+@@ -586,14 +597,24 @@ const main = async () => {
+     name: 'version_root',
+     path: '/version',
+     expectedStatuses: [200],
+-    assert: ({ rawBody }) => assertVersionPayload({ rawBody, expectedService: 'web' }),
++    assert: ({ rawBody }) =>
++      assertVersionPayload({
++        rawBody,
++        expectedService: 'web',
++        expectedTag: expectedReleaseTag,
++      }),
+   })
+ 
+   await runCheck({
+     name: 'version_api_prefix',
+     path: '/api/version',
+     expectedStatuses: [200],
+-    assert: ({ rawBody }) => assertVersionPayload({ rawBody, expectedService: 'api' }),
++    assert: ({ rawBody }) =>
++      assertVersionPayload({
++        rawBody,
++        expectedService: 'api',
++        expectedTag: expectedReleaseTag,
++      }),
+   })
+ 
+   await runCheck({
