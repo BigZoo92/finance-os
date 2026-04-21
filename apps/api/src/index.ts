@@ -255,6 +255,14 @@ const registerAppRoutes = (app: Elysia) => {
         featureEnabled: env.DERIVED_RECOMPUTE_ENABLED,
         liveNewsIngestionEnabled: env.LIVE_NEWS_INGESTION_ENABLED,
         transactionsSnapshotStaleAfterMinutes: env.TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES,
+        transactionsCategorizationMigrationEnabled:
+          env.TRANSACTIONS_CATEGORIZATION_MIGRATION_ENABLED,
+        transactionsCategorizationRolloutPercent:
+          env.TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT,
+        transactionsCategorizationDisagreementAlertRate:
+          env.TRANSACTIONS_CATEGORIZATION_ALERT_DISAGREEMENT_RATE,
+        transactionsCategorizationShadowLatencyBudgetMs:
+          env.TRANSACTIONS_CATEGORIZATION_SHADOW_LATENCY_BUDGET_MS,
         failsoftPolicyEnabled: env.FAILSOFT_POLICY_ENABLED,
         failsoftSourceOrder: env.FAILSOFT_SOURCE_ORDER,
         failsoftNewsEnabled: env.FAILSOFT_NEWS_ENABLED,

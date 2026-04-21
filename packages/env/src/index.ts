@@ -438,6 +438,13 @@ export const getApiEnv = () => {
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES: z.coerce.number().int().positive().default(30),
+    TRANSACTIONS_CATEGORIZATION_MIGRATION_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT: z.coerce.number().int().min(0).max(100).default(0),
+    TRANSACTIONS_CATEGORIZATION_ALERT_DISAGREEMENT_RATE: z.coerce.number().min(0).max(1).default(0.08),
+    TRANSACTIONS_CATEGORIZATION_SHADOW_LATENCY_BUDGET_MS: z.coerce.number().int().positive().default(150),
     DERIVED_RECOMPUTE_ENABLED: z
       .string()
       .optional()

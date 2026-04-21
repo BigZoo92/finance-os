@@ -43,6 +43,26 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
   >
   now: () => Date
   staleAfterMinutes: number
+  categorizationMigration: {
+    enabled: boolean
+    rolloutPercent: number
+    alertDisagreementRate: number
+    shadowLatencyBudgetMs: number
+  }
+  onCategorizationMigrationEvaluated?: (snapshot: {
+    mode: 'admin'
+    evaluatedAt: string
+    total: number
+    rolloutPercent: number
+    disagreements: number
+    disagreementRate: number
+    overAlertThreshold: boolean
+    byMerchant: Array<{ key: string; total: number; disagreements: number }>
+    byCategory: Array<{ key: string; total: number; disagreements: number }>
+    byAccount: Array<{ key: string; total: number; disagreements: number }>
+    shadowDisabledReason: 'disabled' | 'latency_budget_exceeded' | null
+    shadowLatencyMs: number
+  }) => void
 }
 
 const toMoney = (value: string) => {
@@ -54,11 +74,38 @@ const toMoney = (value: string) => {
   return Math.round(parsed * 100) / 100
 }
 
+const toStableBucket = (value: string) => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) % 100
+  }
+  return Math.abs(hash)
+}
+
+const summarizeDisagreement = (
+  counters: Map<string, { total: number; disagreements: number }>
+) => {
+  return [...counters.entries()]
+    .map(([key, entry]) => ({ key, total: entry.total, disagreements: entry.disagreements }))
+    .sort((left, right) => {
+      if (left.disagreements !== right.disagreements) {
+        return right.disagreements - left.disagreements
+      }
+      if (left.total !== right.total) {
+        return right.total - left.total
+      }
+      return left.key.localeCompare(right.key)
+    })
+    .slice(0, 8)
+}
+
 export const createGetDashboardTransactionsUseCase = ({
   listTransactions,
   listTransactionSyncMetadata,
   now,
   staleAfterMinutes,
+  categorizationMigration,
+  onCategorizationMigrationEvaluated,
 }: CreateGetDashboardTransactionsUseCaseDependencies): DashboardUseCases['getTransactions'] => {
   return async input => {
     const fromDate = getRangeStartDate(input.range)
@@ -126,6 +173,130 @@ export const createGetDashboardTransactionsUseCase = ({
             ? 'powens_first_connect_pending'
             : null
 
+    const categorizationStartedAt = now().getTime()
+    const merchantDisagreements = new Map<string, { total: number; disagreements: number }>()
+    const categoryDisagreements = new Map<string, { total: number; disagreements: number }>()
+    const accountDisagreements = new Map<string, { total: number; disagreements: number }>()
+    let disagreementCount = 0
+
+    const items = visibleRows.map(row => {
+      const amount = toMoney(row.amount)
+      const deterministicClassification = applyTransactionAutoCategorization({
+        label: row.label,
+        amount,
+        powensAccountId: row.powensAccountId,
+        accountName: row.accountName,
+        merchant: row.merchant,
+        providerCategory: row.providerCategory,
+        customCategory: row.customCategory,
+        customSubcategory: row.customSubcategory,
+        category: row.category,
+        subcategory: row.subcategory,
+        incomeType: row.incomeType,
+      })
+      const legacyCategory = row.customCategory ?? row.category
+      const legacySubcategory = row.customSubcategory ?? row.subcategory
+      const legacyIncomeType = row.incomeType
+      const disagreement =
+        legacyCategory !== deterministicClassification.category ||
+        legacySubcategory !== deterministicClassification.subcategory ||
+        legacyIncomeType !== deterministicClassification.incomeType
+
+      const shouldCutover =
+        categorizationMigration.enabled &&
+        toStableBucket(`${row.powensAccountId}:${row.id}`) < categorizationMigration.rolloutPercent
+
+      const resolvedCategory = shouldCutover ? deterministicClassification.category : legacyCategory
+      const resolvedSubcategory = shouldCutover
+        ? deterministicClassification.subcategory
+        : legacySubcategory
+      const resolvedIncomeType = shouldCutover
+        ? deterministicClassification.incomeType
+        : legacyIncomeType
+
+      if (disagreement) {
+        disagreementCount += 1
+      }
+
+      const merchantKey = row.merchant.trim() || 'Unknown merchant'
+      const categoryKey = (legacyCategory ?? 'Unknown').trim() || 'Unknown'
+      const accountKey = (row.accountName ?? row.powensAccountId).trim() || row.powensAccountId
+      const trackedKeys: Array<[Map<string, { total: number; disagreements: number }>, string]> = [
+        [merchantDisagreements, merchantKey],
+        [categoryDisagreements, categoryKey],
+        [accountDisagreements, accountKey],
+      ]
+      for (const [counter, key] of trackedKeys) {
+        const current = counter.get(key) ?? { total: 0, disagreements: 0 }
+        current.total += 1
+        if (disagreement) {
+          current.disagreements += 1
+        }
+        counter.set(key, current)
+      }
+
+      const direction: 'income' | 'expense' = amount >= 0 ? 'income' : 'expense'
+
+      return {
+        id: row.id,
+        bookingDate: row.bookingDate,
+        amount,
+        currency: row.currency,
+        direction,
+        label: row.label,
+        merchant: row.merchant,
+        category: resolvedCategory,
+        subcategory: resolvedSubcategory,
+        incomeType: resolvedIncomeType,
+        resolvedCategory,
+        resolutionSource: shouldCutover
+          ? deterministicClassification.resolutionSource
+          : ('fallback' as const),
+        resolutionRuleId: shouldCutover ? deterministicClassification.resolutionRuleId : null,
+        resolutionTrace: shouldCutover
+          ? deterministicClassification.resolutionTrace
+          : [
+              {
+                source: 'fallback' as const,
+                rank: 5,
+                matched: true,
+                reason: 'migration_shadow_legacy_active',
+                category: resolvedCategory,
+                subcategory: resolvedSubcategory,
+                ruleId: null,
+              },
+            ],
+        tags: row.tags,
+        powensConnectionId: row.powensConnectionId,
+        powensAccountId: row.powensAccountId,
+        accountName: row.accountName,
+      }
+    })
+    const shadowLatencyMs = Math.max(0, now().getTime() - categorizationStartedAt)
+    const shadowDisabledReason =
+      !categorizationMigration.enabled
+        ? 'disabled'
+        : shadowLatencyMs > categorizationMigration.shadowLatencyBudgetMs
+          ? 'latency_budget_exceeded'
+          : null
+    if (onCategorizationMigrationEvaluated) {
+      const disagreementRate = items.length === 0 ? 0 : disagreementCount / items.length
+      onCategorizationMigrationEvaluated({
+        mode: 'admin',
+        evaluatedAt: now().toISOString(),
+        total: items.length,
+        rolloutPercent: categorizationMigration.enabled ? categorizationMigration.rolloutPercent : 0,
+        disagreements: disagreementCount,
+        disagreementRate,
+        overAlertThreshold: disagreementRate >= categorizationMigration.alertDisagreementRate,
+        byMerchant: summarizeDisagreement(merchantDisagreements),
+        byCategory: summarizeDisagreement(categoryDisagreements),
+        byAccount: summarizeDisagreement(accountDisagreements),
+        shadowDisabledReason,
+        shadowLatencyMs,
+      })
+    }
+
     return {
       schemaVersion: '2026-04-04',
       range: input.range,
@@ -145,43 +316,7 @@ export const createGetDashboardTransactionsUseCase = ({
         snapshotAgeSeconds,
         refreshRequested: false,
       },
-      items: visibleRows.map(row => {
-        const amount = toMoney(row.amount)
-        const normalizedClassification = applyTransactionAutoCategorization({
-          label: row.label,
-          amount,
-          powensAccountId: row.powensAccountId,
-          accountName: row.accountName,
-          merchant: row.merchant,
-          providerCategory: row.providerCategory,
-          customCategory: row.customCategory,
-          customSubcategory: row.customSubcategory,
-          category: row.category,
-          subcategory: row.subcategory,
-          incomeType: row.incomeType,
-        })
-
-        return {
-          id: row.id,
-          bookingDate: row.bookingDate,
-          amount,
-          currency: row.currency,
-          direction: amount >= 0 ? 'income' : 'expense',
-          label: row.label,
-          merchant: row.merchant,
-          category: normalizedClassification.category,
-          subcategory: normalizedClassification.subcategory,
-          incomeType: normalizedClassification.incomeType,
-          resolvedCategory: normalizedClassification.resolvedCategory,
-          resolutionSource: normalizedClassification.resolutionSource,
-          resolutionRuleId: normalizedClassification.resolutionRuleId,
-          resolutionTrace: normalizedClassification.resolutionTrace,
-          tags: row.tags,
-          powensConnectionId: row.powensConnectionId,
-          powensAccountId: row.powensAccountId,
-          accountName: row.accountName,
-        }
-      }),
+      items,
     }
   }
 }
