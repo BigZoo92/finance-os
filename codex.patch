@@ -1,88 +1,29 @@
-diff --git a/.github/agent-stubs/improve-879.md b/.github/agent-stubs/improve-879.md
+diff --git a/.github/agent-stubs/improve-881.md b/.github/agent-stubs/improve-881.md
 deleted file mode 100644
-index 787b192..0000000
---- a/.github/agent-stubs/improve-879.md
+index b99caee..0000000
+--- a/.github/agent-stubs/improve-881.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #879
+-# Autopilot stub for improve #881
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/879
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/881
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
-index 096ded7..401ae0c 100644
---- a/.github/workflows/release.yml
-+++ b/.github/workflows/release.yml
-@@ -425,4 +425,5 @@ jobs:
-           SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
-           SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
-           SMOKE_SUMMARY_RANGE: ${{ vars.SMOKE_SUMMARY_RANGE }}
-+          SMOKE_EXPECTED_RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
-         run: node scripts/smoke-prod.mjs --base="${SMOKE_BASE_URL}"
-diff --git a/scripts/smoke-prod.mjs b/scripts/smoke-prod.mjs
-index 5ff8ab2..89c56f3 100644
---- a/scripts/smoke-prod.mjs
-+++ b/scripts/smoke-prod.mjs
-@@ -39,6 +39,7 @@ const sessionCookie = readArg('--session-cookie', process.env.SMOKE_SESSION_COOK
- const summaryRange = (readArg('--summary-range', process.env.SMOKE_SUMMARY_RANGE ?? '30d') || '30d')
-   .trim()
-   .toLowerCase()
-+const expectedReleaseTag = readArg('--expected-release-tag', process.env.SMOKE_EXPECTED_RELEASE_TAG ?? '').trim()
- const results = []
+diff --git a/docs/agentic/code_review.md b/docs/agentic/code_review.md
+index 66bcef2..f235549 100644
+--- a/docs/agentic/code_review.md
++++ b/docs/agentic/code_review.md
+@@ -23,6 +23,11 @@ Use this guide for reviews in this repo.
+ - Loading, empty, error, and success states exist
+ - Auth state does not flash incorrectly on first render
+ - PR notes include UI rationale and screenshot notes for meaningful UI changes
++- Mobile-friendly QA + polish gate is explicit in the review evidence:
++  - smallest viewport (`320px`) remains usable without clipped primary actions
++  - all interactive targets remain at least `44px` and keyboard focus-visible
++  - tabular financial values keep `.font-financial` for scanability
++  - no horizontal overflow on core dashboard surfaces unless intentional (`overflow-x-auto` documented)
  
- const VALID_AUTH_MODES = new Set(['demo', 'admin', 'auto'])
-@@ -337,7 +338,7 @@ const assertHealthPayload = ({ rawBody, expectedService }) => {
-   return true
- }
+ ## Usually Ignore
  
--const assertVersionPayload = ({ rawBody, expectedService }) => {
-+const assertVersionPayload = ({ rawBody, expectedService, expectedTag }) => {
-   const parsed = asJson(rawBody)
-   if (!isObject(parsed)) {
-     return 'payload is not JSON'
-@@ -351,6 +352,16 @@ const assertVersionPayload = ({ rawBody, expectedService }) => {
-     return 'payload missing NODE_ENV'
-   }
- 
-+  if (expectedTag) {
-+    if (typeof parsed.GIT_TAG !== 'string' || parsed.GIT_TAG.length === 0) {
-+      return 'payload missing GIT_TAG'
-+    }
-+
-+    if (parsed.GIT_TAG !== expectedTag) {
-+      return `payload GIT_TAG=${parsed.GIT_TAG} does not match expected ${expectedTag}`
-+    }
-+  }
-+
-   return true
- }
- 
-@@ -586,14 +597,24 @@ const main = async () => {
-     name: 'version_root',
-     path: '/version',
-     expectedStatuses: [200],
--    assert: ({ rawBody }) => assertVersionPayload({ rawBody, expectedService: 'web' }),
-+    assert: ({ rawBody }) =>
-+      assertVersionPayload({
-+        rawBody,
-+        expectedService: 'web',
-+        expectedTag: expectedReleaseTag,
-+      }),
-   })
- 
-   await runCheck({
-     name: 'version_api_prefix',
-     path: '/api/version',
-     expectedStatuses: [200],
--    assert: ({ rawBody }) => assertVersionPayload({ rawBody, expectedService: 'api' }),
-+    assert: ({ rawBody }) =>
-+      assertVersionPayload({
-+        rawBody,
-+        expectedService: 'api',
-+        expectedTag: expectedReleaseTag,
-+      }),
-   })
- 
-   await runCheck({
