@@ -38,6 +38,18 @@ interface AdapterDiagnostics {
   divergences: string[]
 }
 
+type DashboardAdapterFailureEvent = {
+  event: 'dashboard_state_failure'
+  source: 'dashboard_summary'
+  widget: (typeof allSupportedFallbackFields)[number] | 'range'
+  fallback_tier: 'legacy_mapper'
+  request_id: string
+  mode: AuthMode | 'unknown'
+  range: DashboardRange
+  reason: string
+  timestamp: string
+}
+
 const createDiagnostics = (): AdapterDiagnostics => ({
   fallbackFields: [],
   divergences: [],
@@ -107,11 +119,37 @@ const logDashboardAdapterEvent = ({
     return
   }
 
+  const failures: DashboardAdapterFailureEvent[] = [
+    ...diagnostics.fallbackFields.map(widget => ({
+      event: 'dashboard_state_failure' as const,
+      source: 'dashboard_summary' as const,
+      widget: widget as (typeof allSupportedFallbackFields)[number],
+      fallback_tier: 'legacy_mapper' as const,
+      request_id: 'unknown',
+      mode,
+      range,
+      reason: 'missing_field_fallback',
+      timestamp: new Date().toISOString(),
+    })),
+    ...diagnostics.divergences.map(reason => ({
+      event: 'dashboard_state_failure' as const,
+      source: 'dashboard_summary' as const,
+      widget: 'range' as const,
+      fallback_tier: 'legacy_mapper' as const,
+      request_id: 'unknown',
+      mode,
+      range,
+      reason,
+      timestamp: new Date().toISOString(),
+    })),
+  ]
+
   const payload = {
     mode,
     range,
     fallbackFields: diagnostics.fallbackFields,
     divergences: diagnostics.divergences,
+    failures,
     timestamp: new Date().toISOString(),
   }
 

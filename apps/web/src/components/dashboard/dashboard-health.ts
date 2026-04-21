@@ -53,6 +53,11 @@ export type DashboardHealthModel = {
   global: DashboardHealthSignal
   domains: Record<DashboardHealthDomainKey, DashboardHealthDomainSignal>
   widgets: Record<DashboardHealthWidgetKey, DashboardHealthWidgetSignal>
+  digest: {
+    staleWidgetCount: number
+    missingWidgetCount: number
+    impactedWidgets: DashboardHealthWidgetKey[]
+  }
 }
 
 type BuildDashboardHealthModelInput = {
@@ -176,6 +181,11 @@ const DEMO_HEALTH_FIXTURE: DashboardHealthModel = {
       detail: HEALTHY_DETAIL.derived,
       badgeLabel: null,
     },
+  },
+  digest: {
+    staleWidgetCount: 1,
+    missingWidgetCount: 0,
+    impactedWidgets: ['wealth_overview', 'connections_state'],
   },
 }
 
@@ -522,6 +532,19 @@ const buildGlobalSignal = (
   }
 }
 
+const buildHealthDigest = (
+  widgets: Record<DashboardHealthWidgetKey, DashboardHealthWidgetSignal>
+) => {
+  const entries = Object.values(widgets)
+  return {
+    staleWidgetCount: entries.filter(widget => widget.reasons.includes('STALE_SYNC')).length,
+    missingWidgetCount: entries.filter(widget => widget.reasons.includes('MISSING_SOURCE')).length,
+    impactedWidgets: entries
+      .filter(widget => widget.status === 'attention_required')
+      .map(widget => widget.key),
+  }
+}
+
 export const getDashboardHealthUiConfig = (): DashboardHealthUiConfig => {
   const parseBooleanUiFlag = (value: string | undefined) => {
     const normalized = value?.trim().toLowerCase()
@@ -625,27 +648,30 @@ export const buildDashboardHealthModel = ({
     },
   }
 
+  const widgets: Record<DashboardHealthWidgetKey, DashboardHealthWidgetSignal> = {
+    wealth_overview: buildWidgetSignal({
+      key: 'wealth_overview',
+      domainKey: 'portfolio',
+      reasons: domains.portfolio.reasons,
+    }),
+    connections_state: buildWidgetSignal({
+      key: 'connections_state',
+      domainKey: 'sync',
+      reasons: domains.sync.reasons,
+    }),
+    investment_positions: buildWidgetSignal({
+      key: 'investment_positions',
+      domainKey: 'derived',
+      reasons: domains.derived.reasons,
+    }),
+  }
+
   return {
     isDemoFixture: false,
     global: buildGlobalSignal(domains),
     domains,
-    widgets: {
-      wealth_overview: buildWidgetSignal({
-        key: 'wealth_overview',
-        domainKey: 'portfolio',
-        reasons: domains.portfolio.reasons,
-      }),
-      connections_state: buildWidgetSignal({
-        key: 'connections_state',
-        domainKey: 'sync',
-        reasons: domains.sync.reasons,
-      }),
-      investment_positions: buildWidgetSignal({
-        key: 'investment_positions',
-        domainKey: 'derived',
-        reasons: domains.derived.reasons,
-      }),
-    },
+    widgets,
+    digest: buildHealthDigest(widgets),
   }
 }
 
@@ -675,6 +701,7 @@ export const logDashboardHealthSnapshotEvent = ({
         },
       ])
     ),
+    digest: health.digest,
     timestamp: new Date().toISOString(),
   })
 }
