@@ -41,10 +41,11 @@
 │              ├──────────────────────────────────│
 │  ◈ Cockpit   │                                  │
 │  ↔ Dépenses  │  [Contenu de page]               │
-│  ◆ Patrimoine│                                  │
-│  △ Invest.   │  max-width: 7xl (1280px)         │
-│  ◎ Objectifs │                                  │
 │  ▣ Actualités│                                  │
+│  ◊ Patrimoine│  max-width: 7xl (1280px)         │
+│  ◎ Objectifs │                                  │
+│  △ Invest.   │                                  │
+│  ≈ Marchés   │                                  │
 │  ⊞ Intégr.  │                                  │
 │  ⚙ Paramèt. │                                  │
 │              │                                  │
@@ -66,7 +67,7 @@
 │  padding-bottom: safe area       │
 │                                  │
 ├──────────────────────────────────│
-│  ◈   ↔   ◆   △   ◎   ⋯        │
+│  ◈   ↔   ▣   ◊   ◎   ⋯        │
 │  Bottom navigation               │
 └──────────────────────────────────┘
 ```
@@ -74,6 +75,17 @@
 - Bottom navigation avec les 5 pages principales + "Plus" (drawer)
 - Le drawer "Plus" affiche toutes les 10 pages avec descriptions
 - Indicateur actif : barre ambre en haut du tab
+
+## Workflow quotidien prioritaire
+
+Ordre de navigation principal (desktop + mobile) :
+1. `Cockpit` → point d'entrée et synthèse journalière.
+2. `Dépenses` → contrôle du flux du jour (transactions, budgets, projection).
+3. `Actualités` → briefing rapide (news + advisor) pour contextualiser les décisions.
+4. `Patrimoine` → état du stock patrimonial.
+5. `Objectifs` → arbitrage et progression.
+
+Les surfaces `Investissements` et `Marchés` restent accessibles immédiatement mais passent après ce noyau quotidien pour limiter la charge cognitive lors des sessions courtes.
 
 ## Principes de navigation
 

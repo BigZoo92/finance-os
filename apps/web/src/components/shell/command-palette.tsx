@@ -4,13 +4,13 @@ import { useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
 
 const PAGES = [
-  { to: '/', label: 'Cockpit', glyph: '◈', section: 'Finances', keywords: 'accueil home dashboard vue ensemble' },
-  { to: '/depenses', label: 'Dépenses', glyph: '↔', section: 'Finances', keywords: 'transactions budgets projections' },
+  { to: '/', label: 'Cockpit', glyph: '◈', section: 'Finances', keywords: 'accueil home dashboard vue ensemble quotidien' },
+  { to: '/depenses', label: 'Dépenses', glyph: '↔', section: 'Finances', keywords: 'transactions budgets projections quotidien' },
+  { to: '/actualites', label: 'Actualités', glyph: '▣', section: 'Finances', keywords: 'news feed IA advisor briefing signaux' },
   { to: '/patrimoine', label: 'Patrimoine', glyph: '◊', section: 'Finances', keywords: 'actifs soldes assets wealth' },
+  { to: '/objectifs', label: 'Objectifs', glyph: '◎', section: 'Finances', keywords: 'goals épargne cibles progression' },
   { to: '/investissements', label: 'Investissements', glyph: '△', section: 'Finances', keywords: 'positions portfolio bourse' },
   { to: '/marches', label: 'Marchés', glyph: '≈', section: 'Finances', keywords: 'macro watchlist regime taux inflation fred eodhd' },
-  { to: '/objectifs', label: 'Objectifs', glyph: '◎', section: 'Finances', keywords: 'goals épargne cibles' },
-  { to: '/actualites', label: 'Actualités', glyph: '▣', section: 'Finances', keywords: 'news feed IA advisor' },
   { to: '/integrations', label: 'Intégrations', glyph: '⊞', section: 'Système', keywords: 'powens sync banque connexion' },
   { to: '/sante', label: 'Santé', glyph: '♡', section: 'Système', keywords: 'health diagnostics système' },
   { to: '/parametres', label: 'Paramètres', glyph: '⚙', section: 'Système', keywords: 'settings notifications export config' },
