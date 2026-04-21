@@ -14,6 +14,7 @@ export type PublicRuntimeEnvKey =
   | 'VITE_PWA_CRITICAL_ENABLED'
   | 'VITE_AI_ADVISOR_ENABLED'
   | 'VITE_AI_ADVISOR_ADMIN_ONLY'
+  | 'VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED'
 
 export type PublicRuntimeEnv = Partial<Record<PublicRuntimeEnvKey, string>>
 
@@ -31,6 +32,7 @@ const PUBLIC_RUNTIME_ENV_KEYS: PublicRuntimeEnvKey[] = [
   'VITE_PWA_CRITICAL_ENABLED',
   'VITE_AI_ADVISOR_ENABLED',
   'VITE_AI_ADVISOR_ADMIN_ONLY',
+  'VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED',
 ]
 
 const toOptionalEnv = (value: string | undefined) => {
@@ -93,6 +95,10 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
   ...withDefined('VITE_PWA_CRITICAL_ENABLED', toOptionalEnv(env.VITE_PWA_CRITICAL_ENABLED)),
   ...withDefined('VITE_AI_ADVISOR_ENABLED', toOptionalEnv(env.VITE_AI_ADVISOR_ENABLED)),
   ...withDefined('VITE_AI_ADVISOR_ADMIN_ONLY', toOptionalEnv(env.VITE_AI_ADVISOR_ADMIN_ONLY)),
+  ...withDefined(
+    'VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED',
+    toOptionalEnv(env.VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED)
+  ),
 })
 
 const getWindowPublicEnv = (): PublicRuntimeEnv => {

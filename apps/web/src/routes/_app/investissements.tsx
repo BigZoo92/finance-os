@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -7,6 +8,10 @@ import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
+import {
+  buildSocialBenchmarkExplainability,
+  logSocialBenchmarkExplainabilityEvent,
+} from '@/features/social-benchmark-explainability'
 import { formatMoney, formatQuantity } from '@/lib/format'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
@@ -57,11 +62,25 @@ function InvestissementsPage() {
     range, summary: summaryQuery.data, ...(authMode ? { mode: authMode } : {}),
   })
   const positions = adaptedSummary.positions
+  const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
 
   const totalValue = positions.reduce(
     (sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0),
     0
   )
+  const explainabilityModel = useMemo(
+    () =>
+      buildSocialBenchmarkExplainability({
+        mode: authMode ?? 'unknown',
+        positions: adaptedSummary.positions,
+        assets: adaptedSummary.assets,
+      }),
+    [adaptedSummary.assets, adaptedSummary.positions, authMode]
+  )
+
+  useEffect(() => {
+    logSocialBenchmarkExplainabilityEvent(explainabilityModel)
+  }, [explainabilityModel])
 
   return (
     <div className="space-y-8">
@@ -171,6 +190,76 @@ function InvestissementsPage() {
             </div>
           )}
       </Panel>
+
+      {explainabilityModel.enabled && (
+        <Panel title="Pourquoi ce benchmark diffère" icon={<span aria-hidden="true">◉</span>} tone="violet">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Résumé: lecture heuristique non-conseil. Les benchmarks bruts restent affichés même en fallback.
+            </p>
+            <div className="rounded-lg border border-border/50 bg-surface-1 p-3 text-xs text-muted-foreground">
+              <p className="font-mono uppercase tracking-[0.16em]">Trace</p>
+              <p className="mt-1 font-mono">{explainabilityModel.traceId}</p>
+              {explainabilityModel.staleInsight && (
+                <p className="mt-2 text-warning">
+                  Données potentiellement anciennes: narration générée avec confiance réduite.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              {explainabilityModel.insights.map(insight => {
+                const expanded = expandedInsightId === insight.id
+                return (
+                  <div key={insight.id} className="rounded-lg border border-border/60 bg-surface-1/70 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{insight.title}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{insight.summary}</p>
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                          insight.confidence === 'high'
+                            ? 'bg-positive/15 text-positive'
+                            : insight.confidence === 'medium'
+                              ? 'bg-warning/15 text-warning'
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        confiance {insight.confidence}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                      aria-expanded={expanded}
+                      onClick={() => setExpandedInsightId(expanded ? null : insight.id)}
+                    >
+                      {expanded ? 'Masquer le détail' : 'Afficher le détail'}
+                    </button>
+                    {expanded && (
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        <p>{insight.detail}</p>
+                        {insight.fallbackReason && (
+                          <p className="text-warning">Fallback: {insight.fallbackReason}</p>
+                        )}
+                        <p className="font-mono">
+                          Règles: {insight.ruleHits.join(', ')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {explainabilityModel.generationFailed && (
+              <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+                Génération narrative indisponible ({explainabilityModel.failureReason}). Les benchmarks de base
+                restent visibles.
+              </p>
+            )}
+          </div>
+        </Panel>
+      )}
 
       {/* Action dock — magnification toolbar for actions */}
       <ActionDock

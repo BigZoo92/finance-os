@@ -15,6 +15,7 @@ const { envMock } = vi.hoisted(() => ({
     VITE_PWA_CRITICAL_ENABLED: 'true',
     VITE_AI_ADVISOR_ENABLED: 'true',
     VITE_AI_ADVISOR_ADMIN_ONLY: 'false',
+    VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED: 'true',
   },
 }))
 
@@ -44,6 +45,8 @@ describe('public runtime env', () => {
   const initialPwaCriticalEnabled = process.env.VITE_PWA_CRITICAL_ENABLED
   const initialAiAdvisorEnabled = process.env.VITE_AI_ADVISOR_ENABLED
   const initialAiAdvisorAdminOnly = process.env.VITE_AI_ADVISOR_ADMIN_ONLY
+  const initialSocialBenchmarkExplainabilityEnabled =
+    process.env.VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED
 
   afterEach(() => {
     if (typeof initialAppTitle === 'undefined') {
@@ -125,6 +128,12 @@ describe('public runtime env', () => {
     } else {
       process.env.VITE_AI_ADVISOR_ADMIN_ONLY = initialAiAdvisorAdminOnly
     }
+    if (typeof initialSocialBenchmarkExplainabilityEnabled === 'undefined') {
+      delete process.env.VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED
+    } else {
+      process.env.VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED =
+        initialSocialBenchmarkExplainabilityEnabled
+    }
 
     vi.unstubAllGlobals()
   })
@@ -143,6 +152,7 @@ describe('public runtime env', () => {
     process.env.VITE_PWA_CRITICAL_ENABLED = 'true'
     process.env.VITE_AI_ADVISOR_ENABLED = 'true'
     process.env.VITE_AI_ADVISOR_ADMIN_ONLY = 'false'
+    process.env.VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED = 'false'
 
     expect(getPublicRuntimeEnv()).toEqual({
       VITE_APP_TITLE: 'Finance OS Runtime',
@@ -158,6 +168,7 @@ describe('public runtime env', () => {
       VITE_PWA_CRITICAL_ENABLED: 'true',
       VITE_AI_ADVISOR_ENABLED: 'true',
       VITE_AI_ADVISOR_ADMIN_ONLY: 'false',
+      VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED: 'false',
     })
   })
 
@@ -185,6 +196,7 @@ describe('public runtime env', () => {
     expect(readPublicRuntimeEnv('VITE_PWA_CRITICAL_ENABLED')).toBe('true')
     expect(readPublicRuntimeEnv('VITE_AI_ADVISOR_ENABLED')).toBe('true')
     expect(readPublicRuntimeEnv('VITE_AI_ADVISOR_ADMIN_ONLY')).toBe('false')
+    expect(readPublicRuntimeEnv('VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED')).toBe('true')
   })
 
   it('serializes only defined public runtime keys for SSR injection', () => {
@@ -219,6 +231,7 @@ describe('public runtime env', () => {
       VITE_PWA_CRITICAL_ENABLED: 'true',
       VITE_AI_ADVISOR_ENABLED: 'true',
       VITE_AI_ADVISOR_ADMIN_ONLY: 'false',
+      VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED: 'true',
     })
   })
 })

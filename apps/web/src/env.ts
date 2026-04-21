@@ -81,6 +81,9 @@ export const env = createEnv({
     VITE_PWA_CRITICAL_ENABLED: createBooleanUiFlagSchema('VITE_PWA_CRITICAL_ENABLED').optional(),
     VITE_AI_ADVISOR_ENABLED: createBooleanUiFlagSchema('VITE_AI_ADVISOR_ENABLED').optional(),
     VITE_AI_ADVISOR_ADMIN_ONLY: createBooleanUiFlagSchema('VITE_AI_ADVISOR_ADMIN_ONLY').optional(),
+    VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED: createBooleanUiFlagSchema(
+      'VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED'
+    ).optional(),
   },
 
   /**
