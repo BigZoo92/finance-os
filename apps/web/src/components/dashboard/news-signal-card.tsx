@@ -32,10 +32,14 @@ export function NewsSignalCard({
   item,
   score,
   reasons,
+  influenceScore,
+  highlightsX,
 }: {
   item: DashboardNewsSignalCardModel
   score: number
   reasons: string[]
+  influenceScore: number
+  highlightsX: boolean
 }) {
   const metadataCard = item.metadataCard
   const primaryImageUrl = getPrimaryImageUrl(metadataCard)
@@ -63,6 +67,8 @@ export function NewsSignalCard({
             <Badge variant="outline">impact {item.marketImpactScore}</Badge>
             <Badge variant="outline">confidence {item.confidence}</Badge>
             <Badge variant="outline">novelty {item.novelty}</Badge>
+            <Badge variant={influenceScore >= 75 ? 'default' : 'outline'}>influence {influenceScore}</Badge>
+            {highlightsX ? <Badge variant="secondary">X/Twitter</Badge> : null}
           </div>
 
           <div className="space-y-2">
