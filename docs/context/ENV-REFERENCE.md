@@ -278,7 +278,13 @@ Notes:
 | `AI_SPEND_ALERT_MONTHLY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget mensuel |
 | `AI_MAX_CHAT_MESSAGES_CONTEXT` | `8` | Dokploy, `.env` | API | Non | Taille max du contexte chat persiste |
 | `AI_DAILY_AUTO_RUN_ENABLED` | `false` | Dokploy, `.env` | Worker | Non | Scheduler quotidien advisor. Doit rester `false` dans le mode manuel recommande |
-| `AI_DAILY_INTERVAL_MS` | `86400000` | Dokploy, `.env` | Worker | Non | Intervalle du scheduler advisor |
+| `AI_DAILY_INTERVAL_MS` | `900000` | Dokploy, `.env` | Worker | Non | Frequence de verification du scheduler advisor (tick periodique) |
+| `AI_DAILY_MARKET_OPEN_WINDOW_ENABLED` | `true` | Dokploy, `.env` | Worker | Non | Active la garde de fenetre autour de l'ouverture de marche pour `run-daily` |
+| `AI_DAILY_MARKET_OPEN_TIMEZONE` | `America/New_York` | Dokploy, `.env` | Worker | Non | Timezone de reference pour la fenetre `run-daily` |
+| `AI_DAILY_MARKET_OPEN_HOUR` | `9` | Dokploy, `.env` | Worker | Non | Heure locale d'ouverture de marche ciblee |
+| `AI_DAILY_MARKET_OPEN_MINUTE` | `30` | Dokploy, `.env` | Worker | Non | Minute locale d'ouverture de marche ciblee |
+| `AI_DAILY_MARKET_OPEN_LEAD_MINUTES` | `45` | Dokploy, `.env` | Worker | Non | Minutes autorisees avant l'ouverture ciblee |
+| `AI_DAILY_MARKET_OPEN_LAG_MINUTES` | `90` | Dokploy, `.env` | Worker | Non | Minutes autorisees apres l'ouverture ciblee |
 
 ---
 

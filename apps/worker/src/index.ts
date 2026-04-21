@@ -1287,6 +1287,12 @@ const startAdvisorScheduler = () => {
     advisorEnabled: env.AI_ADVISOR_ENABLED,
     autoRunEnabled: env.AI_DAILY_AUTO_RUN_ENABLED,
     intervalMs: env.AI_DAILY_INTERVAL_MS,
+    marketOpenWindowEnabled: env.AI_DAILY_MARKET_OPEN_WINDOW_ENABLED,
+    marketOpenTimezone: env.AI_DAILY_MARKET_OPEN_TIMEZONE,
+    marketOpenHour: env.AI_DAILY_MARKET_OPEN_HOUR,
+    marketOpenMinute: env.AI_DAILY_MARKET_OPEN_MINUTE,
+    marketOpenLeadMinutes: env.AI_DAILY_MARKET_OPEN_LEAD_MINUTES,
+    marketOpenLagMinutes: env.AI_DAILY_MARKET_OPEN_LAG_MINUTES,
     trigger: () =>
       triggerDashboardAdvisorDailyRun({
         redisClient: redisClient.client,

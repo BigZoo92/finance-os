@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import {
   buildDashboardAdvisorDailyRequest,
+  shouldTriggerAdvisorDailyRunInMarketOpenWindow,
   startDashboardAdvisorScheduler,
   triggerDashboardAdvisorDailyRun,
 } from './advisor-daily-scheduler'
@@ -136,25 +137,132 @@ describe('startDashboardAdvisorScheduler', () => {
   it('starts the interval when the feature is enabled', () => {
     const events: Array<Record<string, unknown>> = []
     const intervals: number[] = []
+    const triggerCalls: string[] = []
 
     const timer = startDashboardAdvisorScheduler({
       externalIntegrationsSafeMode: false,
       advisorEnabled: true,
       autoRunEnabled: true,
       intervalMs: 900000,
-      trigger: async () => undefined,
+      trigger: async () => {
+        triggerCalls.push('called')
+        return {
+          status: 'triggered',
+        }
+      },
+      nowFn: () => new Date('2026-04-21T13:45:00.000Z'),
       log: event => {
         events.push(event)
       },
       setIntervalFn: ((handler: TimerHandler, timeout?: number) => {
-        void handler
         intervals.push(timeout ?? 0)
+        void handler()
         return 123 as unknown as ReturnType<typeof setInterval>
       }) as typeof setInterval,
     })
 
     expect(timer).toBe(123)
+    expect(triggerCalls).toEqual(['called'])
     expect(intervals).toEqual([900000])
     expect(events.at(-1)?.msg).toBe('worker advisor scheduler started')
+  })
+
+  it('gates runs to the market-open window and triggers only once per market day', () => {
+    const triggerCalls: string[] = []
+    const ticks = [
+      new Date('2026-04-21T12:00:00.000Z'),
+      new Date('2026-04-21T13:10:00.000Z'),
+      new Date('2026-04-21T13:20:00.000Z'),
+      new Date('2026-04-22T13:25:00.000Z'),
+    ]
+
+    const timer = startDashboardAdvisorScheduler({
+      externalIntegrationsSafeMode: false,
+      advisorEnabled: true,
+      autoRunEnabled: true,
+      intervalMs: 900000,
+      trigger: async () => {
+        triggerCalls.push('called')
+        return {
+          status: 'triggered',
+        }
+      },
+      nowFn: () => ticks.shift() ?? new Date('2026-04-22T13:25:00.000Z'),
+      log: () => undefined,
+      setIntervalFn: ((handler: TimerHandler) => {
+        void handler()
+        void handler()
+        void handler()
+        return 123 as unknown as ReturnType<typeof setInterval>
+      }) as typeof setInterval,
+    })
+
+    expect(timer).toBe(123)
+    expect(triggerCalls).toEqual(['called', 'called'])
+  })
+})
+
+describe('shouldTriggerAdvisorDailyRunInMarketOpenWindow', () => {
+  it('returns false outside the configured market-open window', () => {
+    const decision = shouldTriggerAdvisorDailyRunInMarketOpenWindow({
+      now: new Date('2026-04-21T11:30:00.000Z'),
+      window: {
+        enabled: true,
+        timezone: 'America/New_York',
+        openHour: 9,
+        openMinute: 30,
+        leadMinutes: 30,
+        lagMinutes: 60,
+      },
+      lastTriggeredMarketDay: null,
+    })
+
+    expect(decision).toEqual({
+      shouldTrigger: false,
+      marketDay: '2026-04-21',
+      skipReason: 'outside_market_open_window',
+    })
+  })
+
+  it('returns false when today already ran', () => {
+    const decision = shouldTriggerAdvisorDailyRunInMarketOpenWindow({
+      now: new Date('2026-04-21T13:30:00.000Z'),
+      window: {
+        enabled: true,
+        timezone: 'America/New_York',
+        openHour: 9,
+        openMinute: 30,
+        leadMinutes: 30,
+        lagMinutes: 60,
+      },
+      lastTriggeredMarketDay: '2026-04-21',
+    })
+
+    expect(decision).toEqual({
+      shouldTrigger: false,
+      marketDay: '2026-04-21',
+      skipReason: 'already_triggered_today',
+    })
+  })
+
+  it('returns true when inside the configured market-open window', () => {
+    const decision = shouldTriggerAdvisorDailyRunInMarketOpenWindow({
+      now: new Date('2026-04-21T14:15:00.000Z'),
+      window: {
+        enabled: true,
+        timezone: 'America/New_York',
+        openHour: 9,
+        openMinute: 30,
+        leadMinutes: 45,
+        lagMinutes: 90,
+      },
+      lastTriggeredMarketDay: null,
+    })
+
+    expect(decision).toEqual({
+      shouldTrigger: true,
+      marketDay: '2026-04-21',
+      skipReason: null,
+    })
   })
 })

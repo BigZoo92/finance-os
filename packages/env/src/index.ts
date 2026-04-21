@@ -799,7 +799,16 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
-    AI_DAILY_INTERVAL_MS: z.coerce.number().int().positive().default(24 * 60 * 60 * 1000),
+    AI_DAILY_INTERVAL_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+    AI_DAILY_MARKET_OPEN_WINDOW_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    AI_DAILY_MARKET_OPEN_TIMEZONE: z.string().default('America/New_York'),
+    AI_DAILY_MARKET_OPEN_HOUR: z.coerce.number().int().min(0).max(23).default(9),
+    AI_DAILY_MARKET_OPEN_MINUTE: z.coerce.number().int().min(0).max(59).default(30),
+    AI_DAILY_MARKET_OPEN_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(45),
+    AI_DAILY_MARKET_OPEN_LAG_MINUTES: z.coerce.number().int().min(0).max(240).default(90),
     MARKET_DATA_AUTO_REFRESH_ENABLED: z
       .string()
       .optional()
