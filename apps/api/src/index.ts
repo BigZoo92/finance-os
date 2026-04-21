@@ -763,5 +763,50 @@ const shutdown = async (signal: string) => {
   process.exit(0)
 }
 
-process.on('SIGINT', () => void shutdown('SIGINT'))
-process.on('SIGTERM', () => void shutdown('SIGTERM'))
+let shuttingDown = false
+const resolveWarningCode = (warning: Error) => {
+  const candidate = (warning as unknown as { code?: unknown }).code
+  return typeof candidate === 'string' ? candidate : null
+}
+
+const shutdownOnce = (signal: string) => {
+  if (shuttingDown) {
+    return
+  }
+  shuttingDown = true
+  void shutdown(signal)
+}
+
+process.on('SIGINT', () => shutdownOnce('SIGINT'))
+process.on('SIGTERM', () => shutdownOnce('SIGTERM'))
+process.on('warning', warning => {
+  logApiEvent({
+    level: 'warn',
+    msg: 'api runtime warning',
+    warningName: warning.name,
+    warningCode: resolveWarningCode(warning),
+    warningMessage: warning.message,
+  })
+})
+process.on('unhandledRejection', reason => {
+  logApiEvent({
+    level: 'error',
+    msg: 'api unhandled rejection',
+    ...toErrorLogFields({
+      error: reason,
+      includeStack: true,
+    }),
+  })
+  shutdownOnce('UNHANDLED_REJECTION')
+})
+process.on('uncaughtException', error => {
+  logApiEvent({
+    level: 'error',
+    msg: 'api uncaught exception',
+    ...toErrorLogFields({
+      error,
+      includeStack: true,
+    }),
+  })
+  shutdownOnce('UNCAUGHT_EXCEPTION')
+})
