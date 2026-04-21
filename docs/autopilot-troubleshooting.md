@@ -93,3 +93,18 @@
 - Only the first spawned spec should auto-start as `ready`; the rest should be labeled `autopilot:queued`.
 - Only one implementation PR lane should stay open at a time. Extra improve issues are expected to wait under `autopilot:queued-pr`.
 - If you still see multiple implementation PRs open from one batch, inspect for simultaneous `ready` labeling or stale old PRs created before the single-lane rules landed.
+
+## Prompt optimization rollout states
+
+- `Autopilot - Batch to Codex` now supports phased prompt optimization with runtime state tags: `shadow`, `canary`, `enforced`, and `fallback`.
+- `shadow` (default) keeps deterministic baseline prompting and appends comparison telemetry (baseline/optimized token counts, quality proxy delta, mandatory-instruction mismatch rate).
+- `canary` applies optimized prompting only to a deterministic cohort of tasks and falls back to baseline outside the cohort.
+- `enforced` applies optimized prompting by default but still falls back to baseline if mandatory-instruction validation fails.
+- `fallback` is activated automatically when the emergency kill-switch is enabled or when validation/cohort gating rejects optimized prompting.
+
+Runtime controls:
+
+- `AUTOPILOT_BATCH_PROMPT_ROLLOUT_MODE` = `shadow|canary|enforced` (default `shadow`)
+- `AUTOPILOT_BATCH_PROMPT_CANARY_RATIO` = `0..1` (default `0.2`)
+- `AUTOPILOT_BATCH_PROMPT_MISMATCH_SLO` = `0..1` mandatory-instruction mismatch threshold (default `0`)
+- `AUTOPILOT_BATCH_PROMPT_HARD_OFF` = `true|false` emergency hard-off flag (default `false`)
