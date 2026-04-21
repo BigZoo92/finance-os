@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { Badge } from '@finance-os/ui/components'
 import { motion } from 'motion/react'
@@ -10,7 +11,7 @@ import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query
 import type { DashboardRange } from '@/features/dashboard-types'
 import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 import { powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
-import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
+import { adaptDailySurfaceViewModel } from '@/features/dashboard-view-model-adapter'
 import { getTrendDirection, summarizeCashflowDirection } from '@/components/dashboard/trend-visuals'
 import { formatMoney } from '@/lib/format'
 import { D3Sparkline } from '@/components/ui/d3-sparkline'
@@ -69,10 +70,10 @@ function CockpitPage() {
   const statusQ = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
   const goalsQ = useQuery(financialGoalsQueryOptionsWithMode({ mode: authMode }))
 
-  const adapted = adaptDashboardSummaryLegacy({
+  const adapted = adaptDailySurfaceViewModel({
+    mode: authMode ?? 'demo',
     range,
     summary: summaryQ.data,
-    ...(authMode ? { mode: authMode } : {}),
   })
   const trend = getTrendDirection({
     start: adapted.dailyWealthSnapshots[0]?.balance ?? null,
@@ -93,6 +94,18 @@ function CockpitPage() {
   const activeGoals = goals.filter(g => !g.archivedAt)
 
   const sparkData = adapted.dailyWealthSnapshots.map(s => ({ date: s.date, value: s.balance }))
+  const [secondaryReady, setSecondaryReady] = useState(false)
+  const staleData = !summaryQ.isPending && summaryQ.isError && summaryQ.data !== undefined
+
+  useEffect(() => {
+    if (summaryQ.isPending) {
+      setSecondaryReady(false)
+      return
+    }
+
+    const timeout = window.setTimeout(() => setSecondaryReady(true), 120)
+    return () => window.clearTimeout(timeout)
+  }, [summaryQ.isPending, summaryQ.dataUpdatedAt])
 
   return (
     <div className="space-y-10 md:space-y-12">
@@ -183,8 +196,28 @@ function CockpitPage() {
         </div>
       </section>
 
+      {staleData ? (
+        <Panel
+          title="Données en retard, cockpit utilisable"
+          tone="warning"
+          icon={<span className="text-base" aria-hidden="true">◔</span>}
+          description={`Dernière mise à jour locale: ${new Date(summaryQ.dataUpdatedAt).toLocaleString('fr-FR')}.`}
+        >
+          <p className="text-sm text-muted-foreground">
+            Action conseillée: relancez la synchronisation Powens depuis Intégrations, puis revenez ici.
+          </p>
+        </Panel>
+      ) : null}
+
       {/* ── Insights — top expenses / connections / goals ── */}
       <section className="grid gap-5 md:gap-6 lg:grid-cols-3">
+        {!secondaryReady ? (
+          <Panel title="Chargement progressif" description="Affinage des surfaces quotidiennes…" tone="plain">
+            <p className="py-6 text-sm text-muted-foreground">Les tuiles critiques sont prêtes, les détails arrivent.</p>
+          </Panel>
+        ) : null}
+        {secondaryReady ? (
+          <>
         <Panel
           title="Top dépenses"
           icon={<span className="text-base text-negative" aria-hidden="true">↔</span>}
@@ -305,6 +338,8 @@ function CockpitPage() {
             )}
           </div>
         </Panel>
+          </>
+        ) : null}
       </section>
 
       {/* ── Status bar — mono cockpit footer ── */}

@@ -13,6 +13,7 @@ describe('buildDashboardHealthModel', () => {
     expect(health.widgets.connections_state.reasons).toEqual(['STALE_SYNC'])
     expect(health.widgets.wealth_overview.reasons).toEqual(['PARTIAL_IMPORT'])
     expect(health.widgets.investment_positions.status).toBe('healthy')
+    expect(health.digest.staleWidgetCount).toBe(1)
   })
 
   it('marks all dashboard domains healthy when admin data is fresh and aligned', () => {
@@ -162,6 +163,7 @@ describe('buildDashboardHealthModel', () => {
     expect(health.domains.portfolio.status).toBe('healthy')
     expect(health.domains.derived.status).toBe('healthy')
     expect(health.widgets.wealth_overview.badgeLabel).toBeNull()
+    expect(health.digest.impactedWidgets).toEqual([])
   })
 
   it('surfaces admin attention reasons from aggregate and domain-specific health', () => {
