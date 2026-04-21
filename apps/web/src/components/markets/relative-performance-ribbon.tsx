@@ -8,8 +8,10 @@ const CHART_COLORS = [
   'var(--chart-3)',
   'var(--chart-4)',
   'var(--chart-5)',
-  'var(--primary)',
+  'var(--chart-6)',
+  'var(--chart-7)',
 ]
+const MAX_VISIBLE_SERIES = 7
 
 export function RelativePerformanceRibbon({
   items,
@@ -22,7 +24,7 @@ export function RelativePerformanceRibbon({
 
   const data = useMemo(() => {
     return items
-      .slice(0, 6)
+      .slice(0, MAX_VISIBLE_SERIES)
       .map((item, index) => {
         const base = item.history[0]?.value ?? 0
         const normalizedHistory = item.history.map(point => ({
@@ -33,7 +35,7 @@ export function RelativePerformanceRibbon({
         return {
           id: item.instrumentId,
           label: item.shortLabel,
-          color: CHART_COLORS[index % CHART_COLORS.length] ?? 'var(--primary)',
+          color: CHART_COLORS[index % CHART_COLORS.length] ?? 'var(--chart-1)',
           values: normalizedHistory,
           latest:
             normalizedHistory[normalizedHistory.length - 1]?.value ?? 100,
@@ -86,12 +88,18 @@ export function RelativePerformanceRibbon({
     )
   }
 
+  const leader = data
+    .slice()
+    .sort((a, b) => Math.abs((b.latest ?? 100) - 100) - Math.abs((a.latest ?? 100) - 100))[0]
+
   return (
-    <div className="rounded-[28px] border border-border/60 bg-[radial-gradient(circle_at_top,_oklch(from_var(--primary)_l_c_h/16%),_transparent_42%),linear-gradient(180deg,var(--surface-1),var(--surface-0))] p-4 shadow-[var(--shadow-lg)]">
+    <div className="rounded-[28px] border border-border/60 bg-[radial-gradient(circle_at_top,_oklch(from_var(--primary)_l_c_h/16%),_transparent_42%),radial-gradient(circle_at_85%_18%,_oklch(from_var(--chart-2)_l_c_h/16%),_transparent_36%),linear-gradient(180deg,var(--surface-1),var(--surface-0))] p-4 shadow-[var(--shadow-lg)]">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.24em] text-primary/70">Relative Performance Ribbon</p>
-          <h3 className="mt-1 text-lg font-semibold text-foreground">Base 100 sur l'historique visible</h3>
+          <h3 className="mt-1 text-lg font-semibold text-foreground">
+            Base 100 sur l&apos;historique visible · set borné ({data.length}/{MAX_VISIBLE_SERIES})
+          </h3>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {data.map(item => (
@@ -162,20 +170,21 @@ export function RelativePerformanceRibbon({
                 d={path}
                 fill="none"
                 stroke={item.color}
-                strokeWidth="2.5"
+                strokeOpacity={item.id === leader?.id ? 1 : 0.76}
+                strokeWidth={item.id === leader?.id ? 3.2 : 2.4}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
               <circle
                 cx={chart.x(lastIndex)}
                 cy={chart.y(lastPoint.value)}
-                r="4"
+                r={item.id === leader?.id ? '4.6' : '3.8'}
                 fill={item.color}
               />
               <text
                 x={chart.x(lastIndex) + 10}
                 y={chart.y(lastPoint.value) + 4}
-                className="fill-foreground text-[11px] font-medium"
+                className={item.id === leader?.id ? 'fill-foreground text-[11px] font-semibold' : 'fill-foreground text-[11px] font-medium'}
               >
                 {item.label}
               </text>
