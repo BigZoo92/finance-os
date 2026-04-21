@@ -1,3 +1,2 @@
 Falling back to direct application...
-Applied patch to '.github/workflows/release.yml' cleanly.
-Applied patch to 'scripts/smoke-prod.mjs' cleanly.
+Applied patch to 'docs/agentic/code_review.md' cleanly.

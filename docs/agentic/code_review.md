@@ -23,6 +23,11 @@ Use this guide for reviews in this repo.
 - Loading, empty, error, and success states exist
 - Auth state does not flash incorrectly on first render
 - PR notes include UI rationale and screenshot notes for meaningful UI changes
+- Mobile-friendly QA + polish gate is explicit in the review evidence:
+  - smallest viewport (`320px`) remains usable without clipped primary actions
+  - all interactive targets remain at least `44px` and keyboard focus-visible
+  - tabular financial values keep `.font-financial` for scanability
+  - no horizontal overflow on core dashboard surfaces unless intentional (`overflow-x-auto` documented)
 
 ## Usually Ignore
 
