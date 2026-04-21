@@ -1,34 +1,274 @@
-diff --git a/.github/agent-stubs/improve-834.md b/.github/agent-stubs/improve-834.md
+diff --git a/.github/agent-stubs/improve-836.md b/.github/agent-stubs/improve-836.md
 deleted file mode 100644
-index 09d60cb..0000000
---- a/.github/agent-stubs/improve-834.md
+index 6716714..0000000
+--- a/.github/agent-stubs/improve-836.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #834
+-# Autopilot stub for improve #836
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/834
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/836
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/docs/AI-SETUP.md b/docs/AI-SETUP.md
-index 9089290..4ea7c48 100644
---- a/docs/AI-SETUP.md
-+++ b/docs/AI-SETUP.md
-@@ -1,6 +1,6 @@
- # AI Setup
+diff --git a/apps/api/src/index.ts b/apps/api/src/index.ts
+index 282e44f..527282f 100644
+--- a/apps/api/src/index.ts
++++ b/apps/api/src/index.ts
+@@ -280,6 +280,9 @@ const registerAppRoutes = (app: Elysia) => {
+         newsProviderFredEnabled: env.NEWS_PROVIDER_FRED_ENABLED,
+         newsProviderFredApiKey: env.FRED_API_KEY,
+         newsProviderFredSeriesIds: env.NEWS_PROVIDER_FRED_SERIES_IDS,
++        newsProviderXTwitterEnabled: env.NEWS_PROVIDER_X_TWITTER_ENABLED,
++        newsProviderXTwitterQuery: env.NEWS_PROVIDER_X_TWITTER_QUERY,
++        newsProviderXTwitterBearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN,
+         marketDataEnabled: env.MARKET_DATA_ENABLED,
+         marketDataRefreshEnabled: env.MARKET_DATA_REFRESH_ENABLED,
+         marketDataForceFixtureFallback: env.MARKET_DATA_FORCE_FIXTURE_FALLBACK,
+diff --git a/apps/api/src/routes/dashboard/domain/news-taxonomy.ts b/apps/api/src/routes/dashboard/domain/news-taxonomy.ts
+index 01f890c..ee792d6 100644
+--- a/apps/api/src/routes/dashboard/domain/news-taxonomy.ts
++++ b/apps/api/src/routes/dashboard/domain/news-taxonomy.ts
+@@ -7,6 +7,7 @@ export const NEWS_PROVIDER_IDS = [
+   'sec_edgar',
+   'fred',
+   'alpha_vantage',
++  'x_twitter',
+ ] as const
  
--Last updated: 2026-04-15
-+Last updated: 2026-04-20
+ export type NewsProviderId = (typeof NEWS_PROVIDER_IDS)[number]
+@@ -148,6 +149,7 @@ export const NEWS_PROVIDER_LABELS: Record<NewsProviderId, string> = {
+   sec_edgar: 'SEC EDGAR',
+   fred: 'FRED',
+   alpha_vantage: 'Alpha Vantage',
++  x_twitter: 'X / Twitter',
+ }
  
- ## Goal
+ export const NEWS_SOURCE_TYPE_BY_PROVIDER: Record<NewsProviderId, NewsSourceType> = {
+@@ -159,4 +161,5 @@ export const NEWS_SOURCE_TYPE_BY_PROVIDER: Record<NewsProviderId, NewsSourceType
+   sec_edgar: 'filing',
+   fred: 'macro_data',
+   alpha_vantage: 'macro_data',
++  x_twitter: 'media',
+ }
+diff --git a/apps/api/src/routes/dashboard/router.ts b/apps/api/src/routes/dashboard/router.ts
+index 58534d1..a9989ad 100644
+--- a/apps/api/src/routes/dashboard/router.ts
++++ b/apps/api/src/routes/dashboard/router.ts
+@@ -45,6 +45,9 @@ export const createDashboardRoutes = ({
+   newsProviderFredEnabled,
+   newsProviderFredApiKey,
+   newsProviderFredSeriesIds,
++  newsProviderXTwitterEnabled,
++  newsProviderXTwitterQuery,
++  newsProviderXTwitterBearerToken,
+   marketDataEnabled,
+   marketDataRefreshEnabled,
+   marketDataForceFixtureFallback,
+@@ -109,6 +112,9 @@ export const createDashboardRoutes = ({
+   newsProviderFredEnabled: boolean
+   newsProviderFredApiKey: string | undefined
+   newsProviderFredSeriesIds: string[]
++  newsProviderXTwitterEnabled: boolean
++  newsProviderXTwitterQuery: string
++  newsProviderXTwitterBearerToken: string | undefined
+   marketDataEnabled: boolean
+   marketDataRefreshEnabled: boolean
+   marketDataForceFixtureFallback: boolean
+@@ -174,6 +180,9 @@ export const createDashboardRoutes = ({
+     newsProviderFredEnabled,
+     newsProviderFredApiKey,
+     newsProviderFredSeriesIds,
++    newsProviderXTwitterEnabled,
++    newsProviderXTwitterQuery,
++    newsProviderXTwitterBearerToken,
+     marketDataEnabled,
+     marketDataRefreshEnabled,
+     marketDataStaleAfterMinutes,
+diff --git a/apps/api/src/routes/dashboard/runtime.ts b/apps/api/src/routes/dashboard/runtime.ts
+index 95194c4..c3498f2 100644
+--- a/apps/api/src/routes/dashboard/runtime.ts
++++ b/apps/api/src/routes/dashboard/runtime.ts
+@@ -31,6 +31,7 @@ import { createFredNewsProvider } from './services/providers/fred-news-provider'
+ import { createGdeltNewsProvider } from './services/providers/gdelt-news-provider'
+ import { createHnNewsProvider } from './services/providers/hn-news-provider'
+ import { createSecEdgarNewsProvider } from './services/providers/sec-edgar-news-provider'
++import { createXTwitterNewsProvider } from './services/providers/x-twitter-news-provider'
+ import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
+ import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
  
-@@ -53,7 +53,7 @@ Active now:
+@@ -65,6 +66,9 @@ export const createDashboardRouteRuntime = ({
+   newsProviderFredEnabled,
+   newsProviderFredApiKey,
+   newsProviderFredSeriesIds,
++  newsProviderXTwitterEnabled,
++  newsProviderXTwitterQuery,
++  newsProviderXTwitterBearerToken,
+   marketDataEnabled,
+   marketDataRefreshEnabled,
+   marketDataStaleAfterMinutes,
+@@ -128,6 +132,9 @@ export const createDashboardRouteRuntime = ({
+   newsProviderFredEnabled: boolean
+   newsProviderFredApiKey: string | undefined
+   newsProviderFredSeriesIds: string[]
++  newsProviderXTwitterEnabled: boolean
++  newsProviderXTwitterQuery: string
++  newsProviderXTwitterBearerToken: string | undefined
+   marketDataEnabled: boolean
+   marketDataRefreshEnabled: boolean
+   marketDataStaleAfterMinutes: number
+@@ -257,6 +264,11 @@ export const createDashboardRouteRuntime = ({
+         apiKey: newsProviderFredApiKey,
+         seriesIds: newsProviderFredSeriesIds,
+       }),
++      createXTwitterNewsProvider({
++        enabled: newsProviderXTwitterEnabled,
++        query: newsProviderXTwitterQuery,
++        bearerToken: newsProviderXTwitterBearerToken,
++      }),
+     ],
+     maxItemsPerProvider: maxNewsItemsPerProvider,
+     metadataFetchEnabled,
+diff --git a/apps/api/src/routes/dashboard/services/providers/x-twitter-news-provider.ts b/apps/api/src/routes/dashboard/services/providers/x-twitter-news-provider.ts
+new file mode 100644
+index 0000000..5b39083
+--- /dev/null
++++ b/apps/api/src/routes/dashboard/services/providers/x-twitter-news-provider.ts
+@@ -0,0 +1,73 @@
++import type { NewsProviderAdapter } from '../news-provider-types'
++import { fetchJson, sanitizePayload, trimOrNull } from '../news-provider-utils'
++
++interface TwitterRecentSearchResponse {
++  data?: Array<{
++    id?: string
++    text?: string
++    created_at?: string
++    lang?: string
++    author_id?: string
++  }>
++}
++
++export const createXTwitterNewsProvider = ({
++  enabled,
++  bearerToken,
++  query,
++}: {
++  enabled: boolean
++  bearerToken: string | undefined
++  query: string
++}): NewsProviderAdapter => ({
++  provider: 'x_twitter',
++  enabled,
++  cooldownMs: 2_500,
++  async fetchItems({ requestId, maxItems }) {
++    if (!bearerToken) {
++      return []
++    }
++
++    const payload = await fetchJson<TwitterRecentSearchResponse>({
++      url: `https://api.x.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=${Math.min(maxItems, 100)}&tweet.fields=created_at,lang,author_id`,
++      requestId,
++      headers: {
++        Authorization: `Bearer ${bearerToken}`,
++      },
++    })
++
++    return (payload.data ?? [])
++      .map(tweet => {
++        const providerArticleId = trimOrNull(tweet.id)
++        const title = trimOrNull(tweet.text)
++        const publishedAt = tweet.created_at ? new Date(tweet.created_at) : null
++        if (!providerArticleId || !title || !publishedAt || Number.isNaN(publishedAt.getTime())) {
++          return null
++        }
++
++        const providerUrl = `https://x.com/i/web/status/${providerArticleId}`
++
++        return {
++          provider: 'x_twitter' as const,
++          providerArticleId,
++          providerUrl,
++          canonicalUrl: providerUrl,
++          sourceName: 'X',
++          sourceDomain: 'x.com',
++          sourceType: 'media' as const,
++          title,
++          summary: null,
++          contentSnippet: title,
++          language: trimOrNull(tweet.lang) ?? 'en',
++          country: null,
++          region: null,
++          geoScope: 'global' as const,
++          publishedAt,
++          metadata: trimOrNull(tweet.author_id) ? { authorId: tweet.author_id } : null,
++          rawPayload: sanitizePayload(tweet),
++        }
++      })
++      .filter((item): item is NonNullable<typeof item> => item !== null)
++      .slice(0, maxItems)
++  },
++})
+diff --git a/docs/context/ENV-REFERENCE.md b/docs/context/ENV-REFERENCE.md
+index 2426f62..f012198 100644
+--- a/docs/context/ENV-REFERENCE.md
++++ b/docs/context/ENV-REFERENCE.md
+@@ -196,13 +196,16 @@
+ | `NEWS_PROVIDER_SEC_TICKERS` | `AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA` | Dokploy, Local | API | Watchlist ticker SEC |
+ | `NEWS_PROVIDER_FRED_ENABLED` | `false` | Dokploy, Local | API | Active FRED |
+ | `NEWS_PROVIDER_FRED_SERIES_IDS` | `FEDFUNDS,CPIAUCSL,UNRATE,DGS10` | Dokploy, Local | API | Liste CSV des series FRED |
++| `NEWS_PROVIDER_X_TWITTER_ENABLED` | `false` | Dokploy, Local | API | Active l'ingestion X/Twitter (recent search v2) |
++| `NEWS_PROVIDER_X_TWITTER_QUERY` | `(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet` | Dokploy, Local | API | Requete X/Twitter (sans retweets par defaut) |
++| `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN` | -- | Dokploy, Local | API | Bearer token X API v2, secret obligatoire si provider actif |
+ | `FRED_API_KEY` | -- | Dokploy, Local | API | Cle API FRED, requise si FRED news ou marches est active |
  
- Prepared for later, not fully activated:
+ Notes:
  
--- Gemma/local provider slot
-+- Gemma/Qwen/local provider slot
-   - targeted role 1: deterministic rewrite + normalization workloads (low-risk text shaping)
-   - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
-   - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout
+ - `FRED_API_KEY` est un secret partage entre le domaine news et le domaine marches.
+ - `SEC_USER_AGENT` doit etre defini avec une vraie signature produit/contact en prod.
+-- `NEWS_PROVIDER_ECB_DATA_ENABLED` et `NEWS_PROVIDER_FRED_ENABLED` restent desactives par defaut pour garder un cout reseau raisonnable.
++- `NEWS_PROVIDER_ECB_DATA_ENABLED`, `NEWS_PROVIDER_FRED_ENABLED`, et `NEWS_PROVIDER_X_TWITTER_ENABLED` restent desactives par defaut pour garder un cout reseau raisonnable.
+ 
+ ---
+ 
+diff --git a/docs/context/NEWS-FETCH.md b/docs/context/NEWS-FETCH.md
+index 2163a1a..c52d68c 100644
+--- a/docs/context/NEWS-FETCH.md
++++ b/docs/context/NEWS-FETCH.md
+@@ -48,6 +48,7 @@ Providers actuellement cables dans `apps/api/src/routes/dashboard/runtime.ts` :
+ | Federal Reserve RSS | `fed_rss` | policy, speeches, press releases | aucune |
+ | SEC EDGAR / data.sec.gov | `sec_edgar` | filings primaires et submissions | aucune cle, `User-Agent` requis |
+ | FRED | `fred` | series macro structurees | `FRED_API_KEY` |
++| X/Twitter recent search | `x_twitter` | capter des signaux evenementiels tres recents (macro, guidance, cyber, geopolitique) | `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN` |
+ 
+ ### 2.2 Providers prepares mais non cables
+ 
+@@ -55,6 +56,10 @@ Providers actuellement cables dans `apps/api/src/routes/dashboard/runtime.ts` :
+   - type deja reserve dans la taxonomie
+   - non branche par defaut
+   - volontairement exclu du backbone pour eviter une dependance centrale a une API a quotas serras
++- `x_twitter`
++  - branche dans le runtime mais **desactive par defaut**
++  - la foundation actuelle se limite a la recherche recente (`/2/tweets/search/recent`) avec query configurable
++  - tant que `NEWS_PROVIDER_X_TWITTER_ENABLED=false` ou que le bearer token est absent, le provider n'ingere aucun item
+ 
+ ### 2.3 Sources explicitement non retenues comme coeur
+ 
+diff --git a/packages/env/src/index.ts b/packages/env/src/index.ts
+index fe1ecc9..f11573a 100644
+--- a/packages/env/src/index.ts
++++ b/packages/env/src/index.ts
+@@ -524,6 +524,14 @@ export const getApiEnv = () => {
+       .string()
+       .optional()
+       .transform(value => toStringArrayEnv(value, ['FEDFUNDS', 'CPIAUCSL', 'UNRATE', 'DGS10'])),
++    NEWS_PROVIDER_X_TWITTER_ENABLED: z
++      .string()
++      .optional()
++      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
++    NEWS_PROVIDER_X_TWITTER_QUERY: z
++      .string()
++      .default('(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet'),
++    NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: z.string().min(1).optional(),
+     FRED_API_KEY: z.string().min(1).optional(),
+     MARKET_DATA_ENABLED: z
+       .string()

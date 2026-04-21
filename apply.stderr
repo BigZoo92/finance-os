@@ -1,2 +1,9 @@
 Falling back to direct application...
-Applied patch to 'docs/AI-SETUP.md' cleanly.
+Applied patch to 'apps/api/src/index.ts' cleanly.
+Applied patch to 'apps/api/src/routes/dashboard/domain/news-taxonomy.ts' cleanly.
+Applied patch to 'apps/api/src/routes/dashboard/router.ts' cleanly.
+Applied patch to 'apps/api/src/routes/dashboard/runtime.ts' cleanly.
+Falling back to direct application...
+Applied patch to 'docs/context/ENV-REFERENCE.md' cleanly.
+Applied patch to 'docs/context/NEWS-FETCH.md' cleanly.
+Applied patch to 'packages/env/src/index.ts' cleanly.

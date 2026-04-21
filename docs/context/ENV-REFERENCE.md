@@ -196,13 +196,16 @@
 | `NEWS_PROVIDER_SEC_TICKERS` | `AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA` | Dokploy, Local | API | Watchlist ticker SEC |
 | `NEWS_PROVIDER_FRED_ENABLED` | `false` | Dokploy, Local | API | Active FRED |
 | `NEWS_PROVIDER_FRED_SERIES_IDS` | `FEDFUNDS,CPIAUCSL,UNRATE,DGS10` | Dokploy, Local | API | Liste CSV des series FRED |
+| `NEWS_PROVIDER_X_TWITTER_ENABLED` | `false` | Dokploy, Local | API | Active l'ingestion X/Twitter (recent search v2) |
+| `NEWS_PROVIDER_X_TWITTER_QUERY` | `(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet` | Dokploy, Local | API | Requete X/Twitter (sans retweets par defaut) |
+| `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN` | -- | Dokploy, Local | API | Bearer token X API v2, secret obligatoire si provider actif |
 | `FRED_API_KEY` | -- | Dokploy, Local | API | Cle API FRED, requise si FRED news ou marches est active |
 
 Notes:
 
 - `FRED_API_KEY` est un secret partage entre le domaine news et le domaine marches.
 - `SEC_USER_AGENT` doit etre defini avec une vraie signature produit/contact en prod.
-- `NEWS_PROVIDER_ECB_DATA_ENABLED` et `NEWS_PROVIDER_FRED_ENABLED` restent desactives par defaut pour garder un cout reseau raisonnable.
+- `NEWS_PROVIDER_ECB_DATA_ENABLED`, `NEWS_PROVIDER_FRED_ENABLED`, et `NEWS_PROVIDER_X_TWITTER_ENABLED` restent desactives par defaut pour garder un cout reseau raisonnable.
 
 ---
 

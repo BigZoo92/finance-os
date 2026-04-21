@@ -7,6 +7,7 @@ export const NEWS_PROVIDER_IDS = [
   'sec_edgar',
   'fred',
   'alpha_vantage',
+  'x_twitter',
 ] as const
 
 export type NewsProviderId = (typeof NEWS_PROVIDER_IDS)[number]
@@ -148,6 +149,7 @@ export const NEWS_PROVIDER_LABELS: Record<NewsProviderId, string> = {
   sec_edgar: 'SEC EDGAR',
   fred: 'FRED',
   alpha_vantage: 'Alpha Vantage',
+  x_twitter: 'X / Twitter',
 }
 
 export const NEWS_SOURCE_TYPE_BY_PROVIDER: Record<NewsProviderId, NewsSourceType> = {
@@ -159,4 +161,5 @@ export const NEWS_SOURCE_TYPE_BY_PROVIDER: Record<NewsProviderId, NewsSourceType
   sec_edgar: 'filing',
   fred: 'macro_data',
   alpha_vantage: 'macro_data',
+  x_twitter: 'media',
 }
