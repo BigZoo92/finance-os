@@ -78,6 +78,131 @@ jobs:
                 .filter(Boolean);
             }
 
+            function tokenizeApprox(value) {
+              const normalized = normalizeText(value).trim();
+              if (!normalized) return 0;
+              return normalized.split(/\s+/).length;
+            }
+
+            function toBoolean(value, fallback = false) {
+              if (typeof value !== "string") return fallback;
+              const normalized = value.trim().toLowerCase();
+              if (!normalized) return fallback;
+              if (["1", "true", "yes", "on"].includes(normalized)) return true;
+              if (["0", "false", "no", "off"].includes(normalized)) return false;
+              return fallback;
+            }
+
+            function toRatio(value, fallback) {
+              if (typeof value !== "string") return fallback;
+              const parsed = Number(value.trim());
+              if (!Number.isFinite(parsed)) return fallback;
+              if (parsed <= 0) return 0;
+              if (parsed >= 1) return 1;
+              return parsed;
+            }
+
+            function deterministicBucket(seed) {
+              let hash = 2166136261;
+              const input = String(seed || "");
+              for (let index = 0; index < input.length; index += 1) {
+                hash ^= input.charCodeAt(index);
+                hash = Math.imul(hash, 16777619);
+              }
+              return Math.abs(hash >>> 0) % 100;
+            }
+
+            function mandatoryInstructionMatches(promptText) {
+              const mandatoryMarkers = [
+                "Return STRICT JSON ONLY in exactly ONE ```json``` fence.",
+                "No text outside the JSON fence.",
+                "Create exactly one requested spec object per raw bullet",
+                "Every item must set origin='requested'.",
+              ];
+              const missing = mandatoryMarkers.filter((line) => !promptText.includes(line));
+              return {
+                required: mandatoryMarkers.length,
+                matched: mandatoryMarkers.length - missing.length,
+                missing,
+              };
+            }
+
+            function buildPromptLines({
+              rawBullets,
+              nonce,
+              batchArea,
+              batchContext,
+              batchObjectives,
+              batchDesignPrinciples,
+              batchConstraints,
+              batchExpectedEndResult,
+              batchCostBias,
+              batchDecisionRules,
+              batchPivot,
+              optimized,
+            }) {
+              const headerLines = optimized
+                ? [
+                    "@codex",
+                    "AUTOPILOT_BATCH_NONCE: " + nonce,
+                    "",
+                    "Return STRICT JSON ONLY in exactly ONE ```json``` fence.",
+                    `Top-level value must be an array of exactly ${rawBullets.length} items.`,
+                    "No text outside the JSON fence.",
+                    "",
+                    `Create exactly one requested spec object per raw bullet (1:1, same order, count ${rawBullets.length}).`,
+                    "Do NOT add extra items.",
+                    "Use the batch brief below as first-class product context. Preserve fail-soft, demo/admin dual-path, observability, UI/UX, and cost constraints where relevant.",
+                    "Every item must set origin='requested'.",
+                    `source_bullet must be 1..${rawBullets.length} exactly once, in order.`,
+                    "",
+                    "Each item must include title(spec:*), area(api|web|worker|powens|db|infra|ui-ux|docs), priority(p0|p1|p2), origin(requested), source_bullet, goal, non_goals, acceptance_criteria[], breakpoints[], dual_path, observability, uiux, risks, env_change_request.",
+                  ]
+                : [
+                    "@codex",
+                    "AUTOPILOT_BATCH_NONCE: " + nonce,
+                    "",
+                    "Return STRICT JSON ONLY in exactly ONE ```json``` fence.",
+                    `Top-level value must be an array of exactly ${rawBullets.length} items.`,
+                    "No text outside the JSON fence.",
+                    "",
+                    `Create exactly one requested spec object per raw bullet (1:1, same order, count ${rawBullets.length}).`,
+                    "Do NOT add extra items.",
+                    "Use the batch brief below as first-class product context. Preserve its fail-soft, dual-path, reliability, UX, and cost constraints where relevant.",
+                    "Every item must set origin='requested'.",
+                    `source_bullet must be 1..${rawBullets.length} exactly once, in order.`,
+                    "",
+                    "Each item must include:",
+                    "- title (starts with 'spec:')",
+                    "- area (api|web|worker|powens|db|infra|ui-ux|docs)",
+                    "- priority (p0|p1|p2)",
+                    "- origin (must be requested)",
+                    "- source_bullet (number)",
+                    "- goal, non_goals, acceptance_criteria[], breakpoints[]",
+                    "- dual_path, observability, uiux, risks, env_change_request",
+                  ];
+
+              return [
+                ...headerLines,
+                "",
+                "Batch brief:",
+                batchArea ? `- Dominant area: ${batchArea}` : "",
+                batchCostBias ? `- Cost bias: ${batchCostBias}` : "",
+                batchContext ? `### Context\n${batchContext}` : "",
+                batchObjectives ? `### Objectives\n${batchObjectives}` : "",
+                batchDesignPrinciples ? `### Design principles\n${batchDesignPrinciples}` : "",
+                batchConstraints ? `### Non-negotiable constraints\n${batchConstraints}` : "",
+                batchExpectedEndResult ? `### Expected end result\n${batchExpectedEndResult}` : "",
+                batchDecisionRules ? `### Decision rules\n${batchDecisionRules}` : "",
+                batchPivot ? `### Explicit pivot / out-of-scope\n${batchPivot}` : "",
+                "",
+                "Raw bullets to convert:",
+                ...rawBullets.map((bullet, index) => `${index + 1}. ${bullet}`),
+              ]
+                .filter(Boolean)
+                .join("\n");
+            }
+
             if (!has("batch:spec")) return;
             if (!has("autopilot")) return;
 
@@ -145,44 +270,101 @@ jobs:
             }
 
             const nonce = `BATCH-${issue.number}-${Date.now()}`;
+            const rolloutModeRaw = String(process.env.AUTOPILOT_BATCH_PROMPT_ROLLOUT_MODE || "shadow").trim().toLowerCase();
+            const emergencyHardOff = toBoolean(process.env.AUTOPILOT_BATCH_PROMPT_HARD_OFF, false);
+            const canaryRatio = toRatio(process.env.AUTOPILOT_BATCH_PROMPT_CANARY_RATIO, 0.2);
+            const mismatchThreshold = toRatio(process.env.AUTOPILOT_BATCH_PROMPT_MISMATCH_SLO, 0);
+            const bucket = deterministicBucket(`${issue.number}:${issue.created_at || ""}`);
+            const inCanary = bucket < Math.round(canaryRatio * 100);
+            const rolloutMode = ["shadow", "canary", "enforced"].includes(rolloutModeRaw)
+              ? rolloutModeRaw
+              : "shadow";
 
-            const body = [
-              "@codex",
-              "AUTOPILOT_BATCH_NONCE: " + nonce,
+            const baselinePrompt = buildPromptLines({
+              rawBullets,
+              nonce,
+              batchArea,
+              batchContext,
+              batchObjectives,
+              batchDesignPrinciples,
+              batchConstraints,
+              batchExpectedEndResult,
+              batchCostBias,
+              batchDecisionRules,
+              batchPivot,
+              optimized: false,
+            });
+
+            const optimizedPrompt = buildPromptLines({
+              rawBullets,
+              nonce,
+              batchArea,
+              batchContext,
+              batchObjectives,
+              batchDesignPrinciples,
+              batchConstraints,
+              batchExpectedEndResult,
+              batchCostBias,
+              batchDecisionRules,
+              batchPivot,
+              optimized: true,
+            });
+
+            const baselineInstructions = mandatoryInstructionMatches(baselinePrompt);
+            const optimizedInstructions = mandatoryInstructionMatches(optimizedPrompt);
+            const optimizedMismatchRate =
+              optimizedInstructions.required === 0
+                ? 0
+                : (optimizedInstructions.required - optimizedInstructions.matched) /
+                  optimizedInstructions.required;
+            const qualityProxyWordDelta = tokenizeApprox(baselinePrompt) - tokenizeApprox(optimizedPrompt);
+
+            let executionState = rolloutMode;
+            let fallbackReason = "";
+            let selectedPrompt = baselinePrompt;
+
+            if (emergencyHardOff) {
+              executionState = "fallback";
+              fallbackReason = "Emergency hard-off env flag forced baseline prompt.";
+            } else if (rolloutMode === "shadow") {
+              executionState = "shadow";
+              fallbackReason = "Shadow mode uses baseline output while recording comparison metrics.";
+            } else if (rolloutMode === "canary") {
+              if (!inCanary) {
+                executionState = "fallback";
+                fallbackReason = "Issue outside canary cohort; baseline prompt selected.";
+              } else if (optimizedInstructions.missing.length > 0) {
+                executionState = "fallback";
+                fallbackReason = `Mandatory instruction mismatch in canary (${optimizedInstructions.missing.join("; ")}).`;
+              } else {
+                selectedPrompt = optimizedPrompt;
+              }
+            } else if (rolloutMode === "enforced") {
+              if (optimizedInstructions.missing.length > 0) {
+                executionState = "fallback";
+                fallbackReason = `Enforced rollout fallback on mandatory instruction mismatch (${optimizedInstructions.missing.join("; ")}).`;
+              } else {
+                selectedPrompt = optimizedPrompt;
+              }
+            }
+
+            const comparisonSummary = [
               "",
-              "Return STRICT JSON ONLY in exactly ONE ```json``` fence.",
-              `Top-level value must be an array of exactly ${rawBullets.length} items.`,
-              "No text outside the JSON fence.",
-              "",
-              `Create exactly one requested spec object per raw bullet (1:1, same order, count ${rawBullets.length}).`,
-              "Do NOT add extra items.",
-              "Use the batch brief below as first-class product context. Preserve its fail-soft, dual-path, reliability, UX, and cost constraints where relevant.",
-              "Every item must set origin='requested'.",
-              `source_bullet must be 1..${rawBullets.length} exactly once, in order.`,
-              "",
-              "Each item must include:",
-              "- title (starts with 'spec:')",
-              "- area (api|web|worker|powens|db|infra|ui-ux|docs)",
-              "- priority (p0|p1|p2)",
-              "- origin (must be requested)",
-              "- source_bullet (number)",
-              "- goal, non_goals, acceptance_criteria[], breakpoints[]",
-              "- dual_path, observability, uiux, risks, env_change_request",
-              "",
-              "Batch brief:",
-              batchArea ? `- Dominant area: ${batchArea}` : "",
-              batchCostBias ? `- Cost bias: ${batchCostBias}` : "",
-              batchContext ? `### Context\n${batchContext}` : "",
-              batchObjectives ? `### Objectives\n${batchObjectives}` : "",
-              batchDesignPrinciples ? `### Design principles\n${batchDesignPrinciples}` : "",
-              batchConstraints ? `### Non-negotiable constraints\n${batchConstraints}` : "",
-              batchExpectedEndResult ? `### Expected end result\n${batchExpectedEndResult}` : "",
-              batchDecisionRules ? `### Decision rules\n${batchDecisionRules}` : "",
-              batchPivot ? `### Explicit pivot / out-of-scope\n${batchPivot}` : "",
-              "",
-              "Raw bullets to convert:",
-              ...rawBullets.map((bullet, index) => `${index + 1}. ${bullet}`),
-            ].filter(Boolean).join("\n");
+              "Autopilot prompt rollout telemetry:",
+              `- state: ${executionState}`,
+              `- configured_rollout: ${rolloutMode}`,
+              `- canary_bucket: ${bucket}`,
+              `- canary_ratio: ${canaryRatio}`,
+              `- baseline_token_count: ${tokenizeApprox(baselinePrompt)}`,
+              `- optimized_token_count: ${tokenizeApprox(optimizedPrompt)}`,
+              `- quality_proxy_word_delta: ${qualityProxyWordDelta}`,
+              `- mandatory_instruction_mismatch_rate: ${optimizedMismatchRate.toFixed(3)}`,
+              fallbackReason ? `- fallback_reason: ${fallbackReason}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n");
+
+            const body = `${selectedPrompt}\n${comparisonSummary}`;
 
             await github.rest.issues.createComment({
               owner,
@@ -190,6 +372,15 @@ jobs:
               issue_number: issue.number,
               body,
             });
+
+            if (optimizedMismatchRate > mismatchThreshold) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issue.number,
+                labels: ["needs:you"],
+              });
+            }
 
             await github.rest.issues.addLabels({
               owner,
