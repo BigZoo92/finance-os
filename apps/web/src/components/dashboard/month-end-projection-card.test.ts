@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateMonthEndProjection, calculateMonthlyRecurringOverview } from './month-end-projection-card'
+import { calculateMonthEndProjection, calculateMonthlyRecurringOverview, calculateProjectionTrend } from './month-end-projection-card'
 
 describe('calculateMonthEndProjection', () => {
   it('returns a linear projection based on current month transactions', () => {
@@ -102,6 +102,63 @@ describe('calculateMonthEndProjection', () => {
     })
 
     expect(projection).toBeNull()
+  })
+
+  it('builds a daily trajectory for observed and projected month-end net values', () => {
+    const projection = calculateMonthEndProjection({
+      referenceDate: new Date('2026-04-10T12:00:00.000Z'),
+      transactions: [
+        {
+          id: 1,
+          bookingDate: '2026-04-01',
+          amount: 2000,
+          currency: 'EUR',
+          direction: 'income',
+          label: 'Salaire',
+          category: null,
+          subcategory: null,
+          resolvedCategory: null,
+          resolutionSource: 'fallback',
+          resolutionRuleId: null,
+          resolutionTrace: [],
+          incomeType: 'salary',
+          tags: [],
+          powensConnectionId: 'conn-a',
+          powensAccountId: 'acc-a',
+          accountName: 'Main',
+        },
+        {
+          id: 2,
+          bookingDate: '2026-04-05',
+          amount: -800,
+          currency: 'EUR',
+          direction: 'expense',
+          label: 'Loyer',
+          category: null,
+          subcategory: null,
+          resolvedCategory: null,
+          resolutionSource: 'fallback',
+          resolutionRuleId: null,
+          resolutionTrace: [],
+          incomeType: null,
+          tags: [],
+          powensConnectionId: 'conn-a',
+          powensAccountId: 'acc-a',
+          accountName: 'Main',
+        },
+      ],
+    })
+
+    expect(projection).not.toBeNull()
+    if (!projection) {
+      return
+    }
+
+    const trend = calculateProjectionTrend(projection)
+    expect(trend).toHaveLength(30)
+    expect(trend[0]).toEqual({ day: 1, cumulativeNet: 120 })
+    expect(trend[9]).toEqual({ day: 10, cumulativeNet: 1200 })
+    expect(trend.at(-1)).toEqual({ day: 30, cumulativeNet: 3600 })
   })
 })
 

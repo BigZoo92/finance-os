@@ -1,5 +1,6 @@
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
 import type { DashboardTransactionsResponse } from '@/features/dashboard-types'
+import { MiniSparkline } from '@/components/ui/d3-sparkline'
 
 type DashboardTransaction = DashboardTransactionsResponse['items'][number]
 
@@ -18,6 +19,11 @@ export type MonthEndProjectionResult = {
   netToDate: number
   averageNetPerDay: number
   projectedNetAtMonthEnd: number
+}
+
+export type ProjectionTrendPoint = {
+  day: number
+  cumulativeNet: number
 }
 
 export type MonthlyRecurringOverview = {
@@ -244,6 +250,26 @@ export const calculateMonthEndProjection = ({
   }
 }
 
+export const calculateProjectionTrend = (projection: MonthEndProjectionResult): ProjectionTrendPoint[] => {
+  const trend: ProjectionTrendPoint[] = []
+
+  for (let day = 1; day <= projection.daysElapsed; day += 1) {
+    trend.push({
+      day,
+      cumulativeNet: projection.averageNetPerDay * day,
+    })
+  }
+
+  for (let day = projection.daysElapsed + 1; day <= projection.daysElapsed + projection.daysRemaining; day += 1) {
+    trend.push({
+      day,
+      cumulativeNet: projection.netToDate + projection.averageNetPerDay * (day - projection.daysElapsed),
+    })
+  }
+
+  return trend
+}
+
 export const MonthEndProjectionCard = ({
   isAdmin,
   transactions,
@@ -252,6 +278,7 @@ export const MonthEndProjectionCard = ({
   transactions: DashboardTransaction[]
 }) => {
   const projection = calculateMonthEndProjection({ transactions })
+  const projectionTrend = projection ? calculateProjectionTrend(projection) : []
   const recurringOverview = calculateMonthlyRecurringOverview(transactions)
 
   return (
@@ -293,6 +320,27 @@ export const MonthEndProjectionCard = ({
               Detail: revenus {formatMoney(projection.incomesToDate)} • depenses {formatMoney(projection.expensesToDate)} •
               {` ${projection.transactionsCount}`} transaction(s).
             </p>
+            <div className="rounded-md border border-border/70 px-3 py-2">
+              <p className="text-xs text-muted-foreground">Trajectoire du net mensuel (observé puis projeté)</p>
+              <div className="mt-2 flex items-center gap-3">
+                <MiniSparkline
+                  data={projectionTrend.map(point => point.cumulativeNet)}
+                  color="auto"
+                  width={100}
+                  height={28}
+                  className="shrink-0"
+                />
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                  <p>
+                    J{projection.daysElapsed}: <span className="font-financial text-foreground">{formatMoney(projection.netToDate)}</span>
+                  </p>
+                  <p>
+                    J{projection.daysElapsed + projection.daysRemaining}: {' '}
+                    <span className="font-financial text-foreground">{formatMoney(projection.projectedNetAtMonthEnd)}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
           </>
         )}
 
