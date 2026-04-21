@@ -297,6 +297,7 @@ Notes:
 | `VITE_PWA_CRITICAL_ENABLED` | -- | GitHub vars | Alertes critiques push |
 | `VITE_AI_ADVISOR_ENABLED` | -- | GitHub vars | Feature conseiller IA |
 | `VITE_AI_ADVISOR_ADMIN_ONLY` | -- | GitHub vars | Restreindre IA aux admins. Recommande `true` pour le mode manuel actuel |
+| `VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED` | `true` | GitHub vars | Active/desactive le panneau d'explicabilite benchmark social |
 
 ---
 
