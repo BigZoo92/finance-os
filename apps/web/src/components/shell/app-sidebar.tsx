@@ -181,16 +181,14 @@ export function MobileNav() {
     return currentPath.startsWith(to)
   }
 
-  const MOBILE_TAB_ITEMS = NAV_ITEMS.filter(i => i.section === 'main').slice(0, 5)
+  const MOBILE_TAB_ITEMS = NAV_ITEMS.filter(i => i.section === 'main').slice(0, 4)
+  const quickActions = NAV_ITEMS.filter(i => i.section === 'main').slice(4)
 
   return (
     <>
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 lg:hidden safe-area-bottom"
-        aria-label="Navigation principale"
-      >
+      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden safe-area-bottom" aria-label="Navigation principale">
         <div className="mx-3 mb-3 rounded-2xl border border-border/60 glass-surface shadow-lg">
-          <div className="relative flex items-stretch justify-around px-1">
+          <div className="relative flex items-stretch justify-around px-2 py-1">
             {MOBILE_TAB_ITEMS.map(item => {
               const active = isActive(item.to)
               return (
@@ -229,11 +227,18 @@ export function MobileNav() {
             <button
               type="button"
               onClick={() => setIsOpen(true)}
-              className="flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-2 text-[10.5px] text-muted-foreground active:scale-[0.96]"
+              className="relative -mt-6 flex h-14 w-14 shrink-0 items-center justify-center self-start rounded-full border border-primary/30 text-primary-foreground shadow-xl active:scale-[0.96]"
+              style={{
+                background:
+                  'linear-gradient(130deg, oklch(from var(--primary) l c h / 95%) 0%, oklch(from var(--accent-2) l c h / 88%) 100%)',
+                boxShadow:
+                  '0 12px 28px -10px oklch(from var(--primary) l c h / 65%), inset 0 1px 0 oklch(1 0 0 / 30%)',
+              }}
               aria-label="Plus d'options"
             >
-              <span className="text-[17px] leading-none" aria-hidden="true">⋯</span>
-              <span className="font-medium">Plus</span>
+              <span className="text-[24px] leading-none" aria-hidden="true">
+                ⋯
+              </span>
             </button>
           </div>
         </div>
@@ -260,7 +265,7 @@ export function MobileNav() {
               <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-muted-foreground/30" />
               <nav>
                 <ul className="space-y-0.5">
-                  {NAV_ITEMS.map((item, i) => {
+                  {quickActions.map((item, i) => {
                     const active = isActive(item.to)
                     return (
                       <motion.li
