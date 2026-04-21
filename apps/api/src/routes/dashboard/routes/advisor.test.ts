@@ -464,6 +464,23 @@ describe('createAdvisorRoute', () => {
     expect(payload.citations[0]?.topicId).toBe('diversification')
   })
 
+
+  it('answers financial datasets educational question', async () => {
+    const app = createAdvisorTestApp({ mode: 'admin' })
+
+    const response = await app.handle(
+      new Request(
+        'http://finance-os.local/advisor/knowledge-answer?question=Comment%20verifier%20la%20qualite%20d%20un%20dataset%20financier%20%3F'
+      )
+    )
+    const payload = (await response.json()) as DashboardAdvisorKnowledgeAnswerResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.status).toBe('answered')
+    expect(payload.citations[0]?.topicId).toBe('financial-datasets')
+    expect(payload.answer?.headline).toContain('Financial Datasets')
+  })
+
   it('blocks run-daily in demo mode', async () => {
     const app = createAdvisorTestApp({ mode: 'demo' })
 

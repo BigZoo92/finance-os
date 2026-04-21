@@ -273,6 +273,64 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       },
     ],
   },
+
+  {
+    topicId: 'financial-datasets',
+    title: 'Financial Datasets',
+    summary:
+      'Les datasets financiers sont des jeux de donnees structures (prix, fundamentals, macro, flux) utilises pour analyser un contexte avant une decision.',
+    difficulty: 'intermediate',
+    estimatedReadMinutes: 6,
+    tags: ['datasets', 'data-quality', 'macro', 'fundamentals'],
+    aliases: [
+      'financial data',
+      'jeu de donnees financier',
+      'qualite des donnees',
+      'dataset macro',
+    ],
+    relatedQuestions: [
+      'Qu est-ce qu un financial dataset ? ',
+      'Comment verifier la qualite d un dataset financier ?',
+      'Quelles limites avant d utiliser des donnees de marche ?',
+    ],
+    nextStep:
+      'Pour chaque dataset, notez la frequence de mise a jour, la couverture, la methode de calcul et les champs manquants avant interpretation.',
+    sections: [
+      {
+        sectionId: 'families',
+        title: 'Familles de datasets',
+        body:
+          'Les datasets financiers couvrent souvent les prix de marche, les donnees fondamentales, les indicateurs macroeconomiques et les evenements news. Chaque famille a ses delais, biais et usages.',
+        keyPoints: [
+          'Prix et volumes decrivent le marche en temps quasi reel.',
+          'Fundamentals et macro ont souvent plus de latence mais cadrent le regime de fond.',
+        ],
+        keywords: ['prix', 'fundamentals', 'macro', 'latence', 'couverture'],
+      },
+      {
+        sectionId: 'quality',
+        title: 'Qualite et gouvernance',
+        body:
+          'Un dataset utile doit expliciter sa source, son horodatage, ses revisions et ses trous de couverture. Sans ces metadonnees, le risque de sur-interpreter un signal augmente.',
+        keyPoints: [
+          'Toujours verifier provenance, fraicheur et revisions.',
+          'Un champ manquant ou revise peut inverser une conclusion.',
+        ],
+        keywords: ['provenance', 'fraicheur', 'revision', 'missing data', 'biais'],
+      },
+      {
+        sectionId: 'pitfalls',
+        title: 'Pieges frequents',
+        body:
+          'Les principaux pieges sont le look-ahead bias, les survivorship biases et la confusion entre correlation et causalite. Une lecture prudente prefere des hypotheses explicites et testables.',
+        keyPoints: [
+          'Eviter d utiliser une valeur publiee apres la date analysee.',
+          'Ne pas confondre signal descriptif et preuve causale.',
+        ],
+        keywords: ['look-ahead', 'survivorship', 'correlation', 'causalite', 'hypothese'],
+      },
+    ],
+  },
   {
     topicId: 'risk-horizon',
     title: 'Risque et horizon',
