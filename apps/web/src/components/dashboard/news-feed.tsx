@@ -4,6 +4,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { postDashboardNewsIngest } from '@/features/dashboard-api'
 import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import type { AuthMode } from '@/features/auth-types'
+import type { DashboardNewsSignalCard } from '@/features/dashboard-types'
 import { rankNewsByRelevance } from './relevance-scoring'
 import { NewsSignalCard } from './news-signal-card'
 
@@ -29,12 +30,22 @@ const statusTone: Record<string, string> = {
   idle: 'border-border/60 bg-surface-1 text-muted-foreground',
 }
 
+const hasXTwitterSource = (item: DashboardNewsSignalCard) => {
+  return item.sources.some(source => source.provider === 'x_twitter')
+}
+
+const computeInfluenceScore = (item: DashboardNewsSignalCard) => {
+  return Math.round(item.marketImpactScore * 0.55 + item.confidence * 0.3 + item.novelty * 0.15)
+}
+
 export function NewsFeed({ mode }: { mode: AuthMode }) {
   const queryClient = useQueryClient()
   const [topic, setTopic] = useState('')
   const [source, setSource] = useState('')
   const [domain, setDomain] = useState('')
   const [eventType, setEventType] = useState('')
+  const [xOnly, setXOnly] = useState(false)
+  const [highInfluenceOnly, setHighInfluenceOnly] = useState(false)
 
   const deferredTopic = useDeferredValue(topic.trim())
   const deferredSource = useDeferredValue(source.trim())
@@ -60,6 +71,17 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
         eventTypeFilter: deferredEventType,
       })
     : []
+  const curatedItems = rankedItems.filter(({ item }) => {
+    if (xOnly && !hasXTwitterSource(item)) {
+      return false
+    }
+    if (highInfluenceOnly && computeInfluenceScore(item) < 75) {
+      return false
+    }
+    return true
+  })
+  const xSignalCount = rankedItems.filter(({ item }) => hasXTwitterSource(item)).length
+  const highInfluenceCount = rankedItems.filter(({ item }) => computeInfluenceScore(item) >= 75).length
 
   const ingestMutation = useMutation({
     mutationFn: postDashboardNewsIngest,
@@ -145,11 +167,29 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
       </Card>
 
       <Card className="border-border/60 bg-surface-1/80">
-        <CardContent className="grid gap-3 p-4 md:grid-cols-4">
-          <Input value={topic} placeholder="Topic exact ex: macro" onChange={event => setTopic(event.target.value)} />
-          <Input value={source} placeholder="Source exacte ou provider" onChange={event => setSource(event.target.value)} />
-          <Input value={domain} placeholder="Domaine exact ex: geopolitics" onChange={event => setDomain(event.target.value)} />
-          <Input value={eventType} placeholder="Event type exact ex: filing_8k" onChange={event => setEventType(event.target.value)} />
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-3 md:grid-cols-4">
+            <Input value={topic} placeholder="Topic exact ex: macro" onChange={event => setTopic(event.target.value)} />
+            <Input value={source} placeholder="Source exacte ou provider" onChange={event => setSource(event.target.value)} />
+            <Input value={domain} placeholder="Domaine exact ex: geopolitics" onChange={event => setDomain(event.target.value)} />
+            <Input value={eventType} placeholder="Event type exact ex: filing_8k" onChange={event => setEventType(event.target.value)} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant={xOnly ? 'default' : 'secondary'} size="sm" onClick={() => setXOnly(value => !value)}>
+              X/Twitter influent ({xSignalCount})
+            </Button>
+            <Button
+              type="button"
+              variant={highInfluenceOnly ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => setHighInfluenceOnly(value => !value)}
+            >
+              Influence {'>='} 75 ({highInfluenceCount})
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Curation locale: score influence = 55% impact + 30% confiance + 15% nouveaute.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -215,16 +255,23 @@ export function NewsFeed({ mode }: { mode: AuthMode }) {
               <CardDescription>Classement UI adosse aux scores backend, puis ajuste par vos filtres actifs.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {payload && payload.items.length === 0 ? (
-                deferredTopic || deferredSource || deferredDomain || deferredEventType ? (
+              {payload && curatedItems.length === 0 ? (
+                deferredTopic || deferredSource || deferredDomain || deferredEventType || xOnly || highInfluenceOnly ? (
                   <p className="text-sm text-muted-foreground">Aucun signal ne correspond aux filtres actifs.</p>
                 ) : (
                   <p className="text-sm text-muted-foreground">Aucun signal n'est encore disponible dans le cache.</p>
                 )
               ) : null}
 
-              {rankedItems.map(({ item, score, reasons }) => (
-                <NewsSignalCard key={item.id} item={item} score={score} reasons={reasons} />
+              {curatedItems.map(({ item, score, reasons }) => (
+                <NewsSignalCard
+                  key={item.id}
+                  item={item}
+                  score={score}
+                  reasons={reasons}
+                  influenceScore={computeInfluenceScore(item)}
+                  highlightsX={hasXTwitterSource(item)}
+                />
               ))}
             </CardContent>
           </Card>
