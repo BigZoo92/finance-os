@@ -628,6 +628,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     AI_CHAT_ENABLED: z
       .string()
       .optional()
@@ -821,5 +825,9 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     ...powensShape,
   })

@@ -24,6 +24,8 @@ import {
 import { getDashboardSummaryMock } from '../../../../mocks/dashboardSummary.mock'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorDailyBriefResponse,
   DashboardAdvisorEvalsResponse,
@@ -44,6 +46,11 @@ import type {
 import type { NewsContextBundle } from '../news-types'
 import { buildAdvisorChatFallback } from './build-chat-fallback'
 import { buildDeterministicBrief } from './build-deterministic-brief'
+import {
+  buildAdvisorKnowledgeAnswer,
+  buildAdvisorKnowledgeBrowseFallback,
+  buildAdvisorKnowledgeTopics,
+} from './knowledge-pack'
 import { buildDeterministicTransactionSuggestions } from './build-transaction-suggestions'
 import { mapNewsBundleToSignals, mapSummaryToFinanceEngineInput } from './map-summary-to-engine-input'
 import { runAdvisorEvals } from './run-advisor-evals'
@@ -58,6 +65,7 @@ export interface DashboardAdvisorConfig {
   advisorEnabled: boolean
   adminOnly: boolean
   forceLocalOnly: boolean
+  knowledgeRetrievalEnabled: boolean
   chatEnabled: boolean
   challengerEnabled: boolean
   relabelEnabled: boolean
@@ -320,6 +328,27 @@ const buildDemoSpend = (config: DashboardAdvisorConfig) =>
       deepAnalysisDisableRatio: config.deepAnalysisDisableRatio,
     })
   )
+
+const resolveKnowledgeAvailability = (config: DashboardAdvisorConfig) => {
+  if (config.forceLocalOnly) {
+    return {
+      retrievalEnabled: false,
+      browseOnlyReason: 'provider_disable_switch' as const,
+    }
+  }
+
+  if (!config.knowledgeRetrievalEnabled) {
+    return {
+      retrievalEnabled: false,
+      browseOnlyReason: 'retrieval_kill_switch' as const,
+    }
+  }
+
+  return {
+    retrievalEnabled: true,
+    browseOnlyReason: null,
+  }
+}
 
 const toPromptTemplateRecord = (template: {
   key: string
@@ -959,6 +988,48 @@ export const createDashboardAdvisorUseCases = ({
         : repository.getSpendAnalytics(buildSpendInput(config))
     },
 
+    getAdvisorKnowledgeTopics: async ({
+      mode,
+      requestId,
+    }): Promise<DashboardAdvisorKnowledgeTopicsResponse> => {
+      const availability = resolveKnowledgeAvailability(config)
+
+      return buildAdvisorKnowledgeTopics({
+        mode,
+        requestId,
+        retrievalEnabled: availability.retrievalEnabled,
+        browseOnlyReason: availability.browseOnlyReason,
+      })
+    },
+
+    getAdvisorKnowledgeAnswer: async ({
+      mode,
+      requestId,
+      question,
+    }): Promise<DashboardAdvisorKnowledgeAnswerResponse> => {
+      const availability = resolveKnowledgeAvailability(config)
+
+      try {
+        return buildAdvisorKnowledgeAnswer({
+          mode,
+          requestId,
+          question,
+          retrievalEnabled: availability.retrievalEnabled,
+          browseOnlyReason: availability.browseOnlyReason,
+        })
+      } catch {
+        return buildAdvisorKnowledgeBrowseFallback({
+          mode,
+          requestId,
+          question,
+          retrievalEnabled: availability.retrievalEnabled,
+          fallbackReason: 'retrieval_error',
+          intent: 'unknown',
+          queryParseLatencyMs: 0,
+        })
+      }
+    },
+
     runAdvisorDaily: async ({ requestId, triggerSource }) =>
       executeAdvisorPipeline({ requestId, triggerSource, runType: 'daily' }),
 
@@ -1154,6 +1225,8 @@ export const createDashboardAdvisorUseCases = ({
     | 'getAdvisorAssumptions'
     | 'getAdvisorSignals'
     | 'getAdvisorSpend'
+    | 'getAdvisorKnowledgeTopics'
+    | 'getAdvisorKnowledgeAnswer'
     | 'runAdvisorDaily'
     | 'relabelAdvisorTransactions'
     | 'getAdvisorChat'

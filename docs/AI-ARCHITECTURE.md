@@ -8,6 +8,7 @@ Finance-OS now ships a hybrid advisor stack for the personal cockpit:
 
 - deterministic finance engine first
 - LLMs only for structured classification, grounded synthesis, and challenger review
+- educational knowledge-pack retrieval for bounded finance Q&A
 - persisted artifacts instead of prompting from raw history every time
 - explicit cost, budget, and audit trails
 - strict demo/admin split
@@ -48,8 +49,9 @@ Implementation consequences:
 2. LLM second: OpenAI handles structured drafting/classification; Anthropic handles challenger reviews on the most important recommendations.
 3. Challenger isolation: the challenger can only soften, flag, or confirm a recommendation. It does not replace the base deterministic recommendation set.
 4. Grounded chat: chat answers consume persisted advisor artifacts and explicit assumptions. The system must prefer "unknown" over invented certainty.
-5. Fail-soft: demo stays fully deterministic. Admin can degrade to deterministic preview artifacts when DB/provider freshness or budget guardrails block deeper runs.
-6. Cost-aware by default: every model call writes model usage and cost ledger records. Budgets can disable challenger or deeper analysis before hard stop.
+5. Knowledge Q&A stays educational: retrieval is templated, citation-backed, and must block personalized, fiscal, legal, or buy/sell framing.
+6. Fail-soft: demo stays fully deterministic. Admin can degrade to deterministic preview artifacts when DB/provider freshness or budget guardrails block deeper runs, and can degrade knowledge answers to browse-only topics when retrieval is disabled or low-confidence.
+7. Cost-aware by default: every model call writes model usage and cost ledger records. Budgets can disable challenger or deeper analysis before hard stop.
 
 ## Runtime Modules
 
@@ -92,6 +94,7 @@ Responsibilities:
 - OpenAI brief generation
 - Anthropic challenger review
 - transaction relabel suggestions
+- educational knowledge topics and answer assembly
 - grounded chat
 - eval execution and persistence
 
@@ -141,6 +144,7 @@ Responsibilities:
 - signals and assumptions
 - AI spend analytics
 - run history
+- educational Q&A with confidence badge, citations, and browse-only topic fallback
 - manual full-mission status
 - grounded chat
 - eval status
@@ -215,7 +219,7 @@ But it is intentionally off in the current recommended setup.
 - no DB writes
 - no provider calls
 - no LLM calls
-- deterministic preview overview and deterministic demo chat only
+- deterministic preview overview, educational knowledge Q&A, and deterministic demo chat only
 
 ### Admin
 
@@ -236,7 +240,8 @@ Degradation order for advisor surfaces:
 
 1. persisted artifacts
 2. deterministic admin preview rebuilt from current structured dashboard data
-3. deterministic demo fixtures in demo mode only
+3. educational knowledge answer retrieval, else browse-only topic navigation
+4. deterministic demo fixtures in demo mode only
 
 If LLM steps fail:
 

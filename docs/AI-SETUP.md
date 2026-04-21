@@ -7,6 +7,7 @@ Last updated: 2026-04-20
 This document describes the currently recommended advisor posture for Finance-OS:
 
 - advisor stack enabled
+- educational knowledge Q&A enabled
 - chat, challenger, relabel, spend analytics, runs, signals, assumptions, evals enabled
 - admin-only UI and mutations
 - manual orchestration first
@@ -23,6 +24,7 @@ Recommended now:
 - `AI_ADVISOR_ENABLED=true`
 - `AI_ADVISOR_ADMIN_ONLY=true`
 - `AI_ADVISOR_FORCE_LOCAL_ONLY=false`
+- `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=true`
 - `AI_CHAT_ENABLED=true`
 - `AI_CHALLENGER_ENABLED=true`
 - `AI_RELABEL_ENABLED=true`
@@ -34,6 +36,7 @@ Recommended now:
 Operational consequence:
 
 - the advisor surface is visible on `/actualites`
+- the educational Q&A card is visible on `/actualites` with confidence, citations, and browse-topics fallback
 - the full mission is started manually from the admin button `Tout rafraichir et analyser`
 - no background advisor scheduler runs by itself
 - no Powens auto-sync scheduler runs by itself
@@ -144,6 +147,7 @@ Do not put provider API keys in `VITE_*`.
 - `AI_ADVISOR_ENABLED`
 - `AI_ADVISOR_ADMIN_ONLY`
 - `AI_ADVISOR_FORCE_LOCAL_ONLY`
+- `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED`
 - `AI_CHAT_ENABLED`
 - `AI_CHALLENGER_ENABLED`
 - `AI_RELABEL_ENABLED`
@@ -187,6 +191,7 @@ VITE_AI_ADVISOR_ADMIN_ONLY=true
 AI_ADVISOR_ENABLED=true
 AI_ADVISOR_ADMIN_ONLY=true
 AI_ADVISOR_FORCE_LOCAL_ONLY=false
+AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=true
 AI_CHAT_ENABLED=true
 AI_CHALLENGER_ENABLED=true
 AI_RELABEL_ENABLED=true
@@ -212,6 +217,7 @@ VITE_AI_ADVISOR_ADMIN_ONLY=true
 AI_ADVISOR_ENABLED=true
 AI_ADVISOR_ADMIN_ONLY=true
 AI_ADVISOR_FORCE_LOCAL_ONLY=true
+AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=false
 AI_CHAT_ENABLED=true
 AI_CHALLENGER_ENABLED=false
 AI_RELABEL_ENABLED=false
@@ -361,6 +367,12 @@ AI_CHALLENGER_ENABLED=false
 AI_RELABEL_ENABLED=false
 ```
 
+Keep the advisor visible but switch knowledge Q&A to browse-only:
+
+```env
+AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=false
+```
+
 Disable the expensive layers first:
 
 ```env
@@ -413,4 +425,5 @@ The main drivers are:
 - costs are estimated from provider usage payloads plus the local pricing registry
 - `AI_USD_TO_EUR_RATE` is explicit and can drift from real FX if not updated
 - provider outages degrade to deterministic artifacts; they do not remove the advisor surface entirely
+- knowledge-answer retrieval degrade must keep static topic browsing available instead of returning a dead-end error
 - the current recommended mode is manual-first, so freshness depends on the operator clicking the full refresh button

@@ -4,6 +4,8 @@ import { createDashboardRuntimePlugin } from '../plugin'
 import { createAdvisorRoute } from './advisor'
 import type {
   DashboardAdvisorChatPostResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorManualRefreshAndRunPostResponse,
   DashboardAdvisorOverviewResponse,
   DashboardAdvisorManualOperationResponse,
@@ -230,6 +232,103 @@ const createDashboardRuntime = (
       byModel: [],
       anomalies: [],
     }),
+    getAdvisorKnowledgeTopics: async ({
+      mode,
+      requestId,
+    }): Promise<DashboardAdvisorKnowledgeTopicsResponse> => ({
+      mode,
+      requestId,
+      generatedAt: '2026-04-14T08:00:03.000Z',
+      retrievalEnabled: true,
+      browseOnlyReason: null,
+      topics: [
+        {
+          topicId: 'diversification',
+          title: 'Diversification',
+          summary: 'Evite la concentration sur un seul scenario.',
+          difficulty: 'beginner',
+          estimatedReadMinutes: 5,
+          tags: ['portfolio', 'risk'],
+          relatedQuestions: ['Pourquoi diversifier un portefeuille ?'],
+        },
+      ],
+    }),
+    getAdvisorKnowledgeAnswer:
+      async ({ mode, requestId, question }): Promise<DashboardAdvisorKnowledgeAnswerResponse> => ({
+        mode,
+        source: mode === 'demo' ? 'demo_fixture' : 'retrieval',
+        requestId,
+        generatedAt: '2026-04-14T08:00:03.000Z',
+        status: 'answered',
+        question,
+        answer: {
+          headline: 'Diversification: repere pedagogique',
+          summary: 'Diversifier reduit le risque specifique.',
+          keyPoints: ['Evite la concentration', 'Ne supprime pas le risque global'],
+          nextStep: 'Cartographier les expositions principales.',
+          guardrail: 'Contenu educatif uniquement.',
+        },
+        confidenceScore: 0.82,
+        confidenceLabel: 'high',
+        lowConfidence: false,
+        fallbackReason: null,
+        retrievalEnabled: true,
+        retrieval: {
+          intent: 'definition',
+          matchedTopicIds: ['diversification'],
+          hitCount: 1,
+          guardrailTriggered: false,
+          stageLatenciesMs: {
+            queryParse: 2,
+            retrieval: 3,
+            answerAssembly: 4,
+            total: 9,
+          },
+          stages: [
+            {
+              stage: 'query_parse',
+              status: 'completed',
+              detail: 'Question normalisee.',
+            },
+            {
+              stage: 'retrieval',
+              status: 'completed',
+              detail: '1 sujet trouve.',
+            },
+            {
+              stage: 'answer_assembly',
+              status: 'completed',
+              detail: 'Reponse assemblee.',
+            },
+            {
+              stage: 'fallback',
+              status: 'skipped',
+              detail: 'Aucun fallback.',
+            },
+          ],
+        },
+        citations: [
+          {
+            citationId: 'diversification-role',
+            topicId: 'diversification',
+            topicTitle: 'Diversification',
+            sectionTitle: 'Role',
+            label: 'Diversification · Role',
+            excerpt: 'Diversifier reduit la dependance a un seul scenario.',
+          },
+        ],
+        suggestedTopics: [
+          {
+            topicId: 'diversification',
+            title: 'Diversification',
+            summary: 'Evite la concentration sur un seul scenario.',
+            difficulty: 'beginner',
+            estimatedReadMinutes: 5,
+            tags: ['portfolio', 'risk'],
+            relatedQuestions: ['Pourquoi diversifier un portefeuille ?'],
+          },
+        ],
+      }),
     getLatestAdvisorManualOperation: async () => sampleManualOperation,
     getAdvisorManualOperationById: async () => sampleManualOperation,
     runAdvisorManualRefreshAndAnalysis:
@@ -333,6 +432,36 @@ describe('createAdvisorRoute', () => {
     expect(response.status).toBe(200)
     expect(payload.items.length).toBe(1)
     expect(payload.items[0]?.recommendationKey).toBe('cash-drag')
+  })
+
+  it('returns knowledge topics in demo mode', async () => {
+    const app = createAdvisorTestApp({ mode: 'demo' })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/knowledge-topics')
+    )
+    const payload = (await response.json()) as DashboardAdvisorKnowledgeTopicsResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.mode).toBe('demo')
+    expect(payload.retrievalEnabled).toBe(true)
+    expect(payload.topics[0]?.topicId).toBe('diversification')
+  })
+
+  it('returns a knowledge answer payload', async () => {
+    const app = createAdvisorTestApp({ mode: 'admin' })
+
+    const response = await app.handle(
+      new Request(
+        'http://finance-os.local/advisor/knowledge-answer?question=Pourquoi%20diversifier%20un%20portefeuille%20%3F'
+      )
+    )
+    const payload = (await response.json()) as DashboardAdvisorKnowledgeAnswerResponse
+
+    expect(response.status).toBe(200)
+    expect(payload.status).toBe('answered')
+    expect(payload.answer?.headline).toContain('Diversification')
+    expect(payload.citations[0]?.topicId).toBe('diversification')
   })
 
   it('blocks run-daily in demo mode', async () => {

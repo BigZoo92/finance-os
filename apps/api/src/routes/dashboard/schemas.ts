@@ -111,6 +111,14 @@ export const dashboardAdvisorChatQuerySchema = t.Object({
   threadKey: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
 })
 
+export const dashboardAdvisorKnowledgeAnswerQuerySchema = t.Object({
+  question: t.String({
+    minLength: 1,
+    maxLength: 240,
+    pattern: '^(?=.*\\S).+$',
+  }),
+})
+
 export const dashboardAdvisorChatBodySchema = t.Object({
   threadKey: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
   message: t.String({

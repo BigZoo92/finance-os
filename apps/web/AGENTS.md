@@ -36,10 +36,11 @@ Scope: `apps/web/**`
 - Keep AI advisor context assembly, retrieval, and rendering conventions stable in [src/components/dashboard/ai-advisor-panel.tsx](src/components/dashboard/ai-advisor-panel.tsx) and [src/features/dashboard-query-options.ts](src/features/dashboard-query-options.ts):
   - context must be deterministic in demo mode and sourced only from loader/query contracts; never add hidden provider calls or side-effect writes.
   - retrieval must stay read-only (`GET /dashboard/advisor*`) with explicit fail-soft fallback copy when live/admin data is delayed or unavailable.
+  - educational knowledge answers must keep confidence badges, source citations, browse-topics fallback, and explicit guardrail copy; low-confidence, guardrail-blocked, and browse-only states should stay user-visible rather than silently disappearing.
   - citation chips/links must only reference data present in the advisor payload; avoid synthetic sources that cannot be traced to contract fields.
   - redact or omit sensitive values in advisor UI text (tokens, callback codes, account identifiers) and keep request-id-safe logging assumptions intact.
   - cost guardrails are mandatory: keep expensive generation behind existing API/runtime flags and preserve deterministic local insights when AI advisor runtime toggles are off.
-  - the `/actualites` advisor surface must cover daily brief, recommendations, signals, assumptions, spend analytics, run history, chat, manual full-mission status, and evals with coherent loading/degraded/error/admin-only states.
+  - the `/actualites` advisor surface must cover daily brief, recommendations, signals, assumptions, spend analytics, run history, educational Q&A, chat, manual full-mission status, and evals with coherent loading/degraded/error/admin-only states.
 - Keep the `/patrimoine` manual-assets surface admin-only, backed by `/dashboard/manual-assets`, with a clear empty state and no hardcoded admin asset injection.
 - Keep dashboard filters in URL search params. Do not introduce duplicate local filter state for route-owned data.
 - Route all API calls through [src/lib/api.ts](src/lib/api.ts) so SSR cookie forwarding, `x-request-id`, and `/api` compatibility behavior stay consistent.

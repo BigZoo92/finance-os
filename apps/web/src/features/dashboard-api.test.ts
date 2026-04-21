@@ -48,7 +48,7 @@ vi.mock('./demo-data', () => ({
   getDemoDashboardTransactions: vi.fn(),
 }))
 
-import { fetchDashboardNews } from './dashboard-api'
+import { fetchDashboardAdvisorKnowledgeAnswer, fetchDashboardNews } from './dashboard-api'
 
 describe('fetchDashboardNews', () => {
   beforeEach(() => {
@@ -96,5 +96,23 @@ describe('fetchDashboardNews', () => {
 
     expect(result).toBe(demoPayload)
     expect(getDemoDashboardNewsMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('fetchDashboardAdvisorKnowledgeAnswer', () => {
+  beforeEach(() => {
+    apiFetchMock.mockReset()
+  })
+
+  it('encodes the question on the knowledge answer endpoint', async () => {
+    apiFetchMock.mockResolvedValue({ status: 'answered' })
+
+    await fetchDashboardAdvisorKnowledgeAnswer(
+      'Pourquoi diversifier un portefeuille actions ?'
+    )
+
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      '/dashboard/advisor/knowledge-answer?question=Pourquoi+diversifier+un+portefeuille+actions+%3F'
+    )
   })
 })

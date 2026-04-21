@@ -3,6 +3,8 @@ import type { getApiEnv } from '@finance-os/env'
 import type { createRedisClient } from '@finance-os/redis'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorChatThreadResponse,
   DashboardAdvisorDailyBriefResponse,
@@ -1238,6 +1240,15 @@ export interface DashboardUseCases {
     mode: 'demo' | 'admin'
     requestId: string
   }) => Promise<DashboardAdvisorSpendAnalyticsResponse>
+  getAdvisorKnowledgeTopics?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<DashboardAdvisorKnowledgeTopicsResponse>
+  getAdvisorKnowledgeAnswer?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    question: string
+  }) => Promise<DashboardAdvisorKnowledgeAnswerResponse>
   runAdvisorDaily?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

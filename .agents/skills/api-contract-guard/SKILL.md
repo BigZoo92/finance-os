@@ -30,6 +30,7 @@ description: Protect required Finance-OS HTTP contracts and route availability. 
 2. Trace the route implementation in API and its web caller before accepting a contract change.
 3. Check [../../../apps/api/src/index.ts](../../../apps/api/src/index.ts) when route registration, compatibility mounts, or required production assertions are involved.
 4. Flag any change that weakens `/auth/me`, dashboard routes, Powens status, or sensitive Powens actions.
+5. When advisor contracts change, explicitly verify `/dashboard/advisor/knowledge-topics` and `/dashboard/advisor/knowledge-answer` preserve demo determinism, browse-only fallback, and secret-safe logging.
 
 ## Trigger Examples
 

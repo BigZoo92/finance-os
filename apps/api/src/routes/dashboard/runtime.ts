@@ -79,6 +79,7 @@ export const createDashboardRouteRuntime = ({
   aiAdvisorEnabled,
   aiAdvisorAdminOnly,
   aiAdvisorForceLocalOnly,
+  aiKnowledgeQaRetrievalEnabled,
   aiChatEnabled,
   aiChallengerEnabled,
   aiRelabelEnabled,
@@ -141,6 +142,7 @@ export const createDashboardRouteRuntime = ({
   aiAdvisorEnabled: boolean
   aiAdvisorAdminOnly: boolean
   aiAdvisorForceLocalOnly: boolean
+  aiKnowledgeQaRetrievalEnabled: boolean
   aiChatEnabled: boolean
   aiChallengerEnabled: boolean
   aiRelabelEnabled: boolean
@@ -309,6 +311,7 @@ export const createDashboardRouteRuntime = ({
       advisorEnabled: aiAdvisorEnabled,
       adminOnly: aiAdvisorAdminOnly,
       forceLocalOnly: aiAdvisorForceLocalOnly,
+      knowledgeRetrievalEnabled: aiKnowledgeQaRetrievalEnabled,
       chatEnabled: aiChatEnabled,
       challengerEnabled: aiChallengerEnabled,
       relabelEnabled: aiRelabelEnabled,
