@@ -208,6 +208,94 @@ export interface DashboardAdvisorChatThreadResponse {
   messages: DashboardAdvisorChatMessageResponse[]
 }
 
+export interface DashboardAdvisorKnowledgeTopicResponse {
+  topicId: string
+  title: string
+  summary: string
+  difficulty: 'beginner' | 'intermediate'
+  estimatedReadMinutes: number
+  tags: string[]
+  relatedQuestions: string[]
+}
+
+export interface DashboardAdvisorKnowledgeTopicsResponse {
+  mode: 'demo' | 'admin'
+  requestId: string
+  generatedAt: string
+  retrievalEnabled: boolean
+  browseOnlyReason:
+    | 'provider_disable_switch'
+    | 'retrieval_kill_switch'
+    | null
+  topics: DashboardAdvisorKnowledgeTopicResponse[]
+}
+
+export interface DashboardAdvisorKnowledgeCitationResponse {
+  citationId: string
+  topicId: string
+  topicTitle: string
+  sectionTitle: string
+  label: string
+  excerpt: string
+}
+
+export interface DashboardAdvisorKnowledgeStageTraceResponse {
+  stage: 'query_parse' | 'retrieval' | 'answer_assembly' | 'fallback'
+  status: 'completed' | 'skipped'
+  detail: string
+}
+
+export interface DashboardAdvisorKnowledgeAnswerContentResponse {
+  headline: string
+  summary: string
+  keyPoints: string[]
+  nextStep: string
+  guardrail: string
+}
+
+export interface DashboardAdvisorKnowledgeAnswerResponse {
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'retrieval' | 'browse_fallback'
+  requestId: string
+  generatedAt: string
+  status: 'answered' | 'low_confidence' | 'guardrail_blocked' | 'browse_only'
+  question: string
+  answer: DashboardAdvisorKnowledgeAnswerContentResponse | null
+  confidenceScore: number
+  confidenceLabel: 'high' | 'medium' | 'low'
+  lowConfidence: boolean
+  fallbackReason:
+    | 'provider_disable_switch'
+    | 'retrieval_kill_switch'
+    | 'guardrail_personalized_advice'
+    | 'guardrail_regulatory_or_tax'
+    | 'low_confidence'
+    | 'retrieval_error'
+    | null
+  retrievalEnabled: boolean
+  retrieval: {
+    intent:
+      | 'definition'
+      | 'comparison'
+      | 'how_to'
+      | 'risk'
+      | 'planning'
+      | 'unknown'
+    matchedTopicIds: string[]
+    hitCount: number
+    guardrailTriggered: boolean
+    stageLatenciesMs: {
+      queryParse: number
+      retrieval: number
+      answerAssembly: number
+      total: number
+    }
+    stages: DashboardAdvisorKnowledgeStageTraceResponse[]
+  }
+  citations: DashboardAdvisorKnowledgeCitationResponse[]
+  suggestedTopics: DashboardAdvisorKnowledgeTopicResponse[]
+}
+
 export interface DashboardAdvisorEvalCaseResponse {
   id: number
   caseKey: string

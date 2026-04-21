@@ -14,6 +14,8 @@ import { MiniSparkline } from '@/components/ui/d3-sparkline'
 import type { AuthMode } from '@/features/auth-types'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatThreadResponse,
   DashboardAdvisorEvalsResponse,
   DashboardAdvisorManualOperationResponse,
@@ -95,6 +97,56 @@ const statusTone = (status: DashboardAdvisorOverviewResponse['status']) => {
   return 'secondary' as const
 }
 
+const knowledgeConfidenceVariant = (
+  label: DashboardAdvisorKnowledgeAnswerResponse['confidenceLabel']
+) => {
+  if (label === 'low') {
+    return 'outline' as const
+  }
+
+  return 'secondary' as const
+}
+
+const knowledgeStatusVariant = (
+  status: DashboardAdvisorKnowledgeAnswerResponse['status']
+) => {
+  if (status === 'guardrail_blocked') {
+    return 'destructive' as const
+  }
+
+  if (status === 'low_confidence' || status === 'browse_only') {
+    return 'outline' as const
+  }
+
+  return 'secondary' as const
+}
+
+const formatKnowledgeFallback = (
+  fallbackReason: DashboardAdvisorKnowledgeAnswerResponse['fallbackReason']
+) => {
+  if (fallbackReason === 'provider_disable_switch') {
+    return 'Retrieval coupe par le switch provider-disable. Le mode browse-only reste disponible.'
+  }
+
+  if (fallbackReason === 'retrieval_kill_switch') {
+    return 'Retrieval coupe par kill-switch. Parcourez plutot les sujets du knowledge pack.'
+  }
+
+  if (fallbackReason === 'guardrail_personalized_advice') {
+    return 'La question ressemble a une demande personnalisee. Le panneau reste limite a des explications educatives.'
+  }
+
+  if (fallbackReason === 'guardrail_regulatory_or_tax') {
+    return 'Les questions fiscales, juridiques ou reglementaires sortent du cadre educatif de cette surface.'
+  }
+
+  if (fallbackReason === 'retrieval_error') {
+    return 'Le moteur de retrieval a degrade proprement. Parcourez les sujets statiques ci-dessous.'
+  }
+
+  return 'Confiance insuffisante pour assembler une reponse nette. Parcourez plutot les sujets lies.'
+}
+
 const impactSummary = (value: Record<string, unknown>) => {
   const summary = value.summary
   return typeof summary === 'string' ? summary : 'Impact estime disponible dans les artefacts.'
@@ -108,6 +160,8 @@ export const AiAdvisorPanel = ({
   signals,
   spend,
   runs,
+  knowledgeTopics,
+  knowledgeAnswer,
   manualOperation,
   chat,
   evals,
@@ -117,6 +171,9 @@ export const AiAdvisorPanel = ({
   canTriggerRun,
   isTriggeringRun,
   onTriggerRun,
+  isAskingKnowledge,
+  knowledgeAnswerErrorMessage,
+  onAskKnowledge,
   isSendingChat,
   onSendChat,
 }: {
@@ -127,6 +184,8 @@ export const AiAdvisorPanel = ({
   signals: DashboardAdvisorSignalsResponse | undefined
   spend: DashboardAdvisorSpendAnalyticsResponse | undefined
   runs: DashboardAdvisorRunsResponse | undefined
+  knowledgeTopics: DashboardAdvisorKnowledgeTopicsResponse | undefined
+  knowledgeAnswer: DashboardAdvisorKnowledgeAnswerResponse | undefined
   manualOperation: DashboardAdvisorManualOperationResponse | null | undefined
   chat: DashboardAdvisorChatThreadResponse | undefined
   evals: DashboardAdvisorEvalsResponse | undefined
@@ -136,10 +195,14 @@ export const AiAdvisorPanel = ({
   canTriggerRun: boolean
   isTriggeringRun: boolean
   onTriggerRun: () => void
+  isAskingKnowledge: boolean
+  knowledgeAnswerErrorMessage: string | null
+  onAskKnowledge: (question: string) => void
   isSendingChat: boolean
   onSendChat: (message: string) => void
 }) => {
   const [chatDraft, setChatDraft] = useState('')
+  const [knowledgeDraft, setKnowledgeDraft] = useState('')
 
   const handleSendChat = () => {
     const normalized = chatDraft.trim()
@@ -149,6 +212,21 @@ export const AiAdvisorPanel = ({
 
     onSendChat(normalized)
     setChatDraft('')
+  }
+
+  const handleAskKnowledge = (overrideQuestion?: string) => {
+    const normalized = (overrideQuestion ?? knowledgeDraft).trim()
+    if (!normalized) {
+      return
+    }
+
+    onAskKnowledge(normalized)
+
+    if (!overrideQuestion) {
+      setKnowledgeDraft('')
+    } else {
+      setKnowledgeDraft(normalized)
+    }
   }
 
   const snapshotMetrics = overview?.snapshot?.metrics
@@ -330,6 +408,230 @@ export const AiAdvisorPanel = ({
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="overflow-hidden border-border/70 bg-[linear-gradient(135deg,oklch(from_var(--surface-1)_l_c_h/0.9),oklch(from_var(--surface-0)_l_c_h/0.96))]">
+        <CardHeader className="gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>Q&A pedagogique</CardTitle>
+              <Badge
+                variant={
+                  knowledgeAnswer ? knowledgeStatusVariant(knowledgeAnswer.status) : 'outline'
+                }
+              >
+                {knowledgeAnswer?.status ?? 'ask'}
+              </Badge>
+              <Badge variant={knowledgeTopics?.retrievalEnabled ? 'secondary' : 'outline'}>
+                {knowledgeTopics?.retrievalEnabled ? 'retrieval on' : 'browse only'}
+              </Badge>
+              {knowledgeAnswer ? (
+                <Badge variant={knowledgeConfidenceVariant(knowledgeAnswer.confidenceLabel)}>
+                  confiance {knowledgeAnswer.confidenceLabel}
+                </Badge>
+              ) : null}
+            </div>
+            <CardDescription>
+              Questions educatives sur le knowledge pack finance. Pas de conseil personnalise,
+              fiscal, juridique ou achat/vente.
+            </CardDescription>
+            <p className="text-sm text-muted-foreground">
+              Les reponses restent bornees au pack de connaissances et s affichent avec citations
+              explicites.
+            </p>
+            {knowledgeTopics?.browseOnlyReason ? (
+              <p className="text-sm text-amber-300">
+                {formatKnowledgeFallback(knowledgeTopics.browseOnlyReason)}
+              </p>
+            ) : null}
+            {knowledgeAnswerErrorMessage ? (
+              <p className="text-sm text-destructive">{knowledgeAnswerErrorMessage}</p>
+            ) : null}
+          </div>
+          <div className="w-full max-w-2xl space-y-2">
+            <Input
+              value={knowledgeDraft}
+              onChange={event => setKnowledgeDraft(event.target.value)}
+              placeholder="Ex: Pourquoi diversifier un portefeuille ?"
+              disabled={isAskingKnowledge}
+            />
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleAskKnowledge()}
+                disabled={isAskingKnowledge}
+              >
+                {isAskingKnowledge ? 'Recherche...' : 'Poser la question'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {knowledgeAnswer ? (
+            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="space-y-4 rounded-xl border border-border/70 bg-background/50 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={knowledgeStatusVariant(knowledgeAnswer.status)}>
+                    {knowledgeAnswer.status}
+                  </Badge>
+                  <Badge variant={knowledgeConfidenceVariant(knowledgeAnswer.confidenceLabel)}>
+                    {Math.round(knowledgeAnswer.confidenceScore * 100)}%
+                  </Badge>
+                  <Badge variant="outline">{knowledgeAnswer.source}</Badge>
+                  <Badge variant="outline">
+                    {knowledgeAnswer.retrieval.hitCount} hit
+                    {knowledgeAnswer.retrieval.hitCount > 1 ? 's' : ''}
+                  </Badge>
+                </div>
+                {knowledgeAnswer.answer ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-lg font-semibold">{knowledgeAnswer.answer.headline}</p>
+                      <p className="pt-2 text-sm text-muted-foreground">
+                        {knowledgeAnswer.answer.summary}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        Points clefs
+                      </p>
+                      {knowledgeAnswer.answer.keyPoints.map(item => (
+                        <p
+                          key={item}
+                          className="rounded-lg border border-border/70 bg-muted/20 p-3 text-sm"
+                        >
+                          {item}
+                        </p>
+                      ))}
+                    </div>
+                    <div className="rounded-lg border border-positive/30 bg-positive/10 p-3 text-sm">
+                      <p className="font-medium">Etape suivante</p>
+                      <p className="pt-1 text-muted-foreground">
+                        {knowledgeAnswer.answer.nextStep}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-muted-foreground">
+                      {knowledgeAnswer.answer.guardrail}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
+                    <p className="font-medium">Impossible de repondre proprement a cette question</p>
+                    <p className="pt-2 text-sm text-muted-foreground">
+                      {formatKnowledgeFallback(knowledgeAnswer.fallbackReason)}
+                    </p>
+                    <p className="pt-2 text-sm text-muted-foreground">
+                      Parcourez plutot les sujets ci-dessous ou utilisez une formulation plus
+                      generale et pedagogique.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-xl border border-border/70 bg-background/50 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Citations
+                  </p>
+                  <div className="pt-3 space-y-3">
+                    {knowledgeAnswer.citations.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Aucune citation exploitable. Basculez sur la navigation par sujets.
+                      </p>
+                    ) : null}
+                    {knowledgeAnswer.citations.map(citation => (
+                      <div
+                        key={citation.citationId}
+                        className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                      >
+                        <p className="text-sm font-medium">{citation.label}</p>
+                        <p className="pt-1 text-xs text-muted-foreground">
+                          {citation.excerpt}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/70 bg-background/50 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Trace retrieval
+                  </p>
+                  <div className="pt-3 space-y-2">
+                    {knowledgeAnswer.retrieval.stages.map(stage => (
+                      <div
+                        key={stage.stage}
+                        className="flex items-start justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium">{stage.stage}</p>
+                          <p className="pt-1 text-xs text-muted-foreground">{stage.detail}</p>
+                        </div>
+                        <Badge variant={stage.status === 'completed' ? 'secondary' : 'outline'}>
+                          {stage.status}
+                        </Badge>
+                      </div>
+                    ))}
+                    <p className="text-xs text-muted-foreground">
+                      Total {knowledgeAnswer.retrieval.stageLatenciesMs.total} ms · intent{' '}
+                      {knowledgeAnswer.retrieval.intent}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Browse topics
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {knowledgeTopics?.topics.length ?? 0} sujets disponibles
+              </p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {(knowledgeAnswer?.suggestedTopics ?? knowledgeTopics?.topics ?? []).map(topic => (
+                <div
+                  key={topic.topicId}
+                  className="rounded-xl border border-border/70 bg-background/50 p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{topic.title}</p>
+                    <Badge variant="outline">{topic.difficulty}</Badge>
+                    <Badge variant="secondary">{topic.estimatedReadMinutes} min</Badge>
+                  </div>
+                  <p className="pt-2 text-sm text-muted-foreground">{topic.summary}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {topic.tags.map(tag => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {topic.relatedQuestions.slice(0, 2).map(relatedQuestion => (
+                      <Button
+                        key={relatedQuestion}
+                        type="button"
+                        variant="outline"
+                        className="h-auto w-full justify-start whitespace-normal text-left"
+                        onClick={() => handleAskKnowledge(relatedQuestion)}
+                        disabled={isAskingKnowledge}
+                      >
+                        {relatedQuestion}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card>

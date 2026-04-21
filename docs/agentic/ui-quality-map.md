@@ -41,6 +41,7 @@ Use this map when touching dashboard surfaces or shared UI primitives.
 - Market source badges should clearly distinguish `EOD`, `differe`, and `overlay US`, and the freshness legend should stay understandable without opening devtools.
 - Powens connection cards should use explicit badges (`OK`, `KO`, `En cours`, `Inconnu`), keep the short reason readable in the main card, and reserve the exact last-attempt time for a tooltip or similarly lightweight affordance.
 - Advisor panel should keep daily brief, recommendations, signals, spend, runs, and chat readable as one coherent narrative instead of collapsing into unrelated cards.
+- Advisor educational Q&A should show confidence, citations, guardrail copy, and browse-topics fallback explicitly; browse-only and low-confidence states should feel intentional rather than like missing data.
 - Advisor page should make `admin-only` or runtime-disabled states explicit instead of hiding the feature silently.
 - Advisor demo mode must read as deliberately deterministic, not as a broken or half-loaded admin state.
 - Patrimoine manual-assets section should keep a clear empty state when no admin manual asset exists yet.

@@ -5,6 +5,8 @@ import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
 import {
+  fetchDashboardAdvisorKnowledgeAnswer,
+  getDemoDashboardAdvisorKnowledgeAnswer,
   postDashboardAdvisorChat,
   postDashboardAdvisorManualRefreshAndRun,
 } from '@/features/dashboard-api'
@@ -12,6 +14,7 @@ import {
   dashboardAdvisorAssumptionsQueryOptionsWithMode,
   dashboardAdvisorChatQueryOptionsWithMode,
   dashboardAdvisorEvalsQueryOptionsWithMode,
+  dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode,
   dashboardAdvisorManualOperationLatestQueryOptionsWithMode,
   dashboardAdvisorQueryOptionsWithMode,
   dashboardAdvisorRecommendationsQueryOptionsWithMode,
@@ -75,6 +78,11 @@ export const Route = createFileRoute('/_app/actualites')({
         ),
         context.queryClient.ensureQueryData(
           dashboardAdvisorRunsQueryOptionsWithMode({
+            mode,
+          })
+        ),
+        context.queryClient.ensureQueryData(
+          dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode({
             mode,
           })
         ),
@@ -180,6 +188,13 @@ function ActualitesPage() {
       refetchInterval: advisorRefetchInterval,
     }
   )
+  const knowledgeTopicsQuery = useQuery(
+    {
+      ...dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode({
+        ...(aiAdvisorVisible && authMode ? { mode: authMode } : {}),
+      }),
+    }
+  )
   const assumptionsQuery = useQuery(
     {
       ...dashboardAdvisorAssumptionsQueryOptionsWithMode({
@@ -239,12 +254,23 @@ function ActualitesPage() {
     },
   })
 
+  const knowledgeAnswerMutation = useMutation({
+    mutationFn: (question: string) => {
+      if (authMode === 'demo') {
+        return Promise.resolve(getDemoDashboardAdvisorKnowledgeAnswer(question))
+      }
+
+      return fetchDashboardAdvisorKnowledgeAnswer(question)
+    },
+  })
+
   const advisorError = [
     overviewQuery.error,
     recommendationsQuery.error,
     signalsQuery.error,
     spendQuery.error,
     runsQuery.error,
+    knowledgeTopicsQuery.error,
     assumptionsQuery.error,
     chatQuery.error,
     evalsQuery.error,
@@ -356,6 +382,8 @@ function ActualitesPage() {
             signals={signalsQuery.data}
             spend={spendQuery.data}
             runs={runsQuery.data}
+            knowledgeTopics={knowledgeTopicsQuery.data}
+            knowledgeAnswer={knowledgeAnswerMutation.data}
             manualOperation={manualOperationQuery.data}
             chat={chatQuery.data}
             evals={evalsQuery.data}
@@ -363,13 +391,19 @@ function ActualitesPage() {
               overviewQuery.isPending ||
               recommendationsQuery.isPending ||
               signalsQuery.isPending ||
-              spendQuery.isPending
+              spendQuery.isPending ||
+              knowledgeTopicsQuery.isPending
             }
             errorMessage={advisorError ? toErrorMessage(advisorError) : null}
             manualOperationErrorMessage={manualOperationError}
             canTriggerRun={isAdmin}
             isTriggeringRun={manualRefreshAndRunMutation.isPending || manualOperationActive}
             onTriggerRun={() => manualRefreshAndRunMutation.mutate()}
+            isAskingKnowledge={knowledgeAnswerMutation.isPending}
+            knowledgeAnswerErrorMessage={
+              knowledgeAnswerMutation.error ? toErrorMessage(knowledgeAnswerMutation.error) : null
+            }
+            onAskKnowledge={question => knowledgeAnswerMutation.mutate(question)}
             isSendingChat={chatMutation.isPending}
             onSendChat={message => chatMutation.mutate(message)}
           />

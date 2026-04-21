@@ -2,6 +2,9 @@ import { apiFetch, apiRequest, ApiRequestError } from '@/lib/api'
 import { getDemoDashboardNews, getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorChatThreadResponse,
   DashboardAdvisorEvalsResponse,
@@ -175,6 +178,87 @@ export const fetchDashboardTransactions = async (params: {
 
 
 const DEMO_ADVISOR_GENERATED_AT = '2026-04-14T08:00:00.000Z'
+const DEMO_KNOWLEDGE_GUARDRAIL =
+  'Contenu educatif uniquement. Pas de recommandation personnalisee, fiscale, juridique ou de signal achat/vente.'
+
+const DEMO_ADVISOR_KNOWLEDGE_TOPICS: DashboardAdvisorKnowledgeTopicResponse[] = [
+  {
+    topicId: 'emergency-fund',
+    title: 'Fonds d urgence',
+    summary: 'Une reserve liquide limite le risque de vendre un placement au mauvais moment.',
+    difficulty: 'beginner',
+    estimatedReadMinutes: 4,
+    tags: ['cash', 'safety', 'budget'],
+    relatedQuestions: [
+      'Combien de mois de depenses garder en cash ?',
+      'Pourquoi un fonds d urgence avant d investir ?',
+    ],
+  },
+  {
+    topicId: 'diversification',
+    title: 'Diversification',
+    summary: 'Diversifier reduit la dependance a un seul secteur, pays ou scenario.',
+    difficulty: 'beginner',
+    estimatedReadMinutes: 5,
+    tags: ['portfolio', 'risk', 'allocation'],
+    relatedQuestions: [
+      'Pourquoi diversifier un portefeuille ?',
+      'Comment reduire le risque de concentration ?',
+    ],
+  },
+  {
+    topicId: 'dca',
+    title: 'Investissement progressif (DCA)',
+    summary: 'Le DCA lisse le prix d entree et peut aider a garder une discipline simple.',
+    difficulty: 'beginner',
+    estimatedReadMinutes: 4,
+    tags: ['investing', 'discipline', 'automation'],
+    relatedQuestions: [
+      'Vaut-il mieux investir en une fois ou progressivement ?',
+      'Pourquoi automatiser un investissement mensuel ?',
+    ],
+  },
+  {
+    topicId: 'inflation-real-return',
+    title: 'Inflation et rendement reel',
+    summary: 'Le rendement reel mesure ce qui reste une fois l inflation prise en compte.',
+    difficulty: 'intermediate',
+    estimatedReadMinutes: 5,
+    tags: ['inflation', 'returns', 'purchasing-power'],
+    relatedQuestions: [
+      'Quelle difference entre rendement nominal et reel ?',
+      'Pourquoi le cash perd du pouvoir d achat ?',
+    ],
+  },
+]
+
+const normalizeDemoQuestion = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+const pickDemoKnowledgeTopic = (question: string) => {
+  const normalized = normalizeDemoQuestion(question)
+
+  if (/\b(divers|concentr|secteur|pays)\b/.test(normalized)) {
+    return DEMO_ADVISOR_KNOWLEDGE_TOPICS[1]
+  }
+
+  if (/\b(dca|mensuel|progressif|versement)\b/.test(normalized)) {
+    return DEMO_ADVISOR_KNOWLEDGE_TOPICS[2]
+  }
+
+  if (/\b(inflation|reel|nominal|pouvoir d achat|cash drag)\b/.test(normalized)) {
+    return DEMO_ADVISOR_KNOWLEDGE_TOPICS[3]
+  }
+
+  if (/\b(urgence|precaution|cash|reserve)\b/.test(normalized)) {
+    return DEMO_ADVISOR_KNOWLEDGE_TOPICS[0]
+  }
+
+  return null
+}
 
 export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisorOverviewResponse => {
   const summary = getDemoDashboardSummary(range)
@@ -371,6 +455,202 @@ export const getDemoDashboardAdvisorEvals = (): DashboardAdvisorEvalsResponse =>
   latestRun: null,
 })
 
+export const getDemoDashboardAdvisorKnowledgeTopics = (): DashboardAdvisorKnowledgeTopicsResponse => ({
+  mode: 'demo',
+  requestId: 'demo-advisor-request',
+  generatedAt: DEMO_ADVISOR_GENERATED_AT,
+  retrievalEnabled: true,
+  browseOnlyReason: null,
+  topics: DEMO_ADVISOR_KNOWLEDGE_TOPICS,
+})
+
+export const getDemoDashboardAdvisorKnowledgeAnswer = (
+  question: string
+): DashboardAdvisorKnowledgeAnswerResponse => {
+  const normalized = normalizeDemoQuestion(question)
+  const guardrailTriggered =
+    /\b(dois je|should i|acheter|vendre|buy|sell|mon portefeuille)\b/.test(normalized) ||
+    /\b(fiscal|tax|impot|legal|juridique)\b/.test(normalized)
+
+  if (guardrailTriggered) {
+    return {
+      mode: 'demo',
+      source: 'demo_fixture',
+      requestId: 'demo-advisor-request',
+      generatedAt: DEMO_ADVISOR_GENERATED_AT,
+      status: 'guardrail_blocked',
+      question,
+      answer: null,
+      confidenceScore: 0,
+      confidenceLabel: 'low',
+      lowConfidence: true,
+      fallbackReason: /\b(fiscal|tax|impot|legal|juridique)\b/.test(normalized)
+        ? 'guardrail_regulatory_or_tax'
+        : 'guardrail_personalized_advice',
+      retrievalEnabled: true,
+      retrieval: {
+        intent: 'unknown',
+        matchedTopicIds: [],
+        hitCount: 0,
+        guardrailTriggered: true,
+        stageLatenciesMs: {
+          queryParse: 1,
+          retrieval: 0,
+          answerAssembly: 0,
+          total: 1,
+        },
+        stages: [
+          {
+            stage: 'query_parse',
+            status: 'completed',
+            detail: 'Question normalisee.',
+          },
+          {
+            stage: 'retrieval',
+            status: 'skipped',
+            detail: 'Retrieval saute a cause du garde-fou.',
+          },
+          {
+            stage: 'answer_assembly',
+            status: 'skipped',
+            detail: 'Assemblage saute pour rester non personnalise.',
+          },
+          {
+            stage: 'fallback',
+            status: 'completed',
+            detail: 'Retour browse-only.',
+          },
+        ],
+      },
+      citations: [],
+      suggestedTopics: DEMO_ADVISOR_KNOWLEDGE_TOPICS,
+    }
+  }
+
+  const topic = pickDemoKnowledgeTopic(question)
+  if (!topic) {
+    return {
+      mode: 'demo',
+      source: 'demo_fixture',
+      requestId: 'demo-advisor-request',
+      generatedAt: DEMO_ADVISOR_GENERATED_AT,
+      status: 'low_confidence',
+      question,
+      answer: null,
+      confidenceScore: 0.24,
+      confidenceLabel: 'low',
+      lowConfidence: true,
+      fallbackReason: 'low_confidence',
+      retrievalEnabled: true,
+      retrieval: {
+        intent: 'unknown',
+        matchedTopicIds: [],
+        hitCount: 0,
+        guardrailTriggered: false,
+        stageLatenciesMs: {
+          queryParse: 1,
+          retrieval: 1,
+          answerAssembly: 0,
+          total: 2,
+        },
+        stages: [
+          {
+            stage: 'query_parse',
+            status: 'completed',
+            detail: 'Question normalisee.',
+          },
+          {
+            stage: 'retrieval',
+            status: 'completed',
+            detail: 'Aucun sujet demo suffisamment proche.',
+          },
+          {
+            stage: 'answer_assembly',
+            status: 'skipped',
+            detail: 'Assemblage saute faute de confiance.',
+          },
+          {
+            stage: 'fallback',
+            status: 'completed',
+            detail: 'Retour browse topics.',
+          },
+        ],
+      },
+      citations: [],
+      suggestedTopics: DEMO_ADVISOR_KNOWLEDGE_TOPICS,
+    }
+  }
+
+  return {
+    mode: 'demo',
+    source: 'demo_fixture',
+    requestId: 'demo-advisor-request',
+    generatedAt: DEMO_ADVISOR_GENERATED_AT,
+    status: 'answered',
+    question,
+    answer: {
+      headline: `${topic.title}: repere pedagogique`,
+      summary: topic.summary,
+      keyPoints: [
+        `Point cle: ${topic.summary}`,
+        'Le mode demo reste deterministe et purement educatif.',
+      ],
+      nextStep: 'Parcourez le sujet puis basculez en admin pour la meme experience avec observabilite live.',
+      guardrail: DEMO_KNOWLEDGE_GUARDRAIL,
+    },
+    confidenceScore: 0.78,
+    confidenceLabel: 'high',
+    lowConfidence: false,
+    fallbackReason: null,
+    retrievalEnabled: true,
+    retrieval: {
+      intent: 'definition',
+      matchedTopicIds: [topic.topicId],
+      hitCount: 1,
+      guardrailTriggered: false,
+      stageLatenciesMs: {
+        queryParse: 1,
+        retrieval: 1,
+        answerAssembly: 1,
+        total: 3,
+      },
+      stages: [
+        {
+          stage: 'query_parse',
+          status: 'completed',
+          detail: 'Question normalisee.',
+        },
+        {
+          stage: 'retrieval',
+          status: 'completed',
+          detail: 'Sujet demo rapproche avec succes.',
+        },
+        {
+          stage: 'answer_assembly',
+          status: 'completed',
+          detail: 'Reponse demo assemblee.',
+        },
+        {
+          stage: 'fallback',
+          status: 'skipped',
+          detail: 'Aucun fallback necessaire.',
+        },
+      ],
+    },
+    citations: [
+      {
+        citationId: `${topic.topicId}-demo`,
+        topicId: topic.topicId,
+        topicTitle: topic.title,
+        sectionTitle: 'Resume',
+        label: `${topic.title} - Resume`,
+        excerpt: topic.summary,
+      },
+    ],
+    suggestedTopics: DEMO_ADVISOR_KNOWLEDGE_TOPICS,
+  }
+}
+
 export const getDemoDashboardManualAssets = (): DashboardManualAssetsResponse => {
   const summary = getDemoDashboardSummary('30d')
   return {
@@ -449,6 +729,17 @@ export const fetchDashboardAdvisorChat = async (threadKey = 'default') => {
 
 export const fetchDashboardAdvisorEvals = async () => {
   return apiFetch<DashboardAdvisorEvalsResponse>('/dashboard/advisor/evals')
+}
+
+export const fetchDashboardAdvisorKnowledgeTopics = async () => {
+  return apiFetch<DashboardAdvisorKnowledgeTopicsResponse>('/dashboard/advisor/knowledge-topics')
+}
+
+export const fetchDashboardAdvisorKnowledgeAnswer = async (question: string) => {
+  const query = toSearchParams({ question })
+  return apiFetch<DashboardAdvisorKnowledgeAnswerResponse>(
+    `/dashboard/advisor/knowledge-answer?${query}`
+  )
 }
 
 export const postDashboardAdvisorRunDaily = async () => {

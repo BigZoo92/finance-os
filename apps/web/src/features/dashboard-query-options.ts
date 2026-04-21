@@ -4,6 +4,7 @@ import {
   fetchDashboardAdvisorAssumptions,
   fetchDashboardAdvisorChat,
   fetchDashboardAdvisorEvals,
+  fetchDashboardAdvisorKnowledgeTopics,
   fetchDashboardAdvisorLatestManualOperation,
   fetchDashboardAdvisorManualOperationById,
   fetchDashboardAdvisorRecommendations,
@@ -15,6 +16,7 @@ import {
   getDemoDashboardAdvisorAssumptions,
   getDemoDashboardAdvisorChat,
   getDemoDashboardAdvisorEvals,
+  getDemoDashboardAdvisorKnowledgeTopics,
   getDemoDashboardManualAssets,
   getDemoDashboardAdvisorRecommendations,
   getDemoDashboardAdvisorRuns,
@@ -101,6 +103,7 @@ export const dashboardQueryKeys = {
   advisorSignals: (limit: number) => [...dashboardQueryKeys.all, 'advisor-signals', limit] as const,
   advisorSpend: () => [...dashboardQueryKeys.all, 'advisor-spend'] as const,
   advisorRuns: (limit: number) => [...dashboardQueryKeys.all, 'advisor-runs', limit] as const,
+  advisorKnowledgeTopics: () => [...dashboardQueryKeys.all, 'advisor-knowledge-topics'] as const,
   advisorManualOperationLatest: () =>
     [...dashboardQueryKeys.all, 'advisor-manual-operation', 'latest'] as const,
   advisorManualOperation: (operationId: string) =>
@@ -336,6 +339,24 @@ export const dashboardAdvisorRunsQueryOptionsWithMode = ({
     },
     enabled: mode !== undefined,
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
+  })
+
+export const dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorKnowledgeTopics(),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoDashboardAdvisorKnowledgeTopics()
+      }
+
+      return fetchDashboardAdvisorKnowledgeTopics()
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
 export const dashboardAdvisorManualOperationLatestQueryOptionsWithMode = ({

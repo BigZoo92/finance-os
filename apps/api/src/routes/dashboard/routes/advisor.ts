@@ -1,10 +1,12 @@
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { requireAdminOrInternalToken } from '../../../auth/guard'
+import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
 import {
   dashboardAdvisorChatBodySchema,
   dashboardAdvisorChatQuerySchema,
+  dashboardAdvisorKnowledgeAnswerQuerySchema,
   dashboardAdvisorListQuerySchema,
   dashboardAdvisorManualOperationParamsSchema,
   dashboardAdvisorRunBodySchema,
@@ -354,6 +356,95 @@ export const createAdvisorRoute = ({
         requestId: requestMeta.requestId,
       })
     })
+    .get('/advisor/knowledge-topics', async context => {
+      const accessError = ensureAdvisorAccess({
+        context,
+        advisorEnabled,
+        adminOnly,
+      })
+      if (accessError) {
+        return accessError
+      }
+
+      const dashboard = getDashboardRuntime(context)
+      if (!dashboard.useCases.getAdvisorKnowledgeTopics) {
+        return buildAdvisorRouteError({
+          context,
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor knowledge topics runtime is unavailable.',
+        })
+      }
+
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.getAdvisorKnowledgeTopics({
+        mode: auth.mode,
+        requestId: requestMeta.requestId,
+      })
+    })
+    .get(
+      '/advisor/knowledge-answer',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorKnowledgeAnswer) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor knowledge answer runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        const response = await dashboard.useCases.getAdvisorKnowledgeAnswer({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          question: context.query.question,
+        })
+
+        logApiEvent({
+          level: response.status === 'answered' ? 'info' : 'warn',
+          msg: 'advisor knowledge answer',
+          requestId: requestMeta.requestId,
+          mode: auth.mode,
+          advisor_knowledge_status: response.status,
+          advisor_knowledge_source: response.source,
+          advisor_knowledge_retrieval_enabled: response.retrievalEnabled,
+          advisor_knowledge_low_confidence: response.lowConfidence,
+          advisor_knowledge_fallback_reason: response.fallbackReason,
+          advisor_knowledge_confidence_score: response.confidenceScore,
+          advisor_knowledge_confidence_label: response.confidenceLabel,
+          advisor_knowledge_intent: response.retrieval.intent,
+          advisor_knowledge_hit_count: response.retrieval.hitCount,
+          advisor_knowledge_matched_topic_ids: response.retrieval.matchedTopicIds,
+          advisor_knowledge_guardrail_triggered: response.retrieval.guardrailTriggered,
+          advisor_knowledge_latency_query_parse_ms:
+            response.retrieval.stageLatenciesMs.queryParse,
+          advisor_knowledge_latency_retrieval_ms:
+            response.retrieval.stageLatenciesMs.retrieval,
+          advisor_knowledge_latency_answer_assembly_ms:
+            response.retrieval.stageLatenciesMs.answerAssembly,
+          advisor_knowledge_latency_total_ms: response.retrieval.stageLatenciesMs.total,
+          advisor_knowledge_question_length: context.query.question.trim().length,
+        })
+
+        return response
+      },
+      {
+        query: dashboardAdvisorKnowledgeAnswerQuerySchema,
+      }
+    )
     .get('/advisor/manual-refresh-and-run', async context => {
       const accessError = ensureAdvisorAccess({
         context,

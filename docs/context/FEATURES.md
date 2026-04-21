@@ -335,6 +335,8 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - `GET /dashboard/advisor/assumptions`
 - `GET /dashboard/advisor/signals`
 - `GET /dashboard/advisor/spend`
+- `GET /dashboard/advisor/knowledge-topics`
+- `GET /dashboard/advisor/knowledge-answer`
 - `GET /dashboard/advisor/chat`
 - `POST /dashboard/advisor/chat`
 - `GET /dashboard/advisor/evals`
@@ -347,7 +349,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 **Feature flags** :
 
 - Frontend: `VITE_AI_ADVISOR_ENABLED`, `VITE_AI_ADVISOR_ADMIN_ONLY`
-- API/Worker: `AI_ADVISOR_ENABLED`, `AI_ADVISOR_ADMIN_ONLY`, `AI_ADVISOR_FORCE_LOCAL_ONLY`
+- API/Worker: `AI_ADVISOR_ENABLED`, `AI_ADVISOR_ADMIN_ONLY`, `AI_ADVISOR_FORCE_LOCAL_ONLY`, `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED`
 
 ### Architecture produit
 
@@ -363,6 +365,11 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
   - suggestions de relabel transaction
   - threads/messages de chat
   - runs, steps, usages modele, ledger de cout, evals
+- Knowledge pack educatif read-only:
+  - topics statiques sur fonds d'urgence, diversification, DCA, inflation/rendement reel, obligations/taux, dettes, risque/horizon, reequilibrage
+  - retrieval heuristique local + assemblage de reponse template
+  - citations de sections du pack
+  - garde-fous contre le conseil personnalise, fiscal, juridique, ou achat/vente
 
 ### Fonctionnement actuel
 
@@ -386,6 +393,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - Les recommandations candidates sont d'abord produites de facon deterministe
 - OpenAI reformule un brief quotidien structure et relabel les transactions ambiguës
 - Claude challenger relit les recommandations prioritaires et peut les confirmer, les adoucir ou les flagger
+- Le panneau Q&A educatif repond depuis le knowledge pack avec score de confiance, citations, et fallback browse-only vers les sujets si la confiance est faible
 - Le chat repond a partir des artefacts persistants, hypotheses et signaux deja stockes
 - Les couts IA sont historises et exposes dans l'UI
 
@@ -395,11 +403,12 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
   - zero DB
   - zero provider
   - zero mutation
-  - brief/recommandations/chat deterministes
+  - brief/recommandations/chat/Q&A educatif deterministes
 - Admin:
   - lecture DB et artefacts persistants
+  - retrieval Q&A read-only autorise si `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=true`
   - runs manuels via orchestration complete ou planifies plus tard via worker
-  - degrades intelligentes si budget ou provider bloque
+  - degrades intelligentes si budget, provider, kill-switch retrieval, ou garde-fou de contenu bloque
 
 ### Notes d'exploitation
 
