@@ -1,174 +1,60 @@
-diff --git a/.github/agent-stubs/improve-862.md b/.github/agent-stubs/improve-862.md
+diff --git a/.github/agent-stubs/improve-867.md b/.github/agent-stubs/improve-867.md
 deleted file mode 100644
-index b4fcb2d..0000000
---- a/.github/agent-stubs/improve-862.md
+index c1fad3f..0000000
+--- a/.github/agent-stubs/improve-867.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #862
+-# Autopilot stub for improve #867
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/862
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/867
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/web/src/components/dashboard/month-end-projection-card.test.ts b/apps/web/src/components/dashboard/month-end-projection-card.test.ts
-index 16dcce9..ba5d095 100644
---- a/apps/web/src/components/dashboard/month-end-projection-card.test.ts
-+++ b/apps/web/src/components/dashboard/month-end-projection-card.test.ts
-@@ -1,5 +1,5 @@
- import { describe, expect, it } from 'vitest'
--import { calculateMonthEndProjection, calculateMonthlyRecurringOverview } from './month-end-projection-card'
-+import { calculateMonthEndProjection, calculateMonthlyRecurringOverview, calculateProjectionTrend } from './month-end-projection-card'
- 
- describe('calculateMonthEndProjection', () => {
-   it('returns a linear projection based on current month transactions', () => {
-@@ -103,6 +103,63 @@ describe('calculateMonthEndProjection', () => {
- 
-     expect(projection).toBeNull()
-   })
-+
-+  it('builds a daily trajectory for observed and projected month-end net values', () => {
-+    const projection = calculateMonthEndProjection({
-+      referenceDate: new Date('2026-04-10T12:00:00.000Z'),
-+      transactions: [
-+        {
-+          id: 1,
-+          bookingDate: '2026-04-01',
-+          amount: 2000,
-+          currency: 'EUR',
-+          direction: 'income',
-+          label: 'Salaire',
-+          category: null,
-+          subcategory: null,
-+          resolvedCategory: null,
-+          resolutionSource: 'fallback',
-+          resolutionRuleId: null,
-+          resolutionTrace: [],
-+          incomeType: 'salary',
-+          tags: [],
-+          powensConnectionId: 'conn-a',
-+          powensAccountId: 'acc-a',
-+          accountName: 'Main',
-+        },
-+        {
-+          id: 2,
-+          bookingDate: '2026-04-05',
-+          amount: -800,
-+          currency: 'EUR',
-+          direction: 'expense',
-+          label: 'Loyer',
-+          category: null,
-+          subcategory: null,
-+          resolvedCategory: null,
-+          resolutionSource: 'fallback',
-+          resolutionRuleId: null,
-+          resolutionTrace: [],
-+          incomeType: null,
-+          tags: [],
-+          powensConnectionId: 'conn-a',
-+          powensAccountId: 'acc-a',
-+          accountName: 'Main',
-+        },
-+      ],
-+    })
-+
-+    expect(projection).not.toBeNull()
-+    if (!projection) {
-+      return
-+    }
-+
-+    const trend = calculateProjectionTrend(projection)
-+    expect(trend).toHaveLength(30)
-+    expect(trend[0]).toEqual({ day: 1, cumulativeNet: 120 })
-+    expect(trend[9]).toEqual({ day: 10, cumulativeNet: 1200 })
-+    expect(trend.at(-1)).toEqual({ day: 30, cumulativeNet: 3600 })
-+  })
- })
- 
- describe('calculateMonthlyRecurringOverview', () => {
-diff --git a/apps/web/src/components/dashboard/month-end-projection-card.tsx b/apps/web/src/components/dashboard/month-end-projection-card.tsx
-index 695bf37..5fe2d2e 100644
---- a/apps/web/src/components/dashboard/month-end-projection-card.tsx
-+++ b/apps/web/src/components/dashboard/month-end-projection-card.tsx
-@@ -1,5 +1,6 @@
- import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
- import type { DashboardTransactionsResponse } from '@/features/dashboard-types'
-+import { MiniSparkline } from '@/components/ui/d3-sparkline'
- 
- type DashboardTransaction = DashboardTransactionsResponse['items'][number]
- 
-@@ -20,6 +21,11 @@ export type MonthEndProjectionResult = {
-   projectedNetAtMonthEnd: number
- }
- 
-+export type ProjectionTrendPoint = {
-+  day: number
-+  cumulativeNet: number
-+}
-+
- export type MonthlyRecurringOverview = {
-   fixedChargesMonthlyTotal: number
-   expectedIncomeMonthlyTotal: number
-@@ -244,6 +250,26 @@ export const calculateMonthEndProjection = ({
-   }
- }
- 
-+export const calculateProjectionTrend = (projection: MonthEndProjectionResult): ProjectionTrendPoint[] => {
-+  const trend: ProjectionTrendPoint[] = []
-+
-+  for (let day = 1; day <= projection.daysElapsed; day += 1) {
-+    trend.push({
-+      day,
-+      cumulativeNet: projection.averageNetPerDay * day,
-+    })
-+  }
-+
-+  for (let day = projection.daysElapsed + 1; day <= projection.daysElapsed + projection.daysRemaining; day += 1) {
-+    trend.push({
-+      day,
-+      cumulativeNet: projection.netToDate + projection.averageNetPerDay * (day - projection.daysElapsed),
-+    })
-+  }
-+
-+  return trend
-+}
-+
- export const MonthEndProjectionCard = ({
-   isAdmin,
-   transactions,
-@@ -252,6 +278,7 @@ export const MonthEndProjectionCard = ({
-   transactions: DashboardTransaction[]
- }) => {
-   const projection = calculateMonthEndProjection({ transactions })
-+  const projectionTrend = projection ? calculateProjectionTrend(projection) : []
-   const recurringOverview = calculateMonthlyRecurringOverview(transactions)
- 
-   return (
-@@ -293,6 +320,27 @@ export const MonthEndProjectionCard = ({
-               Detail: revenus {formatMoney(projection.incomesToDate)} • depenses {formatMoney(projection.expensesToDate)} •
-               {` ${projection.transactionsCount}`} transaction(s).
-             </p>
-+            <div className="rounded-md border border-border/70 px-3 py-2">
-+              <p className="text-xs text-muted-foreground">Trajectoire du net mensuel (observé puis projeté)</p>
-+              <div className="mt-2 flex items-center gap-3">
-+                <MiniSparkline
-+                  data={projectionTrend.map(point => point.cumulativeNet)}
-+                  color="auto"
-+                  width={100}
-+                  height={28}
-+                  className="shrink-0"
-+                />
-+                <div className="space-y-0.5 text-xs text-muted-foreground">
-+                  <p>
-+                    J{projection.daysElapsed}: <span className="font-financial text-foreground">{formatMoney(projection.netToDate)}</span>
-+                  </p>
-+                  <p>
-+                    J{projection.daysElapsed + projection.daysRemaining}: {' '}
-+                    <span className="font-financial text-foreground">{formatMoney(projection.projectedNetAtMonthEnd)}</span>
-+                  </p>
-+                </div>
-+              </div>
-+            </div>
-           </>
-         )}
- 
+diff --git a/apps/web/src/routes/_app/depenses.tsx b/apps/web/src/routes/_app/depenses.tsx
+index a0532da..8333f67 100644
+--- a/apps/web/src/routes/_app/depenses.tsx
++++ b/apps/web/src/routes/_app/depenses.tsx
+@@ -218,17 +218,34 @@ function DepensesPage() {
+                 {transactions.map(tx => (
+                   <div
+                     key={tx.id}
+-                    className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
++                    className="rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
+                   >
+-                    <div className="min-w-0 flex-1">
+-                      <p className="truncate text-sm font-medium">{tx.label}</p>
+-                      <p className="text-sm text-muted-foreground/60">
+-                        {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
++                    <div className="flex items-center justify-between gap-3">
++                      <div className="min-w-0 flex-1">
++                        <p className="truncate text-sm font-medium">{tx.label}</p>
++                        <p className="text-sm text-muted-foreground/60">
++                          {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
++                          {tx.subcategory ? ` / ${tx.subcategory}` : ''}
++                        </p>
++                      </div>
++                      <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
++                        {formatMoney(tx.amount, tx.currency)}
+                       </p>
+                     </div>
+-                    <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
+-                      {formatMoney(tx.amount, tx.currency)}
+-                    </p>
++                    {isAdmin ? (
++                      <div className="pt-2">
++                        <Button
++                          type="button"
++                          variant="ghost"
++                          size="sm"
++                          className="h-7 px-2 text-xs"
++                          disabled={classifyMutation.isPending}
++                          onClick={() => classifyMutation.mutate(tx)}
++                        >
++                          Éditer la catégorie
++                        </Button>
++                      </div>
++                    ) : null}
+                   </div>
+                 ))}
+               </div>
