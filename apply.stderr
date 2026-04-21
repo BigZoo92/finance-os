@@ -1,3 +1,2 @@
 Falling back to direct application...
-Applied patch to 'apps/web/src/components/dashboard/month-end-projection-card.test.ts' cleanly.
-Applied patch to 'apps/web/src/components/dashboard/month-end-projection-card.tsx' cleanly.
+Applied patch to 'apps/web/src/routes/_app/depenses.tsx' cleanly.

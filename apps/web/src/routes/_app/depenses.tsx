@@ -218,17 +218,34 @@ function DepensesPage() {
                 {transactions.map(tx => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
+                    className="rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{tx.label}</p>
-                      <p className="text-sm text-muted-foreground/60">
-                        {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{tx.label}</p>
+                        <p className="text-sm text-muted-foreground/60">
+                          {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
+                          {tx.subcategory ? ` / ${tx.subcategory}` : ''}
+                        </p>
+                      </div>
+                      <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
+                        {formatMoney(tx.amount, tx.currency)}
                       </p>
                     </div>
-                    <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
-                      {formatMoney(tx.amount, tx.currency)}
-                    </p>
+                    {isAdmin ? (
+                      <div className="pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          disabled={classifyMutation.isPending}
+                          onClick={() => classifyMutation.mutate(tx)}
+                        >
+                          Éditer la catégorie
+                        </Button>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
