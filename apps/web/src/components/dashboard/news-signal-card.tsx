@@ -147,7 +147,7 @@ export function NewsSignalCard({
         </div>
 
         <div className="border-t border-border/60 xl:border-l xl:border-t-0">
-          <div className="relative flex h-full min-h-[270px] flex-col justify-between overflow-hidden bg-[linear-gradient(180deg,color-mix(in_oklch,var(--surface-1)_80%,var(--primary))_0%,color-mix(in_oklch,var(--background)_90%,black)_100%)] p-5 text-white">
+          <div className="relative flex h-full min-h-[270px] flex-col justify-between overflow-hidden bg-[linear-gradient(180deg,color-mix(in_oklch,var(--surface-2)_72%,var(--primary))_0%,color-mix(in_oklch,var(--surface-0)_92%,var(--accent-2))_100%)] p-5 text-white">
             {showImage ? (
               <PixelImageReveal
                 gridSize={12}
@@ -164,7 +164,7 @@ export function NewsSignalCard({
               </PixelImageReveal>
             ) : null}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,8,13,0.18)_0%,rgba(6,8,13,0.58)_45%,rgba(6,8,13,0.92)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(246,185,59,0.26),transparent_46%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,color-mix(in_oklch,var(--accent-2)_35%,transparent)_0%,transparent_46%)]" />
 
             <div className="relative flex items-start justify-between gap-3">
               <div className="inline-flex items-center gap-3 rounded-full border border-white/18 bg-black/25 px-3 py-2 backdrop-blur-sm">
@@ -201,7 +201,7 @@ export function NewsSignalCard({
                 {metadataCard?.author ? <span>author {metadataCard.author}</span> : null}
               </div>
 
-              <div className="rounded-[24px] border border-white/14 bg-black/28 p-4 backdrop-blur-md">
+              <div className="rounded-[24px] border border-white/14 bg-[color-mix(in_oklch,var(--surface-3)_45%,black)] p-4 backdrop-blur-md">
                 <p className="text-base font-semibold leading-snug text-white">
                   {previewTitle}
                 </p>

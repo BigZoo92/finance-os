@@ -1,2 +1,2 @@
 Falling back to direct application...
-Applied patch to 'apps/web/src/routes/_app/actualites.tsx' cleanly.
+Applied patch to 'apps/web/src/components/dashboard/news-signal-card.tsx' cleanly.
