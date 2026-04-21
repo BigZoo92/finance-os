@@ -39,6 +39,7 @@ const sessionCookie = readArg('--session-cookie', process.env.SMOKE_SESSION_COOK
 const summaryRange = (readArg('--summary-range', process.env.SMOKE_SUMMARY_RANGE ?? '30d') || '30d')
   .trim()
   .toLowerCase()
+const expectedReleaseTag = readArg('--expected-release-tag', process.env.SMOKE_EXPECTED_RELEASE_TAG ?? '').trim()
 const results = []
 
 const VALID_AUTH_MODES = new Set(['demo', 'admin', 'auto'])
@@ -337,7 +338,7 @@ const assertHealthPayload = ({ rawBody, expectedService }) => {
   return true
 }
 
-const assertVersionPayload = ({ rawBody, expectedService }) => {
+const assertVersionPayload = ({ rawBody, expectedService, expectedTag }) => {
   const parsed = asJson(rawBody)
   if (!isObject(parsed)) {
     return 'payload is not JSON'
@@ -349,6 +350,16 @@ const assertVersionPayload = ({ rawBody, expectedService }) => {
 
   if (!('NODE_ENV' in parsed)) {
     return 'payload missing NODE_ENV'
+  }
+
+  if (expectedTag) {
+    if (typeof parsed.GIT_TAG !== 'string' || parsed.GIT_TAG.length === 0) {
+      return 'payload missing GIT_TAG'
+    }
+
+    if (parsed.GIT_TAG !== expectedTag) {
+      return `payload GIT_TAG=${parsed.GIT_TAG} does not match expected ${expectedTag}`
+    }
   }
 
   return true
@@ -586,14 +597,24 @@ const main = async () => {
     name: 'version_root',
     path: '/version',
     expectedStatuses: [200],
-    assert: ({ rawBody }) => assertVersionPayload({ rawBody, expectedService: 'web' }),
+    assert: ({ rawBody }) =>
+      assertVersionPayload({
+        rawBody,
+        expectedService: 'web',
+        expectedTag: expectedReleaseTag,
+      }),
   })
 
   await runCheck({
     name: 'version_api_prefix',
     path: '/api/version',
     expectedStatuses: [200],
-    assert: ({ rawBody }) => assertVersionPayload({ rawBody, expectedService: 'api' }),
+    assert: ({ rawBody }) =>
+      assertVersionPayload({
+        rawBody,
+        expectedService: 'api',
+        expectedTag: expectedReleaseTag,
+      }),
   })
 
   await runCheck({
