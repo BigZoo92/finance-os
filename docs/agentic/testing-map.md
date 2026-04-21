@@ -1,209 +1,24 @@
-# Testing Map
+# Testing Map (Deprecated)
 
-Use this map to choose the smallest verification set that still matches the risk.
+This map moved to [testing-canonical.md](./testing-canonical.md). Keep this page as a compatibility redirect for one release cycle.
 
 ## Current Automated Coverage
 
-- API auth and guards:
-  - [../../apps/api/src/auth/routes.test.ts](../../apps/api/src/auth/routes.test.ts)
-  - [../../apps/api/src/auth/guard.test.ts](../../apps/api/src/auth/guard.test.ts)
-  - [../../apps/api/src/auth/session.test.ts](../../apps/api/src/auth/session.test.ts)
-  - [../../apps/api/src/auth/powens-state.test.ts](../../apps/api/src/auth/powens-state.test.ts)
-- API debug and system routing:
-  - [../../apps/api/src/routes/debug/router.test.ts](../../apps/api/src/routes/debug/router.test.ts)
-  - [../../apps/api/src/routes/system.test.ts](../../apps/api/src/routes/system.test.ts)
-- API dashboard normalization:
-  - [../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts](../../apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts)
-  - [../../apps/api/src/routes/dashboard/domain/market-analytics.test.ts](../../apps/api/src/routes/dashboard/domain/market-analytics.test.ts)
-  - [../../apps/api/src/routes/dashboard/routes/goals.test.ts](../../apps/api/src/routes/dashboard/routes/goals.test.ts)
-  - [../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts](../../apps/api/src/routes/dashboard/routes/derived-recompute.test.ts)
-  - [../../apps/api/src/routes/integrations/powens/routes/status.test.ts](../../apps/api/src/routes/integrations/powens/routes/status.test.ts)
-  - [../../apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts](../../apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts)
-  - [../../apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts](../../apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts)
-  - [../../apps/api/src/routes/enrichment/routes/enrichment.test.ts](../../apps/api/src/routes/enrichment/routes/enrichment.test.ts)
-- Web dashboard presentation helpers:
-  - [../../apps/web/src/components/dashboard/wealth-history.test.ts](../../apps/web/src/components/dashboard/wealth-history.test.ts)
-  - [../../apps/web/src/features/dashboard-legacy-adapter.test.ts](../../apps/web/src/features/dashboard-legacy-adapter.test.ts) (covers incremental migration staging: `new-model-ready`, `mixed-fallback`, `legacy-fallback`, `contract-divergence`)
-- Web auth and API client behavior:
-  - [../../apps/web/src/features/auth-ssr.test.ts](../../apps/web/src/features/auth-ssr.test.ts)
-  - [../../apps/web/src/features/auth-view-state.test.ts](../../apps/web/src/features/auth-view-state.test.ts)
-  - [../../apps/web/src/lib/api.test.ts](../../apps/web/src/lib/api.test.ts)
-  - [../../apps/web/src/lib/public-runtime-env.test.ts](../../apps/web/src/lib/public-runtime-env.test.ts)
-  - [../../apps/web/src/features/dashboard-api.test.ts](../../apps/web/src/features/dashboard-api.test.ts)
-  - [../../apps/web/src/features/markets/api.test.ts](../../apps/web/src/features/markets/api.test.ts)
-  - [../../apps/web/src/features/powens/manual-sync-cooldown.test.ts](../../apps/web/src/features/powens/manual-sync-cooldown.test.ts)
-  - [../../apps/web/src/features/powens/sanitize-connection-id.test.ts](../../apps/web/src/features/powens/sanitize-connection-id.test.ts)
-  - [../../apps/web/src/features/goals/api.test.ts](../../apps/web/src/features/goals/api.test.ts)
-- Worker import normalization:
-  - [../../apps/worker/src/raw-import.test.ts](../../apps/worker/src/raw-import.test.ts)
-  - [../../apps/worker/src/market-refresh-scheduler.test.ts](../../apps/worker/src/market-refresh-scheduler.test.ts)
-  - [../../apps/worker/src/sync-status-persistence.test.ts](../../apps/worker/src/sync-status-persistence.test.ts)
-  - [../../apps/worker/src/transaction-gap-detection.test.ts](../../apps/worker/src/transaction-gap-detection.test.ts)
+- Canonical testing strategy: [testing-canonical.md](./testing-canonical.md)
+- CI command entrypoint: [../../package.json](../../package.json)
+- API smoke script: [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs)
 
 ## Scope-Based Verification
 
-- Medium-high risk policy/documentation bundle changes:
-  - `node .agents/skills/scripts/validate-agent-foundation.mjs`
-  - Apply the required checklist in [policy-verification-bundle.md](policy-verification-bundle.md), including dual-path negative tests and fallback assertions.
-- Docs, AGENTS, or skills only:
-  - `node .agents/skills/scripts/validate-agent-foundation.mjs`
-- API auth or contract changes:
-  - `pnpm api:typecheck`
-  - `bun test <changed-api-test-file>`
-  - `pnpm smoke:api` when route or proxy behavior changed
-- Worker sync, import staging, or provider normalization changes:
-  - `pnpm worker:typecheck`
-  - `bun test apps/worker/src/raw-import.test.ts`
-  - `bun test apps/worker/src/sync-status-persistence.test.ts`
-  - `bun test apps/worker/src/transaction-gap-detection.test.ts`
-  - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
-  - verify the raw/normalized/derived/manual boundary still holds (raw payloads stay in `provider_raw_import`; manual edits are not clobbered by sync normalization)
-- Powens sync snapshot persistence, status route, or badge changes:
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm --filter @finance-os/env typecheck`
-  - `pnpm api:typecheck`
-  - `pnpm worker:typecheck`
-  - `pnpm web:typecheck`
-  - `bun test apps/api/src/routes/integrations/powens/routes/status.test.ts`
-  - `bun test apps/api/src/routes/integrations/powens/routes/diagnostics.test.ts`
-  - `bun test apps/api/src/routes/integrations/powens/domain/diagnostics.test.ts`
-  - `bun test apps/worker/src/sync-status-persistence.test.ts`
-  - `pnpm --filter @finance-os/web exec vitest run src/features/powens/sync-status.test.ts src/components/dashboard/latest-sync-status.test.ts src/features/powens/api.test.ts`
-  - `pnpm db:generate` when the schema changed
-- Dashboard asset-model, investment-position, or unified financial-account changes:
-  - `pnpm api:typecheck`
-  - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts`
-  - `pnpm worker:typecheck` when provider cash assets or financial accounts are refreshed from sync
-  - `pnpm --filter @finance-os/db typecheck` when DB schema changes
-  - `pnpm web:typecheck`
-- Shared health/version contract changes across runtimes:
-  - `pnpm api:typecheck`
-  - `bun test apps/api/src/routes/system.test.ts`
-  - `pnpm web:test`
-  - `pnpm web:build`
-  - `pnpm worker:typecheck`
-  - `pnpm smoke:api` and/or `node scripts/smoke-prod.mjs --base=<url>` for deployed verification
-- Production Compose alerting or health-monitoring changes:
-  - `node --test infra/docker/ops-alerts/monitor.test.mjs`
-  - `pnpm worker:typecheck` when heartbeat wiring or worker env changed
-  - `pnpm smoke:api` when healthcheck URLs, proxy routing, or probe targets changed
-  - `pnpm check:ci` when the environment can install and run the full repo suite
-- Autopilot PR-thread patch parsing or issue-comment workflow changes:
-  - `node --test scripts/agentic/parse-autopilot-patch-comment.test.mjs`
-  - `node --test scripts/agentic/parse-autopilot-ready-comment.test.mjs`
-  - `node .agents/skills/scripts/validate-agent-foundation.mjs`
-  - `pnpm check:ci` when the environment can install and run the full repo suite
-- Web loader, auth, or UI changes:
-  - `pnpm web:typecheck`
-  - `pnpm web:test` (`apps/web/vitest.config.mjs` keeps unit tests decoupled from production-only Vite plugins)
-  - `pnpm web:build`
-  - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-legacy-adapter.test.ts` when dashboard compatibility mapping/fallback behavior changes
-  - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts` when goals action logging or request-id propagation changed
-  - `bun test apps/api/src/routes/dashboard/domain/create-get-dashboard-summary-use-case.test.ts` when the UI depends on a changed dashboard summary contract
-- Dashboard goals contract or persistence changes:
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm api:typecheck`
-  - `bun test apps/api/src/routes/dashboard/routes/goals.test.ts`
-  - `pnpm web:typecheck`
-  - `pnpm --filter @finance-os/web exec vitest run src/features/goals/api.test.ts`
-  - `pnpm web:build`
-- Dashboard news ingestion/cache contract, persistence, or UI changes:
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm --filter @finance-os/env typecheck`
-  - `pnpm api:typecheck`
-  - `pnpm web:typecheck`
-  - `pnpm web:build`
-- Dashboard markets / macro contract, persistence, scheduler, or UI changes:
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm --filter @finance-os/env typecheck`
-  - `pnpm api:typecheck`
-  - `pnpm worker:typecheck`
-  - `bun test apps/api/src/routes/dashboard/domain/market-analytics.test.ts`
-  - `bun test apps/worker/src/market-refresh-scheduler.test.ts`
-  - `pnpm web:typecheck`
-  - `pnpm web:build`
-  - `pnpm db:generate` when the schema changed
-- Advisor AI / finance engine / cost-ledger / grounded chat changes:
-  - `pnpm --filter @finance-os/finance-engine typecheck`
-  - `pnpm --filter @finance-os/ai typecheck`
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm --filter @finance-os/env typecheck`
-  - `pnpm api:typecheck`
-  - `pnpm worker:typecheck`
-  - `pnpm web:typecheck`
-  - `bun test packages/finance-engine/src`
-  - `bun test packages/ai/src`
-  - `bun test apps/api/src/routes/dashboard/routes/advisor.test.ts`
-  - `bun test apps/api/src/routes/dashboard/routes/manual-assets.test.ts`
-  - `bun test apps/api/src/routes/dashboard/domain/advisor/create-manual-refresh-and-run-use-case.test.ts`
-  - `bun test apps/api/src/routes/dashboard/domain/advisor/create-dashboard-advisor-use-cases.test.ts`
-  - `bun test apps/worker/src/advisor-daily-scheduler.test.ts`
-  - `bun test apps/worker/src/powens-auto-sync-scheduler.test.ts`
-  - `pnpm web:build`
-- Dashboard derived recompute contract, persistence, or admin UI changes:
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm --filter @finance-os/powens typecheck`
-  - `pnpm api:typecheck`
-  - `pnpm worker:typecheck`
-  - `bun test apps/api/src/routes/dashboard/routes/derived-recompute.test.ts`
-  - `pnpm web:typecheck`
-  - `pnpm --filter @finance-os/web exec vitest run src/features/dashboard-api.test.ts`
-  - `pnpm web:build`
-- Enrichment notes and bulk triage contract/persistence changes:
-  - `pnpm --filter @finance-os/db typecheck`
-  - `pnpm --filter @finance-os/env typecheck`
-  - `pnpm api:typecheck`
-  - `bun test apps/api/src/routes/enrichment/routes/enrichment.test.ts`
-  - `pnpm db:generate` when schema changes
-- DB, env, Powens, Redis, or prelude package changes:
-  - `pnpm --filter <package> typecheck`
-  - package-specific follow-up such as `pnpm db:generate` when schema changes
-  - for recurring commitment schema work, also run `pnpm --filter @finance-os/db typecheck` and document whether `pnpm db:generate` was blocked by local env setup
-- Full confidence pass:
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - `pnpm -r --if-present test`
-  - `pnpm -r --if-present build`
+- Production smoke script: [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs)
+- API runtime entrypoint: [../../apps/api/src/index.ts](../../apps/api/src/index.ts)
+- Web runtime entrypoint: [../../apps/web/src/routes/__root.tsx](../../apps/web/src/routes/__root.tsx)
 
 ## Known Gaps
 
-- There is no worker package test suite today.
-- Worker raw-import, transaction-gap detection, and sync-integrity detection now have focused Bun coverage, but normalized transaction persistence still relies on package typechecks plus CI migration checks rather than a dedicated end-to-end worker suite.
-- Dashboard read-model routes and Powens route handlers have limited direct contract tests today.
-- UI regression coverage is mostly manual for dashboard surfaces.
+Refer to the maintained gap framing and evidence requirements in [testing-canonical.md](./testing-canonical.md).
 
 ## Manual Checks Worth Doing
 
-- Demo mode: dashboard loads mock summary, transactions, and Powens status with sensitive actions disabled.
-- Demo/admin parity acceptance: verify the touched flow against [policy-verification-bundle.md](policy-verification-bundle.md) for explicit pass criteria on each path plus required negative tests.
-- Transactions freshness UX: latest transactions card shows "Last updated" plus distinct freshness badges (`fresh`, `stale-but-usable`, `syncing`, `sync-failed-with-safe-data`, `no-data-first-connect`) without blocking the table behind a spinner-only state.
-- Marches & Macro: demo mode must show the deterministic fixture with zero admin actions, while admin mode must preserve explicit source badges (`EOD`, `differe`, `overlay US`) and a usable degraded fallback when live/cache data is missing.
-- Marches & Macro: the `/marches` layout should keep loading, empty, degraded, error, offline, and permission-gated states readable on mobile and desktop without chart overflow.
-- Dashboard health indicators: global summary and selective inline badges stay aligned in both demo and admin, and the diagnosis drawer explains the same normalized reason codes shown in logs.
-- Powens connection badges: `OK`, `KO`, `En cours`, and `Inconnu` render the expected short reason, the tooltip shows the last attempt time, and `SYNC_STATUS_PERSISTENCE_ENABLED=false` downgrades immediately to runtime placeholders without stale persisted status leaking through.
-- Advisor IA: verifier les etats `loading`, `empty`, `degraded`, `error`, `admin-only`, `demo deterministic`, et confirmer que le chat demo n'ecrit rien.
-- Advisor mission manuelle: verifier `idle`, `running`, `completed`, `degraded`, `failed`, ainsi que le verrou anti-double-clic et le detail des etapes.
-- Actifs manuels admin: verifier l'empty state, l'ajout, la modification, la suppression, et l'absence d'actifs manuels hardcodes en admin.
-- Demo mode: financial goals load the deterministic list, show read-only controls, and never perform API writes.
-- Transaction taxonomy updates: admin classification edits persist category/subcategory/tags and `incomeType`, while expense transactions continue to return `incomeType: null`.
-- Admin mode: `/auth/me` resolves admin on first SSR render with no demo flash.
-- Admin mode: the goals drawer can create, update, and archive goals, with recoverable error messaging and a visible request id when a write fails.
-- Powens callback: invalid auth/state fails safely, valid admin/state flow returns success and queues sync.
-- Release-sensitive changes: run the smoke scripts in [../../scripts/smoke-api.mjs](../../scripts/smoke-api.mjs) and [../../scripts/smoke-prod.mjs](../../scripts/smoke-prod.mjs) with the right env; prod smoke now covers `/health`, `/auth/me`, `/dashboard/summary`, and `/integrations/powens/status`, plus optional demo/admin auth context via `SMOKE_AUTH_MODE`.
-- Rollback readiness: verify kill-switch behavior and emergency downgrade steps from [policy-verification-bundle.md](policy-verification-bundle.md) before marking medium-high risk work as release-ready.
-
-
-## Desktop / Tauri scope
-
-Use when `apps/desktop/**`, Tauri config, or desktop CI wiring changes.
-
-- Required checks:
-  - `pnpm desktop:doctor`
-  - `pnpm desktop:build`
-  - `pnpm check:ci:desktop`
-  - `pnpm check:ci:full` when the change also needs the full repo suite
-- CI evidence:
-  - `.github/workflows/ci.yml` job `tauri-validate`
-- Notes:
-  - `pnpm check:ci` is now the smart default and skips Tauri when no desktop-triggering files are detected; use the explicit desktop/full commands when the detector should be overridden.
-  - iOS commands are scaffold-only and should be validated on macOS/Xcode hosts, not Linux CI.
+- Dual-path policy bundle: [policy-verification-bundle.md](./policy-verification-bundle.md)
+- UI guidance and matrix expectations: [design-guidance-canonical.md](./design-guidance-canonical.md)
