@@ -1,110 +1,25 @@
-diff --git a/.github/agent-stubs/improve-847.md b/.github/agent-stubs/improve-847.md
+diff --git a/.github/agent-stubs/improve-849.md b/.github/agent-stubs/improve-849.md
 deleted file mode 100644
-index 34fc8e2..0000000
---- a/.github/agent-stubs/improve-847.md
+index 14a6ad9..0000000
+--- a/.github/agent-stubs/improve-849.md
 +++ /dev/null
 @@ -1,6 +0,0 @@
--# Autopilot stub for improve #847
+-# Autopilot stub for improve #849
 -
--Source improve issue: https://github.com/BigZoo92/finance-os/issues/847
+-Source improve issue: https://github.com/BigZoo92/finance-os/issues/849
 -
 -This file is a temporary bootstrap marker for branch/PR creation.
 -Delete this file in the first real implementation patch.
 \ No newline at end of file
-diff --git a/apps/api/src/routes/dashboard/domain/advisor/knowledge-pack.ts b/apps/api/src/routes/dashboard/domain/advisor/knowledge-pack.ts
-index 8fc8aa5..701b5b5 100644
---- a/apps/api/src/routes/dashboard/domain/advisor/knowledge-pack.ts
-+++ b/apps/api/src/routes/dashboard/domain/advisor/knowledge-pack.ts
-@@ -273,6 +273,64 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
-       },
-     ],
-   },
-+
-+  {
-+    topicId: 'financial-datasets',
-+    title: 'Financial Datasets',
-+    summary:
-+      'Les datasets financiers sont des jeux de donnees structures (prix, fundamentals, macro, flux) utilises pour analyser un contexte avant une decision.',
-+    difficulty: 'intermediate',
-+    estimatedReadMinutes: 6,
-+    tags: ['datasets', 'data-quality', 'macro', 'fundamentals'],
-+    aliases: [
-+      'financial data',
-+      'jeu de donnees financier',
-+      'qualite des donnees',
-+      'dataset macro',
-+    ],
-+    relatedQuestions: [
-+      'Qu est-ce qu un financial dataset ? ',
-+      'Comment verifier la qualite d un dataset financier ?',
-+      'Quelles limites avant d utiliser des donnees de marche ?',
-+    ],
-+    nextStep:
-+      'Pour chaque dataset, notez la frequence de mise a jour, la couverture, la methode de calcul et les champs manquants avant interpretation.',
-+    sections: [
-+      {
-+        sectionId: 'families',
-+        title: 'Familles de datasets',
-+        body:
-+          'Les datasets financiers couvrent souvent les prix de marche, les donnees fondamentales, les indicateurs macroeconomiques et les evenements news. Chaque famille a ses delais, biais et usages.',
-+        keyPoints: [
-+          'Prix et volumes decrivent le marche en temps quasi reel.',
-+          'Fundamentals et macro ont souvent plus de latence mais cadrent le regime de fond.',
-+        ],
-+        keywords: ['prix', 'fundamentals', 'macro', 'latence', 'couverture'],
-+      },
-+      {
-+        sectionId: 'quality',
-+        title: 'Qualite et gouvernance',
-+        body:
-+          'Un dataset utile doit expliciter sa source, son horodatage, ses revisions et ses trous de couverture. Sans ces metadonnees, le risque de sur-interpreter un signal augmente.',
-+        keyPoints: [
-+          'Toujours verifier provenance, fraicheur et revisions.',
-+          'Un champ manquant ou revise peut inverser une conclusion.',
-+        ],
-+        keywords: ['provenance', 'fraicheur', 'revision', 'missing data', 'biais'],
-+      },
-+      {
-+        sectionId: 'pitfalls',
-+        title: 'Pieges frequents',
-+        body:
-+          'Les principaux pieges sont le look-ahead bias, les survivorship biases et la confusion entre correlation et causalite. Une lecture prudente prefere des hypotheses explicites et testables.',
-+        keyPoints: [
-+          'Eviter d utiliser une valeur publiee apres la date analysee.',
-+          'Ne pas confondre signal descriptif et preuve causale.',
-+        ],
-+        keywords: ['look-ahead', 'survivorship', 'correlation', 'causalite', 'hypothese'],
-+      },
-+    ],
-+  },
-   {
-     topicId: 'risk-horizon',
-     title: 'Risque et horizon',
-diff --git a/apps/api/src/routes/dashboard/routes/advisor.test.ts b/apps/api/src/routes/dashboard/routes/advisor.test.ts
-index 4cf08f4..d881c11 100644
---- a/apps/api/src/routes/dashboard/routes/advisor.test.ts
-+++ b/apps/api/src/routes/dashboard/routes/advisor.test.ts
-@@ -464,6 +464,23 @@ describe('createAdvisorRoute', () => {
-     expect(payload.citations[0]?.topicId).toBe('diversification')
-   })
- 
-+
-+  it('answers financial datasets educational question', async () => {
-+    const app = createAdvisorTestApp({ mode: 'admin' })
-+
-+    const response = await app.handle(
-+      new Request(
-+        'http://finance-os.local/advisor/knowledge-answer?question=Comment%20verifier%20la%20qualite%20d%20un%20dataset%20financier%20%3F'
-+      )
-+    )
-+    const payload = (await response.json()) as DashboardAdvisorKnowledgeAnswerResponse
-+
-+    expect(response.status).toBe(200)
-+    expect(payload.status).toBe('answered')
-+    expect(payload.citations[0]?.topicId).toBe('financial-datasets')
-+    expect(payload.answer?.headline).toContain('Financial Datasets')
-+  })
-+
-   it('blocks run-daily in demo mode', async () => {
-     const app = createAdvisorTestApp({ mode: 'demo' })
- 
+diff --git a/docs/context/FEATURES.md b/docs/context/FEATURES.md
+index 139c933..c6f5b96 100644
+--- a/docs/context/FEATURES.md
++++ b/docs/context/FEATURES.md
+@@ -367,6 +367,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
+   - runs, steps, usages modele, ledger de cout, evals
+ - Knowledge pack educatif read-only:
+   - topics statiques sur fonds d'urgence, diversification, DCA, inflation/rendement reel, obligations/taux, dettes, risque/horizon, reequilibrage
++  - fondation `Financial Datasets` pour expliquer les familles de donnees (prix, fundamentals, macro, news), leurs delais et les checks qualite avant interpretation
+   - retrieval heuristique local + assemblage de reponse template
+   - citations de sections du pack
+   - garde-fous contre le conseil personnalise, fiscal, juridique, ou achat/vente

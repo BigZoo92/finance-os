@@ -367,6 +367,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
   - runs, steps, usages modele, ledger de cout, evals
 - Knowledge pack educatif read-only:
   - topics statiques sur fonds d'urgence, diversification, DCA, inflation/rendement reel, obligations/taux, dettes, risque/horizon, reequilibrage
+  - fondation `Financial Datasets` pour expliquer les familles de donnees (prix, fundamentals, macro, news), leurs delais et les checks qualite avant interpretation
   - retrieval heuristique local + assemblage de reponse template
   - citations de sections du pack
   - garde-fous contre le conseil personnalise, fiscal, juridique, ou achat/vente

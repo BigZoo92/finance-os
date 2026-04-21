@@ -1,3 +1,2 @@
 Falling back to direct application...
-Applied patch to 'apps/api/src/routes/dashboard/domain/advisor/knowledge-pack.ts' cleanly.
-Applied patch to 'apps/api/src/routes/dashboard/routes/advisor.test.ts' cleanly.
+Applied patch to 'docs/context/FEATURES.md' cleanly.
