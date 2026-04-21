@@ -287,7 +287,6 @@ function ActualitesPage() {
         description="Flux macro-financier, signaux externes et advisor IA ancré sur des artefacts persistants."
       />
 
-      {/* Featured PixelTransition strip — hover/tap each card to flip it */}
       <div className="grid gap-3 sm:grid-cols-3">
         <PixelTransition
           className="!w-full !rounded-2xl !border-border/60 !bg-card !text-foreground"
@@ -360,8 +359,78 @@ function ActualitesPage() {
         />
       </div>
 
-      <div className="grid gap-6">
-        <div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="space-y-6">
+          <div className="rounded-2xl border border-border/60 bg-surface-1/80 p-5 shadow-sm">
+            <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-primary/85">
+              cockpit advisor
+            </p>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
+              Pilotage IA complet sur une seule surface
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Brief quotidien, recommandations, anomalies, hypotheses, runbook, Q&A pedagogique et
+              chat ancre sur les artefacts de la plateforme.
+            </p>
+          </div>
+          {aiAdvisorVisible ? (
+            <AiAdvisorPanel
+              mode={authMode}
+              overview={overviewQuery.data}
+              recommendations={recommendationsQuery.data}
+              assumptions={assumptionsQuery.data}
+              signals={signalsQuery.data}
+              spend={spendQuery.data}
+              runs={runsQuery.data}
+              knowledgeTopics={knowledgeTopicsQuery.data}
+              knowledgeAnswer={knowledgeAnswerMutation.data}
+              manualOperation={manualOperationQuery.data}
+              chat={chatQuery.data}
+              evals={evalsQuery.data}
+              isPending={
+                overviewQuery.isPending ||
+                recommendationsQuery.isPending ||
+                signalsQuery.isPending ||
+                spendQuery.isPending ||
+                knowledgeTopicsQuery.isPending
+              }
+              errorMessage={advisorError ? toErrorMessage(advisorError) : null}
+              manualOperationErrorMessage={manualOperationError}
+              canTriggerRun={isAdmin}
+              isTriggeringRun={manualRefreshAndRunMutation.isPending || manualOperationActive}
+              onTriggerRun={() => manualRefreshAndRunMutation.mutate()}
+              isAskingKnowledge={knowledgeAnswerMutation.isPending}
+              knowledgeAnswerErrorMessage={
+                knowledgeAnswerMutation.error ? toErrorMessage(knowledgeAnswerMutation.error) : null
+              }
+              onAskKnowledge={question => knowledgeAnswerMutation.mutate(question)}
+              isSendingChat={chatMutation.isPending}
+              onSendChat={message => chatMutation.mutate(message)}
+            />
+          ) : aiAdvisorHiddenReason ? (
+            <Card>
+              <CardContent className="space-y-2 py-8 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">Advisor IA indisponible sur cette session</p>
+                <p>
+                  {aiAdvisorHiddenReason === 'disabled'
+                    ? 'La surface advisor est desactivee par configuration runtime.'
+                    : 'La surface advisor est reservee a la session admin. Connecte-toi en admin pour afficher le brief, les runs, le chat et le bouton de refresh complet.'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </section>
+
+        <aside className="space-y-4">
+          <div className="rounded-2xl border border-border/60 bg-surface-1/80 p-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent-2/85">
+              news monitor
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Flux externe en continu pour contextualiser les recommandations advisor sans quitter
+              la page.
+            </p>
+          </div>
           {authMode ? (
             <NewsFeed mode={authMode} />
           ) : (
@@ -371,54 +440,7 @@ function ActualitesPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-
-        {aiAdvisorVisible ? (
-          <AiAdvisorPanel
-            mode={authMode}
-            overview={overviewQuery.data}
-            recommendations={recommendationsQuery.data}
-            assumptions={assumptionsQuery.data}
-            signals={signalsQuery.data}
-            spend={spendQuery.data}
-            runs={runsQuery.data}
-            knowledgeTopics={knowledgeTopicsQuery.data}
-            knowledgeAnswer={knowledgeAnswerMutation.data}
-            manualOperation={manualOperationQuery.data}
-            chat={chatQuery.data}
-            evals={evalsQuery.data}
-            isPending={
-              overviewQuery.isPending ||
-              recommendationsQuery.isPending ||
-              signalsQuery.isPending ||
-              spendQuery.isPending ||
-              knowledgeTopicsQuery.isPending
-            }
-            errorMessage={advisorError ? toErrorMessage(advisorError) : null}
-            manualOperationErrorMessage={manualOperationError}
-            canTriggerRun={isAdmin}
-            isTriggeringRun={manualRefreshAndRunMutation.isPending || manualOperationActive}
-            onTriggerRun={() => manualRefreshAndRunMutation.mutate()}
-            isAskingKnowledge={knowledgeAnswerMutation.isPending}
-            knowledgeAnswerErrorMessage={
-              knowledgeAnswerMutation.error ? toErrorMessage(knowledgeAnswerMutation.error) : null
-            }
-            onAskKnowledge={question => knowledgeAnswerMutation.mutate(question)}
-            isSendingChat={chatMutation.isPending}
-            onSendChat={message => chatMutation.mutate(message)}
-          />
-        ) : aiAdvisorHiddenReason ? (
-          <Card>
-            <CardContent className="space-y-2 py-8 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Advisor IA indisponible sur cette session</p>
-              <p>
-                {aiAdvisorHiddenReason === 'disabled'
-                  ? 'La surface advisor est desactivee par configuration runtime.'
-                  : 'La surface advisor est reservee a la session admin. Connecte-toi en admin pour afficher le brief, les runs, le chat et le bouton de refresh complet.'}
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
+        </aside>
       </div>
     </div>
   )
