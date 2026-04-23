@@ -539,6 +539,25 @@ const getSignalsByRunId = async ({
       whyItMatters: row.whyItMatters,
       createdAt: row.createdAt.toISOString(),
     })),
+    socialSignals: {
+      mode: 'off',
+      usedInAdvisorContext: false,
+      droppedReason: 'policy_off',
+      maxSignalsPerRun: 0,
+      maxExternalSharePct: 0,
+      included: [],
+      excluded: [],
+      exclusionSummary: {},
+      decisionLedger: {
+        xSignalCandidates: 0,
+        xSignalIncluded: 0,
+        xSignalExcluded: 0,
+        advisorSocialSharePct: 0,
+        xSignalCapHit: false,
+        trustTierContribution: {},
+        freshnessHistogram: {},
+      },
+    },
   }
 }
 
@@ -1029,6 +1048,7 @@ export const createDashboardAdvisorRepository = ({
         signalCounts: {
           macro: signals.macroSignals.length,
           news: signals.newsSignals.length,
+          social: 0,
         },
         assumptionCount: assumptions.items.length,
         chatEnabled: input.chatEnabled,
@@ -1203,14 +1223,56 @@ export const createDashboardAdvisorRepository = ({
         return {
           macroSignals: [],
           newsSignals: [],
+          socialSignals: {
+            mode: 'off',
+            usedInAdvisorContext: false,
+            droppedReason: 'policy_off',
+            maxSignalsPerRun: 0,
+            maxExternalSharePct: 0,
+            included: [],
+            excluded: [],
+            exclusionSummary: {},
+            decisionLedger: {
+              xSignalCandidates: 0,
+              xSignalIncluded: 0,
+              xSignalExcluded: 0,
+              advisorSocialSharePct: 0,
+              xSignalCapHit: false,
+              trustTierContribution: {},
+              freshnessHistogram: {},
+            },
+          },
         }
       }
 
-      return getSignalsByRunId({
+      const persisted = await getSignalsByRunId({
         db,
         runId: latestRunRow.id,
         limit,
       })
+
+      return {
+        ...persisted,
+        socialSignals: {
+          mode: 'off',
+          usedInAdvisorContext: false,
+          droppedReason: 'policy_off',
+          maxSignalsPerRun: 0,
+          maxExternalSharePct: 0,
+          included: [],
+          excluded: [],
+          exclusionSummary: {},
+          decisionLedger: {
+            xSignalCandidates: 0,
+            xSignalIncluded: 0,
+            xSignalExcluded: 0,
+            advisorSocialSharePct: 0,
+            xSignalCapHit: false,
+            trustTierContribution: {},
+            freshnessHistogram: {},
+          },
+        },
+      }
     },
 
     async getSpendAnalytics(input) {

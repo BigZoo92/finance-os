@@ -30,6 +30,7 @@ const config = {
   deepAnalysisDisableRatio: 0.5,
   maxChatMessagesContext: 8,
   usdToEurRate: 0.92,
+  xSignalsMode: 'shadow',
   openAi: null,
   anthropic: null,
 } as const

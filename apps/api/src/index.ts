@@ -324,6 +324,7 @@ const registerAppRoutes = (app: Elysia) => {
         aiBudgetDisableDeepAnalysisRatio: env.AI_BUDGET_DISABLE_DEEP_ANALYSIS_RATIO,
         aiMaxChatMessagesContext: env.AI_MAX_CHAT_MESSAGES_CONTEXT,
         aiUsdToEurRate: env.AI_USD_TO_EUR_RATE,
+        advisorXSignalsMode: env.ADVISOR_X_SIGNALS_MODE,
       })
     )
     .use(

@@ -390,6 +390,7 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
     signalCounts: {
       macro: 0,
       news: 0,
+      social: 0,
     },
     assumptionCount: 2,
     chatEnabled: true,
@@ -428,6 +429,25 @@ export const getDemoDashboardAdvisorAssumptions = (): DashboardAdvisorAssumption
 export const getDemoDashboardAdvisorSignals = (): DashboardAdvisorSignalsResponse => ({
   macroSignals: [],
   newsSignals: [],
+  socialSignals: {
+    mode: 'shadow',
+    usedInAdvisorContext: false,
+    droppedReason: 'empty',
+    maxSignalsPerRun: 3,
+    maxExternalSharePct: 35,
+    included: [],
+    excluded: [],
+    exclusionSummary: {},
+    decisionLedger: {
+      xSignalCandidates: 0,
+      xSignalIncluded: 0,
+      xSignalExcluded: 0,
+      advisorSocialSharePct: 0,
+      xSignalCapHit: false,
+      trustTierContribution: {},
+      freshnessHistogram: {},
+    },
+  },
 })
 
 export const getDemoDashboardAdvisorSpend = (): DashboardAdvisorSpendAnalyticsResponse => ({
