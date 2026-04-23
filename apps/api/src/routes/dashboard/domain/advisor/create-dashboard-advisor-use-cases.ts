@@ -75,6 +75,7 @@ export interface DashboardAdvisorConfig {
   deepAnalysisDisableRatio: number
   maxChatMessagesContext: number
   usdToEurRate: number
+  xSignalsMode: 'off' | 'shadow' | 'enforced'
   openAi:
     | {
         apiKey: string
@@ -92,6 +93,8 @@ export interface DashboardAdvisorConfig {
       }
     | null
 }
+
+type SocialSignalMode = DashboardAdvisorConfig['xSignalsMode']
 
 const renderPrompt = (template: { userPromptTemplate: string }, context: Record<string, unknown>) =>
   template.userPromptTemplate.replace('{{context_json}}', JSON.stringify(context))
@@ -151,11 +154,116 @@ const toRecommendationResponse = ({
 })
 
 const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardAdvisorSignalsResponse => {
+  const now = Date.now()
+  const toEmptySocialSignals = (mode: SocialSignalMode): DashboardAdvisorSignalsResponse['socialSignals'] => ({
+    mode,
+    usedInAdvisorContext: false,
+    droppedReason: mode === 'off' ? 'policy_off' : 'empty',
+    maxSignalsPerRun: 3,
+    maxExternalSharePct: 35,
+    included: [],
+    excluded: [],
+    exclusionSummary: {},
+    decisionLedger: {
+      xSignalCandidates: 0,
+      xSignalIncluded: 0,
+      xSignalExcluded: 0,
+      advisorSocialSharePct: 0,
+      xSignalCapHit: false,
+      trustTierContribution: {},
+      freshnessHistogram: {},
+    },
+  })
+
   if (!newsBundle) {
     return {
       macroSignals: [],
       newsSignals: [],
+      socialSignals: toEmptySocialSignals('shadow'),
     }
+  }
+
+  const newsSignals = newsBundle.topSignals.slice(0, 10).map((signal, index) => ({
+    id: index + 1,
+    runId: 0,
+    signalKey: signal.id,
+    title: signal.title,
+    eventType: signal.eventType,
+    direction: signal.direction,
+    severity: signal.severity,
+    confidence: signal.confidence,
+    publishedAt: signal.publishedAt,
+    supportingUrls: signal.supportingUrls,
+    affectedEntities: signal.affectedEntities,
+    affectedSectors: signal.affectedSectors,
+    whyItMatters: signal.whyItMatters,
+    createdAt: new Date().toISOString(),
+  }))
+
+  const xCandidates = newsSignals.filter(item =>
+    item.supportingUrls.some(url => url.includes('x.com') || url.includes('twitter.com'))
+  )
+
+  const socialSignals: DashboardAdvisorSignalsResponse['socialSignals'] = {
+    mode: 'shadow',
+    usedInAdvisorContext: false,
+    droppedReason: xCandidates.length === 0 ? 'empty' : 'shadow_mode',
+    maxSignalsPerRun: 3,
+    maxExternalSharePct: 35,
+    included: xCandidates.slice(0, 3).map(item => {
+      const publishedAtMs = item.publishedAt ? Date.parse(item.publishedAt) : now
+      const recencyHours = Math.max(0, Math.round((now - publishedAtMs) / (1000 * 60 * 60)))
+      const freshnessState =
+        recencyHours <= 24 ? 'fresh' : recencyHours <= 72 ? ('recent' as const) : ('stale' as const)
+      return {
+        signalKey: item.signalKey,
+        thesisSummary: item.whyItMatters[0] ?? item.title,
+        direction:
+          item.direction === 'opportunity'
+            ? 'bullish'
+            : item.direction === 'risk'
+              ? 'bearish'
+              : 'neutral',
+        confidence: item.confidence,
+        recencyHours,
+        freshnessState,
+        account: {
+          handle: 'demo.market.signal',
+          trustTier: 'standard',
+          accountWeight: 0.55,
+        },
+        affected: {
+          entities: item.affectedEntities,
+          tickers: item.affectedEntities.map(entity => entity.toUpperCase()).slice(0, 3),
+          themes: item.affectedSectors,
+        },
+        provenance: {
+          source: 'demo_fixture',
+          signalId: item.signalKey,
+          sourceUrls: item.supportingUrls,
+        },
+        scoring: {
+          total: 0.62,
+          trust: 0.55,
+          recency: freshnessState === 'fresh' ? 1 : freshnessState === 'recent' ? 0.7 : 0.3,
+          convergence: 0.4,
+          novelty: 0.6,
+          curation: 0.5,
+        },
+        inclusionReason: 'Shadow mode: candidate retained for observability, not prompt injection.',
+      }
+    }),
+    excluded: [],
+    exclusionSummary: {},
+    decisionLedger: {
+      xSignalCandidates: xCandidates.length,
+      xSignalIncluded: Math.min(3, xCandidates.length),
+      xSignalExcluded: 0,
+      advisorSocialSharePct: xCandidates.length > 0 ? 35 : 0,
+      xSignalCapHit: xCandidates.length > 3,
+      trustTierContribution: { standard: Math.min(3, xCandidates.length) },
+      freshnessHistogram: {},
+    },
   }
 
   return {
@@ -173,22 +281,193 @@ const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardA
       sourceRefs: [],
       createdAt: new Date().toISOString(),
     })),
-    newsSignals: newsBundle.topSignals.slice(0, 10).map((signal, index) => ({
-      id: index + 1,
-      runId: 0,
-      signalKey: signal.id,
-      title: signal.title,
-      eventType: signal.eventType,
-      direction: signal.direction,
-      severity: signal.severity,
-      confidence: signal.confidence,
-      publishedAt: signal.publishedAt,
-      supportingUrls: signal.supportingUrls,
-      affectedEntities: signal.affectedEntities,
-      affectedSectors: signal.affectedSectors,
-      whyItMatters: signal.whyItMatters,
-      createdAt: new Date().toISOString(),
-    })),
+    newsSignals,
+    socialSignals,
+  }
+}
+
+const applySocialSignalPolicy = ({
+  signals,
+  mode,
+  source,
+}: {
+  signals: DashboardAdvisorSignalsResponse
+  mode: SocialSignalMode
+  source: 'demo_fixture' | 'persisted_news_signal'
+}): DashboardAdvisorSignalsResponse => {
+  const maxSignalsPerRun = 3
+  const maxExternalSharePct = 35
+  const now = Date.now()
+
+  if (mode === 'off') {
+    return {
+      ...signals,
+      socialSignals: {
+        mode,
+        usedInAdvisorContext: false,
+        droppedReason: 'policy_off',
+        maxSignalsPerRun,
+        maxExternalSharePct,
+        included: [],
+        excluded: signals.newsSignals.map(item => ({
+          signalKey: item.signalKey,
+          handle: 'x.disabled',
+          exclusionReason: 'policy_off',
+        })),
+        exclusionSummary: { policy_off: signals.newsSignals.length },
+        decisionLedger: {
+          xSignalCandidates: signals.newsSignals.length,
+          xSignalIncluded: 0,
+          xSignalExcluded: signals.newsSignals.length,
+          advisorSocialSharePct: 0,
+          xSignalCapHit: false,
+          trustTierContribution: {},
+          freshnessHistogram: {},
+        },
+      },
+    }
+  }
+
+  const candidates = signals.newsSignals
+    .filter(item => item.supportingUrls.some(url => url.includes('x.com') || url.includes('twitter.com')))
+    .map(item => {
+      const recencyHours = item.publishedAt
+        ? Math.max(0, Math.round((now - Date.parse(item.publishedAt)) / (1000 * 60 * 60)))
+        : 999
+      const freshnessState: 'fresh' | 'recent' | 'stale' =
+        recencyHours <= 24 ? 'fresh' : recencyHours <= 72 ? ('recent' as const) : ('stale' as const)
+      const trustTier: 'trusted' | 'standard' | 'experimental' =
+        source === 'demo_fixture' ? 'standard' : 'trusted'
+      const trust = trustTier === 'trusted' ? 0.85 : 0.55
+      const recency = freshnessState === 'fresh' ? 1 : freshnessState === 'recent' ? 0.7 : 0.2
+      const convergence = item.affectedEntities.length > 1 ? 0.7 : 0.4
+      const novelty = item.eventType === 'social_sentiment' ? 0.65 : 0.45
+      const curation = source === 'demo_fixture' ? 0.5 : 0.6
+      const total = trust * 0.35 + recency * 0.25 + convergence * 0.2 + novelty * 0.1 + curation * 0.1
+      return {
+        item,
+        recencyHours,
+        freshnessState,
+        trustTier,
+        total,
+        trust,
+        recency,
+        convergence,
+        novelty,
+        curation,
+      }
+    })
+    .sort((a, b) => b.total - a.total)
+
+  const included: DashboardAdvisorSignalsResponse['socialSignals']['included'] = []
+  const excluded: DashboardAdvisorSignalsResponse['socialSignals']['excluded'] = []
+
+  for (const candidate of candidates) {
+    if (candidate.freshnessState === 'stale') {
+      excluded.push({
+        signalKey: candidate.item.signalKey,
+        handle: candidate.item.signalKey,
+        exclusionReason: 'stale',
+      })
+      continue
+    }
+    if (candidate.total < 0.45) {
+      excluded.push({
+        signalKey: candidate.item.signalKey,
+        handle: candidate.item.signalKey,
+        exclusionReason: 'low_score',
+      })
+      continue
+    }
+    if (included.length >= maxSignalsPerRun) {
+      excluded.push({
+        signalKey: candidate.item.signalKey,
+        handle: candidate.item.signalKey,
+        exclusionReason: 'signal_cap',
+      })
+      continue
+    }
+    included.push({
+      signalKey: candidate.item.signalKey,
+      thesisSummary: candidate.item.whyItMatters[0] ?? candidate.item.title,
+      direction:
+        candidate.item.direction === 'positive'
+          ? 'bullish'
+          : candidate.item.direction === 'negative'
+            ? 'bearish'
+            : 'neutral',
+      confidence: candidate.item.confidence,
+      recencyHours: candidate.recencyHours,
+      freshnessState: candidate.freshnessState,
+      account: {
+        handle: candidate.item.signalKey,
+        trustTier: candidate.trustTier,
+        accountWeight: Number(candidate.trust.toFixed(2)),
+      },
+      affected: {
+        entities: candidate.item.affectedEntities,
+        tickers: candidate.item.affectedEntities.map(entity => entity.toUpperCase()).slice(0, 3),
+        themes: candidate.item.affectedSectors,
+      },
+      provenance: {
+        source,
+        signalId: candidate.item.signalKey,
+        sourceUrls: candidate.item.supportingUrls,
+      },
+      scoring: {
+        total: Number(candidate.total.toFixed(3)),
+        trust: Number(candidate.trust.toFixed(3)),
+        recency: Number(candidate.recency.toFixed(3)),
+        convergence: Number(candidate.convergence.toFixed(3)),
+        novelty: Number(candidate.novelty.toFixed(3)),
+        curation: Number(candidate.curation.toFixed(3)),
+      },
+      inclusionReason:
+        mode === 'shadow'
+          ? 'Shadow mode scoring only; signal kept out of advisor prompt.'
+          : 'Included under bounded policy (trust, recency, convergence, novelty, curation).',
+    })
+  }
+
+  const exclusionSummary: Record<string, number> = {}
+  for (const item of excluded) {
+    exclusionSummary[item.exclusionReason] = (exclusionSummary[item.exclusionReason] ?? 0) + 1
+  }
+  const trustTierContribution: Record<string, number> = {}
+  const freshnessHistogram: Record<string, number> = {}
+  for (const item of included) {
+    trustTierContribution[item.account.trustTier] = (trustTierContribution[item.account.trustTier] ?? 0) + 1
+    freshnessHistogram[item.freshnessState] = (freshnessHistogram[item.freshnessState] ?? 0) + 1
+  }
+
+  return {
+    ...signals,
+    socialSignals: {
+      mode,
+      usedInAdvisorContext: mode === 'enforced' && included.length > 0,
+      droppedReason:
+        candidates.length === 0
+          ? 'empty'
+          : mode === 'shadow'
+            ? 'shadow_mode'
+            : included.length === 0
+              ? 'stale_or_noisy'
+              : null,
+      maxSignalsPerRun,
+      maxExternalSharePct,
+      included,
+      excluded,
+      exclusionSummary,
+      decisionLedger: {
+        xSignalCandidates: candidates.length,
+        xSignalIncluded: included.length,
+        xSignalExcluded: excluded.length,
+        advisorSocialSharePct: included.length > 0 ? maxExternalSharePct : 0,
+        xSignalCapHit: excluded.some(item => item.exclusionReason === 'signal_cap'),
+        trustTierContribution,
+        freshnessHistogram,
+      },
+    },
   }
 }
 
@@ -273,7 +552,11 @@ const buildPreviewArtifacts = ({
       createdAt: new Date().toISOString(),
     })),
   }
-  const signals = buildSignalResponses(newsBundle)
+  const signals = applySocialSignalPolicy({
+    signals: buildSignalResponses(newsBundle),
+    mode: 'shadow',
+    source: mode === 'demo' ? 'demo_fixture' : 'persisted_news_signal',
+  })
 
   return {
     overview: {
@@ -297,6 +580,7 @@ const buildPreviewArtifacts = ({
       signalCounts: {
         macro: signals.macroSignals.length,
         news: signals.newsSignals.length,
+        social: signals.socialSignals.included.length,
       },
       assumptionCount: assumptions.items.length,
       chatEnabled: mode === 'admin' ? chatEnabled : false,
@@ -582,6 +866,14 @@ export const createDashboardAdvisorUseCases = ({
           recommendationCount: recommendations.length,
           suggestionCount: transactionSuggestions.length,
           signalCount: preview.signals.newsSignals.length,
+          xSignalCandidates: preview.signals.socialSignals.decisionLedger.xSignalCandidates,
+          xSignalIncluded: preview.signals.socialSignals.decisionLedger.xSignalIncluded,
+          xSignalExcluded: preview.signals.socialSignals.decisionLedger.xSignalExcluded,
+          advisorSocialSharePct: preview.signals.socialSignals.decisionLedger.advisorSocialSharePct,
+          xSignalCapHit: preview.signals.socialSignals.decisionLedger.xSignalCapHit,
+          xUsedInPrompt:
+            config.xSignalsMode === 'enforced' && preview.signals.socialSignals.included.length > 0,
+          xDroppedReason: preview.signals.socialSignals.droppedReason,
         },
       })
 
@@ -598,6 +890,10 @@ export const createDashboardAdvisorUseCases = ({
             snapshot: preview.snapshot,
             recommendations: recommendations.slice(0, 6),
             signals: preview.signals.newsSignals.slice(0, 6),
+            socialSignals:
+              config.xSignalsMode === 'enforced'
+                ? preview.signals.socialSignals.included.slice(0, 3)
+                : [],
             assumptions: preview.assumptions.items.slice(0, 8),
           },
           maxOutputTokens: 1400,
@@ -640,6 +936,10 @@ export const createDashboardAdvisorUseCases = ({
               recommendation,
               snapshot: preview.snapshot,
               signals: preview.signals.newsSignals.slice(0, 6),
+              socialSignals:
+                config.xSignalsMode === 'enforced'
+                  ? preview.signals.socialSignals.included.slice(0, 2)
+                  : [],
               assumptions: preview.assumptions.items.slice(0, 8),
             },
             maxOutputTokens: 1000,
@@ -966,7 +1266,7 @@ export const createDashboardAdvisorUseCases = ({
 
     getAdvisorSignals: async ({ mode, requestId, limit = 20 }) => {
       if (mode === 'demo') {
-        return buildPreviewArtifacts({
+        const previewSignals = buildPreviewArtifacts({
           summary: getDashboardSummaryMock('30d'),
           goals: [],
           spend: buildDemoSpend(config),
@@ -974,12 +1274,28 @@ export const createDashboardAdvisorUseCases = ({
           requestId,
           chatEnabled: false,
         }).signals
+        return applySocialSignalPolicy({
+          signals: previewSignals,
+          mode: 'shadow',
+          source: 'demo_fixture',
+        })
       }
 
       const persisted = await repository.listSignals(limit)
-      return persisted.macroSignals.length > 0 || persisted.newsSignals.length > 0
-        ? persisted
-        : (await loadAdminPreview({ requestId })).signals
+      if (persisted.macroSignals.length > 0 || persisted.newsSignals.length > 0) {
+        return applySocialSignalPolicy({
+          signals: persisted,
+          mode: config.xSignalsMode,
+          source: 'persisted_news_signal',
+        })
+      }
+
+      const previewSignals = (await loadAdminPreview({ requestId })).signals
+      return applySocialSignalPolicy({
+        signals: previewSignals,
+        mode: config.xSignalsMode,
+        source: 'demo_fixture',
+      })
     },
 
     getAdvisorSpend: async ({ mode }) => {
@@ -1147,6 +1463,10 @@ export const createDashboardAdvisorUseCases = ({
             recommendations: persistedRecommendations.items,
             assumptions: previewForChat.assumptions.items,
             signals: previewForChat.signals.newsSignals.slice(0, 6),
+            socialSignals:
+              config.xSignalsMode === 'enforced'
+                ? previewForChat.signals.socialSignals.included.slice(0, 3)
+                : [],
             priorMessages:
               (await repository.listChatMessages(threadKey ?? 'default', config.maxChatMessagesContext))?.messages ??
               [],

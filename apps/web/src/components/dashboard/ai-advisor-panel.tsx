@@ -203,6 +203,7 @@ export const AiAdvisorPanel = ({
 }) => {
   const [chatDraft, setChatDraft] = useState('')
   const [knowledgeDraft, setKnowledgeDraft] = useState('')
+  const [includeSocialSignals, setIncludeSocialSignals] = useState(true)
 
   const handleSendChat = () => {
     const normalized = chatDraft.trim()
@@ -717,6 +718,54 @@ export const AiAdvisorPanel = ({
               {(signals?.newsSignals ?? []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">Aucun signal persiste pour l instant.</p>
               ) : null}
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      X / Twitter signals (secondaire)
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Complements non deterministes capes par politique, jamais prioritaires sur les faits financiers.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={includeSocialSignals ? 'secondary' : 'outline'}
+                    onClick={() => setIncludeSocialSignals(value => !value)}
+                  >
+                    {includeSocialSignals ? 'Social ON' : 'Social OFF'}
+                  </Button>
+                </div>
+                {!includeSocialSignals ? (
+                  <p className="text-sm text-muted-foreground">
+                    Signaux X exclus par preference utilisateur.
+                  </p>
+                ) : null}
+                {includeSocialSignals && (signals?.socialSignals.included ?? []).length > 0 ? (
+                  (signals?.socialSignals.included ?? []).map(signal => (
+                    <div key={signal.signalKey} className="rounded-lg border border-border/70 bg-background/50 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">@{signal.account.handle}</p>
+                        <Badge variant="outline">{signal.account.trustTier}</Badge>
+                        <Badge variant="secondary">{signal.direction}</Badge>
+                        <Badge variant="outline">{formatConfidence(signal.confidence / 100)}</Badge>
+                      </div>
+                      <p className="pt-2 text-sm">{signal.thesisSummary}</p>
+                      <p className="pt-1 text-xs text-muted-foreground">
+                        Freshness {signal.freshnessState} ({signal.recencyHours}h) · why it matters:{' '}
+                        {signal.inclusionReason}
+                      </p>
+                    </div>
+                  ))
+                ) : null}
+                {includeSocialSignals && (signals?.socialSignals.included ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    X signals unavailable / stale / excluded by policy.
+                  </p>
+                ) : null}
+              </div>
               <Separator />
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Hypotheses clefs</p>

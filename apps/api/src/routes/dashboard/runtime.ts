@@ -106,6 +106,7 @@ export const createDashboardRouteRuntime = ({
   aiBudgetDisableDeepAnalysisRatio,
   aiMaxChatMessagesContext,
   aiUsdToEurRate,
+  advisorXSignalsMode,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -176,6 +177,7 @@ export const createDashboardRouteRuntime = ({
   aiBudgetDisableDeepAnalysisRatio: number
   aiMaxChatMessagesContext: number
   aiUsdToEurRate: number
+  advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const newsRepository = createDashboardNewsRepository({ db })
@@ -349,6 +351,7 @@ export const createDashboardRouteRuntime = ({
       deepAnalysisDisableRatio: aiBudgetDisableDeepAnalysisRatio,
       maxChatMessagesContext: aiMaxChatMessagesContext,
       usdToEurRate: aiUsdToEurRate,
+      xSignalsMode: advisorXSignalsMode,
       openAi: aiOpenAiApiKey
         ? {
             apiKey: aiOpenAiApiKey,

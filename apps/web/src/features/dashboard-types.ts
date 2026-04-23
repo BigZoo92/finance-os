@@ -764,6 +764,7 @@ export type DashboardAdvisorOverviewResponse = {
   signalCounts: {
     macro: number
     news: number
+    social: number
   }
   assumptionCount: number
   chatEnabled: boolean
@@ -784,6 +785,60 @@ export type DashboardAdvisorAssumptionsResponse = {
 export type DashboardAdvisorSignalsResponse = {
   macroSignals: DashboardAdvisorMacroSignalResponse[]
   newsSignals: DashboardAdvisorNewsSignalResponse[]
+  socialSignals: {
+    mode: 'off' | 'shadow' | 'enforced'
+    usedInAdvisorContext: boolean
+    droppedReason: 'policy_off' | 'shadow_mode' | 'empty' | 'stale_or_noisy' | 'budget_cap' | null
+    maxSignalsPerRun: number
+    maxExternalSharePct: number
+    included: Array<{
+      signalKey: string
+      thesisSummary: string
+      direction: 'bullish' | 'bearish' | 'neutral'
+      confidence: number
+      recencyHours: number
+      freshnessState: 'fresh' | 'recent' | 'stale'
+      account: {
+        handle: string
+        trustTier: 'trusted' | 'standard' | 'experimental'
+        accountWeight: number
+      }
+      affected: {
+        entities: string[]
+        tickers: string[]
+        themes: string[]
+      }
+      provenance: {
+        source: 'demo_fixture' | 'persisted_news_signal'
+        signalId: string
+        sourceUrls: string[]
+      }
+      scoring: {
+        total: number
+        trust: number
+        recency: number
+        convergence: number
+        novelty: number
+        curation: number
+      }
+      inclusionReason: string
+    }>
+    excluded: Array<{
+      signalKey: string
+      handle: string
+      exclusionReason: 'budget_cap' | 'signal_cap' | 'stale' | 'low_score' | 'policy_off' | 'toggle_off'
+    }>
+    exclusionSummary: Record<string, number>
+    decisionLedger: {
+      xSignalCandidates: number
+      xSignalIncluded: number
+      xSignalExcluded: number
+      advisorSocialSharePct: number
+      xSignalCapHit: boolean
+      trustTierContribution: Record<string, number>
+      freshnessHistogram: Record<string, number>
+    }
+  }
 }
 
 export type DashboardAdvisorEvalsResponse = {

@@ -257,6 +257,7 @@ Notes:
 | `AI_ADVISOR_ENABLED` | `true` | Dokploy, `.env` | API, Worker | Non | Active le sous-systeme advisor |
 | `AI_ADVISOR_ADMIN_ONLY` | `false` | Dokploy, `.env` | API | Non | Restreint les surfaces advisor aux sessions admin. Mettre `true` pour le mode manuel admin-only recommande |
 | `AI_ADVISOR_FORCE_LOCAL_ONLY` | `false` | Dokploy, `.env` | API, Worker | Non | Coupe les appels LLM et force le chemin deterministe |
+| `ADVISOR_X_SIGNALS_MODE` | `shadow` | Dokploy, `.env` | API, Worker | Non | Kill-switch des signaux X advisor: `off` desactive, `shadow` score+log sans injection prompt, `enforced` autorise inclusion bornee |
 | `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED` | `true` | Dokploy, `.env` | API, Worker | Non | Kill-switch du Q&A educatif: quand `false`, `/dashboard/advisor/knowledge-answer` reste browse-only et `/dashboard/advisor/knowledge-topics` reste disponible |
 | `AI_CHAT_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le chat grounded |
 | `AI_CHALLENGER_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le challenger Anthropic |

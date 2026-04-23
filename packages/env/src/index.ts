@@ -643,6 +643,7 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    ADVISOR_X_SIGNALS_MODE: z.enum(['off', 'shadow', 'enforced']).default('shadow'),
     AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED: z
       .string()
       .optional()
@@ -849,6 +850,7 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    ADVISOR_X_SIGNALS_MODE: z.enum(['off', 'shadow', 'enforced']).default('shadow'),
     AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED: z
       .string()
       .optional()

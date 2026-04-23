@@ -85,6 +85,7 @@ export const createDashboardRoutes = ({
   aiBudgetDisableDeepAnalysisRatio,
   aiMaxChatMessagesContext,
   aiUsdToEurRate,
+  advisorXSignalsMode,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -156,6 +157,7 @@ export const createDashboardRoutes = ({
   aiBudgetDisableDeepAnalysisRatio: number
   aiMaxChatMessagesContext: number
   aiUsdToEurRate: number
+  advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -227,6 +229,7 @@ export const createDashboardRoutes = ({
     aiBudgetDisableDeepAnalysisRatio,
     aiMaxChatMessagesContext,
     aiUsdToEurRate,
+    advisorXSignalsMode,
   })
 
   return new Elysia({ prefix: '/dashboard' })

@@ -123,6 +123,7 @@ const sampleOverview = (mode: 'demo' | 'admin'): DashboardAdvisorOverviewRespons
   signalCounts: {
     macro: 0,
     news: 0,
+    social: 0,
   },
   assumptionCount: 1,
   chatEnabled: true,
@@ -224,6 +225,25 @@ const createDashboardRuntime = (
     getAdvisorSignals: async () => ({
       macroSignals: [],
       newsSignals: [],
+      socialSignals: {
+        mode: 'shadow',
+        usedInAdvisorContext: false,
+        droppedReason: 'empty',
+        maxSignalsPerRun: 3,
+        maxExternalSharePct: 35,
+        included: [],
+        excluded: [],
+        exclusionSummary: {},
+        decisionLedger: {
+          xSignalCandidates: 0,
+          xSignalIncluded: 0,
+          xSignalExcluded: 0,
+          advisorSocialSharePct: 0,
+          xSignalCapHit: false,
+          trustTierContribution: {},
+          freshnessHistogram: {},
+        },
+      },
     }),
     getAdvisorSpend: async () => ({
       summary: sampleBudgetState,
