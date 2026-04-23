@@ -194,6 +194,8 @@ export interface DashboardAdvisorSocialSignalsResponse {
   mode: 'off' | 'shadow' | 'enforced'
   usedInAdvisorContext: boolean
   droppedReason: 'policy_off' | 'shadow_mode' | 'empty' | 'stale_or_noisy' | 'budget_cap' | null
+  freshnessState: 'fresh' | 'recent' | 'stale' | 'empty' | 'noisy'
+  deterministicFactsPriority: true
   maxSignalsPerRun: number
   maxExternalSharePct: number
   included: DashboardAdvisorSocialSignalResponse[]
@@ -207,6 +209,15 @@ export interface DashboardAdvisorSocialSignalsResponse {
     xSignalCapHit: boolean
     trustTierContribution: Record<string, number>
     freshnessHistogram: Record<string, number>
+    inclusionScoreBreakdown: {
+      total: number
+      trust: number
+      recency: number
+      convergence: number
+      novelty: number
+      curation: number
+    }
+    exclusionReasonBreakdown: Record<string, number>
   }
 }
 

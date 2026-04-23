@@ -159,6 +159,8 @@ const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardA
     mode,
     usedInAdvisorContext: false,
     droppedReason: mode === 'off' ? 'policy_off' : 'empty',
+    freshnessState: 'empty',
+    deterministicFactsPriority: true,
     maxSignalsPerRun: 3,
     maxExternalSharePct: 35,
     included: [],
@@ -172,6 +174,15 @@ const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardA
       xSignalCapHit: false,
       trustTierContribution: {},
       freshnessHistogram: {},
+      inclusionScoreBreakdown: {
+        total: 0,
+        trust: 0,
+        recency: 0,
+        convergence: 0,
+        novelty: 0,
+        curation: 0,
+      },
+      exclusionReasonBreakdown: {},
     },
   })
 
@@ -208,6 +219,8 @@ const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardA
     mode: 'shadow',
     usedInAdvisorContext: false,
     droppedReason: xCandidates.length === 0 ? 'empty' : 'shadow_mode',
+    freshnessState: xCandidates.length === 0 ? 'empty' : 'recent',
+    deterministicFactsPriority: true,
     maxSignalsPerRun: 3,
     maxExternalSharePct: 35,
     included: xCandidates.slice(0, 3).map(item => {
@@ -263,6 +276,15 @@ const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardA
       xSignalCapHit: xCandidates.length > 3,
       trustTierContribution: { standard: Math.min(3, xCandidates.length) },
       freshnessHistogram: {},
+      inclusionScoreBreakdown: {
+        total: 0.62,
+        trust: 0.55,
+        recency: xCandidates.length > 0 ? 0.7 : 0,
+        convergence: 0.4,
+        novelty: 0.6,
+        curation: 0.5,
+      },
+      exclusionReasonBreakdown: {},
     },
   }
 
@@ -306,6 +328,8 @@ const applySocialSignalPolicy = ({
         mode,
         usedInAdvisorContext: false,
         droppedReason: 'policy_off',
+        freshnessState: 'empty',
+        deterministicFactsPriority: true,
         maxSignalsPerRun,
         maxExternalSharePct,
         included: [],
@@ -323,6 +347,15 @@ const applySocialSignalPolicy = ({
           xSignalCapHit: false,
           trustTierContribution: {},
           freshnessHistogram: {},
+          inclusionScoreBreakdown: {
+            total: 0,
+            trust: 0,
+            recency: 0,
+            convergence: 0,
+            novelty: 0,
+            curation: 0,
+          },
+          exclusionReasonBreakdown: { policy_off: signals.newsSignals.length },
         },
       },
     }
@@ -435,10 +468,41 @@ const applySocialSignalPolicy = ({
   }
   const trustTierContribution: Record<string, number> = {}
   const freshnessHistogram: Record<string, number> = {}
+  const scoreTotals = {
+    total: 0,
+    trust: 0,
+    recency: 0,
+    convergence: 0,
+    novelty: 0,
+    curation: 0,
+  }
   for (const item of included) {
     trustTierContribution[item.account.trustTier] = (trustTierContribution[item.account.trustTier] ?? 0) + 1
     freshnessHistogram[item.freshnessState] = (freshnessHistogram[item.freshnessState] ?? 0) + 1
+    scoreTotals.total += item.scoring.total
+    scoreTotals.trust += item.scoring.trust
+    scoreTotals.recency += item.scoring.recency
+    scoreTotals.convergence += item.scoring.convergence
+    scoreTotals.novelty += item.scoring.novelty
+    scoreTotals.curation += item.scoring.curation
   }
+  const includedCount = Math.max(included.length, 1)
+  const inclusionScoreBreakdown = {
+    total: Number((scoreTotals.total / includedCount).toFixed(3)),
+    trust: Number((scoreTotals.trust / includedCount).toFixed(3)),
+    recency: Number((scoreTotals.recency / includedCount).toFixed(3)),
+    convergence: Number((scoreTotals.convergence / includedCount).toFixed(3)),
+    novelty: Number((scoreTotals.novelty / includedCount).toFixed(3)),
+    curation: Number((scoreTotals.curation / includedCount).toFixed(3)),
+  }
+  const freshnessState: DashboardAdvisorSignalsResponse['socialSignals']['freshnessState'] =
+    candidates.length === 0
+      ? 'empty'
+      : included.length === 0
+        ? 'stale'
+        : included.some(item => item.freshnessState === 'fresh')
+          ? 'fresh'
+          : 'recent'
 
   return {
     ...signals,
@@ -453,6 +517,8 @@ const applySocialSignalPolicy = ({
             : included.length === 0
               ? 'stale_or_noisy'
               : null,
+      freshnessState,
+      deterministicFactsPriority: true,
       maxSignalsPerRun,
       maxExternalSharePct,
       included,
@@ -466,6 +532,8 @@ const applySocialSignalPolicy = ({
         xSignalCapHit: excluded.some(item => item.exclusionReason === 'signal_cap'),
         trustTierContribution,
         freshnessHistogram,
+        inclusionScoreBreakdown,
+        exclusionReasonBreakdown: exclusionSummary,
       },
     },
   }
@@ -871,6 +939,9 @@ export const createDashboardAdvisorUseCases = ({
           xSignalExcluded: preview.signals.socialSignals.decisionLedger.xSignalExcluded,
           advisorSocialSharePct: preview.signals.socialSignals.decisionLedger.advisorSocialSharePct,
           xSignalCapHit: preview.signals.socialSignals.decisionLedger.xSignalCapHit,
+          inclusionScoreBreakdown: preview.signals.socialSignals.decisionLedger.inclusionScoreBreakdown,
+          exclusionReasonBreakdown: preview.signals.socialSignals.decisionLedger.exclusionReasonBreakdown,
+          freshnessState: preview.signals.socialSignals.freshnessState,
           xUsedInPrompt:
             config.xSignalsMode === 'enforced' && preview.signals.socialSignals.included.length > 0,
           xDroppedReason: preview.signals.socialSignals.droppedReason,

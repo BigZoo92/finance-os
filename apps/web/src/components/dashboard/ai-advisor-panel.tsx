@@ -204,6 +204,7 @@ export const AiAdvisorPanel = ({
   const [chatDraft, setChatDraft] = useState('')
   const [knowledgeDraft, setKnowledgeDraft] = useState('')
   const [includeSocialSignals, setIncludeSocialSignals] = useState(true)
+  const [accountSocialOverrides, setAccountSocialOverrides] = useState<Record<string, boolean>>({})
 
   const handleSendChat = () => {
     const normalized = chatDraft.trim()
@@ -232,6 +233,13 @@ export const AiAdvisorPanel = ({
 
   const snapshotMetrics = overview?.snapshot?.metrics
   const spendSeries = spend?.daily.map(point => point.usd) ?? []
+  const socialIncludedSignals = (signals?.socialSignals.included ?? []).filter(signal => {
+    if (!includeSocialSignals) {
+      return false
+    }
+    const accountState = accountSocialOverrides[signal.account.handle]
+    return accountState ?? true
+  })
 
   return (
     <div className="space-y-6">
@@ -743,14 +751,27 @@ export const AiAdvisorPanel = ({
                     Signaux X exclus par preference utilisateur.
                   </p>
                 ) : null}
-                {includeSocialSignals && (signals?.socialSignals.included ?? []).length > 0 ? (
-                  (signals?.socialSignals.included ?? []).map(signal => (
+                {includeSocialSignals && socialIncludedSignals.length > 0 ? (
+                  socialIncludedSignals.map(signal => (
                     <div key={signal.signalKey} className="rounded-lg border border-border/70 bg-background/50 p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium">@{signal.account.handle}</p>
                         <Badge variant="outline">{signal.account.trustTier}</Badge>
                         <Badge variant="secondary">{signal.direction}</Badge>
                         <Badge variant="outline">{formatConfidence(signal.confidence / 100)}</Badge>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setAccountSocialOverrides(current => ({
+                              ...current,
+                              [signal.account.handle]: false,
+                            }))
+                          }
+                        >
+                          Exclure ce compte
+                        </Button>
                       </div>
                       <p className="pt-2 text-sm">{signal.thesisSummary}</p>
                       <p className="pt-1 text-xs text-muted-foreground">
@@ -760,10 +781,37 @@ export const AiAdvisorPanel = ({
                     </div>
                   ))
                 ) : null}
-                {includeSocialSignals && (signals?.socialSignals.included ?? []).length === 0 ? (
+                {includeSocialSignals && socialIncludedSignals.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     X signals unavailable / stale / excluded by policy.
                   </p>
+                ) : null}
+                {includeSocialSignals && Object.values(accountSocialOverrides).some(value => value === false) ? (
+                  <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      Comptes exclus localement
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(accountSocialOverrides)
+                        .filter(([, included]) => !included)
+                        .map(([handle]) => (
+                          <Button
+                            key={handle}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setAccountSocialOverrides(current => ({
+                                ...current,
+                                [handle]: true,
+                              }))
+                            }
+                          >
+                            @{handle} · reactiver
+                          </Button>
+                        ))}
+                    </div>
+                  </div>
                 ) : null}
               </div>
               <Separator />
