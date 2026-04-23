@@ -421,6 +421,8 @@ export const createDashboardRouteRuntime = ({
       getAdvisorAssumptions: advisor.getAdvisorAssumptions,
       getAdvisorSignals: advisor.getAdvisorSignals,
       getAdvisorSpend: advisor.getAdvisorSpend,
+      getAdvisorKnowledgeTopics: advisor.getAdvisorKnowledgeTopics,
+      getAdvisorKnowledgeAnswer: advisor.getAdvisorKnowledgeAnswer,
       runAdvisorDaily: advisor.runAdvisorDaily,
       getLatestAdvisorManualOperation: async () =>
         manualAdvisorOrchestration.getLatestManualOperation(),
