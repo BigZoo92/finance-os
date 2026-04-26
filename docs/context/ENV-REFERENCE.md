@@ -259,6 +259,29 @@ Notes:
 | `AI_ADVISOR_FORCE_LOCAL_ONLY` | `false` | Dokploy, `.env` | API, Worker | Non | Coupe les appels LLM et force le chemin deterministe |
 | `ADVISOR_X_SIGNALS_MODE` | `shadow` | Dokploy, `.env` | API, Worker | Non | Kill-switch des signaux X advisor: `off` desactive, `shadow` score+log sans injection prompt, `enforced` autorise inclusion bornee |
 | `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED` | `true` | Dokploy, `.env` | API, Worker | Non | Kill-switch du Q&A educatif: quand `false`, `/dashboard/advisor/knowledge-answer` reste browse-only et `/dashboard/advisor/knowledge-topics` reste disponible |
+| `KNOWLEDGE_SERVICE_ENABLED` | `false` | Dokploy, `.env` | API | Non | Autorise `apps/api` a appeler le service interne GraphRAG. Demo/UI gardent des fixtures si `false` |
+| `KNOWLEDGE_SERVICE_URL` | `http://127.0.0.1:8011` local, `http://knowledge-service:8011` Docker | Dokploy, `.env` | API | Non | URL interne du knowledge service. Ne pas exposer publiquement |
+| `KNOWLEDGE_SERVICE_TIMEOUT_MS` | `2500` | Dokploy, `.env` | API | Non | Timeout court pour fail-soft advisor |
+| `KNOWLEDGE_GRAPH_BACKEND` | `local` dev, `neo4j` prod | Dokploy, `.env` | API, knowledge-service | Non | Backend graph cible: `local`, `neo4j`, `memgraph`, `falkordb` |
+| `KNOWLEDGE_GRAPH_STORAGE_PATH` | `./.knowledge/graph` | Dokploy, `.env` | knowledge-service | Non | Chemin du snapshot local derive |
+| `KNOWLEDGE_GRAPH_REBUILD_ON_START` | `true` | Dokploy, `.env` | knowledge-service | Non | Rebuild seed si le store local est vide au demarrage |
+| `KNOWLEDGE_GRAPH_MAX_CONTEXT_TOKENS` | `1800` | Dokploy, `.env` | API, knowledge-service | Non | Plafond du bundle compact pour l'Advisor |
+| `KNOWLEDGE_GRAPH_VECTOR_ENABLED` | `true` | Dokploy, `.env` | knowledge-service | Non | Active la lane vectorielle si backend disponible |
+| `KNOWLEDGE_GRAPH_FULLTEXT_ENABLED` | `true` | Dokploy, `.env` | knowledge-service | Non | Active la lane full-text/BM25 |
+| `KNOWLEDGE_GRAPH_TEMPORAL_ENABLED` | `true` | Dokploy, `.env` | knowledge-service | Non | Active scoring/filtres temporels |
+| `KNOWLEDGE_GRAPH_DEMO_FIXTURES_ENABLED` | `true` | Dokploy, `.env` | API, knowledge-service | Non | Conserve les fixtures demo deterministes |
+| `KNOWLEDGE_GRAPH_RETRIEVAL_MODE` | `hybrid` | Dokploy, `.env` | API, knowledge-service | Non | Mode par defaut: `hybrid`, `graph`, `vector`, `fulltext` |
+| `KNOWLEDGE_GRAPH_RERANKING_ENABLED` | `true` | Dokploy, `.env` | knowledge-service | Non | Active reranking confiance/provenance/recence |
+| `KNOWLEDGE_GRAPH_MAX_PATH_DEPTH` | `3` | Dokploy, `.env` | API, knowledge-service | Non | Profondeur max de traversal exposee au bundle |
+| `KNOWLEDGE_GRAPH_MIN_CONFIDENCE` | `0.35` | Dokploy, `.env` | API, knowledge-service | Non | Filtre minimal de confiance |
+| `KNOWLEDGE_GRAPH_RECENCY_HALF_LIFE_DAYS` | `45` | Dokploy, `.env` | knowledge-service | Non | Demi-vie de scoring recence |
+| `KNOWLEDGE_GRAPH_EMBEDDING_PROVIDER` | `local` | Dokploy, `.env` | knowledge-service | Non | `local` par defaut; providers externes doivent rester server-only |
+| `KNOWLEDGE_GRAPH_EMBEDDING_MODEL` | `local-hashing-v1` | Dokploy, `.env` | knowledge-service | Non | Modele/strategie d'embedding |
+| `NEO4J_URI` | `bolt://neo4j:7687` | Dokploy, `.env` | knowledge-service | Non | URI interne Neo4j |
+| `NEO4J_USERNAME` | `neo4j` | Dokploy, `.env` | knowledge-service | Non | Utilisateur Neo4j |
+| `NEO4J_PASSWORD` | -- | Dokploy, `.env` | knowledge-service | **Oui** | Mot de passe Neo4j, server-only |
+| `QDRANT_URL` | `http://qdrant:6333` | Dokploy, `.env` | knowledge-service | Non | URL interne Qdrant |
+| `QDRANT_API_KEY` | -- | Dokploy, `.env` | knowledge-service | **Oui si defini** | Cle Qdrant optionnelle, server-only |
 | `AI_CHAT_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le chat grounded |
 | `AI_CHALLENGER_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le challenger Anthropic |
 | `AI_RELABEL_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le relabel transaction ambigu |

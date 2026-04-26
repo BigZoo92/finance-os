@@ -1,6 +1,6 @@
 # Finance-OS -- Services Externes
 
-> **Derniere mise a jour** : 2026-04-15
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici tout nouveau service externe integre.
 
@@ -23,6 +23,8 @@ graph LR
         HN + GDELT + ECB + Fed + SEC + FRED"]
         MarketBackbone["Market backbone
         EODHD + FRED + Twelve Data"]
+        Knowledge["Knowledge service
+        Temporal graph + GraphRAG"]
         GHCR["GitHub Container Registry
         Images Docker"]
         Dokploy["Dokploy
@@ -34,10 +36,32 @@ graph LR
     Worker -->|"OAuth2 + REST"| Powens
     API -->|"REST + RSS + XML + HTML head scrape"| NewsBackbone
     API -->|"REST quotes + macro observations"| MarketBackbone
+    API -->|"Internal HTTP only"| Knowledge
     Worker -->|"Internal POST /dashboard/markets/refresh"| API
     GHA -->|"Push images"| GHCR
     GHA -->|"Deploy API"| Dokploy
 ```
+
+---
+
+## 0. Internal knowledge service -- Temporal GraphRAG
+
+| Detail | Valeur |
+|---|---|
+| **Type** | Service interne FastAPI + backends graph/vector |
+| **Role** | Memoire temporelle explicable pour l'AI Advisor |
+| **URL** | `KNOWLEDGE_SERVICE_URL` (`http://knowledge-service:8011` en Docker prod) |
+| **Auth** | Reseau interne + appels API admin/demo gardes par `apps/api` |
+| **Backends cibles** | Neo4j (graph), Qdrant (hybrid vector/sparse), fallback local JSON |
+| **Consommateur** | API advisor knowledge routes |
+
+Regles:
+
+- jamais expose publiquement; public ingress reste `apps/web`
+- demo = fixtures deterministes, aucune mutation
+- admin = donnees persistables, fail-soft si service indisponible
+- pas de secrets, codes Powens, tokens provider ou PII brute dans les logs/payloads
+- pas de trading execution; les concepts trading sont knowledge-only
 
 ---
 

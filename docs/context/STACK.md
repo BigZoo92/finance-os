@@ -1,6 +1,6 @@
 # Finance-OS -- Stack Technique
 
-> **Derniere mise a jour** : 2026-04-15
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute modification structurelle de la stack doit etre refletee ici.
 
@@ -9,7 +9,7 @@
 ## Vue d'ensemble
 
 Finance-OS est un **cockpit de finances personnelles** self-hosted, mono-utilisateur.
-Architecture monorepo avec 4 runtimes (Web, API, Worker, Desktop Tauri) et packages partages.
+Architecture monorepo avec 5 runtimes (Web, API, Worker, Knowledge Service, Desktop Tauri) et packages partages.
 
 ```mermaid
 graph TB
@@ -24,11 +24,17 @@ graph TB
         Port 3001 - Bun"]
         Worker["Worker (Bun)
         Background jobs"]
+        Knowledge["Knowledge Service (FastAPI)
+        Port 8011 internal only"]
     end
 
     subgraph "Infrastructure"
         PG["PostgreSQL 16"]
         Redis["Redis 7"]
+        Neo4j["Neo4j graph store
+        temporal graph target"]
+        Qdrant["Qdrant vector store
+        optional semantic index"]
     end
 
     subgraph "External"
@@ -44,6 +50,9 @@ graph TB
     Web -->|"/api/* proxy (Nitro)"| API
     API -->|"Drizzle ORM"| PG
     API -->|"node-redis"| Redis
+    API -->|"Internal HTTP /knowledge/*"| Knowledge
+    Knowledge -->|"Graph protocol / Bolt"| Neo4j
+    Knowledge -->|"Vector search API"| Qdrant
     Worker -->|"Drizzle ORM"| PG
     Worker -->|"BLPOP job queue"| Redis
     Worker -->|"REST + OAuth2"| Powens
@@ -64,6 +73,7 @@ finance-os/
     web/          # Frontend - React 19, TanStack Start, Nitro SSR
     api/          # Backend  - Elysia sur Bun
     worker/       # Jobs     - Consumer Redis sur Bun
+    knowledge-service/ # Memoire graphe temporelle - FastAPI Python
     desktop/      # Shell natif - Tauri 2 (reuse apps/web)
   packages/
     ui/           # Design system - shadcn/ui + Radix + Tailwind v4
@@ -132,6 +142,19 @@ finance-os/
 | **Internal HTTP scheduler** | Declenche les ingestions news et refresh marches cache-first |
 
 
+### Knowledge Service (apps/knowledge-service)
+
+| Technologie | Version | Role |
+|---|---|---|
+| **Python** | 3.12 | Runtime service interne |
+| **FastAPI** | latest | HTTP interne, OpenAPI, validation Pydantic |
+| **Pydantic Settings** | latest | Configuration server-only `KNOWLEDGE_*` |
+| **Neo4j driver** | latest | Backend graphe temporel cible |
+| **Qdrant client** | latest | Backend vectoriel optionnel |
+| **orjson** | latest | Serialisation JSON rapide |
+
+**Runtime** : service interne uniquement. En developpement, le compose expose `127.0.0.1:8011`; en production il n'a pas de port public.
+
 ### Desktop shell (apps/desktop)
 
 | Technologie | Version | Role |
@@ -149,6 +172,8 @@ finance-os/
 | **PostgreSQL** | 16-alpine | Stockage principal |
 | **Drizzle ORM** | latest | Schema-as-code, migrations |
 | **Drizzle Kit** | latest | CLI migrations |
+| **Neo4j** | 5.x | Graphe temporel cible pour la memoire IA |
+| **Qdrant** | latest | Index vectoriel optionnel pour retrieval hybride |
 
 ### Cache & Queue
 

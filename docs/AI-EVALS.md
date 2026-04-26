@@ -1,6 +1,6 @@
 # AI Evals
 
-Last updated: 2026-04-20
+Last updated: 2026-04-26
 
 ## Purpose
 
@@ -14,6 +14,7 @@ They exist to catch:
 - challenger failures to call out missing signals
 - cost states that should force degradation
 - insufficient-data cases that should stay cautious
+- knowledge context that should surface provenance, contradictions, unknowns and token budget instead of silent overconfidence
 
 ## What Exists Today
 
@@ -70,6 +71,7 @@ When adding or tuning eval cases for recommendations/chat:
 1. include at least one expectation that checks evidence quality (not only formatting)
 2. include at least one expectation that checks uncertainty handling (`unknown`, caveat, or degraded status)
 3. ensure assertions remain deterministic in demo mode and do not require live provider calls
+4. if a case uses `KnowledgeContextBundle`, assert that deterministic finance-engine facts remain primary and graph context is only enrichment/challenge material
 
 ## Adding New Eval Cases
 
@@ -78,6 +80,7 @@ When adding or tuning eval cases for recommendations/chat:
 3. store explicit expectations, not vague natural-language grading
 4. update `run-advisor-evals.ts` if the new case needs a new assertion path
 5. add or extend a direct test when logic changes materially
+6. for graph-memory cases, include a stale/contradictory evidence path and an unavailable-service fallback path
 
 ## Good Eval Patterns
 
@@ -97,5 +100,6 @@ When adding or tuning eval cases for recommendations/chat:
 - no replay harness for historical production runs yet
 - no provider-side golden dataset evaluation pipeline yet
 - no separate offline batch evaluation job yet
+- no full GraphRAG quality benchmark yet; current graph tests cover schema, seed, temporal supersession, contradictions, redaction, query shape and rebuild idempotency
 
 The current layer is intentionally small but real, queryable, and production-usable.

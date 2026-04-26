@@ -1,6 +1,6 @@
 # AI Setup
 
-Last updated: 2026-04-20
+Last updated: 2026-04-26
 
 ## Goal
 
@@ -25,6 +25,9 @@ Recommended now:
 - `AI_ADVISOR_ADMIN_ONLY=true`
 - `AI_ADVISOR_FORCE_LOCAL_ONLY=false`
 - `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=true`
+- `KNOWLEDGE_SERVICE_ENABLED=false` until the internal service is running
+- `KNOWLEDGE_SERVICE_URL=http://127.0.0.1:8011` locally or `http://knowledge-service:8011` in Docker
+- `KNOWLEDGE_GRAPH_RETRIEVAL_MODE=hybrid`
 - `AI_CHAT_ENABLED=true`
 - `AI_CHALLENGER_ENABLED=true`
 - `AI_RELABEL_ENABLED=true`
@@ -37,6 +40,9 @@ Operational consequence:
 
 - the advisor surface is visible on `/actualites`
 - the educational Q&A card is visible on `/actualites` with confidence, citations, and browse-topics fallback
+- `/memoire` exposes graph health, hybrid search, entity inspection and AI Advisor context preview
+- admin mode can call the internal knowledge service when `KNOWLEDGE_SERVICE_ENABLED=true`
+- demo mode uses deterministic graph fixtures and never writes
 - the full mission is started manually from the admin button `Tout rafraichir et analyser`
 - no background advisor scheduler runs by itself
 - no Powens auto-sync scheduler runs by itself
@@ -93,6 +99,10 @@ Prepared for later, not fully activated:
   - only if you route requests through your own gateway
 - `AI_USD_TO_EUR_RATE`
   - explicit FX conversion for reporting
+- `KNOWLEDGE_SERVICE_ENABLED=true`
+  - only after `apps/knowledge-service` is running and reachable internally
+- `NEO4J_PASSWORD`
+  - required when using the Neo4j production graph backend
 
 ## Where To Store Secrets
 
@@ -118,6 +128,7 @@ Recommended split:
 
 - API:
   - all `AI_*` provider, budget, and advisor flags
+  - all `KNOWLEDGE_*`, `NEO4J_*`, and `QDRANT_*` server-only values
   - `PRIVATE_ACCESS_TOKEN`
 - Worker:
   - `PRIVATE_ACCESS_TOKEN`

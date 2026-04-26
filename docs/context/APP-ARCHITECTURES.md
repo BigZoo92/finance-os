@@ -1,6 +1,6 @@
 # Finance-OS -- Architecture par App & Package
 
-> **Derniere mise a jour** : 2026-04-15
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Mettre a jour lors d'ajout de modules, routes, ou packages.
 
@@ -18,6 +18,8 @@ graph TB
         Elysia + Bun"]
         Worker["apps/worker
         Bun background jobs"]
+        Knowledge["apps/knowledge-service
+        FastAPI internal graph memory"]
     end
 
     subgraph "Packages partages"
@@ -44,6 +46,7 @@ graph TB
     API --> Powens
     API --> Redis
     API --> Prelude
+    API --> Knowledge
     Worker --> DB
     Worker --> Env
     Worker --> Powens
@@ -420,7 +423,48 @@ Posture recommandee actuelle:
 
 ---
 
-## 4. packages/db -- Base de donnees
+## 4. apps/knowledge-service -- Memoire graphe temporelle
+
+**Runtime** : Python 3.12 | **Framework** : FastAPI | **Exposition** : interne uniquement
+
+```
+apps/knowledge-service/
+  pyproject.toml
+  Dockerfile
+  src/finance_os_knowledge/
+    app.py        # FastAPI, requestId, safe errors, structured logs
+    config.py     # KNOWLEDGE_* settings
+    models.py     # Pydantic contracts
+    schema.py     # node/relation taxonomy
+    store.py      # deterministic local graph/BM25/vector fallback engine
+    seed.py       # curated financial/math/risk/macro/trading/cost seed
+    redaction.py  # safe raw payload redaction
+  tests/
+```
+
+### Role
+
+- Fournit les endpoints internes `/knowledge/ingest`, `/knowledge/query`, `/knowledge/context-bundle`, `/knowledge/rebuild`, `/knowledge/stats`, `/knowledge/schema`, `/knowledge/explain`.
+- Stocke des faits temporels avec provenance, confiance, validite, supersession et contradictions sans ecraser l'historique.
+- Combine recherche full-text/BM25, score vectoriel optionnel, traversal graphe, poids de relations, recence et provenance.
+- Produit un `KnowledgeContextBundle` compact pour l'AI Advisor; le moteur deterministe `packages/finance-engine` reste prioritaire.
+- Cible production: Neo4j pour le graphe temporel et Qdrant pour l'index vectoriel. Le moteur local JSON reste le fallback deterministe et testable.
+- Ne doit jamais etre expose publiquement; `apps/web` reste le seul point d'entree public.
+
+### Endpoints appeles par apps/api
+
+| Endpoint service | Usage API |
+|---|---|
+| `GET /knowledge/stats` | `/dashboard/advisor/knowledge/stats` |
+| `GET /knowledge/schema` | `/dashboard/advisor/knowledge/schema` |
+| `POST /knowledge/query` | `/dashboard/advisor/knowledge/query` |
+| `POST /knowledge/context-bundle` | `/dashboard/advisor/knowledge/context-bundle` |
+| `POST /knowledge/explain` | `/dashboard/advisor/knowledge/explain` |
+| `POST /knowledge/rebuild` | `/dashboard/advisor/knowledge/rebuild` admin/internal only |
+
+---
+
+## 5. packages/db -- Base de donnees
 
 **ORM** : Drizzle | **Driver** : postgres-js | **Dialect** : PostgreSQL
 
@@ -463,7 +507,7 @@ packages/db/
 
 ---
 
-## 5. packages/powens -- Client Powens
+## 6. packages/powens -- Client Powens
 
 ```
 packages/powens/src/
@@ -489,7 +533,7 @@ packages/powens/src/
 
 ---
 
-## 6. packages/env -- Validation environnement
+## 7. packages/env -- Validation environnement
 
 ```
 packages/env/src/
@@ -504,7 +548,7 @@ packages/env/src/
 
 ---
 
-## 7. packages/redis -- Client wrapper
+## 8. packages/redis -- Client wrapper
 
 ```
 packages/redis/src/
@@ -516,7 +560,7 @@ packages/redis/src/
 
 ---
 
-## 8. packages/ui -- Design system
+## 9. packages/ui -- Design system
 
 ```
 packages/ui/
@@ -547,7 +591,7 @@ import { Button, Card, Badge } from '@finance-os/ui/components'
 
 ---
 
-## 9. packages/prelude -- Utilitaires
+## 10. packages/prelude -- Utilitaires
 
 ```
 packages/prelude/src/
@@ -560,7 +604,7 @@ packages/prelude/src/
 
 ---
 
-## 10. packages/config-ts -- Configs TypeScript
+## 11. packages/config-ts -- Configs TypeScript
 
 ```
 packages/config-ts/
@@ -571,16 +615,16 @@ packages/config-ts/
 
 ---
 
-## 11. infra/ -- Infrastructure
+## 12. infra/ -- Infrastructure
 
 ```
 infra/
   docker/
     Dockerfile                    # Multi-stage: build-web, web, api, worker
-    docker-compose.dev.yml        # Dev: postgres + redis
+    docker-compose.dev.yml        # Dev: postgres + redis + knowledge-service + neo4j + qdrant
     healthchecks/                 # Scripts healthcheck containers
-docker-compose.prod.yml           # Prod: web + api + worker + postgres + redis + ops-alerts (+ optional hermes-agent profile)
-docker-compose.prod.build.yml     # Build local
+docker-compose.prod.yml           # Prod: web + api + worker + knowledge-service + postgres + redis + neo4j + qdrant + ops-alerts
+docker-compose.prod.build.yml     # Build local, including knowledge-service
 docker-compose.prod.https.yml     # Caddy reverse proxy HTTPS
 ```
 

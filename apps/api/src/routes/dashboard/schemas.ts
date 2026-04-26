@@ -71,12 +71,7 @@ export const dashboardTransactionClassificationBodySchema = t.Object({
   category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
   subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
   incomeType: t.Optional(
-    t.Union([
-      t.Literal('salary'),
-      t.Literal('recurring'),
-      t.Literal('exceptional'),
-      t.Null(),
-    ])
+    t.Union([t.Literal('salary'), t.Literal('recurring'), t.Literal('exceptional'), t.Null()])
   ),
   tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 32 }), { maxItems: 10 })),
 })
@@ -117,6 +112,59 @@ export const dashboardAdvisorKnowledgeAnswerQuerySchema = t.Object({
     maxLength: 240,
     pattern: '^(?=.*\\S).+$',
   }),
+})
+
+const dashboardAdvisorKnowledgeRetrievalModeSchema = t.Union([
+  t.Literal('hybrid'),
+  t.Literal('graph'),
+  t.Literal('vector'),
+  t.Literal('fulltext'),
+])
+
+const dashboardAdvisorKnowledgeModeSchema = t.Union([
+  t.Literal('demo'),
+  t.Literal('admin'),
+  t.Literal('internal'),
+])
+
+export const dashboardAdvisorKnowledgeQueryBodySchema = t.Object({
+  query: t.String({
+    minLength: 1,
+    maxLength: 1000,
+    pattern: '^(?=.*\\S).+$',
+  }),
+  mode: t.Optional(dashboardAdvisorKnowledgeModeSchema),
+  filters: t.Optional(t.Record(t.String({ minLength: 1, maxLength: 80 }), t.Any())),
+  maxResults: t.Optional(t.Numeric({ minimum: 1, maximum: 64 })),
+  maxPathDepth: t.Optional(t.Numeric({ minimum: 0, maximum: 5 })),
+  retrievalMode: t.Optional(dashboardAdvisorKnowledgeRetrievalModeSchema),
+  includeContradictions: t.Optional(t.Boolean()),
+  includeEvidence: t.Optional(t.Boolean()),
+})
+
+export const dashboardAdvisorKnowledgeContextBundleBodySchema = t.Intersect([
+  dashboardAdvisorKnowledgeQueryBodySchema,
+  t.Object({
+    maxTokens: t.Optional(t.Numeric({ minimum: 128, maximum: 12000 })),
+    advisorTask: t.Optional(t.String({ minLength: 1, maxLength: 240 })),
+  }),
+])
+
+export const dashboardAdvisorKnowledgeExplainBodySchema = t.Object({
+  id: t.String({
+    minLength: 1,
+    maxLength: 240,
+    pattern: '^(?=.*\\S).+$',
+  }),
+  query: t.Optional(t.String({ minLength: 1, maxLength: 1000 })),
+  mode: t.Optional(dashboardAdvisorKnowledgeModeSchema),
+})
+
+export const dashboardAdvisorKnowledgeRebuildBodySchema = t.Object({
+  mode: t.Optional(dashboardAdvisorKnowledgeModeSchema),
+  includeSeed: t.Optional(t.Boolean()),
+  sources: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 120 }), { maxItems: 20 })),
+  dryRun: t.Optional(t.Boolean()),
 })
 
 export const dashboardAdvisorChatBodySchema = t.Object({

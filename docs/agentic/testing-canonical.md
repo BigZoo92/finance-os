@@ -24,10 +24,11 @@
 Start small, then widen:
 
 1. Focused tests for changed area.
-2. `pnpm lint` and `pnpm typecheck`.
-3. `pnpm -r --if-present test`.
-4. `pnpm check:ci`.
-5. `scripts/smoke-api.mjs` / `scripts/smoke-prod.mjs` for route and release-sensitive work.
+2. Python service checks when `apps/knowledge-service` changes: isolated venv install, `python -m pytest apps/knowledge-service/tests`, and compile/import checks.
+3. `pnpm lint` and `pnpm typecheck`.
+4. `pnpm -r --if-present test`.
+5. `pnpm check:ci`.
+6. `scripts/smoke-api.mjs` / `scripts/smoke-prod.mjs` for route and release-sensitive work.
 
 ## Demo/Admin Dual-Path (Required)
 

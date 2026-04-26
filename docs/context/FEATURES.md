@@ -1,6 +1,6 @@
 # Finance-OS -- Features Metier
 
-> **Derniere mise a jour** : 2026-04-15
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle feature ou evolution significative.
 
@@ -337,6 +337,12 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - `GET /dashboard/advisor/spend`
 - `GET /dashboard/advisor/knowledge-topics`
 - `GET /dashboard/advisor/knowledge-answer`
+- `GET /dashboard/advisor/knowledge/stats`
+- `GET /dashboard/advisor/knowledge/schema`
+- `POST /dashboard/advisor/knowledge/query`
+- `POST /dashboard/advisor/knowledge/context-bundle`
+- `POST /dashboard/advisor/knowledge/explain`
+- `POST /dashboard/advisor/knowledge/rebuild`
 - `GET /dashboard/advisor/chat`
 - `POST /dashboard/advisor/chat`
 - `GET /dashboard/advisor/evals`
@@ -371,6 +377,13 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
   - retrieval heuristique local + assemblage de reponse template
   - citations de sections du pack
   - garde-fous contre le conseil personnalise, fiscal, juridique, ou achat/vente
+- Memoire temporelle `apps/knowledge-service`:
+  - service Python FastAPI interne uniquement, appele par l'API via `KNOWLEDGE_SERVICE_URL`
+  - schema graph temporel pour concepts financiers, formules, signaux news/marches, snapshots personnels, recommandations, modeles, usages tokens et observations de cout
+  - retrieval hybride: texte/BM25, vecteur optionnel, traversal graphe, scoring temporel, confiance et provenance
+  - `KnowledgeContextBundle` compact pour enrichir, expliquer et challenger les recommandations sans remplacer le moteur deterministe
+  - mode demo deterministe sans DB, provider, embedding externe ou mutation reelle
+  - mode admin persistant et rebuildable depuis les sources canoniques; les faits contradictoires ou supersedes restent historises
 
 ### Fonctionnement actuel
 
@@ -392,6 +405,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
   - proxies de volatilite, downside risk, Sharpe, Sortino, max drawdown
   - signaux de drift et scenarios simples
 - Les recommandations candidates sont d'abord produites de facon deterministe
+- La memoire graphe peut fournir un contexte explicable avant generation ou challenge, mais `packages/finance-engine` reste la source de decision primaire
 - OpenAI reformule un brief quotidien structure et relabel les transactions ambiguës
 - Claude challenger relit les recommandations prioritaires et peut les confirmer, les adoucir ou les flagger
 - Le panneau Q&A educatif repond depuis le knowledge pack avec score de confiance, citations, et fallback browse-only vers les sujets si la confiance est faible
@@ -405,9 +419,11 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
   - zero provider
   - zero mutation
   - brief/recommandations/chat/Q&A educatif deterministes
+  - memoire graphe servie par fixtures deterministes et read-only
 - Admin:
   - lecture DB et artefacts persistants
   - retrieval Q&A read-only autorise si `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=true`
+  - endpoints memoire admin appellent le service interne si `KNOWLEDGE_SERVICE_ENABLED=true`, avec fallback degradable si indisponible
   - runs manuels via orchestration complete ou planifies plus tard via worker
   - degrades intelligentes si budget, provider, kill-switch retrieval, ou garde-fou de contenu bloque
 

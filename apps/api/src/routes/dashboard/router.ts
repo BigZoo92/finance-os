@@ -1,17 +1,18 @@
 import { Elysia } from 'elysia'
+import type { FailsoftSource } from './domain/failsoft-policy'
 import { createDashboardRuntimePlugin } from './plugin'
+import { createAdvisorRoute } from './routes/advisor'
+import { createAdvisorKnowledgeRoute } from './routes/advisor-knowledge'
+import { createAnalyticsRoute } from './routes/analytics'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
 import { createGoalsRoute } from './routes/goals'
+import { createManualAssetsRoute } from './routes/manual-assets'
 import { createMarketsRoute } from './routes/markets'
 import { createNewsRoute } from './routes/news'
 import { createSummaryRoute } from './routes/summary'
-import { createAnalyticsRoute } from './routes/analytics'
-import { createAdvisorRoute } from './routes/advisor'
-import { createManualAssetsRoute } from './routes/manual-assets'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
-import type { FailsoftSource } from './domain/failsoft-policy'
 import type { ApiDb, RedisClient } from './types'
 
 export const createDashboardRoutes = ({
@@ -86,6 +87,13 @@ export const createDashboardRoutes = ({
   aiMaxChatMessagesContext,
   aiUsdToEurRate,
   advisorXSignalsMode,
+  knowledgeServiceEnabled,
+  knowledgeServiceUrl,
+  knowledgeServiceTimeoutMs,
+  knowledgeGraphMaxContextTokens,
+  knowledgeGraphRetrievalMode,
+  knowledgeGraphMaxPathDepth,
+  knowledgeGraphMinConfidence,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -158,6 +166,13 @@ export const createDashboardRoutes = ({
   aiMaxChatMessagesContext: number
   aiUsdToEurRate: number
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
+  knowledgeServiceEnabled: boolean
+  knowledgeServiceUrl: string
+  knowledgeServiceTimeoutMs: number
+  knowledgeGraphMaxContextTokens: number
+  knowledgeGraphRetrievalMode: 'hybrid' | 'graph' | 'vector' | 'fulltext'
+  knowledgeGraphMaxPathDepth: number
+  knowledgeGraphMinConfidence: number
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -249,6 +264,21 @@ export const createDashboardRoutes = ({
         adminOnly: aiAdvisorAdminOnly,
         chatEnabled: aiChatEnabled,
         relabelEnabled: aiRelabelEnabled,
+      })
+    )
+    .use(
+      createAdvisorKnowledgeRoute({
+        advisorEnabled: aiAdvisorEnabled,
+        adminOnly: aiAdvisorAdminOnly,
+        knowledgeConfig: {
+          enabled: knowledgeServiceEnabled,
+          url: knowledgeServiceUrl,
+          timeoutMs: knowledgeServiceTimeoutMs,
+          maxContextTokens: knowledgeGraphMaxContextTokens,
+          retrievalMode: knowledgeGraphRetrievalMode,
+          maxPathDepth: knowledgeGraphMaxPathDepth,
+          minConfidence: knowledgeGraphMinConfidence,
+        },
       })
     )
     .use(createDerivedRecomputeRoute())

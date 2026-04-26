@@ -35,6 +35,8 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - when data is delayed, missing, or inconsistent, fail soft with clear fallback UI copy and degraded-but-usable defaults instead of blocking flows
   - demo-mode analytics must remain deterministic and mock-backed; admin-only analytics may use live providers but must keep demo/admin split explicit
 - Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
+- The Temporal Knowledge Graph / GraphRAG layer is internal-only derived memory for the AI Advisor. It enriches, explains, and challenges deterministic finance-engine outputs; it is not a source of truth for transactions, not part of the agentic development pipeline, and must never enable trading execution.
+- Knowledge graph demo mode must use deterministic fixtures only. Admin mode may call the internal knowledge service, but it must fail soft when unavailable and must preserve request IDs, safe errors, provenance, confidence, recency, temporal validity, and contradiction history.
 - `batch:` issues are first-class product briefs. Preserve their context, objectives, design principles, non-negotiable constraints, expected result, cost bias, decision rules, and explicit out-of-scope when spawning downstream work.
 - Autopilot workflow invariants:
   - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs

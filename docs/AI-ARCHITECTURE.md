@@ -1,6 +1,6 @@
 # AI Architecture
 
-Last updated: 2026-04-15
+Last updated: 2026-04-26
 
 ## Scope
 
@@ -9,6 +9,7 @@ Finance-OS now ships a hybrid advisor stack for the personal cockpit:
 - deterministic finance engine first
 - LLMs only for structured classification, grounded synthesis, and challenger review
 - educational knowledge-pack retrieval for bounded finance Q&A
+- temporal financial knowledge graph memory and Hybrid GraphRAG context bundles
 - persisted artifacts instead of prompting from raw history every time
 - explicit cost, budget, and audit trails
 - strict demo/admin split
@@ -17,10 +18,12 @@ The implementation lives in:
 
 - `packages/finance-engine`
 - `packages/ai`
+- `apps/knowledge-service`
 - `packages/db/src/schema/ai.ts`
 - `apps/api/src/routes/dashboard/domain/advisor/**`
 - `apps/api/src/routes/dashboard/repositories/dashboard-advisor-repository.ts`
 - `apps/api/src/routes/dashboard/routes/advisor.ts`
+- `apps/api/src/routes/dashboard/routes/advisor-knowledge.ts`
 - `apps/worker/src/advisor-daily-scheduler.ts`
 - `apps/api/src/routes/dashboard/domain/advisor/create-manual-refresh-and-run-use-case.ts`
 - `apps/api/src/routes/dashboard/domain/dashboard-manual-assets.ts`
@@ -52,6 +55,23 @@ Implementation consequences:
 5. Knowledge Q&A stays educational: retrieval is templated, citation-backed, and must block personalized, fiscal, legal, or buy/sell framing.
 6. Fail-soft: demo stays fully deterministic. Admin can degrade to deterministic preview artifacts when DB/provider freshness or budget guardrails block deeper runs, and can degrade knowledge answers to browse-only topics when retrieval is disabled or low-confidence.
 7. Cost-aware by default: every model call writes model usage and cost ledger records. Budgets can disable challenger or deeper analysis before hard stop.
+8. Graph memory is enrichment only: `KnowledgeContextBundle` can add concepts, evidence, contradictions and graph paths, but deterministic `packages/finance-engine` remains the recommendation source of truth.
+
+## Temporal Knowledge Graph Memory
+
+`apps/knowledge-service` provides the internal AI memory layer:
+
+- FastAPI service, internal Docker network only
+- Graphiti/Zep-style temporal property graph model
+- production target: Neo4j graph + Qdrant hybrid vector retrieval
+- deterministic local JSON backend for demo, tests and degraded fallback
+- hybrid retrieval across BM25/full-text, vector similarity, relation-weighted traversal, temporal recency, confidence and provenance
+- temporal fields: `observedAt`, `validFrom`, `validTo`, `invalidatedAt`, `supersededBy`, `sourceTimestamp`, `ingestionTimestamp`
+- contradiction-preserving relations such as `CONTRADICTED_BY`, `WEAKENS`, `INVALIDATES` and `SUPERSEDES`
+
+The graph can store financial concepts, formulas, indicators, assumptions, market/news/tweet signals, model/cost observations and personal snapshots. It must not store unredacted secrets, Powens codes/tokens or raw sensitive financial PII.
+
+See [ADR: Temporal Financial Knowledge Graph Memory + Hybrid GraphRAG](adr/temporal-knowledge-graph-graphrag.md).
 
 ## Runtime Modules
 
@@ -84,6 +104,7 @@ Responsibilities:
 - pricing registry and cost estimation
 - budget policy
 - default seeded eval cases
+- `KnowledgeContextBundle` TypeScript contract and compact prompt helper
 
 ### API advisor domain
 
@@ -97,6 +118,7 @@ Responsibilities:
 - educational knowledge topics and answer assembly
 - grounded chat
 - eval execution and persistence
+- knowledge graph stats/query/context-bundle/schema/explain/rebuild proxy endpoints with demo fixtures and admin-only rebuild
 
 `apps/api/src/routes/dashboard/domain/advisor/create-manual-refresh-and-run-use-case.ts` orchestrates the current manual mission:
 

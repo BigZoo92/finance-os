@@ -25,6 +25,7 @@ This guide defines the runtime topology and layering boundaries that every archi
 - API runtime: `apps/api/src/index.ts`.
 - Web runtime: `apps/web/src/routes/__root.tsx`.
 - Worker runtime: `apps/worker/src/index.ts`.
+- Knowledge memory runtime: `apps/knowledge-service/src/finance_os_knowledge/app.py`; internal-only, reached through `apps/api`.
 - Desktop wrapper: `apps/desktop/src-tauri/src/main.rs`.
 
 ## Data Flow and Contracts
@@ -33,6 +34,7 @@ This guide defines the runtime topology and layering boundaries that every archi
 - Domain modules orchestrate business workflows.
 - Repository modules own persistence and read models.
 - Service modules integrate providers and external side effects.
+- The Temporal Knowledge Graph service is enrichment-only for the AI Advisor. It may provide `KnowledgeContextBundle` evidence, paths, confidence, recency, and provenance, but deterministic `packages/finance-engine` outputs remain primary.
 - Feature docs must link to the owning contract and canonical testing/release pages.
 
 ## Demo/Admin Dual-Path (Required)

@@ -1,6 +1,6 @@
 # Finance-OS -- Marches & Macro
 
-> **Derniere mise a jour** : 2026-04-10
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Source de verite pour la feature `/marches`.
 
@@ -229,6 +229,8 @@ Le mapping est volontairement pragmatique: quand un indice cash global gratuit r
 ## 8. MarketContextBundle
 
 Le bundle a pour but de servir de surface stable pour un futur advisor IA.
+
+Depuis la fondation `apps/knowledge-service`, ce bundle peut aussi alimenter la memoire graphe temporelle. Cette integration reste cache-first: le graphe lit les snapshots marche/macro deja persistants, conserve la provenance provider, garde les fenetres temporelles et ne declenche jamais de refresh provider depuis une route de lecture advisor.
 
 ### 8.1 Champs principaux
 

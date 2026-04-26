@@ -19,6 +19,12 @@
 | `/sante` | **Santé** | Vue consolidée de l'état système — connexions, sync, diagnostics, derived, push | Tous les endpoints status/health |
 | `/parametres` | **Paramètres** | Notifications push, derived recompute, exports | `pushSettings`, `derivedRecomputeStatus` |
 
+Additional AI route:
+
+| Route | Page | Role | Donnees principales |
+|-------|------|------|---------------------|
+| `/memoire` | **Memoire & connaissances** | Graphe temporel interne, recherche hybride, provenance, contradictions et preview du contexte AI Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
+
 ### Routes système (hors layout)
 
 | Route | Rôle |

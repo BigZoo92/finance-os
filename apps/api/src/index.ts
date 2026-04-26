@@ -14,13 +14,13 @@ import {
 } from './auth/guard'
 import { createAuthRoutes } from './auth/routes'
 import { env } from './env'
-import { logApiEvent, isApiDebugEnabled, toErrorLogFields } from './observability/logger'
+import { isApiDebugEnabled, logApiEvent, toErrorLogFields } from './observability/logger'
 import { createDashboardRoutes } from './routes/dashboard/router'
 import { createDebugRoutes } from './routes/debug/router'
-import { registerSystemRoutes } from './routes/system'
-import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createEnrichmentRoutes } from './routes/enrichment/router'
+import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createNotificationsRoutes } from './routes/notifications/router'
+import { registerSystemRoutes } from './routes/system'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -257,8 +257,7 @@ const registerAppRoutes = (app: Elysia) => {
         transactionsSnapshotStaleAfterMinutes: env.TRANSACTIONS_SNAPSHOT_STALE_AFTER_MINUTES,
         transactionsCategorizationMigrationEnabled:
           env.TRANSACTIONS_CATEGORIZATION_MIGRATION_ENABLED,
-        transactionsCategorizationRolloutPercent:
-          env.TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT,
+        transactionsCategorizationRolloutPercent: env.TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT,
         transactionsCategorizationDisagreementAlertRate:
           env.TRANSACTIONS_CATEGORIZATION_ALERT_DISAGREEMENT_RATE,
         transactionsCategorizationShadowLatencyBudgetMs:
@@ -325,6 +324,13 @@ const registerAppRoutes = (app: Elysia) => {
         aiMaxChatMessagesContext: env.AI_MAX_CHAT_MESSAGES_CONTEXT,
         aiUsdToEurRate: env.AI_USD_TO_EUR_RATE,
         advisorXSignalsMode: env.ADVISOR_X_SIGNALS_MODE,
+        knowledgeServiceEnabled: env.KNOWLEDGE_SERVICE_ENABLED,
+        knowledgeServiceUrl: env.KNOWLEDGE_SERVICE_URL,
+        knowledgeServiceTimeoutMs: env.KNOWLEDGE_SERVICE_TIMEOUT_MS,
+        knowledgeGraphMaxContextTokens: env.KNOWLEDGE_GRAPH_MAX_CONTEXT_TOKENS,
+        knowledgeGraphRetrievalMode: env.KNOWLEDGE_GRAPH_RETRIEVAL_MODE,
+        knowledgeGraphMaxPathDepth: env.KNOWLEDGE_GRAPH_MAX_PATH_DEPTH,
+        knowledgeGraphMinConfidence: env.KNOWLEDGE_GRAPH_MIN_CONFIDENCE,
       })
     )
     .use(

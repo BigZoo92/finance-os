@@ -27,6 +27,14 @@ All contract docs should provide:
 - API owners live in `apps/api/src/**/routes/*.ts`.
 - Web consumers live in `apps/web/src/features/*query-options.ts` and route loaders.
 - Worker or integration dependencies must be linked when contracts depend on sync freshness.
+- Knowledge memory contracts are owned by `apps/api/src/routes/dashboard/routes/advisor-knowledge.ts` and proxied to the internal-only `apps/knowledge-service` in admin mode. Demo mode must return deterministic fixtures and never call the service.
+
+## Current Special Contracts
+
+| Surface | Paths | Required behavior |
+| --- | --- | --- |
+| Advisor knowledge memory | `/dashboard/advisor/knowledge/stats`, `/schema`, `/query`, `/context-bundle`, `/explain`, `/rebuild` | requestId propagation, safe errors, demo fixtures, admin fail-soft fallback, rebuild admin/internal only |
+| Knowledge service internal API | `/health`, `/version`, `/knowledge/*` | internal-only, structured logs, no PII/raw secret logging, temporal provenance on entities and relations |
 
 ## Demo/Admin Dual-Path (Required)
 

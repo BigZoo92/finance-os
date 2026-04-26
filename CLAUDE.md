@@ -24,6 +24,12 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
 - do risky local investigations or prototypes on non-autopilot branches
 - critique UI structure, copy, accessibility, and color decisions
 
+## AI Advisor Memory Boundary
+
+- The Temporal Knowledge Graph / GraphRAG service is AI Advisor memory for personal financial context, not the Codex/Claude agentic development pipeline.
+- Deterministic `packages/finance-engine` outputs remain first; graph context only enriches, explains, and challenges recommendations.
+- Never treat graph memory as trading execution infrastructure. Technical/trading nodes are knowledge-only and paper-trading-ready at most.
+
 ## Skills System
 
 **Full inventory**: [docs/SKILLS-INVENTORY.md](docs/SKILLS-INVENTORY.md) — trust tiers, overlap arbitration, usage guide.

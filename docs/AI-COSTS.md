@@ -1,6 +1,6 @@
 # AI Costs
 
-Last updated: 2026-04-15
+Last updated: 2026-04-26
 
 ## What Is Implemented
 
@@ -118,6 +118,14 @@ Do not hardcode provider prices anywhere else.
 - Anthropic challenger only on top recommendations
 - compact, targeted context instead of full history prompts
 - persisted artifacts reused by chat and overview reads
+- `KnowledgeContextBundle` adds a `tokenEstimate` and `maxTokens` cap before any graph context is inserted into advisor prompts
+
+## Knowledge Graph Cost Posture
+
+- Default embeddings are local deterministic hashing, so the graph adds no external model spend by default.
+- External embedding providers are optional and server-only; never put embedding keys in `VITE_*`.
+- Graph context should remain compact. The current default `KNOWLEDGE_GRAPH_MAX_CONTEXT_TOKENS=1800` is a ceiling, not a target.
+- Cost observations and token usage can be stored as graph nodes for future model-router intelligence, but they must be provenance-backed and may be stale.
 - budget-aware step skipping before hard failure
 
 ## Known Limits

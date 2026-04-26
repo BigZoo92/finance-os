@@ -65,8 +65,9 @@ const toFailsoftSourceOrderEnv = (value: string | undefined) => {
   const parsed = normalized
     .split(',')
     .map(entry => entry.trim().toLowerCase())
-    .filter((entry): entry is 'live' | 'cache' | 'demo' =>
-      entry === 'live' || entry === 'cache' || entry === 'demo'
+    .filter(
+      (entry): entry is 'live' | 'cache' | 'demo' =>
+        entry === 'live' || entry === 'cache' || entry === 'demo'
     )
 
   return parsed.length > 0 ? Array.from(new Set(parsed)) : defaultOrder
@@ -429,10 +430,7 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    DEMO_DATASET_STRATEGY: z
-      .enum(['legacy', 'minimal', 'v1'])
-      .optional()
-      .default('v1'),
+    DEMO_DATASET_STRATEGY: z.enum(['legacy', 'minimal', 'v1']).optional().default('v1'),
     DEMO_PERSONA_MATCHING_ENABLED: z
       .string()
       .optional()
@@ -443,8 +441,16 @@ export const getApiEnv = () => {
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT: z.coerce.number().int().min(0).max(100).default(0),
-    TRANSACTIONS_CATEGORIZATION_ALERT_DISAGREEMENT_RATE: z.coerce.number().min(0).max(1).default(0.08),
-    TRANSACTIONS_CATEGORIZATION_SHADOW_LATENCY_BUDGET_MS: z.coerce.number().int().positive().default(150),
+    TRANSACTIONS_CATEGORIZATION_ALERT_DISAGREEMENT_RATE: z.coerce
+      .number()
+      .min(0)
+      .max(1)
+      .default(0.08),
+    TRANSACTIONS_CATEGORIZATION_SHADOW_LATENCY_BUDGET_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(150),
     DERIVED_RECOMPUTE_ENABLED: z
       .string()
       .optional()
@@ -477,7 +483,9 @@ export const getApiEnv = () => {
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     NEWS_PROVIDER_GDELT_QUERY: z
       .string()
-      .default('(finance OR inflation OR rates OR sanctions OR cybersecurity OR "artificial intelligence")'),
+      .default(
+        '(finance OR inflation OR rates OR sanctions OR cybersecurity OR "artificial intelligence")'
+      ),
     NEWS_PROVIDER_ECB_RSS_ENABLED: z
       .string()
       .optional()
@@ -522,7 +530,9 @@ export const getApiEnv = () => {
     NEWS_PROVIDER_SEC_TICKERS: z
       .string()
       .optional()
-      .transform(value => toStringArrayEnv(value, ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA'])),
+      .transform(value =>
+        toStringArrayEnv(value, ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA'])
+      ),
     NEWS_PROVIDER_FRED_ENABLED: z
       .string()
       .optional()
@@ -537,7 +547,9 @@ export const getApiEnv = () => {
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     NEWS_PROVIDER_X_TWITTER_QUERY: z
       .string()
-      .default('(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet'),
+      .default(
+        '(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet'
+      ),
     NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: z.string().min(1).optional(),
     FRED_API_KEY: z.string().min(1).optional(),
     MARKET_DATA_ENABLED: z
@@ -572,7 +584,11 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
-    MARKET_DATA_STALE_AFTER_MINUTES: z.coerce.number().int().positive().default(16 * 60),
+    MARKET_DATA_STALE_AFTER_MINUTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(16 * 60),
     MARKET_DATA_REFRESH_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(900),
     MARKET_DATA_DEFAULT_WATCHLIST_IDS: z
       .string()
@@ -648,6 +664,55 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_SERVICE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    KNOWLEDGE_SERVICE_URL: z
+      .string()
+      .url('KNOWLEDGE_SERVICE_URL must be a valid URL')
+      .default('http://127.0.0.1:8011'),
+    KNOWLEDGE_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(2500),
+    KNOWLEDGE_GRAPH_BACKEND: z.enum(['local', 'neo4j', 'memgraph', 'falkordb']).default('local'),
+    KNOWLEDGE_GRAPH_STORAGE_PATH: z.string().min(1).default('./.knowledge/graph'),
+    KNOWLEDGE_GRAPH_REBUILD_ON_START: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_GRAPH_MAX_CONTEXT_TOKENS: z.coerce.number().int().positive().default(1800),
+    KNOWLEDGE_GRAPH_VECTOR_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_GRAPH_FULLTEXT_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_GRAPH_TEMPORAL_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_GRAPH_DEMO_FIXTURES_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_GRAPH_RETRIEVAL_MODE: z
+      .enum(['hybrid', 'graph', 'vector', 'fulltext'])
+      .default('hybrid'),
+    KNOWLEDGE_GRAPH_RERANKING_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    KNOWLEDGE_GRAPH_MAX_PATH_DEPTH: z.coerce.number().int().min(0).max(5).default(3),
+    KNOWLEDGE_GRAPH_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.35),
+    KNOWLEDGE_GRAPH_RECENCY_HALF_LIFE_DAYS: z.coerce.number().positive().default(45),
+    KNOWLEDGE_GRAPH_EMBEDDING_PROVIDER: z.enum(['local', 'openai', 'none']).default('local'),
+    KNOWLEDGE_GRAPH_EMBEDDING_MODEL: z.string().min(1).default('local-hashing-v1'),
+    NEO4J_URI: z.string().url('NEO4J_URI must be a valid URL').optional(),
+    NEO4J_USERNAME: z.string().min(1).optional(),
+    NEO4J_PASSWORD: z.string().min(1).optional(),
+    QDRANT_URL: z.string().url('QDRANT_URL must be a valid URL').optional(),
+    QDRANT_API_KEY: z.string().min(1).optional(),
     AI_CHAT_ENABLED: z
       .string()
       .optional()
@@ -666,10 +731,7 @@ export const getApiEnv = () => {
     AI_OPENAI_DAILY_MODEL: z.string().default('gpt-5.4-mini'),
     AI_OPENAI_DEEP_MODEL: z.string().default('gpt-5.4'),
     AI_ANTHROPIC_API_KEY: z.string().min(1).optional(),
-    AI_ANTHROPIC_BASE_URL: z
-      .string()
-      .url('AI_ANTHROPIC_BASE_URL must be a valid URL')
-      .optional(),
+    AI_ANTHROPIC_BASE_URL: z.string().url('AI_ANTHROPIC_BASE_URL must be a valid URL').optional(),
     AI_ANTHROPIC_CHALLENGER_MODEL: z.string().default('claude-sonnet-4-6'),
     AI_USD_TO_EUR_RATE: z.coerce.number().positive().default(0.92),
     AI_BUDGET_DAILY_USD: z.coerce.number().nonnegative().default(2),
@@ -691,7 +753,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    PUSH_DELIVERY_PROVIDER_URL: z.string().url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL').optional(),
+    PUSH_DELIVERY_PROVIDER_URL: z
+      .string()
+      .url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL')
+      .optional(),
     PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
     AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
@@ -795,12 +860,20 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    NEWS_FETCH_INTERVAL_MS: z.coerce.number().int().positive().default(4 * 60 * 60 * 1000),
+    NEWS_FETCH_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(4 * 60 * 60 * 1000),
     AI_DAILY_AUTO_RUN_ENABLED: z
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
-    AI_DAILY_INTERVAL_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+    AI_DAILY_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(15 * 60 * 1000),
     AI_DAILY_MARKET_OPEN_WINDOW_ENABLED: z
       .string()
       .optional()
@@ -839,7 +912,10 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    PUSH_DELIVERY_PROVIDER_URL: z.string().url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL').optional(),
+    PUSH_DELIVERY_PROVIDER_URL: z
+      .string()
+      .url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL')
+      .optional(),
     PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
     AI_ADVISOR_ENABLED: z

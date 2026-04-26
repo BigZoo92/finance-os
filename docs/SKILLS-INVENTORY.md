@@ -1,8 +1,12 @@
 # Skills Inventory — Finance-OS
 
-> Last updated: 2026-04-08
+> Last updated: 2026-04-26
 
 This document catalogs all installed agent skills, their trust tier, overlap arbitration, and usage conventions.
+
+## Recent Evaluations
+
+- 2026-04-26: `find-skills` was used before the Temporal Knowledge Graph / GraphRAG work. Public GraphRAG-adjacent skills returned by search were not installed because they had low adoption/trust and did not encode Finance-OS demo/admin, privacy, observability, or agentic-pipeline separation invariants. Local Finance-OS skills and direct primary-source research remain the required path for this area.
 
 ---
 

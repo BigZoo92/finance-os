@@ -1,6 +1,6 @@
 # Finance-OS -- News Fetch
 
-> **Derniere mise a jour** : 2026-04-15
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Toute modification touchant `/dashboard/news`, `/dashboard/news/context`, `/dashboard/news/ingest`, `apps/api/src/routes/dashboard/domain/dashboard-news.ts`, `apps/api/src/routes/dashboard/services/fetch-live-news.ts`, `apps/api/src/routes/dashboard/services/providers/**`, `apps/api/src/routes/dashboard/services/scrape-article-metadata.ts`, `apps/api/src/routes/dashboard/repositories/dashboard-news-repository.ts`, `apps/worker/src/news-ingest-scheduler.ts`, `packages/db/src/schema/news.ts`, `apps/web/src/features/dashboard-api.ts`, `apps/web/src/features/dashboard-query-options.ts`, `apps/web/src/features/demo-data.ts`, `apps/web/src/components/dashboard/news-feed.tsx`, `apps/web/src/components/dashboard/relevance-scoring.ts`, ou les flags news/failsoft doit mettre a jour ce document dans le meme changement.
 
@@ -169,6 +169,16 @@ Ce qui change:
   - chat grounded
 
 Autrement dit, la news stack reste une source structuree et cachee, et l'advisor consomme ses artefacts au lieu d'aller reparcourir le web en direct.
+
+### 3.6 Memoire temporelle
+
+Le `NewsContextBundle` est une source canonique admissible pour `apps/knowledge-service`, mais l'invariant cache-first ne change pas:
+
+- l'ingestion graphe consomme uniquement les artefacts deja normalises/cachees; elle ne declenche pas de provider news
+- `GET /dashboard/news` et `GET /dashboard/news/context` restent read-only/cache-only
+- les relations graphe possibles (`NewsSignal -> MacroSignal -> Sector/Ticker -> Recommendation`) gardent provenance, timestamp source, confiance et validite temporelle
+- demo reste fixture-only; admin peut reconstruire la memoire depuis les snapshots persistants
+- les contradictions ou signaux obsoletes sont historises au lieu d'ecraser les faits precedents
 
 ---
 

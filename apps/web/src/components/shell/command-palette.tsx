@@ -1,19 +1,86 @@
-import { useEffect, useState } from 'react'
-import { Command } from 'cmdk'
 import { useNavigate } from '@tanstack/react-router'
+import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useState } from 'react'
 
 const PAGES = [
-  { to: '/', label: 'Cockpit', glyph: '◈', section: 'Finances', keywords: 'accueil home dashboard vue ensemble quotidien' },
-  { to: '/depenses', label: 'Dépenses', glyph: '↔', section: 'Finances', keywords: 'transactions budgets projections quotidien' },
-  { to: '/actualites', label: 'Actualités', glyph: '▣', section: 'Finances', keywords: 'news feed IA advisor briefing signaux' },
-  { to: '/patrimoine', label: 'Patrimoine', glyph: '◊', section: 'Finances', keywords: 'actifs soldes assets wealth' },
-  { to: '/objectifs', label: 'Objectifs', glyph: '◎', section: 'Finances', keywords: 'goals épargne cibles progression' },
-  { to: '/investissements', label: 'Investissements', glyph: '△', section: 'Finances', keywords: 'positions portfolio bourse' },
-  { to: '/marches', label: 'Marchés', glyph: '≈', section: 'Finances', keywords: 'macro watchlist regime taux inflation fred eodhd' },
-  { to: '/integrations', label: 'Intégrations', glyph: '⊞', section: 'Système', keywords: 'powens sync banque connexion' },
-  { to: '/sante', label: 'Santé', glyph: '♡', section: 'Système', keywords: 'health diagnostics système' },
-  { to: '/parametres', label: 'Paramètres', glyph: '⚙', section: 'Système', keywords: 'settings notifications export config' },
+  {
+    to: '/',
+    label: 'Cockpit',
+    glyph: '◈',
+    section: 'Finances',
+    keywords: 'accueil home dashboard vue ensemble quotidien',
+  },
+  {
+    to: '/depenses',
+    label: 'Dépenses',
+    glyph: '↔',
+    section: 'Finances',
+    keywords: 'transactions budgets projections quotidien',
+  },
+  {
+    to: '/actualites',
+    label: 'Actualités',
+    glyph: '▣',
+    section: 'Finances',
+    keywords: 'news feed IA advisor briefing signaux',
+  },
+  {
+    to: '/memoire',
+    label: 'Mémoire',
+    glyph: '[#]',
+    section: 'Finances',
+    keywords: 'graphe connaissances IA advisor graphrag memoire',
+  },
+  {
+    to: '/patrimoine',
+    label: 'Patrimoine',
+    glyph: '◊',
+    section: 'Finances',
+    keywords: 'actifs soldes assets wealth',
+  },
+  {
+    to: '/objectifs',
+    label: 'Objectifs',
+    glyph: '◎',
+    section: 'Finances',
+    keywords: 'goals épargne cibles progression',
+  },
+  {
+    to: '/investissements',
+    label: 'Investissements',
+    glyph: '△',
+    section: 'Finances',
+    keywords: 'positions portfolio bourse',
+  },
+  {
+    to: '/marches',
+    label: 'Marchés',
+    glyph: '≈',
+    section: 'Finances',
+    keywords: 'macro watchlist regime taux inflation fred eodhd',
+  },
+  {
+    to: '/integrations',
+    label: 'Intégrations',
+    glyph: '⊞',
+    section: 'Système',
+    keywords: 'powens sync banque connexion',
+  },
+  {
+    to: '/sante',
+    label: 'Santé',
+    glyph: '♡',
+    section: 'Système',
+    keywords: 'health diagnostics système',
+  },
+  {
+    to: '/parametres',
+    label: 'Paramètres',
+    glyph: '⚙',
+    section: 'Système',
+    keywords: 'settings notifications export config',
+  },
 ] as const
 
 export function CommandPalette() {
@@ -21,12 +88,14 @@ export function CommandPalette() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
         setOpen(prev => !prev)
       }
-      if (e.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') {
+        setOpen(false)
+      }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -37,8 +106,8 @@ export function CommandPalette() {
     navigate({ to })
   }
 
-  const financesPages = PAGES.filter(p => p.section === 'Finances')
-  const systemPages = PAGES.filter(p => p.section === 'Système')
+  const financesPages = PAGES.filter(page => page.section === 'Finances')
+  const systemPages = PAGES.filter(page => page.section === 'Système')
 
   return (
     <AnimatePresence>
@@ -60,7 +129,6 @@ export function CommandPalette() {
             transition={{ type: 'spring', bounce: 0.15, duration: 0.38 }}
             className="fixed left-1/2 top-[18%] z-[101] w-[92vw] max-w-[560px] -translate-x-1/2"
           >
-            {/* Aurora rim — subtle rose→violet gradient frame */}
             <div
               className="relative overflow-hidden rounded-[22px] p-[1px]"
               style={{
@@ -71,7 +139,6 @@ export function CommandPalette() {
               }}
             >
               <Command className="overflow-hidden rounded-[21px] bg-card" loop>
-                {/* Header rail */}
                 <div
                   className="relative flex items-center gap-3 border-b border-border/40 px-4 py-3"
                   style={{
@@ -79,7 +146,9 @@ export function CommandPalette() {
                       'linear-gradient(180deg, oklch(from var(--primary) l c h / 5%) 0%, transparent 100%)',
                   }}
                 >
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary/65">◈ Finance OS</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary/65">
+                    ◈ Finance OS
+                  </span>
                   <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">
                     · navigation
                   </span>
@@ -118,10 +187,10 @@ export function CommandPalette() {
                           >
                             {page.glyph}
                           </span>
-                          <span className="font-medium flex-1">{page.label}</span>
+                          <span className="flex-1 font-medium">{page.label}</span>
                           <span
                             aria-hidden="true"
-                            className="text-[11px] font-mono text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
+                            className="font-mono text-[11px] text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
                           >
                             ↵
                           </span>
@@ -136,10 +205,6 @@ export function CommandPalette() {
                     navigation rapide
                   </span>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground/55">
-                    <kbd className="rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px]">
-                      ↵
-                    </kbd>
-                    <span>ouvrir</span>
                     <kbd className="rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px]">
                       esc
                     </kbd>
@@ -164,7 +229,9 @@ export function CommandPaletteTrigger() {
       }
       className="group hidden items-center gap-2 rounded-lg border border-border/60 bg-surface-1 px-3 py-1.5 text-xs text-muted-foreground transition-all duration-150 hover:border-primary/30 hover:bg-surface-2 hover:text-foreground md:inline-flex"
     >
-      <span aria-hidden="true" className="text-primary/70">⌕</span>
+      <span aria-hidden="true" className="text-primary/70">
+        ⌕
+      </span>
       <span>Rechercher</span>
       <kbd className="rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/60 transition-colors group-hover:text-primary/70">
         ⌘K

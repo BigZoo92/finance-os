@@ -51,3 +51,10 @@ services:
         GIT_SHA: ${GIT_SHA:-local}
         GIT_TAG: ${GIT_TAG:-local}
         BUILD_TIME: ${BUILD_TIME:-local}
+
+  knowledge-service:
+    image: finance-os-knowledge-service:prod
+    pull_policy: never
+    build:
+      context: apps/knowledge-service
+      dockerfile: Dockerfile
