@@ -50,16 +50,30 @@ Providers actuellement cables dans `apps/api/src/routes/dashboard/runtime.ts` :
 | FRED | `fred` | series macro structurees | `FRED_API_KEY` |
 | X/Twitter recent search | `x_twitter` | capter des signaux evenementiels tres recents (macro, guidance, cyber, geopolitique) | `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN` |
 
-### 2.2 Providers prepares mais non cables
+### 2.2 Providers sociaux (Prompt 4)
+
+- `x_twitter`
+  - branche dans le runtime mais **desactive par defaut**
+  - la foundation actuelle se limite a la recherche recente (`/2/tweets/search/recent`) avec query configurable
+  - tant que `NEWS_PROVIDER_X_TWITTER_ENABLED=false` ou que le bearer token est absent, le provider n'ingere aucun item
+  - API officielle pay-per-use uniquement, pas de scraping
+- `bluesky`
+  - provider Bluesky/ATProto ajoute en Prompt 4
+  - desactive par defaut (`BLUESKY_ENABLED=false`)
+  - utilise l'API XRPC avec app password
+  - alternative gratuite et ouverte a X/Twitter
+- `manual_import`
+  - permet l'import manuel de signaux via JSON/texte
+  - toujours disponible en mode admin
+  - utile comme fallback avant l'activation d'un provider payant
+  - endpoint: `POST /dashboard/signals/ingest/manual`
+
+### 2.3 Providers prepares mais non cables
 
 - `alpha_vantage`
   - type deja reserve dans la taxonomie
   - non branche par defaut
   - volontairement exclu du backbone pour eviter une dependance centrale a une API a quotas serras
-- `x_twitter`
-  - branche dans le runtime mais **desactive par defaut**
-  - la foundation actuelle se limite a la recherche recente (`/2/tweets/search/recent`) avec query configurable
-  - tant que `NEWS_PROVIDER_X_TWITTER_ENABLED=false` ou que le bearer token est absent, le provider n'ingere aucun item
 
 ### 2.3 Sources explicitement non retenues comme coeur
 
@@ -617,7 +631,19 @@ Verification recommandees apres changement:
 
 ---
 
-## 13. Limites connues
+## 13. Signal item persistence (Prompt 4B)
+
+En complement de la table `news_article` (backbone news), `signal_item` persiste les signaux provenant de:
+- imports manuels (`manual_import`)
+- providers sociaux (X/Twitter, Bluesky)
+- tout provider normalise dans le pipeline signal
+
+Le pipeline complet: normalisation → enrichissement → classification → scoring → dedupe → persist → graph ingest auto-trigger.
+
+Verification specifique aux signaux:
+- `bun test apps/api/src/routes/dashboard/domain/signal-pipeline.test.ts apps/api/src/routes/dashboard/domain/signal-classifier.test.ts`
+
+## 14. Limites connues
 
 - pas de LLM externe: tout l'enrichissement est deterministic
 - pas de scraping body complet: volontaire
@@ -628,6 +654,7 @@ Verification recommandees apres changement:
   - GDELT doit etre rate-limite
   - SEC exige un `User-Agent` explicite
   - FRED exige une cle API
+- `signal_item` et `news_article` sont deux tables separees; les signaux sociaux vont dans `signal_item`, les news backbone restent dans `news_article`
 
 ---
 

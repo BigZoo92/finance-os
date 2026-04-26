@@ -30,6 +30,10 @@ import {
   triggerDashboardNewsIngest,
 } from './news-ingest-scheduler'
 import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
+import {
+  startSocialSignalScheduler,
+  triggerSocialSignalIngest,
+} from './social-signal-scheduler'
 import { logWorkerEvent } from './observability/logger'
 import {
   buildProviderRawImportRow,
@@ -95,6 +99,7 @@ let schedulerTimer: ReturnType<typeof setInterval> | null = null
 let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let marketSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let advisorSchedulerTimer: ReturnType<typeof setInterval> | null = null
+let socialSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
 let keepRunning = true
 
@@ -1310,6 +1315,28 @@ const startAdvisorScheduler = () => {
   })
 }
 
+const startSocialScheduler = () => {
+  socialSchedulerTimer = startSocialSignalScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    socialPollingEnabled: env.SIGNALS_SOCIAL_POLLING_ENABLED,
+    intervalMs: env.SIGNALS_SOCIAL_POLLING_INTERVAL_MS,
+    trigger: () =>
+      triggerSocialSignalIngest({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker social signal scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
 const consumeJobs = async () => {
   while (keepRunning) {
     try {
@@ -1389,6 +1416,7 @@ const start = async () => {
   startNewsScheduler()
   startMarketScheduler()
   startAdvisorScheduler()
+  startSocialScheduler()
   await consumeJobs()
 }
 
@@ -1423,6 +1451,11 @@ const shutdown = async (signal: string) => {
   if (advisorSchedulerTimer) {
     clearInterval(advisorSchedulerTimer)
     advisorSchedulerTimer = null
+  }
+
+  if (socialSchedulerTimer) {
+    clearInterval(socialSchedulerTimer)
+    socialSchedulerTimer = null
   }
 
   statusServer?.close()

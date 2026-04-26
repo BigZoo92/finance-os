@@ -31,15 +31,16 @@
 
 | Route | Page | Rôle | Données principales |
 |-------|------|------|---------------------|
-| `/signaux` | **Actualités** | Flux macro-financier externe — contexte pour l'IA | `dashboardNews` |
+| `/signaux` | **Signaux** | Hub de signaux externes — news, overview, navigation | `dashboardNews`, `signalHealth`, `signalSources` |
 | `/signaux/marches` | **Marchés & macro** | Panorama marché, macro, watchlist mondiale | `marketsOverview` |
+| `/signaux/social` | **Comptes sociaux** | Gestion des comptes X, Bluesky, imports manuels | `signalSources`, `signalHealth` |
 | `/signaux/sources` | **Sources & fraîcheur** | Provenance et qualité des données (admin-only) | Multiple health queries |
 
 ### Redirections (ancien vers nouveau)
 
 | Ancienne route | Nouvelle route | Type |
 |----------------|----------------|------|
-| `/actualites` | `/ia` | 301 |
+| `/actualites` | `/signaux` | 301 |
 | `/memoire` | `/ia/memoire` | 301 |
 | `/marches` | `/signaux/marches` | 301 |
 
@@ -79,8 +80,9 @@
 │  ⊘ Coûts IA       │                              │
 │  ──────────────── │                              │
 │  Données & signaux│                              │
-│  ⊟ Actualités     │                              │
+│  ⊟ Signaux        │                              │
 │  ≈ Marchés        │                              │
+│  ⊕ Social         │                              │
 │  ⊡ Sources        │                              │
 │                   │                              │
 │  [Réduire]        │                              │

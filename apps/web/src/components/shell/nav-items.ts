@@ -155,6 +155,13 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'signaux',
   },
   {
+    to: '/signaux/social',
+    label: 'Social',
+    icon: '⊕',
+    description: 'Comptes X, Bluesky et imports manuels',
+    group: 'signaux',
+  },
+  {
     to: '/signaux/sources',
     label: 'Sources',
     icon: '⊡',

@@ -213,6 +213,37 @@ Notes:
 
 ---
 
+## 11.ter Bluesky / AT Protocol
+
+| Variable | Default | Ou la definir | Consommateur | Sensible | Description |
+|---|---|---|---|---|---|
+| `BLUESKY_ENABLED` | `false` | Dokploy, Local | API | Non | Active le provider Bluesky |
+| `BLUESKY_HANDLE` | -- | Dokploy, Local | API | Non | Handle Bluesky pour l'auth (ex: `user.bsky.social`) |
+| `BLUESKY_APP_PASSWORD` | -- | Dokploy, Local | API | **Oui** | App password Bluesky, server-only |
+| `BLUESKY_SERVICE_URL` | `https://bsky.social` | Dokploy, Local | API | Non | URL du service ATProto |
+
+Notes:
+
+- `BLUESKY_APP_PASSWORD` est un secret, jamais expose cote client.
+- Le provider Bluesky est optionnel et desactive par defaut.
+
+---
+
+## 11.quater Signaux sociaux
+
+| Variable | Default | Ou la definir | Consommateur | Description |
+|---|---|---|---|---|
+| `SIGNALS_SOCIAL_POLLING_ENABLED` | `false` | Dokploy, Local | API, Worker | Active le polling automatique des comptes sociaux |
+| `SIGNALS_SOCIAL_POLLING_INTERVAL_MS` | `3600000` | Dokploy, Local | Worker | Intervalle du scheduler social (1h par defaut) |
+| `SIGNALS_MANUAL_IMPORT_ENABLED` | `true` | Dokploy, Local | API | Active l'import manuel de signaux |
+
+Notes:
+
+- Le polling social est desactive par defaut. Il necessite au moins un provider social configure (X ou Bluesky).
+- L'import manuel est toujours disponible en mode admin, meme sans provider social.
+
+---
+
 ## 11.bis Market data
 
 | Variable | Default | Ou la definir | Consommateur | Description |

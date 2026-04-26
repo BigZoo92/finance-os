@@ -9,6 +9,7 @@ import { createGoalsRoute } from './routes/goals'
 import { createManualAssetsRoute } from './routes/manual-assets'
 import { createMarketsRoute } from './routes/markets'
 import { createNewsRoute } from './routes/news'
+import { createSignalSourcesRoute } from './routes/signal-sources'
 import { createSummaryRoute } from './routes/summary'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
@@ -294,4 +295,5 @@ export const createDashboardRoutes = ({
     .use(createGoalsRoute())
     .use(createTransactionsRoute())
     .use(createTransactionClassificationRoute())
+    .use(createSignalSourcesRoute({ db }))
 }

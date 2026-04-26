@@ -551,6 +551,25 @@ export const getApiEnv = () => {
         '(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet'
       ),
     NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: z.string().min(1).optional(),
+    BLUESKY_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    BLUESKY_HANDLE: z.string().optional(),
+    BLUESKY_APP_PASSWORD: z.string().min(1).optional(),
+    BLUESKY_SERVICE_URL: z.string().default('https://bsky.social'),
+    SIGNALS_SOCIAL_POLLING_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    SIGNALS_SOCIAL_POLLING_INTERVAL_MS: z
+      .string()
+      .optional()
+      .transform(value => Number(value ?? 3600000)),
+    SIGNALS_MANUAL_IMPORT_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     FRED_API_KEY: z.string().min(1).optional(),
     MARKET_DATA_ENABLED: z
       .string()
@@ -865,6 +884,15 @@ export const getWorkerEnv = () =>
       .int()
       .positive()
       .default(4 * 60 * 60 * 1000),
+    SIGNALS_SOCIAL_POLLING_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    SIGNALS_SOCIAL_POLLING_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60 * 60 * 1000),
     AI_DAILY_AUTO_RUN_ENABLED: z
       .string()
       .optional()

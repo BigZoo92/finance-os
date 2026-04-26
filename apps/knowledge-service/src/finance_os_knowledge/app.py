@@ -18,10 +18,12 @@ from .ingest import (
     CostLedgerIngestRequest,
     MarketsIngestRequest,
     NewsIngestRequest,
+    SocialIngestRequest,
     build_advisor_ingest,
     build_cost_ledger_ingest,
     build_markets_ingest,
     build_news_ingest,
+    build_social_ingest,
 )
 from .models import (
     ContextBundleRequest,
@@ -316,6 +318,12 @@ def create_app() -> FastAPI:
     async def ingest_advisor(request_body: AdvisorIngestRequest, request: Request):
         request_id = _request_id(request)
         ingest_request = build_advisor_ingest(request_body)
+        return store().ingest(ingest_request, request_id=request_id)
+
+    @app.post("/knowledge/ingest/social")
+    async def ingest_social(request_body: SocialIngestRequest, request: Request):
+        request_id = _request_id(request)
+        ingest_request = build_social_ingest(request_body)
         return store().ingest(ingest_request, request_id=request_id)
 
     @app.post("/knowledge/ingest/cost-ledger")

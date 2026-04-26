@@ -335,8 +335,50 @@ Le domaine marches suit le meme principe que news:
   - role cible: normalisation/reformulation deterministe de texte non critique
   - role cible: fallback de synthese en mode degrade quand les providers payants sont indisponibles
   - role cible: sandbox local pour evaluer prompts et gardes-fous avant activation production
-- ingestion Twitter/X
 - extension crypto
+
+---
+
+## 4.bis Providers sociaux (Donnees & signaux)
+
+### X/Twitter API v2
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST pay-per-use |
+| **Role** | Signaux evenementiels finance + AI/tech depuis comptes surveilles |
+| **Auth** | `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN` (pay-per-use credits) |
+| **Consommateur** | API news provider `x_twitter` |
+| **Notes** | Desactive par defaut. API officielle uniquement, pas de scraping. ~$0.005/post read |
+
+### Bluesky / AT Protocol
+
+| Detail | Valeur |
+|---|---|
+| **Type** | API REST (XRPC) + Jetstream websocket |
+| **Role** | Alternative sociale ouverte, signaux AI/tech |
+| **Auth** | `BLUESKY_HANDLE` + `BLUESKY_APP_PASSWORD` (app password) |
+| **Consommateur** | API news provider `bluesky` |
+| **Notes** | Desactive par defaut. Protocole ouvert, gratuit. Jetstream non formel |
+
+### Import manuel
+
+| Detail | Valeur |
+|---|---|
+| **Type** | Import JSON/texte via API |
+| **Role** | Fallback universel pour signaux sans provider configure |
+| **Auth** | Admin session |
+| **Consommateur** | API route `POST /dashboard/signals/ingest/manual` |
+| **Notes** | Toujours disponible en admin. Normalise en signal items standard |
+
+### Regles communes social
+
+- Les comptes a surveiller sont persistes dans `signal_source` (PostgreSQL)
+- Deux groupes: Finance et IA/Tech
+- Chaque signal passe par la normalisation, le scoring et la deduplication existants
+- Les signaux sociaux ne sont jamais la base unique d'un conseil financier
+- L'injection dans le Knowledge Graph cree des noeuds `SocialSignal`
+- Endpoint Knowledge Graph: `POST /knowledge/ingest/social`
 
 ---
 
@@ -441,6 +483,9 @@ Le domaine marches suit le meme principe que news:
 | Powens | **Actif** | OAuth2 + Client Credentials | Non (compte requis) | Oui (donnees bancaires) |
 | News backbone (HN/GDELT/ECB/Fed/SEC/FRED) | **Actif** | Mixte selon provider | Oui / cle FRED optionnelle | Non (cache-first, best-effort) |
 | Market backbone (EODHD/FRED/Twelve Data) | **Actif** | Cle(s) serveur | Oui / partiel selon plan | Non (cache-first, best-effort) |
+| X/Twitter API v2 | **Optionnel** | Bearer token (pay-per-use) | Non | Non (desactive par defaut) |
+| Bluesky/ATProto | **Optionnel** | App password | Oui | Non (desactive par defaut) |
+| Import manuel (signaux) | **Actif** | Admin session | Oui | Non |
 | Web Push | **Configure** | VAPID | Oui | Non |
 | LLM / IA | **Non integre** | -- | -- | Non |
 | GHCR | **Actif** | Token GitHub | Oui (repos publics) | Non (build-time) |

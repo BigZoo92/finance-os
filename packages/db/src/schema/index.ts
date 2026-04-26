@@ -10,3 +10,4 @@ export * from './enrichment'
 
 export * from './markets'
 export * from './news'
+export * from './signals'

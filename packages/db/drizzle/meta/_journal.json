@@ -169,6 +169,20 @@
       "when": 1776245460235,
       "tag": "0023_sour_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777226300734,
+      "tag": "0024_marvelous_korath",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777227087511,
+      "tag": "0025_spooky_wasp",
+      "breakpoints": true
     }
   ]
 }

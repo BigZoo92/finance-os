@@ -1,11 +1,15 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
+import { signalHealthQueryOptions, signalItemsQueryOptions, signalSourcesQueryOptions, signalRunsQueryOptions } from '@/features/signals-query-options'
+import type { SignalItem } from '@/features/signals-api'
+import { Badge } from '@finance-os/ui/components'
 import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
 import { NewsFeed } from '@/components/dashboard/news-feed'
 
 export const Route = createFileRoute('/_app/signaux/')({
@@ -15,7 +19,13 @@ export const Route = createFileRoute('/_app/signaux/')({
       auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
 
-    await context.queryClient.ensureQueryData(dashboardNewsQueryOptionsWithMode({ mode }))
+    await Promise.all([
+      context.queryClient.ensureQueryData(dashboardNewsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(signalHealthQueryOptions()),
+      context.queryClient.ensureQueryData(signalSourcesQueryOptions()),
+      context.queryClient.ensureQueryData(signalItemsQueryOptions({ limit: 20 })),
+      context.queryClient.ensureQueryData(signalRunsQueryOptions()),
+    ])
   },
   component: SignauxActualitesPage,
 })
@@ -30,26 +40,138 @@ function SignauxActualitesPage() {
   const isAdmin = authViewState === 'admin'
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
 
+  useQuery(signalHealthQueryOptions())
+  const sourcesQuery = useQuery(signalSourcesQueryOptions())
+
+  const itemsQuery = useQuery(signalItemsQueryOptions({ limit: 20 }))
+  const runsQuery = useQuery(signalRunsQueryOptions())
+
+  const sourceCounts = sourcesQuery.data?.counts ?? { finance: 0, ai_tech: 0 }
+  const totalSources = sourceCounts.finance + sourceCounts.ai_tech
+  const signalItems = itemsQuery.data?.items ?? []
+  const signalTotal = itemsQuery.data?.total ?? 0
+  const attentionItems = signalItems.filter(i => i.requiresAttention)
+  const lastRun = runsQuery.data?.runs?.[0]
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
-        eyebrow="Données & signaux"
+        eyebrow="Donnees & signaux"
         icon="⊟"
-        title="Actualités"
-        description="Flux macro-financier externe. Ces signaux alimentent l'Advisor IA et enrichissent le graphe de connaissances pour contextualiser vos recommandations."
+        title="Signaux"
+        description="Hub de donnees et signaux externes. Contexte pour l'IA Advisor et le graphe de connaissances."
       />
 
+      {/* Quick overview strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <QuickStat label="Signaux persistes" value={signalTotal} />
+        <QuickStat label="Attention requise" value={attentionItems.length} highlight={attentionItems.length > 0} />
+        <QuickStat label="Sources" value={totalSources} />
+        <QuickStat label="Finance" value={sourceCounts.finance} />
+        <QuickStat label="IA / Tech" value={sourceCounts.ai_tech} />
+      </div>
+
+      {/* Last ingestion run */}
+      {lastRun && (
+        <Panel>
+          <div className="flex items-center justify-between text-xs text-text-secondary">
+            <span>Derniere ingestion: {lastRun.provider} ({lastRun.runType})</span>
+            <span>
+              {lastRun.insertedCount} inseres, {lastRun.dedupedCount} dedup, {lastRun.graphIngestedCount} graph
+              {lastRun.status === 'success' ? ' — OK' : lastRun.status === 'failed' ? ' — Echec' : ''}
+            </span>
+            <span>{lastRun.finishedAt ? new Date(lastRun.finishedAt).toLocaleString('fr-FR') : 'en cours'}</span>
+          </div>
+        </Panel>
+      )}
+
+      {/* Attention-needed signals */}
+      {attentionItems.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-text-primary mb-2">Signaux necessitant votre attention</h3>
+          <div className="space-y-2">
+            {attentionItems.slice(0, 5).map(item => (
+              <SignalItemCard key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Navigation to sub-pages */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Link to="/signaux/marches" className="block">
+          <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">≈</span>
+              <div>
+                <p className="text-sm font-medium text-text-primary">Marches & macro</p>
+                <p className="text-xs text-text-tertiary">Panorama et signaux deterministes</p>
+              </div>
+            </div>
+          </Panel>
+        </Link>
+        {/* @ts-expect-error route type will be generated on next build */}
+        <Link to="/signaux/social" className="block">
+          <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⊕</span>
+              <div>
+                <p className="text-sm font-medium text-text-primary">Comptes sociaux</p>
+                <p className="text-xs text-text-tertiary">{totalSources} compte(s) surveille(s)</p>
+              </div>
+            </div>
+          </Panel>
+        </Link>
+        {isAdmin && (
+          <Link to="/signaux/sources" className="block">
+            <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⊡</span>
+                <div>
+                  <p className="text-sm font-medium text-text-primary">Sources & fraicheur</p>
+                  <p className="text-xs text-text-tertiary">Qualite et provenance des donnees</p>
+                </div>
+              </div>
+            </Panel>
+          </Link>
+        )}
+      </div>
+
+      {/* Context note */}
       <div className="rounded-xl border border-border/40 bg-surface-1/40 p-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-aurora/60">
-          rôle de cette surface
+          role de cette surface
         </p>
         <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-          Les actualités sont un flux de contexte, pas le centre de l'app. Elles servent à nourrir
-          les recommandations de l'Advisor IA avec des signaux macro-financiers, des événements de
-          marché et des données externes fraîches. Consultez l'IA pour des analyses personnalisées.
+          Ces signaux alimentent l'IA Advisor et enrichissent le graphe de connaissances.
+          Ils ne sont pas des conseils financiers. Consultez l'IA pour des analyses personnalisees.
         </p>
       </div>
 
+      {/* Recent persisted signal items */}
+      {signalItems.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-text-primary mb-2">Signaux recents ({signalTotal})</h3>
+          <div className="space-y-2">
+            {signalItems.slice(0, 10).map(item => (
+              <SignalItemCard key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {signalItems.length === 0 && isAdmin && (
+        <Panel>
+          <p className="text-text-secondary text-sm py-4 text-center">
+            Aucun signal persiste. Utilisez l'import manuel depuis{' '}
+            {/* @ts-expect-error route type will be generated on next build */}
+            <Link to="/signaux/social" className="text-primary underline">Comptes sociaux</Link>
+            {' '}ou attendez une ingestion automatique.
+          </p>
+        </Panel>
+      )}
+
+      {/* News feed (existing news backbone) */}
       {authMode ? (
         <NewsFeed mode={authMode} />
       ) : (
@@ -60,5 +182,42 @@ function SignauxActualitesPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+function QuickStat({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) {
+  return (
+    <Panel>
+      <p className="text-xs text-text-tertiary">{label}</p>
+      <p className={`text-lg font-medium font-financial ${highlight ? 'text-warning' : 'text-text-primary'}`}>{value}</p>
+    </Panel>
+  )
+}
+
+function SignalItemCard({ item }: { item: SignalItem }) {
+  return (
+    <Panel>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {item.requiresAttention && (
+              <Badge variant="destructive" className="text-[10px] shrink-0">Attention</Badge>
+            )}
+            <Badge variant="outline" className="text-[10px] shrink-0">{item.signalDomain}</Badge>
+            <Badge variant="secondary" className="text-[10px] shrink-0">{item.sourceProvider}</Badge>
+          </div>
+          <p className="text-sm text-text-primary mt-1 line-clamp-2">{item.title}</p>
+          {item.attentionReason && (
+            <p className="text-xs text-warning mt-0.5">{item.attentionReason}</p>
+          )}
+          <div className="flex gap-3 mt-1 text-[10px] text-text-tertiary">
+            <span>Relevance {item.relevanceScore}</span>
+            <span>Impact {item.impactScore}</span>
+            <span>Graph: {item.graphIngestStatus}</span>
+            <span>{new Date(item.publishedAt).toLocaleDateString('fr-FR')}</span>
+          </div>
+        </div>
+      </div>
+    </Panel>
   )
 }

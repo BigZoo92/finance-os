@@ -71,6 +71,18 @@ Implementation consequences:
 
 The graph can store financial concepts, formulas, indicators, assumptions, market/news/tweet signals, model/cost observations and personal snapshots. It must not store unredacted secrets, Powens codes/tokens or raw sensitive financial PII.
 
+### Signal Intelligence Layer (Prompt 4/4B)
+
+`signal_item` in PostgreSQL is the canonical store for external signals (social, manual imports, news).
+After each ingestion run, top-scored signals are auto-sent to the knowledge graph via `POST /knowledge/ingest/social`, creating `SocialSignal` nodes with `AFFECTS_ASSET` relations.
+
+Key invariants:
+- Signal items are classified into domains: finance, macro, market, ai_tech, cybersecurity, regulatory
+- `requiresAttention` is computed deterministically from pattern rules (Finance: Fed/ECB decisions, crashes; AI/Tech: model releases, pricing changes)
+- Graph ingest is fail-soft: `graphIngestStatus` tracks state per item
+- Social signals are never the sole basis for financial advice — they enrich KnowledgeContextBundle as scored evidence with provenance
+- Manual import via `POST /dashboard/signals/ingest/manual` provides a free/legal fallback without paid API credentials
+
 See [ADR: Temporal Financial Knowledge Graph Memory + Hybrid GraphRAG](adr/temporal-knowledge-graph-graphrag.md).
 
 ## Runtime Modules

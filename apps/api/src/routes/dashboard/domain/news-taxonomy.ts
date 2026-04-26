@@ -8,6 +8,8 @@ export const NEWS_PROVIDER_IDS = [
   'fred',
   'alpha_vantage',
   'x_twitter',
+  'bluesky',
+  'manual_import',
 ] as const
 
 export type NewsProviderId = (typeof NEWS_PROVIDER_IDS)[number]
@@ -23,6 +25,8 @@ export const NEWS_SOURCE_TYPES = [
   'industry',
   'blog',
   'tech_forum',
+  'social',
+  'manual',
 ] as const
 
 export type NewsSourceType = (typeof NEWS_SOURCE_TYPES)[number]
@@ -150,6 +154,8 @@ export const NEWS_PROVIDER_LABELS: Record<NewsProviderId, string> = {
   fred: 'FRED',
   alpha_vantage: 'Alpha Vantage',
   x_twitter: 'X / Twitter',
+  bluesky: 'Bluesky',
+  manual_import: 'Import manuel',
 }
 
 export const NEWS_SOURCE_TYPE_BY_PROVIDER: Record<NewsProviderId, NewsSourceType> = {
@@ -161,5 +167,7 @@ export const NEWS_SOURCE_TYPE_BY_PROVIDER: Record<NewsProviderId, NewsSourceType
   sec_edgar: 'filing',
   fred: 'macro_data',
   alpha_vantage: 'macro_data',
-  x_twitter: 'media',
+  x_twitter: 'social',
+  bluesky: 'social',
+  manual_import: 'manual',
 }

@@ -29,6 +29,7 @@ import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
 import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
+import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
 import { Route as AppSignauxSourcesRouteImport } from './routes/_app/signaux/sources'
 import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
 import { Route as AppIaMemoireRouteImport } from './routes/_app/ia/memoire'
@@ -134,6 +135,11 @@ const AppIaIndexRoute = AppIaIndexRouteImport.update({
   path: '/ia/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
+  id: '/signaux/social',
+  path: '/signaux/social',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSignauxSourcesRoute = AppSignauxSourcesRouteImport.update({
   id: '/signaux/sources',
   path: '/signaux/sources',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/memoire': typeof AppIaMemoireRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
+  '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
   '/ia/': typeof AppIaIndexRoute
   '/signaux/': typeof AppSignauxIndexRoute
@@ -208,6 +215,7 @@ export interface FileRoutesByTo {
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/memoire': typeof AppIaMemoireRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
+  '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
   '/ia': typeof AppIaIndexRoute
   '/signaux': typeof AppSignauxIndexRoute
@@ -236,6 +244,7 @@ export interface FileRoutesById {
   '/_app/ia/couts': typeof AppIaCoutsRoute
   '/_app/ia/memoire': typeof AppIaMemoireRoute
   '/_app/signaux/marches': typeof AppSignauxMarchesRoute
+  '/_app/signaux/social': typeof AppSignauxSocialRoute
   '/_app/signaux/sources': typeof AppSignauxSourcesRoute
   '/_app/ia/': typeof AppIaIndexRoute
   '/_app/signaux/': typeof AppSignauxIndexRoute
@@ -474,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/signaux/social': {
+      id: '/_app/signaux/social'
+      path: '/signaux/social'
+      fullPath: '/signaux/social'
+      preLoaderRoute: typeof AppSignauxSocialRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/signaux/sources': {
       id: '/_app/signaux/sources'
       path: '/signaux/sources'
@@ -528,6 +544,7 @@ interface AppRouteChildren {
   AppIaCoutsRoute: typeof AppIaCoutsRoute
   AppIaMemoireRoute: typeof AppIaMemoireRoute
   AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
+  AppSignauxSocialRoute: typeof AppSignauxSocialRoute
   AppSignauxSourcesRoute: typeof AppSignauxSourcesRoute
   AppIaIndexRoute: typeof AppIaIndexRoute
   AppSignauxIndexRoute: typeof AppSignauxIndexRoute
@@ -549,6 +566,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaCoutsRoute: AppIaCoutsRoute,
   AppIaMemoireRoute: AppIaMemoireRoute,
   AppSignauxMarchesRoute: AppSignauxMarchesRoute,
+  AppSignauxSocialRoute: AppSignauxSocialRoute,
   AppSignauxSourcesRoute: AppSignauxSourcesRoute,
   AppIaIndexRoute: AppIaIndexRoute,
   AppSignauxIndexRoute: AppSignauxIndexRoute,
