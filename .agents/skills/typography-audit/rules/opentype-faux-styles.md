@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-faux-styles.md
+     Hash:   sha256:e9e3322941b84e58
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Avoid Faux Bold, Italic, and Small Caps
 impact: MEDIUM-HIGH

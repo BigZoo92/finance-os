@@ -15,7 +15,7 @@
     "check:ci:core": "node scripts/check-ci.mjs --scope=core",
     "check:ci:desktop": "node scripts/check-ci.mjs --scope=desktop",
     "check:ci:full": "node scripts/check-ci.mjs --scope=full",
-    "test": "node --test scripts/agentic/*.test.mjs scripts/desktop-scope.test.mjs",
+    "test": "node --test scripts/agentic/*.test.mjs scripts/desktop-scope.test.mjs scripts/agent-context/agent-context.test.mjs scripts/agent-context/sync-skills.test.mjs",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
@@ -62,7 +62,17 @@
     "desktop:ios:targets": "rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios",
     "desktop:ios:init": "pnpm desktop:ios:targets && pnpm --filter @finance-os/desktop ios:init",
     "desktop:ios:dev": "pnpm --filter @finance-os/desktop ios:dev",
-    "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build"
+    "desktop:ios:build": "pnpm --filter @finance-os/desktop ios:build",
+    "agent:context:audit": "node scripts/agent-context/audit.mjs",
+    "agent:context:pack": "node scripts/agent-context/pack.mjs",
+    "agent:context:estimate": "node scripts/agent-context/estimate.mjs",
+    "agent:context:select": "node scripts/agent-context/select.mjs",
+    "agent:context:check": "node scripts/agent-context/check.mjs",
+    "agent:prompt:build": "node scripts/agent-context/prompt-builder.mjs",
+    "agent:telemetry:record": "node scripts/agent-context/telemetry-record.mjs",
+    "agent:skills:sync": "node scripts/agent-context/sync-skills.mjs sync",
+    "agent:skills:check": "node scripts/agent-context/sync-skills.mjs check",
+    "agent:skills:watch": "node scripts/agent-context/sync-skills.mjs watch"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",

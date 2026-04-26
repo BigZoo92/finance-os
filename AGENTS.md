@@ -100,27 +100,43 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 - [packages/ui/AGENTS.md](packages/ui/AGENTS.md)
 - [packages/prelude/AGENTS.md](packages/prelude/AGENTS.md)
 
+## Agent Efficiency System
+
+Context packs, skill routing, model routing, and token telemetry:
+- **Index**: [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
+- **Context packs**: `docs/agentic/context-packs/` — compact, task-specific bundles
+- **Commands**: `pnpm agent:context:select`, `pnpm agent:context:check`, `pnpm agent:prompt:build`
+- **Budget tiers**: small (8K), medium (16K), large (32K), xlarge (64K), autonomous (128K)
+- Every large agent task must have an explicit context budget.
+- No model should receive the entire repo context by default.
+- AI Advisor costs and agentic dev costs are tracked separately.
+
 ## Agentic Maps
 
 - [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
-- [docs/agentic/architecture-map.md](docs/agentic/architecture-map.md)
-- [docs/agentic/contracts-map.md](docs/agentic/contracts-map.md)
-- [docs/agentic/testing-map.md](docs/agentic/testing-map.md)
-- [docs/agentic/ui-quality-map.md](docs/agentic/ui-quality-map.md)
-- [docs/agentic/release-map.md](docs/agentic/release-map.md)
-- Repo-local skills live under `.agents/skills/`.
+- [docs/agentic/model-routing.md](docs/agentic/model-routing.md)
+- [docs/agentic/skill-routing.md](docs/agentic/skill-routing.md)
+- [docs/agentic/prompt-caching-strategy.md](docs/agentic/prompt-caching-strategy.md)
+- [docs/agentic/token-economics.md](docs/agentic/token-economics.md)
+- [docs/agentic/agent-runbook.md](docs/agentic/agent-runbook.md)
+- [docs/agentic/context-audit.md](docs/agentic/context-audit.md)
+- Canonical skill source: `.agentic/source/skills/` (single agent-neutral source of truth)
+- `.claude/skills/`, `.agents/skills/`, `.qwen/skills/`, root `skills/` are all generated projections — **never edit directly**
+- Sync: `pnpm agent:skills:sync`, CI check: `pnpm agent:skills:check`, dev watch: `pnpm agent:skills:watch`
+- Heavy references (color-expert) live in `.agentic/source/references/` — injected only into `.claude/skills/`
 
 ## Skills System
 
 Full inventory with trust tiers, overlaps, and usage guide: [docs/SKILLS-INVENTORY.md](docs/SKILLS-INVENTORY.md)
 
-### Skill categories (`.claude/skills/`)
+### Skill categories (`.agentic/source/skills/` — canonical)
 | Category | Path | Count | Purpose |
 |---|---|---|---|
 | Finance-OS local | `finance-os/` | 7 | Repo-specific invariants — highest priority |
 | GitNexus guides | `gitnexus/` | 6 | Code intelligence workflows |
 | GitNexus generated | `generated/` | 20 | Auto-indexed domain clusters |
-| External recommended | root-level dirs | 17 | Best practices (React, TanStack, Redis, Drizzle, CI/CD, security, perf, testing) |
+| External recommended | root-level dirs | 17+ | Best practices (React, TanStack, Redis, Drizzle, CI/CD, security, perf, testing) |
+| Codex workflow | root-level dirs | 11 | Autopilot-specific guards and strategies |
 | Impeccable (UI) | root-level dirs | 33 | UI refinement and design system |
 | Experimental | `experimental/` | 1 | Unproven — use with caution |
 

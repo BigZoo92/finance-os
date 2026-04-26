@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/ux-writing.md
+     Hash:   sha256:0cd5e958d92be6e2
+     Sync:   pnpm agent:skills:sync -->
+
 # UX Writing
 
 ## The Button Label Problem

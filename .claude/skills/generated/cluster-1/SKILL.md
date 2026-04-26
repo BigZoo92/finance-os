@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/cluster-1/SKILL.md
+     Hash:   sha256:9131315d57c001a4
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: cluster-1
 description: "Skill for the Cluster_1 area of finance-os. 13 symbols across 2 files."

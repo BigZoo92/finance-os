@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-weight-contrast.md
+     Hash:   sha256:11418dcc9c56d28f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Build Hierarchy with Multiple Axes
 impact: MEDIUM-HIGH

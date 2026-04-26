@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/powens/SKILL.md
+     Hash:   sha256:0dacdad6f2a66d1d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: powens
 description: "Skill for the Powens area of finance-os. 30 symbols across 5 files."

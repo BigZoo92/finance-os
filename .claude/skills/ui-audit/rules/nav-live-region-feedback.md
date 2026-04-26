@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/nav-live-region-feedback.md
+     Hash:   sha256:758a42893f28788a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Announce Status Changes with Live Regions
 impact: HIGH

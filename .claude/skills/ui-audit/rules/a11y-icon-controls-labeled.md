@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/a11y-icon-controls-labeled.md
+     Hash:   sha256:554ed113409ca0eb
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Label Icon-Only Controls
 impact: HIGH

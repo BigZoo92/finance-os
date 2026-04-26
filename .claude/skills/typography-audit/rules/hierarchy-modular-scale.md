@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-modular-scale.md
+     Hash:   sha256:183618d03845f148
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use a Modular Scale as a Guide, Not a Constraint
 impact: MEDIUM-HIGH

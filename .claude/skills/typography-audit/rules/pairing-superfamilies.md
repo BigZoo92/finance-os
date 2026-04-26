@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-superfamilies.md
+     Hash:   sha256:3e8ef9a46a951490
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Superfamilies for Easy Pairing
 impact: MEDIUM

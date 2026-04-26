@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-rendering.md
+     Hash:   sha256:f85a84efc5470ef1
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Apply Antialiased Font Smoothing on macOS
 impact: MEDIUM

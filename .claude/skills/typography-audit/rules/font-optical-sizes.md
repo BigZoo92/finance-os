@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-optical-sizes.md
+     Hash:   sha256:2d2daf29d5dfa3ad
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Text and Display Optical Sizes Correctly
 impact: CRITICAL

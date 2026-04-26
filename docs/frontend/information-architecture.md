@@ -1,29 +1,47 @@
 # Architecture d'information — Finance-OS
 
 > Carte des pages, rôle de chaque surface, principes de navigation.
+> Refactorisée en Prompt 3 (2026-04-26) : 3 sections (Cockpit personnel, IA, Données & signaux).
 
 ## Structure des routes
 
-### Routes applicatives (sous layout `_app.tsx`)
+### Section 1 : Cockpit personnel
 
 | Route | Page | Rôle | Données principales |
 |-------|------|------|---------------------|
-| `/` | **Cockpit** | Vue d'ensemble — KPIs, tendance patrimoine, top dépenses, connexions, objectifs | `dashboardSummary`, `financialGoals`, `powensStatus` |
+| `/` | **Cockpit** | Vue d'ensemble — KPIs, tendance patrimoine, top dépenses, connexions, objectifs, entry point IA | `dashboardSummary`, `financialGoals`, `powensStatus`, `dashboardAdvisor` |
 | `/depenses` | **Dépenses** | Transactions, structure des dépenses, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
 | `/patrimoine` | **Patrimoine** | Actifs, historique patrimoine, soldes par connexion | `dashboardSummary` |
 | `/investissements` | **Investissements** | Positions d'investissement, valorisation, P&L | `dashboardSummary` (positions) |
-| `/marches` | **Marches & Macro** | Panorama marche, macro, watchlist mondiale, signaux et bundle IA futur | `marketsOverview` |
 | `/objectifs` | **Objectifs** | Objectifs financiers personnels (CRUD) | `financialGoals` |
-| `/actualites` | **Actualités** | Flux d'actualités financières, conseiller IA | `dashboardNews`, `dashboardAdvisor` |
 | `/integrations` | **Intégrations** | Connexions Powens, sync runs, diagnostics, audit trail | `powensStatus`, `powensSyncRuns`, `powensDiagnostics`, `powensAuditTrail` |
-| `/sante` | **Santé** | Vue consolidée de l'état système — connexions, sync, diagnostics, derived, push | Tous les endpoints status/health |
+| `/sante` | **Santé** | Vue consolidée de l'état système | Tous les endpoints status/health |
 | `/parametres` | **Paramètres** | Notifications push, derived recompute, exports | `pushSettings`, `derivedRecomputeStatus` |
 
-Additional AI route:
+### Section 2 : IA
 
-| Route | Page | Role | Donnees principales |
+| Route | Page | Rôle | Données principales |
 |-------|------|------|---------------------|
-| `/memoire` | **Memoire & connaissances** | Graphe temporel interne, recherche hybride, provenance, contradictions et preview du contexte AI Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
+| `/ia` | **Advisor** | Brief quotidien, recommandations, métriques, navigation IA | `dashboardAdvisor*`, `dashboardAdvisorRecommendations`, `dashboardAdvisorSpend` |
+| `/ia/chat` | **Chat finance** | Conversation financière avec contexte + Q&A pédagogique | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics` |
+| `/ia/memoire` | **Mémoire & connaissances** | Graphe temporel, recherche hybride, provenance, contexte bundle | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
+| `/ia/couts` | **Coûts IA** | Tokens, modèles, budget, runs (admin-only) | `dashboardAdvisorSpend`, `dashboardAdvisorRuns` |
+
+### Section 3 : Données & signaux
+
+| Route | Page | Rôle | Données principales |
+|-------|------|------|---------------------|
+| `/signaux` | **Actualités** | Flux macro-financier externe — contexte pour l'IA | `dashboardNews` |
+| `/signaux/marches` | **Marchés & macro** | Panorama marché, macro, watchlist mondiale | `marketsOverview` |
+| `/signaux/sources` | **Sources & fraîcheur** | Provenance et qualité des données (admin-only) | Multiple health queries |
+
+### Redirections (ancien vers nouveau)
+
+| Ancienne route | Nouvelle route | Type |
+|----------------|----------------|------|
+| `/actualites` | `/ia` | 301 |
+| `/memoire` | `/ia/memoire` | 301 |
+| `/marches` | `/signaux/marches` | 301 |
 
 ### Routes système (hors layout)
 
@@ -38,28 +56,39 @@ Additional AI route:
 
 ## Shell applicatif
 
-### Desktop (≥1024px)
+### Desktop (>=1024px)
 
 ```
-┌─────────────┬──────────────────────────────────┐
-│  Sidebar     │  Topbar (titre, démo badge,      │
-│  (240px)     │  session)                        │
-│              ├──────────────────────────────────│
-│  ◈ Cockpit   │                                  │
-│  ↔ Dépenses  │  [Contenu de page]               │
-│  ▣ Actualités│                                  │
-│  ◊ Patrimoine│  max-width: 7xl (1280px)         │
-│  ◎ Objectifs │                                  │
-│  △ Invest.   │                                  │
-│  ≈ Marchés   │                                  │
-│  ⊞ Intégr.  │                                  │
-│  ⚙ Paramèt. │                                  │
-│              │                                  │
-│  [Réduire]   │                                  │
-└─────────────┴──────────────────────────────────┘
+┌──────────────────┬──────────────────────────────┐
+│  Sidebar (248px)  │  Topbar (brand, demo, auth)  │
+│                   ├──────────────────────────────│
+│  Cockpit personnel│                              │
+│  ◈ Cockpit        │  [Contenu de page]           │
+│  ↔ Dépenses       │                              │
+│  ◊ Patrimoine     │  max-width: 7xl (1280px)     │
+│  △ Invest.        │                              │
+│  ◎ Objectifs      │                              │
+│  ⊞ Intégrations   │                              │
+│  ♡ Santé          │                              │
+│  ⚙ Paramètres     │                              │
+│  ──────────────── │                              │
+│  IA               │                              │
+│  ▣ Advisor        │                              │
+│  ◬ Chat finance   │                              │
+│  [#] Mémoire      │                              │
+│  ⊘ Coûts IA       │                              │
+│  ──────────────── │                              │
+│  Données & signaux│                              │
+│  ⊟ Actualités     │                              │
+│  ≈ Marchés        │                              │
+│  ⊡ Sources        │                              │
+│                   │                              │
+│  [Réduire]        │                              │
+└──────────────────┴──────────────────────────────┘
 ```
 
-- La sidebar se réduit à 68px (icônes seules) via toggle
+- La sidebar se réduit à 72px (icônes seules) via toggle
+- 3 groupes avec séparateurs et headers
 - L'indicateur de page active utilise `motion layoutId` pour une animation fluide
 
 ### Mobile (<1024px)
@@ -73,39 +102,39 @@ Additional AI route:
 │  padding-bottom: safe area       │
 │                                  │
 ├──────────────────────────────────│
-│  ◈   ↔   ▣   ◊   ◎   ⋯        │
+│  ◈   ↔   ◊   ▣   ⋯             │
 │  Bottom navigation               │
 └──────────────────────────────────┘
 ```
 
-- Bottom navigation avec les 5 pages principales + "Plus" (drawer)
-- Le drawer "Plus" affiche toutes les 10 pages avec descriptions
-- Indicateur actif : barre ambre en haut du tab
+Tabs bottom bar : Cockpit, Dépenses, Patrimoine, IA (Advisor)
+Bouton "Plus" ouvre un drawer avec tous les autres items, groupés par section.
 
 ## Workflow quotidien prioritaire
 
-Ordre de navigation principal (desktop + mobile) :
-1. `Cockpit` → point d'entrée et synthèse journalière.
-2. `Dépenses` → contrôle du flux du jour (transactions, budgets, projection).
-3. `Actualités` → briefing rapide (news + advisor) pour contextualiser les décisions.
-4. `Patrimoine` → état du stock patrimonial.
-5. `Objectifs` → arbitrage et progression.
+1. `Cockpit` — point d'entrée, synthèse, "qu'est-ce qui demande attention ?"
+2. `Dépenses` — contrôle du flux du jour
+3. `IA > Advisor` — briefing IA, recommandations, agir
+4. `Patrimoine` — état du stock patrimonial
+5. `Objectifs` — arbitrage et progression
 
-Les surfaces `Investissements` et `Marchés` restent accessibles immédiatement mais passent après ce noyau quotidien pour limiter la charge cognitive lors des sessions courtes.
+Les signaux (Actualités, Marchés) sont consultés quand le contexte est nécessaire, pas comme routine quotidienne. Ils alimentent l'IA en arrière-plan.
 
 ## Principes de navigation
 
-1. **Chaque page a un rôle clair** — pas de chevauchement entre pages
-2. **Progressive disclosure** — le cockpit montre l'essentiel, les pages dédiées montrent le détail
-3. **URL = état** — les filtres (range, etc.) vivent dans les search params URL
-4. **Loaders = fraîcheur** — chaque page prefetch ses données dans le loader TanStack
-5. **Fail-soft** — si une query échoue, la page reste utilisable (sections individuelles gèrent leurs erreurs)
+1. **3 sections claires** — finances personnelles, IA, données externes
+2. **Chaque page a un rôle clair** — pas de chevauchement
+3. **Progressive disclosure** — le cockpit montre l'essentiel, les pages dédiées montrent le détail
+4. **URL = état** — les filtres (range, etc.) vivent dans les search params URL
+5. **Loaders = fraîcheur** — chaque page prefetch ses données dans le loader TanStack
+6. **Fail-soft** — si une query échoue, la page reste utilisable
+7. **IA first-class** — l'IA a sa propre section, pas un widget dans une page news
 
 ## Relation entre surfaces métier
 
 ```
                     ┌─────────────┐
-                    │   COCKPIT   │
+                    │   COCKPIT   │ ← point d'entrée
                     │ (synthèse)  │
                     └──────┬──────┘
                            │
@@ -116,36 +145,44 @@ Les surfaces `Investissements` et `Marchés` restent accessibles immédiatement 
     │(flux)     │   │(stock)    │   │(positions) │
     └───────────┘   └───────────┘   └────────────┘
           │
-    ┌─────┴─────┐   ┌───────────┐   ┌────────────┐
-    │ Objectifs │   │ Actualités│   │ Intégrations│
-    │(planning) │   │(contexte) │   │(ops)       │
-    └───────────┘   └───────────┘   └────────────┘
-                                          │
-                                    ┌─────┴──────┐
-                                    │ Paramètres │
-                                    │(config)    │
-                                    └────────────┘
-```
+    ┌─────┴─────┐
+    │ Objectifs │
+    │(planning) │
+    └───────────┘
 
-Le cockpit est le point d'entrée. Il redirige naturellement vers les pages dédiées via les cartes de synthèse. `Marches & Macro` sert de surface de contexte exogène : elle complète `Actualités` avec un snapshot de marché lisible mais reste séparée du cockpit personnel. Les intégrations et paramètres sont séparés de la surface métier car ils concernent l'infrastructure, pas les finances.
+    ┌─────────────────────────────────────┐
+    │             IA                      │
+    │  Advisor → Chat → Mémoire → Coûts  │
+    │  (enrichi par Données & signaux)    │
+    └─────────────────────────────────────┘
+                     ↑
+    ┌────────────────┼──────────────────┐
+    │ Actualités │ Marchés │ Sources    │
+    │ (contexte externe / signaux)      │
+    └───────────────────────────────────┘
+```
 
 ## Guidelines pour les futures évolutions
 
 ### Ajouter une page
 
-1. Créer `apps/web/src/routes/_app/{nom}.tsx`
+1. Créer `apps/web/src/routes/_app/{section}/{nom}.tsx`
 2. Ajouter le loader avec prefetch des queries nécessaires
-3. Ajouter l'entrée dans `NAV_ITEMS` du composant `AppSidebar`
+3. Ajouter l'entrée dans `NAV_ITEMS` (`nav-items.ts`) avec le bon `group`
 4. Mettre à jour ce document
-5. Vérifier que la bottom nav mobile reste gérable (max 5 items principaux)
+5. Vérifier que la bottom nav mobile reste gérable (max 4 tabs + Plus)
 
-### Ajouter une section au cockpit
+### Ajouter au cockpit
 
-Le cockpit ne doit PAS grossir indéfiniment. Avant d'ajouter une carte au cockpit, se demander :
+Le cockpit ne doit PAS grossir indéfiniment. Avant d'ajouter une carte :
 - Est-ce que l'utilisateur a besoin de cette info **chaque jour** ?
 - Est-ce que ça ne fait pas doublon avec une page dédiée ?
 - Est-ce que ça peut être un **lien** vers la page dédiée plutôt qu'une duplication ?
 
-### Ajouter un filtre global
+### Navigation source de vérité
 
-Les filtres de période (`range`) sont locaux à chaque page. Un filtre global (par exemple : toutes les pages sur la même période) devrait vivre dans un layout context, pas dans chaque page individuellement.
+`apps/web/src/components/shell/nav-items.ts` est la source unique pour :
+- tous les items de navigation
+- les groupes (cockpit, ia, signaux)
+- les priorités mobile
+- les descriptions et icônes

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/type-measure-leading.md
+     Hash:   sha256:eac117a2afd8701d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Keep Line Length and Leading in Range
 impact: HIGH

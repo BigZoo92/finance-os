@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-diacritics.md
+     Hash:   sha256:f508f4438d66f863
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Support Accented Characters and Diacritics
 impact: CRITICAL

@@ -1,6 +1,6 @@
 # Finance-OS -- Variables d'environnement & Feature Flags
 
-> **Derniere mise a jour** : 2026-04-15
+> **Derniere mise a jour** : 2026-04-26
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle variable ajoutee.
 
@@ -277,11 +277,24 @@ Notes:
 | `KNOWLEDGE_GRAPH_RECENCY_HALF_LIFE_DAYS` | `45` | Dokploy, `.env` | knowledge-service | Non | Demi-vie de scoring recence |
 | `KNOWLEDGE_GRAPH_EMBEDDING_PROVIDER` | `local` | Dokploy, `.env` | knowledge-service | Non | `local` par defaut; providers externes doivent rester server-only |
 | `KNOWLEDGE_GRAPH_EMBEDDING_MODEL` | `local-hashing-v1` | Dokploy, `.env` | knowledge-service | Non | Modele/strategie d'embedding |
-| `NEO4J_URI` | `bolt://neo4j:7687` | Dokploy, `.env` | knowledge-service | Non | URI interne Neo4j |
-| `NEO4J_USERNAME` | `neo4j` | Dokploy, `.env` | knowledge-service | Non | Utilisateur Neo4j |
-| `NEO4J_PASSWORD` | -- | Dokploy, `.env` | knowledge-service | **Oui** | Mot de passe Neo4j, server-only |
-| `QDRANT_URL` | `http://qdrant:6333` | Dokploy, `.env` | knowledge-service | Non | URL interne Qdrant |
-| `QDRANT_API_KEY` | -- | Dokploy, `.env` | knowledge-service | **Oui si defini** | Cle Qdrant optionnelle, server-only |
+| `NEO4J_URI` | `bolt://neo4j:7687` | Dokploy, `.env` | knowledge-service | Non | URI interne Neo4j (legacy alias, encore supporte) |
+| `NEO4J_USERNAME` | `neo4j` | Dokploy, `.env` | knowledge-service | Non | Utilisateur Neo4j (legacy alias) |
+| `NEO4J_PASSWORD` | -- | Dokploy, `.env` | knowledge-service | **Oui** | Mot de passe Neo4j (legacy alias) |
+| `QDRANT_URL` | `http://qdrant:6333` | Dokploy, `.env` | knowledge-service | Non | URL interne Qdrant (legacy alias) |
+| `QDRANT_API_KEY` | -- | Dokploy, `.env` | knowledge-service | **Oui si defini** | Cle Qdrant optionnelle (legacy alias) |
+| `KNOWLEDGE_USE_PRODUCTION_BACKENDS` | `false` dev / `true` prod | Dokploy, `.env` | knowledge-service | Non | Bascule admin sur Neo4j+Qdrant. Demo et tests restent toujours sur le store local |
+| `KNOWLEDGE_REQUIRE_PRODUCTION_BACKENDS_IN_ADMIN` | `false` dev / `true` prod | Dokploy, `.env` | knowledge-service | Non | Si `true`, l'admin doit pouvoir parler a Neo4j et Qdrant ou degrader explicitement |
+| `KNOWLEDGE_ALLOW_LOCAL_FALLBACK_IN_ADMIN` | `true` | Dokploy, `.env` | knowledge-service | Non | Autorise le fallback local quand un backend est indisponible (degraded surface) |
+| `KNOWLEDGE_NEO4J_URI` | `bolt://neo4j:7687` | Dokploy, `.env` | knowledge-service | Non | URI Neo4j cible utilisee par l'adapter production |
+| `KNOWLEDGE_NEO4J_USER` | `neo4j` | Dokploy, `.env` | knowledge-service | Non | Utilisateur Neo4j |
+| `KNOWLEDGE_NEO4J_PASSWORD` | -- | Dokploy, `.env` | knowledge-service | **Oui** | Mot de passe Neo4j, server-only, jamais expose a l'UI |
+| `KNOWLEDGE_NEO4J_DATABASE` | `neo4j` | Dokploy, `.env` | knowledge-service | Non | Base Neo4j cible |
+| `KNOWLEDGE_QDRANT_URL` | `http://qdrant:6333` | Dokploy, `.env` | knowledge-service | Non | URL Qdrant pour le retrieval vectoriel/hybride |
+| `KNOWLEDGE_QDRANT_API_KEY` | -- | Dokploy, `.env` | knowledge-service | **Oui si defini** | Cle Qdrant optionnelle, server-only |
+| `KNOWLEDGE_QDRANT_COLLECTION` | `finance_os_knowledge` | Dokploy, `.env` | knowledge-service | Non | Nom de la collection vectorielle |
+| `KNOWLEDGE_EMBEDDING_PROVIDER` | `local` | Dokploy, `.env` | knowledge-service | Non | `local` ou `openai` (server-only). Failures degradent vers hashing local |
+| `KNOWLEDGE_EMBEDDING_MODEL` | `local-hashing-v1` | Dokploy, `.env` | knowledge-service | Non | Modele/strategie d'embedding effective |
+| `KNOWLEDGE_EMBEDDING_DIMENSIONS` | `256` | Dokploy, `.env` | knowledge-service | Non | Dimension du vecteur stocke dans Qdrant |
 | `AI_CHAT_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le chat grounded |
 | `AI_CHALLENGER_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le challenger Anthropic |
 | `AI_RELABEL_ENABLED` | `true` | Dokploy, `.env` | API | Non | Active le relabel transaction ambigu |

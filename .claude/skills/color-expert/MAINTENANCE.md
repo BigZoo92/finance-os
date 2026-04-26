@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/MAINTENANCE.md
+     Hash:   sha256:1f802caef2ffe671
+     Sync:   pnpm agent:skills:sync -->
+
 # Maintenance Guide
 
 Use this file when extending or reviewing the skill.

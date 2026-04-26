@@ -1,16 +1,21 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/powens/SKILL.md
+     Hash:   sha256:0dacdad6f2a66d1d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: powens
-description: "Skill for the Powens area of finance-os. 29 symbols across 5 files."
+description: "Skill for the Powens area of finance-os. 30 symbols across 5 files."
 ---
 
 # Powens
 
-29 symbols | 5 files | Cohesion: 100%
+30 symbols | 5 files | Cohesion: 100%
 
 ## When to Use
 
 - Working with code in `apps/`
-- Understanding how resetPowensManualSyncCooldown, startPowensManualSyncCooldown, readReconnectBannerDeferredSnapshot work
+- Understanding how resetPowensManualSyncCooldown, startPowensManualSyncCooldown, getPowensConnectionSyncBadgeModel work
 - Modifying powens-related functionality
 
 ## Key Files
@@ -20,7 +25,7 @@ description: "Skill for the Powens area of finance-os. 29 symbols across 5 files
 | `apps/web/src/features/powens/manual-sync-cooldown.ts` | createInitialCooldownStoreState, stopCooldownTicker, syncCooldownClock, ensureCooldownTicker, normalizeDurationSeconds (+8) |
 | `apps/web/src/features/powens/reconnect-banner.ts` | canUseLocalStorage, readReconnectBannerDeferredSnapshot, writeReconnectBannerDeferredSnapshot, clearReconnectBannerDeferredSnapshot, parseBooleanUiFlag (+1) |
 | `apps/web/src/routes/powens/callback.tsx` | toErrorState, renderLayout, PowensCallbackPendingPage, PowensCallbackPage |
-| `apps/web/src/features/powens/sync-status.ts` | formatAttemptTime, toTooltipLabel, getPowensConnectionSyncBadgeModel |
+| `apps/web/src/features/powens/sync-status.ts` | formatAttemptTime, toSnapshotFreshnessLabel, toTooltipLabel, getPowensConnectionSyncBadgeModel |
 | `apps/web/src/features/powens/internal-notifications.ts` | toIsoTimestamp, toConnectionDetail, getPowensInternalNotifications |
 
 ## Entry Points
@@ -29,9 +34,9 @@ Start here when exploring this area:
 
 - **`resetPowensManualSyncCooldown`** (Function) — `apps/web/src/features/powens/manual-sync-cooldown.ts:145`
 - **`startPowensManualSyncCooldown`** (Function) — `apps/web/src/features/powens/manual-sync-cooldown.ts:150`
+- **`getPowensConnectionSyncBadgeModel`** (Function) — `apps/web/src/features/powens/sync-status.ts:51`
 - **`readReconnectBannerDeferredSnapshot`** (Function) — `apps/web/src/features/powens/reconnect-banner.ts:70`
 - **`writeReconnectBannerDeferredSnapshot`** (Function) — `apps/web/src/features/powens/reconnect-banner.ts:97`
-- **`clearReconnectBannerDeferredSnapshot`** (Function) — `apps/web/src/features/powens/reconnect-banner.ts:111`
 
 ## Key Symbols
 
@@ -39,11 +44,11 @@ Start here when exploring this area:
 |--------|------|------|------|
 | `resetPowensManualSyncCooldown` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 145 |
 | `startPowensManualSyncCooldown` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 150 |
+| `getPowensConnectionSyncBadgeModel` | Function | `apps/web/src/features/powens/sync-status.ts` | 51 |
 | `readReconnectBannerDeferredSnapshot` | Function | `apps/web/src/features/powens/reconnect-banner.ts` | 70 |
 | `writeReconnectBannerDeferredSnapshot` | Function | `apps/web/src/features/powens/reconnect-banner.ts` | 97 |
 | `clearReconnectBannerDeferredSnapshot` | Function | `apps/web/src/features/powens/reconnect-banner.ts` | 111 |
 | `getPowensManualSyncCooldownUiConfig` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 132 |
-| `getPowensConnectionSyncBadgeModel` | Function | `apps/web/src/features/powens/sync-status.ts` | 38 |
 | `getPowensInternalNotifications` | Function | `apps/web/src/features/powens/internal-notifications.ts` | 39 |
 | `getPowensReconnectBannerUiEnabled` | Function | `apps/web/src/features/powens/reconnect-banner.ts` | 47 |
 | `getPowensManualSyncUiState` | Function | `apps/web/src/features/powens/manual-sync-cooldown.ts` | 215 |
@@ -56,7 +61,7 @@ Start here when exploring this area:
 | `renderLayout` | Function | `apps/web/src/routes/powens/callback.tsx` | 64 |
 | `PowensCallbackPendingPage` | Function | `apps/web/src/routes/powens/callback.tsx` | 82 |
 | `PowensCallbackPage` | Function | `apps/web/src/routes/powens/callback.tsx` | 147 |
-| `canUseLocalStorage` | Function | `apps/web/src/features/powens/reconnect-banner.ts` | 66 |
+| `formatAttemptTime` | Function | `apps/web/src/features/powens/sync-status.ts` | 17 |
 
 ## Execution Flows
 

@@ -1,11 +1,16 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/routes/SKILL.md
+     Hash:   sha256:025da88f20cab947
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: routes
-description: "Skill for the Routes area of finance-os. 74 symbols across 32 files."
+description: "Skill for the Routes area of finance-os. 72 symbols across 32 files."
 ---
 
 # Routes
 
-74 symbols | 32 files | Cohesion: 99%
+72 symbols | 32 files | Cohesion: 99%
 
 ## When to Use
 
@@ -21,12 +26,12 @@ description: "Skill for the Routes area of finance-os. 74 symbols across 32 file
 | `apps/api/src/routes/dashboard/routes/advisor.ts` | clampImpactEstimate, buildLocalInsights, buildActionTracking, buildDecisionWorkflow, buildLocalActions (+1) |
 | `apps/api/src/routes/integrations/powens/services/create-powens-admin-audit-service.ts` | recordEvent, safeParseEvent, listRecentEvents, getLatestCallback |
 | `apps/api/src/routes/integrations/powens/routes/status.test.ts` | createConnectionStatus, createLatestCallback, createPowensRuntime, createStatusTestApp |
-| `apps/web/src/routes/index.tsx` | resolveRange, HomePage, swallowPowensPrefetchError, prefetchDashboardRouteQueries |
 | `apps/api/src/routes/integrations/powens/services/create-powens-connect-url-service.ts` | withStateQueryParam, getConnectUrl, isCallbackStateValid |
 | `apps/api/src/routes/dashboard/routes/news.test.ts` | createNewsPayload, createDashboardRuntime, createNewsTestApp |
 | `apps/api/src/routes/dashboard/routes/goals.test.ts` | createGoalPayload, createDashboardRuntime, createGoalsTestApp |
 | `apps/api/src/routes/dashboard/routes/derived-recompute.test.ts` | createDerivedRecomputePayload, createDashboardRuntime, createDerivedRecomputeTestApp |
 | `apps/api/src/routes/dashboard/routes/analytics.test.ts` | buildSummary, createDashboardRuntime, createAnalyticsTestApp |
+| `apps/api/src/routes/integrations/powens/routes/callback.ts` | sanitizeConnectionId, createCallbackRoute |
 
 ## Entry Points
 
@@ -36,7 +41,7 @@ Start here when exploring this area:
 - **`createConnectUrlRoute`** (Function) — `apps/api/src/routes/integrations/powens/routes/connect-url.ts:7`
 - **`createCallbackRoute`** (Function) — `apps/api/src/routes/integrations/powens/routes/callback.ts:14`
 - **`recordEvent`** (Function) — `apps/api/src/routes/integrations/powens/services/create-powens-admin-audit-service.ts:67`
-- **`requestTransactionsBackgroundRefresh`** (Function) — `apps/api/src/routes/dashboard/runtime.ts:61`
+- **`requestTransactionsBackgroundRefresh`** (Function) — `apps/api/src/routes/dashboard/runtime.ts:114`
 
 ## Key Symbols
 
@@ -47,7 +52,7 @@ Start here when exploring this area:
 | `createConnectUrlRoute` | Function | `apps/api/src/routes/integrations/powens/routes/connect-url.ts` | 7 |
 | `createCallbackRoute` | Function | `apps/api/src/routes/integrations/powens/routes/callback.ts` | 14 |
 | `recordEvent` | Function | `apps/api/src/routes/integrations/powens/services/create-powens-admin-audit-service.ts` | 67 |
-| `requestTransactionsBackgroundRefresh` | Function | `apps/api/src/routes/dashboard/runtime.ts` | 61 |
+| `requestTransactionsBackgroundRefresh` | Function | `apps/api/src/routes/dashboard/runtime.ts` | 114 |
 | `createTransactionsRoute` | Function | `apps/api/src/routes/dashboard/routes/transactions.ts` | 15 |
 | `logResolutionStats` | Function | `apps/api/src/routes/dashboard/routes/transactions.ts` | 27 |
 | `createRequestSyncUseCase` | Function | `apps/api/src/routes/integrations/powens/domain/create-request-sync-use-case.ts` | 16 |
@@ -60,8 +65,8 @@ Start here when exploring this area:
 | `createEnrichmentBulkTriageRoute` | Function | `apps/api/src/routes/enrichment/routes/bulk-triage.ts` | 10 |
 | `createBacklogRoute` | Function | `apps/api/src/routes/integrations/powens/routes/backlog.ts` | 4 |
 | `createGetSyncBacklogCountUseCase` | Function | `apps/api/src/routes/integrations/powens/domain/create-get-sync-backlog-count-use-case.ts` | 6 |
-| `registerSystemRoutes` | Function | `apps/api/src/routes/system.ts` | 21 |
-| `prefetchDashboardRouteQueries` | Function | `apps/web/src/routes/index.tsx` | 36 |
+| `registerSystemRoutes` | Function | `apps/api/src/routes/system.ts` | 22 |
+| `createNewsRoute` | Function | `apps/api/src/routes/dashboard/routes/news.ts` | 63 |
 
 ## Execution Flows
 

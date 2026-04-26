@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-consistent-system.md
+     Hash:   sha256:391d851b7e6fb321
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Define and Document a Type System
 impact: MEDIUM-HIGH

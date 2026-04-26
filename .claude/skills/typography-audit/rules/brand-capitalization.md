@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-capitalization.md
+     Hash:   sha256:e92cc77aa266da28
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Choose Consistent Brand Capitalization
 impact: LOW-MEDIUM

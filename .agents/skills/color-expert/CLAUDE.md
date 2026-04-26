@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/CLAUDE.md
+     Hash:   sha256:1a7f978147566cf6
+     Sync:   pnpm agent:skills:sync -->
+
 # CLAUDE.md
 
 This file provides guidance when working with code in this repository.

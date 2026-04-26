@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-letterspacing-body.md
+     Hash:   sha256:9f1e704a8c93b1e3
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Never Letterspace Body Text
 impact: HIGH

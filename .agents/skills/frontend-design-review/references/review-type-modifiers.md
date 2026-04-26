@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design-review/references/review-type-modifiers.md
+     Hash:   sha256:a8e2347d41954640
+     Sync:   pnpm agent:skills:sync -->
+
 # Review Type Modifiers
 
 Adjust focus based on review context:

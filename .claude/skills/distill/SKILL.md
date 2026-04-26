@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/distill/SKILL.md
+     Hash:   sha256:dffb5ad02d3fd8e4
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: distill
 description: Strip designs to their essence by removing unnecessary complexity. Great design is simple, powerful, and clean. Use when the user asks to simplify, declutter, reduce noise, remove elements, or make a UI cleaner and more focused.

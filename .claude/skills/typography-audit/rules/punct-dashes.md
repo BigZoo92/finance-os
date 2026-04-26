@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-dashes.md
+     Hash:   sha256:1a02520a57181557
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Em Dash vs En Dash vs Hyphen
 impact: CRITICAL

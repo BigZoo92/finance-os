@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/layout-empty-loading-error-states.md
+     Hash:   sha256:5295ed3cfaabad01
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Design Empty, Loading, and Error States Explicitly
 impact: HIGH

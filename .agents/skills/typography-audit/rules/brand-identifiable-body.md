@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-identifiable-body.md
+     Hash:   sha256:09f308bfb8cde2aa
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Make Body Text Distinctive
 impact: LOW-MEDIUM

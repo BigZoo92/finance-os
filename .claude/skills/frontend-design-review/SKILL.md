@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design-review/SKILL.md
+     Hash:   sha256:639b68cdc6f9b4cd
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: frontend-design-review
 description: >

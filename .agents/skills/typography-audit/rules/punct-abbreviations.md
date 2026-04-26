@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-abbreviations.md
+     Hash:   sha256:77783d0fc7825c4c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Clean Up Abbreviations and Decades
 impact: CRITICAL

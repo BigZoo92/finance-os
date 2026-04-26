@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/SKILL.md
+     Hash:   sha256:5555803cbb110078
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: ui-audit
 description: Audits web UI quality across accessibility, interaction, forms, typography, navigation, layout, performance, motion, and microcopy. Use when reviewing or refining frontend UI before merge or release, asking "check my UI", "is this accessible", "polish this page", or when the user asks for a UI, UX, or accessibility audit.

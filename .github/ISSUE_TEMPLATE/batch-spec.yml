@@ -120,3 +120,25 @@ body:
         - ...
     validations:
       required: true
+
+  - type: dropdown
+    id: context_budget
+    attributes:
+      label: Context budget
+      description: Maximum context size for agent prompts. Smaller = cheaper + faster. Use large/xlarge only for complex cross-cutting work.
+      options:
+        - small (8K tokens)
+        - medium (16K tokens)
+        - large (32K tokens)
+        - xlarge (64K tokens)
+    validations:
+      required: false
+
+  - type: input
+    id: context_packs
+    attributes:
+      label: Context packs
+      description: "Comma-separated context packs to include (see docs/agentic/context-packs/). Leave empty for auto-selection."
+      placeholder: "core, web-ui"
+    validations:
+      required: false

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/empirical-prompt-tuning/SKILL.md
+     Hash:   sha256:426dfe316e7b32bf
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: empirical-prompt-tuning
 description: A method for improving agent-facing text instructions (skills, slash commands, task prompts, CLAUDE.md sections, code-generation prompts) by having a bias-free executor actually run them, evaluating from both sides (executor self-report + instruction-side metrics), and iterating until improvements plateau. Use this right after creating or heavily revising a prompt or skill, or when you suspect an agent’s unexpected behavior is caused by ambiguity in the instruction itself.

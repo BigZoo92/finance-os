@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-hair-thin-spaces.md
+     Hash:   sha256:31cfd2f857c9f4fc
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Hair and Thin Spaces for Fine Adjustments
 impact: HIGH

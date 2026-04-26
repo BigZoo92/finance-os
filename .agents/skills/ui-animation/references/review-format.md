@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/review-format.md
+     Hash:   sha256:7f18cf43c71e2fb4
+     Sync:   pnpm agent:skills:sync -->
+
 # Animation Review Format
 
 ## Before/After/Why table

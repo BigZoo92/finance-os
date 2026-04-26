@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/layout-flex-grid-first.md
+     Hash:   sha256:7f9d92d274bf940c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Prefer Flex/Grid Over JS Measurement
 impact: HIGH

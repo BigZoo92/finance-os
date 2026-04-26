@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-paragraph-indent.md
+     Hash:   sha256:43d193de103acb33
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Apply Indents Correctly
 impact: HIGH

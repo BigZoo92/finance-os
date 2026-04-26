@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-true-styles.md
+     Hash:   sha256:9a310ead1f29783b
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Load Real Italic and Bold Styles
 impact: CRITICAL

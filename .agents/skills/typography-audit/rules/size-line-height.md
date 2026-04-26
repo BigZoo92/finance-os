@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-line-height.md
+     Hash:   sha256:3164c84926489b6b
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Set Line Height for Comfortable Reading
 impact: HIGH

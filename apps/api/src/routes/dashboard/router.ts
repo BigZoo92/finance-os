@@ -245,6 +245,15 @@ export const createDashboardRoutes = ({
     aiMaxChatMessagesContext,
     aiUsdToEurRate,
     advisorXSignalsMode,
+    knowledgeConfig: {
+      enabled: knowledgeServiceEnabled,
+      url: knowledgeServiceUrl,
+      timeoutMs: knowledgeServiceTimeoutMs,
+      maxContextTokens: knowledgeGraphMaxContextTokens,
+      retrievalMode: knowledgeGraphRetrievalMode,
+      maxPathDepth: knowledgeGraphMaxPathDepth,
+      minConfidence: knowledgeGraphMinConfidence,
+    },
   })
 
   return new Elysia({ prefix: '/dashboard' })

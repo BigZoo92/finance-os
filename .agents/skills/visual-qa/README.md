@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/visual-qa/README.md
+     Hash:   sha256:996f568198a93580
+     Sync:   pnpm agent:skills:sync -->
+
 # visual-qa
 
 Use vision models to self-review screenshots against design intent. Catch spacing issues, alignment problems, color inconsistencies, responsive bugs, and accessibility gaps before shipping.

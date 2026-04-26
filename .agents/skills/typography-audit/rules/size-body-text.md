@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-body-text.md
+     Hash:   sha256:7b130fb6b4fc254f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Set Body Text Size by Context
 impact: HIGH

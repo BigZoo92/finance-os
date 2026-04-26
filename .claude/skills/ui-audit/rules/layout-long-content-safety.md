@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/layout-long-content-safety.md
+     Hash:   sha256:fe1b4a3204603880
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Handle Long and Unbroken Content Safely
 impact: HIGH

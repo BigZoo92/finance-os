@@ -2,19 +2,25 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { BrandMark } from '@/components/brand/brand-mark'
-import { NAV_ITEMS, type NavItem } from './nav-items'
+import {
+  NAV_GROUPS,
+  NAV_ITEMS,
+  getMobileTabItems,
+  getMobileDrawerItems,
+  type NavItem,
+} from './nav-items'
+
+// ────────────────────────────────────────────────────────────
+// Desktop Sidebar
+// ────────────────────────────────────────────────────────────
 
 export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
-  const routerState = useRouterState()
-  const currentPath = routerState.location.pathname
+  const currentPath = useRouterState().location.pathname
 
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
-    return currentPath.startsWith(to)
+    return currentPath === to || currentPath.startsWith(to + '/')
   }
-
-  const mainItems = NAV_ITEMS.filter(i => i.section === 'main')
-  const systemItems = NAV_ITEMS.filter(i => i.section === 'system')
 
   return (
     <aside
@@ -27,7 +33,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         transitionTimingFunction: 'var(--ease-out-expo)',
       }}
     >
-      {/* Subtle aurora gradient flourish behind the brand */}
+      {/* Aurora gradient flourish */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-40"
@@ -50,34 +56,40 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         </Link>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 pt-1 pb-4">
-        {!collapsed && (
-          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/45">
-            Finances
-          </p>
-        )}
-        <ul className="space-y-px">
-          {mainItems.map(item => (
-            <SidebarItem key={item.to} item={item} active={isActive(item.to)} collapsed={collapsed} />
-          ))}
-        </ul>
-
-        <div className="my-4 hair-rule" />
-
-        {!collapsed && (
-          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-accent-2/55">
-            Système
-          </p>
-        )}
-        <ul className="space-y-px">
-          {systemItems.map(item => (
-            <SidebarItem key={item.to} item={item} active={isActive(item.to)} collapsed={collapsed} />
-          ))}
-        </ul>
+      {/* Navigation — 3 groups */}
+      <nav className="flex-1 overflow-y-auto px-3 pt-1 pb-4" aria-label="Navigation principale">
+        {NAV_GROUPS.map((group, gi) => {
+          const items = NAV_ITEMS.filter(i => i.group === group.id)
+          if (items.length === 0) return null
+          return (
+            <div key={group.id} className={gi > 0 ? 'mt-3' : ''}>
+              {gi > 0 && <div className="mb-3 hair-rule" />}
+              {!collapsed && (
+                <p
+                  className={`mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.22em] ${group.color}`}
+                >
+                  {group.label}
+                </p>
+              )}
+              {collapsed && gi > 0 && (
+                <p
+                  className="mb-1.5 px-1 text-center text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/40"
+                  title={group.label}
+                >
+                  {group.icon}
+                </p>
+              )}
+              <ul className="space-y-px">
+                {items.map(item => (
+                  <SidebarItem key={item.to} item={item} active={isActive(item.to)} collapsed={collapsed} />
+                ))}
+              </ul>
+            </div>
+          )
+        })}
       </nav>
 
-      {/* Footer — brand block + collapse */}
+      {/* Footer */}
       <div className="relative px-3 pb-3">
         {!collapsed && <SidebarFooterBlock />}
         <button
@@ -170,26 +182,29 @@ function SidebarItem({ item, active, collapsed }: { item: NavItem; active: boole
   )
 }
 
+// ────────────────────────────────────────────────────────────
+// Mobile Bottom Navigation
+// ────────────────────────────────────────────────────────────
+
 export function MobileNav() {
-  const routerState = useRouterState()
-  const currentPath = routerState.location.pathname
+  const currentPath = useRouterState().location.pathname
   const prefersReducedMotion = useReducedMotion()
   const [isOpen, setIsOpen] = useState(false)
 
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
-    return currentPath.startsWith(to)
+    return currentPath === to || currentPath.startsWith(to + '/')
   }
 
-  const MOBILE_TAB_ITEMS = NAV_ITEMS.filter(i => i.section === 'main').slice(0, 4)
-  const quickActions = NAV_ITEMS.filter(i => i.section === 'main').slice(4)
+  const tabItems = getMobileTabItems()
+  const drawerItems = getMobileDrawerItems()
 
   return (
     <>
       <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden safe-area-bottom" aria-label="Navigation principale">
         <div className="mx-3 mb-3 rounded-2xl border border-border/60 glass-surface shadow-lg">
           <div className="relative flex items-stretch justify-around px-2 py-1">
-            {MOBILE_TAB_ITEMS.map(item => {
+            {tabItems.map(item => {
               const active = isActive(item.to)
               return (
                 <Link
@@ -260,39 +275,52 @@ export function MobileNav() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', bounce: 0.1, duration: 0.45 }}
-              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-border/50 bg-card shadow-2xl px-5 pb-8 pt-3 lg:hidden"
+              className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-border/50 bg-card shadow-2xl px-5 pb-8 pt-3 lg:hidden"
             >
               <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-muted-foreground/30" />
               <nav>
-                <ul className="space-y-0.5">
-                  {quickActions.map((item, i) => {
-                    const active = isActive(item.to)
-                    return (
-                      <motion.li
-                        key={item.to}
-                        initial={{ opacity: 0, x: -12 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: prefersReducedMotion ? 0 : i * 0.03, duration: 0.2 }}
+                {NAV_GROUPS.map(group => {
+                  const items = drawerItems.filter(i => i.group === group.id)
+                  if (items.length === 0) return null
+                  return (
+                    <div key={group.id} className="mb-4">
+                      <p
+                        className={`mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
                       >
-                        <Link
-                          to={item.to}
-                          onClick={() => setIsOpen(false)}
-                          className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all duration-150 active:scale-[0.98] ${
-                            active
-                              ? 'bg-primary/12 text-primary font-semibold border border-primary/20'
-                              : 'text-foreground/75 hover:bg-accent/50'
-                          }`}
-                        >
-                          <span className="text-lg" aria-hidden="true">{item.icon}</span>
-                          <div>
-                            <p>{item.label}</p>
-                            <p className="text-xs text-muted-foreground/70">{item.description}</p>
-                          </div>
-                        </Link>
-                      </motion.li>
-                    )
-                  })}
-                </ul>
+                        {group.label}
+                      </p>
+                      <ul className="space-y-0.5">
+                        {items.map((item, i) => {
+                          const active = isActive(item.to)
+                          return (
+                            <motion.li
+                              key={item.to}
+                              initial={{ opacity: 0, x: -12 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: prefersReducedMotion ? 0 : i * 0.03, duration: 0.2 }}
+                            >
+                              <Link
+                                to={item.to}
+                                onClick={() => setIsOpen(false)}
+                                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all duration-150 active:scale-[0.98] ${
+                                  active
+                                    ? 'bg-primary/12 text-primary font-semibold border border-primary/20'
+                                    : 'text-foreground/75 hover:bg-accent/50'
+                                }`}
+                              >
+                                <span className="text-lg" aria-hidden="true">{item.icon}</span>
+                                <div>
+                                  <p>{item.label}</p>
+                                  <p className="text-xs text-muted-foreground/70">{item.description}</p>
+                                </div>
+                              </Link>
+                            </motion.li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  )
+                })}
               </nav>
             </motion.div>
           </>

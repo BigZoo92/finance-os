@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-cuts.md
+     Hash:   sha256:7ce8fa7ca187701c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Display Cuts Only at Large Sizes
 impact: LOW-MEDIUM

@@ -1,11 +1,16 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/features/SKILL.md
+     Hash:   sha256:0e508fa140fba627
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: features
-description: "Skill for the Features area of finance-os. 30 symbols across 5 files."
+description: "Skill for the Features area of finance-os. 32 symbols across 6 files."
 ---
 
 # Features
 
-30 symbols | 5 files | Cohesion: 100%
+32 symbols | 6 files | Cohesion: 100%
 
 ## When to Use
 
@@ -20,6 +25,7 @@ description: "Skill for the Features area of finance-os. 30 symbols across 5 fil
 | `apps/web/src/features/demo-data.ts` | toMoney, toDateOnly, getRangeStartDate, listDatesInRange, buildDailyWealthSnapshots (+6) |
 | `apps/web/src/features/dashboard-api.ts` | toSearchParams, fetchDashboardNews, fetchDashboardSummary, fetchDashboardTransactions, fetchDashboardAdvisor (+4) |
 | `apps/web/src/features/dashboard-legacy-adapter.ts` | createDiagnostics, getMigrationStage, toArrayWithFallback, toTotalsWithFallback, logDashboardAdapterEvent (+1) |
+| `apps/web/src/features/pwa-install-prompt.ts` | parseTimestamp, readPwaInstallDismissedUntil |
 | `apps/web/src/features/auth-ssr.ts` | getRequestAuthContext, fetchAuthMeFromSsr |
 | `apps/web/src/features/ai-advisor-config.ts` | toBooleanFlag, getAiAdvisorUiFlags |
 
@@ -31,7 +37,7 @@ Start here when exploring this area:
 - **`adaptDashboardSummaryLegacy`** (Function) — `apps/web/src/features/dashboard-legacy-adapter.ts:125`
 - **`getDemoDashboardTransactions`** (Function) — `apps/web/src/features/demo-data.ts:630`
 - **`fetchDashboardNews`** (Function) — `apps/web/src/features/dashboard-api.ts:26`
-- **`fetchDashboardSummary`** (Function) — `apps/web/src/features/dashboard-api.ts:58`
+- **`fetchDashboardSummary`** (Function) — `apps/web/src/features/dashboard-api.ts:97`
 
 ## Key Symbols
 
@@ -41,11 +47,12 @@ Start here when exploring this area:
 | `adaptDashboardSummaryLegacy` | Function | `apps/web/src/features/dashboard-legacy-adapter.ts` | 125 |
 | `getDemoDashboardTransactions` | Function | `apps/web/src/features/demo-data.ts` | 630 |
 | `fetchDashboardNews` | Function | `apps/web/src/features/dashboard-api.ts` | 26 |
-| `fetchDashboardSummary` | Function | `apps/web/src/features/dashboard-api.ts` | 58 |
-| `fetchDashboardTransactions` | Function | `apps/web/src/features/dashboard-api.ts` | 80 |
-| `fetchDashboardAdvisor` | Function | `apps/web/src/features/dashboard-api.ts` | 244 |
-| `normalizeDashboardDerivedRecomputeActionError` | Function | `apps/web/src/features/dashboard-api.ts` | 286 |
-| `postDashboardDerivedRecompute` | Function | `apps/web/src/features/dashboard-api.ts` | 331 |
+| `fetchDashboardSummary` | Function | `apps/web/src/features/dashboard-api.ts` | 97 |
+| `fetchDashboardTransactions` | Function | `apps/web/src/features/dashboard-api.ts` | 119 |
+| `fetchDashboardAdvisor` | Function | `apps/web/src/features/dashboard-api.ts` | 283 |
+| `readPwaInstallDismissedUntil` | Function | `apps/web/src/features/pwa-install-prompt.ts` | 19 |
+| `normalizeDashboardDerivedRecomputeActionError` | Function | `apps/web/src/features/dashboard-api.ts` | 325 |
+| `postDashboardDerivedRecompute` | Function | `apps/web/src/features/dashboard-api.ts` | 370 |
 | `fetchAuthMeFromSsr` | Function | `apps/web/src/features/auth-ssr.ts` | 30 |
 | `getAiAdvisorUiFlags` | Function | `apps/web/src/features/ai-advisor-config.ts` | 17 |
 | `toMoney` | Function | `apps/web/src/features/demo-data.ts` | 39 |
@@ -56,7 +63,6 @@ Start here when exploring this area:
 | `createDiagnostics` | Function | `apps/web/src/features/dashboard-legacy-adapter.ts` | 40 |
 | `getMigrationStage` | Function | `apps/web/src/features/dashboard-legacy-adapter.ts` | 55 |
 | `toArrayWithFallback` | Function | `apps/web/src/features/dashboard-legacy-adapter.ts` | 71 |
-| `toTotalsWithFallback` | Function | `apps/web/src/features/dashboard-legacy-adapter.ts` | 80 |
 
 ## Execution Flows
 

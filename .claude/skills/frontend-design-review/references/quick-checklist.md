@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design-review/references/quick-checklist.md
+     Hash:   sha256:8043fd995ae8d10c
+     Sync:   pnpm agent:skills:sync -->
+
 # Quick Checklist
 
 Before approving any UI work:

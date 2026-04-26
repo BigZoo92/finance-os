@@ -1,0 +1,1307 @@
+{
+  "generatedAt": "2026-04-26T16:53:18.471Z",
+  "totalSkills": 100,
+  "totalTokens": 145004,
+  "totalRefTokens": 17410,
+  "byTier": {
+    "core": {
+      "count": 13,
+      "tokens": 13995
+    },
+    "recommended": {
+      "count": 18,
+      "tokens": 33902
+    },
+    "optional": {
+      "count": 68,
+      "tokens": 94535
+    },
+    "experimental": {
+      "count": 1,
+      "tokens": 2572
+    }
+  },
+  "taskDomains": {
+    "core-invariants": {
+      "requiredSkills": [
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [
+        "security-and-hardening"
+      ],
+      "docs": [
+        "AGENTS.md"
+      ]
+    },
+    "web-ui": {
+      "requiredSkills": [
+        "finance-os/ui-cockpit",
+        "finance-os/web-ssr-auth"
+      ],
+      "optionalSkills": [
+        "vercel-react-best-practices",
+        "vercel-composition-patterns"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "DESIGN.md",
+        "apps/web/AGENTS.md"
+      ]
+    },
+    "tanstack": {
+      "requiredSkills": [
+        "finance-os/web-ssr-auth",
+        "tanstack-start-best-practices"
+      ],
+      "optionalSkills": [
+        "tanstack-router-best-practices",
+        "tanstack-query-best-practices",
+        "tanstack-integration-best-practices"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "apps/web/AGENTS.md"
+      ]
+    },
+    "api-backend": {
+      "requiredSkills": [
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [
+        "security-and-hardening"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "apps/api/AGENTS.md"
+      ]
+    },
+    "worker-sync": {
+      "requiredSkills": [
+        "finance-os/worker-sync"
+      ],
+      "optionalSkills": [
+        "redis-development"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "apps/worker/AGENTS.md"
+      ]
+    },
+    "powens": {
+      "requiredSkills": [
+        "finance-os/powens-integration",
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [],
+      "docs": [
+        "AGENTS.md",
+        "packages/powens/AGENTS.md"
+      ]
+    },
+    "knowledge-graph": {
+      "requiredSkills": [
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [],
+      "docs": [
+        "AGENTS.md",
+        "docs/adr/temporal-knowledge-graph-graphrag.md"
+      ]
+    },
+    "ai-advisor": {
+      "requiredSkills": [
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [],
+      "docs": [
+        "AGENTS.md",
+        "docs/AI-SETUP.md"
+      ]
+    },
+    "database": {
+      "requiredSkills": [
+        "drizzle-best-practices"
+      ],
+      "optionalSkills": [
+        "postgresql-code-review"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "packages/db/AGENTS.md"
+      ]
+    },
+    "redis": {
+      "requiredSkills": [
+        "finance-os/worker-sync"
+      ],
+      "optionalSkills": [
+        "redis-development"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "packages/redis/AGENTS.md"
+      ]
+    },
+    "docker-deploy": {
+      "requiredSkills": [
+        "finance-os/deploy-ghcr-dokploy"
+      ],
+      "optionalSkills": [
+        "ci-cd-and-automation"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "infra/docker/AGENTS.md",
+        "docs/deployment.md"
+      ]
+    },
+    "ci-cd": {
+      "requiredSkills": [
+        "finance-os/deploy-ghcr-dokploy"
+      ],
+      "optionalSkills": [
+        "ci-cd-and-automation",
+        "git-workflow-and-versioning"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "infra/docker/AGENTS.md"
+      ]
+    },
+    "testing": {
+      "requiredSkills": [
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [
+        "webapp-testing"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "docs/agentic/testing-canonical.md"
+      ]
+    },
+    "performance": {
+      "requiredSkills": [
+        "performance"
+      ],
+      "optionalSkills": [
+        "core-web-vitals"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "docs/context/PERFORMANCE-PLAYBOOK.md"
+      ]
+    },
+    "design-polish": {
+      "requiredSkills": [
+        "finance-os/ui-cockpit"
+      ],
+      "optionalSkills": [
+        "polish",
+        "critique",
+        "audit"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "DESIGN.md"
+      ]
+    },
+    "security": {
+      "requiredSkills": [
+        "finance-os/core-invariants",
+        "security-and-hardening"
+      ],
+      "optionalSkills": [],
+      "docs": [
+        "AGENTS.md"
+      ]
+    },
+    "review": {
+      "requiredSkills": [
+        "code-review",
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [
+        "postgresql-code-review"
+      ],
+      "docs": [
+        "AGENTS.md",
+        "docs/agentic/code_review.md"
+      ]
+    },
+    "documentation": {
+      "requiredSkills": [
+        "documentation-and-adrs"
+      ],
+      "optionalSkills": [],
+      "docs": [
+        "AGENTS.md"
+      ]
+    },
+    "agentic-autopilot": {
+      "requiredSkills": [
+        "finance-os/core-invariants"
+      ],
+      "optionalSkills": [],
+      "docs": [
+        "AGENTS.md",
+        "docs/agentic/INDEX.md"
+      ]
+    }
+  },
+  "skills": [
+    {
+      "name": "adapt",
+      "path": ".agentic/source/skills/adapt",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1780,
+      "refTokens": 0
+    },
+    {
+      "name": "animate",
+      "path": ".agentic/source/skills/animate",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1915,
+      "refTokens": 0
+    },
+    {
+      "name": "api-contract-guard",
+      "path": ".agentic/source/skills/api-contract-guard",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 468,
+      "refTokens": 0
+    },
+    {
+      "name": "arrange",
+      "path": ".agentic/source/skills/arrange",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1835,
+      "refTokens": 0
+    },
+    {
+      "name": "audit",
+      "path": ".agentic/source/skills/audit",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1900,
+      "refTokens": 0
+    },
+    {
+      "name": "bolder",
+      "path": ".agentic/source/skills/bolder",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1683,
+      "refTokens": 0
+    },
+    {
+      "name": "ci-cd-and-automation",
+      "path": ".agentic/source/skills/ci-cd-and-automation",
+      "tier": "recommended",
+      "domains": [
+        "ci-cd"
+      ],
+      "tokens": 2752,
+      "refTokens": 0
+    },
+    {
+      "name": "clarify",
+      "path": ".agentic/source/skills/clarify",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1690,
+      "refTokens": 0
+    },
+    {
+      "name": "code-change-verification",
+      "path": ".agentic/source/skills/code-change-verification",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 449,
+      "refTokens": 0
+    },
+    {
+      "name": "code-review",
+      "path": ".agentic/source/skills/code-review",
+      "tier": "recommended",
+      "domains": [
+        "review"
+      ],
+      "tokens": 2318,
+      "refTokens": 0
+    },
+    {
+      "name": "color-expert",
+      "path": ".agentic/source/skills/color-expert",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 3937,
+      "refTokens": 0
+    },
+    {
+      "name": "colorize",
+      "path": ".agentic/source/skills/colorize",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1721,
+      "refTokens": 0
+    },
+    {
+      "name": "core-web-vitals",
+      "path": ".agentic/source/skills/core-web-vitals",
+      "tier": "recommended",
+      "domains": [
+        "performance"
+      ],
+      "tokens": 2897,
+      "refTokens": 1087
+    },
+    {
+      "name": "creative-direction",
+      "path": ".agentic/source/skills/creative-direction",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2648,
+      "refTokens": 0
+    },
+    {
+      "name": "critique",
+      "path": ".agentic/source/skills/critique",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2775,
+      "refTokens": 0
+    },
+    {
+      "name": "delight",
+      "path": ".agentic/source/skills/delight",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2504,
+      "refTokens": 0
+    },
+    {
+      "name": "design-tokens",
+      "path": ".agentic/source/skills/design-tokens",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2899,
+      "refTokens": 0
+    },
+    {
+      "name": "distill",
+      "path": ".agentic/source/skills/distill",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1560,
+      "refTokens": 0
+    },
+    {
+      "name": "docs-sync",
+      "path": ".agentic/source/skills/docs-sync",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 442,
+      "refTokens": 0
+    },
+    {
+      "name": "documentation-and-adrs",
+      "path": ".agentic/source/skills/documentation-and-adrs",
+      "tier": "recommended",
+      "domains": [
+        "documentation"
+      ],
+      "tokens": 2178,
+      "refTokens": 0
+    },
+    {
+      "name": "drizzle-best-practices",
+      "path": ".agentic/source/skills/drizzle-best-practices",
+      "tier": "recommended",
+      "domains": [
+        "database"
+      ],
+      "tokens": 3316,
+      "refTokens": 0
+    },
+    {
+      "name": "dual-path-guard",
+      "path": ".agentic/source/skills/dual-path-guard",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 541,
+      "refTokens": 0
+    },
+    {
+      "name": "empirical-prompt-tuning",
+      "path": ".agentic/source/skills/empirical-prompt-tuning",
+      "tier": "optional",
+      "domains": [
+        "agentic-autopilot"
+      ],
+      "tokens": 4298,
+      "refTokens": 0
+    },
+    {
+      "name": "sast-security-scan",
+      "path": ".agentic/source/skills/experimental/sast-security-scan",
+      "tier": "experimental",
+      "domains": [
+        "security"
+      ],
+      "tokens": 2572,
+      "refTokens": 0
+    },
+    {
+      "name": "extract",
+      "path": ".agentic/source/skills/extract",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 988,
+      "refTokens": 0
+    },
+    {
+      "name": "core-invariants",
+      "path": ".agentic/source/skills/finance-os/core-invariants",
+      "tier": "core",
+      "domains": [
+        "core-invariants",
+        "security",
+        "env"
+      ],
+      "tokens": 1229,
+      "refTokens": 0
+    },
+    {
+      "name": "deploy-ghcr-dokploy",
+      "path": ".agentic/source/skills/finance-os/deploy-ghcr-dokploy",
+      "tier": "core",
+      "domains": [
+        "docker-deploy",
+        "ci-cd"
+      ],
+      "tokens": 1168,
+      "refTokens": 0
+    },
+    {
+      "name": "observability-failsoft",
+      "path": ".agentic/source/skills/finance-os/observability-failsoft",
+      "tier": "core",
+      "domains": [
+        "observability",
+        "core-invariants"
+      ],
+      "tokens": 1421,
+      "refTokens": 0
+    },
+    {
+      "name": "powens-integration",
+      "path": ".agentic/source/skills/finance-os/powens-integration",
+      "tier": "core",
+      "domains": [
+        "powens"
+      ],
+      "tokens": 1050,
+      "refTokens": 0
+    },
+    {
+      "name": "ui-cockpit",
+      "path": ".agentic/source/skills/finance-os/ui-cockpit",
+      "tier": "core",
+      "domains": [
+        "web-ui",
+        "design-polish"
+      ],
+      "tokens": 1478,
+      "refTokens": 0
+    },
+    {
+      "name": "web-ssr-auth",
+      "path": ".agentic/source/skills/finance-os/web-ssr-auth",
+      "tier": "core",
+      "domains": [
+        "web-ui",
+        "tanstack",
+        "auth"
+      ],
+      "tokens": 1260,
+      "refTokens": 0
+    },
+    {
+      "name": "worker-sync",
+      "path": ".agentic/source/skills/finance-os/worker-sync",
+      "tier": "core",
+      "domains": [
+        "worker-sync",
+        "redis"
+      ],
+      "tokens": 1401,
+      "refTokens": 0
+    },
+    {
+      "name": "frontend-design",
+      "path": ".agentic/source/skills/frontend-design",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2369,
+      "refTokens": 0
+    },
+    {
+      "name": "frontend-design-review",
+      "path": ".agentic/source/skills/frontend-design-review",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1539,
+      "refTokens": 1680
+    },
+    {
+      "name": "frontend-skill",
+      "path": ".agentic/source/skills/frontend-skill",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1918,
+      "refTokens": 0
+    },
+    {
+      "name": "app",
+      "path": ".agentic/source/skills/generated/app",
+      "tier": "optional",
+      "domains": [
+        "app"
+      ],
+      "tokens": 399,
+      "refTokens": 0
+    },
+    {
+      "name": "auth",
+      "path": ".agentic/source/skills/generated/auth",
+      "tier": "optional",
+      "domains": [
+        "auth"
+      ],
+      "tokens": 1185,
+      "refTokens": 0
+    },
+    {
+      "name": "cluster-1",
+      "path": ".agentic/source/skills/generated/cluster-1",
+      "tier": "optional",
+      "domains": [
+        "1"
+      ],
+      "tokens": 615,
+      "refTokens": 0
+    },
+    {
+      "name": "cluster-17",
+      "path": ".agentic/source/skills/generated/cluster-17",
+      "tier": "optional",
+      "domains": [
+        "17"
+      ],
+      "tokens": 371,
+      "refTokens": 0
+    },
+    {
+      "name": "cluster-3",
+      "path": ".agentic/source/skills/generated/cluster-3",
+      "tier": "optional",
+      "domains": [
+        "3"
+      ],
+      "tokens": 690,
+      "refTokens": 0
+    },
+    {
+      "name": "cluster-47",
+      "path": ".agentic/source/skills/generated/cluster-47",
+      "tier": "optional",
+      "domains": [
+        "47"
+      ],
+      "tokens": 494,
+      "refTokens": 0
+    },
+    {
+      "name": "cluster-48",
+      "path": ".agentic/source/skills/generated/cluster-48",
+      "tier": "optional",
+      "domains": [
+        "48"
+      ],
+      "tokens": 423,
+      "refTokens": 0
+    },
+    {
+      "name": "dashboard",
+      "path": ".agentic/source/skills/generated/dashboard",
+      "tier": "optional",
+      "domains": [
+        "dashboard"
+      ],
+      "tokens": 1417,
+      "refTokens": 0
+    },
+    {
+      "name": "debug",
+      "path": ".agentic/source/skills/generated/debug",
+      "tier": "optional",
+      "domains": [
+        "debug"
+      ],
+      "tokens": 556,
+      "refTokens": 0
+    },
+    {
+      "name": "domain",
+      "path": ".agentic/source/skills/generated/domain",
+      "tier": "optional",
+      "domains": [
+        "domain"
+      ],
+      "tokens": 1511,
+      "refTokens": 0
+    },
+    {
+      "name": "features",
+      "path": ".agentic/source/skills/generated/features",
+      "tier": "optional",
+      "domains": [
+        "features"
+      ],
+      "tokens": 969,
+      "refTokens": 0
+    },
+    {
+      "name": "goals",
+      "path": ".agentic/source/skills/generated/goals",
+      "tier": "optional",
+      "domains": [
+        "goals"
+      ],
+      "tokens": 521,
+      "refTokens": 0
+    },
+    {
+      "name": "logging",
+      "path": ".agentic/source/skills/generated/logging",
+      "tier": "optional",
+      "domains": [
+        "logging"
+      ],
+      "tokens": 562,
+      "refTokens": 0
+    },
+    {
+      "name": "mocks",
+      "path": ".agentic/source/skills/generated/mocks",
+      "tier": "optional",
+      "domains": [
+        "mocks"
+      ],
+      "tokens": 836,
+      "refTokens": 0
+    },
+    {
+      "name": "powens",
+      "path": ".agentic/source/skills/generated/powens",
+      "tier": "optional",
+      "domains": [
+        "powens"
+      ],
+      "tokens": 1101,
+      "refTokens": 0
+    },
+    {
+      "name": "repositories",
+      "path": ".agentic/source/skills/generated/repositories",
+      "tier": "optional",
+      "domains": [
+        "repositories"
+      ],
+      "tokens": 1579,
+      "refTokens": 0
+    },
+    {
+      "name": "routes",
+      "path": ".agentic/source/skills/generated/routes",
+      "tier": "optional",
+      "domains": [
+        "routes"
+      ],
+      "tokens": 1395,
+      "refTokens": 0
+    },
+    {
+      "name": "services",
+      "path": ".agentic/source/skills/generated/services",
+      "tier": "optional",
+      "domains": [
+        "services"
+      ],
+      "tokens": 1155,
+      "refTokens": 0
+    },
+    {
+      "name": "shell",
+      "path": ".agentic/source/skills/generated/shell",
+      "tier": "optional",
+      "domains": [
+        "shell"
+      ],
+      "tokens": 525,
+      "refTokens": 0
+    },
+    {
+      "name": "ui",
+      "path": ".agentic/source/skills/generated/ui",
+      "tier": "optional",
+      "domains": [
+        "ui"
+      ],
+      "tokens": 728,
+      "refTokens": 0
+    },
+    {
+      "name": "git-workflow-and-versioning",
+      "path": ".agentic/source/skills/git-workflow-and-versioning",
+      "tier": "recommended",
+      "domains": [
+        "ci-cd"
+      ],
+      "tokens": 2570,
+      "refTokens": 0
+    },
+    {
+      "name": "gitnexus-cli",
+      "path": ".agentic/source/skills/gitnexus/gitnexus-cli",
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ],
+      "tokens": 859,
+      "refTokens": 0
+    },
+    {
+      "name": "gitnexus-debugging",
+      "path": ".agentic/source/skills/gitnexus/gitnexus-debugging",
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ],
+      "tokens": 780,
+      "refTokens": 0
+    },
+    {
+      "name": "gitnexus-exploring",
+      "path": ".agentic/source/skills/gitnexus/gitnexus-exploring",
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ],
+      "tokens": 749,
+      "refTokens": 0
+    },
+    {
+      "name": "gitnexus-guide",
+      "path": ".agentic/source/skills/gitnexus/gitnexus-guide",
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ],
+      "tokens": 867,
+      "refTokens": 0
+    },
+    {
+      "name": "gitnexus-impact-analysis",
+      "path": ".agentic/source/skills/gitnexus/gitnexus-impact-analysis",
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ],
+      "tokens": 723,
+      "refTokens": 0
+    },
+    {
+      "name": "gitnexus-refactoring",
+      "path": ".agentic/source/skills/gitnexus/gitnexus-refactoring",
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ],
+      "tokens": 1010,
+      "refTokens": 0
+    },
+    {
+      "name": "harden",
+      "path": ".agentic/source/skills/harden",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2263,
+      "refTokens": 0
+    },
+    {
+      "name": "implementation-strategy",
+      "path": ".agentic/source/skills/implementation-strategy",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 490,
+      "refTokens": 0
+    },
+    {
+      "name": "learn",
+      "path": ".agentic/source/skills/learn",
+      "tier": "optional",
+      "domains": [
+        "agentic-autopilot"
+      ],
+      "tokens": 3441,
+      "refTokens": 4535
+    },
+    {
+      "name": "make-interfaces-feel-better",
+      "path": ".agentic/source/skills/make-interfaces-feel-better",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1943,
+      "refTokens": 0
+    },
+    {
+      "name": "motion-design-patterns",
+      "path": ".agentic/source/skills/motion-design-patterns",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2962,
+      "refTokens": 0
+    },
+    {
+      "name": "normalize",
+      "path": ".agentic/source/skills/normalize",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1047,
+      "refTokens": 0
+    },
+    {
+      "name": "onboard",
+      "path": ".agentic/source/skills/onboard",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2082,
+      "refTokens": 0
+    },
+    {
+      "name": "optimize",
+      "path": ".agentic/source/skills/optimize",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1946,
+      "refTokens": 0
+    },
+    {
+      "name": "overdrive",
+      "path": ".agentic/source/skills/overdrive",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2403,
+      "refTokens": 0
+    },
+    {
+      "name": "performance",
+      "path": ".agentic/source/skills/performance",
+      "tier": "recommended",
+      "domains": [
+        "performance"
+      ],
+      "tokens": 2303,
+      "refTokens": 0
+    },
+    {
+      "name": "polish",
+      "path": ".agentic/source/skills/polish",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2025,
+      "refTokens": 0
+    },
+    {
+      "name": "postgresql-code-review",
+      "path": ".agentic/source/skills/postgresql-code-review",
+      "tier": "recommended",
+      "domains": [
+        "database"
+      ],
+      "tokens": 2571,
+      "refTokens": 0
+    },
+    {
+      "name": "powens-safety-review",
+      "path": ".agentic/source/skills/powens-safety-review",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 504,
+      "refTokens": 0
+    },
+    {
+      "name": "pr-summary",
+      "path": ".agentic/source/skills/pr-summary",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 400,
+      "refTokens": 0
+    },
+    {
+      "name": "quieter",
+      "path": ".agentic/source/skills/quieter",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1283,
+      "refTokens": 0
+    },
+    {
+      "name": "redis-development",
+      "path": ".agentic/source/skills/redis-development",
+      "tier": "recommended",
+      "domains": [
+        "redis"
+      ],
+      "tokens": 1063,
+      "refTokens": 0
+    },
+    {
+      "name": "release-sanity",
+      "path": ".agentic/source/skills/release-sanity",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 1014,
+      "refTokens": 0
+    },
+    {
+      "name": "repo-recall",
+      "path": ".agentic/source/skills/repo-recall",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 478,
+      "refTokens": 0
+    },
+    {
+      "name": "review-skill",
+      "path": ".agentic/source/skills/review-skill",
+      "tier": "optional",
+      "domains": [
+        "agentic-autopilot"
+      ],
+      "tokens": 1339,
+      "refTokens": 2641
+    },
+    {
+      "name": "security-and-hardening",
+      "path": ".agentic/source/skills/security-and-hardening",
+      "tier": "recommended",
+      "domains": [
+        "security"
+      ],
+      "tokens": 2794,
+      "refTokens": 0
+    },
+    {
+      "name": "tanstack-integration-best-practices",
+      "path": ".agentic/source/skills/tanstack-integration-best-practices",
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ],
+      "tokens": 644,
+      "refTokens": 0
+    },
+    {
+      "name": "tanstack-query-best-practices",
+      "path": ".agentic/source/skills/tanstack-query-best-practices",
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ],
+      "tokens": 1210,
+      "refTokens": 0
+    },
+    {
+      "name": "tanstack-router-best-practices",
+      "path": ".agentic/source/skills/tanstack-router-best-practices",
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ],
+      "tokens": 1125,
+      "refTokens": 0
+    },
+    {
+      "name": "tanstack-start-best-practices",
+      "path": ".agentic/source/skills/tanstack-start-best-practices",
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ],
+      "tokens": 1035,
+      "refTokens": 0
+    },
+    {
+      "name": "teach-impeccable",
+      "path": ".agentic/source/skills/teach-impeccable",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 718,
+      "refTokens": 0
+    },
+    {
+      "name": "test-coverage-improver",
+      "path": ".agentic/source/skills/test-coverage-improver",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 422,
+      "refTokens": 0
+    },
+    {
+      "name": "typeset",
+      "path": ".agentic/source/skills/typeset",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 1440,
+      "refTokens": 0
+    },
+    {
+      "name": "typography-audit",
+      "path": ".agentic/source/skills/typography-audit",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 749,
+      "refTokens": 0
+    },
+    {
+      "name": "ui-animation",
+      "path": ".agentic/source/skills/ui-animation",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2285,
+      "refTokens": 7467
+    },
+    {
+      "name": "ui-audit",
+      "path": ".agentic/source/skills/ui-audit",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 835,
+      "refTokens": 0
+    },
+    {
+      "name": "ui-change-quality",
+      "path": ".agentic/source/skills/ui-change-quality",
+      "tier": "optional",
+      "domains": [
+        "unknown"
+      ],
+      "tokens": 498,
+      "refTokens": 0
+    },
+    {
+      "name": "ui-design",
+      "path": ".agentic/source/skills/ui-design",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 354,
+      "refTokens": 0
+    },
+    {
+      "name": "vercel-composition-patterns",
+      "path": ".agentic/source/skills/vercel-composition-patterns",
+      "tier": "recommended",
+      "domains": [
+        "web-ui"
+      ],
+      "tokens": 721,
+      "refTokens": 0
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "path": ".agentic/source/skills/vercel-react-best-practices",
+      "tier": "recommended",
+      "domains": [
+        "web-ui"
+      ],
+      "tokens": 1783,
+      "refTokens": 0
+    },
+    {
+      "name": "visual-qa",
+      "path": ".agentic/source/skills/visual-qa",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 2415,
+      "refTokens": 0
+    },
+    {
+      "name": "web-design-guidelines",
+      "path": ".agentic/source/skills/web-design-guidelines",
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ],
+      "tokens": 308,
+      "refTokens": 0
+    },
+    {
+      "name": "web-quality-audit",
+      "path": ".agentic/source/skills/web-quality-audit",
+      "tier": "recommended",
+      "domains": [
+        "performance",
+        "accessibility"
+      ],
+      "tokens": 1656,
+      "refTokens": 0
+    },
+    {
+      "name": "webapp-testing",
+      "path": ".agentic/source/skills/webapp-testing",
+      "tier": "recommended",
+      "domains": [
+        "testing"
+      ],
+      "tokens": 966,
+      "refTokens": 0
+    }
+  ]
+}

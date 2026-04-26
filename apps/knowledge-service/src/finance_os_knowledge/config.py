@@ -37,16 +37,87 @@ class KnowledgeSettings(BaseSettings):
     recency_half_life_days: float = Field(
         default=45.0, alias="KNOWLEDGE_GRAPH_RECENCY_HALF_LIFE_DAYS"
     )
-    embedding_provider: Literal["local", "openai", "none"] = Field(
-        default="local", alias="KNOWLEDGE_GRAPH_EMBEDDING_PROVIDER"
-    )
-    embedding_model: str = Field(default="local-hashing-v1", alias="KNOWLEDGE_GRAPH_EMBEDDING_MODEL")
 
-    neo4j_uri: str | None = Field(default=None, alias="NEO4J_URI")
-    neo4j_username: str | None = Field(default=None, alias="NEO4J_USERNAME")
-    neo4j_password: str | None = Field(default=None, alias="NEO4J_PASSWORD")
-    qdrant_url: str | None = Field(default=None, alias="QDRANT_URL")
-    qdrant_api_key: str | None = Field(default=None, alias="QDRANT_API_KEY")
+    embedding_provider: Literal["local", "openai", "none"] = Field(
+        default="local", alias="KNOWLEDGE_EMBEDDING_PROVIDER"
+    )
+    embedding_model: str = Field(
+        default="local-hashing-v1", alias="KNOWLEDGE_EMBEDDING_MODEL"
+    )
+    embedding_dimensions: int = Field(
+        default=256, alias="KNOWLEDGE_EMBEDDING_DIMENSIONS", ge=32, le=4096
+    )
+
+    use_production_backends: bool = Field(
+        default=False, alias="KNOWLEDGE_USE_PRODUCTION_BACKENDS"
+    )
+    require_production_backends_in_admin: bool = Field(
+        default=False, alias="KNOWLEDGE_REQUIRE_PRODUCTION_BACKENDS_IN_ADMIN"
+    )
+    allow_local_fallback_in_admin: bool = Field(
+        default=True, alias="KNOWLEDGE_ALLOW_LOCAL_FALLBACK_IN_ADMIN"
+    )
+
+    knowledge_neo4j_uri: str | None = Field(default=None, alias="KNOWLEDGE_NEO4J_URI")
+    knowledge_neo4j_user: str | None = Field(default=None, alias="KNOWLEDGE_NEO4J_USER")
+    knowledge_neo4j_password: str | None = Field(
+        default=None, alias="KNOWLEDGE_NEO4J_PASSWORD"
+    )
+    knowledge_neo4j_database: str = Field(
+        default="neo4j", alias="KNOWLEDGE_NEO4J_DATABASE"
+    )
+
+    knowledge_qdrant_url: str | None = Field(default=None, alias="KNOWLEDGE_QDRANT_URL")
+    knowledge_qdrant_api_key: str | None = Field(
+        default=None, alias="KNOWLEDGE_QDRANT_API_KEY"
+    )
+    knowledge_qdrant_collection: str = Field(
+        default="finance_os_knowledge", alias="KNOWLEDGE_QDRANT_COLLECTION"
+    )
+
+    legacy_neo4j_uri: str | None = Field(default=None, alias="NEO4J_URI")
+    legacy_neo4j_username: str | None = Field(default=None, alias="NEO4J_USERNAME")
+    legacy_neo4j_password: str | None = Field(default=None, alias="NEO4J_PASSWORD")
+    legacy_qdrant_url: str | None = Field(default=None, alias="QDRANT_URL")
+    legacy_qdrant_api_key: str | None = Field(default=None, alias="QDRANT_API_KEY")
+
+    @property
+    def neo4j_uri(self) -> str | None:
+        return self.knowledge_neo4j_uri or self.legacy_neo4j_uri
+
+    @property
+    def neo4j_user(self) -> str | None:
+        return self.knowledge_neo4j_user or self.legacy_neo4j_username
+
+    @property
+    def neo4j_password(self) -> str | None:
+        return self.knowledge_neo4j_password or self.legacy_neo4j_password
+
+    @property
+    def neo4j_database(self) -> str:
+        return self.knowledge_neo4j_database or "neo4j"
+
+    @property
+    def qdrant_url(self) -> str | None:
+        return self.knowledge_qdrant_url or self.legacy_qdrant_url
+
+    @property
+    def qdrant_api_key(self) -> str | None:
+        return self.knowledge_qdrant_api_key or self.legacy_qdrant_api_key
+
+    @property
+    def qdrant_collection(self) -> str:
+        return self.knowledge_qdrant_collection or "finance_os_knowledge"
+
+    @property
+    def production_backends_configured(self) -> bool:
+        return bool(
+            self.use_production_backends
+            and self.neo4j_uri
+            and self.neo4j_user
+            and self.neo4j_password
+            and self.qdrant_url
+        )
 
 
 @lru_cache(maxsize=1)

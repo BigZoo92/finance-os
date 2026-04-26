@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-primes.md
+     Hash:   sha256:5ae0c4d0d0c16e5f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Prime Marks for Measurements
 impact: CRITICAL

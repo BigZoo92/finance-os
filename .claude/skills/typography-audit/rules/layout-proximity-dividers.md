@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-proximity-dividers.md
+     Hash:   sha256:07010a5498993594
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Proximity and Dividers to Clarify Associations
 impact: MEDIUM

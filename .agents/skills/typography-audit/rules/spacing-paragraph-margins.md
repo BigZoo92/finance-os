@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-paragraph-margins.md
+     Hash:   sha256:9267a7caa7f84f77
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Add Adequate Margins Around Text
 impact: HIGH

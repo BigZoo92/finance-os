@@ -2,86 +2,39 @@ import { useNavigate } from '@tanstack/react-router'
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { NAV_GROUPS, NAV_ITEMS } from './nav-items'
 
-const PAGES = [
-  {
-    to: '/',
-    label: 'Cockpit',
-    glyph: '◈',
-    section: 'Finances',
-    keywords: 'accueil home dashboard vue ensemble quotidien',
-  },
-  {
-    to: '/depenses',
-    label: 'Dépenses',
-    glyph: '↔',
-    section: 'Finances',
-    keywords: 'transactions budgets projections quotidien',
-  },
-  {
-    to: '/actualites',
-    label: 'Actualités',
-    glyph: '▣',
-    section: 'Finances',
-    keywords: 'news feed IA advisor briefing signaux',
-  },
-  {
-    to: '/memoire',
-    label: 'Mémoire',
-    glyph: '[#]',
-    section: 'Finances',
-    keywords: 'graphe connaissances IA advisor graphrag memoire',
-  },
-  {
-    to: '/patrimoine',
-    label: 'Patrimoine',
-    glyph: '◊',
-    section: 'Finances',
-    keywords: 'actifs soldes assets wealth',
-  },
-  {
-    to: '/objectifs',
-    label: 'Objectifs',
-    glyph: '◎',
-    section: 'Finances',
-    keywords: 'goals épargne cibles progression',
-  },
-  {
-    to: '/investissements',
-    label: 'Investissements',
-    glyph: '△',
-    section: 'Finances',
-    keywords: 'positions portfolio bourse',
-  },
-  {
-    to: '/marches',
-    label: 'Marchés',
-    glyph: '≈',
-    section: 'Finances',
-    keywords: 'macro watchlist regime taux inflation fred eodhd',
-  },
-  {
-    to: '/integrations',
-    label: 'Intégrations',
-    glyph: '⊞',
-    section: 'Système',
-    keywords: 'powens sync banque connexion',
-  },
-  {
-    to: '/sante',
-    label: 'Santé',
-    glyph: '♡',
-    section: 'Système',
-    keywords: 'health diagnostics système',
-  },
-  {
-    to: '/parametres',
-    label: 'Paramètres',
-    glyph: '⚙',
-    section: 'Système',
-    keywords: 'settings notifications export config',
-  },
-] as const
+const KEYWORDS: Record<string, string> = {
+  '/': 'accueil home dashboard vue ensemble quotidien',
+  '/depenses': 'transactions budgets projections quotidien',
+  '/patrimoine': 'actifs soldes assets wealth',
+  '/investissements': 'positions portfolio bourse invest',
+  '/objectifs': 'goals épargne cibles progression',
+  '/integrations': 'powens sync banque connexion',
+  '/sante': 'health diagnostics système',
+  '/parametres': 'settings notifications export config',
+  '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils',
+  '/ia/chat': 'chat conversation question reponse advisor dialogue',
+  '/ia/memoire': 'graphe connaissances graphrag memoire knowledge neo4j qdrant',
+  '/ia/couts': 'tokens couts budget modeles llm depenses ia usage',
+  '/signaux': 'news actualites feed flux macro signal briefing',
+  '/signaux/marches': 'macro watchlist regime taux inflation fred eodhd marches bourse',
+  '/signaux/sources': 'sources api fraicheur qualite donnees providers',
+}
+
+const PAGES = NAV_ITEMS.map(item => ({
+  to: item.to,
+  label: item.label,
+  glyph: item.icon,
+  group: item.group,
+  keywords: KEYWORDS[item.to] ?? '',
+}))
+
+const GROUP_DISPLAY: Record<string, { heading: string; color: string }> = {
+  cockpit: { heading: 'Cockpit personnel', color: 'text-primary/55' },
+  ia: { heading: 'IA', color: 'text-aurora/70' },
+  signaux: { heading: 'Données & signaux', color: 'text-accent-2/55' },
+}
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
@@ -105,9 +58,6 @@ export function CommandPalette() {
     setOpen(false)
     navigate({ to })
   }
-
-  const financesPages = PAGES.filter(page => page.section === 'Finances')
-  const systemPages = PAGES.filter(page => page.section === 'Système')
 
   return (
     <AnimatePresence>
@@ -165,39 +115,41 @@ export function CommandPalette() {
                     Aucune page trouvée.
                   </Command.Empty>
 
-                  {[
-                    { heading: 'Finances', color: 'text-primary/55', pages: financesPages },
-                    { heading: 'Système', color: 'text-accent-2/55', pages: systemPages },
-                  ].map(group => (
-                    <Command.Group
-                      key={group.heading}
-                      heading={group.heading}
-                      className={`px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
-                    >
-                      {group.pages.map(page => (
-                        <Command.Item
-                          key={page.to}
-                          value={`${page.label} ${page.keywords}`}
-                          onSelect={() => handleSelect(page.to)}
-                          className="group/item flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
-                        >
-                          <span
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 text-sm transition-colors group-data-[selected=true]/item:bg-primary/15 group-data-[selected=true]/item:text-primary"
-                            aria-hidden="true"
+                  {NAV_GROUPS.map(group => {
+                    const groupPages = PAGES.filter(p => p.group === group.id)
+                    if (groupPages.length === 0) return null
+                    const display = GROUP_DISPLAY[group.id]
+                    return (
+                      <Command.Group
+                        key={group.id}
+                        heading={display?.heading ?? group.label}
+                        className={`px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${display?.color ?? 'text-muted-foreground'}`}
+                      >
+                        {groupPages.map(page => (
+                          <Command.Item
+                            key={page.to}
+                            value={`${page.label} ${page.keywords}`}
+                            onSelect={() => handleSelect(page.to)}
+                            className="group/item flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
                           >
-                            {page.glyph}
-                          </span>
-                          <span className="flex-1 font-medium">{page.label}</span>
-                          <span
-                            aria-hidden="true"
-                            className="font-mono text-[11px] text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
-                          >
-                            ↵
-                          </span>
-                        </Command.Item>
-                      ))}
-                    </Command.Group>
-                  ))}
+                            <span
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 text-sm transition-colors group-data-[selected=true]/item:bg-primary/15 group-data-[selected=true]/item:text-primary"
+                              aria-hidden="true"
+                            >
+                              {page.glyph}
+                            </span>
+                            <span className="flex-1 font-medium">{page.label}</span>
+                            <span
+                              aria-hidden="true"
+                              className="font-mono text-[11px] text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
+                            >
+                              ↵
+                            </span>
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )
+                  })}
                 </Command.List>
 
                 <div className="flex items-center justify-between border-t border-border/40 bg-surface-1/50 px-4 py-2">

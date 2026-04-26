@@ -1,3 +1,15 @@
+import type { KnowledgeContextBundle } from '@finance-os/ai'
+import { buildAdvisorKnowledgeContextQuery } from '@finance-os/finance-engine'
+import { logApiEvent, toErrorLogFields } from '../../observability/logger'
+import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
+import {
+  type AdvisorKnowledgeContextFetcher,
+  createDashboardAdvisorUseCases,
+} from './domain/advisor/create-dashboard-advisor-use-cases'
+import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
+import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
+import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
+import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import {
   createArchiveDashboardGoalUseCase,
   createCreateDashboardGoalUseCase,
@@ -5,19 +17,14 @@ import {
   createUpdateDashboardGoalUseCase,
 } from './domain/dashboard-goals'
 import { createDashboardManualAssetUseCases } from './domain/dashboard-manual-assets'
+import { createDashboardMarketsUseCases } from './domain/dashboard-markets'
+import { createDashboardNewsUseCases } from './domain/dashboard-news'
 import {
   createGetDashboardDerivedRecomputeStatusUseCase,
   createRunDashboardDerivedRecomputeUseCase,
 } from './domain/derived-recompute'
-import { createDashboardAdvisorUseCases } from './domain/advisor/create-dashboard-advisor-use-cases'
-import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
-import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
-import { createDashboardNewsUseCases } from './domain/dashboard-news'
-import { createDashboardMarketsUseCases } from './domain/dashboard-markets'
 import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/failsoft-policy'
-import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
 import { recordCategorizationMigrationSnapshot } from './domain/transaction-categorization-migration-observability'
-import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
 import { createDashboardAdvisorRepository } from './repositories/dashboard-advisor-repository'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
 import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
@@ -25,6 +32,11 @@ import { createDashboardNewsRepository } from './repositories/dashboard-news-rep
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
 import { createLiveMarketDataRefreshService } from './services/fetch-live-market-data'
 import { createLiveNewsIngestionService } from './services/fetch-live-news'
+import {
+  createKnowledgeServiceClient,
+  type KnowledgeServiceClientConfig,
+  KnowledgeServiceUnavailableError,
+} from './services/knowledge-service-client'
 import { createEcbDataNewsProvider } from './services/providers/ecb-data-news-provider'
 import { createEcbRssNewsProvider } from './services/providers/ecb-rss-news-provider'
 import { createFedRssNewsProvider } from './services/providers/fed-rss-news-provider'
@@ -33,7 +45,6 @@ import { createGdeltNewsProvider } from './services/providers/gdelt-news-provide
 import { createHnNewsProvider } from './services/providers/hn-news-provider'
 import { createSecEdgarNewsProvider } from './services/providers/sec-edgar-news-provider'
 import { createXTwitterNewsProvider } from './services/providers/x-twitter-news-provider'
-import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
 import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
 
 export const createDashboardRouteRuntime = ({
@@ -107,6 +118,7 @@ export const createDashboardRouteRuntime = ({
   aiMaxChatMessagesContext,
   aiUsdToEurRate,
   advisorXSignalsMode,
+  knowledgeConfig,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -178,6 +190,7 @@ export const createDashboardRouteRuntime = ({
   aiMaxChatMessagesContext: number
   aiUsdToEurRate: number
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
+  knowledgeConfig: KnowledgeServiceClientConfig
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const newsRepository = createDashboardNewsRepository({ db })
@@ -331,12 +344,56 @@ export const createDashboardRouteRuntime = ({
     },
   })
 
+  const knowledgeClient = createKnowledgeServiceClient(knowledgeConfig)
+
+  const getKnowledgeContextBundle: AdvisorKnowledgeContextFetcher = async ({
+    requestId,
+    mode,
+    snapshot,
+    recommendations,
+    advisorTask,
+  }) => {
+    if (!knowledgeConfig.enabled || mode === 'demo') {
+      return null
+    }
+    const hint = buildAdvisorKnowledgeContextQuery({ snapshot, recommendations })
+    try {
+      const raw = await knowledgeClient.contextBundle(
+        {
+          query: hint.query,
+          mode,
+          maxResults: hint.maxResults,
+          maxPathDepth: hint.maxPathDepth,
+          retrievalMode: knowledgeConfig.retrievalMode,
+          includeContradictions: true,
+          includeEvidence: true,
+          maxTokens: knowledgeConfig.maxContextTokens,
+          advisorTask,
+          filters: { tags: hint.tags },
+        },
+        requestId
+      )
+      return raw as unknown as KnowledgeContextBundle
+    } catch (error) {
+      logApiEvent({
+        level: 'warn',
+        msg: 'advisor knowledge context fetch failed',
+        requestId,
+        advisor_task: advisorTask,
+        knowledge_service_unavailable: error instanceof KnowledgeServiceUnavailableError,
+        ...toErrorLogFields({ error, includeStack: false }),
+      })
+      return null
+    }
+  }
+
   const advisor = createDashboardAdvisorUseCases({
     repository: advisorRepository,
     getSummary,
     getGoals,
     getNewsContextBundle: news.getNewsContextBundle,
     getTransactions,
+    getKnowledgeContextBundle,
     config: {
       advisorEnabled: aiAdvisorEnabled,
       adminOnly: aiAdvisorAdminOnly,

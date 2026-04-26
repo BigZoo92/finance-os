@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-color.md
+     Hash:   sha256:e706df35ccc2a800
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Color Intentionally in Typography
 impact: LOW-MEDIUM

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/code-review/SKILL.md
+     Hash:   sha256:9c0d40796dbaaea2
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: code-review
 description: "Structured code review with severity labels and 4-phase process. Use when reviewing PRs, auditing code quality, performing pre-merge checks, or when asked to review code changes."

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-caps-subheads.md
+     Hash:   sha256:1aee5b5c27014e21
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Letterspaced Caps for Subheadings
 impact: MEDIUM-HIGH

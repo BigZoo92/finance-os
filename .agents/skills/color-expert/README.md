@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/README.md
+     Hash:   sha256:e17b8b1548d106ad
+     Sync:   pnpm agent:skills:sync -->
+
 # color-expert
 
 An [agent skill](https://agentskills.io) that turns your coding agent into a color science expert. Built from resources I keep looking up, returning to, and sharing with others.

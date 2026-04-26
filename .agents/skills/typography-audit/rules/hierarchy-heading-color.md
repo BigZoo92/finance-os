@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-heading-color.md
+     Hash:   sha256:471382e609a90f64
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Lighten Headings as They Grow
 impact: MEDIUM-HIGH

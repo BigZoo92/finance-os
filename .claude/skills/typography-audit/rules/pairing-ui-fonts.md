@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-ui-fonts.md
+     Hash:   sha256:a1b0f3a9f88a327f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Choose UI Fonts with Distinct Ambiguous Glyphs
 impact: MEDIUM

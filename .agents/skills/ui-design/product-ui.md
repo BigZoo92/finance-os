@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-design/product-ui.md
+     Hash:   sha256:8cd6d4689b6662a2
+     Sync:   pnpm agent:skills:sync -->
+
 # Product UI (SaaS/Admin/Data-heavy)
 
 Use for dashboards, admin tools, and data-dense workflows.

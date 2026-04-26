@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-ligatures.md
+     Hash:   sha256:32d24925a6950ff9
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Manage Ligatures by Context
 impact: MEDIUM-HIGH

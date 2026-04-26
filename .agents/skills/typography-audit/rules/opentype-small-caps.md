@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-small-caps.md
+     Hash:   sha256:601950b1bc393ed8
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Real Small Caps, Not Pseudo
 impact: MEDIUM-HIGH

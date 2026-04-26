@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-no-two-sans.md
+     Hash:   sha256:6d9e3548d4abf204
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Avoid Pairing Two Sans-Serifs
 impact: MEDIUM

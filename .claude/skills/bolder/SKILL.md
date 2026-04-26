@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/bolder/SKILL.md
+     Hash:   sha256:855be81eca8f0717
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: bolder
 description: Amplify safe or boring designs to make them more visually interesting and stimulating. Increases impact while maintaining usability. Use when the user says the design looks bland, generic, too safe, lacks personality, or wants more visual impact and character.

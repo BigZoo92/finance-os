@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/features/SKILL.md
+     Hash:   sha256:0e508fa140fba627
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: features
 description: "Skill for the Features area of finance-os. 32 symbols across 6 files."

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/type-link-distinction-no-shift.md
+     Hash:   sha256:0bd17a8bb9aa6958
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Distinguish Links Without Layout Shift
 impact: MEDIUM

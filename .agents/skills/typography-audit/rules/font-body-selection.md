@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-body-selection.md
+     Hash:   sha256:9cc1111c506c841a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Choose Body Fonts for Legibility
 impact: CRITICAL

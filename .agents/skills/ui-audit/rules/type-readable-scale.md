@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/type-readable-scale.md
+     Hash:   sha256:273a69ea6af8c2d2
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Set a Readable Type Scale
 impact: HIGH

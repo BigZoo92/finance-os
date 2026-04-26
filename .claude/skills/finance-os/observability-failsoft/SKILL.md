@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/observability-failsoft/SKILL.md
+     Hash:   sha256:f819f86ae1cbab33
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-observability-failsoft
 description: "Observability and fail-soft patterns — widget health, fallback chains, metrics, logging, health checks, debug conventions. Use when adding features with degraded states, monitoring, or error handling."

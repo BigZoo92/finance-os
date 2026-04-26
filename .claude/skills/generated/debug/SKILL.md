@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/debug/SKILL.md
+     Hash:   sha256:5e8ff5e98ef4b0f0
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: debug
 description: "Skill for the Debug area of finance-os. 11 symbols across 2 files."

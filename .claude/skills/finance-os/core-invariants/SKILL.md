@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/core-invariants/SKILL.md
+     Hash:   sha256:4e57c12583ca187d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-core-invariants
 description: "Finance-OS foundational invariants — dual-path demo/admin, security, privacy, logging, observability. MUST be loaded before any code change touching auth, routes, env vars, or data access."

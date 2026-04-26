@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 import json
 import logging
+from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -9,7 +10,19 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
 
 from . import __version__
+from .backends.factory import select_backend
+from .backends.production_store import ProductionKnowledgeStore
 from .config import get_settings
+from .ingest import (
+    AdvisorIngestRequest,
+    CostLedgerIngestRequest,
+    MarketsIngestRequest,
+    NewsIngestRequest,
+    build_advisor_ingest,
+    build_cost_ledger_ingest,
+    build_markets_ingest,
+    build_news_ingest,
+)
 from .models import (
     ContextBundleRequest,
     HealthResponse,
@@ -20,7 +33,6 @@ from .models import (
     VersionResponse,
 )
 from .schema import NODE_TYPES, RELATION_TYPES, RELATION_WEIGHTS, SCHEMA_VERSION
-from .store import KnowledgeGraphStore
 
 logger = logging.getLogger("finance_os_knowledge")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -38,7 +50,14 @@ def _log(level: str, message: str, **fields: object) -> None:
         "msg": message,
         **fields,
     }
-    logger.log(logging.ERROR if level == "error" else logging.WARNING if level == "warn" else logging.INFO, json.dumps(payload, default=str))
+    logger.log(
+        logging.ERROR
+        if level == "error"
+        else logging.WARNING
+        if level == "warn"
+        else logging.INFO,
+        json.dumps(payload, default=str),
+    )
 
 
 def _safe_error(request_id: str, status_code: int, code: str, message: str) -> ORJSONResponse:
@@ -54,26 +73,51 @@ def _safe_error(request_id: str, status_code: int, code: str, message: str) -> O
     )
 
 
+def _backend_health(store: Any) -> dict[str, Any] | None:
+    if isinstance(store, ProductionKnowledgeStore):
+        return store.health()
+    return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    store = KnowledgeGraphStore(settings=settings)
+    try:
+        store = select_backend(settings)
+    except RuntimeError as exc:
+        _log("error", "knowledge backend selection failed", errName=type(exc).__name__)
+        raise
+
     try:
         store.load()
     except Exception as exc:
         _log("warn", "knowledge store load failed", errName=type(exc).__name__)
 
-    if settings.rebuild_on_start and not store.entities:
+    needs_seed = False
+    if isinstance(store, ProductionKnowledgeStore):
+        needs_seed = settings.rebuild_on_start and not store.local.entities
+    else:
+        needs_seed = settings.rebuild_on_start and not store.entities  # type: ignore[attr-defined]
+
+    if needs_seed:
         try:
             store.rebuild(
                 KnowledgeRebuildRequest(mode="demo", includeSeed=True, dryRun=False),
                 request_id="startup-rebuild",
             )
         except Exception as exc:
-            _log("error", "knowledge startup rebuild failed", errName=type(exc).__name__)
+            _log(
+                "error",
+                "knowledge startup rebuild failed",
+                errName=type(exc).__name__,
+            )
 
     app.state.store = store
-    yield
+    try:
+        yield
+    finally:
+        if isinstance(store, ProductionKnowledgeStore):
+            store.close()
 
 
 def create_app() -> FastAPI:
@@ -122,40 +166,70 @@ def create_app() -> FastAPI:
         return response
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         request_id = _request_id(request)
-        _log("warn", "knowledge validation failed", requestId=request_id, route=request.url.path)
+        _log(
+            "warn",
+            "knowledge validation failed",
+            requestId=request_id,
+            route=request.url.path,
+        )
         return _safe_error(request_id, 400, "INVALID_INPUT", "Invalid request payload.")
 
-    def store() -> KnowledgeGraphStore:
+    def store():
         return app.state.store
 
-    @app.get("/health", response_model=HealthResponse)
+    @app.get("/health")
     async def health(request: Request):
         request_id = _request_id(request)
-        degraded = settings.graph_backend != "local" and (
-            (settings.graph_backend == "neo4j" and not settings.neo4j_uri)
-            or (settings.graph_backend in ("memgraph", "falkordb") and not settings.neo4j_uri)
+        active = store()
+        backend_health = _backend_health(active)
+        production_configured = settings.production_backends_configured
+        production_active = (
+            backend_health.get("productionActive", False) if backend_health else False
         )
-        return HealthResponse(
-            status="degraded" if degraded else "ok",
-            service="knowledge-service",
-            backend=settings.graph_backend,
-            vectorEnabled=settings.vector_enabled,
-            fulltextEnabled=settings.fulltext_enabled,
-            temporalEnabled=settings.temporal_enabled,
-            requestId=request_id,
-            timestamp=datetime.now(UTC),
-        )
+        degraded = (
+            production_configured and not production_active
+        ) or (settings.graph_backend != "local" and not production_configured)
+        payload = {
+            "status": "degraded" if degraded else "ok",
+            "service": "knowledge-service",
+            "backend": "neo4j"
+            if (backend_health and backend_health["neo4j"]["available"])
+            else settings.graph_backend,
+            "vectorEnabled": settings.vector_enabled,
+            "fulltextEnabled": settings.fulltext_enabled,
+            "temporalEnabled": settings.temporal_enabled,
+            "requestId": request_id,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "productionConfigured": production_configured,
+            "productionActive": production_active,
+            "backends": backend_health,
+        }
+        return ORJSONResponse(payload, headers={"x-request-id": request_id})
 
     @app.get("/version", response_model=VersionResponse)
     async def version():
+        active = store()
+        backend_health = _backend_health(active)
+        graph_backend = (
+            "neo4j"
+            if backend_health and backend_health["neo4j"]["available"]
+            else settings.graph_backend
+        )
+        vector_backend = (
+            "qdrant"
+            if backend_health and backend_health["qdrant"]["available"]
+            else "local-hashing"
+        )
         return VersionResponse(
             service="knowledge-service",
             version=settings.app_version or __version__,
             schemaVersion=SCHEMA_VERSION,
-            graphBackend=settings.graph_backend,
-            vectorBackend="qdrant" if settings.graph_backend != "local" else "local-hashing",
+            graphBackend=graph_backend,
+            vectorBackend=vector_backend,
         )
 
     @app.post("/knowledge/ingest")
@@ -181,7 +255,12 @@ def create_app() -> FastAPI:
     @app.get("/knowledge/stats")
     async def stats(request: Request):
         request_id = _request_id(request)
-        return store().stats(request_id=request_id)
+        response = store().stats(request_id=request_id)
+        payload = response.model_dump(by_alias=True, mode="json")
+        backend_health = _backend_health(store())
+        if backend_health:
+            payload["backendHealth"] = backend_health
+        return ORJSONResponse(payload, headers={"x-request-id": request_id})
 
     @app.get("/knowledge/schema")
     async def schema(request: Request):
@@ -219,5 +298,32 @@ def create_app() -> FastAPI:
             mode=request_body.mode,
             request_id=request_id,
         )
+
+    # Source-specific ingestion endpoints --------------------------------
+    @app.post("/knowledge/ingest/markets")
+    async def ingest_markets(request_body: MarketsIngestRequest, request: Request):
+        request_id = _request_id(request)
+        ingest_request = build_markets_ingest(request_body)
+        return store().ingest(ingest_request, request_id=request_id)
+
+    @app.post("/knowledge/ingest/news")
+    async def ingest_news(request_body: NewsIngestRequest, request: Request):
+        request_id = _request_id(request)
+        ingest_request = build_news_ingest(request_body)
+        return store().ingest(ingest_request, request_id=request_id)
+
+    @app.post("/knowledge/ingest/advisor")
+    async def ingest_advisor(request_body: AdvisorIngestRequest, request: Request):
+        request_id = _request_id(request)
+        ingest_request = build_advisor_ingest(request_body)
+        return store().ingest(ingest_request, request_id=request_id)
+
+    @app.post("/knowledge/ingest/cost-ledger")
+    async def ingest_cost_ledger(
+        request_body: CostLedgerIngestRequest, request: Request
+    ):
+        request_id = _request_id(request)
+        ingest_request = build_cost_ledger_ingest(request_body)
+        return store().ingest(ingest_request, request_id=request_id)
 
     return app

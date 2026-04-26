@@ -31,6 +31,14 @@ export interface KnowledgeStatsResponse {
   storageSizeBytes: number
   degraded?: boolean
   fallbackReason?: string | null
+  backendHealth?: KnowledgeBackendHealth
+}
+
+export interface KnowledgeBackendHealth {
+  neo4j: { available: boolean; lastError: string | null; database: string }
+  qdrant: { available: boolean; lastError: string | null; collection: string }
+  degradedReasons: string[]
+  productionActive: boolean
 }
 
 export interface KnowledgeSchemaResponse {

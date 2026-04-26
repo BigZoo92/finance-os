@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-subhead-proximity.md
+     Hash:   sha256:25ef8ee4bf62a822
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Place Subheadings Closer to Following Content
 impact: HIGH

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/normalize/SKILL.md
+     Hash:   sha256:1321fb31e5b3f9ff
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: normalize
 description: Audits and realigns UI to match design system standards, spacing, tokens, and patterns. Use when the user mentions consistency, design drift, mismatched styles, tokens, or wants to bring a feature back in line with the system.

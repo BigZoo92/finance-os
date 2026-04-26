@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/color-and-contrast.md
+     Hash:   sha256:be502ad08270cd60
+     Sync:   pnpm agent:skills:sync -->
+
 # Color & Contrast
 
 ## Color Spaces: Use OKLCH

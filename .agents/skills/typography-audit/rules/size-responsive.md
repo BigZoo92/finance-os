@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-responsive.md
+     Hash:   sha256:557ec6815338d398
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Adapt Typography Across Breakpoints
 impact: HIGH

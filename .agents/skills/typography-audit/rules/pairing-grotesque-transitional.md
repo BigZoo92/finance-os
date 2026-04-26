@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-grotesque-transitional.md
+     Hash:   sha256:5a0bff990ed6c13c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Pair Grotesques with Transitional Serifs
 impact: MEDIUM

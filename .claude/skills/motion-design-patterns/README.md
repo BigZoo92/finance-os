@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/motion-design-patterns/README.md
+     Hash:   sha256:89186cddca26ee51
+     Sync:   pnpm agent:skills:sync -->
+
 # motion-design-patterns
 
 Framer Motion (Motion) animation patterns for React — springs, staggers, layout animations, micro-interactions, scroll effects, and page transitions. The difference between "it works" and "it feels great."

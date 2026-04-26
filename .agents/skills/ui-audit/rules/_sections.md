@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/_sections.md
+     Hash:   sha256:5ca31b0c3d06f1a9
+     Sync:   pnpm agent:skills:sync -->
+
 # Sections
 
 This file defines all sections, ordering, impact levels, and descriptions for the UI audit rules.

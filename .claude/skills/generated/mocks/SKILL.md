@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/mocks/SKILL.md
+     Hash:   sha256:55f481e2857e77f9
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: mocks
 description: "Skill for the Mocks area of finance-os. 16 symbols across 5 files."

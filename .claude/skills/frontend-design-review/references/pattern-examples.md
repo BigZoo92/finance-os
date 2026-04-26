@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design-review/references/pattern-examples.md
+     Hash:   sha256:072f2a647de304d5
+     Sync:   pnpm agent:skills:sync -->
+
 # Pattern Examples
 
 ## Creative Frontend (New Interfaces)

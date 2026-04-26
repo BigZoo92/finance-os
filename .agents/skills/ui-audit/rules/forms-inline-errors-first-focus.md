@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/forms-inline-errors-first-focus.md
+     Hash:   sha256:96197f354791cdcc
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Show Inline Errors and Focus the First Invalid Field
 impact: HIGH

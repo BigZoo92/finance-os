@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/forms-mobile-input-font-size.md
+     Hash:   sha256:61eaf1e74a25b463
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Keep Mobile Input Text at Readable Size
 impact: HIGH

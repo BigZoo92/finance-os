@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/design-tokens/README.md
+     Hash:   sha256:62c2ba6e7baa5085
+     Sync:   pnpm agent:skills:sync -->
+
 # design-tokens
 
 Generate type scales, color palettes, spacing systems, and dark mode derivations with math — not guessing. Includes WCAG contrast formulas, systematic shade generation, and production-ready CSS/Tailwind output.

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/logging/SKILL.md
+     Hash:   sha256:37b51c9b90c360e7
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: logging
 description: "Skill for the Logging area of finance-os. 9 symbols across 1 files."

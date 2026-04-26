@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-design/marketing-ui.md
+     Hash:   sha256:15658850ff334eda
+     Sync:   pnpm agent:skills:sync -->
+
 # Marketing / Brand UI
 
 Deliver working code with a clear aesthetic point of view. Avoid generic AI aesthetics.

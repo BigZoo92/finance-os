@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-cross-medium.md
+     Hash:   sha256:8d23432de3334863
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Keep Type Consistent Across Media
 impact: LOW-MEDIUM

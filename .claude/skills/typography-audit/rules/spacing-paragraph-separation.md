@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-paragraph-separation.md
+     Hash:   sha256:222ac6f2adcfae9a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Line Breaks or Indents, Not Both
 impact: HIGH

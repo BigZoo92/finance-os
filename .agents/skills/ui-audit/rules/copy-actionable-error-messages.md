@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/copy-actionable-error-messages.md
+     Hash:   sha256:3f119703ff8e922e
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Make Error Messages Actionable
 impact: HIGH

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-dark-backgrounds.md
+     Hash:   sha256:2304fbec86f448fe
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Handle Dark Backgrounds Carefully
 impact: LOW-MEDIUM

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/decision-framework.md
+     Hash:   sha256:cf7833532dbdfa5f
+     Sync:   pnpm agent:skills:sync -->
+
 # Animation Decision Framework
 
 Before writing any animation code, answer these four questions in order.

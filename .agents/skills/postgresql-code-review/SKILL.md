@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/postgresql-code-review/SKILL.md
+     Hash:   sha256:708bf6eb8a22a305
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: postgresql-code-review
 description: "PostgreSQL-focused code review for schema design, query performance, indexes, JSONB, security, and Drizzle-specific patterns. Use when reviewing database changes, writing complex queries, or optimizing PostgreSQL performance."

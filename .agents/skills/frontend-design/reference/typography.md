@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/typography.md
+     Hash:   sha256:f18de3de5eea28c8
+     Sync:   pnpm agent:skills:sync -->
+
 # Typography
 
 ## Classic Typography Principles

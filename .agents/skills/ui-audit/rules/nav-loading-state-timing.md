@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/nav-loading-state-timing.md
+     Hash:   sha256:0d5bfd7f2b85bdca
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Stabilize Loading Indicator Timing
 impact: MEDIUM

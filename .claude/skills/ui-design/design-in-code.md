@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-design/design-in-code.md
+     Hash:   sha256:912c593c5a1f1940
+     Sync:   pnpm agent:skills:sync -->
+
 # Design in Code
 
 Fast, low-fi planning before visual polish.

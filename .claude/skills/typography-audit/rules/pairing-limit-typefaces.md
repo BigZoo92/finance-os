@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-limit-typefaces.md
+     Hash:   sha256:4613d70caa7f3aa0
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Limit to Two Typefaces
 impact: MEDIUM

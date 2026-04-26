@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/SKILL.md
+     Hash:   sha256:607cec04eb62815d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: typography-audit
 description: Audits web typography for punctuation, font selection, sizing, spacing, OpenType features, hierarchy, layout, typeface pairing, brand identity, and display type. Use when writing CSS/HTML for text, selecting or pairing typefaces, reviewing typography in web designs, configuring font-feature-settings, building a type system, or auditing typographic quality. Triggers on tasks involving font-family, font-size, line-height, letter-spacing, @font-face, font pairing, or typographic correctness.

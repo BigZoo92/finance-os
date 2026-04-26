@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-large-type.md
+     Hash:   sha256:8e07af7528b121f7
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Large Type as a Design Element
 impact: LOW-MEDIUM

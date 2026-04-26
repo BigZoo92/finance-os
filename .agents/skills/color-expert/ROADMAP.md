@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/ROADMAP.md
+     Hash:   sha256:8426e302746c0bea
+     Sync:   pnpm agent:skills:sync -->
+
 # Roadmap
 
 Planned work for the skill beyond reference collection and curation.

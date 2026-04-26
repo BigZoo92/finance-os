@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-case-rules.md
+     Hash:   sha256:a41c40a4d336e5f7
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Choose Sentence or Title Case Consistently
 impact: CRITICAL

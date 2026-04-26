@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/drizzle-best-practices/SKILL.md
+     Hash:   sha256:c086f786cf92a1e9
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: drizzle-best-practices
 description: "Drizzle ORM patterns for PostgreSQL. Use when writing or reviewing schema definitions, queries, migrations, upserts, batch operations, or repository code that uses drizzle-orm."

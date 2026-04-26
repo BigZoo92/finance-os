@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/SECURITY.md
+     Hash:   sha256:8a6505d661102c1d
+     Sync:   pnpm agent:skills:sync -->
+
 # Security
 
 ## Skill Architecture

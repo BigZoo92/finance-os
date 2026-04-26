@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-lead-paragraph.md
+     Hash:   sha256:3c7373a7b9bfbc36
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Style a Lead Paragraph
 impact: LOW-MEDIUM

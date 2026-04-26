@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-geometric-modern.md
+     Hash:   sha256:fdc6de9ee40c24f6
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Pair Geometric Sans with Modern Serifs
 impact: MEDIUM

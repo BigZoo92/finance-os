@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-variable-fonts.md
+     Hash:   sha256:757c42fa5d608df4
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Prefer WOFF2 and Variable Fonts
 impact: CRITICAL

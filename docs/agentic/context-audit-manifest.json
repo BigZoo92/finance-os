@@ -1,0 +1,1345 @@
+{
+  "generatedAt": "2026-04-26T16:26:14.288Z",
+  "summary": {
+    "totalDocFiles": 37,
+    "totalDocTokens": 100050,
+    "totalSkills": 89,
+    "totalSkillTokens": 139298,
+    "totalRefTokens": 508498,
+    "duplicateCount": 0
+  },
+  "files": [
+    {
+      "path": "FINANCE-OS-CONTEXT.md",
+      "tier": "archive",
+      "domain": "core",
+      "description": "Monolithic external-chat context pack (do not auto-load)",
+      "tokens": 26682
+    },
+    {
+      "path": "docs/context/ENV-REFERENCE.md",
+      "tier": "task-relevant",
+      "domain": "env",
+      "description": "Environment variables reference",
+      "tokens": 7520
+    },
+    {
+      "path": "docs/context/FEATURES.md",
+      "tier": "domain-core",
+      "domain": "core",
+      "description": "All business features",
+      "tokens": 5353
+    },
+    {
+      "path": "docs/context/APP-ARCHITECTURES.md",
+      "tier": "domain-core",
+      "domain": "core",
+      "description": "Per-app architecture with graphs",
+      "tokens": 5308
+    },
+    {
+      "path": "AGENTS.md",
+      "tier": "always",
+      "domain": "core",
+      "description": "Global invariants and agentic contract",
+      "tokens": 5102
+    },
+    {
+      "path": "docs/deployment.md",
+      "tier": "task-relevant",
+      "domain": "deploy",
+      "description": "Deployment documentation",
+      "tokens": 4495
+    },
+    {
+      "path": "docs/context/NEWS-FETCH.md",
+      "tier": "task-relevant",
+      "domain": "news",
+      "description": "News pipeline architecture",
+      "tokens": 4142
+    },
+    {
+      "path": "docs/context/EXTERNAL-SERVICES.md",
+      "tier": "task-relevant",
+      "domain": "services",
+      "description": "External services and APIs",
+      "tokens": 4042
+    },
+    {
+      "path": "docs/adr/temporal-knowledge-graph-graphrag.md",
+      "tier": "task-relevant",
+      "domain": "knowledge-graph",
+      "description": "Knowledge graph ADR",
+      "tokens": 3910
+    },
+    {
+      "path": "docs/SKILLS-INVENTORY.md",
+      "tier": "task-relevant",
+      "domain": "skills",
+      "description": "Skills inventory with trust tiers",
+      "tokens": 3181
+    },
+    {
+      "path": "apps/web/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "web-ui",
+      "description": "Local AGENTS.md for web-ui",
+      "tokens": 3114
+    },
+    {
+      "path": "docs/context/STACK.md",
+      "tier": "domain-core",
+      "domain": "core",
+      "description": "Technical stack and architecture",
+      "tokens": 2839
+    },
+    {
+      "path": "docs/AI-SETUP.md",
+      "tier": "task-relevant",
+      "domain": "ai-advisor",
+      "description": "AI setup documentation",
+      "tokens": 2820
+    },
+    {
+      "path": "docs/context/CONVENTIONS.md",
+      "tier": "domain-core",
+      "domain": "core",
+      "description": "Coding conventions and best practices",
+      "tokens": 2792
+    },
+    {
+      "path": "docs/context/MARKETS-MACRO.md",
+      "tier": "task-relevant",
+      "domain": "markets",
+      "description": "Markets and macro data pipeline",
+      "tokens": 2768
+    },
+    {
+      "path": "DESIGN.md",
+      "tier": "always",
+      "domain": "design",
+      "description": "Design system source of truth",
+      "tokens": 1966
+    },
+    {
+      "path": "docs/agentic/policy-verification-bundle.md",
+      "tier": "task-relevant",
+      "domain": "review",
+      "description": "Verification checklists",
+      "tokens": 1669
+    },
+    {
+      "path": "docs/context/DESIGN-DIRECTION.md",
+      "tier": "domain-core",
+      "domain": "design",
+      "description": "Artistic direction",
+      "tokens": 1541
+    },
+    {
+      "path": "apps/api/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "api-backend",
+      "description": "Local AGENTS.md for api-backend",
+      "tokens": 1367
+    },
+    {
+      "path": "docs/agentic/architecture-canonical.md",
+      "tier": "task-relevant",
+      "domain": "architecture",
+      "description": "Canonical architecture template",
+      "tokens": 950
+    },
+    {
+      "path": "docs/context/TAURI-DESKTOP.md",
+      "tier": "task-relevant",
+      "domain": "desktop",
+      "description": "Tauri desktop app context",
+      "tokens": 930
+    },
+    {
+      "path": "docs/context/PERFORMANCE-PLAYBOOK.md",
+      "tier": "task-relevant",
+      "domain": "performance",
+      "description": "Performance optimization guide",
+      "tokens": 809
+    },
+    {
+      "path": "apps/worker/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "worker-sync",
+      "description": "Local AGENTS.md for worker-sync",
+      "tokens": 808
+    },
+    {
+      "path": "docs/agentic/contracts-canonical.md",
+      "tier": "task-relevant",
+      "domain": "contracts",
+      "description": "HTTP contract guidance",
+      "tokens": 735
+    },
+    {
+      "path": "docs/agentic/code_review.md",
+      "tier": "task-relevant",
+      "domain": "review",
+      "description": "Code review severity and checklist",
+      "tokens": 675
+    },
+    {
+      "path": "docs/agentic/execution-map.md",
+      "tier": "task-relevant",
+      "domain": "architecture",
+      "description": "Runtime execution flows",
+      "tokens": 671
+    },
+    {
+      "path": "docs/agentic/testing-canonical.md",
+      "tier": "task-relevant",
+      "domain": "testing",
+      "description": "Verification strategy",
+      "tokens": 568
+    },
+    {
+      "path": "docs/agentic/design-guidance-canonical.md",
+      "tier": "task-relevant",
+      "domain": "design",
+      "description": "UI/UX quality guidance",
+      "tokens": 567
+    },
+    {
+      "path": "docs/agentic/release-canonical.md",
+      "tier": "task-relevant",
+      "domain": "deploy",
+      "description": "Release/deploy guidance",
+      "tokens": 541
+    },
+    {
+      "path": "infra/docker/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "docker-deploy",
+      "description": "Local AGENTS.md for docker-deploy",
+      "tokens": 518
+    },
+    {
+      "path": "packages/db/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "database",
+      "description": "Local AGENTS.md for database",
+      "tokens": 329
+    },
+    {
+      "path": "apps/desktop/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "desktop",
+      "description": "Local AGENTS.md for desktop",
+      "tokens": 296
+    },
+    {
+      "path": "packages/env/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "env",
+      "description": "Local AGENTS.md for env",
+      "tokens": 275
+    },
+    {
+      "path": "packages/powens/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "powens",
+      "description": "Local AGENTS.md for powens",
+      "tokens": 221
+    },
+    {
+      "path": "packages/ui/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "web-ui",
+      "description": "Local AGENTS.md for web-ui",
+      "tokens": 196
+    },
+    {
+      "path": "packages/prelude/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "core",
+      "description": "Local AGENTS.md for core",
+      "tokens": 193
+    },
+    {
+      "path": "packages/redis/AGENTS.md",
+      "tier": "domain-core",
+      "domain": "redis",
+      "description": "Local AGENTS.md for redis",
+      "tokens": 157
+    }
+  ],
+  "skills": [
+    {
+      "name": "empirical-prompt-tuning",
+      "path": ".claude/skills/empirical-prompt-tuning",
+      "mainFile": ".claude/skills/empirical-prompt-tuning/SKILL.md",
+      "tokens": 4298,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "agentic-autopilot"
+      ]
+    },
+    {
+      "name": "color-expert",
+      "path": ".claude/skills/color-expert",
+      "mainFile": ".claude/skills/color-expert/SKILL.md",
+      "tokens": 3937,
+      "refTokens": 491136,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "learn",
+      "path": ".claude/skills/learn",
+      "mainFile": ".claude/skills/learn/SKILL.md",
+      "tokens": 3441,
+      "refTokens": 4535,
+      "tier": "optional",
+      "domains": [
+        "agentic-autopilot"
+      ]
+    },
+    {
+      "name": "drizzle-best-practices",
+      "path": ".claude/skills/drizzle-best-practices",
+      "mainFile": ".claude/skills/drizzle-best-practices/SKILL.md",
+      "tokens": 3316,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "database"
+      ]
+    },
+    {
+      "name": "motion-design-patterns",
+      "path": ".claude/skills/motion-design-patterns",
+      "mainFile": ".claude/skills/motion-design-patterns/SKILL.md",
+      "tokens": 2962,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "design-tokens",
+      "path": ".claude/skills/design-tokens",
+      "mainFile": ".claude/skills/design-tokens/SKILL.md",
+      "tokens": 2899,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "core-web-vitals",
+      "path": ".claude/skills/core-web-vitals",
+      "mainFile": ".claude/skills/core-web-vitals/SKILL.md",
+      "tokens": 2897,
+      "refTokens": 1087,
+      "tier": "recommended",
+      "domains": [
+        "performance"
+      ]
+    },
+    {
+      "name": "security-and-hardening",
+      "path": ".claude/skills/security-and-hardening",
+      "mainFile": ".claude/skills/security-and-hardening/SKILL.md",
+      "tokens": 2794,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "security"
+      ]
+    },
+    {
+      "name": "critique",
+      "path": ".claude/skills/critique",
+      "mainFile": ".claude/skills/critique/SKILL.md",
+      "tokens": 2775,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "ci-cd-and-automation",
+      "path": ".claude/skills/ci-cd-and-automation",
+      "mainFile": ".claude/skills/ci-cd-and-automation/SKILL.md",
+      "tokens": 2752,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "creative-direction",
+      "path": ".claude/skills/creative-direction",
+      "mainFile": ".claude/skills/creative-direction/SKILL.md",
+      "tokens": 2648,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "sast-security-scan",
+      "path": ".claude/skills/experimental/sast-security-scan",
+      "mainFile": ".claude/skills/experimental/sast-security-scan/SKILL.md",
+      "tokens": 2572,
+      "refTokens": 0,
+      "tier": "experimental",
+      "domains": [
+        "security"
+      ]
+    },
+    {
+      "name": "postgresql-code-review",
+      "path": ".claude/skills/postgresql-code-review",
+      "mainFile": ".claude/skills/postgresql-code-review/SKILL.md",
+      "tokens": 2571,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "database"
+      ]
+    },
+    {
+      "name": "git-workflow-and-versioning",
+      "path": ".claude/skills/git-workflow-and-versioning",
+      "mainFile": ".claude/skills/git-workflow-and-versioning/SKILL.md",
+      "tokens": 2570,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "delight",
+      "path": ".claude/skills/delight",
+      "mainFile": ".claude/skills/delight/SKILL.md",
+      "tokens": 2504,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "visual-qa",
+      "path": ".claude/skills/visual-qa",
+      "mainFile": ".claude/skills/visual-qa/SKILL.md",
+      "tokens": 2415,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "overdrive",
+      "path": ".claude/skills/overdrive",
+      "mainFile": ".claude/skills/overdrive/SKILL.md",
+      "tokens": 2403,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "frontend-design",
+      "path": ".claude/skills/frontend-design",
+      "mainFile": ".claude/skills/frontend-design/SKILL.md",
+      "tokens": 2369,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "code-review",
+      "path": ".claude/skills/code-review",
+      "mainFile": ".claude/skills/code-review/SKILL.md",
+      "tokens": 2318,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "review"
+      ]
+    },
+    {
+      "name": "performance",
+      "path": ".claude/skills/performance",
+      "mainFile": ".claude/skills/performance/SKILL.md",
+      "tokens": 2303,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "performance"
+      ]
+    },
+    {
+      "name": "ui-animation",
+      "path": ".claude/skills/ui-animation",
+      "mainFile": ".claude/skills/ui-animation/SKILL.md",
+      "tokens": 2285,
+      "refTokens": 7467,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "harden",
+      "path": ".claude/skills/harden",
+      "mainFile": ".claude/skills/harden/SKILL.md",
+      "tokens": 2263,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "documentation-and-adrs",
+      "path": ".claude/skills/documentation-and-adrs",
+      "mainFile": ".claude/skills/documentation-and-adrs/SKILL.md",
+      "tokens": 2178,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "documentation"
+      ]
+    },
+    {
+      "name": "onboard",
+      "path": ".claude/skills/onboard",
+      "mainFile": ".claude/skills/onboard/SKILL.md",
+      "tokens": 2082,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "polish",
+      "path": ".claude/skills/polish",
+      "mainFile": ".claude/skills/polish/SKILL.md",
+      "tokens": 2025,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "optimize",
+      "path": ".claude/skills/optimize",
+      "mainFile": ".claude/skills/optimize/SKILL.md",
+      "tokens": 1946,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "make-interfaces-feel-better",
+      "path": ".claude/skills/make-interfaces-feel-better",
+      "mainFile": ".claude/skills/make-interfaces-feel-better/SKILL.md",
+      "tokens": 1943,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "frontend-skill",
+      "path": ".claude/skills/frontend-skill",
+      "mainFile": ".claude/skills/frontend-skill/SKILL.md",
+      "tokens": 1918,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "animate",
+      "path": ".claude/skills/animate",
+      "mainFile": ".claude/skills/animate/SKILL.md",
+      "tokens": 1915,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "audit",
+      "path": ".claude/skills/audit",
+      "mainFile": ".claude/skills/audit/SKILL.md",
+      "tokens": 1900,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "arrange",
+      "path": ".claude/skills/arrange",
+      "mainFile": ".claude/skills/arrange/SKILL.md",
+      "tokens": 1835,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "path": ".claude/skills/vercel-react-best-practices",
+      "mainFile": ".claude/skills/vercel-react-best-practices/SKILL.md",
+      "tokens": 1783,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "web-ui"
+      ]
+    },
+    {
+      "name": "adapt",
+      "path": ".claude/skills/adapt",
+      "mainFile": ".claude/skills/adapt/SKILL.md",
+      "tokens": 1780,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "colorize",
+      "path": ".claude/skills/colorize",
+      "mainFile": ".claude/skills/colorize/SKILL.md",
+      "tokens": 1721,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "clarify",
+      "path": ".claude/skills/clarify",
+      "mainFile": ".claude/skills/clarify/SKILL.md",
+      "tokens": 1690,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "bolder",
+      "path": ".claude/skills/bolder",
+      "mainFile": ".claude/skills/bolder/SKILL.md",
+      "tokens": 1683,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "web-quality-audit",
+      "path": ".claude/skills/web-quality-audit",
+      "mainFile": ".claude/skills/web-quality-audit/SKILL.md",
+      "tokens": 1656,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "performance",
+        "accessibility"
+      ]
+    },
+    {
+      "name": "repositories",
+      "path": ".claude/skills/generated/repositories",
+      "mainFile": ".claude/skills/generated/repositories/SKILL.md",
+      "tokens": 1579,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "repositories"
+      ]
+    },
+    {
+      "name": "distill",
+      "path": ".claude/skills/distill",
+      "mainFile": ".claude/skills/distill/SKILL.md",
+      "tokens": 1560,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "frontend-design-review",
+      "path": ".claude/skills/frontend-design-review",
+      "mainFile": ".claude/skills/frontend-design-review/SKILL.md",
+      "tokens": 1539,
+      "refTokens": 1680,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "domain",
+      "path": ".claude/skills/generated/domain",
+      "mainFile": ".claude/skills/generated/domain/SKILL.md",
+      "tokens": 1511,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "domain"
+      ]
+    },
+    {
+      "name": "ui-cockpit",
+      "path": ".claude/skills/finance-os/ui-cockpit",
+      "mainFile": ".claude/skills/finance-os/ui-cockpit/SKILL.md",
+      "tokens": 1478,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "web-ui",
+        "design-polish"
+      ]
+    },
+    {
+      "name": "typeset",
+      "path": ".claude/skills/typeset",
+      "mainFile": ".claude/skills/typeset/SKILL.md",
+      "tokens": 1440,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "observability-failsoft",
+      "path": ".claude/skills/finance-os/observability-failsoft",
+      "mainFile": ".claude/skills/finance-os/observability-failsoft/SKILL.md",
+      "tokens": 1421,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "observability",
+        "core-invariants"
+      ]
+    },
+    {
+      "name": "dashboard",
+      "path": ".claude/skills/generated/dashboard",
+      "mainFile": ".claude/skills/generated/dashboard/SKILL.md",
+      "tokens": 1417,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "dashboard"
+      ]
+    },
+    {
+      "name": "worker-sync",
+      "path": ".claude/skills/finance-os/worker-sync",
+      "mainFile": ".claude/skills/finance-os/worker-sync/SKILL.md",
+      "tokens": 1401,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "worker-sync",
+        "redis"
+      ]
+    },
+    {
+      "name": "routes",
+      "path": ".claude/skills/generated/routes",
+      "mainFile": ".claude/skills/generated/routes/SKILL.md",
+      "tokens": 1395,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "routes"
+      ]
+    },
+    {
+      "name": "review-skill",
+      "path": ".claude/skills/review-skill",
+      "mainFile": ".claude/skills/review-skill/SKILL.md",
+      "tokens": 1339,
+      "refTokens": 2593,
+      "tier": "optional",
+      "domains": [
+        "agentic-autopilot"
+      ]
+    },
+    {
+      "name": "quieter",
+      "path": ".claude/skills/quieter",
+      "mainFile": ".claude/skills/quieter/SKILL.md",
+      "tokens": 1283,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "web-ssr-auth",
+      "path": ".claude/skills/finance-os/web-ssr-auth",
+      "mainFile": ".claude/skills/finance-os/web-ssr-auth/SKILL.md",
+      "tokens": 1260,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "web-ui",
+        "tanstack",
+        "auth"
+      ]
+    },
+    {
+      "name": "core-invariants",
+      "path": ".claude/skills/finance-os/core-invariants",
+      "mainFile": ".claude/skills/finance-os/core-invariants/SKILL.md",
+      "tokens": 1229,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "core-invariants",
+        "security",
+        "env"
+      ]
+    },
+    {
+      "name": "tanstack-query-best-practices",
+      "path": ".claude/skills/tanstack-query-best-practices",
+      "mainFile": ".claude/skills/tanstack-query-best-practices/SKILL.md",
+      "tokens": 1210,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "auth",
+      "path": ".claude/skills/generated/auth",
+      "mainFile": ".claude/skills/generated/auth/SKILL.md",
+      "tokens": 1185,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "auth"
+      ]
+    },
+    {
+      "name": "deploy-ghcr-dokploy",
+      "path": ".claude/skills/finance-os/deploy-ghcr-dokploy",
+      "mainFile": ".claude/skills/finance-os/deploy-ghcr-dokploy/SKILL.md",
+      "tokens": 1168,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "docker-deploy",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "services",
+      "path": ".claude/skills/generated/services",
+      "mainFile": ".claude/skills/generated/services/SKILL.md",
+      "tokens": 1155,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "services"
+      ]
+    },
+    {
+      "name": "tanstack-router-best-practices",
+      "path": ".claude/skills/tanstack-router-best-practices",
+      "mainFile": ".claude/skills/tanstack-router-best-practices/SKILL.md",
+      "tokens": 1125,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "powens",
+      "path": ".claude/skills/generated/powens",
+      "mainFile": ".claude/skills/generated/powens/SKILL.md",
+      "tokens": 1101,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "powens"
+      ]
+    },
+    {
+      "name": "redis-development",
+      "path": ".claude/skills/redis-development",
+      "mainFile": ".claude/skills/redis-development/SKILL.md",
+      "tokens": 1063,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "redis"
+      ]
+    },
+    {
+      "name": "powens-integration",
+      "path": ".claude/skills/finance-os/powens-integration",
+      "mainFile": ".claude/skills/finance-os/powens-integration/SKILL.md",
+      "tokens": 1050,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "powens"
+      ]
+    },
+    {
+      "name": "normalize",
+      "path": ".claude/skills/normalize",
+      "mainFile": ".claude/skills/normalize/SKILL.md",
+      "tokens": 1047,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "tanstack-start-best-practices",
+      "path": ".claude/skills/tanstack-start-best-practices",
+      "mainFile": ".claude/skills/tanstack-start-best-practices/SKILL.md",
+      "tokens": 1035,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "gitnexus-refactoring",
+      "path": ".claude/skills/gitnexus/gitnexus-refactoring",
+      "mainFile": ".claude/skills/gitnexus/gitnexus-refactoring/SKILL.md",
+      "tokens": 1010,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ]
+    },
+    {
+      "name": "extract",
+      "path": ".claude/skills/extract",
+      "mainFile": ".claude/skills/extract/SKILL.md",
+      "tokens": 988,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "features",
+      "path": ".claude/skills/generated/features",
+      "mainFile": ".claude/skills/generated/features/SKILL.md",
+      "tokens": 969,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "features"
+      ]
+    },
+    {
+      "name": "webapp-testing",
+      "path": ".claude/skills/webapp-testing",
+      "mainFile": ".claude/skills/webapp-testing/SKILL.md",
+      "tokens": 966,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "testing"
+      ]
+    },
+    {
+      "name": "gitnexus-guide",
+      "path": ".claude/skills/gitnexus/gitnexus-guide",
+      "mainFile": ".claude/skills/gitnexus/gitnexus-guide/SKILL.md",
+      "tokens": 867,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ]
+    },
+    {
+      "name": "gitnexus-cli",
+      "path": ".claude/skills/gitnexus/gitnexus-cli",
+      "mainFile": ".claude/skills/gitnexus/gitnexus-cli/SKILL.md",
+      "tokens": 859,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ]
+    },
+    {
+      "name": "mocks",
+      "path": ".claude/skills/generated/mocks",
+      "mainFile": ".claude/skills/generated/mocks/SKILL.md",
+      "tokens": 836,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "mocks"
+      ]
+    },
+    {
+      "name": "ui-audit",
+      "path": ".claude/skills/ui-audit",
+      "mainFile": ".claude/skills/ui-audit/SKILL.md",
+      "tokens": 835,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "gitnexus-debugging",
+      "path": ".claude/skills/gitnexus/gitnexus-debugging",
+      "mainFile": ".claude/skills/gitnexus/gitnexus-debugging/SKILL.md",
+      "tokens": 780,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ]
+    },
+    {
+      "name": "gitnexus-exploring",
+      "path": ".claude/skills/gitnexus/gitnexus-exploring",
+      "mainFile": ".claude/skills/gitnexus/gitnexus-exploring/SKILL.md",
+      "tokens": 749,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ]
+    },
+    {
+      "name": "typography-audit",
+      "path": ".claude/skills/typography-audit",
+      "mainFile": ".claude/skills/typography-audit/SKILL.md",
+      "tokens": 749,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "ui",
+      "path": ".claude/skills/generated/ui",
+      "mainFile": ".claude/skills/generated/ui/SKILL.md",
+      "tokens": 728,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "ui"
+      ]
+    },
+    {
+      "name": "gitnexus-impact-analysis",
+      "path": ".claude/skills/gitnexus/gitnexus-impact-analysis",
+      "mainFile": ".claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md",
+      "tokens": 723,
+      "refTokens": 0,
+      "tier": "core",
+      "domains": [
+        "agentic-autopilot",
+        "architecture"
+      ]
+    },
+    {
+      "name": "vercel-composition-patterns",
+      "path": ".claude/skills/vercel-composition-patterns",
+      "mainFile": ".claude/skills/vercel-composition-patterns/SKILL.md",
+      "tokens": 721,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "web-ui"
+      ]
+    },
+    {
+      "name": "teach-impeccable",
+      "path": ".claude/skills/teach-impeccable",
+      "mainFile": ".claude/skills/teach-impeccable/SKILL.md",
+      "tokens": 718,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "cluster-3",
+      "path": ".claude/skills/generated/cluster-3",
+      "mainFile": ".claude/skills/generated/cluster-3/SKILL.md",
+      "tokens": 690,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "3"
+      ]
+    },
+    {
+      "name": "tanstack-integration-best-practices",
+      "path": ".claude/skills/tanstack-integration-best-practices",
+      "mainFile": ".claude/skills/tanstack-integration-best-practices/SKILL.md",
+      "tokens": 644,
+      "refTokens": 0,
+      "tier": "recommended",
+      "domains": [
+        "tanstack",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "cluster-1",
+      "path": ".claude/skills/generated/cluster-1",
+      "mainFile": ".claude/skills/generated/cluster-1/SKILL.md",
+      "tokens": 615,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "1"
+      ]
+    },
+    {
+      "name": "logging",
+      "path": ".claude/skills/generated/logging",
+      "mainFile": ".claude/skills/generated/logging/SKILL.md",
+      "tokens": 562,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "logging"
+      ]
+    },
+    {
+      "name": "debug",
+      "path": ".claude/skills/generated/debug",
+      "mainFile": ".claude/skills/generated/debug/SKILL.md",
+      "tokens": 556,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "debug"
+      ]
+    },
+    {
+      "name": "shell",
+      "path": ".claude/skills/generated/shell",
+      "mainFile": ".claude/skills/generated/shell/SKILL.md",
+      "tokens": 525,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "shell"
+      ]
+    },
+    {
+      "name": "goals",
+      "path": ".claude/skills/generated/goals",
+      "mainFile": ".claude/skills/generated/goals/SKILL.md",
+      "tokens": 521,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "goals"
+      ]
+    },
+    {
+      "name": "cluster-47",
+      "path": ".claude/skills/generated/cluster-47",
+      "mainFile": ".claude/skills/generated/cluster-47/SKILL.md",
+      "tokens": 494,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "47"
+      ]
+    },
+    {
+      "name": "cluster-48",
+      "path": ".claude/skills/generated/cluster-48",
+      "mainFile": ".claude/skills/generated/cluster-48/SKILL.md",
+      "tokens": 423,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "48"
+      ]
+    },
+    {
+      "name": "app",
+      "path": ".claude/skills/generated/app",
+      "mainFile": ".claude/skills/generated/app/SKILL.md",
+      "tokens": 399,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "app"
+      ]
+    },
+    {
+      "name": "cluster-17",
+      "path": ".claude/skills/generated/cluster-17",
+      "mainFile": ".claude/skills/generated/cluster-17/SKILL.md",
+      "tokens": 371,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "17"
+      ]
+    },
+    {
+      "name": "ui-design",
+      "path": ".claude/skills/ui-design",
+      "mainFile": ".claude/skills/ui-design/SKILL.md",
+      "tokens": 354,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    },
+    {
+      "name": "web-design-guidelines",
+      "path": ".claude/skills/web-design-guidelines",
+      "mainFile": ".claude/skills/web-design-guidelines/SKILL.md",
+      "tokens": 308,
+      "refTokens": 0,
+      "tier": "optional",
+      "domains": [
+        "design-polish",
+        "web-ui"
+      ]
+    }
+  ],
+  "duplicates": [],
+  "tierDistribution": {
+    "docs": {
+      "archive": {
+        "count": 1,
+        "tokens": 26682
+      },
+      "task-relevant": {
+        "count": 18,
+        "tokens": 40993
+      },
+      "domain-core": {
+        "count": 16,
+        "tokens": 25307
+      },
+      "always": {
+        "count": 2,
+        "tokens": 7068
+      }
+    },
+    "skills": {
+      "optional": {
+        "count": 57,
+        "tokens": 88829
+      },
+      "recommended": {
+        "count": 18,
+        "tokens": 33902
+      },
+      "experimental": {
+        "count": 1,
+        "tokens": 2572
+      },
+      "core": {
+        "count": 13,
+        "tokens": 13995
+      }
+    }
+  }
+}

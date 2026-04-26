@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design-review/references/review-output-format.md
+     Hash:   sha256:0735f13a4eff99ff
+     Sync:   pnpm agent:skills:sync -->
+
 # Review Output Format
 
 ```

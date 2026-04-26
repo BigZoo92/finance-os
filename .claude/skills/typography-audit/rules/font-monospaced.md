@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-monospaced.md
+     Hash:   sha256:b9da12febfc73aff
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Reserve Monospaced Fonts for Short Blocks
 impact: CRITICAL

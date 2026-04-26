@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-heading-levels.md
+     Hash:   sha256:823b6ebb79f8c649
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Keep Heading Levels Shallow and Descriptive
 impact: MEDIUM-HIGH

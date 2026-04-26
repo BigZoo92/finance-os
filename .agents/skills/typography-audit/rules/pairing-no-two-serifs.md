@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-no-two-serifs.md
+     Hash:   sha256:c4655cc3b945d990
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Avoid Pairing Two Serifs
 impact: MEDIUM

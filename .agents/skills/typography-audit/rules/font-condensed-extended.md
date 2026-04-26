@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-condensed-extended.md
+     Hash:   sha256:e82343f9d34e7e1d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Condensed Faces for Headlines Only
 impact: CRITICAL

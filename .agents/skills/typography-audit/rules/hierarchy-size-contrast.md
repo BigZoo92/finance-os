@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-size-contrast.md
+     Hash:   sha256:dcf70a75384dd7f2
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Ensure Strong Size Contrast Between Levels
 impact: MEDIUM-HIGH

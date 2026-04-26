@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/auth/SKILL.md
+     Hash:   sha256:1e927519231ac045
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: auth
 description: "Skill for the Auth area of finance-os. 66 symbols across 13 files."

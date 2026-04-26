@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/overdrive/SKILL.md
+     Hash:   sha256:a8369e35a7ef8c4f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: overdrive
 description: Pushes interfaces past conventional limits with technically ambitious implementations — shaders, spring physics, scroll-driven reveals, 60fps animations. Use when the user wants to wow, impress, go all-out, or make something that feels extraordinary.

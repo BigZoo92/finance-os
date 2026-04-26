@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-monoscript-kerning.md
+     Hash:   sha256:b6c56f9a98455313
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Do Not Adjust Spacing on Monospaced or Script Fonts
 impact: MEDIUM-HIGH

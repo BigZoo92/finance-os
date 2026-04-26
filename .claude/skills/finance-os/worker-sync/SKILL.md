@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/worker-sync/SKILL.md
+     Hash:   sha256:126052f2473ed4e4
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-worker-sync
 description: "Worker sync engine — Redis BLPOP queue, lock-based sync, batch upserts, integrity checks. Use when working on the background worker, sync jobs, or Redis queue patterns."

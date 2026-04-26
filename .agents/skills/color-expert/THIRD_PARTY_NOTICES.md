@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/THIRD_PARTY_NOTICES.md
+     Hash:   sha256:5613b7ddd8169826
+     Sync:   pnpm agent:skills:sync -->
+
 # Third-Party Notices
 
 This repository contains a mix of:

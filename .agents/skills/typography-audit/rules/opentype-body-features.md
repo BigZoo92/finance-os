@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-body-features.md
+     Hash:   sha256:effe81152c9fcc22
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Enable Standard OpenType Features for Body
 impact: MEDIUM-HIGH

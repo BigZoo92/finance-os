@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/repositories/SKILL.md
+     Hash:   sha256:d8b1cea024d7df35
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: repositories
 description: "Skill for the Repositories area of finance-os. 50 symbols across 15 files."

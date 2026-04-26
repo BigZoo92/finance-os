@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/_template.md
+     Hash:   sha256:5ceca41b997cbd95
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Rule Title Here
 impact: MEDIUM

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/make-interfaces-feel-better/animations.md
+     Hash:   sha256:eaaacab19a846f72
+     Sync:   pnpm agent:skills:sync -->
+
 # Animations
 
 Interruptible animations, enter/exit transitions, and contextual icon animations.

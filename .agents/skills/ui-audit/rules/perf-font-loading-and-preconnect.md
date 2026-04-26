@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/perf-font-loading-and-preconnect.md
+     Hash:   sha256:bd4cd4097c28027a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Preload Critical Fonts and Preconnect Asset Origins
 impact: HIGH

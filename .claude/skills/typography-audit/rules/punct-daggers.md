@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-daggers.md
+     Hash:   sha256:36e9e66309992261
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Daggers and Special Marks Correctly
 impact: CRITICAL

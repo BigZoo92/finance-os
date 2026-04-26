@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-single-space.md
+     Hash:   sha256:e7abe82fe2049726
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: One Space After Periods
 impact: CRITICAL

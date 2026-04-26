@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typeset/SKILL.md
+     Hash:   sha256:32108f34bbc76567
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: typeset
 description: Improves typography by fixing font choices, hierarchy, sizing, weight, and readability so text feels intentional. Use when the user mentions fonts, type, readability, text hierarchy, sizing looks off, or wants more polished, intentional typography.

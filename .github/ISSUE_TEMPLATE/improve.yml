@@ -77,3 +77,15 @@ body:
       description: Mandatory. If no new key/API/variable, write `None`.
     validations:
       required: true
+
+  - type: dropdown
+    id: context_budget
+    attributes:
+      label: Context budget
+      description: Maximum context for challenger prompt. Use small/medium for focused improvements.
+      options:
+        - small (8K tokens)
+        - medium (16K tokens)
+        - large (32K tokens)
+    validations:
+      required: false

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/performance-deep-dive.md
+     Hash:   sha256:52b0797fe257f9b4
+     Sync:   pnpm agent:skills:sync -->
+
 # Performance Deep Dive
 
 Advanced performance guidance beyond the quick rules in SKILL.md.

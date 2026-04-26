@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-headline-opentype.md
+     Hash:   sha256:fc5978eccea1fdcd
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Enable Extra OpenType Features for Headlines
 impact: LOW-MEDIUM

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/quieter/SKILL.md
+     Hash:   sha256:910d4b8bd48ebebb
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: quieter
 description: Tones down visually aggressive or overstimulating designs, reducing intensity while preserving quality. Use when the user mentions too bold, too loud, overwhelming, aggressive, garish, or wants a calmer, more refined aesthetic.

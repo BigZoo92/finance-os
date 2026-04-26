@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-word-spacing.md
+     Hash:   sha256:07b6ee66fab3158a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Adjust Word Spacing with Letterspacing
 impact: HIGH

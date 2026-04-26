@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-licensing.md
+     Hash:   sha256:028bd734d58e9e92
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: License Fonts Properly
 impact: LOW-MEDIUM

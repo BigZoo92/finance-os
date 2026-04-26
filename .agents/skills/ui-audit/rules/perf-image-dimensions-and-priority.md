@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/perf-image-dimensions-and-priority.md
+     Hash:   sha256:da76272de4ed1f39
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Set Image Dimensions and Priority Intentionally
 impact: CRITICAL

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/forms-dont-block-paste-ime.md
+     Hash:   sha256:ba6c215856f0fdb9
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Do Not Block Paste or IME Input
 impact: HIGH

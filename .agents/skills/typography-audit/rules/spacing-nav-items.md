@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-nav-items.md
+     Hash:   sha256:aef6366e33cd0f27
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Space Navigation Items with CSS Padding
 impact: HIGH

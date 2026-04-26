@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/gesture-drag.md
+     Hash:   sha256:ca9407d77d6d1e30
+     Sync:   pnpm agent:skills:sync -->
+
 # Gesture and Drag Animations
 
 Patterns for drag, swipe, and gesture interactions where the user directly manipulates elements.

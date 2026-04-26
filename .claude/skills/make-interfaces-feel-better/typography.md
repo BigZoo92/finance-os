@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/make-interfaces-feel-better/typography.md
+     Hash:   sha256:960cfa67b05109ae
+     Sync:   pnpm agent:skills:sync -->
+
 # Typography
 
 Typography rendering details that make interfaces feel better.

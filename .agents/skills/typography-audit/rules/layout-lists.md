@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-lists.md
+     Hash:   sha256:e5c7da6538462983
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Format Lists with Proper Markup and Spacing
 impact: MEDIUM

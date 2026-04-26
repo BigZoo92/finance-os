@@ -2,7 +2,7 @@
 
 Date: 2026-04-26
 
-Status: accepted foundation, staged rollout
+Status: accepted foundation, **Phase 1 production wiring landed (real Neo4j + Qdrant)**
 
 ## Decision
 
@@ -269,3 +269,28 @@ The service API isolates callers from backend details:
 - `POST /knowledge/explain`
 
 Backend migration can move from local JSON to Neo4j/Qdrant, or later to Memgraph/FalkorDB/LanceDB/pgvector, without changing `apps/api`, `packages/ai` or UI contracts. The only required stable contract is the temporal graph schema and `KnowledgeContextBundle` response shape.
+
+## Phase 1 production wiring (2026-04-26)
+
+The Phase 1 implementation lands the actual Neo4j + Qdrant adapters. Admin mode now persists/queries on the real backends when configured; demo, tests and degraded operation continue to use the deterministic local store.
+
+What is actually implemented in `apps/knowledge-service`:
+
+- `backends/neo4j_adapter.py` opens a Neo4j 5 connection on startup, creates the `KnowledgeNode` uniqueness constraint, type/scope/source/confidence/temporal indexes plus the `knowledge_node_fulltext` full-text index, and runs idempotent `MERGE` upserts for entities/relations. Relations are stored as native typed Neo4j edges so Cypher traversal is natural.
+- `backends/qdrant_adapter.py` creates the configured collection on startup, embeds entity/relation text via the local hashing embedding (or optional OpenAI provider, fail-soft) and serves the vector retrieval lane with payload filters on scope/confidence.
+- `backends/production_store.py` composes the local in-memory cache (used for hot BM25 + traversal scoring) with write-through to Neo4j and Qdrant. On startup it hydrates the local cache from Neo4j when the graph already contains data.
+- `backends/factory.select_backend` chooses production vs. local based on the new env contract: `KNOWLEDGE_USE_PRODUCTION_BACKENDS`, `KNOWLEDGE_REQUIRE_PRODUCTION_BACKENDS_IN_ADMIN`, `KNOWLEDGE_ALLOW_LOCAL_FALLBACK_IN_ADMIN`.
+- The new env vars `KNOWLEDGE_NEO4J_URI/USER/PASSWORD/DATABASE`, `KNOWLEDGE_QDRANT_URL/API_KEY/COLLECTION`, `KNOWLEDGE_EMBEDDING_PROVIDER/MODEL/DIMENSIONS` are the canonical contract; the legacy `NEO4J_*`/`QDRANT_*` aliases are still honoured.
+- Source-specific ingestion adapters live in `ingest/`: `markets.py`, `news.py`, `advisor.py`, `cost_ledger.py`. They produce idempotent `KnowledgeIngestRequest` payloads from existing Finance-OS context bundles. The new HTTP endpoints `POST /knowledge/ingest/markets|news|advisor|cost-ledger` wrap them.
+
+What is wired in `apps/api`:
+
+- `runtime.ts` instantiates a `createKnowledgeServiceClient` and exposes a typed `getKnowledgeContextBundle` to `createDashboardAdvisorUseCases`.
+- The advisor daily brief, challenger and grounded chat steps now compact the bundle into the prompt context via `compactKnowledgeContextForPrompt`. Failures fall through to deterministic context with a `knowledge_context_failed`/`degraded` reason.
+- The `/memoire` page surfaces real Neo4j and Qdrant health, including degraded reasons returned by the knowledge service.
+
+What stays on the local fallback:
+
+- Demo mode (always).
+- Tests (always — `backends.factory.select_backend` returns the local store when production env is absent).
+- Admin mode when `KNOWLEDGE_USE_PRODUCTION_BACKENDS=false` or one of the production backends is unreachable and local fallback is allowed. The store reports `degraded=true` with a precise reason in `/health` and `/knowledge/stats.backendHealth` so operators can react.

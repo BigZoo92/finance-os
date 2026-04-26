@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/creative-direction/README.md
+     Hash:   sha256:98a90b483fe736d4
+     Sync:   pnpm agent:skills:sync -->
+
 # creative-direction
 
 Image prompt templates, model selection guidance, and anti-generic patterns for AI-generated visual assets. Stop getting "a person using a laptop" and start getting images with actual creative direction.

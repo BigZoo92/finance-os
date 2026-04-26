@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/component-patterns.md
+     Hash:   sha256:1f750cfabb2a4778
+     Sync:   pnpm agent:skills:sync -->
+
 # Component Animation Patterns
 
 ## Contents

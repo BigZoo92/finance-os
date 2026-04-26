@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/dashboard/SKILL.md
+     Hash:   sha256:c240a87a9e2467df
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: dashboard
 description: "Skill for the Dashboard area of finance-os. 83 symbols across 13 files."

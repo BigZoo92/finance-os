@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-weight-body.md
+     Hash:   sha256:d7b78b443a8a07cb
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Appropriate Body Text Weight
 impact: CRITICAL

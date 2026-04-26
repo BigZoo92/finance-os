@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/learn/SKILL.md
+     Hash:   sha256:5f5efcf794eb183b
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: learn
 description: >

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-letterspacing-uppercase.md
+     Hash:   sha256:1a8091224ae679e3
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Add Letterspacing to Uppercase Text
 impact: HIGH

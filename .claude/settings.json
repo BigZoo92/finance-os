@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/enzogivernaud/dev/**)",
+      "Bash(python -c \"from finance_os_knowledge.app import create_app; app = create_app\\(\\); print\\('app created ok'\\)\")",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//opt/homebrew/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/enzogivernaud/**)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm -w typecheck)",
+      "Bash(docker compose *)",
+      "Bash(GHCR_IMAGE_NAME=test APP_IMAGE_TAG=test docker compose -f docker-compose.prod.yml config --quiet)",
+      "Bash(pnpm -r --if-present test)",
+      "Bash(pnpm -r --if-present build)",
+      "Bash(pnpm -w lint)",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

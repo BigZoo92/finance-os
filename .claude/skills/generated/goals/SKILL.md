@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/goals/SKILL.md
+     Hash:   sha256:d65c7020cfcf6a02
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: goals
 description: "Skill for the Goals area of finance-os. 8 symbols across 2 files."

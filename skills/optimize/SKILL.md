@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/optimize/SKILL.md
+     Hash:   sha256:71caee1a977ed307
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: optimize
 description: Diagnoses and fixes UI performance across loading speed, rendering, animations, images, and bundle size. Use when the user mentions slow, laggy, janky, performance, bundle size, load time, or wants a faster, smoother experience.

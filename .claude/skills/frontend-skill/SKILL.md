@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-skill/SKILL.md
+     Hash:   sha256:d367b2d22825d74c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: frontend-skill
 description: Use when the task asks for a visually strong landing page, website, app, prototype, demo, or game UI. This skill enforces restrained composition, image-led hierarchy, cohesive content structure, and tasteful motion while avoiding generic cards, weak branding, and UI clutter.

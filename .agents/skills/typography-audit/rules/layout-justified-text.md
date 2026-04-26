@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-justified-text.md
+     Hash:   sha256:8be00f17a2daa91e
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Avoid Justified Text on the Web
 impact: MEDIUM

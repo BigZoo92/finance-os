@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/color-expert/evals/task-prompts.md
+     Hash:   sha256:b148385377fd3fca
+     Sync:   pnpm agent:skills:sync -->
+
 # Task Prompts
 
 Use these prompts for qualitative review of the skill. They are meant to test whether the skill gives the right kind of answer, not whether it produces one rigid output.

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/_sections.md
+     Hash:   sha256:58fb21622821d940
+     Sync:   pnpm agent:skills:sync -->
+
 # Sections
 
 This file defines all sections, their ordering, impact levels, and descriptions.

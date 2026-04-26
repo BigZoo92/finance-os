@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/a11y-contrast-and-redundant-cues.md
+     Hash:   sha256:bfcc2f0d30ff31ad
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Meet Contrast and Avoid Color-Only Meaning
 impact: CRITICAL

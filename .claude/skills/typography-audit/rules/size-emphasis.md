@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-emphasis.md
+     Hash:   sha256:d21725a814738d8e
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Italics for Emphasis
 impact: HIGH

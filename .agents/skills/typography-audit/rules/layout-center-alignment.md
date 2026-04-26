@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-center-alignment.md
+     Hash:   sha256:b1bedb0d7b3f2865
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Center-Align Text Sparingly
 impact: MEDIUM

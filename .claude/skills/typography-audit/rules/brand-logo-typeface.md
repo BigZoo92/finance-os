@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-logo-typeface.md
+     Hash:   sha256:e5b75aaf29152309
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Choose Logo Typeface Based on Specific Letters
 impact: LOW-MEDIUM

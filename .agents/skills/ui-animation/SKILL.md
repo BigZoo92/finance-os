@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/SKILL.md
+     Hash:   sha256:9184f1c3344075e8
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: ui-animation
 description: Creates, reviews, and debugs UI motion and animation implementations. Covers springs, gestures, drag interactions, clip-path reveals, easing, timing, and animation review. Use when designing, implementing, or reviewing motion, CSS transitions, keyframes, framer-motion, spring animations, asking "add animations to", "make this feel smooth", "review my animations", "should this animate", or "add a swipe gesture"

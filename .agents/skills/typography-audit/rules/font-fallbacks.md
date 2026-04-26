@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-fallbacks.md
+     Hash:   sha256:f9ad3591e91f6c05
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Define Strong Fallback Font Stacks
 impact: CRITICAL

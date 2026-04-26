@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-kerning.md
+     Hash:   sha256:c89e92f307738f64
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Metrics Kerning, Adjust Tracking First
 impact: MEDIUM-HIGH

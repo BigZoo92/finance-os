@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -7,7 +7,12 @@ import { motion } from 'motion/react'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query-options'
+import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
+import {
+  dashboardSummaryQueryOptionsWithMode,
+  dashboardAdvisorQueryOptionsWithMode,
+  dashboardAdvisorRecommendationsQueryOptionsWithMode,
+} from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 import { powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
@@ -31,11 +36,24 @@ export const Route = createFileRoute('/_app/')({
     const mode: AuthMode | undefined =
       auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
-    await Promise.all([
+
+    const advisorFlags = getAiAdvisorUiFlags()
+    const advisorVisible = advisorFlags.enabled && (!advisorFlags.adminOnly || mode === 'admin')
+
+    const prefetches: Array<Promise<unknown>> = [
       context.queryClient.ensureQueryData(dashboardSummaryQueryOptionsWithMode({ range: deps.range, mode })),
       context.queryClient.ensureQueryData(financialGoalsQueryOptionsWithMode({ mode })),
       context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode({ mode })),
-    ])
+    ]
+
+    if (advisorVisible) {
+      prefetches.push(
+        context.queryClient.ensureQueryData(dashboardAdvisorQueryOptionsWithMode({ range: '30d', mode })),
+        context.queryClient.ensureQueryData(dashboardAdvisorRecommendationsQueryOptionsWithMode({ mode })),
+      )
+    }
+
+    await Promise.all(prefetches)
   },
   component: CockpitPage,
 })
@@ -90,8 +108,20 @@ function CockpitPage() {
   const connsOk = conns.filter(c => c.status === 'connected').length
   const connsFail = conns.filter(c => c.status === 'error' || c.status === 'reconnect_required').length
 
+  const advisorFlags = getAiAdvisorUiFlags()
+  const advisorVisible = advisorFlags.enabled && (!advisorFlags.adminOnly || isAdmin)
+  const advisorQ = useQuery({
+    ...dashboardAdvisorQueryOptionsWithMode({ range: '30d', ...(advisorVisible && authMode ? { mode: authMode } : {}) }),
+    enabled: advisorVisible,
+  })
+  const recsQ = useQuery({
+    ...dashboardAdvisorRecommendationsQueryOptionsWithMode(advisorVisible && authMode ? { mode: authMode } : {}),
+    enabled: advisorVisible,
+  })
+
   const goals = goalsQ.data?.items ?? []
   const activeGoals = goals.filter(g => !g.archivedAt)
+  const activeRecs = recsQ.data?.items ?? []
 
   const sparkData = adapted.dailyWealthSnapshots.map(s => ({ date: s.date, value: s.balance }))
   const [secondaryReady, setSecondaryReady] = useState(false)
@@ -208,6 +238,72 @@ function CockpitPage() {
           </p>
         </Panel>
       ) : null}
+
+      {/* ── AI Advisor entry + attention items ── */}
+      {advisorVisible && (
+        <section className="grid gap-4 md:grid-cols-2">
+          <Link
+            to="/ia"
+            className="group rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md transition-all hover:border-primary/30 hover:bg-card/80"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-aurora/70">
+              ▣ advisor IA
+            </p>
+            <p className="mt-3 text-lg font-semibold text-foreground group-hover:text-primary">
+              {advisorQ.data?.brief?.title ?? 'Brief quotidien'}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+              {advisorQ.data?.brief?.summary ?? 'Consultez l\'Advisor IA pour vos recommandations personnalisées.'}
+            </p>
+            <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <StatusDot tone={advisorQ.data?.status === 'degraded' ? 'warn' : 'ok'} size={6} />
+                {advisorQ.data?.status ?? 'loading'}
+              </span>
+              {activeRecs.length > 0 && (
+                <span className="text-primary">{activeRecs.length} recommandation{activeRecs.length > 1 ? 's' : ''}</span>
+              )}
+            </div>
+          </Link>
+
+          <div className="space-y-2 rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-negative/70">
+              ⚠ demande attention
+            </p>
+            <div className="space-y-1.5">
+              {connsFail > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <StatusDot tone="err" size={6} pulse />
+                  <Link to="/integrations" className="text-foreground hover:text-primary">
+                    {connsFail} connexion{connsFail > 1 ? 's' : ''} bancaire{connsFail > 1 ? 's' : ''} en erreur
+                  </Link>
+                </div>
+              )}
+              {activeRecs.filter(r => r.riskLevel === 'high').length > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <StatusDot tone="warn" size={6} />
+                  <Link to="/ia" className="text-foreground hover:text-primary">
+                    {activeRecs.filter(r => r.riskLevel === 'high').length} recommandation{activeRecs.filter(r => r.riskLevel === 'high').length > 1 ? 's' : ''} risque élevé
+                  </Link>
+                </div>
+              )}
+              {activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <StatusDot tone="warn" size={6} />
+                  <Link to="/objectifs" className="text-foreground hover:text-primary">
+                    {activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length} objectif{activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length > 1 ? 's' : ''} en retard
+                  </Link>
+                </div>
+              )}
+              {connsFail === 0 && activeRecs.filter(r => r.riskLevel === 'high').length === 0 && activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length === 0 && (
+                <p className="py-2 text-sm text-muted-foreground">
+                  Rien de critique. Tout est en ordre.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Insights — top expenses / connections / goals ── */}
       <section className="grid gap-5 md:gap-6 lg:grid-cols-3">

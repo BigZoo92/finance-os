@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-widows-orphans.md
+     Hash:   sha256:2a5392de6c9f65c2
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Manage Widows and Orphans with Non-Breaking Spaces
 impact: MEDIUM

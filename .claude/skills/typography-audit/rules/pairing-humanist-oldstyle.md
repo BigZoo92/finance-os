@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-humanist-oldstyle.md
+     Hash:   sha256:3a29f16ce9edfbb9
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Pair Humanist Sans with Old-Style Serifs
 impact: MEDIUM

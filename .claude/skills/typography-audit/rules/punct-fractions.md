@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-fractions.md
+     Hash:   sha256:e81adf66b381504b
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Proper Fraction and Math Entities
 impact: CRITICAL

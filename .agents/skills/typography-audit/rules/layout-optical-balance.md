@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-optical-balance.md
+     Hash:   sha256:6616c17021d2418b
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Balance Layouts Optically
 impact: MEDIUM

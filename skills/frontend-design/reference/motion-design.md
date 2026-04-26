@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/motion-design.md
+     Hash:   sha256:c35a59b5f795721c
+     Sync:   pnpm agent:skills:sync -->
+
 # Motion Design
 
 ## Duration: The 100/300/500 Rule

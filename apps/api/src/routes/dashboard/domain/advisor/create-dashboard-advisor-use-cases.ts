@@ -1,34 +1,36 @@
 import {
+  type AiBudgetState,
   CHAT_GROUNDED_PROMPT,
+  type ChatGroundedAnswer,
+  compactKnowledgeContextForPrompt,
   computeAiBudgetState,
   createAnthropicMessagesClient,
   createOpenAiResponsesClient,
   DAILY_BRIEF_PROMPT,
-  DEFAULT_AI_EVAL_CASES,
-  RECOMMENDATION_CHALLENGE_PROMPT,
-  TRANSACTION_LABELS_PROMPT,
-  type AiBudgetState,
-  type ChatGroundedAnswer,
   type DailyBriefLlmDraft,
+  DEFAULT_AI_EVAL_CASES,
+  type KnowledgeContextBundle,
+  RECOMMENDATION_CHALLENGE_PROMPT,
   type RecommendationChallengeDraft,
   type StructuredCompletionRequest,
   type StructuredCompletionResult,
+  TRANSACTION_LABELS_PROMPT,
   type TransactionLabelSuggestionDraft,
 } from '@finance-os/ai'
 import {
-  calculateAdvisorSnapshot,
-  generateAdvisorRecommendations,
   type AdvisorSnapshot,
+  calculateAdvisorSnapshot,
   type DeterministicRecommendation,
+  generateAdvisorRecommendations,
 } from '@finance-os/finance-engine'
 import { getDashboardSummaryMock } from '../../../../mocks/dashboardSummary.mock'
 import type {
   DashboardAdvisorAssumptionsResponse,
-  DashboardAdvisorKnowledgeAnswerResponse,
-  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorDailyBriefResponse,
   DashboardAdvisorEvalsResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorOverviewResponse,
   DashboardAdvisorRecommendationResponse,
   DashboardAdvisorRecommendationsResponse,
@@ -46,13 +48,16 @@ import type {
 import type { NewsContextBundle } from '../news-types'
 import { buildAdvisorChatFallback } from './build-chat-fallback'
 import { buildDeterministicBrief } from './build-deterministic-brief'
+import { buildDeterministicTransactionSuggestions } from './build-transaction-suggestions'
 import {
   buildAdvisorKnowledgeAnswer,
   buildAdvisorKnowledgeBrowseFallback,
   buildAdvisorKnowledgeTopics,
 } from './knowledge-pack'
-import { buildDeterministicTransactionSuggestions } from './build-transaction-suggestions'
-import { mapNewsBundleToSignals, mapSummaryToFinanceEngineInput } from './map-summary-to-engine-input'
+import {
+  mapNewsBundleToSignals,
+  mapSummaryToFinanceEngineInput,
+} from './map-summary-to-engine-input'
 import { runAdvisorEvals } from './run-advisor-evals'
 
 type StructuredClient = {
@@ -76,22 +81,18 @@ export interface DashboardAdvisorConfig {
   maxChatMessagesContext: number
   usdToEurRate: number
   xSignalsMode: 'off' | 'shadow' | 'enforced'
-  openAi:
-    | {
-        apiKey: string
-        baseUrl?: string
-        classifierModel: string
-        dailyModel: string
-        deepModel: string
-      }
-    | null
-  anthropic:
-    | {
-        apiKey: string
-        baseUrl?: string
-        challengerModel: string
-      }
-    | null
+  openAi: {
+    apiKey: string
+    baseUrl?: string
+    classifierModel: string
+    dailyModel: string
+    deepModel: string
+  } | null
+  anthropic: {
+    apiKey: string
+    baseUrl?: string
+    challengerModel: string
+  } | null
 }
 
 type SocialSignalMode = DashboardAdvisorConfig['xSignalsMode']
@@ -99,13 +100,7 @@ type SocialSignalMode = DashboardAdvisorConfig['xSignalsMode']
 const renderPrompt = (template: { userPromptTemplate: string }, context: Record<string, unknown>) =>
   template.userPromptTemplate.replace('{{context_json}}', JSON.stringify(context))
 
-const toSnapshotResponse = ({
-  snapshot,
-  runId,
-}: {
-  snapshot: AdvisorSnapshot
-  runId: number
-}) => ({
+const toSnapshotResponse = ({ snapshot, runId }: { snapshot: AdvisorSnapshot; runId: number }) => ({
   id: 0,
   runId,
   asOfDate: snapshot.asOf.slice(0, 10),
@@ -114,7 +109,9 @@ const toSnapshotResponse = ({
   riskProfile: snapshot.riskProfile,
   metrics: snapshot.metrics as unknown as Record<string, unknown>,
   allocationBuckets: snapshot.allocationBuckets as unknown as Array<Record<string, unknown>>,
-  assetClassAllocations: snapshot.assetClassAllocations as unknown as Array<Record<string, unknown>>,
+  assetClassAllocations: snapshot.assetClassAllocations as unknown as Array<
+    Record<string, unknown>
+  >,
   driftSignals: snapshot.driftSignals as unknown as Array<Record<string, unknown>>,
   scenarios: snapshot.scenarios as unknown as Array<Record<string, unknown>>,
   diagnostics: snapshot.diagnostics as unknown as Record<string, unknown>,
@@ -153,9 +150,13 @@ const toRecommendationResponse = ({
   challenge: null,
 })
 
-const buildSignalResponses = (newsBundle?: NewsContextBundle | null): DashboardAdvisorSignalsResponse => {
+const buildSignalResponses = (
+  newsBundle?: NewsContextBundle | null
+): DashboardAdvisorSignalsResponse => {
   const now = Date.now()
-  const toEmptySocialSignals = (mode: SocialSignalMode): DashboardAdvisorSignalsResponse['socialSignals'] => ({
+  const toEmptySocialSignals = (
+    mode: SocialSignalMode
+  ): DashboardAdvisorSignalsResponse['socialSignals'] => ({
     mode,
     usedInAdvisorContext: false,
     droppedReason: mode === 'off' ? 'policy_off' : 'empty',
@@ -362,7 +363,9 @@ const applySocialSignalPolicy = ({
   }
 
   const candidates = signals.newsSignals
-    .filter(item => item.supportingUrls.some(url => url.includes('x.com') || url.includes('twitter.com')))
+    .filter(item =>
+      item.supportingUrls.some(url => url.includes('x.com') || url.includes('twitter.com'))
+    )
     .map(item => {
       const recencyHours = item.publishedAt
         ? Math.max(0, Math.round((now - Date.parse(item.publishedAt)) / (1000 * 60 * 60)))
@@ -376,7 +379,8 @@ const applySocialSignalPolicy = ({
       const convergence = item.affectedEntities.length > 1 ? 0.7 : 0.4
       const novelty = item.eventType === 'social_sentiment' ? 0.65 : 0.45
       const curation = source === 'demo_fixture' ? 0.5 : 0.6
-      const total = trust * 0.35 + recency * 0.25 + convergence * 0.2 + novelty * 0.1 + curation * 0.1
+      const total =
+        trust * 0.35 + recency * 0.25 + convergence * 0.2 + novelty * 0.1 + curation * 0.1
       return {
         item,
         recencyHours,
@@ -477,7 +481,8 @@ const applySocialSignalPolicy = ({
     curation: 0,
   }
   for (const item of included) {
-    trustTierContribution[item.account.trustTier] = (trustTierContribution[item.account.trustTier] ?? 0) + 1
+    trustTierContribution[item.account.trustTier] =
+      (trustTierContribution[item.account.trustTier] ?? 0) + 1
     freshnessHistogram[item.freshnessState] = (freshnessHistogram[item.freshnessState] ?? 0) + 1
     scoreTotals.total += item.scoring.total
     scoreTotals.trust += item.scoring.trust
@@ -539,7 +544,9 @@ const applySocialSignalPolicy = ({
   }
 }
 
-const createEmptySpendAnalytics = (budgetState: AiBudgetState): DashboardAdvisorSpendAnalyticsResponse => ({
+const createEmptySpendAnalytics = (
+  budgetState: AiBudgetState
+): DashboardAdvisorSpendAnalyticsResponse => ({
   summary: budgetState,
   daily: [],
   byFeature: [],
@@ -720,12 +727,21 @@ const toPromptTemplateRecord = (template: {
   schema: template.schema,
 })
 
+export type AdvisorKnowledgeContextFetcher = (input: {
+  requestId: string
+  mode: 'admin' | 'demo' | 'internal'
+  snapshot: AdvisorSnapshot
+  recommendations: DeterministicRecommendation[]
+  advisorTask: string
+}) => Promise<KnowledgeContextBundle | null>
+
 export const createDashboardAdvisorUseCases = ({
   repository,
   getSummary,
   getGoals,
   getNewsContextBundle,
   getTransactions,
+  getKnowledgeContextBundle,
   config,
 }: {
   repository: DashboardAdvisorRepository
@@ -733,6 +749,7 @@ export const createDashboardAdvisorUseCases = ({
   getGoals: DashboardUseCases['getGoals']
   getNewsContextBundle?: DashboardUseCases['getNewsContextBundle']
   getTransactions: DashboardUseCases['getTransactions']
+  getKnowledgeContextBundle?: AdvisorKnowledgeContextFetcher
   config: DashboardAdvisorConfig
 }) => {
   const openAiClient: StructuredClient | null = config.openAi
@@ -749,6 +766,86 @@ export const createDashboardAdvisorUseCases = ({
         usdToEurRate: config.usdToEurRate,
       })
     : null
+
+  const resolveKnowledgeBundle = async ({
+    requestId,
+    mode,
+    snapshot,
+    recommendations,
+    advisorTask,
+  }: {
+    requestId: string
+    mode: 'admin' | 'demo' | 'internal'
+    snapshot: AdvisorSnapshot
+    recommendations: DeterministicRecommendation[]
+    advisorTask: string
+  }): Promise<{ bundle: KnowledgeContextBundle | null; degradedReason: string | null }> => {
+    if (!getKnowledgeContextBundle) {
+      return { bundle: null, degradedReason: 'knowledge_context_disabled' }
+    }
+    try {
+      const bundle = await getKnowledgeContextBundle({
+        requestId,
+        mode,
+        snapshot,
+        recommendations,
+        advisorTask,
+      })
+      if (!bundle) {
+        return { bundle: null, degradedReason: 'knowledge_context_unavailable' }
+      }
+      return {
+        bundle,
+        degradedReason: bundle.degraded
+          ? `knowledge_context_degraded:${bundle.fallbackReason ?? 'unknown'}`
+          : null,
+      }
+    } catch {
+      return { bundle: null, degradedReason: 'knowledge_context_failed' }
+    }
+  }
+
+  const knowledgeContextForPrompt = (
+    bundle: KnowledgeContextBundle | null
+  ): {
+    knowledgeContext?: {
+      summary: string
+      tokenEstimate: number
+      confidence: number
+      recency: number
+      degraded: boolean
+      mode: string
+      contradictions: Array<{ id: string; title: string }>
+      assumptions: Array<{ id: string; title: string }>
+      unknowns: string[]
+      retrievalExplanation: string[]
+      provenanceCount: number
+    }
+  } => {
+    if (!bundle) {
+      return {}
+    }
+    const compactedText = compactKnowledgeContextForPrompt({ bundle })
+    return {
+      knowledgeContext: {
+        summary: compactedText,
+        tokenEstimate: bundle.tokenEstimate,
+        confidence: bundle.confidence,
+        recency: bundle.recency,
+        degraded: bundle.degraded,
+        mode: bundle.mode,
+        contradictions: bundle.contradictoryEvidence
+          .slice(0, 4)
+          .map(item => ({ id: item.id, title: item.title })),
+        assumptions: bundle.assumptions
+          .slice(0, 4)
+          .map(item => ({ id: item.id, title: item.title })),
+        unknowns: bundle.unknowns.slice(0, 4),
+        retrievalExplanation: bundle.retrievalExplanation.slice(0, 3),
+        provenanceCount: bundle.provenance.length,
+      },
+    }
+  }
 
   const runStructuredStep = async <TOutput>({
     runId,
@@ -831,15 +928,13 @@ export const createDashboardAdvisorUseCases = ({
     }
   }
 
-  const loadAdminPreview = async ({
-    requestId,
-  }: {
-    requestId: string
-  }) => {
+  const loadAdminPreview = async ({ requestId }: { requestId: string }) => {
     const [summary, goalsResponse, newsBundle, spend] = await Promise.all([
       getSummary('30d'),
       getGoals(),
-      getNewsContextBundle ? getNewsContextBundle({ requestId, range: '7d' }) : Promise.resolve(null),
+      getNewsContextBundle
+        ? getNewsContextBundle({ requestId, range: '7d' })
+        : Promise.resolve(null),
       repository.getSpendAnalytics(buildSpendInput(config)),
     ])
 
@@ -903,7 +998,9 @@ export const createDashboardAdvisorUseCases = ({
       const [summary, goalsResponse, newsBundle, transactionsResponse] = await Promise.all([
         getSummary('30d'),
         getGoals(),
-        getNewsContextBundle ? getNewsContextBundle({ requestId, range: '7d' }) : Promise.resolve(null),
+        getNewsContextBundle
+          ? getNewsContextBundle({ requestId, range: '7d' })
+          : Promise.resolve(null),
         getTransactions({
           range: '30d',
           limit: 40,
@@ -923,7 +1020,9 @@ export const createDashboardAdvisorUseCases = ({
 
       let brief = preview.brief
       const recommendations = preview.recommendations.items.map(item => ({ ...item }))
-      let transactionSuggestions = buildDeterministicTransactionSuggestions(transactionsResponse.items)
+      let transactionSuggestions = buildDeterministicTransactionSuggestions(
+        transactionsResponse.items
+      )
 
       await repository.updateRunStep({
         stepId: deterministicStepId,
@@ -939,14 +1038,27 @@ export const createDashboardAdvisorUseCases = ({
           xSignalExcluded: preview.signals.socialSignals.decisionLedger.xSignalExcluded,
           advisorSocialSharePct: preview.signals.socialSignals.decisionLedger.advisorSocialSharePct,
           xSignalCapHit: preview.signals.socialSignals.decisionLedger.xSignalCapHit,
-          inclusionScoreBreakdown: preview.signals.socialSignals.decisionLedger.inclusionScoreBreakdown,
-          exclusionReasonBreakdown: preview.signals.socialSignals.decisionLedger.exclusionReasonBreakdown,
+          inclusionScoreBreakdown:
+            preview.signals.socialSignals.decisionLedger.inclusionScoreBreakdown,
+          exclusionReasonBreakdown:
+            preview.signals.socialSignals.decisionLedger.exclusionReasonBreakdown,
           freshnessState: preview.signals.socialSignals.freshnessState,
           xUsedInPrompt:
             config.xSignalsMode === 'enforced' && preview.signals.socialSignals.included.length > 0,
           xDroppedReason: preview.signals.socialSignals.droppedReason,
         },
       })
+
+      const dailyKnowledge = await resolveKnowledgeBundle({
+        requestId,
+        mode: 'admin',
+        snapshot: preview.snapshot,
+        recommendations: preview.deterministicRecommendations,
+        advisorTask: 'daily-brief',
+      })
+      if (dailyKnowledge.degradedReason) {
+        degradedReasons.push(dailyKnowledge.degradedReason)
+      }
 
       if (!config.forceLocalOnly && !budgetState.blocked && openAiClient) {
         const llmBrief = await runStructuredStep<DailyBriefLlmDraft>({
@@ -966,6 +1078,7 @@ export const createDashboardAdvisorUseCases = ({
                 ? preview.signals.socialSignals.included.slice(0, 3)
                 : [],
             assumptions: preview.assumptions.items.slice(0, 8),
+            ...knowledgeContextForPrompt(dailyKnowledge.bundle),
           },
           maxOutputTokens: 1400,
           reasoningEffort: budgetState.deepAnalysisAllowed ? 'medium' : 'low',
@@ -993,8 +1106,30 @@ export const createDashboardAdvisorUseCases = ({
         degradedReasons.push('budget_blocked')
       }
 
-      if (!config.forceLocalOnly && config.challengerEnabled && anthropicClient && budgetState.challengerAllowed) {
+      if (
+        !config.forceLocalOnly &&
+        config.challengerEnabled &&
+        anthropicClient &&
+        budgetState.challengerAllowed
+      ) {
         for (const recommendation of recommendations.slice(0, 3)) {
+          const challengeKnowledge = await resolveKnowledgeBundle({
+            requestId,
+            mode: 'admin',
+            snapshot: preview.snapshot,
+            recommendations: [
+              ...preview.deterministicRecommendations.filter(
+                item => item.category === recommendation.category
+              ),
+              ...preview.deterministicRecommendations.filter(
+                item => item.category !== recommendation.category
+              ),
+            ].slice(0, 4),
+            advisorTask: `challenger:${recommendation.category}`,
+          })
+          if (challengeKnowledge.degradedReason) {
+            degradedReasons.push(challengeKnowledge.degradedReason)
+          }
           const challenge = await runStructuredStep<RecommendationChallengeDraft>({
             runId,
             stepKey: `challenge_${recommendation.recommendationKey}`,
@@ -1012,6 +1147,7 @@ export const createDashboardAdvisorUseCases = ({
                   ? preview.signals.socialSignals.included.slice(0, 2)
                   : [],
               assumptions: preview.assumptions.items.slice(0, 8),
+              ...knowledgeContextForPrompt(challengeKnowledge.bundle),
             },
             maxOutputTokens: 1000,
           })
@@ -1056,7 +1192,9 @@ export const createDashboardAdvisorUseCases = ({
         ambiguousSuggestions.length > 0 &&
         !budgetState.blocked
       ) {
-        const llmSuggestions = await runStructuredStep<{ suggestions: TransactionLabelSuggestionDraft[] }>({
+        const llmSuggestions = await runStructuredStep<{
+          suggestions: TransactionLabelSuggestionDraft[]
+        }>({
           runId,
           stepKey: 'transaction_relabel_llm',
           feature: 'advisor_relabel',
@@ -1066,7 +1204,9 @@ export const createDashboardAdvisorUseCases = ({
           template: TRANSACTION_LABELS_PROMPT,
           context: {
             transactions: ambiguousSuggestions.map(item => {
-              const source = transactionsResponse.items.find(transaction => transaction.id === item.transactionId)
+              const source = transactionsResponse.items.find(
+                transaction => transaction.id === item.transactionId
+              )
               return {
                 transactionId: item.transactionId,
                 label: source?.label ?? '',
@@ -1129,8 +1269,12 @@ export const createDashboardAdvisorUseCases = ({
           currency: preview.snapshot.currency,
           riskProfile: preview.snapshot.riskProfile,
           metrics: preview.snapshot.metrics as unknown as Record<string, unknown>,
-          allocationBuckets: preview.snapshot.allocationBuckets as unknown as Array<Record<string, unknown>>,
-          assetClassAllocations: preview.snapshot.assetClassAllocations as unknown as Array<Record<string, unknown>>,
+          allocationBuckets: preview.snapshot.allocationBuckets as unknown as Array<
+            Record<string, unknown>
+          >,
+          assetClassAllocations: preview.snapshot.assetClassAllocations as unknown as Array<
+            Record<string, unknown>
+          >,
           driftSignals: preview.snapshot.driftSignals as unknown as Array<Record<string, unknown>>,
           scenarios: preview.snapshot.scenarios as unknown as Array<Record<string, unknown>>,
           diagnostics: preview.snapshot.diagnostics as unknown as Record<string, unknown>,
@@ -1276,9 +1420,11 @@ export const createDashboardAdvisorUseCases = ({
           ...buildSpendInput(config),
           chatEnabled: config.chatEnabled,
         })) ??
-        (await loadAdminPreview({
-          requestId,
-        })).overview
+        (
+          await loadAdminPreview({
+            requestId,
+          })
+        ).overview
       )
     },
 
@@ -1294,7 +1440,9 @@ export const createDashboardAdvisorUseCases = ({
         }).brief
       }
 
-      return (await repository.getLatestDailyBrief()) ?? (await loadAdminPreview({ requestId })).brief
+      return (
+        (await repository.getLatestDailyBrief()) ?? (await loadAdminPreview({ requestId })).brief
+      )
     },
 
     getAdvisorRecommendations: async ({ mode, requestId, limit = 20 }) => {
@@ -1312,7 +1460,9 @@ export const createDashboardAdvisorUseCases = ({
       }
 
       const persisted = await repository.listRecommendations(limit)
-      return persisted.items.length > 0 ? persisted : (await loadAdminPreview({ requestId })).recommendations
+      return persisted.items.length > 0
+        ? persisted
+        : (await loadAdminPreview({ requestId })).recommendations
     },
 
     getAdvisorRuns: async ({ mode, limit = 20 }) => {
@@ -1332,7 +1482,9 @@ export const createDashboardAdvisorUseCases = ({
       }
 
       const persisted = await repository.listAssumptions(limit)
-      return persisted.items.length > 0 ? persisted : (await loadAdminPreview({ requestId })).assumptions
+      return persisted.items.length > 0
+        ? persisted
+        : (await loadAdminPreview({ requestId })).assumptions
     },
 
     getAdvisorSignals: async ({ mode, requestId, limit = 20 }) => {
@@ -1445,7 +1597,10 @@ export const createDashboardAdvisorUseCases = ({
       }
 
       return (
-        (await repository.listChatMessages(threadKey ?? 'default', config.maxChatMessagesContext)) ?? {
+        (await repository.listChatMessages(
+          threadKey ?? 'default',
+          config.maxChatMessagesContext
+        )) ?? {
           threadId: threadKey ?? 'default',
           title: 'Finance Assistant',
           messages: [],
@@ -1519,6 +1674,14 @@ export const createDashboardAdvisorUseCases = ({
         recommendations: previewForChat.deterministicRecommendations,
       })
 
+      const chatKnowledge = await resolveKnowledgeBundle({
+        requestId,
+        mode: 'admin',
+        snapshot: previewForChat.snapshot,
+        recommendations: previewForChat.deterministicRecommendations,
+        advisorTask: `chat:${message.slice(0, 80)}`,
+      })
+
       if (!config.forceLocalOnly && !budgetState.blocked && openAiClient) {
         const llmAnswer = await runStructuredStep<ChatGroundedAnswer>({
           runId,
@@ -1539,8 +1702,13 @@ export const createDashboardAdvisorUseCases = ({
                 ? previewForChat.signals.socialSignals.included.slice(0, 3)
                 : [],
             priorMessages:
-              (await repository.listChatMessages(threadKey ?? 'default', config.maxChatMessagesContext))?.messages ??
-              [],
+              (
+                await repository.listChatMessages(
+                  threadKey ?? 'default',
+                  config.maxChatMessagesContext
+                )
+              )?.messages ?? [],
+            ...knowledgeContextForPrompt(chatKnowledge.bundle),
           },
           maxOutputTokens: 1200,
           reasoningEffort: budgetState.deepAnalysisAllowed ? 'medium' : 'low',

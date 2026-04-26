@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-swashes.md
+     Hash:   sha256:9dce401eaef79fef
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Swashes and Alternates Sparingly
 impact: LOW-MEDIUM

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/gitnexus/gitnexus-cli/SKILL.md
+     Hash:   sha256:e28f79d4ea2473ef
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: gitnexus-cli
 description: "Use when the user needs to run GitNexus CLI commands like analyze/index a repo, check status, clean the index, generate a wiki, or list indexed repos. Examples: \"Index this repo\", \"Reanalyze the codebase\", \"Generate a wiki\""

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/make-interfaces-feel-better/surfaces.md
+     Hash:   sha256:0564c57a29adf1be
+     Sync:   pnpm agent:skills:sync -->
+
 # Surfaces
 
 Border radius, optical alignment, shadows, and image outlines.

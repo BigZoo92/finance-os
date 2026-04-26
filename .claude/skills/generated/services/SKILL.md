@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/services/SKILL.md
+     Hash:   sha256:efe4b1b29f271e09
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: services
 description: "Skill for the Services area of finance-os. 27 symbols across 6 files."

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-design/SKILL.md
+     Hash:   sha256:2942f9d606dd1260
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: ui-design
 description: Defines visual systems, colour palettes, typography scales, and layout patterns for web UI. Produces design tokens and component styling for product dashboards (SaaS/admin/data-heavy) or marketing/brand landing pages. Use when choosing visual direction, designing a landing page, building a hero section, selecting colour palettes and fonts, establishing layout patterns, starting a new UI design system, theming a web application, or asking "make this look good", "make this look premium", "design the UI for", "full-bleed hero", or "pick a visual style".

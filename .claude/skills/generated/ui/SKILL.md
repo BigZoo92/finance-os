@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/ui/SKILL.md
+     Hash:   sha256:98ce060fe6f8b226
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: ui
 description: "Skill for the Ui area of finance-os. 20 symbols across 8 files."

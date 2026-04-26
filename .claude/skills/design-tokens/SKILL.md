@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/design-tokens/SKILL.md
+     Hash:   sha256:40d5978db5c39b3f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: design-tokens
 description: Generate type scales, color palettes, spacing systems, WCAG contrast checks, and dark mode derivations with math. Use when setting up a design system, creating tokens, or building a Tailwind/CSS theme. Outputs CSS custom properties, Tailwind config, or JSON tokens.

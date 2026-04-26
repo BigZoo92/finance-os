@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-tabular-figures.md
+     Hash:   sha256:725737ba6d894732
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Tabular Figures in Data Contexts
 impact: MEDIUM-HIGH

@@ -2,16 +2,62 @@
 
 Use these files as markdown-first entry points before re-exploring the repo.
 
-## Maps
+## Agent Efficiency System (NEW)
 
-- [architecture-canonical.md](architecture-canonical.md): canonical runtime entrypoints, boundaries, and architecture doc template
-- [contracts-canonical.md](contracts-canonical.md): canonical HTTP contract guidance and non-regression template
-- [testing-canonical.md](testing-canonical.md): canonical verification strategy and evidence requirements
-- [release-canonical.md](release-canonical.md): canonical CI/release/deploy guidance and rollout constraints
-- [design-guidance-canonical.md](design-guidance-canonical.md): canonical UI/UX quality guidance with required state matrix template
-- [execution-map.md](execution-map.md): end-to-end runtime flows for dashboard, Powens callback, and worker sync
-- [code_review.md](code_review.md): practical review severity and checklist for this repo
-- [policy-verification-bundle.md](policy-verification-bundle.md): conventions, decision trees, and high-effort verification checklists for dual-path parity, observability, UI states, and rollback
+Start here for optimized agentic workflows:
+
+- **[agent-surfaces.md](agent-surfaces.md)**: Canonical source, projections, sync workflow
+- **[context-audit.md](context-audit.md)**: Full audit of repo context bloat, duplication, and optimization opportunities
+- **[model-routing.md](model-routing.md)**: Which model for which task (Codex/Claude/Kimi/Qwen/Hermes/Gemma)
+- **[skill-routing.md](skill-routing.md)**: How skills are selected by task domain
+- **[prompt-caching-strategy.md](prompt-caching-strategy.md)**: Cache-friendly prompt structure design
+- **[token-economics.md](token-economics.md)**: Token/cost telemetry schema and tracking
+- **[agent-runbook.md](agent-runbook.md)**: Step-by-step guide for using the efficiency system
+
+### Context Packs (compact, task-specific bundles)
+
+- [context-packs/core.md](context-packs/core.md) — global invariants (always loaded)
+- [context-packs/web-ui.md](context-packs/web-ui.md) — web frontend + design system
+- [context-packs/api-backend.md](context-packs/api-backend.md) — API/Elysia
+- [context-packs/worker-sync.md](context-packs/worker-sync.md) — background worker
+- [context-packs/ai-advisor.md](context-packs/ai-advisor.md) — AI Advisor (financial)
+- [context-packs/knowledge-graph.md](context-packs/knowledge-graph.md) — knowledge graph
+- [context-packs/deploy-ci.md](context-packs/deploy-ci.md) — Docker/CI/CD
+- [context-packs/design-system.md](context-packs/design-system.md) — design tokens + identity
+- [context-packs/testing.md](context-packs/testing.md) — verification strategy
+- [context-packs/security.md](context-packs/security.md) — security invariants
+- [context-packs/autopilot.md](context-packs/autopilot.md) — autopilot workflow
+
+### Commands
+
+```bash
+pnpm agent:context:audit      # Full context audit with manifest
+pnpm agent:context:pack       # Regenerate all context packs
+pnpm agent:context:estimate   # Estimate tokens for files
+pnpm agent:context:select     # Select docs+skills for a task domain
+pnpm agent:context:check      # CI check for context bloat
+pnpm agent:prompt:build       # Build cache-optimized prompt
+pnpm agent:telemetry:record   # Record agent task telemetry
+```
+
+### ADRs
+
+- [../adr/agent-efficiency-context-budget-model-router.md](../adr/agent-efficiency-context-budget-model-router.md)
+- [../adr/model-routing-and-token-economics.md](../adr/model-routing-and-token-economics.md)
+- [../adr/agent-memory-letta-hermes.md](../adr/agent-memory-letta-hermes.md)
+
+---
+
+## Canonical Maps
+
+- [architecture-canonical.md](architecture-canonical.md): runtime entrypoints, boundaries
+- [contracts-canonical.md](contracts-canonical.md): HTTP contract guidance
+- [testing-canonical.md](testing-canonical.md): verification strategy
+- [release-canonical.md](release-canonical.md): CI/release/deploy guidance
+- [design-guidance-canonical.md](design-guidance-canonical.md): UI/UX quality guidance
+- [execution-map.md](execution-map.md): end-to-end runtime flows
+- [code_review.md](code_review.md): review severity and checklist
+- [policy-verification-bundle.md](policy-verification-bundle.md): verification checklists
 
 ## Deprecated Redirect Stubs
 
@@ -33,9 +79,11 @@ Use these files as markdown-first entry points before re-exploring the repo.
 ## Repo-Local Skills
 
 - Skills live under [../../.agents/skills/](../../.agents/skills/).
-- Start with [../../.agents/skills/repo-recall/SKILL.md](../../.agents/skills/repo-recall/SKILL.md) for orientation and then use the narrower skill that matches the task.
+- Skill routing: [skill-routing.md](skill-routing.md)
+- Full inventory: [../../docs/SKILLS-INVENTORY.md](../../docs/SKILLS-INVENTORY.md)
 
 ## Validation
 
 - Agentic foundation validation: `node .agents/skills/scripts/validate-agent-foundation.mjs`
-- Repo-wide verification commands remain in [../../package.json](../../package.json).
+- Context budget check: `pnpm agent:context:check`
+- Repo-wide verification: `pnpm check:ci`

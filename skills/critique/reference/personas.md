@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/critique/reference/personas.md
+     Hash:   sha256:4b0127ebbc920da1
+     Sync:   pnpm agent:skills:sync -->
+
 # Persona-Based Design Testing
 
 Test the interface through the eyes of 5 distinct user archetypes. Each persona exposes different failure modes that a single "design director" perspective would miss.

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/contextual-animations.md
+     Hash:   sha256:8848caff8b8966db
+     Sync:   pnpm agent:skills:sync -->
+
 # Contextual Animations
 
 Patterns for icon swaps, word-level stagger entrances, and subtle exits.

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/spacing-columns-gutters.md
+     Hash:   sha256:d15f6d9fef5c3562
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Ensure Adequate Column Padding and Gutters
 impact: HIGH

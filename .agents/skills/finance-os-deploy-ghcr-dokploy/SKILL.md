@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/deploy-ghcr-dokploy/SKILL.md
+     Hash:   sha256:f58b6f6e72989e31
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-deploy-ghcr-dokploy
 description: "Deployment pipeline — Docker multi-stage build, GHCR tagging, Dokploy orchestration, smoke tests, rollback. Use when working on CI/CD, Docker, release process, or infrastructure."

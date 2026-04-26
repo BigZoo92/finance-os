@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/brand-equity.md
+     Hash:   sha256:19305589b56f7f0f
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Protect Brand Typographic Equity
 impact: LOW-MEDIUM

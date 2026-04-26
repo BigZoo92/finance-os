@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/domain/SKILL.md
+     Hash:   sha256:fdf183dc2aa9d05b
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: domain
 description: "Skill for the Domain area of finance-os. 96 symbols across 16 files."

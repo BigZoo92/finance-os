@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/spatial-design.md
+     Hash:   sha256:10c743ee8245fc1b
+     Sync:   pnpm agent:skills:sync -->
+
 # Spatial Design
 
 ## Spacing Systems

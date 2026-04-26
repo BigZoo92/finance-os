@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/SKILL.md
+     Hash:   sha256:2a43ac4549e08170
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: frontend-design
 description: Create distinctive, production-grade frontend interfaces with high design quality. Generates creative, polished code that avoids generic AI aesthetics. Use when the user asks to build web components, pages, artifacts, posters, or applications, or when any design skill requires project context.

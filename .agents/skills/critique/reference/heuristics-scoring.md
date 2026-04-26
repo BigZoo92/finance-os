@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/critique/reference/heuristics-scoring.md
+     Hash:   sha256:c047724521f6f73e
+     Sync:   pnpm agent:skills:sync -->
+
 # Heuristics Scoring Guide
 
 Score each of Nielsen's 10 Usability Heuristics on a 0–4 scale. Be honest — a 4 means genuinely excellent, not "good enough."

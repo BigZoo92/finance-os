@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/nav-semantic-links.md
+     Hash:   sha256:ece91f3f1ac8d6c7
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Semantic Links for Navigation
 impact: HIGH

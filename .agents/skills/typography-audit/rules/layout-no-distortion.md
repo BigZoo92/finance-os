@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-no-distortion.md
+     Hash:   sha256:b0a3064e19032694
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Never Distort Type
 impact: MEDIUM

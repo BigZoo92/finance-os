@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/interaction-keyboard-operable.md
+     Hash:   sha256:860badc6234993d1
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Ensure Full Keyboard Operability
 impact: CRITICAL

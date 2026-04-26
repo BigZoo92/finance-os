@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/audit/SKILL.md
+     Hash:   sha256:3a475438b19d48de
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: audit
 description: Run technical quality checks across accessibility, performance, theming, responsive design, and anti-patterns. Generates a scored report with P0-P3 severity ratings and actionable plan. Use when the user wants an accessibility check, performance audit, or technical quality review.

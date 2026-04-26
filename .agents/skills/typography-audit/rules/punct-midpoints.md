@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-midpoints.md
+     Hash:   sha256:3f83726dec00c928
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Midpoint Separators with Thin Spaces
 impact: CRITICAL

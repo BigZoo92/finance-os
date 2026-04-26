@@ -1,3 +1,13 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/review-skill/references/rubric.md
+     Hash:   sha256:fab9daf653de50c0
+     Sync:   pnpm agent:skills:sync -->
+
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/agentskill-sh-review-skill/references/rubric.md
+     Hash:   sha256:35a2d9982932a2c3
+     Sync:   pnpm agent:skills:sync -->
+
 # Skill Review Rubric
 
 Evaluate each dimension on a 1-5 scale. Score honestly. A 3 is acceptable, not a failure.

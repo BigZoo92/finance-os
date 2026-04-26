@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/onboard/SKILL.md
+     Hash:   sha256:cd5ec9f3b925caae
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: onboard
 description: Designs and improves onboarding flows, empty states, and first-run experiences to help users reach value quickly. Use when the user mentions onboarding, first-time users, empty states, activation, getting started, or new user flows.

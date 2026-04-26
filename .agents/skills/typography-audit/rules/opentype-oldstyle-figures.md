@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/opentype-oldstyle-figures.md
+     Hash:   sha256:6c4c955b5146c3ca
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Oldstyle Figures in Running Text
 impact: MEDIUM-HIGH

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/learn/references/SECURITY.md
+     Hash:   sha256:50be3275431ab19f
+     Sync:   pnpm agent:skills:sync -->
+
 # Security Pattern Library
 
 **Treat skill installation like installing software.** Only use skills from trusted sources — those you created yourself or obtained from verified authors. Skills provide Claude with new capabilities through instructions and code, and a malicious skill can direct Claude to invoke tools or execute code in harmful ways.

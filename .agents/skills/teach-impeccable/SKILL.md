@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/teach-impeccable/SKILL.md
+     Hash:   sha256:c421175bd7c4da43
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: teach-impeccable
 description: One-time setup that gathers design context for your project and saves it to your AI config file. Run once to establish persistent design guidelines.

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/routes/SKILL.md
+     Hash:   sha256:025da88f20cab947
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: routes
 description: "Skill for the Routes area of finance-os. 72 symbols across 32 files."

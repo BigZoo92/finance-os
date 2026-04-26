@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-design/aesthetic-direction.md
+     Hash:   sha256:6bcdd03a62f06a0d
+     Sync:   pnpm agent:skills:sync -->
+
 # Aesthetic Direction
 
 Goal: make the UI look human-designed, not AI-default.

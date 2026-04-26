@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-underlines.md
+     Hash:   sha256:171302b14f9aac30
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Never Underline for Emphasis
 impact: HIGH

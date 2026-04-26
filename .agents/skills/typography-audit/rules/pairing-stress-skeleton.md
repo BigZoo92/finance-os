@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-stress-skeleton.md
+     Hash:   sha256:73732128e7917029
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Match Stress Angles When Pairing
 impact: MEDIUM

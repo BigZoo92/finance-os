@@ -27,6 +27,13 @@ import { Route as AppInvestissementsRouteImport } from './routes/_app/investisse
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
 import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
+import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
+import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
+import { Route as AppSignauxSourcesRouteImport } from './routes/_app/signaux/sources'
+import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
+import { Route as AppIaMemoireRouteImport } from './routes/_app/ia/memoire'
+import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
+import { Route as AppIaChatRouteImport } from './routes/_app/ia/chat'
 
 const VersionRoute = VersionRouteImport.update({
   id: '/version',
@@ -117,6 +124,41 @@ const AppActualitesRoute = AppActualitesRouteImport.update({
   path: '/actualites',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSignauxIndexRoute = AppSignauxIndexRouteImport.update({
+  id: '/signaux/',
+  path: '/signaux/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaIndexRoute = AppIaIndexRouteImport.update({
+  id: '/ia/',
+  path: '/ia/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSignauxSourcesRoute = AppSignauxSourcesRouteImport.update({
+  id: '/signaux/sources',
+  path: '/signaux/sources',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSignauxMarchesRoute = AppSignauxMarchesRouteImport.update({
+  id: '/signaux/marches',
+  path: '/signaux/marches',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaMemoireRoute = AppIaMemoireRouteImport.update({
+  id: '/ia/memoire',
+  path: '/ia/memoire',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaCoutsRoute = AppIaCoutsRouteImport.update({
+  id: '/ia/couts',
+  path: '/ia/couts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaChatRoute = AppIaChatRouteImport.update({
+  id: '/ia/chat',
+  path: '/ia/chat',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -136,6 +178,13 @@ export interface FileRoutesByFullPath {
   '/patrimoine': typeof AppPatrimoineRoute
   '/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
+  '/ia/chat': typeof AppIaChatRoute
+  '/ia/couts': typeof AppIaCoutsRoute
+  '/ia/memoire': typeof AppIaMemoireRoute
+  '/signaux/marches': typeof AppSignauxMarchesRoute
+  '/signaux/sources': typeof AppSignauxSourcesRoute
+  '/ia/': typeof AppIaIndexRoute
+  '/signaux/': typeof AppSignauxIndexRoute
 }
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
@@ -155,6 +204,13 @@ export interface FileRoutesByTo {
   '/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/': typeof AppIndexRoute
+  '/ia/chat': typeof AppIaChatRoute
+  '/ia/couts': typeof AppIaCoutsRoute
+  '/ia/memoire': typeof AppIaMemoireRoute
+  '/signaux/marches': typeof AppSignauxMarchesRoute
+  '/signaux/sources': typeof AppSignauxSourcesRoute
+  '/ia': typeof AppIaIndexRoute
+  '/signaux': typeof AppSignauxIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,6 +232,13 @@ export interface FileRoutesById {
   '/_app/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/ia/chat': typeof AppIaChatRoute
+  '/_app/ia/couts': typeof AppIaCoutsRoute
+  '/_app/ia/memoire': typeof AppIaMemoireRoute
+  '/_app/signaux/marches': typeof AppSignauxMarchesRoute
+  '/_app/signaux/sources': typeof AppSignauxSourcesRoute
+  '/_app/ia/': typeof AppIaIndexRoute
+  '/_app/signaux/': typeof AppSignauxIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,6 +260,13 @@ export interface FileRouteTypes {
     | '/patrimoine'
     | '/sante'
     | '/powens/callback'
+    | '/ia/chat'
+    | '/ia/couts'
+    | '/ia/memoire'
+    | '/signaux/marches'
+    | '/signaux/sources'
+    | '/ia/'
+    | '/signaux/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/health'
@@ -216,6 +286,13 @@ export interface FileRouteTypes {
     | '/sante'
     | '/powens/callback'
     | '/'
+    | '/ia/chat'
+    | '/ia/couts'
+    | '/ia/memoire'
+    | '/signaux/marches'
+    | '/signaux/sources'
+    | '/ia'
+    | '/signaux'
   id:
     | '__root__'
     | '/_app'
@@ -236,6 +313,13 @@ export interface FileRouteTypes {
     | '/_app/sante'
     | '/powens/callback'
     | '/_app/'
+    | '/_app/ia/chat'
+    | '/_app/ia/couts'
+    | '/_app/ia/memoire'
+    | '/_app/signaux/marches'
+    | '/_app/signaux/sources'
+    | '/_app/ia/'
+    | '/_app/signaux/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -376,6 +460,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppActualitesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/signaux/': {
+      id: '/_app/signaux/'
+      path: '/signaux'
+      fullPath: '/signaux/'
+      preLoaderRoute: typeof AppSignauxIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/': {
+      id: '/_app/ia/'
+      path: '/ia'
+      fullPath: '/ia/'
+      preLoaderRoute: typeof AppIaIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/sources': {
+      id: '/_app/signaux/sources'
+      path: '/signaux/sources'
+      fullPath: '/signaux/sources'
+      preLoaderRoute: typeof AppSignauxSourcesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/marches': {
+      id: '/_app/signaux/marches'
+      path: '/signaux/marches'
+      fullPath: '/signaux/marches'
+      preLoaderRoute: typeof AppSignauxMarchesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/memoire': {
+      id: '/_app/ia/memoire'
+      path: '/ia/memoire'
+      fullPath: '/ia/memoire'
+      preLoaderRoute: typeof AppIaMemoireRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/couts': {
+      id: '/_app/ia/couts'
+      path: '/ia/couts'
+      fullPath: '/ia/couts'
+      preLoaderRoute: typeof AppIaCoutsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/chat': {
+      id: '/_app/ia/chat'
+      path: '/ia/chat'
+      fullPath: '/ia/chat'
+      preLoaderRoute: typeof AppIaChatRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -391,6 +524,13 @@ interface AppRouteChildren {
   AppPatrimoineRoute: typeof AppPatrimoineRoute
   AppSanteRoute: typeof AppSanteRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppIaChatRoute: typeof AppIaChatRoute
+  AppIaCoutsRoute: typeof AppIaCoutsRoute
+  AppIaMemoireRoute: typeof AppIaMemoireRoute
+  AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
+  AppSignauxSourcesRoute: typeof AppSignauxSourcesRoute
+  AppIaIndexRoute: typeof AppIaIndexRoute
+  AppSignauxIndexRoute: typeof AppSignauxIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -405,6 +545,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppPatrimoineRoute: AppPatrimoineRoute,
   AppSanteRoute: AppSanteRoute,
   AppIndexRoute: AppIndexRoute,
+  AppIaChatRoute: AppIaChatRoute,
+  AppIaCoutsRoute: AppIaCoutsRoute,
+  AppIaMemoireRoute: AppIaMemoireRoute,
+  AppSignauxMarchesRoute: AppSignauxMarchesRoute,
+  AppSignauxSourcesRoute: AppSignauxSourcesRoute,
+  AppIaIndexRoute: AppIaIndexRoute,
+  AppSignauxIndexRoute: AppSignauxIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

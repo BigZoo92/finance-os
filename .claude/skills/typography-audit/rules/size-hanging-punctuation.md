@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-hanging-punctuation.md
+     Hash:   sha256:41e79eed7a3bd140
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Hanging Punctuation Where Feasible
 impact: HIGH

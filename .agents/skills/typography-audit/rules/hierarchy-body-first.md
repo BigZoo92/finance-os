@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/hierarchy-body-first.md
+     Hash:   sha256:7a33aa9cbb57a70a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Start Layout with Body Text
 impact: MEDIUM-HIGH

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/review-skill/SKILL.md
+     Hash:   sha256:394cbb098d668fb9
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: review-skill
 description: >

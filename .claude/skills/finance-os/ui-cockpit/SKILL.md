@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/ui-cockpit/SKILL.md
+     Hash:   sha256:ca809475e79f1bf2
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-ui-cockpit
 description: "Finance-OS UI cockpit conventions — luxury dark-first dashboard identity, component states, motion rules, anti-patterns. Use when building or modifying any UI component, page, or visual element."

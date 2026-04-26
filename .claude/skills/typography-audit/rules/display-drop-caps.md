@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-drop-caps.md
+     Hash:   sha256:eeff2a92d6fc6c96
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Implement Drop Caps or Initial Caps
 impact: LOW-MEDIUM

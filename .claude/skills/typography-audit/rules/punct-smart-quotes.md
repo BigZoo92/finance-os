@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-smart-quotes.md
+     Hash:   sha256:4557f98b264f2ab8
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Smart Quotes, Never Straight
 impact: CRITICAL

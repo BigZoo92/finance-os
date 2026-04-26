@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/motion-transform-opacity-only.md
+     Hash:   sha256:1f0e37b3010f0271
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Animate Transform and Opacity, Not Layout
 impact: HIGH

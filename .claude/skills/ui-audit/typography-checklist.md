@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/typography-checklist.md
+     Hash:   sha256:ab688f81bbbfd053
+     Sync:   pnpm agent:skills:sync -->
+
 # Typography Checklist
 
 Use this checklist to implement or review typography in UI/web work. Apply only the items that are relevant to the target surface.

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/powens-integration/SKILL.md
+     Hash:   sha256:7c54a07d578b6100
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-powens-integration
 description: "Powens banking aggregation integration — OAuth2 flow, token encryption, callback security, sync lifecycle. Use when working on bank connections, sync, or the Powens client."

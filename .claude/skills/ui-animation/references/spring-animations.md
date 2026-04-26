@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/spring-animations.md
+     Hash:   sha256:e51212d3edc2ba71
+     Sync:   pnpm agent:skills:sync -->
+
 # Spring Animations
 
 Springs feel more natural than duration-based animations because they simulate real physics. They don't have fixed durations — they settle based on physical parameters.

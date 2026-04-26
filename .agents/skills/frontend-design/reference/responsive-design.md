@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/responsive-design.md
+     Hash:   sha256:5add44195a42cf7f
+     Sync:   pnpm agent:skills:sync -->
+
 # Responsive Design
 
 ## Mobile-First: Write It Right

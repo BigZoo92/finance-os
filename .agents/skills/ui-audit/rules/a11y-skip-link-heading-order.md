@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/a11y-skip-link-heading-order.md
+     Hash:   sha256:9813b3bca3ecef40
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Provide Skip Link and Logical Heading Order
 impact: HIGH

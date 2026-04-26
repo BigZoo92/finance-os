@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-headline-spacing.md
+     Hash:   sha256:fca96d2cf47c63f8
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Tighten Spacing for Large Headlines
 impact: LOW-MEDIUM

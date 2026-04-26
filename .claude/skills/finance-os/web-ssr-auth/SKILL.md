@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/finance-os/web-ssr-auth/SKILL.md
+     Hash:   sha256:501b6fbacd4a4b10
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: finance-os-web-ssr-auth
 description: "SSR authentication, hydration, and mode-switching patterns for TanStack Start. Use when working on auth flows, route loaders, SSR/client coherence, or demo/admin transitions."

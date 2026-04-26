@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-ampersands.md
+     Hash:   sha256:73435dfeb7f782c8
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Ampersands Sparingly
 impact: CRITICAL

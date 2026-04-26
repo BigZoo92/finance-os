@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/make-interfaces-feel-better/performance.md
+     Hash:   sha256:f4537590cca88414
+     Sync:   pnpm agent:skills:sync -->
+
 # Performance
 
 Transition specificity and GPU compositing hints.

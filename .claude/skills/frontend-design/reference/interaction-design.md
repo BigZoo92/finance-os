@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/frontend-design/reference/interaction-design.md
+     Hash:   sha256:7f545df683b18974
+     Sync:   pnpm agent:skills:sync -->
+
 # Interaction Design
 
 ## The Eight Interactive States

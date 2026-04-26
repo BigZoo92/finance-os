@@ -91,3 +91,39 @@ body:
       description: Mandatory. If no new key/API/variable, write `None`.
     validations:
       required: true
+
+  - type: dropdown
+    id: context_budget
+    attributes:
+      label: Context budget
+      description: Maximum context for agent prompts. Smaller = cheaper + faster.
+      options:
+        - small (8K tokens)
+        - medium (16K tokens)
+        - large (32K tokens)
+        - xlarge (64K tokens)
+    validations:
+      required: false
+
+  - type: input
+    id: context_packs
+    attributes:
+      label: Context packs
+      description: "Comma-separated packs (see docs/agentic/context-packs/). Leave empty for auto."
+      placeholder: "core, api-backend"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: model_preference
+    attributes:
+      label: Model preference
+      description: Preferred model for this task. Leave default for auto-routing.
+      options:
+        - auto (cheapest capable)
+        - codex
+        - claude
+        - qwen
+        - kimi
+    validations:
+      required: false

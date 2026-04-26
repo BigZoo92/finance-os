@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/punct-symbols.md
+     Hash:   sha256:4627d5189b6289a2
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Copyright, Trademark, and Registered Marks
 impact: CRITICAL

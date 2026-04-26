@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/layout-hanging-bullets.md
+     Hash:   sha256:e4592e9319ff4a1e
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Choose Hanging vs Indented Bullets
 impact: MEDIUM

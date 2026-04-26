@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/generated/auth/SKILL.md
+     Hash:   sha256:1e927519231ac045
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: auth
 description: "Skill for the Auth area of finance-os. 66 symbols across 13 files."
@@ -32,8 +37,8 @@ description: "Skill for the Auth area of finance-os. 66 symbols across 13 files.
 
 Start here when exploring this area:
 
-- **`listConnectionAccounts`** (Function) — `packages/powens/src/client.ts:252`
-- **`listAccountTransactions`** (Function) — `packages/powens/src/client.ts:265`
+- **`listConnectionAccounts`** (Function) — `packages/powens/src/client.ts:254`
+- **`listAccountTransactions`** (Function) — `packages/powens/src/client.ts:267`
 - **`createPowensCallbackState`** (Function) — `apps/api/src/auth/powens-state.ts:65`
 - **`readPowensCallbackState`** (Function) — `apps/api/src/auth/powens-state.ts:84`
 - **`consumeRateLimitSlot`** (Function) — `apps/api/src/auth/rate-limit.ts:2`
@@ -44,8 +49,8 @@ Start here when exploring this area:
 |--------|------|------|------|
 | `DemoModeForbiddenError` | Class | `apps/api/src/auth/guard.ts` | 14 |
 | `InternalTokenRequiredError` | Class | `apps/api/src/auth/guard.ts` | 25 |
-| `listConnectionAccounts` | Function | `packages/powens/src/client.ts` | 252 |
-| `listAccountTransactions` | Function | `packages/powens/src/client.ts` | 265 |
+| `listConnectionAccounts` | Function | `packages/powens/src/client.ts` | 254 |
+| `listAccountTransactions` | Function | `packages/powens/src/client.ts` | 267 |
 | `createPowensCallbackState` | Function | `apps/api/src/auth/powens-state.ts` | 65 |
 | `readPowensCallbackState` | Function | `apps/api/src/auth/powens-state.ts` | 84 |
 | `consumeRateLimitSlot` | Function | `apps/api/src/auth/rate-limit.ts` | 2 |
@@ -60,8 +65,8 @@ Start here when exploring this area:
 | `readInternalTokenFromRequest` | Function | `apps/api/src/auth/guard.ts` | 50 |
 | `deriveAuth` | Function | `apps/api/src/auth/derive.ts` | 11 |
 | `acquireManualSyncSlot` | Method | `apps/api/src/routes/integrations/powens/repositories/powens-sync-guard-repository.ts` | 9 |
-| `extractNextUrl` | Function | `packages/powens/src/client.ts` | 113 |
-| `formatDate` | Function | `apps/worker/src/index.ts` | 146 |
+| `extractNextUrl` | Function | `packages/powens/src/client.ts` | 115 |
+| `formatDate` | Function | `apps/worker/src/index.ts` | 151 |
 
 ## Execution Flows
 
@@ -82,7 +87,7 @@ Start here when exploring this area:
 
 | Area | Connections |
 |------|-------------|
-| Cluster_16 | 3 calls |
+| Cluster_17 | 3 calls |
 | Cluster_1 | 1 calls |
 
 ## How to Explore

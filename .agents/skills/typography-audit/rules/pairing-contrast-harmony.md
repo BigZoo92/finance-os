@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/pairing-contrast-harmony.md
+     Hash:   sha256:892e5249ab95b63a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Pair by Contrast or Harmony, Not Similarity
 impact: MEDIUM

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/craft-checklist.md
+     Hash:   sha256:2fadb1d23370c981
+     Sync:   pnpm agent:skills:sync -->
+
 # Craft Checklist (Detailed)
 
 Use this as a final polish pass.

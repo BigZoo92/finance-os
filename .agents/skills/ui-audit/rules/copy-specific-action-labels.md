@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-audit/rules/copy-specific-action-labels.md
+     Hash:   sha256:42b5ca009128d065
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Use Specific Action Labels
 impact: MEDIUM

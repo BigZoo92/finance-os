@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/adapt/SKILL.md
+     Hash:   sha256:a960b3dec6b096ee
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: adapt
 description: Adapt designs to work across different screen sizes, devices, contexts, or platforms. Implements breakpoints, fluid layouts, and touch targets. Use when the user mentions responsive design, mobile layouts, breakpoints, viewport adaptation, or cross-device compatibility.

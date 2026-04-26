@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/_template.md
+     Hash:   sha256:2f7ce3b034404793
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Rule Title Here
 impact: MEDIUM

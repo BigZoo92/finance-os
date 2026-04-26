@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/colorize/SKILL.md
+     Hash:   sha256:5cf1a99786889492
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: colorize
 description: Add strategic color to features that are too monochromatic or lack visual interest, making interfaces more engaging and expressive. Use when the user mentions the design looking gray, dull, lacking warmth, needing more color, or wanting a more vibrant or expressive palette.

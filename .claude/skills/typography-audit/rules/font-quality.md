@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-quality.md
+     Hash:   sha256:be9caa01d583e96a
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Evaluate Font Quality Before Use
 impact: CRITICAL

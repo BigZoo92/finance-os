@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/ui-animation/references/clip-path-techniques.md
+     Hash:   sha256:0ab0ebd5faa64b72
+     Sync:   pnpm agent:skills:sync -->
+
 # clip-path for Animation
 
 `clip-path` is one of the most powerful animation tools in CSS. It is hardware-accelerated and creates effects impossible with `opacity` and `transform` alone.

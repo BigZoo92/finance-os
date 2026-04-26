@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/size-line-length.md
+     Hash:   sha256:4d3f61c06d15640c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Keep Line Length Between 45\u201375 Characters
 impact: HIGH

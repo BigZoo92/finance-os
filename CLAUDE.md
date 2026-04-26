@@ -84,6 +84,23 @@ For full project context (stack, features, design, env vars, architecture), read
 - [STACK.md](docs/context/STACK.md), [FEATURES.md](docs/context/FEATURES.md), [DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md), [CONVENTIONS.md](docs/context/CONVENTIONS.md), [ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md), [EXTERNAL-SERVICES.md](docs/context/EXTERNAL-SERVICES.md), [APP-ARCHITECTURES.md](docs/context/APP-ARCHITECTURES.md)
 - Update these docs when changes affect stack, features, env vars, or services.
 
+## Agent Efficiency System
+
+Use context packs and skill routing instead of loading the entire repo brain:
+
+- **Context selection**: `pnpm agent:context:select -- --domains=DOMAIN --budget=TIER`
+- **Prompt builder**: `pnpm agent:prompt:build -- --domains=DOMAIN --budget=TIER --task="..."`
+- **Budget tiers**: small (8K), medium (16K), large (32K), xlarge (64K), autonomous (128K)
+- **Skill routing**: [docs/agentic/skill-routing.md](docs/agentic/skill-routing.md)
+- **Model routing**: [docs/agentic/model-routing.md](docs/agentic/model-routing.md)
+- **Full index**: [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
+
+Claude's primary roles (challenger, reviewer) typically need `medium` budget.
+Implementation tasks handed off to Codex typically need `large` or `xlarge`.
+
+**Skills**: `.claude/skills/` is a **generated projection** — never edit directly.
+Edit skills in `.agentic/source/skills/`, then run `pnpm agent:skills:sync`.
+
 ## Output Bias
 
 - Be concise and high-signal.

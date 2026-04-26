@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/font-face-setup.md
+     Hash:   sha256:42bfb33086ec0649
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Correct @font-face Declarations
 impact: CRITICAL

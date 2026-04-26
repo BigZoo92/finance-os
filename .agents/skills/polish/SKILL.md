@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/polish/SKILL.md
+     Hash:   sha256:5f9af3783ad0ffff
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: polish
 description: Performs a final quality pass fixing alignment, spacing, consistency, and micro-detail issues before shipping. Use when the user mentions polish, finishing touches, pre-launch review, something looks off, or wants to go from good to great.

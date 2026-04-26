@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/critique/reference/cognitive-load.md
+     Hash:   sha256:7653f0a2f60f6d04
+     Sync:   pnpm agent:skills:sync -->
+
 # Cognitive Load Assessment
 
 Cognitive load is the total mental effort required to use an interface. Overloaded users make mistakes, get frustrated, and leave. This reference helps identify and fix cognitive overload.

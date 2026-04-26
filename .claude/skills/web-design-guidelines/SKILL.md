@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/web-design-guidelines/SKILL.md
+     Hash:   sha256:f4647ca866a3accf
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: web-design-guidelines
 description: Review UI code for Web Interface Guidelines compliance. Use when asked to "review my UI", "check accessibility", "audit design", "review UX", or "check my site against best practices".

@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/typography-audit/rules/display-grid-breaking.md
+     Hash:   sha256:f9c8aeecdf9bc5e0
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 title: Break the Grid Intentionally
 impact: LOW-MEDIUM
