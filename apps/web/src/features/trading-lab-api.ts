@@ -138,3 +138,224 @@ export const fetchAttentionItems = (opts?: { status?: string }) => {
     `/dashboard/trading-lab/attention${qs ? `?${qs}` : ''}`
   )
 }
+
+// ---------------------------------------------------------------------------
+// Mutations (admin-only — UI guards by mode)
+// ---------------------------------------------------------------------------
+
+export type DataSourcePreference =
+  | 'auto'
+  | 'cached'
+  | 'provider'
+  | 'caller_provided'
+  | 'deterministic_fixture'
+
+export type PreferredProvider = 'auto' | 'eodhd' | 'twelvedata'
+
+export interface BacktestRunRequest {
+  strategyId: number
+  symbol: string
+  exchange?: string
+  timeframe?: string
+  startDate: string
+  endDate: string
+  initialCash?: number
+  feesBps?: number
+  slippageBps?: number
+  spreadBps?: number
+  data?: Array<Record<string, unknown>>
+  dataSourcePreference?: DataSourcePreference
+  preferredProvider?: PreferredProvider
+  useDemoData?: boolean
+}
+
+export interface BacktestRunResponse {
+  ok: boolean
+  runId?: number
+  metrics?: Record<string, unknown> | null
+  caveats?: string[]
+  resolvedMarketDataSource?: string
+  dataProvider?: string
+  dataQuality?: string
+  dataWarnings?: string[]
+  fallbackUsed?: boolean
+  fallbackReason?: string | null
+  barsCount?: number
+  firstBarDate?: string | null
+  lastBarDate?: string | null
+  graphIngest?: { ok: boolean; reason: string | null }
+  code?: string
+  message?: string
+}
+
+export const runTradingLabBacktest = (body: BacktestRunRequest) =>
+  apiFetch<BacktestRunResponse>('/dashboard/trading-lab/backtests/run', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+export interface WalkForwardRequest {
+  strategyId: number
+  symbol: string
+  exchange?: string
+  timeframe?: string
+  startDate: string
+  endDate: string
+  initialCash?: number
+  feesBps?: number
+  slippageBps?: number
+  spreadBps?: number
+  data?: Array<Record<string, unknown>>
+  dataSourcePreference?: DataSourcePreference
+  preferredProvider?: PreferredProvider
+  trainBars?: number
+  testBars?: number
+  stepBars?: number
+}
+
+export interface WalkForwardWindow {
+  index: number
+  train_start: string
+  train_end: string
+  test_start: string
+  test_end: string
+  train_return: number | null
+  test_return: number | null
+  train_sharpe: number | null
+  test_sharpe: number | null
+  train_max_drawdown: number | null
+  test_max_drawdown: number | null
+  test_total_trades: number
+}
+
+export interface WalkForwardResponse {
+  ok: boolean
+  windows?: WalkForwardWindow[]
+  inSample?: Record<string, unknown>
+  outOfSample?: Record<string, unknown>
+  stabilityScore?: number | null
+  degradationRatio?: number | null
+  overfitWarning?: string | null
+  summary?: string
+  resolvedMarketDataSource?: string
+  dataProvider?: string
+  fallbackUsed?: boolean
+  caveats?: string[]
+  code?: string
+  message?: string
+}
+
+export const runTradingLabWalkForward = (body: WalkForwardRequest) =>
+  apiFetch<WalkForwardResponse>('/dashboard/trading-lab/backtests/walk-forward', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+export interface MarketDataPreviewRequest {
+  symbol: string
+  exchange?: string
+  timeframe?: string
+  startDate: string
+  endDate: string
+  dataSourcePreference?: DataSourcePreference
+  preferredProvider?: PreferredProvider
+  data?: Array<Record<string, unknown>>
+}
+
+export interface MarketDataPreviewResponse {
+  ok: boolean
+  resolvedMarketDataSource?: string
+  dataProvider?: string
+  dataQuality?: string
+  dataWarnings?: string[]
+  barsCount?: number
+  firstBarDate?: string | null
+  lastBarDate?: string | null
+  fallbackUsed?: boolean
+  fallbackReason?: string | null
+  sample?: Array<{
+    date: string
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+  }>
+  code?: string
+  message?: string
+}
+
+export const previewTradingLabMarketData = (body: MarketDataPreviewRequest) =>
+  apiFetch<MarketDataPreviewResponse>('/dashboard/trading-lab/market-data/preview', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+export interface CreateScenarioFromSignalRequest {
+  signalItemId: number
+  linkedStrategyId?: number
+}
+
+export const createScenarioFromSignal = (body: CreateScenarioFromSignalRequest) =>
+  apiFetch<{ ok: boolean; scenario: TradingLabScenario }>(
+    '/dashboard/trading-lab/scenarios/from-signal',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+
+export interface CreateStrategyRequest {
+  name: string
+  slug: string
+  description?: string
+  strategyType?: string
+  status?: string
+  tags?: string[]
+  parameters?: Record<string, unknown>
+  indicators?: Array<{ name: string; params: Record<string, unknown> }>
+  entryRules?: Array<{ id: string; description: string; condition: string }>
+  exitRules?: Array<{ id: string; description: string; condition: string }>
+  riskRules?: Array<{ id: string; description: string; condition: string }>
+  assumptions?: string[]
+  caveats?: string[]
+}
+
+export const createTradingLabStrategy = (body: CreateStrategyRequest) =>
+  apiFetch<{ ok: boolean; strategy: TradingLabStrategy }>(
+    '/dashboard/trading-lab/strategies',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+
+export const updateTradingLabStrategy = (
+  id: number,
+  body: Partial<CreateStrategyRequest> & { enabled?: boolean }
+) =>
+  apiFetch<{ ok: boolean; strategy: TradingLabStrategy }>(
+    `/dashboard/trading-lab/strategies/${id}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+
+export const archiveTradingLabStrategy = (id: number) =>
+  apiFetch<{ ok: boolean; strategy: TradingLabStrategy }>(
+    `/dashboard/trading-lab/strategies/${id}`,
+    { method: 'DELETE' }
+  )
+
+export const triggerAttentionRebuildApi = () =>
+  apiFetch<{ ok: boolean; generated: number }>(
+    '/dashboard/trading-lab/attention/rebuild',
+    { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }
+  )

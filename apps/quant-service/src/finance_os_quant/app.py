@@ -20,6 +20,7 @@ from .config import get_settings
 from .engines.backtest import AVAILABLE_STRATEGIES, run_backtest
 from .engines.indicators import AVAILABLE_INDICATORS, compute_indicator
 from .engines.metrics import compute_all_metrics
+from .engines.walk_forward import run_walk_forward
 from .models import (
     BacktestRequest,
     CapabilitiesResponse,
@@ -30,6 +31,7 @@ from .models import (
     ScenarioEvaluateRequest,
     ScenarioEvaluateResult,
     VersionResponse,
+    WalkForwardRequest,
 )
 
 logger = logging.getLogger("finance_os_quant")
@@ -126,6 +128,8 @@ def create_app() -> FastAPI:
             paper_only=settings.trading_lab_paper_only,
             vectorbt_available=_check_vectorbt(),
             quantstats_available=_check_quantstats(),
+            walk_forward=True,
+            strategies=AVAILABLE_STRATEGIES,
         ).model_dump()
 
     # --- Indicators ---
@@ -224,6 +228,46 @@ def create_app() -> FastAPI:
         except Exception as exc:
             _log("error", "metrics_error", requestId=rid, error=str(exc))
             return _safe_error(rid, 400, "METRICS_ERROR", str(exc))
+
+    # --- Walk-forward validation ---
+    @app.post("/quant/walk-forward", response_class=ORJSONResponse)
+    async def walk_forward(request: Request, body: WalkForwardRequest) -> ORJSONResponse:
+        rid = _request_id(request)
+        _log("info", "walk_forward_request", requestId=rid, strategy=body.strategy_type, rows=len(body.data))
+
+        if not settings.quant_service_enabled:
+            return _safe_error(rid, 503, "SERVICE_DISABLED", "Quant service is disabled")
+
+        if not settings.trading_lab_paper_only:
+            return _safe_error(rid, 403, "PAPER_ONLY", "Trading Lab is paper-only mode.")
+
+        if len(body.data) > settings.trading_lab_max_backtest_rows:
+            return _safe_error(
+                rid, 400, "DATA_TOO_LARGE",
+                f"Data exceeds maximum rows ({len(body.data)} > {settings.trading_lab_max_backtest_rows})",
+            )
+
+        try:
+            result = run_walk_forward(
+                strategy_type=body.strategy_type,
+                data=body.data,
+                initial_cash=body.initial_cash,
+                fees_bps=body.fees_bps,
+                slippage_bps=body.slippage_bps,
+                spread_bps=body.spread_bps,
+                params=body.params,
+                train_bars=body.train_bars,
+                test_bars=body.test_bars,
+                step_bars=body.step_bars,
+            )
+            result["requestId"] = rid
+            return ORJSONResponse(
+                result,
+                headers={"x-request-id": rid, "cache-control": "no-store"},
+            )
+        except Exception as exc:  # noqa: BLE001
+            _log("error", "walk_forward_error", requestId=rid, error=str(exc))
+            return _safe_error(rid, 400, "WALK_FORWARD_ERROR", str(exc))
 
     # --- Scenario Evaluate ---
     @app.post("/quant/scenario/evaluate", response_class=ORJSONResponse)

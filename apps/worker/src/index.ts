@@ -34,6 +34,10 @@ import {
   startSocialSignalScheduler,
   triggerSocialSignalIngest,
 } from './social-signal-scheduler'
+import {
+  startAttentionRebuildScheduler,
+  triggerAttentionRebuild,
+} from './attention-rebuild-scheduler'
 import { logWorkerEvent } from './observability/logger'
 import {
   buildProviderRawImportRow,
@@ -100,6 +104,7 @@ let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let marketSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let advisorSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let socialSchedulerTimer: ReturnType<typeof setInterval> | null = null
+let attentionSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
 let keepRunning = true
 
@@ -1315,6 +1320,29 @@ const startAdvisorScheduler = () => {
   })
 }
 
+const startAttentionScheduler = () => {
+  attentionSchedulerTimer = startAttentionRebuildScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    attentionSystemEnabled: env.ATTENTION_SYSTEM_ENABLED,
+    autoRebuildEnabled: env.ATTENTION_REBUILD_AUTO_ENABLED,
+    intervalMs: env.ATTENTION_REBUILD_INTERVAL_MS,
+    trigger: () =>
+      triggerAttentionRebuild({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker attention scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
 const startSocialScheduler = () => {
   socialSchedulerTimer = startSocialSignalScheduler({
     externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
@@ -1417,6 +1445,7 @@ const start = async () => {
   startMarketScheduler()
   startAdvisorScheduler()
   startSocialScheduler()
+  startAttentionScheduler()
   await consumeJobs()
 }
 
@@ -1456,6 +1485,11 @@ const shutdown = async (signal: string) => {
   if (socialSchedulerTimer) {
     clearInterval(socialSchedulerTimer)
     socialSchedulerTimer = null
+  }
+
+  if (attentionSchedulerTimer) {
+    clearInterval(attentionSchedulerTimer)
+    attentionSchedulerTimer = null
   }
 
   statusServer?.close()

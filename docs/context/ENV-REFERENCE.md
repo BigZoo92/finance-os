@@ -285,12 +285,16 @@ Notes:
 | `ATTENTION_SYSTEM_ENABLED` | `true` | Dokploy, Local | API | Active le systeme d'attention |
 | `ATTENTION_SIGNAL_MIN_RELEVANCE` | `60` | Dokploy, Local | API | Seuil minimum relevance pour attention signal |
 | `ATTENTION_SIGNAL_MIN_CONFIDENCE` | `50` | Dokploy, Local | API | Seuil minimum confidence pour attention signal |
+| `ATTENTION_REBUILD_AUTO_ENABLED` | `false` | Dokploy, Local | Worker | Active la reconstruction periodique des attention items via le worker |
+| `ATTENTION_REBUILD_INTERVAL_MS` | `600000` | Dokploy, Local | Worker | Intervalle de reconstruction (par defaut 10 min) |
 
 Notes:
 
 - `TRADING_LAB_PAPER_ONLY` doit rester `true`. Aucune execution reelle n'est implementee.
 - Le quant service est interne uniquement (pas d'exposition publique).
 - En demo, les routes Trading Lab retournent des fixtures deterministes.
+- Le runner UI Trading Lab utilise l'adapter OHLCV (cache `market_ohlcv_bar` -> provider EODHD/TwelveData -> fixture deterministe). Aucun appel provider n'est emis depuis une route GET.
+- `ATTENTION_REBUILD_AUTO_ENABLED=false` par defaut : la reconstruction reste declenchable manuellement via `POST /dashboard/trading-lab/attention/rebuild`.
 
 ---
 

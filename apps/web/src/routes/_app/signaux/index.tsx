@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -7,6 +8,7 @@ import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-op
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { signalHealthQueryOptions, signalItemsQueryOptions, signalSourcesQueryOptions, signalRunsQueryOptions } from '@/features/signals-query-options'
 import type { SignalItem } from '@/features/signals-api'
+import { createScenarioFromSignal } from '@/features/trading-lab-api'
 import { Badge } from '@finance-os/ui/components'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
@@ -91,7 +93,7 @@ function SignauxActualitesPage() {
           <h3 className="text-sm font-medium text-text-primary mb-2">Signaux necessitant votre attention</h3>
           <div className="space-y-2">
             {attentionItems.slice(0, 5).map(item => (
-              <SignalItemCard key={item.id} item={item} />
+              <SignalItemCard key={item.id} item={item} isAdmin={isAdmin} />
             ))}
           </div>
         </div>
@@ -153,7 +155,7 @@ function SignauxActualitesPage() {
           <h3 className="text-sm font-medium text-text-primary mb-2">Signaux recents ({signalTotal})</h3>
           <div className="space-y-2">
             {signalItems.slice(0, 10).map(item => (
-              <SignalItemCard key={item.id} item={item} />
+              <SignalItemCard key={item.id} item={item} isAdmin={isAdmin} />
             ))}
           </div>
         </div>
@@ -192,7 +194,20 @@ function QuickStat({ label, value, highlight }: { label: string; value: number |
   )
 }
 
-function SignalItemCard({ item }: { item: SignalItem }) {
+function SignalItemCard({ item, isAdmin }: { item: SignalItem; isAdmin: boolean }) {
+  const queryClient = useQueryClient()
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const mutation = useMutation({
+    mutationFn: () => createScenarioFromSignal({ signalItemId: item.id }),
+    onSuccess: result => {
+      setFeedback(`Scénario #${result.scenario.id} créé.`)
+      void queryClient.invalidateQueries({ queryKey: ['tradingLab', 'scenarios'] })
+    },
+    onError: error => {
+      setFeedback(`Erreur : ${(error as Error).message.slice(0, 80)}`)
+    },
+  })
+
   return (
     <Panel>
       <div className="flex items-start justify-between gap-3">
@@ -215,6 +230,31 @@ function SignalItemCard({ item }: { item: SignalItem }) {
             <span>{new Date(item.publishedAt).toLocaleDateString('fr-FR')}</span>
           </div>
         </div>
+        {isAdmin ? (
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <button
+              type="button"
+              disabled={mutation.isPending || mutation.isSuccess}
+              onClick={() => mutation.mutate()}
+              className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[10px] font-medium text-violet-300 hover:bg-violet-500/20 disabled:opacity-50"
+            >
+              {mutation.isPending
+                ? 'Création…'
+                : mutation.isSuccess
+                  ? 'Scénario créé'
+                  : 'Créer un scénario papier'}
+            </button>
+            <Link
+              to="/ia/trading-lab"
+              className="text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Voir Trading Lab →
+            </Link>
+            {feedback ? (
+              <span className="text-[10px] text-muted-foreground">{feedback}</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </Panel>
   )

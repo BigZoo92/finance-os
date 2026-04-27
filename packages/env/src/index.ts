@@ -934,6 +934,19 @@ export const getWorkerEnv = () =>
       .int()
       .positive()
       .default(15 * 60 * 1000),
+    ATTENTION_SYSTEM_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    ATTENTION_REBUILD_AUTO_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    ATTENTION_REBUILD_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(10 * 60 * 1000),
     AI_DAILY_MARKET_OPEN_WINDOW_ENABLED: z
       .string()
       .optional()

@@ -314,6 +314,13 @@ export const createDashboardRoutes = ({
         knowledgeServiceEnabled,
         knowledgeServiceUrl,
         graphIngestEnabled: tradingLabGraphIngestEnabled,
+        marketDataDeps: {
+          eodhdApiKey,
+          twelveDataApiKey,
+          marketDataEodhdEnabled,
+          marketDataTwelveDataEnabled,
+          forceFixtureFallback: marketDataForceFixtureFallback,
+        },
       })
     )
 }

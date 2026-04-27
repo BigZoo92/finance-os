@@ -30,6 +30,8 @@ class CapabilitiesResponse(BaseModel):
     paper_only: bool = True
     vectorbt_available: bool
     quantstats_available: bool
+    walk_forward: bool = True
+    strategies: List[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +148,21 @@ class MetricsResult(BaseModel):
 # ---------------------------------------------------------------------------
 # Scenario
 # ---------------------------------------------------------------------------
+
+class WalkForwardRequest(BaseModel):
+    strategy_type: str
+    data: List[Dict[str, Any]] = Field(
+        ..., description="OHLCV rows: [{date, open, high, low, close, volume}]"
+    )
+    initial_cash: float = 10_000.0
+    fees_bps: float = 10.0
+    slippage_bps: float = 5.0
+    spread_bps: float = 2.0
+    params: Dict[str, Any] = Field(default_factory=dict)
+    train_bars: int = 120
+    test_bars: int = 30
+    step_bars: int = 30
+
 
 class ScenarioEvaluateRequest(BaseModel):
     thesis: str

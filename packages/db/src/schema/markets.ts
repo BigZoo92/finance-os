@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 export const marketQuoteSnapshot = pgTable(
@@ -133,5 +134,46 @@ export const marketContextBundleSnapshot = pgTable(
       columns: [table.singleton],
       name: 'market_context_bundle_snapshot_singleton_pk',
     }),
+  ]
+)
+
+// ---------------------------------------------------------------------------
+// OHLCV bars cache (Trading Lab + future intraday backtests)
+// ---------------------------------------------------------------------------
+// Persisted historical OHLCV candles fetched from market providers.
+// Keyed by (provider, symbol, interval, bar_date) — same provider+symbol+date
+// row gets upserted on subsequent fetches (no duplicates).
+
+export const marketOhlcvBar = pgTable(
+  'market_ohlcv_bar',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    provider: text('provider').notNull(),
+    symbol: text('symbol').notNull(),
+    exchange: text('exchange'),
+    interval: text('interval').notNull().default('1d'),
+    barDate: text('bar_date').notNull(),
+    open: numeric('open', { precision: 18, scale: 6 }).notNull(),
+    high: numeric('high', { precision: 18, scale: 6 }).notNull(),
+    low: numeric('low', { precision: 18, scale: 6 }).notNull(),
+    close: numeric('close', { precision: 18, scale: 6 }).notNull(),
+    volume: numeric('volume', { precision: 24, scale: 4 }),
+    adjustedClose: numeric('adjusted_close', { precision: 18, scale: 6 }),
+    currency: text('currency'),
+    sourceRef: text('source_ref'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).defaultNow().notNull(),
+    dataHash: text('data_hash'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex('market_ohlcv_bar_pk_unique').on(
+      table.provider,
+      table.symbol,
+      table.interval,
+      table.barDate
+    ),
+    index('market_ohlcv_bar_symbol_date_idx').on(table.symbol, table.barDate),
+    index('market_ohlcv_bar_provider_fetched_idx').on(table.provider, table.fetchedAt),
   ]
 )

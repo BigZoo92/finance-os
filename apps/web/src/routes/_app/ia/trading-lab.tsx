@@ -8,12 +8,21 @@ import {
   tradingLabCapabilitiesQueryOptions,
   attentionItemsQueryOptions,
 } from '@/features/trading-lab-query-options'
-import type { TradingLabStrategy, TradingLabBacktestRun, TradingLabScenario, AttentionItem } from '@/features/trading-lab-api'
+import type {
+  TradingLabStrategy,
+  TradingLabBacktestRun,
+  TradingLabScenario,
+  AttentionItem,
+} from '@/features/trading-lab-api'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { EquityCurveChart, type EquityPoint } from '@/components/trading-lab/equity-curve-chart'
 import { DrawdownChart, type DrawdownPoint } from '@/components/trading-lab/drawdown-chart'
+import { BacktestRunner } from '@/components/trading-lab/backtest-runner'
+import { StrategyEditor } from '@/components/trading-lab/strategy-editor'
+import { GraphPathPreview } from '@/components/trading-lab/path-preview'
+import { DataSourceBadge } from '@/components/trading-lab/data-source-badge'
 
 export const Route = createFileRoute('/_app/ia/trading-lab')({
   loader: async ({ context }) => {
@@ -75,6 +84,7 @@ function MetricCard({ label, value }: { label: string; value: string | number | 
 function TradingLabPage() {
   const { data: authData } = useQuery(authMeQueryOptions())
   const isAdmin = authData?.mode === 'admin'
+  const isDemo = authData?.mode === 'demo'
 
   const { data: strategies = [], isLoading: strategiesLoading } = useQuery(tradingLabStrategiesQueryOptions())
   const { data: backtests = [], isLoading: backtestsLoading } = useQuery(tradingLabBacktestsQueryOptions())
@@ -84,12 +94,15 @@ function TradingLabPage() {
 
   const attentionItems: AttentionItem[] = attentionData?.items ?? []
   const openCount = attentionData?.openCount ?? 0
+  const strategyList = strategies as TradingLabStrategy[]
+  const backtestList = backtests as TradingLabBacktestRun[]
+  const scenarioList = scenarios as TradingLabScenario[]
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Trading Lab"
-        description="Paper-trading, backtesting & strategy research"
+        description="Recherche papier, backtests et stratégies — pas de trading réel."
       />
 
       {/* Paper-only warning */}
@@ -97,10 +110,10 @@ function TradingLabPage() {
         <div className="flex items-start gap-2">
           <span className="text-amber-400 text-lg leading-none mt-0.5">&#9888;</span>
           <div>
-            <div className="font-medium text-amber-300 text-sm">Paper Trading Only</div>
+            <div className="font-medium text-amber-300 text-sm">Paper Trading Only · Backtest ≠ prédiction</div>
             <div className="text-xs text-amber-400/80 mt-0.5">
-              This is a research and simulation environment. No real capital is at risk.
-              Backtest results are not predictions. Technical strategies are experimental unless marked as benchmark.
+              Environnement de recherche et simulation. Aucun capital réel, aucune connexion broker, aucune exécution d'ordre.
+              Les stratégies techniques sont expérimentales sauf marquées comme benchmark. Les signaux sociaux seuls sont une preuve faible.
             </div>
           </div>
         </div>
@@ -132,24 +145,42 @@ function TradingLabPage() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiTile label="Strategies" value={strategies.length} />
-        <KpiTile label="Backtests" value={backtests.length} />
-        <KpiTile label="Scenarios" value={scenarios.length} />
+        <KpiTile label="Stratégies" value={strategyList.length} />
+        <KpiTile label="Backtests" value={backtestList.length} />
+        <KpiTile label="Scénarios" value={scenarioList.length} />
         <KpiTile
           label="Quant Service"
-          display={capabilities?.quantServiceAvailable ? 'Connected' : 'Offline'}
+          display={capabilities?.quantServiceAvailable ? 'Connecté' : 'Hors-ligne'}
         />
       </div>
 
-      {/* Strategies */}
-      <Panel title="Strategies">
+      {/* In-UI runner (admin) + strategy editor (admin) — collapsed by default */}
+      <BacktestRunner
+        strategies={strategyList}
+        isAdmin={Boolean(isAdmin)}
+        isDemo={Boolean(isDemo)}
+      />
+      <StrategyEditor strategies={strategyList} isAdmin={Boolean(isAdmin)} />
+
+      {/* Graph path preview (cleanly bounded — not a graph hairball) */}
+      <GraphPathPreview
+        scenarios={scenarioList}
+        strategies={strategyList}
+        backtests={backtestList}
+        attentionItems={attentionItems}
+      />
+
+      {/* Strategies list */}
+      <Panel title="Stratégies">
         {strategiesLoading ? (
-          <div className="text-sm text-muted-foreground">Loading strategies...</div>
-        ) : strategies.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No strategies yet.{isAdmin ? ' Create one to start.' : ''}</div>
+          <div className="text-sm text-muted-foreground">Chargement…</div>
+        ) : strategyList.length === 0 ? (
+          <div className="text-sm text-muted-foreground">
+            Aucune stratégie pour le moment.{isAdmin ? ' Crée-en une via le builder ci-dessus.' : ''}
+          </div>
         ) : (
           <div className="space-y-2">
-            {(strategies as TradingLabStrategy[]).map((s: TradingLabStrategy) => (
+            {strategyList.map(s => (
               <div key={s.id} className="flex items-center gap-3 rounded-md border border-border bg-surface-0 p-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -157,7 +188,7 @@ function TradingLabPage() {
                     <StatusBadge status={s.status} />
                     {s.strategyType === 'experimental' && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">
-                        experimental
+                        expérimentale
                       </span>
                     )}
                     {s.strategyType === 'benchmark' && (
@@ -180,29 +211,35 @@ function TradingLabPage() {
       </Panel>
 
       {/* Latest backtests */}
-      <Panel title="Latest Backtests">
+      <Panel title="Backtests récents">
         {backtestsLoading ? (
-          <div className="text-sm text-muted-foreground">Loading backtests...</div>
-        ) : backtests.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No backtest runs yet.</div>
+          <div className="text-sm text-muted-foreground">Chargement…</div>
+        ) : backtestList.length === 0 ? (
+          <div className="text-sm text-muted-foreground">Aucun backtest pour le moment.</div>
         ) : (
           <div className="space-y-4">
-            {(backtests as TradingLabBacktestRun[]).slice(0, 5).map((b: TradingLabBacktestRun) => {
+            {backtestList.slice(0, 5).map(b => {
               const m = (b.metrics ?? {}) as Record<string, unknown>
               const equity = (b.equityCurve ?? []) as EquityPoint[]
               const drawdowns = (b.drawdowns ?? []) as DrawdownPoint[]
+              const summary = (b.resultSummary ?? {}) as Record<string, unknown>
+              const dataQuality = (summary.dataQuality as string | undefined) ?? null
+              const dataProvider = (summary.dataProvider as string | undefined) ?? null
+              const fallbackUsed = Boolean(summary.fallbackUsed)
               return (
                 <div key={b.id} className="rounded-md border border-border bg-surface-0 p-3">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{b.name}</span>
                     <StatusBadge status={b.runStatus} />
                     <span className="ml-auto font-financial text-xs text-muted-foreground">{b.symbol}</span>
-                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground/60">
-                      {b.timeframe} · {(b.marketDataSource ?? 'unknown').replace(/_/g, ' ')}
-                    </span>
+                    <DataSourceBadge
+                      resolvedMarketDataSource={b.marketDataSource}
+                      dataProvider={dataProvider}
+                      dataQuality={dataQuality}
+                      fallbackUsed={fallbackUsed}
+                    />
                   </div>
 
-                  {/* Assumptions row */}
                   <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                     <span>cash <span className="font-financial text-foreground">${b.initialCash.toFixed(0)}</span></span>
                     <span>fees <span className="font-financial text-foreground">{b.feesBps}bps</span></span>
@@ -212,7 +249,6 @@ function TradingLabPage() {
                     {b.dataHash ? <span>data <span className="font-mono text-foreground/80">{b.dataHash.slice(0, 8)}</span></span> : null}
                   </div>
 
-                  {/* Metrics grid */}
                   {b.metrics ? (
                     <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
                       <MetricCard label="CAGR" value={m.cagr != null ? `${((m.cagr as number) * 100).toFixed(1)}%` : null} />
@@ -226,12 +262,11 @@ function TradingLabPage() {
                     </div>
                   ) : null}
 
-                  {/* Charts */}
                   {b.runStatus === 'completed' && equity.length > 0 ? (
                     <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
                       <div>
                         <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground/70">
-                          <span>Equity curve</span>
+                          <span>Courbe d'équité</span>
                           <span className="font-mono">{equity.length} pts</span>
                         </div>
                         <EquityCurveChart data={equity} height={200} />
@@ -246,7 +281,6 @@ function TradingLabPage() {
                     </div>
                   ) : null}
 
-                  {/* Trades summary */}
                   {b.runStatus === 'completed' && b.trades && b.trades.length > 0 ? (
                     <details className="mt-3">
                       <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
@@ -256,9 +290,9 @@ function TradingLabPage() {
                         <table className="w-full text-[11px]">
                           <thead className="text-muted-foreground/70">
                             <tr className="border-b border-border/40">
-                              <th className="px-2 py-1 text-left">Entry</th>
-                              <th className="px-2 py-1 text-left">Exit</th>
-                              <th className="px-2 py-1 text-right">Side</th>
+                              <th className="px-2 py-1 text-left">Entrée</th>
+                              <th className="px-2 py-1 text-left">Sortie</th>
+                              <th className="px-2 py-1 text-right">Côté</th>
                               <th className="px-2 py-1 text-right">PnL</th>
                               <th className="px-2 py-1 text-right">PnL %</th>
                             </tr>
@@ -292,10 +326,8 @@ function TradingLabPage() {
                     <div className="mt-2 text-xs text-red-400">{b.errorSummary}</div>
                   ) : null}
 
-                  {/* Per-result caveats */}
                   <div className="mt-3 text-[10px] text-amber-400/70">
-                    Backtest is a simulation, not a prediction. Technical strategies are experimental.
-                    Social signals alone are weak evidence.
+                    Backtest = simulation, pas une prédiction. Stratégies techniques expérimentales. Signaux sociaux seuls = preuve faible.
                   </div>
                 </div>
               )
@@ -305,14 +337,14 @@ function TradingLabPage() {
       </Panel>
 
       {/* Scenarios */}
-      <Panel title="Paper Scenarios">
+      <Panel title="Scénarios papier">
         {scenariosLoading ? (
-          <div className="text-sm text-muted-foreground">Loading scenarios...</div>
-        ) : scenarios.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No scenarios yet. Create one from a signal or manually.</div>
+          <div className="text-sm text-muted-foreground">Chargement…</div>
+        ) : scenarioList.length === 0 ? (
+          <div className="text-sm text-muted-foreground">Aucun scénario. Crée-en un depuis un signal pour structurer une thèse.</div>
         ) : (
           <div className="space-y-2">
-            {(scenarios as TradingLabScenario[]).map((s: TradingLabScenario) => (
+            {scenarioList.map(s => (
               <div key={s.id} className="rounded-md border border-border bg-surface-0 p-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{s.name}</span>
@@ -323,7 +355,7 @@ function TradingLabPage() {
                 ) : null}
                 {s.invalidationCriteria ? (
                   <div className="text-xs text-red-400/70 mt-1">
-                    Invalidation: {s.invalidationCriteria}
+                    Invalidation : {s.invalidationCriteria}
                   </div>
                 ) : null}
               </div>
@@ -334,7 +366,7 @@ function TradingLabPage() {
 
       {/* Capabilities / risk caveats */}
       {capabilities?.caveats && capabilities.caveats.length > 0 && (
-        <Panel title="Risk & Caveats">
+        <Panel title="Risques & caveats">
           <ul className="space-y-1">
             {capabilities.caveats.map((c: string, i: number) => (
               <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">

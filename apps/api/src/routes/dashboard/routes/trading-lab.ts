@@ -5,7 +5,10 @@ import { requireAdmin } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
 import { createDashboardTradingLabRepository } from '../repositories/dashboard-trading-lab-repository'
 import { createDashboardSignalItemsRepository } from '../repositories/dashboard-signal-items-repository'
-import { generateDeterministicOhlcv } from '../services/trading-lab-ohlcv-fixtures'
+import {
+  resolveMarketData,
+  type DataSourcePreference,
+} from '../services/trading-lab-market-data'
 import { sendBacktestToKnowledgeGraph } from '../services/trading-lab-graph-ingest'
 import type { ApiDb } from '../types'
 
@@ -185,6 +188,7 @@ export const createTradingLabRoute = ({
   knowledgeServiceEnabled,
   knowledgeServiceUrl,
   graphIngestEnabled,
+  marketDataDeps,
 }: {
   db: ApiDb
   quantServiceEnabled: boolean
@@ -193,6 +197,13 @@ export const createTradingLabRoute = ({
   knowledgeServiceEnabled: boolean
   knowledgeServiceUrl: string
   graphIngestEnabled: boolean
+  marketDataDeps: {
+    eodhdApiKey: string | undefined
+    twelveDataApiKey: string | undefined
+    marketDataEodhdEnabled: boolean
+    marketDataTwelveDataEnabled: boolean
+    forceFixtureFallback: boolean
+  }
 }) => {
   const repo = createDashboardTradingLabRepository({ db })
   const signalItemsRepo = createDashboardSignalItemsRepository({ db })
@@ -438,6 +449,7 @@ export const createTradingLabRoute = ({
             const {
               strategyId,
               symbol,
+              exchange,
               timeframe,
               startDate,
               endDate,
@@ -447,27 +459,45 @@ export const createTradingLabRoute = ({
               spreadBps,
               data,
               useDemoData,
+              dataSourcePreference,
+              preferredProvider,
             } = context.body
 
-            // Resolve OHLCV: use provided data, else fall back to deterministic fixture
             const startDateObj = new Date(startDate)
             const endDateObj = new Date(endDate)
-            const providedRows = Array.isArray(data) ? data.length : 0
-            const ohlcv =
-              providedRows > 0
-                ? (data as Array<Record<string, unknown>>)
+            const interval = timeframe ?? '1d'
+
+            // Pick effective preference. Legacy callers may still pass
+            // useDemoData=false → "provider", useDemoData=true → "auto".
+            const effectivePreference: DataSourcePreference =
+              dataSourcePreference ??
+              (Array.isArray(data) && data.length > 0
+                ? 'caller_provided'
                 : useDemoData === false
-                ? null
-                : generateDeterministicOhlcv({
-                    symbol,
-                    startDate: startDateObj,
-                    endDate: endDateObj,
-                  })
+                  ? 'provider'
+                  : 'auto')
 
-            const dataSource =
-              providedRows > 0 ? 'caller_provided' : useDemoData === false ? 'unavailable' : 'deterministic_fixture'
+            // Resolve OHLCV through adapter (cache → provider → fixture chain)
+            const resolution = await resolveMarketData({
+              input: {
+                symbol,
+                ...(exchange ? { exchange } : {}),
+                interval,
+                startDate: startDateObj,
+                endDate: endDateObj,
+                dataSourcePreference: effectivePreference,
+                preferredProvider: preferredProvider ?? 'auto',
+                callerData: Array.isArray(data) ? data : null,
+                requestId,
+              },
+              deps: { db, ...marketDataDeps },
+            })
 
-            // Create run record — omit undefined keys for exactOptionalPropertyTypes
+            // Build initial run record with resolved data source
+            const dataSource = resolution.ok
+              ? resolution.resolvedMarketDataSource
+              : 'unavailable'
+
             const runInput: Parameters<typeof repo.createBacktestRun>[0] = {
               strategyId,
               name: `${symbol} ${startDate.slice(0, 10)} to ${endDate.slice(0, 10)}`,
@@ -484,20 +514,40 @@ export const createTradingLabRoute = ({
 
             const run = await repo.createBacktestRun(runInput)
 
-            // Reject if data is unavailable and demo data was opted out
-            if (!ohlcv || ohlcv.length < 5) {
+            if (!resolution.ok) {
               await repo.updateBacktestRunResult(run.id, {
                 runStatus: 'failed',
                 runStartedAt: new Date(),
                 runFinishedAt: new Date(),
                 durationMs: 0,
-                errorSummary: 'OHLCV data unavailable',
+                errorSummary: resolution.message,
+              })
+              context.set.status = 422
+              return {
+                ok: false,
+                code: resolution.code,
+                message: resolution.message,
+                attempted: resolution.attempted,
+                runId: run.id,
+                requestId,
+              }
+            }
+            const ohlcv = resolution.bars
+
+            if (ohlcv.length < 5) {
+              await repo.updateBacktestRunResult(run.id, {
+                runStatus: 'failed',
+                runStartedAt: new Date(),
+                runFinishedAt: new Date(),
+                durationMs: 0,
+                errorSummary: `Only ${ohlcv.length} bars resolved (minimum 5).`,
               })
               context.set.status = 422
               return {
                 ok: false,
                 code: 'DATA_UNAVAILABLE',
-                message: 'No OHLCV data was provided and useDemoData was false.',
+                message: `Only ${ohlcv.length} bars resolved (minimum 5).`,
+                resolvedMarketDataSource: resolution.resolvedMarketDataSource,
                 runId: run.id,
                 requestId,
               }
@@ -578,7 +628,18 @@ export const createTradingLabRoute = ({
               durationMs: Date.now() - startedAt.getTime(),
               paramsHash: qd.params_hash as string,
               dataHash: qd.data_hash as string,
-              resultSummary: { strategy_type: qd.strategy_type, dataSource, dataPoints: ohlcv.length },
+              resultSummary: {
+                strategy_type: qd.strategy_type,
+                dataSource,
+                dataProvider: resolution.dataProvider,
+                dataQuality: resolution.dataQuality,
+                dataWarnings: resolution.dataWarnings,
+                fallbackUsed: resolution.fallbackUsed,
+                fallbackReason: resolution.fallbackReason,
+                firstBarDate: resolution.firstBarDate,
+                lastBarDate: resolution.lastBarDate,
+                dataPoints: ohlcv.length,
+              },
               metrics: metrics ?? {},
               equityCurve: qd.equity_curve as Array<{ date: string; equity: number }>,
               trades: qd.trades as Array<Record<string, unknown>>,
@@ -635,8 +696,15 @@ export const createTradingLabRoute = ({
               runId: run.id,
               metrics,
               caveats,
-              dataSource,
-              dataPoints: ohlcv.length,
+              resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+              dataProvider: resolution.dataProvider,
+              dataQuality: resolution.dataQuality,
+              dataWarnings: resolution.dataWarnings,
+              fallbackUsed: resolution.fallbackUsed,
+              fallbackReason: resolution.fallbackReason,
+              barsCount: resolution.barsCount,
+              firstBarDate: resolution.firstBarDate,
+              lastBarDate: resolution.lastBarDate,
               graphIngest: { ok: graphResult.ok, reason: graphResult.reason ?? null },
               requestId,
             }
@@ -647,6 +715,7 @@ export const createTradingLabRoute = ({
         body: t.Object({
           strategyId: t.Number(),
           symbol: t.String(),
+          exchange: t.Optional(t.String()),
           timeframe: t.Optional(t.String()),
           startDate: t.String(),
           endDate: t.String(),
@@ -656,6 +725,288 @@ export const createTradingLabRoute = ({
           spreadBps: t.Optional(t.Number()),
           data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
           useDemoData: t.Optional(t.Boolean()),
+          dataSourcePreference: t.Optional(
+            t.Union([
+              t.Literal('auto'),
+              t.Literal('cached'),
+              t.Literal('provider'),
+              t.Literal('caller_provided'),
+              t.Literal('deterministic_fixture'),
+            ])
+          ),
+          preferredProvider: t.Optional(
+            t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
+          ),
+        }),
+      }
+    )
+
+    // --- Walk-forward validation ---
+    .post(
+      '/backtests/walk-forward',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        return demoOrReal({
+          context,
+          demo: () => {
+            context.set.status = 403
+            return {
+              ok: false,
+              code: 'DEMO_MODE_FORBIDDEN',
+              message: 'Admin session required',
+              requestId,
+            }
+          },
+          real: async () => {
+            requireAdmin(context)
+            const {
+              strategyId,
+              symbol,
+              exchange,
+              timeframe,
+              startDate,
+              endDate,
+              initialCash,
+              feesBps,
+              slippageBps,
+              spreadBps,
+              data,
+              dataSourcePreference,
+              preferredProvider,
+              trainBars,
+              testBars,
+              stepBars,
+            } = context.body
+
+            const startDateObj = new Date(startDate)
+            const endDateObj = new Date(endDate)
+            const interval = timeframe ?? '1d'
+
+            const resolution = await resolveMarketData({
+              input: {
+                symbol,
+                ...(exchange ? { exchange } : {}),
+                interval,
+                startDate: startDateObj,
+                endDate: endDateObj,
+                dataSourcePreference: dataSourcePreference ?? 'auto',
+                preferredProvider: preferredProvider ?? 'auto',
+                callerData: Array.isArray(data) ? data : null,
+                requestId,
+              },
+              deps: { db, ...marketDataDeps },
+            })
+
+            if (!resolution.ok) {
+              context.set.status = 422
+              return {
+                ok: false,
+                code: resolution.code,
+                message: resolution.message,
+                attempted: resolution.attempted,
+                requestId,
+              }
+            }
+
+            const strategy = await repo.getStrategy(strategyId)
+            if (!strategy) {
+              context.set.status = 404
+              return {
+                ok: false,
+                code: 'STRATEGY_NOT_FOUND',
+                message: 'Strategy not found',
+                requestId,
+              }
+            }
+
+            const strategyParams = (strategy.parameters ?? {}) as Record<string, unknown>
+            const strategyTypeForQuant =
+              (strategyParams.strategy_type as string | undefined) ??
+              (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')
+                ? 'buy_and_hold'
+                : 'buy_and_hold')
+
+            const quantResult = await callQuantService(
+              '/quant/walk-forward',
+              {
+                strategy_type: strategyTypeForQuant,
+                data: resolution.bars,
+                initial_cash: initialCash ?? 10000,
+                fees_bps: feesBps ?? 10,
+                slippage_bps: slippageBps ?? 5,
+                spread_bps: spreadBps ?? 2,
+                params: strategyParams,
+                train_bars: trainBars ?? 120,
+                test_bars: testBars ?? 30,
+                step_bars: stepBars ?? 30,
+              },
+              requestId,
+              90_000
+            )
+            if (!quantResult.ok) {
+              context.set.status = 502
+              return {
+                ok: false,
+                code: 'WALK_FORWARD_FAILED',
+                message: quantResult.error ?? 'Walk-forward failed',
+                requestId,
+              }
+            }
+
+            const wf = quantResult.data as Record<string, unknown>
+            return {
+              ok: true,
+              strategyId,
+              symbol,
+              interval,
+              resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+              dataProvider: resolution.dataProvider,
+              dataQuality: resolution.dataQuality,
+              fallbackUsed: resolution.fallbackUsed,
+              barsCount: resolution.barsCount,
+              windows: wf.windows,
+              inSample: wf.in_sample,
+              outOfSample: wf.out_of_sample,
+              stabilityScore: wf.stability_score,
+              degradationRatio: wf.degradation_ratio,
+              overfitWarning: wf.overfit_warning,
+              summary: wf.summary,
+              caveats: [
+                'Walk-forward validation reduces — but does not eliminate — overfitting risk.',
+                'Out-of-sample metrics still depend on past regime persistence.',
+                'Paper-trading only. No real capital at risk.',
+              ],
+              requestId,
+            }
+          },
+        })
+      },
+      {
+        body: t.Object({
+          strategyId: t.Number(),
+          symbol: t.String(),
+          exchange: t.Optional(t.String()),
+          timeframe: t.Optional(t.String()),
+          startDate: t.String(),
+          endDate: t.String(),
+          initialCash: t.Optional(t.Number()),
+          feesBps: t.Optional(t.Number()),
+          slippageBps: t.Optional(t.Number()),
+          spreadBps: t.Optional(t.Number()),
+          data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
+          dataSourcePreference: t.Optional(
+            t.Union([
+              t.Literal('auto'),
+              t.Literal('cached'),
+              t.Literal('provider'),
+              t.Literal('caller_provided'),
+              t.Literal('deterministic_fixture'),
+            ])
+          ),
+          preferredProvider: t.Optional(
+            t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
+          ),
+          trainBars: t.Optional(t.Number()),
+          testBars: t.Optional(t.Number()),
+          stepBars: t.Optional(t.Number()),
+        }),
+      }
+    )
+
+    // --- Market data preview (admin-only — useful for the runner UI) ---
+    .post(
+      '/market-data/preview',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        return demoOrReal({
+          context,
+          demo: () => ({
+            ok: true,
+            resolvedMarketDataSource: 'deterministic_fixture' as const,
+            dataProvider: 'fixture' as const,
+            dataQuality: 'synthetic' as const,
+            barsCount: 0,
+            firstBarDate: null,
+            lastBarDate: null,
+            fallbackUsed: false,
+            fallbackReason: null,
+            sample: [],
+            dataWarnings: ['Demo mode: synthetic preview only.'],
+            requestId,
+          }),
+          real: async () => {
+            requireAdmin(context)
+            const {
+              symbol,
+              exchange,
+              timeframe,
+              startDate,
+              endDate,
+              dataSourcePreference,
+              preferredProvider,
+              data,
+            } = context.body
+            const resolution = await resolveMarketData({
+              input: {
+                symbol,
+                ...(exchange ? { exchange } : {}),
+                interval: timeframe ?? '1d',
+                startDate: new Date(startDate),
+                endDate: new Date(endDate),
+                dataSourcePreference: dataSourcePreference ?? 'auto',
+                preferredProvider: preferredProvider ?? 'auto',
+                callerData: Array.isArray(data) ? data : null,
+                requestId,
+              },
+              deps: { db, ...marketDataDeps },
+            })
+            if (!resolution.ok) {
+              context.set.status = 422
+              return {
+                ok: false,
+                code: resolution.code,
+                message: resolution.message,
+                attempted: resolution.attempted,
+                requestId,
+              }
+            }
+            return {
+              ok: true,
+              resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+              dataProvider: resolution.dataProvider,
+              dataQuality: resolution.dataQuality,
+              dataWarnings: resolution.dataWarnings,
+              barsCount: resolution.barsCount,
+              firstBarDate: resolution.firstBarDate,
+              lastBarDate: resolution.lastBarDate,
+              fallbackUsed: resolution.fallbackUsed,
+              fallbackReason: resolution.fallbackReason,
+              sample: resolution.bars.slice(0, 50),
+              requestId,
+            }
+          },
+        })
+      },
+      {
+        body: t.Object({
+          symbol: t.String(),
+          exchange: t.Optional(t.String()),
+          timeframe: t.Optional(t.String()),
+          startDate: t.String(),
+          endDate: t.String(),
+          dataSourcePreference: t.Optional(
+            t.Union([
+              t.Literal('auto'),
+              t.Literal('cached'),
+              t.Literal('provider'),
+              t.Literal('caller_provided'),
+              t.Literal('deterministic_fixture'),
+            ])
+          ),
+          preferredProvider: t.Optional(
+            t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
+          ),
+          data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
         }),
       }
     )

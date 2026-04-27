@@ -332,7 +332,12 @@ services:
       neo4j:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        # Qdrant ships as a distroless image (no /bin/sh, no wget/curl) so a
+        # Docker-level healthcheck cannot be executed inside the container.
+        # The knowledge-service handles Qdrant connectivity with retries on
+        # its own (qdrant-client) and is itself fail-soft via
+        # KNOWLEDGE_SERVICE_ENABLED. service_started is sufficient here.
+        condition: service_started
     networks:
       - finance_os_internal
     volumes:
@@ -381,12 +386,11 @@ services:
       - knowledge_qdrant_data:/qdrant/storage
     networks:
       - finance_os_internal
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:6333/healthz >/dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
+    # No Docker-level healthcheck: qdrant/qdrant v1.10+ uses a distroless base
+    # image with no shell and no wget/curl, so any CMD-SHELL or wget-based
+    # probe always fails and falsely marks the container unhealthy. Qdrant's
+    # /healthz endpoint is still reachable from other containers and from the
+    # knowledge-service, which is the actual readiness signal we care about.
     security_opt:
       - no-new-privileges:true
 
