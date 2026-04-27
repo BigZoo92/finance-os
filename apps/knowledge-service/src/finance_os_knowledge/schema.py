@@ -16,6 +16,7 @@ KnowledgeNodeType = Literal[
     "NewsSignal",
     "MacroSignal",
     "TweetSignal",
+    "SocialSignal",
     "Asset",
     "Ticker",
     "Sector",
@@ -34,6 +35,9 @@ KnowledgeNodeType = Literal[
     "AgentRun",
     "CostObservation",
     "TokenUsageObservation",
+    "BacktestRun",
+    "PaperScenario",
+    "AttentionEvent",
 ]
 
 KnowledgeRelationType = Literal[
@@ -72,6 +76,9 @@ KnowledgeRelationType = Literal[
     "PART_OF",
     "LEADS_TO",
     "HAS_TIME_WINDOW",
+    "BACKTESTED_WITH",
+    "PRODUCED_METRIC",
+    "GENERATED_SCENARIO",
 ]
 
 NODE_TYPES: tuple[str, ...] = tuple(KnowledgeNodeType.__args__)  # type: ignore[attr-defined]
@@ -94,6 +101,9 @@ RELATION_WEIGHTS: dict[str, float] = {
     "CORRELATES_WITH": 0.7,
     "SIMILAR_TO": 0.66,
     "PART_OF": 0.64,
+    "BACKTESTED_WITH": 0.72,
+    "PRODUCED_METRIC": 0.68,
+    "GENERATED_SCENARIO": 0.7,
 }
 
-SCHEMA_VERSION = "2026-04-26.temporal-graph-v1"
+SCHEMA_VERSION = "2026-04-26.temporal-graph-v2"

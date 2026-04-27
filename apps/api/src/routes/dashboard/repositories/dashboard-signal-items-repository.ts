@@ -207,6 +207,15 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
     return row?.count ?? 0
   },
 
+  async getItemById(id: number): Promise<SignalItemRow | null> {
+    const rows = await db
+      .select()
+      .from(schema.signalItem)
+      .where(eq(schema.signalItem.id, id))
+      .limit(1)
+    return rows[0] ? toRow(rows[0]) : null
+  },
+
   async listPendingGraphIngest(limit: number, minRelevance: number): Promise<SignalItemRow[]> {
     const rows = await db
       .select()

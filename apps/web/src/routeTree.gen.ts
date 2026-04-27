@@ -29,9 +29,10 @@ import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
 import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
-import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
 import { Route as AppSignauxSourcesRouteImport } from './routes/_app/signaux/sources'
+import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
 import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
+import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
 import { Route as AppIaMemoireRouteImport } from './routes/_app/ia/memoire'
 import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
 import { Route as AppIaChatRouteImport } from './routes/_app/ia/chat'
@@ -135,19 +136,24 @@ const AppIaIndexRoute = AppIaIndexRouteImport.update({
   path: '/ia/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
-  id: '/signaux/social',
-  path: '/signaux/social',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppSignauxSourcesRoute = AppSignauxSourcesRouteImport.update({
   id: '/signaux/sources',
   path: '/signaux/sources',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
+  id: '/signaux/social',
+  path: '/signaux/social',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSignauxMarchesRoute = AppSignauxMarchesRouteImport.update({
   id: '/signaux/marches',
   path: '/signaux/marches',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
+  id: '/ia/trading-lab',
+  path: '/ia/trading-lab',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIaMemoireRoute = AppIaMemoireRouteImport.update({
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/memoire': typeof AppIaMemoireRoute
+  '/ia/trading-lab': typeof AppIaTradingLabRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/memoire': typeof AppIaMemoireRoute
+  '/ia/trading-lab': typeof AppIaTradingLabRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/_app/ia/chat': typeof AppIaChatRoute
   '/_app/ia/couts': typeof AppIaCoutsRoute
   '/_app/ia/memoire': typeof AppIaMemoireRoute
+  '/_app/ia/trading-lab': typeof AppIaTradingLabRoute
   '/_app/signaux/marches': typeof AppSignauxMarchesRoute
   '/_app/signaux/social': typeof AppSignauxSocialRoute
   '/_app/signaux/sources': typeof AppSignauxSourcesRoute
@@ -272,7 +281,9 @@ export interface FileRouteTypes {
     | '/ia/chat'
     | '/ia/couts'
     | '/ia/memoire'
+    | '/ia/trading-lab'
     | '/signaux/marches'
+    | '/signaux/social'
     | '/signaux/sources'
     | '/ia/'
     | '/signaux/'
@@ -298,7 +309,9 @@ export interface FileRouteTypes {
     | '/ia/chat'
     | '/ia/couts'
     | '/ia/memoire'
+    | '/ia/trading-lab'
     | '/signaux/marches'
+    | '/signaux/social'
     | '/signaux/sources'
     | '/ia'
     | '/signaux'
@@ -325,7 +338,9 @@ export interface FileRouteTypes {
     | '/_app/ia/chat'
     | '/_app/ia/couts'
     | '/_app/ia/memoire'
+    | '/_app/ia/trading-lab'
     | '/_app/signaux/marches'
+    | '/_app/signaux/social'
     | '/_app/signaux/sources'
     | '/_app/ia/'
     | '/_app/signaux/'
@@ -483,13 +498,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/signaux/social': {
-      id: '/_app/signaux/social'
-      path: '/signaux/social'
-      fullPath: '/signaux/social'
-      preLoaderRoute: typeof AppSignauxSocialRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/signaux/sources': {
       id: '/_app/signaux/sources'
       path: '/signaux/sources'
@@ -497,11 +505,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSignauxSourcesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/signaux/social': {
+      id: '/_app/signaux/social'
+      path: '/signaux/social'
+      fullPath: '/signaux/social'
+      preLoaderRoute: typeof AppSignauxSocialRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/signaux/marches': {
       id: '/_app/signaux/marches'
       path: '/signaux/marches'
       fullPath: '/signaux/marches'
       preLoaderRoute: typeof AppSignauxMarchesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/trading-lab': {
+      id: '/_app/ia/trading-lab'
+      path: '/ia/trading-lab'
+      fullPath: '/ia/trading-lab'
+      preLoaderRoute: typeof AppIaTradingLabRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/ia/memoire': {
@@ -543,6 +565,7 @@ interface AppRouteChildren {
   AppIaChatRoute: typeof AppIaChatRoute
   AppIaCoutsRoute: typeof AppIaCoutsRoute
   AppIaMemoireRoute: typeof AppIaMemoireRoute
+  AppIaTradingLabRoute: typeof AppIaTradingLabRoute
   AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
   AppSignauxSocialRoute: typeof AppSignauxSocialRoute
   AppSignauxSourcesRoute: typeof AppSignauxSourcesRoute
@@ -565,6 +588,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaChatRoute: AppIaChatRoute,
   AppIaCoutsRoute: AppIaCoutsRoute,
   AppIaMemoireRoute: AppIaMemoireRoute,
+  AppIaTradingLabRoute: AppIaTradingLabRoute,
   AppSignauxMarchesRoute: AppSignauxMarchesRoute,
   AppSignauxSocialRoute: AppSignauxSocialRoute,
   AppSignauxSourcesRoute: AppSignauxSourcesRoute,

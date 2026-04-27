@@ -43,6 +43,7 @@
     "cmdk": "^1.1.1",
     "d3": "^7.9.0",
     "gsap": "^3.15.0",
+    "lightweight-charts": "^5.2.0",
     "motion": "^12.38.0",
     "nitro": "npm:nitro-nightly@latest",
     "postprocessing": "^6.39.0",

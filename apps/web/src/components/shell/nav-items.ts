@@ -131,6 +131,13 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'ia',
   },
   {
+    to: '/ia/trading-lab',
+    label: 'Trading Lab',
+    icon: '⟐',
+    description: 'Paper-trading, backtest et recherche',
+    group: 'ia',
+  },
+  {
     to: '/ia/couts',
     label: 'Coûts IA',
     icon: '⊘',

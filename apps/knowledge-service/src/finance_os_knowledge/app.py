@@ -19,11 +19,13 @@ from .ingest import (
     MarketsIngestRequest,
     NewsIngestRequest,
     SocialIngestRequest,
+    TradingLabIngestRequest,
     build_advisor_ingest,
     build_cost_ledger_ingest,
     build_markets_ingest,
     build_news_ingest,
     build_social_ingest,
+    build_trading_lab_ingest,
 )
 from .models import (
     ContextBundleRequest,
@@ -332,6 +334,14 @@ def create_app() -> FastAPI:
     ):
         request_id = _request_id(request)
         ingest_request = build_cost_ledger_ingest(request_body)
+        return store().ingest(ingest_request, request_id=request_id)
+
+    @app.post("/knowledge/ingest/trading-lab")
+    async def ingest_trading_lab(
+        request_body: TradingLabIngestRequest, request: Request
+    ):
+        request_id = _request_id(request)
+        ingest_request = build_trading_lab_ingest(request_body)
         return store().ingest(ingest_request, request_id=request_id)
 
     return app

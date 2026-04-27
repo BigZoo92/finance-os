@@ -11,6 +11,7 @@ import { createMarketsRoute } from './routes/markets'
 import { createNewsRoute } from './routes/news'
 import { createSignalSourcesRoute } from './routes/signal-sources'
 import { createSummaryRoute } from './routes/summary'
+import { createTradingLabRoute } from './routes/trading-lab'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
@@ -95,6 +96,10 @@ export const createDashboardRoutes = ({
   knowledgeGraphRetrievalMode,
   knowledgeGraphMaxPathDepth,
   knowledgeGraphMinConfidence,
+  quantServiceEnabled,
+  quantServiceUrl,
+  quantServiceTimeoutMs,
+  tradingLabGraphIngestEnabled,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -174,6 +179,10 @@ export const createDashboardRoutes = ({
   knowledgeGraphRetrievalMode: 'hybrid' | 'graph' | 'vector' | 'fulltext'
   knowledgeGraphMaxPathDepth: number
   knowledgeGraphMinConfidence: number
+  quantServiceEnabled: boolean
+  quantServiceUrl: string
+  quantServiceTimeoutMs: number
+  tradingLabGraphIngestEnabled: boolean
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -296,4 +305,15 @@ export const createDashboardRoutes = ({
     .use(createTransactionsRoute())
     .use(createTransactionClassificationRoute())
     .use(createSignalSourcesRoute({ db }))
+    .use(
+      createTradingLabRoute({
+        db,
+        quantServiceEnabled,
+        quantServiceUrl,
+        quantServiceTimeoutMs,
+        knowledgeServiceEnabled,
+        knowledgeServiceUrl,
+        graphIngestEnabled: tradingLabGraphIngestEnabled,
+      })
+    )
 }

@@ -1074,9 +1074,23 @@ export const createDashboardAdvisorUseCases = ({
             recommendations: recommendations.slice(0, 6),
             signals: preview.signals.newsSignals.slice(0, 6),
             socialSignals:
-              config.xSignalsMode === 'enforced'
+              config.xSignalsMode !== 'off'
                 ? preview.signals.socialSignals.included.slice(0, 3)
                 : [],
+            socialSignalCaveats:
+              config.xSignalsMode === 'shadow'
+                ? [
+                    'Social signals are provided as supplementary context only.',
+                    'Do not base recommendations solely on social signal content.',
+                    'Verify claims against official sources before citing.',
+                    'Include source attribution and confidence level when referencing.',
+                  ]
+                : config.xSignalsMode === 'enforced'
+                  ? [
+                      'Social signals are enrichment context. Always cite source and confidence.',
+                      'Never recommend solely based on a single social post.',
+                    ]
+                  : [],
             assumptions: preview.assumptions.items.slice(0, 8),
             ...knowledgeContextForPrompt(dailyKnowledge.bundle),
           },
@@ -1143,8 +1157,12 @@ export const createDashboardAdvisorUseCases = ({
               snapshot: preview.snapshot,
               signals: preview.signals.newsSignals.slice(0, 6),
               socialSignals:
-                config.xSignalsMode === 'enforced'
+                config.xSignalsMode !== 'off'
                   ? preview.signals.socialSignals.included.slice(0, 2)
+                  : [],
+              socialSignalCaveats:
+                config.xSignalsMode !== 'off'
+                  ? ['Social signals are supplementary context. Verify before citing.']
                   : [],
               assumptions: preview.assumptions.items.slice(0, 8),
               ...knowledgeContextForPrompt(challengeKnowledge.bundle),
@@ -1698,8 +1716,15 @@ export const createDashboardAdvisorUseCases = ({
             assumptions: previewForChat.assumptions.items,
             signals: previewForChat.signals.newsSignals.slice(0, 6),
             socialSignals:
-              config.xSignalsMode === 'enforced'
+              config.xSignalsMode !== 'off'
                 ? previewForChat.signals.socialSignals.included.slice(0, 3)
+                : [],
+            socialSignalCaveats:
+              config.xSignalsMode !== 'off'
+                ? [
+                    'Social signals are supplementary context. Always cite source and confidence.',
+                    'Never present social signal content as verified financial advice.',
+                  ]
                 : [],
             priorMessages:
               (

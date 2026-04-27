@@ -183,6 +183,13 @@
       "when": 1777227087511,
       "tag": "0025_spooky_wasp",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777228318997,
+      "tag": "0026_sleepy_ogun",
+      "breakpoints": true
     }
   ]
 }

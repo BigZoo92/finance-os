@@ -24,6 +24,8 @@ import { CockpitHero } from '@/components/surfaces/cockpit-hero'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { Panel } from '@/components/surfaces/panel'
 import { StatusDot } from '@/components/surfaces/status-dot'
+import { attentionItemsQueryOptions } from '@/features/trading-lab-query-options'
+import type { AttentionItem } from '@/features/trading-lab-api'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (v: string | undefined): DashboardRange => (v === '7d' || v === '90d' ? v : '30d')
@@ -44,6 +46,7 @@ export const Route = createFileRoute('/_app/')({
       context.queryClient.ensureQueryData(dashboardSummaryQueryOptionsWithMode({ range: deps.range, mode })),
       context.queryClient.ensureQueryData(financialGoalsQueryOptionsWithMode({ mode })),
       context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(attentionItemsQueryOptions({ status: 'open' })),
     ]
 
     if (advisorVisible) {
@@ -118,6 +121,10 @@ function CockpitPage() {
     ...dashboardAdvisorRecommendationsQueryOptionsWithMode(advisorVisible && authMode ? { mode: authMode } : {}),
     enabled: advisorVisible,
   })
+
+  const attentionQ = useQuery(attentionItemsQueryOptions({ status: 'open' }))
+  const attentionItems: AttentionItem[] = attentionQ.data?.items ?? []
+  const attentionCount = attentionQ.data?.openCount ?? attentionItems.length
 
   const goals = goalsQ.data?.items ?? []
   const activeGoals = goals.filter(g => !g.archivedAt)
@@ -267,10 +274,43 @@ function CockpitPage() {
           </Link>
 
           <div className="space-y-2 rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md">
-            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-negative/70">
-              ⚠ demande attention
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-negative/70">
+                ⚠ demande attention
+              </p>
+              {attentionCount > 0 ? (
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">
+                  {attentionCount}
+                </span>
+              ) : null}
+            </div>
             <div className="space-y-1.5">
+              {/* Real attention items from API (signals, providers, trading-lab, system) */}
+              {attentionItems.slice(0, 4).map(item => {
+                const tone =
+                  item.severity === 'critical' ? 'err' : item.severity === 'important' ? 'warn' : 'ok'
+                const linkProps = item.actionHref
+                  ? { to: item.actionHref, asLink: true as const }
+                  : { asLink: false as const }
+                return (
+                  <div key={item.id} className="flex items-start gap-2 text-sm">
+                    <StatusDot tone={tone} size={6} pulse={item.severity === 'critical'} />
+                    {linkProps.asLink ? (
+                      <a
+                        href={item.actionHref ?? '#'}
+                        className="line-clamp-1 text-foreground hover:text-primary"
+                        title={item.summary ?? item.title}
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      <span className="line-clamp-1 text-foreground" title={item.summary ?? item.title}>
+                        {item.title}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
               {connsFail > 0 && (
                 <div className="flex items-center gap-2 text-sm">
                   <StatusDot tone="err" size={6} pulse />
@@ -295,7 +335,7 @@ function CockpitPage() {
                   </Link>
                 </div>
               )}
-              {connsFail === 0 && activeRecs.filter(r => r.riskLevel === 'high').length === 0 && activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length === 0 && (
+              {connsFail === 0 && activeRecs.filter(r => r.riskLevel === 'high').length === 0 && activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length === 0 && attentionItems.length === 0 && (
                 <p className="py-2 text-sm text-muted-foreground">
                   Rien de critique. Tout est en ordre.
                 </p>

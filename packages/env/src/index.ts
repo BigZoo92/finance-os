@@ -724,6 +724,38 @@ export const getApiEnv = () => {
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     KNOWLEDGE_GRAPH_MAX_PATH_DEPTH: z.coerce.number().int().min(0).max(5).default(3),
     KNOWLEDGE_GRAPH_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.35),
+
+    // ── Quant Service / Trading Lab ─────────────────────────────
+    QUANT_SERVICE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    QUANT_SERVICE_URL: z
+      .string()
+      .url('QUANT_SERVICE_URL must be a valid URL')
+      .default('http://127.0.0.1:8012'),
+    QUANT_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+    TRADING_LAB_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    TRADING_LAB_PAPER_ONLY: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    TRADING_LAB_MAX_BACKTEST_ROWS: z.coerce.number().int().positive().default(50000),
+    TRADING_LAB_DEFAULT_FEES_BPS: z.coerce.number().min(0).default(10),
+    TRADING_LAB_DEFAULT_SLIPPAGE_BPS: z.coerce.number().min(0).default(5),
+    TRADING_LAB_GRAPH_INGEST_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    ATTENTION_SYSTEM_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    ATTENTION_SIGNAL_MIN_RELEVANCE: z.coerce.number().int().min(0).default(60),
+    ATTENTION_SIGNAL_MIN_CONFIDENCE: z.coerce.number().int().min(0).default(50),
     KNOWLEDGE_GRAPH_RECENCY_HALF_LIFE_DAYS: z.coerce.number().positive().default(45),
     KNOWLEDGE_GRAPH_EMBEDDING_PROVIDER: z.enum(['local', 'openai', 'none']).default('local'),
     KNOWLEDGE_GRAPH_EMBEDDING_MODEL: z.string().min(1).default('local-hashing-v1'),

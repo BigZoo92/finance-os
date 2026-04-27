@@ -20,6 +20,7 @@ from .cost_ledger import CostLedgerIngestRequest, build_cost_ledger_ingest
 from .markets import MarketsIngestRequest, build_markets_ingest
 from .news import NewsIngestRequest, build_news_ingest
 from .social import SocialIngestRequest, build_social_ingest
+from .trading_lab import TradingLabIngestRequest, build_trading_lab_ingest
 
 __all__ = [
     "AdvisorIngestRequest",
@@ -27,9 +28,11 @@ __all__ = [
     "MarketsIngestRequest",
     "NewsIngestRequest",
     "SocialIngestRequest",
+    "TradingLabIngestRequest",
     "build_advisor_ingest",
     "build_cost_ledger_ingest",
     "build_markets_ingest",
     "build_news_ingest",
     "build_social_ingest",
+    "build_trading_lab_ingest",
 ]

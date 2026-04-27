@@ -110,7 +110,6 @@ function SignauxActualitesPage() {
             </div>
           </Panel>
         </Link>
-        {/* @ts-expect-error route type will be generated on next build */}
         <Link to="/signaux/social" className="block">
           <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
             <div className="flex items-center gap-2">
@@ -164,7 +163,6 @@ function SignauxActualitesPage() {
         <Panel>
           <p className="text-text-secondary text-sm py-4 text-center">
             Aucun signal persiste. Utilisez l'import manuel depuis{' '}
-            {/* @ts-expect-error route type will be generated on next build */}
             <Link to="/signaux/social" className="text-primary underline">Comptes sociaux</Link>
             {' '}ou attendez une ingestion automatique.
           </p>

@@ -269,6 +269,31 @@ Notes:
 
 ---
 
+## 11. Quant Service / Trading Lab
+
+| Variable | Default | Ou la definir | Consommateur | Description |
+|---|---|---|---|---|
+| `QUANT_SERVICE_ENABLED` | `false` | Dokploy, Local | API | Active le quant service proxy |
+| `QUANT_SERVICE_URL` | `http://127.0.0.1:8012` | Dokploy, Local | API | URL interne du quant service |
+| `QUANT_SERVICE_TIMEOUT_MS` | `30000` | Dokploy, Local | API | Timeout appels quant service |
+| `TRADING_LAB_ENABLED` | `true` | Dokploy, Local | API | Active les routes Trading Lab |
+| `TRADING_LAB_PAPER_ONLY` | `true` | Dokploy, Local | API, Quant Service | Verrou paper-trading only. Ne pas mettre a false. |
+| `TRADING_LAB_MAX_BACKTEST_ROWS` | `50000` | Dokploy, Local | Quant Service | Limite donnees par backtest |
+| `TRADING_LAB_DEFAULT_FEES_BPS` | `10` | Dokploy, Local | Quant Service | Frais par defaut en bps |
+| `TRADING_LAB_DEFAULT_SLIPPAGE_BPS` | `5` | Dokploy, Local | Quant Service | Slippage par defaut en bps |
+| `TRADING_LAB_GRAPH_INGEST_ENABLED` | `true` | Dokploy, Local | API | Ingest strategies/backtests vers knowledge graph |
+| `ATTENTION_SYSTEM_ENABLED` | `true` | Dokploy, Local | API | Active le systeme d'attention |
+| `ATTENTION_SIGNAL_MIN_RELEVANCE` | `60` | Dokploy, Local | API | Seuil minimum relevance pour attention signal |
+| `ATTENTION_SIGNAL_MIN_CONFIDENCE` | `50` | Dokploy, Local | API | Seuil minimum confidence pour attention signal |
+
+Notes:
+
+- `TRADING_LAB_PAPER_ONLY` doit rester `true`. Aucune execution reelle n'est implementee.
+- Le quant service est interne uniquement (pas d'exposition publique).
+- En demo, les routes Trading Lab retournent des fixtures deterministes.
+
+---
+
 ## 12. Failsoft Policy
 
 | Flag | Default | Ou la definir | Consommateur | Description |

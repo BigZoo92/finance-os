@@ -134,6 +134,29 @@ services:
       retries: 20
       start_period: 20s
 
+  quant-service:
+    build:
+      context: ../../apps/quant-service
+      dockerfile: Dockerfile
+    container_name: finance-os-quant-service
+    restart: unless-stopped
+    environment:
+      QUANT_SERVICE_ENABLED: ${QUANT_SERVICE_ENABLED:-true}
+      QUANT_SERVICE_HOST: 0.0.0.0
+      QUANT_SERVICE_PORT: 8012
+      TRADING_LAB_PAPER_ONLY: "true"
+      TRADING_LAB_MAX_BACKTEST_ROWS: ${TRADING_LAB_MAX_BACKTEST_ROWS:-50000}
+      TRADING_LAB_DEFAULT_FEES_BPS: ${TRADING_LAB_DEFAULT_FEES_BPS:-10}
+      TRADING_LAB_DEFAULT_SLIPPAGE_BPS: ${TRADING_LAB_DEFAULT_SLIPPAGE_BPS:-5}
+    ports:
+      - "127.0.0.1:${QUANT_SERVICE_PORT:-8012}:8012"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8012/health', timeout=3).read()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
 volumes:
   postgres_data:
   redis_data:

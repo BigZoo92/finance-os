@@ -1,0 +1,350 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import {
+  tradingLabStrategiesQueryOptions,
+  tradingLabBacktestsQueryOptions,
+  tradingLabScenariosQueryOptions,
+  tradingLabCapabilitiesQueryOptions,
+  attentionItemsQueryOptions,
+} from '@/features/trading-lab-query-options'
+import type { TradingLabStrategy, TradingLabBacktestRun, TradingLabScenario, AttentionItem } from '@/features/trading-lab-api'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { EquityCurveChart, type EquityPoint } from '@/components/trading-lab/equity-curve-chart'
+import { DrawdownChart, type DrawdownPoint } from '@/components/trading-lab/drawdown-chart'
+
+export const Route = createFileRoute('/_app/ia/trading-lab')({
+  loader: async ({ context }) => {
+    await Promise.allSettled([
+      context.queryClient.ensureQueryData(tradingLabStrategiesQueryOptions()),
+      context.queryClient.ensureQueryData(tradingLabBacktestsQueryOptions()),
+      context.queryClient.ensureQueryData(tradingLabScenariosQueryOptions()),
+      context.queryClient.ensureQueryData(tradingLabCapabilitiesQueryOptions()),
+      context.queryClient.ensureQueryData(attentionItemsQueryOptions({ status: 'open' })),
+    ])
+  },
+  component: TradingLabPage,
+})
+
+function SeverityBadge({ severity }: { severity: string }) {
+  const colorMap: Record<string, string> = {
+    critical: 'bg-red-500/20 text-red-400 border-red-500/30',
+    important: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    watch: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    info: 'bg-surface-2 text-muted-foreground border-border',
+  }
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorMap[severity] ?? colorMap.info}`}>
+      {severity}
+    </span>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const colorMap: Record<string, string> = {
+    'active-paper': 'bg-green-500/20 text-green-400 border-green-500/30',
+    draft: 'bg-surface-2 text-muted-foreground border-border',
+    archived: 'bg-surface-1 text-muted-foreground/60 border-border/50',
+    completed: 'bg-green-500/20 text-green-400 border-green-500/30',
+    running: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    failed: 'bg-red-500/20 text-red-400 border-red-500/30',
+    pending: 'bg-surface-2 text-muted-foreground border-border',
+    open: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    tracking: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  }
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorMap[status] ?? colorMap.draft}`}>
+      {status}
+    </span>
+  )
+}
+
+function MetricCard({ label, value }: { label: string; value: string | number | null }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface-1 p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-financial text-lg font-semibold text-foreground">
+        {value !== null && value !== undefined ? String(value) : '--'}
+      </div>
+    </div>
+  )
+}
+
+function TradingLabPage() {
+  const { data: authData } = useQuery(authMeQueryOptions())
+  const isAdmin = authData?.mode === 'admin'
+
+  const { data: strategies = [], isLoading: strategiesLoading } = useQuery(tradingLabStrategiesQueryOptions())
+  const { data: backtests = [], isLoading: backtestsLoading } = useQuery(tradingLabBacktestsQueryOptions())
+  const { data: scenarios = [], isLoading: scenariosLoading } = useQuery(tradingLabScenariosQueryOptions())
+  const { data: capabilities } = useQuery(tradingLabCapabilitiesQueryOptions())
+  const { data: attentionData } = useQuery(attentionItemsQueryOptions({ status: 'open' }))
+
+  const attentionItems: AttentionItem[] = attentionData?.items ?? []
+  const openCount = attentionData?.openCount ?? 0
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Trading Lab"
+        description="Paper-trading, backtesting & strategy research"
+      />
+
+      {/* Paper-only warning */}
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+        <div className="flex items-start gap-2">
+          <span className="text-amber-400 text-lg leading-none mt-0.5">&#9888;</span>
+          <div>
+            <div className="font-medium text-amber-300 text-sm">Paper Trading Only</div>
+            <div className="text-xs text-amber-400/80 mt-0.5">
+              This is a research and simulation environment. No real capital is at risk.
+              Backtest results are not predictions. Technical strategies are experimental unless marked as benchmark.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Attention items */}
+      {openCount > 0 && (
+        <Panel title={`Ce qui demande ton attention (${openCount})`}>
+          <div className="space-y-2">
+            {attentionItems.slice(0, 5).map((item: AttentionItem) => (
+              <div key={item.id} className="flex items-start gap-3 rounded-md border border-border bg-surface-0 p-3">
+                <SeverityBadge severity={item.severity} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{item.title}</div>
+                  {item.summary ? (
+                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.summary}</div>
+                  ) : null}
+                </div>
+                {item.actionHref ? (
+                  <a href={item.actionHref} className="text-xs text-primary hover:underline shrink-0">
+                    Voir
+                  </a>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      {/* KPI row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiTile label="Strategies" value={strategies.length} />
+        <KpiTile label="Backtests" value={backtests.length} />
+        <KpiTile label="Scenarios" value={scenarios.length} />
+        <KpiTile
+          label="Quant Service"
+          display={capabilities?.quantServiceAvailable ? 'Connected' : 'Offline'}
+        />
+      </div>
+
+      {/* Strategies */}
+      <Panel title="Strategies">
+        {strategiesLoading ? (
+          <div className="text-sm text-muted-foreground">Loading strategies...</div>
+        ) : strategies.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No strategies yet.{isAdmin ? ' Create one to start.' : ''}</div>
+        ) : (
+          <div className="space-y-2">
+            {(strategies as TradingLabStrategy[]).map((s: TradingLabStrategy) => (
+              <div key={s.id} className="flex items-center gap-3 rounded-md border border-border bg-surface-0 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{s.name}</span>
+                    <StatusBadge status={s.status} />
+                    {s.strategyType === 'experimental' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                        experimental
+                      </span>
+                    )}
+                    {s.strategyType === 'benchmark' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20">
+                        benchmark
+                      </span>
+                    )}
+                  </div>
+                  {s.description ? (
+                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{s.description}</div>
+                  ) : null}
+                </div>
+                <div className="text-xs text-muted-foreground/60 shrink-0">
+                  {s.tags.slice(0, 3).join(', ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {/* Latest backtests */}
+      <Panel title="Latest Backtests">
+        {backtestsLoading ? (
+          <div className="text-sm text-muted-foreground">Loading backtests...</div>
+        ) : backtests.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No backtest runs yet.</div>
+        ) : (
+          <div className="space-y-4">
+            {(backtests as TradingLabBacktestRun[]).slice(0, 5).map((b: TradingLabBacktestRun) => {
+              const m = (b.metrics ?? {}) as Record<string, unknown>
+              const equity = (b.equityCurve ?? []) as EquityPoint[]
+              const drawdowns = (b.drawdowns ?? []) as DrawdownPoint[]
+              return (
+                <div key={b.id} className="rounded-md border border-border bg-surface-0 p-3">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{b.name}</span>
+                    <StatusBadge status={b.runStatus} />
+                    <span className="ml-auto font-financial text-xs text-muted-foreground">{b.symbol}</span>
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground/60">
+                      {b.timeframe} · {(b.marketDataSource ?? 'unknown').replace(/_/g, ' ')}
+                    </span>
+                  </div>
+
+                  {/* Assumptions row */}
+                  <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span>cash <span className="font-financial text-foreground">${b.initialCash.toFixed(0)}</span></span>
+                    <span>fees <span className="font-financial text-foreground">{b.feesBps}bps</span></span>
+                    <span>slippage <span className="font-financial text-foreground">{b.slippageBps}bps</span></span>
+                    <span>spread <span className="font-financial text-foreground">{b.spreadBps}bps</span></span>
+                    {b.paramsHash ? <span>params <span className="font-mono text-foreground/80">{b.paramsHash.slice(0, 8)}</span></span> : null}
+                    {b.dataHash ? <span>data <span className="font-mono text-foreground/80">{b.dataHash.slice(0, 8)}</span></span> : null}
+                  </div>
+
+                  {/* Metrics grid */}
+                  {b.metrics ? (
+                    <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+                      <MetricCard label="CAGR" value={m.cagr != null ? `${((m.cagr as number) * 100).toFixed(1)}%` : null} />
+                      <MetricCard label="Sharpe" value={m.sharpe != null ? (m.sharpe as number).toFixed(2) : null} />
+                      <MetricCard label="Sortino" value={m.sortino != null ? (m.sortino as number).toFixed(2) : null} />
+                      <MetricCard label="Max DD" value={m.max_drawdown != null ? `${((m.max_drawdown as number) * 100).toFixed(1)}%` : null} />
+                      <MetricCard label="Calmar" value={m.calmar != null ? (m.calmar as number).toFixed(2) : null} />
+                      <MetricCard label="Win Rate" value={m.win_rate != null ? `${((m.win_rate as number) * 100).toFixed(0)}%` : null} />
+                      <MetricCard label="Profit F." value={m.profit_factor != null ? (m.profit_factor as number).toFixed(2) : null} />
+                      <MetricCard label="Trades" value={m.total_trades as number | null} />
+                    </div>
+                  ) : null}
+
+                  {/* Charts */}
+                  {b.runStatus === 'completed' && equity.length > 0 ? (
+                    <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+                      <div>
+                        <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                          <span>Equity curve</span>
+                          <span className="font-mono">{equity.length} pts</span>
+                        </div>
+                        <EquityCurveChart data={equity} height={200} />
+                      </div>
+                      <div>
+                        <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                          <span>Drawdown</span>
+                          <span className="font-mono">{drawdowns.length} pts</span>
+                        </div>
+                        <DrawdownChart data={drawdowns} height={200} />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Trades summary */}
+                  {b.runStatus === 'completed' && b.trades && b.trades.length > 0 ? (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                        {b.trades.length} trade{b.trades.length > 1 ? 's' : ''} ▾
+                      </summary>
+                      <div className="mt-2 max-h-44 overflow-auto rounded border border-border/50 bg-surface-1">
+                        <table className="w-full text-[11px]">
+                          <thead className="text-muted-foreground/70">
+                            <tr className="border-b border-border/40">
+                              <th className="px-2 py-1 text-left">Entry</th>
+                              <th className="px-2 py-1 text-left">Exit</th>
+                              <th className="px-2 py-1 text-right">Side</th>
+                              <th className="px-2 py-1 text-right">PnL</th>
+                              <th className="px-2 py-1 text-right">PnL %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="font-financial">
+                            {b.trades.slice(0, 50).map((t, i) => {
+                              const tr = t as Record<string, unknown>
+                              const pnl = Number(tr.pnl ?? 0)
+                              const pnlPct = Number(tr.pnl_pct ?? tr.pnlPct ?? 0)
+                              return (
+                                <tr key={i} className="border-b border-border/20">
+                                  <td className="px-2 py-1">{String(tr.entry_date ?? tr.entryDate ?? '')}</td>
+                                  <td className="px-2 py-1">{String(tr.exit_date ?? tr.exitDate ?? '')}</td>
+                                  <td className="px-2 py-1 text-right">{String(tr.side ?? 'long')}</td>
+                                  <td className={`px-2 py-1 text-right ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}>
+                                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                                  </td>
+                                  <td className={`px-2 py-1 text-right ${pnlPct >= 0 ? 'text-positive' : 'text-negative'}`}>
+                                    {pnlPct >= 0 ? '+' : ''}{(pnlPct * 100).toFixed(2)}%
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  ) : null}
+
+                  {b.runStatus === 'failed' && b.errorSummary ? (
+                    <div className="mt-2 text-xs text-red-400">{b.errorSummary}</div>
+                  ) : null}
+
+                  {/* Per-result caveats */}
+                  <div className="mt-3 text-[10px] text-amber-400/70">
+                    Backtest is a simulation, not a prediction. Technical strategies are experimental.
+                    Social signals alone are weak evidence.
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Panel>
+
+      {/* Scenarios */}
+      <Panel title="Paper Scenarios">
+        {scenariosLoading ? (
+          <div className="text-sm text-muted-foreground">Loading scenarios...</div>
+        ) : scenarios.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No scenarios yet. Create one from a signal or manually.</div>
+        ) : (
+          <div className="space-y-2">
+            {(scenarios as TradingLabScenario[]).map((s: TradingLabScenario) => (
+              <div key={s.id} className="rounded-md border border-border bg-surface-0 p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">{s.name}</span>
+                  <StatusBadge status={s.status} />
+                </div>
+                {s.thesis ? (
+                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.thesis}</div>
+                ) : null}
+                {s.invalidationCriteria ? (
+                  <div className="text-xs text-red-400/70 mt-1">
+                    Invalidation: {s.invalidationCriteria}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {/* Capabilities / risk caveats */}
+      {capabilities?.caveats && capabilities.caveats.length > 0 && (
+        <Panel title="Risk & Caveats">
+          <ul className="space-y-1">
+            {capabilities.caveats.map((c: string, i: number) => (
+              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                <span className="text-amber-400 mt-0.5">&#9679;</span>
+                {c}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+    </div>
+  )
+}

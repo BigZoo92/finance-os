@@ -308,6 +308,20 @@ TRADING_TECHNICAL = [
     ("RiskMetric", "Lookahead bias", "Using information in a backtest that was unavailable at the decision time.", ["backtesting", "risk"]),
     ("RiskMetric", "Data snooping", "Repeated testing until a coincidental pattern appears significant.", ["backtesting", "risk"]),
     ("RiskMetric", "Regime change", "Shift in market behavior that invalidates assumptions learned from prior periods.", ["backtesting", "risk"]),
+    ("RiskMetric", "Calmar ratio", "Annualized return divided by maximum drawdown. Higher is better risk-adjusted.", ["risk", "returns", "paper-trading-only"]),
+    ("RiskMetric", "Walk-forward validation", "Testing a strategy on sequential out-of-sample windows to reduce overfitting.", ["backtesting", "validation", "paper-trading-only"]),
+    ("RiskMetric", "Out-of-sample testing", "Evaluating a strategy on data not used for parameter selection.", ["backtesting", "validation", "paper-trading-only"]),
+    ("RiskMetric", "Transaction cost modeling", "Realistic fee, slippage and spread assumptions in backtest simulations.", ["backtesting", "cost", "paper-trading-only"]),
+    ("RiskMetric", "Backtest vs live gap", "Performance difference between historical simulation and real execution due to costs, latency and behavior.", ["backtesting", "risk", "paper-trading-only"]),
+    ("RiskMetric", "Risk of ruin", "Probability of losing a specified fraction of capital under a given strategy.", ["risk", "advanced", "paper-trading-only"]),
+    ("FinancialConcept", "Position sizing", "Determining trade size based on risk budget, volatility and account equity.", ["risk-management", "paper-trading-only"]),
+    ("FinancialConcept", "Stop-loss and trailing stop", "Order types that limit downside by exiting positions at predefined loss thresholds.", ["risk-management", "paper-trading-only"]),
+    ("FinancialConcept", "Volatility regime detection", "Identifying whether the market is in a low, normal or high volatility state to adapt strategy behavior.", ["technical-analysis", "experimental", "paper-trading-only"]),
+    ("FinancialConcept", "Breakout and false breakout", "Price movement beyond a range boundary, which may be genuine or quickly reversed.", ["technical-analysis", "experimental", "paper-trading-only"]),
+    ("Indicator", "ATR Average True Range", "Volatility indicator measuring the average range of price movement over a period.", ["technical-analysis", "indicator", "paper-trading-only"]),
+    ("Indicator", "Bollinger Bands", "Volatility bands plotted at standard deviations above and below a moving average.", ["technical-analysis", "indicator", "paper-trading-only"]),
+    ("Indicator", "RSI Relative Strength Index", "Momentum oscillator measuring speed and magnitude of recent price changes, 0-100 scale.", ["technical-analysis", "indicator", "paper-trading-only"]),
+    ("Indicator", "MACD", "Moving Average Convergence Divergence. Trend-following momentum indicator using EMA differences.", ["technical-analysis", "indicator", "paper-trading-only"]),
 ]
 
 AGENTIC_AND_MODEL_MEMORY = [
@@ -464,6 +478,14 @@ def build_seed_ingest(mode: str = "demo") -> KnowledgeIngestRequest:
     connect("INVALIDATES", "Survivorship bias", "Backtesting bias", "Survivorship bias invalidates backtest evidence.", 0.8)
     connect("INVALIDATES", "Overfitting", "Backtesting bias", "Overfitting weakens backtest evidence.", 0.8)
     connect("INVALIDATES", "Regime change", "Trend momentum mean reversion", "A regime change can invalidate a strategy family.", 0.68)
+    connect("USES_FORMULA", "Calmar ratio", "CAGR", "Calmar uses CAGR as numerator.", 0.82)
+    connect("USES_FORMULA", "Calmar ratio", "Max drawdown", "Calmar uses max drawdown as denominator.", 0.82)
+    connect("MITIGATES", "Walk-forward validation", "Overfitting", "Walk-forward testing reduces overfitting risk.", 0.84)
+    connect("MITIGATES", "Out-of-sample testing", "Data snooping", "OOS testing reduces data snooping risk.", 0.82)
+    connect("IMPACTS", "Transaction cost modeling", "Backtest vs live gap", "Realistic cost modeling narrows the backtest-live gap.", 0.78)
+    connect("REQUIRES_ASSUMPTION", "Position sizing", "Kelly criterion", "Position sizing may reference Kelly but requires strong caveats.", 0.68)
+    connect("MITIGATES", "Stop-loss and trailing stop", "Max drawdown", "Stops can limit drawdown depth.", 0.72)
+    connect("IMPACTS", "Volatility regime detection", "Trend momentum mean reversion", "Regime detection can inform strategy selection.", 0.7)
 
     return KnowledgeIngestRequest(
         mode=mode,  # type: ignore[arg-type]

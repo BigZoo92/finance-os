@@ -331,6 +331,10 @@ const registerAppRoutes = (app: Elysia) => {
         knowledgeGraphRetrievalMode: env.KNOWLEDGE_GRAPH_RETRIEVAL_MODE,
         knowledgeGraphMaxPathDepth: env.KNOWLEDGE_GRAPH_MAX_PATH_DEPTH,
         knowledgeGraphMinConfidence: env.KNOWLEDGE_GRAPH_MIN_CONFIDENCE,
+        quantServiceEnabled: env.QUANT_SERVICE_ENABLED,
+        quantServiceUrl: env.QUANT_SERVICE_URL,
+        quantServiceTimeoutMs: env.QUANT_SERVICE_TIMEOUT_MS,
+        tradingLabGraphIngestEnabled: env.TRADING_LAB_GRAPH_INGEST_ENABLED,
       })
     )
     .use(

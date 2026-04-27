@@ -25,6 +25,7 @@
 | `/ia` | **Advisor** | Brief quotidien, recommandations, métriques, navigation IA | `dashboardAdvisor*`, `dashboardAdvisorRecommendations`, `dashboardAdvisorSpend` |
 | `/ia/chat` | **Chat finance** | Conversation financière avec contexte + Q&A pédagogique | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics` |
 | `/ia/memoire` | **Mémoire & connaissances** | Graphe temporel, recherche hybride, provenance, contexte bundle | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
+| `/ia/trading-lab` | **Trading Lab** | Paper-trading, backtesting, stratégies, scénarios (paper-only) | `tradingLabStrategies`, `tradingLabBacktests`, `tradingLabScenarios`, `tradingLabCapabilities`, `attentionItems` |
 | `/ia/couts` | **Coûts IA** | Tokens, modèles, budget, runs (admin-only) | `dashboardAdvisorSpend`, `dashboardAdvisorRuns` |
 
 ### Section 3 : Données & signaux
