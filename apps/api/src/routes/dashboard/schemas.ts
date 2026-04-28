@@ -142,13 +142,22 @@ export const dashboardAdvisorKnowledgeQueryBodySchema = t.Object({
   includeEvidence: t.Optional(t.Boolean()),
 })
 
-export const dashboardAdvisorKnowledgeContextBundleBodySchema = t.Intersect([
-  dashboardAdvisorKnowledgeQueryBodySchema,
-  t.Object({
-    maxTokens: t.Optional(t.Numeric({ minimum: 128, maximum: 12000 })),
-    advisorTask: t.Optional(t.String({ minLength: 1, maxLength: 240 })),
+export const dashboardAdvisorKnowledgeContextBundleBodySchema = t.Object({
+  query: t.String({
+    minLength: 1,
+    maxLength: 1000,
+    pattern: '^(?=.*\\S).+$',
   }),
-])
+  mode: t.Optional(dashboardAdvisorKnowledgeModeSchema),
+  filters: t.Optional(t.Record(t.String({ minLength: 1, maxLength: 80 }), t.Any())),
+  maxResults: t.Optional(t.Numeric({ minimum: 1, maximum: 64 })),
+  maxPathDepth: t.Optional(t.Numeric({ minimum: 0, maximum: 5 })),
+  retrievalMode: t.Optional(dashboardAdvisorKnowledgeRetrievalModeSchema),
+  includeContradictions: t.Optional(t.Boolean()),
+  includeEvidence: t.Optional(t.Boolean()),
+  maxTokens: t.Optional(t.Numeric({ minimum: 128, maximum: 12000 })),
+  advisorTask: t.Optional(t.String({ minLength: 1, maxLength: 240 })),
+})
 
 export const dashboardAdvisorKnowledgeExplainBodySchema = t.Object({
   id: t.String({
