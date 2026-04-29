@@ -90,6 +90,10 @@ const createPowensRuntime = ({
   repositories: {
     connection: {
       upsertConnectedConnection: async () => {},
+      disconnectConnection: async ({ connectionId }) => ({
+        disconnected: true,
+        connectionId,
+      }),
       listConnectionStatuses: async () => [createConnectionStatus()],
       listSyncRuns: async () => [],
     },
@@ -111,6 +115,10 @@ const createPowensRuntime = ({
     listStatuses: listStatuses ?? (async () => [createConnectionStatus()]),
     listSyncRuns: async () => [],
     getSyncBacklogCount: async () => 0,
+    disconnectConnection: async connectionId => ({
+      disconnected: true,
+      connectionId,
+    }),
   },
 })
 

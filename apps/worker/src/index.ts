@@ -15,8 +15,13 @@ import {
 } from '@finance-os/powens'
 import { buildRuntimeHealthWithFlags, resolveRuntimeVersion } from '@finance-os/prelude'
 import { createRedisClient } from '@finance-os/redis'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { env } from './env'
+import {
+  collectNormalizedIbans,
+  dedupePowensAccountRows,
+  normalizePowensIban,
+} from './powens-account-dedupe'
 import {
   startDashboardMarketsScheduler,
   triggerDashboardMarketsRefresh,
@@ -25,15 +30,9 @@ import {
   startDashboardAdvisorScheduler,
   triggerDashboardAdvisorDailyRun,
 } from './advisor-daily-scheduler'
-import {
-  startDashboardNewsScheduler,
-  triggerDashboardNewsIngest,
-} from './news-ingest-scheduler'
+import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
 import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
-import {
-  startSocialSignalScheduler,
-  triggerSocialSignalIngest,
-} from './social-signal-scheduler'
+import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
 import {
   startAttentionRebuildScheduler,
   triggerAttentionRebuild,
@@ -167,7 +166,12 @@ const startStatusServer = () => {
   })
 
   statusServer.listen(WORKER_STATUS_PORT, WORKER_STATUS_HOST)
-  console.log(`[worker] status server: http://${WORKER_STATUS_HOST}:${WORKER_STATUS_PORT}`)
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker status server listening',
+    host: WORKER_STATUS_HOST,
+    port: WORKER_STATUS_PORT,
+  })
 }
 
 const formatDate = (value: Date) => value.toISOString().slice(0, 10)
@@ -482,6 +486,126 @@ const dedupeRowsByKey = <T>(rows: T[], getKey: (row: T) => string): T[] => {
   return dedupedRows
 }
 
+const disableSupersededPowensAccounts = async ({
+  connectionId,
+  accounts,
+  now,
+}: {
+  connectionId: string
+  accounts: Array<{
+    iban: string | null
+    enabled: boolean
+  }>
+  now: Date
+}) => {
+  const activeIbans = collectNormalizedIbans(accounts.filter(account => account.enabled))
+  if (activeIbans.size === 0) {
+    return
+  }
+
+  const existingAccounts = await dbClient.db
+    .select({
+      powensConnectionId: schema.financialAccount.powensConnectionId,
+      powensAccountId: schema.financialAccount.powensAccountId,
+      iban: schema.financialAccount.iban,
+    })
+    .from(schema.financialAccount)
+    .where(
+      and(
+        eq(schema.financialAccount.provider, 'powens'),
+        eq(schema.financialAccount.enabled, true),
+        ne(schema.financialAccount.powensConnectionId, connectionId)
+      )
+    )
+
+  const supersededAccounts = existingAccounts.filter(account => {
+    const normalizedIban = normalizePowensIban(account.iban)
+    return normalizedIban ? activeIbans.has(normalizedIban) : false
+  })
+
+  if (supersededAccounts.length === 0) {
+    return
+  }
+
+  const supersededAccountIds = [
+    ...new Set(supersededAccounts.map(account => account.powensAccountId)),
+  ]
+  const supersededConnectionIds = [
+    ...new Set(supersededAccounts.map(account => account.powensConnectionId)),
+  ]
+
+  await dbClient.db
+    .update(schema.financialAccount)
+    .set({
+      enabled: false,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        inArray(schema.financialAccount.powensAccountId, supersededAccountIds),
+        inArray(schema.financialAccount.powensConnectionId, supersededConnectionIds)
+      )
+    )
+
+  await dbClient.db
+    .update(schema.asset)
+    .set({
+      enabled: false,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        inArray(schema.asset.powensAccountId, supersededAccountIds),
+        inArray(schema.asset.powensConnectionId, supersededConnectionIds)
+      )
+    )
+
+  const remainingActiveRows = await dbClient.db
+    .select({
+      powensConnectionId: schema.financialAccount.powensConnectionId,
+      activeAccountCount: sql<number>`count(*)::int`,
+    })
+    .from(schema.financialAccount)
+    .where(
+      and(
+        inArray(schema.financialAccount.powensConnectionId, supersededConnectionIds),
+        eq(schema.financialAccount.enabled, true)
+      )
+    )
+    .groupBy(schema.financialAccount.powensConnectionId)
+
+  const activeConnectionIds = new Set(
+    remainingActiveRows.filter(row => row.activeAccountCount > 0).map(row => row.powensConnectionId)
+  )
+  const fullySupersededConnectionIds = supersededConnectionIds.filter(
+    supersededConnectionId => !activeConnectionIds.has(supersededConnectionId)
+  )
+
+  if (fullySupersededConnectionIds.length > 0) {
+    await dbClient.db
+      .update(schema.powensConnection)
+      .set({
+        archivedAt: now,
+        archivedReason: 'duplicate_account_replaced',
+        updatedAt: now,
+      })
+      .where(
+        and(
+          inArray(schema.powensConnection.powensConnectionId, fullySupersededConnectionIds),
+          isNull(schema.powensConnection.archivedAt)
+        )
+      )
+  }
+
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker disabled superseded Powens accounts',
+    connectionId,
+    supersededAccountCount: supersededAccountIds.length,
+    supersededConnectionCount: fullySupersededConnectionIds.length,
+  })
+}
+
 const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) => {
   if (accounts.length === 0) {
     return []
@@ -523,10 +647,13 @@ const upsertAccounts = async (connectionId: string, accounts: PowensAccount[]) =
     return []
   }
 
-  const dedupedAccounts = dedupeRowsByKey(
-    normalizedAccounts,
-    account => `${account.providerConnectionId}|${account.powensAccountId}`
-  )
+  const dedupedAccounts = dedupePowensAccountRows(normalizedAccounts)
+
+  await disableSupersededPowensAccounts({
+    connectionId,
+    accounts: dedupedAccounts,
+    now,
+  })
 
   const accountValues = dedupedAccounts.map(account => ({
     source: account.source,
@@ -622,8 +749,7 @@ const upsertProviderRawImports = async (rows: ProviderRawImportInsert[]) => {
 
   const dedupedRows = dedupeRowsByKey(
     rows,
-    row =>
-      `${row.provider}|${row.providerConnectionId}|${row.objectType}|${row.externalObjectId}`
+    row => `${row.provider}|${row.providerConnectionId}|${row.objectType}|${row.externalObjectId}`
   )
 
   await dbClient.db
@@ -773,10 +899,26 @@ const syncConnection = async (params: {
         lastSuccessAt: schema.powensConnection.lastSuccessAt,
       })
       .from(schema.powensConnection)
-      .where(eq(schema.powensConnection.powensConnectionId, connectionId))
+      .where(
+        and(
+          eq(schema.powensConnection.powensConnectionId, connectionId),
+          isNull(schema.powensConnection.archivedAt)
+        )
+      )
       .limit(1)
 
     if (!connection) {
+      await recordSyncRunEnded({
+        runId,
+        result: 'success',
+      })
+      logWorkerEvent({
+        level: 'info',
+        msg: 'worker connection sync skipped for archived or missing connection',
+        connectionId,
+        requestId: requestId ?? 'n/a',
+        syncId: runId,
+      })
       return
     }
 
@@ -1163,6 +1305,7 @@ const syncAllConnections = async (requestId?: string) => {
       lastSyncAttemptAt: schema.powensConnection.lastSyncAttemptAt,
     })
     .from(schema.powensConnection)
+    .where(isNull(schema.powensConnection.archivedAt))
 
   for (const connection of connections) {
     if (

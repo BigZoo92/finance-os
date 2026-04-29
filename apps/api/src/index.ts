@@ -12,6 +12,11 @@ import {
   isInternalTokenValid,
   readInternalTokenFromRequest,
 } from './auth/guard'
+import {
+  createAllowedBrowserOrigins,
+  isSameOriginMutationRequest,
+  isUnsafeHttpMethod,
+} from './auth/origin'
 import { createAuthRoutes } from './auth/routes'
 import { env } from './env'
 import { isApiDebugEnabled, logApiEvent, toErrorLogFields } from './observability/logger'
@@ -21,6 +26,7 @@ import { createEnrichmentRoutes } from './routes/enrichment/router'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createNotificationsRoutes } from './routes/notifications/router'
 import { registerSystemRoutes } from './routes/system'
+import { applyApiSecurityHeaders, createApiSecurityHeaders } from './security/http-headers'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -466,6 +472,7 @@ const buildApiErrorResponse = ({
     {
       status,
       headers: {
+        ...createApiSecurityHeaders({ nodeEnv: env.NODE_ENV }),
         'content-type': 'application/json',
         'cache-control': 'no-store',
         'x-request-id': requestId,
@@ -518,6 +525,7 @@ const app = new Elysia()
     }
 
     context.set.status = 401
+    applyApiSecurityHeaders(context.set.headers, { nodeEnv: env.NODE_ENV })
     const requestId = getRequestMeta(context).requestId
     logApiEvent({
       level: 'warn',
@@ -537,6 +545,61 @@ const app = new Elysia()
       requestId,
     }
   })
+  .onBeforeHandle(context => {
+    if (context.request.method === 'OPTIONS') {
+      return
+    }
+
+    if (!isUnsafeHttpMethod(context.request.method)) {
+      return
+    }
+
+    if (getInternalAuth(context).hasValidToken) {
+      return
+    }
+
+    const allowedOrigins = createAllowedBrowserOrigins({
+      requestUrl: context.request.url,
+      webOrigin: env.WEB_ORIGIN,
+      nodeEnv: env.NODE_ENV,
+    })
+
+    if (
+      isSameOriginMutationRequest({
+        request: context.request,
+        allowedOrigins,
+      })
+    ) {
+      return
+    }
+
+    const route = toPathname(context.request)
+    const requestId = getRequestMeta(context).requestId
+    context.set.status = 403
+    context.set.headers['cache-control'] = 'no-store'
+    context.set.headers['x-request-id'] = requestId
+    applyApiSecurityHeaders(context.set.headers, { nodeEnv: env.NODE_ENV })
+
+    logApiEvent({
+      level: 'warn',
+      msg: 'api request denied by csrf origin guard',
+      route,
+      method: context.request.method,
+      status: 403,
+      requestId,
+      originPresent: Boolean(context.request.headers.get('origin')),
+      refererPresent: Boolean(context.request.headers.get('referer')),
+      errName: 'CsrfOriginForbidden',
+      errMessage: 'Unsafe browser mutation requires a same-origin Origin or Referer header',
+    })
+
+    return {
+      ok: false,
+      code: 'CSRF_ORIGIN_FORBIDDEN',
+      message: 'Unsafe browser mutation requires a same-origin Origin or Referer header',
+      requestId,
+    }
+  })
   .onAfterHandle(context => {
     const requestId = getRequestMeta(context).requestId
     const startedAtMs = getRequestMeta(context).startedAtMs
@@ -545,7 +608,7 @@ const app = new Elysia()
     const userMode = resolveUserMode(context)
     const route = toPathname(context.request)
     const method = context.request.method
-    context.set.headers['x-robots-tag'] = 'noindex, nofollow, noarchive'
+    applyApiSecurityHeaders(context.set.headers, { nodeEnv: env.NODE_ENV })
     context.set.headers['x-request-id'] = requestId
     if (shouldSetNoStore(route)) {
       context.set.headers['cache-control'] = 'no-store'
@@ -639,6 +702,7 @@ const app = new Elysia()
     const userMode = resolveUserMode(context)
     const route = toPathname(context.request)
     context.set.headers['x-request-id'] = requestId
+    applyApiSecurityHeaders(context.set.headers, { nodeEnv: env.NODE_ENV })
     if (shouldSetNoStore(route)) {
       context.set.headers['cache-control'] = 'no-store'
     }

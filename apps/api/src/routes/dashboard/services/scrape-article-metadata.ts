@@ -1,3 +1,5 @@
+import { lookup } from 'node:dns/promises'
+import { isIP } from 'node:net'
 import { load } from 'cheerio'
 import {
   canonicalizeUrl,
@@ -8,6 +10,185 @@ import {
 import type { NewsMetadataCard, NewsMetadataFetchStatus } from '../domain/news-types'
 
 const HEAD_END_PATTERN = /<\/head>/i
+const MAX_METADATA_REDIRECTS = 3
+
+type MetadataFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+type ResolveMetadataHostname = (hostname: string) => Promise<string[]>
+
+class UnsafeMetadataUrlError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'UnsafeMetadataUrlError'
+  }
+}
+
+const resolveHostnameWithDns: ResolveMetadataHostname = async hostname => {
+  const addresses = await lookup(hostname, {
+    all: true,
+    verbatim: true,
+  })
+
+  return addresses.map(address => address.address)
+}
+
+const parseIpv4Parts = (address: string) => {
+  const parts = address.split('.')
+  if (parts.length !== 4) {
+    return null
+  }
+
+  const parsed = parts.map(part => {
+    if (!/^\d{1,3}$/.test(part)) {
+      return null
+    }
+
+    const value = Number(part)
+    return Number.isInteger(value) && value >= 0 && value <= 255 ? value : null
+  })
+
+  if (parsed.some(value => value === null)) {
+    return null
+  }
+
+  return parsed as [number, number, number, number]
+}
+
+export const isBlockedMetadataAddress = (address: string) => {
+  const normalized = address
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+  const ipv4Mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)
+  const ipv4Address = ipv4Mapped?.[1] ?? normalized
+  const ipv4 = parseIpv4Parts(ipv4Address)
+
+  if (ipv4) {
+    const [a, b] = ipv4
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      a >= 224
+    )
+  }
+
+  return (
+    normalized === '::' ||
+    normalized === '::1' ||
+    normalized.startsWith('fe80:') ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd')
+  )
+}
+
+const assertSafeMetadataUrl = async ({
+  url,
+  resolveHostname,
+}: {
+  url: string
+  resolveHostname: ResolveMetadataHostname
+}) => {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new UnsafeMetadataUrlError('metadata URL is invalid')
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new UnsafeMetadataUrlError('metadata URL protocol is not allowed')
+  }
+
+  const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) {
+    throw new UnsafeMetadataUrlError('metadata URL hostname is local')
+  }
+
+  if (isIP(hostname)) {
+    if (isBlockedMetadataAddress(hostname)) {
+      throw new UnsafeMetadataUrlError('metadata URL address is private')
+    }
+    return parsed
+  }
+
+  const addresses = await resolveHostname(hostname)
+  if (addresses.length === 0 || addresses.some(isBlockedMetadataAddress)) {
+    throw new UnsafeMetadataUrlError('metadata URL resolves to a private address')
+  }
+
+  return parsed
+}
+
+const fetchSafeMetadataResponse = async ({
+  url,
+  requestId,
+  timeoutMs,
+  userAgent,
+  fetchImpl,
+  resolveHostname,
+  redirectsRemaining,
+}: {
+  url: string
+  requestId: string
+  timeoutMs: number
+  userAgent: string
+  fetchImpl: MetadataFetch
+  resolveHostname: ResolveMetadataHostname
+  redirectsRemaining: number
+}): Promise<{
+  response: Response
+  finalUrl: string
+}> => {
+  const parsedUrl = await assertSafeMetadataUrl({
+    url,
+    resolveHostname,
+  })
+
+  const response = await fetchImpl(parsedUrl, {
+    signal: AbortSignal.timeout(timeoutMs),
+    redirect: 'manual',
+    credentials: 'omit',
+    headers: {
+      accept: 'text/html,application/xhtml+xml',
+      'user-agent': userAgent,
+      'x-request-id': requestId,
+    },
+  })
+
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get('location')
+    if (!location) {
+      return {
+        response,
+        finalUrl: parsedUrl.toString(),
+      }
+    }
+
+    if (redirectsRemaining <= 0) {
+      throw new UnsafeMetadataUrlError('metadata redirect limit exceeded')
+    }
+
+    return fetchSafeMetadataResponse({
+      url: new URL(location, parsedUrl).toString(),
+      requestId,
+      timeoutMs,
+      userAgent,
+      fetchImpl,
+      resolveHostname,
+      redirectsRemaining: redirectsRemaining - 1,
+    })
+  }
+
+  return {
+    response,
+    finalUrl: parsedUrl.toString(),
+  }
+}
 
 const readPartialBody = async ({
   response,
@@ -110,9 +291,7 @@ const resolveAbsoluteUrl = (baseUrl: string, candidate: string | null) => {
 }
 
 const resolveAbsoluteUrls = (baseUrl: string, candidates: Array<string | null>) => {
-  return uniqueStrings(
-    candidates.map(candidate => resolveAbsoluteUrl(baseUrl, candidate))
-  )
+  return uniqueStrings(candidates.map(candidate => resolveAbsoluteUrl(baseUrl, candidate)))
 }
 
 const buildDefaultFaviconUrl = (value: string) => {
@@ -187,8 +366,7 @@ const parseJsonLd = ($: ReturnType<typeof load>) => {
                   typeof (entry.author as { name?: unknown }).name === 'string'
                 ? (entry.author as { name: string }).name
                 : null,
-          publishedAt:
-            typeof entry.datePublished === 'string' ? entry.datePublished : null,
+          publishedAt: typeof entry.datePublished === 'string' ? entry.datePublished : null,
           imageCandidates: extractJsonLdImageCandidates(entry.image),
         }
       }
@@ -224,12 +402,16 @@ export const scrapeArticleMetadata = async ({
   timeoutMs,
   maxBytes,
   userAgent,
+  fetchImpl = fetch,
+  resolveHostname = resolveHostnameWithDns,
 }: {
   url: string
   requestId: string
   timeoutMs: number
   maxBytes: number
   userAgent: string
+  fetchImpl?: MetadataFetch
+  resolveHostname?: ResolveMetadataHostname
 }): Promise<{
   status: NewsMetadataFetchStatus
   card: NewsMetadataCard
@@ -238,19 +420,22 @@ export const scrapeArticleMetadata = async ({
   const minimalCard = buildMinimalCard(url)
 
   try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(timeoutMs),
-      redirect: 'follow',
-      headers: {
-        accept: 'text/html,application/xhtml+xml',
-        'user-agent': userAgent,
-        'x-request-id': requestId,
-      },
+    const { response, finalUrl } = await fetchSafeMetadataResponse({
+      url,
+      requestId,
+      timeoutMs,
+      userAgent,
+      fetchImpl,
+      resolveHostname,
+      redirectsRemaining: MAX_METADATA_REDIRECTS,
     })
 
     if (!response.ok) {
       return {
-        status: response.status === 401 || response.status === 403 || response.status === 429 ? 'skipped' : 'failed',
+        status:
+          response.status === 401 || response.status === 403 || response.status === 429
+            ? 'skipped'
+            : 'failed',
         card: minimalCard,
         fetchedAt: null,
       }
@@ -272,10 +457,7 @@ export const scrapeArticleMetadata = async ({
     const $ = load(html)
     const jsonLd = parseJsonLd($)
     const title = trimToLength(
-      resolveMetaContent($, [
-        'meta[property="og:title"]',
-        'meta[name="twitter:title"]',
-      ]) ??
+      resolveMetaContent($, ['meta[property="og:title"]', 'meta[name="twitter:title"]']) ??
         $('title').text().trim() ??
         minimalCard.title,
       240
@@ -288,11 +470,11 @@ export const scrapeArticleMetadata = async ({
       ]) ?? null
 
     const canonicalUrl = resolveAbsoluteUrl(
-      url,
+      finalUrl,
       resolveLinkHref($, ['link[rel="canonical"]']) ??
         resolveMetaContent($, ['meta[property="og:url"]'])
     )
-    const imageCandidates = resolveAbsoluteUrls(url, [
+    const imageCandidates = resolveAbsoluteUrls(finalUrl, [
       ...collectMetaContents($, [
         'meta[property="og:image:secure_url"]',
         'meta[property="og:image:url"]',
@@ -306,12 +488,10 @@ export const scrapeArticleMetadata = async ({
     ])
     const imageUrl = imageCandidates[0] ?? null
     const imageAlt =
-      resolveMetaContent($, [
-        'meta[property="og:image:alt"]',
-        'meta[name="twitter:image:alt"]',
-      ]) ?? null
-    const defaultFaviconUrl = buildDefaultFaviconUrl(url)
-    const faviconCandidates = resolveAbsoluteUrls(url, [
+      resolveMetaContent($, ['meta[property="og:image:alt"]', 'meta[name="twitter:image:alt"]']) ??
+      null
+    const defaultFaviconUrl = buildDefaultFaviconUrl(finalUrl)
+    const faviconCandidates = resolveAbsoluteUrls(finalUrl, [
       ...collectLinkHrefs($, [
         'link[rel="icon"]',
         'link[rel="shortcut icon"]',
@@ -326,16 +506,12 @@ export const scrapeArticleMetadata = async ({
     const faviconUrl = faviconCandidates[0] ?? null
     const siteName =
       resolveMetaContent($, ['meta[property="og:site_name"]']) ??
-      extractHostname(canonicalUrl ?? url)
+      extractHostname(canonicalUrl ?? finalUrl)
     const author =
       jsonLd?.author ??
-      resolveMetaContent($, [
-        'meta[name="author"]',
-        'meta[property="article:author"]',
-      ])
+      resolveMetaContent($, ['meta[name="author"]', 'meta[property="article:author"]'])
     const publishedAt =
-      jsonLd?.publishedAt ??
-      resolveMetaContent($, ['meta[property="article:published_time"]'])
+      jsonLd?.publishedAt ?? resolveMetaContent($, ['meta[property="article:published_time"]'])
 
     return {
       status: 'fetched',
@@ -347,7 +523,7 @@ export const scrapeArticleMetadata = async ({
         imageCandidates,
         imageAlt,
         siteName,
-        displayUrl: extractHostname(canonicalUrl ?? url) ?? url,
+        displayUrl: extractHostname(canonicalUrl ?? finalUrl) ?? finalUrl,
         faviconUrl,
         faviconCandidates,
         publishedAt,
@@ -356,9 +532,9 @@ export const scrapeArticleMetadata = async ({
       },
       fetchedAt: new Date(),
     }
-  } catch {
+  } catch (error) {
     return {
-      status: 'failed',
+      status: error instanceof UnsafeMetadataUrlError ? 'skipped' : 'failed',
       card: minimalCard,
       fetchedAt: null,
     }

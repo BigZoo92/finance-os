@@ -356,11 +356,14 @@ Service:
 Strategie:
 
 - fetch server-side
+- URL publique uniquement: `http:`/`https:`, pas de `localhost`, IP privees, loopback, link-local, metadata IPs, ni redirection vers ces cibles
+- redirections manuelles bornees
 - timeout strict
 - taille max stricte
 - lecture partielle du `head`
 - pas de headless browser
 - fallback minimal si HTML indisponible, non HTML, ou site restreint
+- aucun cookie/token interne n'est transmis aux URLs externes
 
 Champs extraits:
 

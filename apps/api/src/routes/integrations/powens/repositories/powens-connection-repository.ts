@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { desc } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import type { ApiDb, PowensConnectionRepository, PowensSyncRunView, RedisClient } from '../types'
 
 const SYNC_RUNS_LIST_KEY = 'powens:metrics:sync:runs'
@@ -44,6 +44,8 @@ export const createPowensConnectionRepository = (
           accessTokenEncrypted: encryptedAccessToken,
           status: 'connected',
           lastError: null,
+          archivedAt: null,
+          archivedReason: null,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -55,9 +57,53 @@ export const createPowensConnectionRepository = (
             accessTokenEncrypted: encryptedAccessToken,
             status: 'connected',
             lastError: null,
+            archivedAt: null,
+            archivedReason: null,
             updatedAt: now,
           },
         })
+    },
+
+    async disconnectConnection({ connectionId, now, reason }) {
+      const updated = await db.transaction(async tx => {
+        const disconnectedConnections = await tx
+          .update(schema.powensConnection)
+          .set({
+            archivedAt: now,
+            archivedReason: reason,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(schema.powensConnection.powensConnectionId, connectionId),
+              isNull(schema.powensConnection.archivedAt)
+            )
+          )
+          .returning({ powensConnectionId: schema.powensConnection.powensConnectionId })
+
+        await tx
+          .update(schema.financialAccount)
+          .set({
+            enabled: false,
+            updatedAt: now,
+          })
+          .where(eq(schema.financialAccount.powensConnectionId, connectionId))
+
+        await tx
+          .update(schema.asset)
+          .set({
+            enabled: false,
+            updatedAt: now,
+          })
+          .where(eq(schema.asset.powensConnectionId, connectionId))
+
+        return disconnectedConnections
+      })
+
+      return {
+        disconnected: updated.length > 0,
+        connectionId,
+      }
     },
 
     async listConnectionStatuses() {
@@ -83,6 +129,7 @@ export const createPowensConnectionRepository = (
           updatedAt: schema.powensConnection.updatedAt,
         })
         .from(schema.powensConnection)
+        .where(isNull(schema.powensConnection.archivedAt))
         .orderBy(desc(schema.powensConnection.createdAt))
     },
 

@@ -13,6 +13,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 import {
+  deletePowensConnection,
   fetchPowensAuditTrail,
   postPowensSync,
   fetchPowensStatus,
@@ -146,5 +147,23 @@ describe("powens API fallbacks", () => {
         fullResync: true,
       }),
     });
+  });
+
+  it("calls the connection disconnect endpoint with DELETE", async () => {
+    apiFetchMock.mockResolvedValue({
+      ok: true,
+      requestId: "req-disconnect",
+      connectionId: "conn-1",
+      disconnected: true,
+    });
+
+    await deletePowensConnection("conn-1");
+
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      "/integrations/powens/connections/conn-1",
+      {
+        method: "DELETE",
+      },
+    );
   });
 });

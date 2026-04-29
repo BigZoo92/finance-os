@@ -1,4 +1,5 @@
 import { createHandlePowensCallbackUseCase } from './domain/create-handle-callback-use-case'
+import { createDisconnectConnectionUseCase } from './domain/create-disconnect-connection-use-case'
 import { createListStatusesUseCase } from './domain/create-list-statuses-use-case'
 import { createListSyncRunsUseCase } from './domain/create-list-sync-runs-use-case'
 import { createRequestSyncUseCase } from './domain/create-request-sync-use-case'
@@ -27,7 +28,10 @@ export const createPowensRouteRuntime = ({
   const connection = createPowensConnectionRepository(db, redisClient)
   const diagnosticsMetrics = createDiagnosticsMetrics(redisClient)
   const jobs = createPowensJobQueueRepository(redisClient)
-  const syncGuard = createPowensSyncGuardRepository(redisClient, env.POWENS_MANUAL_SYNC_COOLDOWN_SECONDS)
+  const syncGuard = createPowensSyncGuardRepository(
+    redisClient,
+    env.POWENS_MANUAL_SYNC_COOLDOWN_SECONDS
+  )
 
   const handleCallback = createHandlePowensCallbackUseCase({
     exchangeCodeForToken: client.exchangeCodeForToken,
@@ -40,6 +44,10 @@ export const createPowensRouteRuntime = ({
     enqueueConnectionSync: jobs.enqueueConnectionSync,
     enqueueAllConnectionsSync: jobs.enqueueAllConnectionsSync,
     acquireManualSyncSlot: syncGuard.acquireManualSyncSlot,
+  })
+
+  const disconnectConnection = createDisconnectConnectionUseCase({
+    disconnectConnection: connection.disconnectConnection,
   })
 
   const listStatuses = createListStatusesUseCase({
@@ -82,6 +90,7 @@ export const createPowensRouteRuntime = ({
       listStatuses,
       listSyncRuns,
       getSyncBacklogCount,
+      disconnectConnection,
     },
   }
 }

@@ -3,6 +3,7 @@ import { createPowensRuntimePlugin } from './plugin'
 import { createAuditTrailRoute } from './routes/audit-trail'
 import { createBacklogRoute } from './routes/backlog'
 import { createCallbackRoute } from './routes/callback'
+import { createConnectionsRoute } from './routes/connections'
 import { createConnectUrlRoute } from './routes/connect-url'
 import { createStatusRoute } from './routes/status'
 import { createSyncRoute } from './routes/sync'
@@ -20,6 +21,7 @@ export const createPowensRoutes = ({ db, redisClient, env }: PowensRoutesDepende
     .use(createBacklogRoute())
     .use(createAuditTrailRoute())
     .use(createCallbackRoute())
+    .use(createConnectionsRoute())
     .use(createSyncRoute())
     .use(createDiagnosticsRoute())
     .use(

@@ -318,6 +318,10 @@ const createRequestHeaders = ({
     headers.set("x-request-id", requestContext.requestId);
   }
 
+  if (requestContext.requestOrigin && !headers.has("Origin")) {
+    headers.set("Origin", requestContext.requestOrigin);
+  }
+
   const internalToken = resolveServerInternalToken();
   if (internalToken) {
     headers.set("x-internal-token", internalToken);

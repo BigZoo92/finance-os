@@ -198,6 +198,7 @@ Chaque widget/feature doit couvrir :
 - Hash password PBKDF2-SHA256 (210k iterations) ou Argon2 (legacy)
 - Session HMAC-SHA256 avec secret minimum 32 bytes
 - Comparaisons timing-safe partout
+- Les configs/outils ne doivent jamais afficher `DATABASE_URL`, tokens, cookies, codes Powens, ou payloads provider bruts.
 
 ### 6.2 Rate limiting
 - Login : 5 tentatives/min/IP (Redis-backed)
@@ -206,8 +207,18 @@ Chaque widget/feature doit couvrir :
 
 ### 6.3 CORS
 - Origins autorises : WEB_ORIGIN, localhost (dev)
-- Headers autorises : Accept, Content-Type, authorization, x-finance-os-access-token, x-internal-token, x-request-id
+- Headers autorises : Accept, Content-Type, authorization, x-finance-os-access-token, x-finance-os-debug-token, x-internal-token, x-request-id
 - Credentials : true
+
+### 6.4 CSRF / origine navigateur
+- Toute mutation cookie-auth (`POST`, `PUT`, `PATCH`, `DELETE`) doit etre admin-only/internal-only et refuser les requetes navigateur sans `Origin` ou `Referer` same-origin.
+- Le token interne (`PRIVATE_ACCESS_TOKEN` via `x-internal-token`, `Authorization: Bearer`, ou compat `x-finance-os-access-token`) contourne ce controle uniquement pour les appels serveur-a-serveur.
+- Les endpoints OAuth/callback doivent conserver leur etat signe et ne jamais logguer le `code` provider.
+
+### 6.5 Fetch serveur externe
+- Les URLs provenant de donnees externes doivent etre validees avant `fetch`.
+- Bloquer `localhost`, IP privees, loopback, link-local, metadata IPs et redirections vers ces cibles.
+- Garder timeout, limite d'octets, redirections bornees, user-agent explicite, et aucun cookie/token interne vers l'externe.
 
 ---
 

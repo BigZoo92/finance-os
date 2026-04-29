@@ -1,13 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useStore } from '@tanstack/react-store'
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@finance-os/ui/components'
+import { useState } from 'react'
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
-import { fetchPowensConnectUrl, postPowensSync } from '@/features/powens/api'
+import {
+  deletePowensConnection,
+  fetchPowensConnectUrl,
+  postPowensSync,
+} from '@/features/powens/api'
+import { getPowensDisconnectActionState } from '@/features/powens/disconnect-action-state'
 import {
   getPowensManualSyncCooldownSnapshot,
   getPowensManualSyncCooldownUiConfig,
@@ -31,7 +45,8 @@ import { ActionDock } from '@/components/surfaces/action-dock'
 export const Route = createFileRoute('/_app/integrations')({
   loader: async ({ context }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-    const mode: AuthMode | undefined = auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
+    const mode: AuthMode | undefined =
+      auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
 
     const opts = { mode }
@@ -46,6 +61,9 @@ export const Route = createFileRoute('/_app/integrations')({
 
 function IntegrationsPage() {
   const queryClient = useQueryClient()
+  const [pendingDisconnectConnectionId, setPendingDisconnectConnectionId] = useState<string | null>(
+    null
+  )
   const manualSyncCooldownUiConfig = getPowensManualSyncCooldownUiConfig()
   const manualSyncCooldownState = useStore(powensManualSyncCooldownStore)
   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
@@ -60,9 +78,15 @@ function IntegrationsPage() {
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
 
   const statusQuery = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const syncRunsQuery = useQuery(powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const diagnosticsQuery = useQuery(powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const auditTrailQuery = useQuery(powensAuditTrailQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
+  const syncRunsQuery = useQuery(
+    powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const diagnosticsQuery = useQuery(
+    powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const auditTrailQuery = useQuery(
+    powensAuditTrailQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
 
   const statusConnections = statusQuery.data?.connections ?? []
   const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false
@@ -84,9 +108,15 @@ function IntegrationsPage() {
       if (!isAdmin) throw new Error('Admin session required')
       return fetchPowensConnectUrl({})
     },
-    onSuccess: payload => { window.location.assign(payload.url) },
+    onSuccess: payload => {
+      window.location.assign(payload.url)
+    },
     onError: error => {
-      pushToast({ title: 'Connexion impossible', description: toErrorMessage(error), tone: 'error' })
+      pushToast({
+        title: 'Connexion impossible',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
     },
   })
 
@@ -106,14 +136,46 @@ function IntegrationsPage() {
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: financialGoalsQueryKeys.list() }),
       ])
-      pushToast({ title: 'Sync enfilée', description: 'Le worker va traiter la synchronisation.', tone: 'success' })
+      pushToast({
+        title: 'Sync enfilée',
+        description: 'Le worker va traiter la synchronisation.',
+        tone: 'success',
+      })
     },
     onError: error => {
       pushToast({ title: 'Sync refusée', description: toErrorMessage(error), tone: 'error' })
     },
   })
 
-  const diagnosticsOutcomeBadge: Record<string, { label: string; variant: 'secondary' | 'outline' | 'destructive' }> = {
+  const disconnectMutation = useMutation({
+    mutationFn: async ({ connectionId }: { connectionId: string }) => {
+      if (!isAdmin) throw new Error('Admin session required')
+      return deletePowensConnection(connectionId)
+    },
+    onSuccess: async payload => {
+      setPendingDisconnectConnectionId(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: powensQueryKeys.status() }),
+        queryClient.invalidateQueries({ queryKey: powensQueryKeys.syncRuns() }),
+        queryClient.invalidateQueries({ queryKey: powensQueryKeys.diagnostics() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: financialGoalsQueryKeys.list() }),
+      ])
+      pushToast({
+        title: payload.disconnected ? 'Connexion retiree' : 'Connexion deja retiree',
+        description: 'Les comptes lies sont caches des vues actives.',
+        tone: 'success',
+      })
+    },
+    onError: error => {
+      pushToast({ title: 'Retrait refuse', description: toErrorMessage(error), tone: 'error' })
+    },
+  })
+
+  const diagnosticsOutcomeBadge: Record<
+    string,
+    { label: string; variant: 'secondary' | 'outline' | 'destructive' }
+  > = {
     ok: { label: 'OK', variant: 'secondary' },
     degraded: { label: 'Dégradé', variant: 'outline' },
     timeout: { label: 'Timeout', variant: 'destructive' },
@@ -166,23 +228,39 @@ function IntegrationsPage() {
         <CardHeader>
           <CardTitle className="text-base">Connexions</CardTitle>
           <CardDescription>
-            {statusConnections.length} connexion{statusConnections.length !== 1 ? 's' : ''} enregistrée{statusConnections.length !== 1 ? 's' : ''}
+            {statusConnections.length} connexion{statusConnections.length !== 1 ? 's' : ''}{' '}
+            enregistrée{statusConnections.length !== 1 ? 's' : ''}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {statusQuery.isPending ? (
             <div className="space-y-3">
-              {Array.from({ length: 2 }, (_, index) => `integration-status-skeleton-${index + 1}`).map(key => (
+              {Array.from(
+                { length: 2 },
+                (_, index) => `integration-status-skeleton-${index + 1}`
+              ).map(key => (
                 <div key={key} className="h-20 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
           ) : statusConnections.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Aucune connexion Powens.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Aucune connexion Powens.
+            </p>
           ) : (
             statusConnections.map(connection => {
               const syncBadge = getPowensConnectionSyncBadgeModel({
                 connection,
                 persistenceEnabled: syncStatusPersistenceEnabled,
+              })
+              const isConfirmingDisconnect =
+                pendingDisconnectConnectionId === connection.powensConnectionId
+              const isDisconnectPending =
+                disconnectMutation.isPending &&
+                disconnectMutation.variables?.connectionId === connection.powensConnectionId
+              const disconnectAction = getPowensDisconnectActionState({
+                isAdmin,
+                isConfirming: isConfirmingDisconnect,
+                isPending: isDisconnectPending,
               })
               return (
                 <div
@@ -193,7 +271,8 @@ function IntegrationsPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-medium text-sm">
-                        {connection.providerInstitutionName ?? `Connexion #${connection.powensConnectionId}`}
+                        {connection.providerInstitutionName ??
+                          `Connexion #${connection.powensConnectionId}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {connection.provider} · ref {connection.providerConnectionId}
@@ -215,11 +294,56 @@ function IntegrationsPage() {
                         size="sm"
                         variant="ghost"
                         className="text-xs"
-                        disabled={manualSyncUiState.blocked || syncMutation.isPending}
-                        onClick={() => syncMutation.mutate({ connectionId: connection.powensConnectionId })}
+                        disabled={
+                          manualSyncUiState.blocked || syncMutation.isPending || isDisconnectPending
+                        }
+                        onClick={() =>
+                          syncMutation.mutate({ connectionId: connection.powensConnectionId })
+                        }
                       >
                         Sync
                       </Button>
+                      {disconnectAction.showConfirmation ? (
+                        <>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs"
+                            disabled={!disconnectAction.canCancel}
+                            onClick={() => setPendingDisconnectConnectionId(null)}
+                          >
+                            Annuler
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="text-xs"
+                            disabled={!disconnectAction.canConfirm}
+                            onClick={() =>
+                              disconnectMutation.mutate({
+                                connectionId: connection.powensConnectionId,
+                              })
+                            }
+                          >
+                            {isDisconnectPending ? 'Retrait...' : 'Confirmer'}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          disabled={!disconnectAction.canStart}
+                          onClick={() =>
+                            setPendingDisconnectConnectionId(connection.powensConnectionId)
+                          }
+                        >
+                          Retirer
+                        </Button>
+                      )}
                     </div>
                   </div>
                   {connection.lastError && (
@@ -240,7 +364,10 @@ function IntegrationsPage() {
         <CardContent className="space-y-2">
           {syncRunsQuery.isPending ? (
             <div className="space-y-2">
-              {Array.from({ length: 3 }, (_, index) => `integration-sync-skeleton-${index + 1}`).map(key => (
+              {Array.from(
+                { length: 3 },
+                (_, index) => `integration-sync-skeleton-${index + 1}`
+              ).map(key => (
                 <div key={key} className="h-12 animate-pulse rounded bg-muted" />
               ))}
             </div>
@@ -255,17 +382,27 @@ function IntegrationsPage() {
                 <div className="min-w-0">
                   <p className="text-sm">
                     <span className="font-medium">#{run.connectionId}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(run.startedAt)}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {formatDateTime(run.startedAt)}
+                    </span>
                     {formatDuration(run.startedAt, run.endedAt) && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         · {formatDuration(run.startedAt, run.endedAt)}
                       </span>
                     )}
                   </p>
-                  {run.errorMessage && <p className="text-xs text-destructive truncate">{run.errorMessage}</p>}
+                  {run.errorMessage && (
+                    <p className="text-xs text-destructive truncate">{run.errorMessage}</p>
+                  )}
                 </div>
                 <Badge
-                  variant={run.result === 'success' ? 'secondary' : run.result === 'running' ? 'outline' : 'destructive'}
+                  variant={
+                    run.result === 'success'
+                      ? 'secondary'
+                      : run.result === 'running'
+                        ? 'outline'
+                        : 'destructive'
+                  }
                   className="text-xs"
                 >
                   {run.result}
@@ -319,10 +456,15 @@ function IntegrationsPage() {
                 className="flex items-center justify-between rounded-lg border border-border/50 bg-surface-1 px-4 py-2.5"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{event.action} · {event.actorMode}</p>
+                  <p className="text-sm font-medium">
+                    {event.action} · {event.actorMode}
+                  </p>
                   <p className="text-xs text-muted-foreground">{formatDateTime(event.at)}</p>
                 </div>
-                <Badge variant={event.result === 'allowed' ? 'secondary' : 'destructive'} className="text-xs">
+                <Badge
+                  variant={event.result === 'allowed' ? 'secondary' : 'destructive'}
+                  className="text-xs"
+                >
                   {event.result}
                 </Badge>
               </div>

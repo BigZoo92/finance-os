@@ -15,6 +15,7 @@ Scope: `apps/worker/**`
 - Preserve the current safety model:
   - per-connection Redis lock
   - reconnect-required handling on auth failures
+  - archived Powens connections are skipped by manual and scheduled sync
   - heartbeat and scheduler behavior
   - graceful shutdown of DB and Redis clients
   - heartbeat file compatibility with `infra/docker/ops-alerts/monitor.mjs` and `infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs`
@@ -33,4 +34,5 @@ Scope: `apps/worker/**`
 ## Pitfalls
 
 - Do not weaken transaction/account upsert idempotence backed by [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts).
+- Do not re-enable provider accounts/assets from an archived or superseded Powens connection without an explicit reconnect flow.
 - Do not add browser-facing or SSR-facing concerns here.

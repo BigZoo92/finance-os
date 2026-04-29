@@ -20,7 +20,10 @@ This map moved to [contracts-canonical.md](./contracts-canonical.md). Keep this 
 
 - Powens router: [../../apps/api/src/routes/integrations/powens/router.ts](../../apps/api/src/routes/integrations/powens/router.ts)
 - Powens callback route: [../../apps/api/src/routes/integrations/powens/routes/callback.ts](../../apps/api/src/routes/integrations/powens/routes/callback.ts)
+- Powens connection disconnect route: [../../apps/api/src/routes/integrations/powens/routes/connections.ts](../../apps/api/src/routes/integrations/powens/routes/connections.ts)
+- Powens connection status route: [../../apps/api/src/routes/integrations/powens/routes/status.ts](../../apps/api/src/routes/integrations/powens/routes/status.ts)
 - Powens callback UI: [../../apps/web/src/routes/powens/callback.tsx](../../apps/web/src/routes/powens/callback.tsx)
+- Powens integrations UI: [../../apps/web/src/routes/_app/integrations.tsx](../../apps/web/src/routes/_app/integrations.tsx)
 - Worker sync orchestrator: [../../apps/worker/src/index.ts](../../apps/worker/src/index.ts)
 
 ## Manual Contract Checks

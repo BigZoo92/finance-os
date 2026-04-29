@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { getAuth, getInternalAuth, getRequestMeta } from './context'
 import type { ApiEnv, InternalTokenSource } from './types'
 
@@ -48,7 +49,9 @@ const toBearerToken = (authorizationHeader: string | null) => {
   return token && token.length > 0 ? token : null
 }
 
-export const readInternalTokenFromRequest = (request: Request): {
+export const readInternalTokenFromRequest = (
+  request: Request
+): {
   token: string | null
   source: InternalTokenSource
 } => {
@@ -93,14 +96,19 @@ export const isInternalTokenValid = ({
     return false
   }
 
-  return providedToken === env.PRIVATE_ACCESS_TOKEN
+  const providedDigest = createHash('sha256').update(providedToken).digest()
+  const expectedDigest = createHash('sha256').update(env.PRIVATE_ACCESS_TOKEN).digest()
+
+  return timingSafeEqual(providedDigest, expectedDigest)
 }
 
 export const isDemoModeForbiddenError = (error: unknown): error is DemoModeForbiddenError => {
   return error instanceof DemoModeForbiddenError
 }
 
-export const isInternalTokenRequiredError = (error: unknown): error is InternalTokenRequiredError => {
+export const isInternalTokenRequiredError = (
+  error: unknown
+): error is InternalTokenRequiredError => {
   return error instanceof InternalTokenRequiredError
 }
 
@@ -109,7 +117,10 @@ export const requireAdminOrInternalToken = <TContext extends object>(context: TC
     return
   }
 
-  throw new DemoModeForbiddenError(getRequestMeta(context).requestId, ADMIN_OR_INTERNAL_REQUIRED_MESSAGE)
+  throw new DemoModeForbiddenError(
+    getRequestMeta(context).requestId,
+    ADMIN_OR_INTERNAL_REQUIRED_MESSAGE
+  )
 }
 
 export const requireInternalToken = <TContext extends object>(context: TContext) => {

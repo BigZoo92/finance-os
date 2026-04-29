@@ -45,6 +45,10 @@ const createRuntime = (response: DiagnosticsResponse): PowensRouteRuntime => ({
   repositories: {
     connection: {
       upsertConnectedConnection: async () => {},
+      disconnectConnection: async ({ connectionId }) => ({
+        disconnected: true,
+        connectionId,
+      }),
       listConnectionStatuses: async () => [],
       listSyncRuns: async () => [],
     },
@@ -66,10 +70,20 @@ const createRuntime = (response: DiagnosticsResponse): PowensRouteRuntime => ({
     listStatuses: async () => [],
     listSyncRuns: async () => [],
     getSyncBacklogCount: async () => 0,
+    disconnectConnection: async connectionId => ({
+      disconnected: true,
+      connectionId,
+    }),
   },
 })
 
-const createApp = ({ mode, response }: { mode: 'demo' | 'admin'; response: DiagnosticsResponse }) => {
+const createApp = ({
+  mode,
+  response,
+}: {
+  mode: 'demo' | 'admin'
+  response: DiagnosticsResponse
+}) => {
   return new Elysia()
     .derive(() => ({
       auth: {

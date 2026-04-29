@@ -11,6 +11,7 @@ import type {
   PowensSyncBacklogResponse,
   PowensSyncRunsResponse,
   PowensDiagnosticsResponse,
+  PowensDisconnectResponse,
 } from "./types";
 
 export const fetchPowensStatus = async () => {
@@ -79,6 +80,15 @@ export const postPowensSync = (payload?: { connectionId?: string; fullResync?: b
   return apiFetch<{ ok: boolean }>("/integrations/powens/sync", {
     ...init,
   });
+};
+
+export const deletePowensConnection = (connectionId: string) => {
+  return apiFetch<PowensDisconnectResponse>(
+    `/integrations/powens/connections/${encodeURIComponent(connectionId)}`,
+    {
+      method: "DELETE",
+    },
+  );
 };
 
 export const fetchPowensSyncRuns = async () => {

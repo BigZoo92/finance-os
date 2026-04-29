@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { and, asc, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNull, lt, or, sql } from 'drizzle-orm'
 import type { ApiDb, DashboardReadRepository, DashboardTransactionCursor } from '../types'
 
 const toCursorPredicate = (cursor: DashboardTransactionCursor | null) => {
@@ -115,6 +115,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           schema.powensConnection,
           eq(schema.financialAccount.powensConnectionId, schema.powensConnection.powensConnectionId)
         )
+        .where(isNull(schema.powensConnection.archivedAt))
         .orderBy(desc(schema.financialAccount.updatedAt), desc(schema.financialAccount.id))
     },
 
@@ -138,6 +139,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           syncMetadata: schema.powensConnection.syncMetadata,
         })
         .from(schema.powensConnection)
+        .where(isNull(schema.powensConnection.archivedAt))
         .orderBy(desc(schema.powensConnection.updatedAt), desc(schema.powensConnection.id))
     },
 
@@ -165,6 +167,7 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           schema.powensConnection,
           eq(schema.asset.powensConnectionId, schema.powensConnection.powensConnectionId)
         )
+        .where(isNull(schema.powensConnection.archivedAt))
         .orderBy(desc(schema.asset.updatedAt), desc(schema.asset.id))
     },
 
@@ -364,7 +367,9 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           providerCategory: schema.transaction.category,
           customCategory: schema.transaction.customCategory,
           customSubcategory: schema.transaction.customSubcategory,
-          category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
+          category: sql<
+            string | null
+          >`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
             when ${schema.transaction.amount} <= 0 then null
@@ -477,7 +482,9 @@ export const createDashboardReadRepository = ({ db }: { db: ApiDb }): DashboardR
           providerCategory: schema.transaction.category,
           customCategory: schema.transaction.customCategory,
           customSubcategory: schema.transaction.customSubcategory,
-          category: sql<string | null>`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
+          category: sql<
+            string | null
+          >`coalesce(nullif(${schema.transaction.customCategory}, ''), nullif(${schema.transaction.category}, ''))`,
           subcategory: schema.transaction.customSubcategory,
           incomeType: sql<'salary' | 'recurring' | 'exceptional' | null>`case
             when ${schema.transaction.amount} <= 0 then null

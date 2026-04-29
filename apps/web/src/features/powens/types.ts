@@ -65,7 +65,7 @@ export type PowensSyncBacklogResponse = {
 
 export type PowensAdminAuditEvent = {
   id: string
-  action: 'connect_url' | 'manual_sync' | 'callback'
+  action: 'connect_url' | 'manual_sync' | 'callback' | 'disconnect_connection'
   result: 'allowed' | 'blocked' | 'failed'
   actorMode: 'admin' | 'state'
   at: string
@@ -88,4 +88,11 @@ export type PowensDiagnosticsResponse = {
   issueType?: 'timeout' | 'auth' | 'provider'
   retryable: boolean
   lastCheckedAt: string
+}
+
+export type PowensDisconnectResponse = {
+  ok: true
+  requestId: string
+  connectionId: string
+  disconnected: boolean
 }

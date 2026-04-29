@@ -19,6 +19,7 @@ Scope: `apps/web/**`
 - Keep dashboard health signals in [src/components/dashboard/dashboard-health.ts](src/components/dashboard/dashboard-health.ts) and [src/components/dashboard/dashboard-health-panel.tsx](src/components/dashboard/dashboard-health-panel.tsx); demo must stay deterministic from the fixture matrix, admin must derive one global summary plus selective widget badges from loader/query data only.
 - Keep the Powens manual sync cooldown UI in [src/features/powens/manual-sync-cooldown.ts](src/features/powens/manual-sync-cooldown.ts) as client-only state behind runtime-safe `VITE_*` config; it must never become authoritative or weaken demo/admin gating.
 - Keep Powens connection badges driven by [src/features/powens/sync-status.ts](src/features/powens/sync-status.ts): admin should prefer the persisted last-sync snapshot from `/integrations/powens/status`, fall back to runtime status when `SYNC_STATUS_PERSISTENCE_ENABLED=false`, and keep demo deterministic without DB/provider writes.
+- Keep Powens disconnect UI admin-only and confirmation-based. It must call the shared feature API helper, invalidate Powens/dashboard/goals queries, and never be available as a demo mutation.
 - Keep Powens state semantics explicit and fail-soft in UI copy and mappings:
   - Runtime connection states from `PowensConnectionStatus.status` are `connected`, `syncing`, `error`, `reconnect_required`.
   - Persisted sync snapshot from `/integrations/powens/status` is `lastSyncStatus: OK|KO` with reason codes `SUCCESS`, `PARTIAL_IMPORT`, `SYNC_FAILED`, `RECONNECT_REQUIRED`.

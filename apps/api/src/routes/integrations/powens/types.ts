@@ -54,6 +54,11 @@ export interface PowensConnectionStatusView {
   updatedAt: Date
 }
 
+export interface PowensConnectionDisconnectResult {
+  disconnected: boolean
+  connectionId: string
+}
+
 export interface PowensSyncRunView {
   id: string
   requestId: string | null
@@ -71,6 +76,11 @@ export interface PowensConnectionRepository {
     encryptedAccessToken: string
     now: Date
   }) => Promise<void>
+  disconnectConnection: (params: {
+    connectionId: string
+    now: Date
+    reason: string
+  }) => Promise<PowensConnectionDisconnectResult>
   listConnectionStatuses: () => Promise<PowensConnectionStatusView[]>
   listSyncRuns: (limit?: number) => Promise<PowensSyncRunView[]>
 }
@@ -111,9 +121,14 @@ export interface PowensUseCases {
   listStatuses: () => Promise<PowensConnectionStatusView[]>
   listSyncRuns: (limit?: number) => Promise<PowensSyncRunView[]>
   getSyncBacklogCount: () => Promise<number>
+  disconnectConnection: (connectionId: string) => Promise<PowensConnectionDisconnectResult>
 }
 
-export type PowensAdminAuditAction = 'connect_url' | 'manual_sync' | 'callback'
+export type PowensAdminAuditAction =
+  | 'connect_url'
+  | 'manual_sync'
+  | 'callback'
+  | 'disconnect_connection'
 export type PowensAdminAuditResult = 'allowed' | 'blocked' | 'failed'
 
 export interface PowensAdminAuditEvent {
@@ -148,7 +163,10 @@ export interface PowensRouteRuntime {
     connectUrl: PowensConnectUrlService
     adminAudit: PowensAdminAuditService
     diagnostics: {
-      run: (context: { requestId: string; mode: 'demo' | 'admin' }) => Promise<DiagnosticsServiceResponse>
+      run: (context: {
+        requestId: string
+        mode: 'demo' | 'admin'
+      }) => Promise<DiagnosticsServiceResponse>
     }
   }
   repositories: {

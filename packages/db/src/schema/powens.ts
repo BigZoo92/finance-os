@@ -55,6 +55,8 @@ export const powensConnection = pgTable(
     lastFailedAt: timestamp('last_failed_at', { withTimezone: true }),
     lastError: text('last_error'),
     syncMetadata: jsonb('sync_metadata').$type<Record<string, unknown> | null>(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    archivedReason: text('archived_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -64,6 +66,7 @@ export const powensConnection = pgTable(
       table.provider,
       table.providerConnectionId
     ),
+    index('powens_connection_active_idx').on(table.archivedAt),
   ]
 )
 
@@ -121,14 +124,11 @@ export const transaction = pgTable(
     customIncomeType: text('custom_income_type'),
     customTags: jsonb('custom_tags').$type<string[] | null>(),
     customMerchant: text('custom_merchant'),
-    customMerchantHistory: jsonb('custom_merchant_history').$type<
-      | Array<{
-          changedAt: string
-          previousMerchant: string | null
-          nextMerchant: string | null
-        }>
-      | null
-    >(),
+    customMerchantHistory: jsonb('custom_merchant_history').$type<Array<{
+      changedAt: string
+      previousMerchant: string | null
+      nextMerchant: string | null
+    }> | null>(),
     merchant: text('merchant'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -44,6 +44,8 @@ Use `.env.example` as template.
 6. API exchanges `code` at Powens (`POST /auth/token/access`), encrypts access token (AES-256-GCM), stores connection, and enqueues sync.
 7. Worker syncs accounts + transactions into Postgres.
 
+The callback upserts by `powens_connection_id`. A repeated callback for the same provider connection refreshes the encrypted token and reuses the existing row instead of creating a second active connection.
+
 Powens endpoints used by this MVP:
 
 - `POST /auth/token/access` (code -> access token)
@@ -60,13 +62,24 @@ Powens endpoints used by this MVP:
 
 ## Idempotence model
 
+- Connections: upsert on `powens_connection_id`; exact reconnects unarchive the same row and replace the encrypted access token.
 - Accounts: upsert on `powens_account_id`.
+- Duplicate accounts returned within one provider sync are collapsed by `(provider_connection_id, powens_account_id)` before DB upsert; the latest provider row wins.
+- If a newly synced active Powens account has the same normalized IBAN as an enabled account on another Powens connection, the older account/asset is disabled. If that leaves the older connection with no enabled accounts, the older connection is archived with reason `duplicate_account_replaced`.
 - Transactions:
   - Unique when Powens transaction id exists:
     - `(powens_connection_id, powens_transaction_id)` (partial unique, non-null id only).
   - Fallback unique when id is absent:
     - `(powens_connection_id, powens_account_id, booking_date, amount, label_hash)`.
 - Worker uses bulk upserts in batches to avoid duplicates on retries.
+
+## Disconnect / archive
+
+- Admin can soft-disconnect a connection with `DELETE /integrations/powens/connections/:connectionId`.
+- Demo mode cannot disconnect and never mutates DB/provider state.
+- The route sets `powens_connection.archived_at`, records an archive reason, disables linked `financial_account` and provider `asset` rows, and preserves historical transactions/raw imports.
+- Archived connections are hidden from Powens status and dashboard active connection reads.
+- The worker skips archived connections for both manual and scheduled sync.
 
 ## Security model
 

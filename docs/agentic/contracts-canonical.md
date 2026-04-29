@@ -35,6 +35,7 @@ All contract docs should provide:
 | --- | --- | --- |
 | Advisor knowledge memory | `/dashboard/advisor/knowledge/stats`, `/schema`, `/query`, `/context-bundle`, `/explain`, `/rebuild` | requestId propagation, safe errors, demo fixtures, admin fail-soft fallback, rebuild admin/internal only |
 | Knowledge service internal API | `/health`, `/version`, `/knowledge/*` | internal-only, structured logs, no PII/raw secret logging, temporal provenance on entities and relations |
+| Powens connection management | `/integrations/powens/status`, `/sync`, `/callback`, `/connections/:connectionId` | demo deterministic/no writes, admin-only mutations, signed callback state, encrypted tokens, soft-disconnect/archive, hidden archived connections, worker skips archived rows |
 
 ## Demo/Admin Dual-Path (Required)
 

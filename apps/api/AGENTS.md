@@ -15,6 +15,7 @@ Scope: `apps/api/**`
 - Keep the dashboard news pipeline (`/dashboard/news`, `/dashboard/news/context`, `/dashboard/news/ingest`, cache-state semantics, provider health, metadata scraping, dataset fallback) aligned with [../../docs/context/NEWS-FETCH.md](../../docs/context/NEWS-FETCH.md), and update that document whenever this feature changes.
 - Keep the dashboard markets pipeline (`/dashboard/markets/overview`, `/dashboard/markets/watchlist`, `/dashboard/markets/macro`, `/dashboard/markets/context-bundle`, `/dashboard/markets/refresh`) aligned with [../../docs/context/MARKETS-MACRO.md](../../docs/context/MARKETS-MACRO.md): demo must stay deterministic, `GET` reads remain cache-only, `POST /refresh` stays admin/internal-token only, and quote provenance/freshness metadata must remain explicit.
 - Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
+- Powens connection management must stay soft-delete/soft-disconnect: archive connection rows, disable linked provider accounts/assets, preserve transaction history, and hide archived connections from active status/dashboard reads.
 - Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
 - Keep Powens status and fail-soft behavior contract-stable:
   - Runtime connection `status` values are `connected`, `syncing`, `error`, `reconnect_required`; preserve this taxonomy unless contract/docs/tests are updated together.
@@ -23,6 +24,7 @@ Scope: `apps/api/**`
   - If safe mode is active, `/integrations/powens/status` must remain available with deterministic fallback payloads (`safeModeActive`, optional `fallback: safe_mode`) so web stays usable.
   - Fail-soft is mandatory: provider outages/timeouts must not break unrelated dashboard reads or escalate to unsafe payloads/logs.
 - Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
+- Preserve global browser-origin protection for cookie-auth mutations: unsafe methods require same-origin `Origin`/`Referer` unless a valid internal token is present.
 - Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
 - Keep `/dashboard/goals*` demo-safe on reads and admin-gated on writes, with no ad hoc payload drift between route schemas, domain use cases, and web callers.
 

@@ -27,6 +27,7 @@ Important:
 
 - En `development`, `/auth/login`, `/auth/logout` et `/auth/me` restent accessibles sans la barriere header.
 - En `production`, `PRIVATE_ACCESS_TOKEN` est reserve aux appels serveur-a-serveur (SSR/internal tooling), jamais au navigateur.
+- Les mutations HTTP (`POST`, `PUT`, `PATCH`, `DELETE`) sans token interne valide doivent presenter un `Origin` ou `Referer` same-origin. Les appels SSR/internal passent par `PRIVATE_ACCESS_TOKEN`; les appels navigateur passent par `WEB_ORIGIN` ou le proxy `/api` meme origine.
 
 ## 3) Endpoints auth
 
@@ -66,6 +67,8 @@ Voir aussi:
 
 En local, le web appelle `/api/*` (proxy Vite/Nitro vers l'API).  
 Ce choix evite les problemes de cookies cross-origin et garde `credentials: 'include'` simple et fiable.
+
+Les mutations depuis le navigateur doivent conserver l'en-tete `Origin` normal du navigateur. En SSR, `apps/web` relaie l'origine de la requete utilisateur et ajoute le token interne runtime si disponible.
 
 ## 6) Generer le hash du mot de passe
 

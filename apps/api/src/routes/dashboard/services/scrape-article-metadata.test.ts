@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { scrapeArticleMetadata } from './scrape-article-metadata'
+import { isBlockedMetadataAddress, scrapeArticleMetadata } from './scrape-article-metadata'
 
 const originalFetch = globalThis.fetch
 
@@ -54,6 +54,7 @@ describe('scrapeArticleMetadata', () => {
       timeoutMs: 2500,
       maxBytes: 8192,
       userAgent: 'finance-os-tests/1.0',
+      resolveHostname: async () => ['93.184.216.34'],
     })
 
     expect(result.status).toBe('fetched')
@@ -98,14 +99,76 @@ describe('scrapeArticleMetadata', () => {
       timeoutMs: 2500,
       maxBytes: 8192,
       userAgent: 'finance-os-tests/1.0',
+      resolveHostname: async () => ['93.184.216.34'],
     })
 
     expect(result.status).toBe('skipped')
     expect(result.card.displayUrl).toBe('signals.example')
     expect(result.card.title).toBe('signals.example')
     expect(result.card.faviconUrl).toBe('https://signals.example/favicon.ico')
-    expect(result.card.faviconCandidates).toEqual([
-      'https://signals.example/favicon.ico',
-    ])
+    expect(result.card.faviconCandidates).toEqual(['https://signals.example/favicon.ico'])
+  })
+
+  it('skips localhost, private IP, and cloud metadata URLs before fetch', async () => {
+    let fetchCalls = 0
+    const fetchImpl = async () => {
+      fetchCalls += 1
+      return new Response('<html></html>', {
+        status: 200,
+        headers: {
+          'content-type': 'text/html',
+        },
+      })
+    }
+
+    for (const url of [
+      'http://localhost/article',
+      'http://127.0.0.1/article',
+      'http://10.0.0.5/article',
+      'http://169.254.169.254/latest/meta-data',
+    ]) {
+      const result = await scrapeArticleMetadata({
+        url,
+        requestId: 'req-ssrf',
+        timeoutMs: 2500,
+        maxBytes: 8192,
+        userAgent: 'finance-os-tests/1.0',
+        fetchImpl,
+      })
+
+      expect(result.status).toBe('skipped')
+    }
+
+    expect(fetchCalls).toBe(0)
+  })
+
+  it('rejects redirects to private network targets', async () => {
+    const result = await scrapeArticleMetadata({
+      url: 'https://signals.example/redirect',
+      requestId: 'req-redirect-ssrf',
+      timeoutMs: 2500,
+      maxBytes: 8192,
+      userAgent: 'finance-os-tests/1.0',
+      resolveHostname: async hostname =>
+        hostname === 'signals.example' ? ['93.184.216.34'] : ['127.0.0.1'],
+      fetchImpl: async () =>
+        new Response(null, {
+          status: 302,
+          headers: {
+            location: 'http://127.0.0.1/admin',
+          },
+        }),
+    })
+
+    expect(result.status).toBe('skipped')
+  })
+
+  it('classifies private and link-local addresses as blocked', () => {
+    expect(isBlockedMetadataAddress('127.0.0.1')).toBe(true)
+    expect(isBlockedMetadataAddress('169.254.169.254')).toBe(true)
+    expect(isBlockedMetadataAddress('10.1.2.3')).toBe(true)
+    expect(isBlockedMetadataAddress('::1')).toBe(true)
+    expect(isBlockedMetadataAddress('fe80::1')).toBe(true)
+    expect(isBlockedMetadataAddress('93.184.216.34')).toBe(false)
   })
 })

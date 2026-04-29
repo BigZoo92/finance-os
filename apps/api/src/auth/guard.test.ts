@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { DemoModeForbiddenError, requireAdmin } from './guard'
+import { DemoModeForbiddenError, isInternalTokenValid, requireAdmin } from './guard'
 
 const requestMeta = {
   requestId: 'req-guard',
@@ -25,5 +25,32 @@ describe('requireAdmin', () => {
         requestMeta,
       })
     ).toThrow(DemoModeForbiddenError)
+  })
+})
+
+describe('isInternalTokenValid', () => {
+  it('accepts only the exact configured internal token', () => {
+    const env = {
+      PRIVATE_ACCESS_TOKEN: 'internal-token-secret',
+    }
+
+    expect(
+      isInternalTokenValid({
+        providedToken: 'internal-token-secret',
+        env,
+      })
+    ).toBe(true)
+    expect(
+      isInternalTokenValid({
+        providedToken: 'internal-token-secret ',
+        env,
+      })
+    ).toBe(false)
+    expect(
+      isInternalTokenValid({
+        providedToken: null,
+        env,
+      })
+    ).toBe(false)
   })
 })
