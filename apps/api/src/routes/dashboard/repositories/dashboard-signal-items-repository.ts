@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { type SQL, and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import type { ApiDb } from '../types'
 
 export interface SignalItemRow {
@@ -168,7 +168,8 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
       if (rows.length === 0) {
         return { inserted: false }
       }
-      return { inserted: true, item: toRow(rows[0]!) }
+      const row = rows[0]
+      return row ? { inserted: true, item: toRow(row) } : { inserted: false }
     } catch {
       return { inserted: false }
     }

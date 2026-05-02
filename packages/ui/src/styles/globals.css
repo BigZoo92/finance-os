@@ -131,8 +131,11 @@
   /* Respect reduced motion globally for decorative animations */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: Accessibility override must win over component animation declarations. */
       animation-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: Accessibility override must win over component animation declarations. */
       animation-iteration-count: 1 !important;
+      /* biome-ignore lint/complexity/noImportantStyles: Accessibility override must win over component animation declarations. */
       transition-duration: 0.01ms !important;
     }
   }

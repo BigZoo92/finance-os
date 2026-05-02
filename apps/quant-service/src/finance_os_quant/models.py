@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 # Health / Version
 # ---------------------------------------------------------------------------
 
+
 class HealthResponse(BaseModel):
     ok: bool = True
     service: str = "quant-service"
@@ -39,8 +40,15 @@ class CapabilitiesResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 IndicatorType = Literal[
-    "ema", "sma", "rsi", "macd", "parabolic_sar",
-    "atr", "bollinger_bands", "volume_profile", "support_resistance",
+    "ema",
+    "sma",
+    "rsi",
+    "macd",
+    "parabolic_sar",
+    "atr",
+    "bollinger_bands",
+    "volume_profile",
+    "support_resistance",
 ]
 
 
@@ -61,6 +69,7 @@ class IndicatorResult(BaseModel):
 # ---------------------------------------------------------------------------
 # Backtest
 # ---------------------------------------------------------------------------
+
 
 class BacktestRequest(BaseModel):
     strategy_type: str
@@ -116,12 +125,14 @@ class BacktestResult(BaseModel):
     equity_curve: List[Dict[str, Any]]
     trades: List[TradeRecord]
     drawdowns: List[Dict[str, Any]]
-    caveats: List[str] = Field(default_factory=lambda: [
-        "This is a simulation. Past performance does not predict future results.",
-        "Backtest results include survivorship bias and do not account for market impact.",
-        "Transaction costs are approximated. Real costs may differ.",
-        "Paper-trading only. No real capital at risk.",
-    ])
+    caveats: List[str] = Field(
+        default_factory=lambda: [
+            "This is a simulation. Past performance does not predict future results.",
+            "Backtest results include survivorship bias and do not account for market impact.",
+            "Transaction costs are approximated. Real costs may differ.",
+            "Paper-trading only. No real capital at risk.",
+        ]
+    )
     params_hash: Optional[str] = None
     data_hash: Optional[str] = None
 
@@ -130,24 +141,26 @@ class BacktestResult(BaseModel):
 # Metrics
 # ---------------------------------------------------------------------------
 
+
 class MetricsRequest(BaseModel):
-    returns: List[float] = Field(
-        ..., description="Daily returns series"
-    )
+    returns: List[float] = Field(..., description="Daily returns series")
     benchmark_returns: Optional[List[float]] = None
     risk_free_rate: float = 0.0
 
 
 class MetricsResult(BaseModel):
     metrics: BacktestMetrics
-    caveats: List[str] = Field(default_factory=lambda: [
-        "Metrics assume daily returns. Adjust interpretation for other frequencies.",
-    ])
+    caveats: List[str] = Field(
+        default_factory=lambda: [
+            "Metrics assume daily returns. Adjust interpretation for other frequencies.",
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
 # Scenario
 # ---------------------------------------------------------------------------
+
 
 class WalkForwardRequest(BaseModel):
     strategy_type: str
@@ -179,6 +192,8 @@ class ScenarioEvaluateResult(BaseModel):
     supporting_evidence_count: int
     contradicting_evidence_count: int
     assessment: str
-    caveats: List[str] = Field(default_factory=lambda: [
-        "Scenario evaluation is heuristic-based. Not financial advice.",
-    ])
+    caveats: List[str] = Field(
+        default_factory=lambda: [
+            "Scenario evaluation is heuristic-based. Not financial advice.",
+        ]
+    )

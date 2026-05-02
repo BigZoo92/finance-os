@@ -4,6 +4,7 @@ Maps deterministic advisor recommendations and the assumptions/evidence
 that justify them into Recommendation/Assumption/Evidence nodes with
 JUSTIFIES/REQUIRES_ASSUMPTION/SUPPORTED_BY relations.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -85,9 +86,7 @@ def _evidence_node(
     )
 
 
-def _assumption_node(
-    item: AdvisorAssumptionInput, mode: KnowledgeScope
-) -> KnowledgeEntity:
+def _assumption_node(item: AdvisorAssumptionInput, mode: KnowledgeScope) -> KnowledgeEntity:
     node_id = stable_node_id("advisor:assumption", item.id, item.summary)
     return KnowledgeEntity(
         id=node_id,
@@ -149,9 +148,7 @@ def build_advisor_ingest(request: AdvisorIngestRequest) -> KnowledgeIngestReques
             if assumption_node.id not in seen:
                 entities.append(assumption_node)
                 seen.add(assumption_node.id)
-            rel_id = stable_relation_id(
-                "REQUIRES_ASSUMPTION", rec.id, assumption_node.id
-            )
+            rel_id = stable_relation_id("REQUIRES_ASSUMPTION", rec.id, assumption_node.id)
             relations.append(
                 KnowledgeRelation(
                     id=rel_id,

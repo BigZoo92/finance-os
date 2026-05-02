@@ -6,6 +6,7 @@ Neo4j and vector retrieval in Qdrant. If either backend becomes unavailable
 the store reports a degraded reason and continues to serve queries from the
 local cache.
 """
+
 from __future__ import annotations
 
 import logging
@@ -88,13 +89,9 @@ class ProductionKnowledgeStore:
                         try:
                             data = dict(raw)
                             if "provenanceJson" in data:
-                                data["provenance"] = _json.loads(
-                                    data.pop("provenanceJson") or "[]"
-                                )
+                                data["provenance"] = _json.loads(data.pop("provenanceJson") or "[]")
                             if "metadataJson" in data:
-                                data["metadata"] = _json.loads(
-                                    data.pop("metadataJson") or "{}"
-                                )
+                                data["metadata"] = _json.loads(data.pop("metadataJson") or "{}")
                             entity = KnowledgeEntity.model_validate(data)
                             self.local.entities[entity.id] = entity
                         except Exception:
@@ -103,13 +100,9 @@ class ProductionKnowledgeStore:
                         try:
                             data = dict(raw)
                             if "provenanceJson" in data:
-                                data["provenance"] = _json.loads(
-                                    data.pop("provenanceJson") or "[]"
-                                )
+                                data["provenance"] = _json.loads(data.pop("provenanceJson") or "[]")
                             if "metadataJson" in data:
-                                data["metadata"] = _json.loads(
-                                    data.pop("metadataJson") or "{}"
-                                )
+                                data["metadata"] = _json.loads(data.pop("metadataJson") or "{}")
                             rel = KnowledgeRelation.model_validate(data)
                             self.local.relations[rel.id] = rel
                         except Exception:
@@ -162,9 +155,7 @@ class ProductionKnowledgeStore:
         return response
 
     # Read paths -----------------------------------------------------------
-    def query(
-        self, request: KnowledgeQueryRequest, *, request_id: str
-    ) -> KnowledgeQueryResponse:
+    def query(self, request: KnowledgeQueryRequest, *, request_id: str) -> KnowledgeQueryResponse:
         response = self.local.query(request, request_id=request_id)
         # Merge Qdrant vector scores back into the response so production
         # admin queries actually exercise the Qdrant retrieval lane.
@@ -211,7 +202,9 @@ class ProductionKnowledgeStore:
                 response.metrics = metrics
         if self.degraded:
             response.degraded = True
-            response.fallback_reason = ",".join(self.degraded_reasons[:4]) or response.fallback_reason
+            response.fallback_reason = (
+                ",".join(self.degraded_reasons[:4]) or response.fallback_reason
+            )
         return response
 
     def context_bundle(

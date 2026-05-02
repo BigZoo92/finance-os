@@ -2,16 +2,11 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
 
 const ROOT = new URL('../../', import.meta.url).pathname.replace(/\/$/, '')
 const MANIFEST_PATH = join(ROOT, '.agentic/manifests/skills-sync-manifest.json')
 const CANONICAL = join(ROOT, '.agentic/source/skills')
-
-function sha256(filePath) {
-  return createHash('sha256').update(readFileSync(filePath)).digest('hex')
-}
 
 describe('skills-sync-manifest.json', () => {
   it('exists at .agentic/manifests/', () => {

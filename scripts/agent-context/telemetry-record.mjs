@@ -91,7 +91,7 @@ if (!existsSync(gitignorePath)) {
 // Write to monthly JSONL file
 const monthKey = new Date().toISOString().slice(0, 7)
 const filePath = join(DATA_DIR, `${monthKey}.jsonl`)
-appendFileSync(filePath, JSON.stringify(record) + '\n')
+appendFileSync(filePath, `${JSON.stringify(record)}\n`)
 
 console.log(`Recorded telemetry for task ${record.taskId}:`)
 console.log(`  Type: ${record.taskType}`)

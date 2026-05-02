@@ -32,7 +32,9 @@ def test_seed_contains_required_temporal_finance_memory_types():
 
 def test_ingest_is_idempotent_and_supersedes_changed_facts(tmp_path):
     store = KnowledgeGraphStore(
-        settings=KnowledgeSettings(KNOWLEDGE_GRAPH_STORAGE_PATH=tmp_path, KNOWLEDGE_GRAPH_REBUILD_ON_START=False)
+        settings=KnowledgeSettings(
+            KNOWLEDGE_GRAPH_STORAGE_PATH=tmp_path, KNOWLEDGE_GRAPH_REBUILD_ON_START=False
+        )
     )
     first = KnowledgeEntity(
         id="financialconcept:test_fact",
@@ -46,9 +48,15 @@ def test_ingest_is_idempotent_and_supersedes_changed_facts(tmp_path):
     )
     changed = first.model_copy(update={"description": "Changed", "confidence": 0.8})
 
-    response1 = store.ingest(KnowledgeIngestRequest(mode="admin", entities=[first]), request_id="r1")
-    response2 = store.ingest(KnowledgeIngestRequest(mode="admin", entities=[first]), request_id="r2")
-    response3 = store.ingest(KnowledgeIngestRequest(mode="admin", entities=[changed]), request_id="r3")
+    response1 = store.ingest(
+        KnowledgeIngestRequest(mode="admin", entities=[first]), request_id="r1"
+    )
+    response2 = store.ingest(
+        KnowledgeIngestRequest(mode="admin", entities=[first]), request_id="r2"
+    )
+    response3 = store.ingest(
+        KnowledgeIngestRequest(mode="admin", entities=[changed]), request_id="r3"
+    )
 
     assert response1.inserted_entities == 1
     assert response2.dedupe_count == 1
@@ -60,7 +68,9 @@ def test_ingest_is_idempotent_and_supersedes_changed_facts(tmp_path):
 
 def test_contradictions_coexist_and_are_retrieved(tmp_path):
     store = KnowledgeGraphStore(
-        settings=KnowledgeSettings(KNOWLEDGE_GRAPH_STORAGE_PATH=tmp_path, KNOWLEDGE_GRAPH_REBUILD_ON_START=False)
+        settings=KnowledgeSettings(
+            KNOWLEDGE_GRAPH_STORAGE_PATH=tmp_path, KNOWLEDGE_GRAPH_REBUILD_ON_START=False
+        )
     )
     risky = KnowledgeEntity(
         id="tradingstrategy:demo_edge",
@@ -111,7 +121,9 @@ def store_query(query: str):
 
 def test_context_bundle_shape_and_redaction(tmp_path):
     store = KnowledgeGraphStore(
-        settings=KnowledgeSettings(KNOWLEDGE_GRAPH_STORAGE_PATH=tmp_path, KNOWLEDGE_GRAPH_REBUILD_ON_START=False)
+        settings=KnowledgeSettings(
+            KNOWLEDGE_GRAPH_STORAGE_PATH=tmp_path, KNOWLEDGE_GRAPH_REBUILD_ON_START=False
+        )
     )
     entity = KnowledgeEntity(
         id="provider:redacted",
@@ -143,7 +155,10 @@ def test_http_endpoints_rebuild_query_stats(tmp_path, monkeypatch):
         assert rebuild.status_code == 200
         assert rebuild.json()["entityCount"] >= 50
 
-        query = client.post("/knowledge/query", json={"mode": "demo", "query": "cash drag inflation", "maxResults": 5})
+        query = client.post(
+            "/knowledge/query",
+            json={"mode": "demo", "query": "cash drag inflation", "maxResults": 5},
+        )
         assert query.status_code == 200
         assert query.json()["hits"]
 

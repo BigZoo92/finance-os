@@ -20,10 +20,11 @@ describe('normalizeManualImportItems', () => {
       100
     )
     expect(items).toHaveLength(2)
-    expect(items[0]!.provider).toBe('manual_import')
-    expect(items[0]!.sourceType).toBe('manual')
-    expect(items[0]!.title).toContain('Fed expected')
-    expect(items[1]!.sourceName).toBe('@AnthropicAI')
+    const [fedItem, anthropicItem] = items
+    expect(fedItem?.provider).toBe('manual_import')
+    expect(fedItem?.sourceType).toBe('manual')
+    expect(fedItem?.title).toContain('Fed expected')
+    expect(anthropicItem?.sourceName).toBe('@AnthropicAI')
   })
 
   it('skips empty text items', () => {

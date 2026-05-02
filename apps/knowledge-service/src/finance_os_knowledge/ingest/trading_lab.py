@@ -2,6 +2,7 @@
 
 Compact summaries only — no full equity curves or trade lists in graph.
 """
+
 from __future__ import annotations
 
 from typing import Any

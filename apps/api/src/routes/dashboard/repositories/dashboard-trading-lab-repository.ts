@@ -6,9 +6,16 @@ const {
   attentionItem,
   tradingLabBacktestRun,
   tradingLabPaperScenario,
-  tradingLabSignalLink,
   tradingLabStrategy,
 } = schema
+
+const expectReturnedRow = <T>(rows: T[], operation: string): T => {
+  const row = rows[0]
+  if (!row) {
+    throw new Error(`${operation} did not return a row`)
+  }
+  return row
+}
 
 export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
   // ---------------------------------------------------------------------------
@@ -75,7 +82,7 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
         ...(input.caveats ? { caveats: input.caveats } : {}),
       })
       .returning()
-    return rows[0]!
+    return expectReturnedRow(rows, 'create trading lab strategy')
   }
 
   const updateStrategy = async (
@@ -152,7 +159,7 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
         runStatus: 'pending',
       })
       .returning()
-    return rows[0]!
+    return expectReturnedRow(rows, 'create trading lab backtest run')
   }
 
   const updateBacktestRunResult = async (
@@ -202,7 +209,7 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
       .insert(tradingLabPaperScenario)
       .values(input)
       .returning()
-    return rows[0]!
+    return expectReturnedRow(rows, 'create trading lab scenario')
   }
 
   const updateScenario = async (
@@ -276,7 +283,7 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
         },
       })
       .returning()
-    return rows[0]!
+    return expectReturnedRow(rows, 'upsert attention item')
   }
 
   const updateAttentionItemStatus = async (

@@ -166,8 +166,8 @@ function IaCoutsPage() {
               )}
               {spendQuery.data.anomalies.length > 0 && (
                 <div className="space-y-1">
-                  {spendQuery.data.anomalies.map((a, i) => (
-                    <p key={i} className={`text-xs ${a.severity === 'critical' ? 'text-negative' : 'text-warning'}`}>{a.message}</p>
+                  {spendQuery.data.anomalies.map(a => (
+                    <p key={`${a.severity}:${a.message}`} className={`text-xs ${a.severity === 'critical' ? 'text-negative' : 'text-warning'}`}>{a.message}</p>
                   ))}
                 </div>
               )}

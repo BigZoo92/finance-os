@@ -20,7 +20,7 @@
  */
 
 import {
-  readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, cpSync,
+  readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync,
 } from 'node:fs'
 import { join, relative, dirname, extname } from 'node:path'
 import { createHash } from 'node:crypto'
@@ -31,7 +31,6 @@ const REFERENCES = join(ROOT, '.agentic/source/references')
 const MANIFEST_PATH = join(ROOT, '.agentic/manifests/skills-sync-manifest.json')
 
 // Header injected at the top of every projected .md file
-const GEN_HEADER_PREFIX = '<!-- GENERATED — DO NOT EDIT'
 function generatedHeader(sourceRel, hash) {
   return [
     `<!-- GENERATED — DO NOT EDIT`,
@@ -178,7 +177,7 @@ function syncTarget(target, canonicalSkills) {
       let outputBuf
       if (isMd) {
         const header = generatedHeader(srcRel, srcHash)
-        outputBuf = Buffer.from(header + '\n\n' + srcBuf.toString('utf-8'))
+        outputBuf = Buffer.from(`${header}\n\n${srcBuf.toString('utf-8')}`)
       } else {
         outputBuf = srcBuf
       }
@@ -246,7 +245,7 @@ function writeManifest(allHashes) {
     fileCount: Object.values(allHashes).reduce((s, h) => s + Object.keys(h).length, 0),
     hashes: allHashes,
   }
-  writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n')
+  writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`)
   return manifest
 }
 
@@ -315,7 +314,7 @@ if (command === 'sync') {
   console.log('Watching .agentic/source/skills/ for changes... (Ctrl+C to stop)\n')
 
   let debounce = null
-  watch(CANONICAL, { recursive: true }, (event, filename) => {
+  watch(CANONICAL, { recursive: true }, (_event, filename) => {
     if (debounce) clearTimeout(debounce)
     debounce = setTimeout(() => {
       console.log(`[${new Date().toISOString().slice(11, 19)}] Change: ${filename} — re-syncing...`)

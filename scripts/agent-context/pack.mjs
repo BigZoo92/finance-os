@@ -180,8 +180,6 @@ ${aiSetup ? aiSetup.substring(0, 3000) : 'See docs/AI-SETUP.md'}
 `))
 
 // --- KNOWLEDGE GRAPH PACK ---
-const kgAdr = readIfExists('docs/adr/temporal-knowledge-graph-graphrag.md')
-
 packs.push(writePack('knowledge-graph', `# Knowledge Graph Context Pack — Finance-OS
 
 > Auto-generated. Source: docs/adr/temporal-knowledge-graph-graphrag.md

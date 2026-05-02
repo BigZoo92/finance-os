@@ -8,6 +8,7 @@ The adapter is fail-soft: missing config or connectivity flips
 `available=False` and the parent store routes vector retrieval back to the
 local hashing implementation rather than dropping requests.
 """
+
 from __future__ import annotations
 
 import logging
@@ -147,9 +148,7 @@ class QdrantAdapter:
         if not self._client or not self._models:
             return
         try:
-            collections = {
-                col.name for col in self._client.get_collections().collections
-            }
+            collections = {col.name for col in self._client.get_collections().collections}
             if self.collection in collections:
                 self._initialized = True
                 return
@@ -265,7 +264,11 @@ class QdrantAdapter:
         try:
             provider = self.embedding_provider
             vector = provider.embed(query)
-            must = [self._models.FieldCondition(key="kind", match=self._models.MatchValue(value="entity"))]
+            must = [
+                self._models.FieldCondition(
+                    key="kind", match=self._models.MatchValue(value="entity")
+                )
+            ]
             if scope:
                 must.append(
                     self._models.FieldCondition(
@@ -310,9 +313,7 @@ class QdrantAdapter:
             return {"available": False, "error": self._last_error}
         try:
             info = self._client.get_collection(collection_name=self.collection)
-            count = self._client.count(
-                collection_name=self.collection, exact=False
-            ).count
+            count = self._client.count(collection_name=self.collection, exact=False).count
             return {
                 "available": True,
                 "vectors": int(count),

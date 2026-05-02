@@ -298,12 +298,18 @@ function TradingLabPage() {
                             </tr>
                           </thead>
                           <tbody className="font-financial">
-                            {b.trades.slice(0, 50).map((t, i) => {
+                            {b.trades.slice(0, 50).map(t => {
                               const tr = t as Record<string, unknown>
                               const pnl = Number(tr.pnl ?? 0)
                               const pnlPct = Number(tr.pnl_pct ?? tr.pnlPct ?? 0)
+                              const tradeKey = [
+                                String(tr.entry_date ?? tr.entryDate ?? ''),
+                                String(tr.exit_date ?? tr.exitDate ?? ''),
+                                String(tr.side ?? 'long'),
+                                String(tr.pnl ?? ''),
+                              ].join(':')
                               return (
-                                <tr key={i} className="border-b border-border/20">
+                                <tr key={tradeKey} className="border-b border-border/20">
                                   <td className="px-2 py-1">{String(tr.entry_date ?? tr.entryDate ?? '')}</td>
                                   <td className="px-2 py-1">{String(tr.exit_date ?? tr.exitDate ?? '')}</td>
                                   <td className="px-2 py-1 text-right">{String(tr.side ?? 'long')}</td>
@@ -368,8 +374,8 @@ function TradingLabPage() {
       {capabilities?.caveats && capabilities.caveats.length > 0 && (
         <Panel title="Risques & caveats">
           <ul className="space-y-1">
-            {capabilities.caveats.map((c: string, i: number) => (
-              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+            {capabilities.caveats.map((c: string) => (
+              <li key={c} className="text-xs text-muted-foreground flex items-start gap-2">
                 <span className="text-amber-400 mt-0.5">&#9679;</span>
                 {c}
               </li>

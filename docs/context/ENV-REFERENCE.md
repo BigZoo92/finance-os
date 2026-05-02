@@ -24,6 +24,7 @@
 | `TZ` | `Europe/Paris` | Dokploy | Tous | Non | Timezone |
 | `APP_VERSION` | -- | Docker build | Tous | Non | Version app (git tag) |
 | `APP_COMMIT_SHA` | -- | Docker build | Tous | Non | Commit SHA |
+| `FINANCE_OS_SKIP_ROOT_ENV` | `false` | Local, CI | API, Worker, Web SSR tools | Non | Test/e2e escape hatch: skip loading the root `.env` when the caller supplies an explicit env |
 | `LOG_LEVEL` | `info` | Dokploy, Local | API, Worker | Non | Niveau de log (debug/info/warn/error) |
 | `APP_DEBUG` | `0` | Local | API | Non | Mode debug (1 = active) |
 
@@ -68,6 +69,7 @@
 |---|---|---|---|---|---|
 | `REDIS_URL` | `redis://localhost:6379` | Dokploy, Local | API, Worker | Non | Connection string Redis |
 | `REDIS_PORT` | `6379` | Docker compose | Docker | Non | Port Redis |
+| `API_ALLOW_IN_MEMORY_REDIS` | `false` | Local, CI | API | Non | Autorise l'API a utiliser l'adapter Redis en memoire pour demo/test/local sans daemon Redis. Rejete explicitement en production si `true`. |
 
 ---
 

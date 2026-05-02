@@ -119,6 +119,14 @@ const toRunRow = (row: typeof schema.signalIngestionRun.$inferSelect): SignalIng
   createdAt: row.createdAt.toISOString(),
 })
 
+const expectReturnedRow = <T>(rows: T[], operation: string): T => {
+  const row = rows[0]
+  if (!row) {
+    throw new Error(`${operation} did not return a row`)
+  }
+  return row
+}
+
 export const createDashboardSignalSourcesRepository = ({ db }: { db: ApiDb }) => ({
   async listSources(group?: SignalSourceGroup): Promise<SignalSourceRow[]> {
     const conditions = group ? [eq(schema.signalSource.group, group)] : []
@@ -161,7 +169,7 @@ export const createDashboardSignalSourcesRepository = ({ db }: { db: ApiDb }) =>
       values.requiresAttentionPolicy = input.requiresAttentionPolicy
 
     const rows = await db.insert(schema.signalSource).values(values).returning()
-    return toRow(rows[0]!)
+    return toRow(expectReturnedRow(rows, 'create signal source'))
   },
 
   async updateSource(id: number, input: UpdateSignalSourceInput): Promise<SignalSourceRow | null> {
@@ -242,7 +250,7 @@ export const createDashboardSignalSourcesRepository = ({ db }: { db: ApiDb }) =>
         requestId: input.requestId,
       })
       .returning({ id: schema.signalIngestionRun.id })
-    return rows[0]!.id
+    return expectReturnedRow(rows, 'create signal ingestion run').id
   },
 
   async completeIngestionRun(

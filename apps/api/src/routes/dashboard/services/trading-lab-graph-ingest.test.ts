@@ -65,7 +65,7 @@ describe('sendBacktestToKnowledgeGraph', () => {
   })
 
   it('sends compact payload and never includes equity curve / trades', async () => {
-    let captured: { url?: string; body?: unknown } = {}
+    const captured: { url?: string; body?: unknown } = {}
     ;(globalThis as { fetch: typeof fetch }).fetch = mock(async (url: string | URL, init?: RequestInit) => {
       captured.url = String(url)
       captured.body = init?.body ? JSON.parse(String(init.body)) : null
@@ -88,14 +88,18 @@ describe('sendBacktestToKnowledgeGraph', () => {
     expect(Array.isArray(body.strategies)).toBe(true)
     expect(Array.isArray(body.backtests)).toBe(true)
     const bt = (body.backtests as Array<Record<string, unknown>>)[0]
-    expect(bt!.id).toBe(42)
-    expect(bt!.symbol).toBe('SPY.US')
+    expect(bt).toBeDefined()
+    if (!bt) {
+      throw new Error('Expected compact backtest payload')
+    }
+    expect(bt.id).toBe(42)
+    expect(bt.symbol).toBe('SPY.US')
     // equity curve / trades MUST NOT appear in graph payload
-    expect('equityCurve' in bt!).toBe(false)
-    expect('equity_curve' in bt!).toBe(false)
-    expect('trades' in bt!).toBe(false)
+    expect('equityCurve' in bt).toBe(false)
+    expect('equity_curve' in bt).toBe(false)
+    expect('trades' in bt).toBe(false)
     // metrics filtered to known compact set, irrelevant key dropped
-    const metrics = bt!.metrics as Record<string, unknown>
+    const metrics = bt.metrics as Record<string, unknown>
     expect('cagr' in metrics).toBe(true)
     expect('irrelevant' in metrics).toBe(false)
   })

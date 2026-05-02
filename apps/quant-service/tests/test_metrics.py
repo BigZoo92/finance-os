@@ -28,6 +28,7 @@ def test_cagr_insufficient_data():
 
 def test_sharpe_positive_for_positive_returns():
     import random
+
     random.seed(42)
     returns = [0.01 + random.gauss(0, 0.005) for _ in range(252)]
     sharpe = compute_sharpe(returns)
@@ -42,6 +43,7 @@ def test_sharpe_none_for_zero_vol():
 
 def test_sortino_positive_for_positive_returns():
     import random
+
     random.seed(42)
     returns = [0.01 + random.gauss(0, 0.005) for _ in range(252)]
     sortino = compute_sortino(returns)

@@ -46,11 +46,15 @@ def _tokens(value: str) -> list[str]:
 
 def _entity_text(entity: KnowledgeEntity) -> str:
     metadata_text = " ".join(str(value) for value in entity.metadata.values() if value is not None)
-    return " ".join([entity.id, entity.type, entity.label, entity.description, *entity.tags, metadata_text])
+    return " ".join(
+        [entity.id, entity.type, entity.label, entity.description, *entity.tags, metadata_text]
+    )
 
 
 def _relation_text(relation: KnowledgeRelation) -> str:
-    return " ".join([relation.id, relation.type, relation.label or "", relation.description, *relation.tags])
+    return " ".join(
+        [relation.id, relation.type, relation.label or "", relation.description, *relation.tags]
+    )
 
 
 def _hash_payload(value: dict[str, Any]) -> str:
@@ -82,10 +86,14 @@ def _cosine_from_tokens(left: list[str], right: list[str]) -> float:
     right_vector = [0.0] * VECTOR_DIMS
 
     for token in left:
-        left_vector[int(hashlib.blake2b(token.encode(), digest_size=2).hexdigest(), 16) % VECTOR_DIMS] += 1
+        left_vector[
+            int(hashlib.blake2b(token.encode(), digest_size=2).hexdigest(), 16) % VECTOR_DIMS
+        ] += 1
 
     for token in right:
-        right_vector[int(hashlib.blake2b(token.encode(), digest_size=2).hexdigest(), 16) % VECTOR_DIMS] += 1
+        right_vector[
+            int(hashlib.blake2b(token.encode(), digest_size=2).hexdigest(), 16) % VECTOR_DIMS
+        ] += 1
 
     dot = sum(a * b for a, b in zip(left_vector, right_vector, strict=True))
     left_norm = math.sqrt(sum(a * a for a in left_vector))
@@ -175,8 +183,12 @@ class KnowledgeGraphStore:
         payload = {
             "schemaVersion": SCHEMA_VERSION,
             "savedAt": utc_now().isoformat(),
-            "entities": [item.model_dump(by_alias=True, mode="json") for item in self.entities.values()],
-            "relations": [item.model_dump(by_alias=True, mode="json") for item in self.relations.values()],
+            "entities": [
+                item.model_dump(by_alias=True, mode="json") for item in self.entities.values()
+            ],
+            "relations": [
+                item.model_dump(by_alias=True, mode="json") for item in self.relations.values()
+            ],
             "historicalEntities": [
                 item.model_dump(by_alias=True, mode="json") for item in self.historical_entities
             ],
@@ -185,7 +197,9 @@ class KnowledgeGraphStore:
             ],
             "observations": self.observations,
         }
-        self.storage_file().write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        self.storage_file().write_text(
+            json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
 
     def reset(self) -> None:
         self.entities.clear()
@@ -194,7 +208,9 @@ class KnowledgeGraphStore:
         self.historical_relations.clear()
         self.observations.clear()
 
-    def ingest(self, request: KnowledgeIngestRequest, *, request_id: str) -> KnowledgeIngestResponse:
+    def ingest(
+        self, request: KnowledgeIngestRequest, *, request_id: str
+    ) -> KnowledgeIngestResponse:
         inserted_entities = 0
         updated_entities = 0
         inserted_relations = 0
@@ -271,17 +287,26 @@ class KnowledgeGraphStore:
             contradictionCount=contradiction_count,
         )
 
-    def rebuild(self, request: KnowledgeRebuildRequest, *, request_id: str) -> KnowledgeRebuildResponse:
+    def rebuild(
+        self, request: KnowledgeRebuildRequest, *, request_id: str
+    ) -> KnowledgeRebuildResponse:
         started = utc_now()
         start_ms = _now_ms()
-        snapshot = (self.entities.copy(), self.relations.copy(), list(self.historical_entities), list(self.historical_relations))
+        snapshot = (
+            self.entities.copy(),
+            self.relations.copy(),
+            list(self.historical_entities),
+            list(self.historical_relations),
+        )
 
         try:
             if not request.dry_run:
                 self.reset()
 
             if request.include_seed:
-                target = self if not request.dry_run else KnowledgeGraphStore(settings=self.settings)
+                target = (
+                    self if not request.dry_run else KnowledgeGraphStore(settings=self.settings)
+                )
                 target.ingest(build_seed_ingest(request.mode), request_id=request_id)
                 entity_count = len(target.entities)
                 relation_count = len(target.relations)
@@ -311,7 +336,12 @@ class KnowledgeGraphStore:
         except Exception as exc:
             self.metrics.last_failure_reason = "rebuild_failed"
             if not request.dry_run:
-                self.entities, self.relations, self.historical_entities, self.historical_relations = snapshot
+                (
+                    self.entities,
+                    self.relations,
+                    self.historical_entities,
+                    self.historical_relations,
+                ) = snapshot
             raise exc
 
     def _filter_entities(self, request: KnowledgeQueryRequest) -> list[KnowledgeEntity]:
@@ -343,12 +373,16 @@ class KnowledgeGraphStore:
 
         return [entity for entity in candidates if allowed(entity)]
 
-    def _bm25_scores(self, query_tokens: list[str], entities: list[KnowledgeEntity]) -> dict[str, float]:
+    def _bm25_scores(
+        self, query_tokens: list[str], entities: list[KnowledgeEntity]
+    ) -> dict[str, float]:
         if not query_tokens or not entities:
             return {}
 
         document_tokens = {entity.id: _tokens(_entity_text(entity)) for entity in entities}
-        avg_len = sum(len(tokens) for tokens in document_tokens.values()) / max(len(document_tokens), 1)
+        avg_len = sum(len(tokens) for tokens in document_tokens.values()) / max(
+            len(document_tokens), 1
+        )
         doc_freq = Counter()
         for tokens in document_tokens.values():
             doc_freq.update(set(tokens))
@@ -363,14 +397,18 @@ class KnowledgeGraphStore:
             for token in query_tokens:
                 if token not in term_freq:
                     continue
-                idf = math.log(1 + (len(document_tokens) - doc_freq[token] + 0.5) / (doc_freq[token] + 0.5))
+                idf = math.log(
+                    1 + (len(document_tokens) - doc_freq[token] + 0.5) / (doc_freq[token] + 0.5)
+                )
                 numerator = term_freq[token] * (k1 + 1)
                 denominator = term_freq[token] + k1 * (1 - b + b * length / max(avg_len, 1))
                 score += idf * numerator / denominator
             scores[entity_id] = min(score / max(len(query_tokens), 1), 1.0)
         return scores
 
-    def _vector_scores(self, query_tokens: list[str], entities: list[KnowledgeEntity]) -> dict[str, float]:
+    def _vector_scores(
+        self, query_tokens: list[str], entities: list[KnowledgeEntity]
+    ) -> dict[str, float]:
         return {
             entity.id: _cosine_from_tokens(query_tokens, _tokens(_entity_text(entity)))
             for entity in entities
@@ -434,19 +472,33 @@ class KnowledgeGraphStore:
         started_ms = _now_ms()
         query_tokens = _tokens(request.query)
         retrieval_mode = request.retrieval_mode or self.settings.retrieval_mode
-        max_depth = request.max_path_depth if request.max_path_depth is not None else self.settings.max_path_depth
+        max_depth = (
+            request.max_path_depth
+            if request.max_path_depth is not None
+            else self.settings.max_path_depth
+        )
         min_confidence = request.filters.min_confidence or self.settings.min_confidence
         scoped_request = request.model_copy(
-            update={"filters": request.filters.model_copy(update={"min_confidence": min_confidence})}
+            update={
+                "filters": request.filters.model_copy(update={"min_confidence": min_confidence})
+            }
         )
         entities = self._filter_entities(scoped_request)
 
         fulltext_started = _now_ms()
-        bm25 = self._bm25_scores(query_tokens, entities) if retrieval_mode in ("hybrid", "fulltext") else {}
+        bm25 = (
+            self._bm25_scores(query_tokens, entities)
+            if retrieval_mode in ("hybrid", "fulltext")
+            else {}
+        )
         self.metrics.fulltext_retrieval_latency_ms = _now_ms() - fulltext_started
 
         vector_started = _now_ms()
-        vectors = self._vector_scores(query_tokens, entities) if retrieval_mode in ("hybrid", "vector") and self.settings.vector_enabled else {}
+        vectors = (
+            self._vector_scores(query_tokens, entities)
+            if retrieval_mode in ("hybrid", "vector") and self.settings.vector_enabled
+            else {}
+        )
         self.metrics.vector_retrieval_latency_ms = _now_ms() - vector_started
 
         initial_scores: dict[str, float] = {}
@@ -457,7 +509,9 @@ class KnowledgeGraphStore:
 
         seed_ids = [
             entity_id
-            for entity_id, score in sorted(initial_scores.items(), key=lambda item: item[1], reverse=True)
+            for entity_id, score in sorted(
+                initial_scores.items(), key=lambda item: item[1], reverse=True
+            )
             if score > 0
         ][: max(request.max_results, 4)]
 
@@ -482,7 +536,9 @@ class KnowledgeGraphStore:
             temporal = _recency_score(entity, half_life_days=self.settings.recency_half_life_days)
             confidence = entity.confidence
             provenance = min(len(entity.provenance) / 2, 1.0)
-            relation_weight = max((path.score for path in paths_by_entity.get(entity_id, [])), default=0)
+            relation_weight = max(
+                (path.score for path in paths_by_entity.get(entity_id, [])), default=0
+            )
 
             total = (
                 0.28 * fulltext
@@ -524,7 +580,8 @@ class KnowledgeGraphStore:
             contradictory = [
                 self.entities[relation.to_id]
                 for relation in relations
-                if relation.type in ("CONTRADICTED_BY", "WEAKENS", "INVALIDATES") and relation.to_id in self.entities
+                if relation.type in ("CONTRADICTED_BY", "WEAKENS", "INVALIDATES")
+                and relation.to_id in self.entities
             ]
 
             hits.append(
@@ -573,7 +630,9 @@ class KnowledgeGraphStore:
             fallbackReason=None,
         )
 
-    def context_bundle(self, request: ContextBundleRequest, *, request_id: str) -> KnowledgeContextBundle:
+    def context_bundle(
+        self, request: ContextBundleRequest, *, request_id: str
+    ) -> KnowledgeContextBundle:
         query_response = self.query(request, request_id=request_id)
         max_tokens = request.max_tokens or self.settings.max_context_tokens
         hits = query_response.hits
@@ -591,7 +650,9 @@ class KnowledgeGraphStore:
                 title=entity.label,
                 summary=entity.description[:420],
                 confidence=entity.confidence,
-                recency=round(_recency_score(entity, half_life_days=self.settings.recency_half_life_days), 4),
+                recency=round(
+                    _recency_score(entity, half_life_days=self.settings.recency_half_life_days), 4
+                ),
                 provenanceRefs=refs[:5],
                 why=why or [],
             )
@@ -620,29 +681,21 @@ class KnowledgeGraphStore:
         if not hits:
             unknowns.append("No matching graph memory was found for this query.")
         if not contradictory:
-            unknowns.append("No contradictory evidence was retrieved; absence is not proof none exists.")
+            unknowns.append(
+                "No contradictory evidence was retrieved; absence is not proof none exists."
+            )
         if request.mode == "demo":
             unknowns.append("Demo mode uses deterministic seed fixtures only.")
 
-        summary_lines = [
-            f"{item.title}: {item.summary}" for item in entities[:6]
-        ]
+        summary_lines = [f"{item.title}: {item.summary}" for item in entities[:6]]
         summary = " ".join(summary_lines) if summary_lines else "No graph context available."
         token_estimate = max(1, math.ceil(len(summary) / 4))
         if token_estimate > max_tokens:
             summary = summary[: max_tokens * 4]
             token_estimate = max_tokens
 
-        confidence = (
-            sum(item.confidence for item in entities) / len(entities)
-            if entities
-            else 0
-        )
-        recency = (
-            sum(item.recency for item in entities) / len(entities)
-            if entities
-            else 0
-        )
+        confidence = sum(item.confidence for item in entities) / len(entities) if entities else 0
+        recency = sum(item.recency for item in entities) / len(entities) if entities else 0
         self.metrics.context_bundle_token_estimate = token_estimate
 
         return KnowledgeContextBundle(
@@ -671,7 +724,9 @@ class KnowledgeGraphStore:
             fallbackReason=query_response.fallback_reason,
         )
 
-    def explain(self, entity_or_relation_id: str, *, query: str | None, mode: str, request_id: str) -> KnowledgeExplainResponse:
+    def explain(
+        self, entity_or_relation_id: str, *, query: str | None, mode: str, request_id: str
+    ) -> KnowledgeExplainResponse:
         entity = self.entities.get(entity_or_relation_id)
         relation = self.relations.get(entity_or_relation_id)
         if not entity and not relation:

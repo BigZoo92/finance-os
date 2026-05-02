@@ -3,6 +3,7 @@
 Internal implementations with QuantStats integration when available.
 All metrics are deterministic for same inputs.
 """
+
 from __future__ import annotations
 
 import math
@@ -78,9 +79,7 @@ def compute_max_drawdown(equity_curve: list[float]) -> float | None:
     return _safe(max_dd)
 
 
-def compute_calmar(
-    equity_curve: list[float], periods_per_year: float = 252
-) -> float | None:
+def compute_calmar(equity_curve: list[float], periods_per_year: float = 252) -> float | None:
     cagr = compute_cagr(equity_curve, periods_per_year)
     max_dd = compute_max_drawdown(equity_curve)
     if cagr is None or max_dd is None or max_dd == 0:
@@ -158,7 +157,9 @@ def compute_alpha(
     return _safe(r_mean - risk_free_rate - beta * (b_mean - risk_free_rate))
 
 
-def compute_drawdowns(equity_curve: list[float], dates: list[str] | None = None) -> list[dict[str, Any]]:
+def compute_drawdowns(
+    equity_curve: list[float], dates: list[str] | None = None
+) -> list[dict[str, Any]]:
     """Compute drawdown series from equity curve."""
     if not equity_curve:
         return []
@@ -205,6 +206,8 @@ def compute_all_metrics(
         for r in benchmark_returns:
             bm_eq.append(bm_eq[-1] * (1 + r))
         result["benchmark_return"] = compute_cagr(bm_eq, periods_per_year)
-        result["alpha"] = compute_alpha(returns, benchmark_returns, risk_free_rate, periods_per_year)
+        result["alpha"] = compute_alpha(
+            returns, benchmark_returns, risk_free_rate, periods_per_year
+        )
         result["beta"] = compute_beta(returns, benchmark_returns)
     return result

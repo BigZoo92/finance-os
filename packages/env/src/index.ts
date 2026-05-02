@@ -5,8 +5,18 @@ import { z } from 'zod'
 
 let rootEnvLoaded = false
 
+const isTruthyRawEnv = (value: string | undefined) => {
+  const normalized = value?.trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'yes'
+}
+
 const loadRootEnv = () => {
   if (rootEnvLoaded) return
+
+  if (isTruthyRawEnv(process.env.FINANCE_OS_SKIP_ROOT_ENV)) {
+    rootEnvLoaded = true
+    return
+  }
 
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
@@ -425,9 +435,16 @@ const externalInvestmentsShape = {
 const assertProductionApiEnv = (values: {
   NODE_ENV: 'development' | 'test' | 'production'
   POWENS_REDIRECT_URI_PROD?: string | undefined
+  API_ALLOW_IN_MEMORY_REDIS: boolean
 }) => {
   if (values.NODE_ENV !== 'production') {
     return
+  }
+
+  if (values.API_ALLOW_IN_MEMORY_REDIS) {
+    throw new Error(
+      'Invalid environment variables:\nAPI_ALLOW_IN_MEMORY_REDIS must not be enabled in production'
+    )
   }
 
   if (!values.POWENS_REDIRECT_URI_PROD) {
@@ -451,6 +468,10 @@ export const getApiEnv = () => {
     WEB_ORIGIN: z.string().url('WEB_ORIGIN must be a valid URL').optional(),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+    API_ALLOW_IN_MEMORY_REDIS: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),

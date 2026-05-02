@@ -3,6 +3,7 @@
 Deterministic internal engine using NumPy/pandas.
 vectorbt integration available as optional accelerator.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -21,7 +22,7 @@ def _hash_params(params: dict[str, Any]) -> str:
 
 
 def _hash_data(data: list[dict[str, Any]]) -> str:
-    key = f"{len(data)}:{data[0].get('date','?') if data else '?'}:{data[-1].get('date','?') if data else '?'}"
+    key = f"{len(data)}:{data[0].get('date', '?') if data else '?'}:{data[-1].get('date', '?') if data else '?'}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
@@ -86,8 +87,17 @@ def _rsi_mean_reversion(df: pd.DataFrame, params: dict[str, Any]) -> pd.Series:
 def _parabolic_sar_trend(df: pd.DataFrame, params: dict[str, Any]) -> pd.Series:
     """Parabolic SAR trend following: long when price > SAR."""
     sar_data = compute_parabolic_sar(
-        [{"date": str(d.date()), "open": r["open"], "high": r["high"], "low": r["low"], "close": r["close"], "volume": r.get("volume", 0)}
-         for d, r in df.iterrows()],
+        [
+            {
+                "date": str(d.date()),
+                "open": r["open"],
+                "high": r["high"],
+                "low": r["low"],
+                "close": r["close"],
+                "volume": r.get("volume", 0),
+            }
+            for d, r in df.iterrows()
+        ],
         params,
     )
     sar_series = pd.Series(
@@ -202,17 +212,19 @@ def run_backtest(
             total_slippage += proceeds * slippage_rate
             pnl = cash - (position * entry_price)
             pnl_pct = pnl / (position * entry_price) if position * entry_price > 0 else 0.0
-            trades.append({
-                "entry_date": entry_date,
-                "exit_date": date_str,
-                "side": "long",
-                "entry_price": round(entry_price, 4),
-                "exit_price": round(price, 4),
-                "size": round(position, 6),
-                "pnl": round(pnl, 2),
-                "pnl_pct": round(pnl_pct, 6),
-                "fees": round(cost, 2),
-            })
+            trades.append(
+                {
+                    "entry_date": entry_date,
+                    "exit_date": date_str,
+                    "side": "long",
+                    "entry_price": round(entry_price, 4),
+                    "exit_price": round(price, 4),
+                    "size": round(position, 6),
+                    "pnl": round(pnl, 2),
+                    "pnl_pct": round(pnl_pct, 6),
+                    "fees": round(cost, 2),
+                }
+            )
             position = 0.0
 
         equity = cash + position * price
@@ -233,17 +245,19 @@ def run_backtest(
         total_slippage += proceeds * slippage_rate
         pnl = cash - (position * entry_price)
         pnl_pct = pnl / (position * entry_price) if position * entry_price > 0 else 0.0
-        trades.append({
-            "entry_date": entry_date,
-            "exit_date": dates[-1] if dates else "",
-            "side": "long",
-            "entry_price": round(entry_price, 4),
-            "exit_price": round(price, 4),
-            "size": round(position, 6),
-            "pnl": round(pnl, 2),
-            "pnl_pct": round(pnl_pct, 6),
-            "fees": round(cost, 2),
-        })
+        trades.append(
+            {
+                "entry_date": entry_date,
+                "exit_date": dates[-1] if dates else "",
+                "side": "long",
+                "entry_price": round(entry_price, 4),
+                "exit_price": round(price, 4),
+                "size": round(position, 6),
+                "pnl": round(pnl, 2),
+                "pnl_pct": round(pnl_pct, 6),
+                "fees": round(cost, 2),
+            }
+        )
         equity_curve[-1] = round(cash, 2)
 
     # Benchmark

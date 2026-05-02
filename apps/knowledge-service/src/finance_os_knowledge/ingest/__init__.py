@@ -15,6 +15,7 @@ Common rules across adapters:
 * Redaction: free-form text fields are bounded; raw_payload is never
   populated by these adapters to avoid PII leakage.
 """
+
 from .advisor import AdvisorIngestRequest, build_advisor_ingest
 from .cost_ledger import CostLedgerIngestRequest, build_cost_ledger_ingest
 from .markets import MarketsIngestRequest, build_markets_ingest

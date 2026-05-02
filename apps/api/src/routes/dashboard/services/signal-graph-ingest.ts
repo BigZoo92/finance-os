@@ -1,5 +1,4 @@
 import type { SignalItemRow } from '../repositories/dashboard-signal-items-repository'
-import type { KnowledgeServiceClientConfig } from './knowledge-service-client'
 
 interface GraphIngestResult {
   sentCount: number

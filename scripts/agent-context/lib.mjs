@@ -5,7 +5,7 @@
  * No external dependencies — uses Node.js built-ins only.
  */
 
-import { readFileSync, statSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, relative, extname } from 'node:path'
 
 const ROOT = new URL('../../', import.meta.url).pathname.replace(/\/$/, '')

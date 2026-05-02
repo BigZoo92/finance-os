@@ -28,7 +28,7 @@ type Preset = {
   caveats: string[]
 }
 
-const PRESETS: Record<string, Preset> = {
+const PRESETS = {
   buy_and_hold: {
     name: 'Buy & Hold',
     slug: 'buy-and-hold',
@@ -115,18 +115,23 @@ const PRESETS: Record<string, Preset> = {
     assumptions: ['Volatilité directionnelle après cassure'],
     caveats: ['Faux signaux fréquents en range'],
   },
-}
+} satisfies Record<string, Preset>
+
+type PresetKey = keyof typeof PRESETS
+
+const DEFAULT_PRESET_KEY = 'ema_crossover' satisfies PresetKey
+const DEFAULT_PRESET = PRESETS[DEFAULT_PRESET_KEY]
 
 export function StrategyEditor({ strategies, isAdmin }: Props) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [presetKey, setPresetKey] = useState<keyof typeof PRESETS>('ema_crossover')
-  const [name, setName] = useState(PRESETS.ema_crossover!.name)
-  const [slug, setSlug] = useState(PRESETS.ema_crossover!.slug)
-  const [description, setDescription] = useState(PRESETS.ema_crossover!.description)
+  const [presetKey, setPresetKey] = useState<PresetKey>(DEFAULT_PRESET_KEY)
+  const [name, setName] = useState(DEFAULT_PRESET.name)
+  const [slug, setSlug] = useState(DEFAULT_PRESET.slug)
+  const [description, setDescription] = useState(DEFAULT_PRESET.description)
   const [feedback, setFeedback] = useState<string | null>(null)
 
-  const applyPreset = (key: keyof typeof PRESETS) => {
+  const applyPreset = (key: PresetKey) => {
     const preset = PRESETS[key]
     if (!preset) return
     setPresetKey(key)
@@ -217,7 +222,7 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
                 className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
                 value={presetKey}
                 disabled={!isAdmin}
-                onChange={event => applyPreset(event.target.value as keyof typeof PRESETS)}
+                onChange={event => applyPreset(event.target.value as PresetKey)}
               >
                 {Object.entries(PRESETS).map(([key, preset]) => (
                   <option key={key} value={key}>
@@ -261,7 +266,7 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
 
           <div className="rounded-md border border-border/60 bg-surface-1 p-2 text-[11px]">
             <div className="mb-1 text-muted-foreground">Règles & caveats du preset</div>
-            <PresetSummary preset={PRESETS[presetKey]!} />
+            <PresetSummary preset={PRESETS[presetKey] ?? DEFAULT_PRESET} />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

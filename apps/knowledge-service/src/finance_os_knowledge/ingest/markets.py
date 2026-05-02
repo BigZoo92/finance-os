@@ -4,6 +4,7 @@ Takes a markets context bundle (regimes, macro signals, asset/sector
 exposures) and produces MacroSignal/Asset/Ticker/Sector/Evidence nodes
 with the appropriate IMPACTS/AFFECTS_SECTOR/AFFECTS_ASSET relations.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -50,9 +51,7 @@ class MarketsIngestRequest(BaseModel):
     mode: KnowledgeScope = "admin"
     source: str = "finance-os-markets"
     generated_at: datetime | None = Field(default=None, alias="generatedAt")
-    macro_signals: list[MarketsMacroSignalInput] = Field(
-        default_factory=list, alias="macroSignals"
-    )
+    macro_signals: list[MarketsMacroSignalInput] = Field(default_factory=list, alias="macroSignals")
     tickers: list[MarketsTickerInput] = Field(default_factory=list)
 
 
@@ -116,9 +115,7 @@ def _sector_node(sector: str, mode: KnowledgeScope) -> KnowledgeEntity:
     )
 
 
-def _macro_signal_node(
-    signal: MarketsMacroSignalInput, mode: KnowledgeScope
-) -> KnowledgeEntity:
+def _macro_signal_node(signal: MarketsMacroSignalInput, mode: KnowledgeScope) -> KnowledgeEntity:
     node_id = stable_node_id("markets:macro", signal.id, signal.label)
     return KnowledgeEntity(
         id=node_id,

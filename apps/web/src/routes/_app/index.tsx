@@ -142,7 +142,7 @@ function CockpitPage() {
 
     const timeout = window.setTimeout(() => setSecondaryReady(true), 120)
     return () => window.clearTimeout(timeout)
-  }, [summaryQ.isPending, summaryQ.dataUpdatedAt])
+  }, [summaryQ.isPending])
 
   return (
     <div className="space-y-10 md:space-y-12">

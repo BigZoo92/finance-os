@@ -12,7 +12,7 @@
  * Exit code 0 = pass, 1 = fail
  */
 
-import { buildFileRegistry, buildSkillRegistry, detectDuplicates, BUDGET_TIERS } from './lib.mjs'
+import { buildFileRegistry, buildSkillRegistry, detectDuplicates } from './lib.mjs'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 

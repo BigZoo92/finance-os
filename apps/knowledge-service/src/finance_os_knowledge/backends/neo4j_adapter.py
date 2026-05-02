@@ -18,6 +18,7 @@ We intentionally guard every Neo4j call so missing connectivity never
 hard-crashes the service: the adapter exposes `available` and a lightweight
 `ping` so the parent store can route to the local fallback.
 """
+
 from __future__ import annotations
 
 import json
@@ -130,7 +131,11 @@ class Neo4jAdapter:
         return self.settings.neo4j_database
 
     def connect(self) -> bool:
-        if not self.settings.neo4j_uri or not self.settings.neo4j_user or not self.settings.neo4j_password:
+        if (
+            not self.settings.neo4j_uri
+            or not self.settings.neo4j_user
+            or not self.settings.neo4j_password
+        ):
             self._available = False
             self._last_error = "neo4j_not_configured"
             return False
@@ -188,12 +193,9 @@ class Neo4jAdapter:
         statements = [
             "CREATE CONSTRAINT knowledge_node_id IF NOT EXISTS "
             "FOR (n:KnowledgeNode) REQUIRE n.id IS UNIQUE",
-            "CREATE INDEX knowledge_node_type IF NOT EXISTS "
-            "FOR (n:KnowledgeNode) ON (n.type)",
-            "CREATE INDEX knowledge_node_scope IF NOT EXISTS "
-            "FOR (n:KnowledgeNode) ON (n.scope)",
-            "CREATE INDEX knowledge_node_source IF NOT EXISTS "
-            "FOR (n:KnowledgeNode) ON (n.source)",
+            "CREATE INDEX knowledge_node_type IF NOT EXISTS FOR (n:KnowledgeNode) ON (n.type)",
+            "CREATE INDEX knowledge_node_scope IF NOT EXISTS FOR (n:KnowledgeNode) ON (n.scope)",
+            "CREATE INDEX knowledge_node_source IF NOT EXISTS FOR (n:KnowledgeNode) ON (n.source)",
             "CREATE INDEX knowledge_node_confidence IF NOT EXISTS "
             "FOR (n:KnowledgeNode) ON (n.confidence)",
             "CREATE INDEX knowledge_node_observed_at IF NOT EXISTS "
@@ -214,9 +216,7 @@ class Neo4jAdapter:
                 try:
                     session.run(fulltext).consume()
                 except Exception as exc:  # pragma: no cover - older neo4j may differ
-                    logger.warning(
-                        "fulltext index creation skipped: %s", type(exc).__name__
-                    )
+                    logger.warning("fulltext index creation skipped: %s", type(exc).__name__)
             self._initialized = True
         except Exception as exc:
             self._available = False
@@ -259,7 +259,9 @@ class Neo4jAdapter:
     def upsert_relations(self, relations: Iterable[KnowledgeRelation]) -> int:
         if not self._driver:
             return 0
-        rows = [_relation_props(rel) | {"fromId": rel.from_id, "toId": rel.to_id} for rel in relations]
+        rows = [
+            _relation_props(rel) | {"fromId": rel.from_id, "toId": rel.to_id} for rel in relations
+        ]
         if not rows:
             return 0
         # Group by relation type because Cypher requires a literal type. Use a

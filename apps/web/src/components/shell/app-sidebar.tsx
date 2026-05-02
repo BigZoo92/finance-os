@@ -19,7 +19,7 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
 
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
-    return currentPath === to || currentPath.startsWith(to + '/')
+    return currentPath === to || currentPath.startsWith(`${to}/`)
   }
 
   return (
@@ -193,7 +193,7 @@ export function MobileNav() {
 
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
-    return currentPath === to || currentPath.startsWith(to + '/')
+    return currentPath === to || currentPath.startsWith(`${to}/`)
   }
 
   const tabItems = getMobileTabItems()

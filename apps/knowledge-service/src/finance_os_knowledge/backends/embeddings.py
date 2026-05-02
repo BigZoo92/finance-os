@@ -4,6 +4,7 @@ Default is the deterministic local hashing embedding (no network, no PII
 leakage). External providers are optional and fail-soft: if they raise we
 fall back to the local hashing embedding rather than blocking ingestion.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -99,9 +100,7 @@ class OpenAIEmbeddings:
 
 def build_embedding_provider(settings: KnowledgeSettings) -> EmbeddingProvider:
     if settings.embedding_provider == "openai":
-        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
-            "KNOWLEDGE_OPENAI_API_KEY"
-        )
+        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("KNOWLEDGE_OPENAI_API_KEY")
         if api_key:
             try:
                 return OpenAIEmbeddings(

@@ -76,9 +76,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # TODO: make this blocking after the existing root Biome baseline is fixed.
-      - name: Root lint (known failing baseline)
-        continue-on-error: true
+      - name: Root lint
         run: pnpm lint
 
       - name: Docker workspace manifest drift check
@@ -131,6 +129,32 @@ jobs:
 
       - name: Run demo E2E smoke
         run: pnpm test:e2e
+
+  docker-build-smoke:
+    name: Docker Build Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: true
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      DOCKER_BUILDKIT: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Docker build smoke
+        run: pnpm docker:build:smoke
 
 
   tauri-validate:

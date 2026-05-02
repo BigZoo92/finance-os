@@ -4,6 +4,7 @@ Admin mode prefers the production store (Neo4j + Qdrant). Demo, tests, or
 missing configuration fall back to the deterministic local store. We never
 raise from selection: callers can always trust they receive a usable store.
 """
+
 from __future__ import annotations
 
 import logging
@@ -71,9 +72,7 @@ def select_backend(settings: KnowledgeSettings) -> KnowledgeBackend:
     """
     if not settings.production_backends_configured:
         if settings.require_production_backends_in_admin:
-            logger.error(
-                "knowledge service requires production backends but none configured"
-            )
+            logger.error("knowledge service requires production backends but none configured")
         return KnowledgeGraphStore(settings=settings)
 
     production = ProductionKnowledgeStore(settings=settings)

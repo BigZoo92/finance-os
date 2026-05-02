@@ -14,6 +14,7 @@ const services = [
 
 const commands = {
   lint: ['run', '--extra', 'dev', 'ruff', 'check', '.'],
+  format: ['run', '--extra', 'dev', 'ruff', 'format', '.'],
   'format-check': ['run', '--extra', 'dev', 'ruff', 'format', '--check', '.'],
   test: ['run', '--extra', 'dev', 'pytest'],
 }
@@ -21,7 +22,7 @@ const commands = {
 const commandName = process.argv[2]
 
 if (!commandName || !(commandName in commands)) {
-  console.error('Usage: node scripts/python-services.mjs <lint|format-check|test>')
+  console.error('Usage: node scripts/python-services.mjs <lint|format|format-check|test>')
   process.exit(1)
 }
 

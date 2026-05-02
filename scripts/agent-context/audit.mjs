@@ -7,8 +7,8 @@
  * Outputs both human-readable report and machine-readable JSON.
  */
 
-import { buildFileRegistry, buildSkillRegistry, detectDuplicates, estimateTokens, ROOT } from './lib.mjs'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { buildFileRegistry, buildSkillRegistry, detectDuplicates, ROOT } from './lib.mjs'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const fileRegistry = buildFileRegistry()

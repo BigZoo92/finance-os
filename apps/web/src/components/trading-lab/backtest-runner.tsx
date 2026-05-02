@@ -338,8 +338,8 @@ function PreviewResultPanel({
       </div>
       {data.dataWarnings && data.dataWarnings.length > 0 ? (
         <ul className="space-y-0.5 text-amber-300/70">
-          {data.dataWarnings.map((warning, index) => (
-            <li key={index}>· {warning}</li>
+          {data.dataWarnings.map(warning => (
+            <li key={warning}>· {warning}</li>
           ))}
         </ul>
       ) : null}
@@ -397,8 +397,8 @@ function BacktestResultPanel({
       ) : null}
       {data.dataWarnings && data.dataWarnings.length > 0 ? (
         <ul className="mt-1 space-y-0.5 text-muted-foreground">
-          {data.dataWarnings.map((warning, index) => (
-            <li key={index}>· {warning}</li>
+          {data.dataWarnings.map(warning => (
+            <li key={warning}>· {warning}</li>
           ))}
         </ul>
       ) : null}

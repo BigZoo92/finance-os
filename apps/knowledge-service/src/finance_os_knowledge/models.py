@@ -5,7 +5,13 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .redaction import redact_value
-from .schema import KnowledgeNodeType, KnowledgeRelationType, KnowledgeScope, NODE_TYPES, RELATION_TYPES
+from .schema import (
+    KnowledgeNodeType,
+    KnowledgeRelationType,
+    KnowledgeScope,
+    NODE_TYPES,
+    RELATION_TYPES,
+)
 
 
 def utc_now() -> datetime:

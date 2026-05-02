@@ -653,9 +653,10 @@ function PatrimoinePage() {
                       <option value="investment">Investissement</option>
                     </select>
                   </label>
-                  <label className="space-y-2 text-sm">
+                  <label className="space-y-2 text-sm" htmlFor="manual-asset-currency">
                     <span className="text-muted-foreground">Devise</span>
                     <Input
+                      id="manual-asset-currency"
                       value={manualAssetDraft.currency}
                       onChange={event =>
                         setManualAssetDraft(current => ({
@@ -669,9 +670,10 @@ function PatrimoinePage() {
                   </label>
                 </div>
 
-                <label className="space-y-2 text-sm">
+                <label className="space-y-2 text-sm" htmlFor="manual-asset-name">
                   <span className="text-muted-foreground">Nom</span>
                   <Input
+                    id="manual-asset-name"
                     value={manualAssetDraft.name}
                     onChange={event =>
                       setManualAssetDraft(current => ({
@@ -685,9 +687,10 @@ function PatrimoinePage() {
                 </label>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className="space-y-2 text-sm">
+                  <label className="space-y-2 text-sm" htmlFor="manual-asset-valuation">
                     <span className="text-muted-foreground">Valorisation</span>
                     <Input
+                      id="manual-asset-valuation"
                       type="number"
                       inputMode="decimal"
                       step="0.01"
@@ -702,9 +705,10 @@ function PatrimoinePage() {
                       placeholder="0.00"
                     />
                   </label>
-                  <label className="space-y-2 text-sm">
+                  <label className="space-y-2 text-sm" htmlFor="manual-asset-valuation-as-of">
                     <span className="text-muted-foreground">Valorisation au</span>
                     <Input
+                      id="manual-asset-valuation-as-of"
                       type="datetime-local"
                       value={manualAssetDraft.valuationAsOf}
                       onChange={event =>
@@ -718,9 +722,10 @@ function PatrimoinePage() {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className="space-y-2 text-sm">
+                  <label className="space-y-2 text-sm" htmlFor="manual-asset-category">
                     <span className="text-muted-foreground">Categorie</span>
                     <Input
+                      id="manual-asset-category"
                       value={manualAssetDraft.category}
                       onChange={event =>
                         setManualAssetDraft(current => ({

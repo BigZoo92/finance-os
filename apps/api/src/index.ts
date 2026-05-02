@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
 import { resolveRuntimeVersion } from '@finance-os/prelude'
-import { createRedisClient } from '@finance-os/redis'
+import { createInMemoryRedisClient, createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from './auth/context'
 import { deriveAuth } from './auth/derive'
@@ -30,7 +30,17 @@ import { registerSystemRoutes } from './routes/system'
 import { applyApiSecurityHeaders, createApiSecurityHeaders } from './security/http-headers'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
-const redisClient = createRedisClient(env.REDIS_URL)
+const redisClient = env.API_ALLOW_IN_MEMORY_REDIS
+  ? createInMemoryRedisClient()
+  : createRedisClient(env.REDIS_URL)
+
+if (env.API_ALLOW_IN_MEMORY_REDIS) {
+  logApiEvent({
+    level: 'warn',
+    msg: 'api using in-memory redis adapter',
+    nodeEnv: env.NODE_ENV,
+  })
+}
 
 const withApiCompatibilityPaths = (paths: string[]) => {
   const expanded = new Set<string>()

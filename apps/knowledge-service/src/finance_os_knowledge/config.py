@@ -25,9 +25,7 @@ class KnowledgeSettings(BaseSettings):
     vector_enabled: bool = Field(default=True, alias="KNOWLEDGE_GRAPH_VECTOR_ENABLED")
     fulltext_enabled: bool = Field(default=True, alias="KNOWLEDGE_GRAPH_FULLTEXT_ENABLED")
     temporal_enabled: bool = Field(default=True, alias="KNOWLEDGE_GRAPH_TEMPORAL_ENABLED")
-    demo_fixtures_enabled: bool = Field(
-        default=True, alias="KNOWLEDGE_GRAPH_DEMO_FIXTURES_ENABLED"
-    )
+    demo_fixtures_enabled: bool = Field(default=True, alias="KNOWLEDGE_GRAPH_DEMO_FIXTURES_ENABLED")
     retrieval_mode: Literal["hybrid", "graph", "vector", "fulltext"] = Field(
         default="hybrid", alias="KNOWLEDGE_GRAPH_RETRIEVAL_MODE"
     )
@@ -41,16 +39,12 @@ class KnowledgeSettings(BaseSettings):
     embedding_provider: Literal["local", "openai", "none"] = Field(
         default="local", alias="KNOWLEDGE_EMBEDDING_PROVIDER"
     )
-    embedding_model: str = Field(
-        default="local-hashing-v1", alias="KNOWLEDGE_EMBEDDING_MODEL"
-    )
+    embedding_model: str = Field(default="local-hashing-v1", alias="KNOWLEDGE_EMBEDDING_MODEL")
     embedding_dimensions: int = Field(
         default=256, alias="KNOWLEDGE_EMBEDDING_DIMENSIONS", ge=32, le=4096
     )
 
-    use_production_backends: bool = Field(
-        default=False, alias="KNOWLEDGE_USE_PRODUCTION_BACKENDS"
-    )
+    use_production_backends: bool = Field(default=False, alias="KNOWLEDGE_USE_PRODUCTION_BACKENDS")
     require_production_backends_in_admin: bool = Field(
         default=False, alias="KNOWLEDGE_REQUIRE_PRODUCTION_BACKENDS_IN_ADMIN"
     )
@@ -60,17 +54,11 @@ class KnowledgeSettings(BaseSettings):
 
     knowledge_neo4j_uri: str | None = Field(default=None, alias="KNOWLEDGE_NEO4J_URI")
     knowledge_neo4j_user: str | None = Field(default=None, alias="KNOWLEDGE_NEO4J_USER")
-    knowledge_neo4j_password: str | None = Field(
-        default=None, alias="KNOWLEDGE_NEO4J_PASSWORD"
-    )
-    knowledge_neo4j_database: str = Field(
-        default="neo4j", alias="KNOWLEDGE_NEO4J_DATABASE"
-    )
+    knowledge_neo4j_password: str | None = Field(default=None, alias="KNOWLEDGE_NEO4J_PASSWORD")
+    knowledge_neo4j_database: str = Field(default="neo4j", alias="KNOWLEDGE_NEO4J_DATABASE")
 
     knowledge_qdrant_url: str | None = Field(default=None, alias="KNOWLEDGE_QDRANT_URL")
-    knowledge_qdrant_api_key: str | None = Field(
-        default=None, alias="KNOWLEDGE_QDRANT_API_KEY"
-    )
+    knowledge_qdrant_api_key: str | None = Field(default=None, alias="KNOWLEDGE_QDRANT_API_KEY")
     knowledge_qdrant_collection: str = Field(
         default="finance_os_knowledge", alias="KNOWLEDGE_QDRANT_COLLECTION"
     )

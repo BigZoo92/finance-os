@@ -4,6 +4,7 @@ Maps a news context bundle (curated headlines + market-event tags) into
 NewsSignal/MarketEvent/SourceDocument/Evidence nodes with the appropriate
 SUPPORTED_BY/CONTRADICTED_BY/IMPACTS edges.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

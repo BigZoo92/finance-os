@@ -5,6 +5,7 @@ SocialSignal nodes with AFFECTS_ASSET/OBSERVED_IN edges.
 Reuses the news ingest infrastructure but creates SocialSignal node types
 to distinguish provenance.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

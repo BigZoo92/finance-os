@@ -37,10 +37,22 @@ logger = logging.getLogger("finance_os_quant")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 METRIC_NAMES = [
-    "cagr", "volatility", "sharpe", "sortino", "max_drawdown",
-    "calmar", "win_rate", "profit_factor", "exposure_time",
-    "total_trades", "total_fees", "total_slippage", "benchmark_return",
-    "alpha", "beta", "drawdown_recovery_days",
+    "cagr",
+    "volatility",
+    "sharpe",
+    "sortino",
+    "max_drawdown",
+    "calmar",
+    "win_rate",
+    "profit_factor",
+    "exposure_time",
+    "total_trades",
+    "total_fees",
+    "total_slippage",
+    "benchmark_return",
+    "alpha",
+    "beta",
+    "drawdown_recovery_days",
 ]
 
 
@@ -57,9 +69,7 @@ def _log(level: str, message: str, **fields: object) -> None:
         **fields,
     }
     logger.log(
-        logging.ERROR if level == "error"
-        else logging.WARNING if level == "warn"
-        else logging.INFO,
+        logging.ERROR if level == "error" else logging.WARNING if level == "warn" else logging.INFO,
         json.dumps(payload, default=str),
     )
 
@@ -75,6 +85,7 @@ def _safe_error(request_id: str, status_code: int, code: str, message: str) -> O
 def _check_vectorbt() -> bool:
     try:
         import vectorbt  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -83,6 +94,7 @@ def _check_vectorbt() -> bool:
 def _check_quantstats() -> bool:
     try:
         import quantstats  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -100,7 +112,9 @@ def create_app() -> FastAPI:
 
     # --- Validation error handler ---
     @app.exception_handler(RequestValidationError)
-    async def validation_error_handler(request: Request, exc: RequestValidationError) -> ORJSONResponse:
+    async def validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ) -> ORJSONResponse:
         rid = _request_id(request)
         return _safe_error(rid, 422, "VALIDATION_ERROR", str(exc.errors()[:3]))
 
@@ -160,17 +174,30 @@ def create_app() -> FastAPI:
     @app.post("/quant/backtest", response_class=ORJSONResponse)
     async def backtest(request: Request, body: BacktestRequest) -> ORJSONResponse:
         rid = _request_id(request)
-        _log("info", "backtest_request", requestId=rid, strategy=body.strategy_type, rows=len(body.data))
+        _log(
+            "info",
+            "backtest_request",
+            requestId=rid,
+            strategy=body.strategy_type,
+            rows=len(body.data),
+        )
 
         if not settings.quant_service_enabled:
             return _safe_error(rid, 503, "SERVICE_DISABLED", "Quant service is disabled")
 
         if not settings.trading_lab_paper_only:
-            return _safe_error(rid, 403, "PAPER_ONLY", "Trading Lab is paper-only mode. Live trading is not supported.")
+            return _safe_error(
+                rid,
+                403,
+                "PAPER_ONLY",
+                "Trading Lab is paper-only mode. Live trading is not supported.",
+            )
 
         if len(body.data) > settings.trading_lab_max_backtest_rows:
             return _safe_error(
-                rid, 400, "DATA_TOO_LARGE",
+                rid,
+                400,
+                "DATA_TOO_LARGE",
                 f"Data exceeds maximum rows ({len(body.data)} > {settings.trading_lab_max_backtest_rows})",
             )
 
@@ -220,7 +247,9 @@ def create_app() -> FastAPI:
                     "ok": True,
                     "metrics": result_metrics,
                     "requestId": rid,
-                    "caveats": ["Metrics assume daily returns. Adjust interpretation for other frequencies."],
+                    "caveats": [
+                        "Metrics assume daily returns. Adjust interpretation for other frequencies."
+                    ],
                 },
                 headers={"x-request-id": rid, "cache-control": "no-store"},
             )
@@ -232,7 +261,13 @@ def create_app() -> FastAPI:
     @app.post("/quant/walk-forward", response_class=ORJSONResponse)
     async def walk_forward(request: Request, body: WalkForwardRequest) -> ORJSONResponse:
         rid = _request_id(request)
-        _log("info", "walk_forward_request", requestId=rid, strategy=body.strategy_type, rows=len(body.data))
+        _log(
+            "info",
+            "walk_forward_request",
+            requestId=rid,
+            strategy=body.strategy_type,
+            rows=len(body.data),
+        )
 
         if not settings.quant_service_enabled:
             return _safe_error(rid, 503, "SERVICE_DISABLED", "Quant service is disabled")
@@ -242,7 +277,9 @@ def create_app() -> FastAPI:
 
         if len(body.data) > settings.trading_lab_max_backtest_rows:
             return _safe_error(
-                rid, 400, "DATA_TOO_LARGE",
+                rid,
+                400,
+                "DATA_TOO_LARGE",
                 f"Data exceeds maximum rows ({len(body.data)} > {settings.trading_lab_max_backtest_rows})",
             )
 
@@ -281,7 +318,15 @@ def create_app() -> FastAPI:
         contradicting = len(body.contradicting_signals)
         total = supporting + contradicting
         confidence = supporting / total if total > 0 else 0.0
-        risk = "low" if confidence > 0.7 else "medium" if confidence > 0.4 else "high" if confidence > 0.2 else "critical"
+        risk = (
+            "low"
+            if confidence > 0.7
+            else "medium"
+            if confidence > 0.4
+            else "high"
+            if confidence > 0.2
+            else "critical"
+        )
 
         result = ScenarioEvaluateResult(
             confidence=round(confidence, 2),
@@ -296,5 +341,10 @@ def create_app() -> FastAPI:
             headers={"x-request-id": rid, "cache-control": "no-store"},
         )
 
-    _log("info", "quant_service_started", version=__version__, paper_only=settings.trading_lab_paper_only)
+    _log(
+        "info",
+        "quant_service_started",
+        version=__version__,
+        paper_only=settings.trading_lab_paper_only,
+    )
     return app

@@ -3,6 +3,7 @@
 Maps Model usage and AI cost-ledger rows into Model/AgentRun/CostObservation/
 TokenUsageObservation nodes connected via USES_MODEL/CONSUMED_TOKENS/COSTS.
 """
+
 from __future__ import annotations
 
 from datetime import datetime

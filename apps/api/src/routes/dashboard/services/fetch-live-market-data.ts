@@ -1,4 +1,4 @@
-import { clampHistory, computeChangePct, computeFreshnessMinutes, getMarketSessionState, roundNumber, safeNumber } from '../domain/market-helpers'
+import { clampHistory, computeChangePct, computeFreshnessMinutes, getMarketSessionState, safeNumber } from '../domain/market-helpers'
 import {
   getMarketInstrumentDefinition,
   getMarketMacroSeriesDefinition,

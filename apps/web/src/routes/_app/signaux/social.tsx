@@ -380,8 +380,9 @@ function AddSourceForm({
       <h3 className="text-sm font-medium text-text-primary mb-3">Nouveau compte</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-text-secondary block mb-1">Provider</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-provider">Provider</label>
           <select
+            id="signal-source-provider"
             value={provider}
             onChange={e => setProvider(e.target.value)}
             className="w-full rounded-lg bg-surface-1 border border-surface-2 px-3 py-1.5 text-sm text-text-primary"
@@ -392,8 +393,9 @@ function AddSourceForm({
           </select>
         </div>
         <div>
-          <label className="text-xs text-text-secondary block mb-1">Groupe</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-group">Groupe</label>
           <select
+            id="signal-source-group"
             value={group}
             onChange={e => setGroup(e.target.value as SignalSourceGroup)}
             className="w-full rounded-lg bg-surface-1 border border-surface-2 px-3 py-1.5 text-sm text-text-primary"
@@ -403,8 +405,9 @@ function AddSourceForm({
           </select>
         </div>
         <div>
-          <label className="text-xs text-text-secondary block mb-1">Handle / identifiant</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-handle">Handle / identifiant</label>
           <input
+            id="signal-source-handle"
             type="text"
             value={handle}
             onChange={e => setHandle(e.target.value)}
@@ -413,8 +416,9 @@ function AddSourceForm({
           />
         </div>
         <div>
-          <label className="text-xs text-text-secondary block mb-1">Nom d'affichage</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-display-name">Nom d'affichage</label>
           <input
+            id="signal-source-display-name"
             type="text"
             value={displayName}
             onChange={e => setDisplayName(e.target.value)}
@@ -423,8 +427,9 @@ function AddSourceForm({
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="text-xs text-text-secondary block mb-1">Tags (separes par virgule)</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-tags">Tags (separes par virgule)</label>
           <input
+            id="signal-source-tags"
             type="text"
             value={tags}
             onChange={e => setTags(e.target.value)}

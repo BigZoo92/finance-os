@@ -6,7 +6,14 @@ from httpx import ASGITransport, AsyncClient
 from finance_os_quant.app import create_app
 
 SAMPLE_DATA = [
-    {"date": f"2024-01-{i:02d}", "open": 100 + i, "high": 102 + i, "low": 99 + i, "close": 101 + i, "volume": 1000}
+    {
+        "date": f"2024-01-{i:02d}",
+        "open": 100 + i,
+        "high": 102 + i,
+        "low": 99 + i,
+        "close": 101 + i,
+        "volume": 1000,
+    }
     for i in range(1, 31)
 ]
 
@@ -53,11 +60,14 @@ async def test_capabilities(client):
 
 @pytest.mark.anyio
 async def test_indicators_endpoint(client):
-    resp = await client.post("/quant/indicators", json={
-        "indicator": "ema",
-        "data": SAMPLE_DATA,
-        "params": {"period": 10},
-    })
+    resp = await client.post(
+        "/quant/indicators",
+        json={
+            "indicator": "ema",
+            "data": SAMPLE_DATA,
+            "params": {"period": 10},
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["ok"] is True
@@ -67,12 +77,15 @@ async def test_indicators_endpoint(client):
 
 @pytest.mark.anyio
 async def test_backtest_endpoint(client):
-    resp = await client.post("/quant/backtest", json={
-        "strategy_type": "buy_and_hold",
-        "data": SAMPLE_DATA,
-        "initial_cash": 10000,
-        "fees_bps": 10,
-    })
+    resp = await client.post(
+        "/quant/backtest",
+        json={
+            "strategy_type": "buy_and_hold",
+            "data": SAMPLE_DATA,
+            "initial_cash": 10000,
+            "fees_bps": 10,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["ok"] is True
@@ -83,9 +96,12 @@ async def test_backtest_endpoint(client):
 
 @pytest.mark.anyio
 async def test_metrics_endpoint(client):
-    resp = await client.post("/quant/metrics", json={
-        "returns": [0.01, -0.005, 0.02, -0.01, 0.015] * 50,
-    })
+    resp = await client.post(
+        "/quant/metrics",
+        json={
+            "returns": [0.01, -0.005, 0.02, -0.01, 0.015] * 50,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["ok"] is True
@@ -94,11 +110,14 @@ async def test_metrics_endpoint(client):
 
 @pytest.mark.anyio
 async def test_scenario_evaluate_endpoint(client):
-    resp = await client.post("/quant/scenario/evaluate", json={
-        "thesis": "Tech sector will outperform in Q2",
-        "supporting_signals": [{"id": "1"}],
-        "contradicting_signals": [{"id": "2"}, {"id": "3"}],
-    })
+    resp = await client.post(
+        "/quant/scenario/evaluate",
+        json={
+            "thesis": "Tech sector will outperform in Q2",
+            "supporting_signals": [{"id": "1"}],
+            "contradicting_signals": [{"id": "2"}, {"id": "3"}],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["ok"] is True

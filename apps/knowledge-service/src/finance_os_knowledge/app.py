@@ -54,11 +54,7 @@ def _log(level: str, message: str, **fields: object) -> None:
         **fields,
     }
     logger.log(
-        logging.ERROR
-        if level == "error"
-        else logging.WARNING
-        if level == "warn"
-        else logging.INFO,
+        logging.ERROR if level == "error" else logging.WARNING if level == "warn" else logging.INFO,
         json.dumps(payload, default=str),
     )
 
@@ -169,9 +165,7 @@ def create_app() -> FastAPI:
         return response
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
-    ):
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
         request_id = _request_id(request)
         _log(
             "warn",
@@ -193,9 +187,9 @@ def create_app() -> FastAPI:
         production_active = (
             backend_health.get("productionActive", False) if backend_health else False
         )
-        degraded = (
-            production_configured and not production_active
-        ) or (settings.graph_backend != "local" and not production_configured)
+        degraded = (production_configured and not production_active) or (
+            settings.graph_backend != "local" and not production_configured
+        )
         payload = {
             "status": "degraded" if degraded else "ok",
             "service": "knowledge-service",
@@ -328,17 +322,13 @@ def create_app() -> FastAPI:
         return store().ingest(ingest_request, request_id=request_id)
 
     @app.post("/knowledge/ingest/cost-ledger")
-    async def ingest_cost_ledger(
-        request_body: CostLedgerIngestRequest, request: Request
-    ):
+    async def ingest_cost_ledger(request_body: CostLedgerIngestRequest, request: Request):
         request_id = _request_id(request)
         ingest_request = build_cost_ledger_ingest(request_body)
         return store().ingest(ingest_request, request_id=request_id)
 
     @app.post("/knowledge/ingest/trading-lab")
-    async def ingest_trading_lab(
-        request_body: TradingLabIngestRequest, request: Request
-    ):
+    async def ingest_trading_lab(request_body: TradingLabIngestRequest, request: Request):
         request_id = _request_id(request)
         ingest_request = build_trading_lab_ingest(request_body)
         return store().ingest(ingest_request, request_id=request_id)

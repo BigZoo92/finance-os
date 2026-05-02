@@ -5,9 +5,17 @@ from finance_os_quant.engines.indicators import compute_indicator, AVAILABLE_IND
 
 # Simple OHLCV fixture — 50 trading days across Jan-Mar 2024
 from datetime import date, timedelta
+
 _base = date(2024, 1, 2)
 SAMPLE_DATA = [
-    {"date": str(_base + timedelta(days=i)), "open": 100 + i, "high": 102 + i, "low": 99 + i, "close": 101 + i, "volume": 1000}
+    {
+        "date": str(_base + timedelta(days=i)),
+        "open": 100 + i,
+        "high": 102 + i,
+        "low": 99 + i,
+        "close": 101 + i,
+        "volume": 1000,
+    }
     for i in range(50)
 ]
 

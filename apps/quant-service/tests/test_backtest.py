@@ -4,17 +4,32 @@ import pytest
 from finance_os_quant.engines.backtest import run_backtest, AVAILABLE_STRATEGIES
 
 from datetime import date, timedelta
+
 _base = date(2024, 1, 2)
 
 # Trending up data (price rises steadily)
 TREND_UP_DATA = [
-    {"date": str(_base + timedelta(days=i)), "open": 100 + i * 0.5, "high": 102 + i * 0.5, "low": 99 + i * 0.5, "close": 101 + i * 0.5, "volume": 1000}
+    {
+        "date": str(_base + timedelta(days=i)),
+        "open": 100 + i * 0.5,
+        "high": 102 + i * 0.5,
+        "low": 99 + i * 0.5,
+        "close": 101 + i * 0.5,
+        "volume": 1000,
+    }
     for i in range(50)
 ]
 
 # Flat data
 FLAT_DATA = [
-    {"date": str(_base + timedelta(days=i)), "open": 100, "high": 101, "low": 99, "close": 100, "volume": 1000}
+    {
+        "date": str(_base + timedelta(days=i)),
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100,
+        "volume": 1000,
+    }
     for i in range(50)
 ]
 
@@ -48,8 +63,12 @@ def test_buy_and_hold_metrics():
 
 
 def test_fees_applied():
-    result_no_fees = run_backtest("buy_and_hold", TREND_UP_DATA, fees_bps=0, slippage_bps=0, spread_bps=0)
-    result_with_fees = run_backtest("buy_and_hold", TREND_UP_DATA, fees_bps=50, slippage_bps=20, spread_bps=10)
+    result_no_fees = run_backtest(
+        "buy_and_hold", TREND_UP_DATA, fees_bps=0, slippage_bps=0, spread_bps=0
+    )
+    result_with_fees = run_backtest(
+        "buy_and_hold", TREND_UP_DATA, fees_bps=50, slippage_bps=20, spread_bps=10
+    )
     # With fees, final equity should be lower
     eq_no = result_no_fees["equity_curve"][-1]["equity"]
     eq_with = result_with_fees["equity_curve"][-1]["equity"]
@@ -57,7 +76,9 @@ def test_fees_applied():
 
 
 def test_ema_crossover():
-    result = run_backtest("ema_crossover", TREND_UP_DATA, params={"fast_period": 5, "slow_period": 15})
+    result = run_backtest(
+        "ema_crossover", TREND_UP_DATA, params={"fast_period": 5, "slow_period": 15}
+    )
     assert result["ok"] is True
     assert len(result["equity_curve"]) > 0
 

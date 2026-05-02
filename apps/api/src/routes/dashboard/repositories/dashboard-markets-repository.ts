@@ -1,5 +1,5 @@
 import { schema } from '@finance-os/db'
-import { eq, inArray, notInArray, sql } from 'drizzle-orm'
+import { eq, notInArray, sql } from 'drizzle-orm'
 import { safeNumber, toIsoOrNull, toProviderFreshnessLabel } from '../domain/market-helpers'
 import { MARKET_PROVIDER_LABELS } from '../domain/market-definitions'
 import type {

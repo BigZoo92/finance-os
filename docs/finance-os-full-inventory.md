@@ -118,7 +118,7 @@ Python services are app-local packages with individual `pyproject.toml` files:
 - `apps/knowledge-service/pyproject.toml`
 - `apps/quant-service/pyproject.toml`
 
-They use FastAPI, Pydantic, ORJSON/Uvicorn, and optional dev dependencies. Phase 2 added per-service `uv.lock` files, Ruff dev dependencies, and root pnpm orchestration (`pnpm python:lint`, `pnpm python:test`, `pnpm python:check`). A root uv workspace was intentionally deferred because the two services are independently deployable and do not currently share Python packages. `pnpm python:format:check` exists as a non-blocking format baseline check and currently reports pre-existing Ruff formatting drift.
+They use FastAPI, Pydantic, ORJSON/Uvicorn, and optional dev dependencies. Per-service `uv.lock` files, Ruff dev dependencies, and root pnpm orchestration are present: `pnpm python:lint`, `pnpm python:format:check`, `pnpm python:test`, and `pnpm python:check`. `pnpm python:check` now includes Ruff format checking. A root uv workspace remains deferred because the two services are independently deployable and do not currently share Python packages.
 
 ### AI/knowledge architecture
 
@@ -126,7 +126,7 @@ The AI Advisor is TypeScript-led through `packages/ai`, `apps/api/src/routes/das
 
 ### Deployment and CI overview
 
-CI is defined in `.github/workflows/ci.yml`. It installs pnpm/Bun, surfaces root `pnpm lint` as an explicit known-failing baseline check, runs the Docker workspace manifest drift check, runs workspace lint/typecheck/test/build, runs Python uv/Ruff/pytest checks, runs a deterministic Playwright demo E2E smoke job, and conditionally builds the Tauri desktop shell when desktop scope is detected.
+CI is defined in `.github/workflows/ci.yml`. It installs pnpm/Bun, runs root `pnpm lint` as a blocking signal, runs the Docker workspace manifest drift check, runs workspace lint/typecheck/test/build, runs Python uv/Ruff/pytest/format checks, runs a real-stack Playwright demo E2E smoke job, runs Docker build smoke targets when Docker is available in CI, and conditionally builds the Tauri desktop shell when desktop scope is detected.
 
 Release is defined in `.github/workflows/release.yml`. It runs CI, builds GHCR images for web/api/worker from `infra/docker/Dockerfile`, builds a separate knowledge-service image, syncs Dokploy compose/env state, triggers deployment, and runs post-deploy smoke checks.
 
@@ -146,6 +146,8 @@ Demo mode is the default product path. It is intended to:
 - Return a safe `auth/me` mode that does not imply a real admin session.
 
 Demo data appears in `apps/api/src/mocks`, `apps/web/src/features/demo-data.ts`, and feature-specific frontend fixtures such as market demo data. Some routes also accept mode/search parameters or demo fixture override headers for tests.
+
+The API can now boot in explicit demo/test/local profiles without a Redis daemon by setting `API_ALLOW_IN_MEMORY_REDIS=true`; this selects the in-memory Redis adapter in `packages/redis`. Production startup rejects this flag so real production deployments still require Redis. E2E uses `FINANCE_OS_SKIP_ROOT_ENV=1` to avoid accidentally loading local secrets and supplies deterministic server-only test env values.
 
 ### Admin mode
 
@@ -706,7 +708,7 @@ Sync failures should update provider health/sync run tables and preserve previou
 
 #### Tests
 
-`packages/external-investments/src/external-investments.test.ts` exists and passed in baseline. More API route tests should be added.
+`packages/external-investments/src/external-investments.test.ts` exists and passed in baseline. `packages/external-investments/src/provider-operation.test.ts` covers the first Effect boundary for retry, timeout, fail-soft fallback, and credential redaction. More API route tests should be added.
 
 #### Known limitations / TODOs
 
@@ -714,7 +716,7 @@ Sync failures should update provider health/sync run tables and preserve previou
 
 #### Technical improvement opportunities
 
-Adopt Effect first in this package/job boundary: typed provider errors, retries, timeouts, redacted logging, credential resource scopes, and read-only operation allowlists.
+The first Effect pilot now lives in this package as `provider-operation.ts`: typed provider errors, bounded timeout, retry attempts, fail-soft fallback mapping, and redacted provider error messages. Future work should apply the same pattern to one concrete IBKR/Binance provider call after route/job tests are in place.
 
 ### Markets and macro context
 
@@ -873,7 +875,7 @@ Provider failures update cache/provider state and should not block the dashboard
 
 #### Tests
 
-News scheduler tests exist. Signal source route/domain tests exist in several dashboard files, but root lint currently flags some non-null assertions in signal tests/repositories.
+News scheduler tests exist. Signal source route/domain tests exist in several dashboard files, and the previously flagged root Biome issues in signal tests/repositories have been cleaned.
 
 #### Known limitations / TODOs
 
@@ -1166,15 +1168,15 @@ Quant service failures should return safe unavailable state and preserve existin
 
 #### Tests
 
-Phase 2 root orchestration runs quant Python tests through `pnpm python:test`. TS trading-lab route tests were not clearly identified in baseline output.
+Root orchestration runs quant Python tests through `pnpm python:test`. TS trading-lab route tests were not clearly identified in baseline output.
 
 #### Known limitations / TODOs
 
-`apps/api/src/routes/dashboard/routes/trading-lab.ts` is large. Quant service now has root uv/Ruff/pytest orchestration, but Ruff format checking is still a non-blocking baseline.
+`apps/api/src/routes/dashboard/routes/trading-lab.ts` is large. Quant service now has root uv/Ruff/pytest orchestration, and Ruff format checking is blocking through `pnpm python:check`.
 
 #### Technical improvement opportunities
 
-Add route contract tests and decide whether to make Python format enforcement blocking after a focused format-only patch. Keep all trading lab operations explicitly paper/research only.
+Add route contract tests. Keep all trading lab operations explicitly paper/research only.
 
 ### Analytics, derived recompute, and finance engine
 
@@ -1451,11 +1453,11 @@ System tests exist. Docker ops alert tests exist at `infra/docker/ops-alerts/mon
 
 #### Known limitations / TODOs
 
-Root `pnpm lint` fails while CI validate uses `pnpm -r --if-present lint`, which currently misses root Biome lint. This is a CI signal-quality issue.
+Root `pnpm lint` is now clean and is a blocking CI/check signal. Future CI changes should keep root Biome lint separate from package-level lint so root config/scripts/docs do not silently escape validation.
 
 #### Technical improvement opportunities
 
-Align CI lint with root lint once existing Biome violations are fixed or scoped. Add CI summary output and artifact logs for failing smoke/build jobs.
+Add CI summary output and artifact logs for failing smoke/build jobs.
 
 ### Desktop shell
 
@@ -1929,7 +1931,7 @@ Protections found:
 Gaps:
 
 - No single redaction test matrix across AI context bundle assembly was found.
-- Python Ruff format checking is now available but intentionally non-blocking because it reports broad pre-existing formatting drift.
+- No single redaction test matrix across Python knowledge-service payload assembly was found.
 
 ### Demo/admin separation
 
@@ -1937,7 +1939,7 @@ Demo should use deterministic AI/advisor/knowledge fixtures or safe fallbacks. A
 
 ### Limitations
 
-- No Effect dependency or standard Effect pattern currently found.
+- Effect is currently piloted in external-investments only; no AI-specific Effect boundary exists yet.
 - Large advisor orchestration files increase review risk.
 - Knowledge/AI context privacy and budget tests should be strengthened.
 
@@ -1962,9 +1964,16 @@ The monorepo uses pnpm 10.x with Bun for API/worker/package tests and Vite/TanSt
 - `pnpm -r --if-present build`
 - `pnpm check:ci`
 - `pnpm docker:check`
+- `pnpm docker:build:smoke`
+- `pnpm affected:print`
+- `pnpm affected:lint`
+- `pnpm affected:typecheck`
+- `pnpm affected:test`
+- `pnpm affected:build`
 - `pnpm python:lint`
 - `pnpm python:test`
 - `pnpm python:check`
+- `pnpm python:format`
 - `pnpm python:format:check`
 - `pnpm test:e2e`
 
@@ -1986,18 +1995,19 @@ Package scripts are uneven:
 - Bun setup
 - Python 3.12 and uv setup
 - `pnpm install --frozen-lockfile`
-- explicit non-blocking root `pnpm lint` known-failing baseline
+- blocking root `pnpm lint`
 - `pnpm docker:check`
 - `pnpm -r --if-present lint`
 - `pnpm -r --if-present typecheck`
 - `pnpm -r --if-present test`
-- `pnpm python:check`
+- `pnpm python:check` including Ruff format check
 - `pnpm -r --if-present build`
-- separate Playwright demo E2E smoke job with Chromium install
+- separate real-stack Playwright demo E2E smoke job with Chromium install
+- Docker build smoke job for web/api/worker and Python service Dockerfiles
 - conditional Tauri validate
 - concurrency with cancel-in-progress
 
-Important finding: `pnpm check:ci` passed, but `pnpm lint` failed because CI/workspace lint currently runs package lint scripts only and misses root Biome lint. This is a signal-quality gap, not a new failure from this audit patch.
+Root Biome lint is now part of `pnpm check:ci` and CI as a blocking signal.
 
 ### Dockerfiles
 
@@ -2035,29 +2045,28 @@ Release workflow builds images, syncs Dokploy compose/env, triggers deployment, 
 Baseline:
 
 - install passed
-- root lint failed pre-change
+- root lint is clean and blocking after the foundation hardening pass
 - typecheck passed
 - workspace tests passed
 - workspace build passed
-- check:ci passed despite root lint mismatch
-- Python `pytest` missing in the pre-Phase-2 global environment; Phase 2 adds uv-managed Python checks.
+- check:ci includes root lint
+- Python checks are uv-managed and include Ruff lint, Ruff format check, and pytest
 - Docker daemon unavailable locally
 
 ### Current weaknesses
 
-- Root lint is explicit but still non-blocking in CI until existing Biome violations are fixed.
-- Playwright E2E smoke exists, but it is intentionally a deterministic demo smoke rather than an admin/provider test.
-- Python format checking is available but non-blocking due pre-existing formatting drift.
+- Playwright E2E smoke covers real web plus real API demo boot, but it is intentionally not an admin/provider test.
+- Python format checking is now blocking through `pnpm python:check`.
 - Docker build could not be locally validated because Docker daemon was unavailable.
 - Docker manifest stage is hand-maintained and can drift as workspace packages change.
 - Web build reports large chunks for main/three/react-related assets.
-- No affected-task graph beyond desktop scope detection.
+- Affected-task graph script exists, but root/CI/Docker/lockfile changes intentionally fall back to full validation.
 
 ### Optimization opportunities
 
-- Add root lint to CI after fixing existing lint errors, or make root lint a separate required check with known baseline.
-- Add a minimal Playwright smoke in CI.
-- Add Python uv/Ruff/pytest checks.
+- Keep root lint blocking in CI/checks.
+- Expand Playwright only after safe admin fixtures are defined.
+- Keep Python uv/Ruff/pytest/format checks in the required path.
 - Consider `pnpm fetch` or `pnpm deploy` in Docker after testing compatibility with workspace links and Bun runtime.
 - Consider an affected task graph script before adopting Nx/Turbo/Moon. The repo likes Nx mentality but does not require Nx.
 - Add bundle analysis and route-level chunking for heavy three/reactbits/trading lab routes.
@@ -2121,18 +2130,20 @@ Gaps:
 
 ### E2E tests
 
-Phase 2 added a minimal Playwright smoke:
+The Playwright smoke is now real-stack demo coverage:
 
-- deterministic demo API stub for `/api/auth/me` and the cockpit attention read
-- web app boots in demo mode
+- API starts in a test/demo profile with in-memory Redis and no DB/provider credentials required
+- web app is built and served through Vite preview so the smoke exercises production-like SSR instead of relying on TanStack/Nitro dev-server readiness
 - `GET /api/auth/me` returns safe demo mode with `Cache-Control: no-store`
+- `/api/health` reports the API runtime and safe-mode state
+- dashboard summary and cockpit attention reads return demo-safe responses
 - cockpit `/` renders without fatal SSR crash
 - no live providers or admin credentials required
 - optional admin login smoke remains deferred until safe fixtures/secrets are defined
 
 ### Python tests
 
-Phase 2 added root-managed Python checks through uv: `pnpm python:lint`, `pnpm python:test`, and `pnpm python:check`. `pnpm python:format:check` exists but is non-blocking because it currently reports broad pre-existing Ruff formatting drift.
+Root-managed Python checks run through uv: `pnpm python:lint`, `pnpm python:format:check`, `pnpm python:test`, and `pnpm python:check`. Ruff format drift was cleaned and the format check is now part of `pnpm python:check`.
 
 ### Security-sensitive tests
 
@@ -2165,16 +2176,13 @@ Existing tests cover auth cookies/rate-limit behavior and some route cache-contr
 
 ### High
 
-- Root `pnpm lint` fails pre-change while `pnpm check:ci` passes because CI uses workspace package lint scripts and misses root Biome lint.
-- No E2E suite found for the critical demo/admin/cockpit SSR path.
-- Python services have no root-managed dev/test environment; `pytest` is not installed locally, so Python tests cannot run from a clean baseline.
-- Docker production package manifest/copy stages were drifting from workspace dependencies; fixed for `packages/external-investments` in this patch, but the hand-maintained pattern remains fragile.
+- Docker production package manifest/copy stages are hand-maintained; `pnpm docker:check` and Docker build smoke reduce drift risk, but review discipline is still required.
 - The worktree contains broad pre-existing/unrelated modifications and untracked external-investments files/migrations, increasing review risk.
 
 ### Medium
 
 - Large source files: `create-dashboard-advisor-use-cases.ts`, `dashboard-advisor-repository.ts`, `apps/worker/src/index.ts`, `packages/external-investments/src/repository.ts`, `routes/trading-lab.ts`, `ai-advisor-panel.tsx`, `integrations.tsx`, `dashboard/types.ts`, `packages/env/src/index.ts`.
-- No Effect dependency/pattern found despite many provider/job/use-case flows that fit typed effects.
+- Effect now exists as a small external-investments provider operation boundary, but most provider/job/use-case flows still use ad hoc async error handling.
 - No TypeScript project references/build graph; typecheck is global and not obviously incremental by package.
 - Duplicate zod major versions: zod v4 in API/web and zod v3 in worker/env.
 - Web build reports large chunks around main/three/reactbits.
@@ -2191,15 +2199,13 @@ Existing tests cover auth cookies/rate-limit behavior and some route cache-contr
 
 ### Immediate safe wins
 
-1. Fix existing Biome lint violations, then make the currently explicit root lint baseline blocking.
-2. Add Docker build smoke in CI for web/api/worker targets and knowledge/quant services after Docker daemon/runtime assumptions are validated.
-3. Add route tests for external investment credential/sync auth and demo blocking.
-4. Decide whether Python Ruff formatting should be applied in a dedicated format-only patch.
-5. Expand the Playwright demo smoke into an admin-safe smoke only after fixture/secrets strategy is explicit.
+1. Add route tests for external investment credential/sync auth and demo blocking.
+2. Keep Docker build smoke green in CI for web/api/worker targets and knowledge/quant services.
+3. Expand the Playwright demo smoke into an admin-safe smoke only after fixture/secrets strategy is explicit.
 
 ### Short-term optimizations
 
-1. Introduce a simple affected-task script using changed files and workspace dependency graph before considering Nx/Turbo/Moon.
+1. Use the simple affected-task script in local development and CI experiments before considering Nx/Turbo/Moon.
 2. Split `apps/worker/src/index.ts` into Powens sync orchestration, Redis metrics, status server, and scheduler bootstrap modules.
 3. Split AI Advisor repository/use-case files by daily brief, recommendations, chat, costs, knowledge, and operations.
 4. Add bundle analysis and manual chunking/route splitting for Three/ReactBits/Trading Lab.
@@ -2223,15 +2229,14 @@ Do not use Effect for:
 - Stable CRUD route wrappers where zod/current code is clearer.
 - A repo-wide rewrite without tests.
 
-Recommended first implementation target: `packages/external-investments` provider clients and `apps/worker/src/external-investments-sync.ts`, because the domain is read-only, provider-heavy, and already package-isolated.
+Implemented first target: `packages/external-investments/src/provider-operation.ts`. It wraps an isolated provider operation with `Effect.tryPromise`, bounded timeout, optional retry, typed safe errors, redaction, and fail-soft fallback values without changing IBKR/Binance credential behavior or read-only allowlists.
 
-Phase 2 decision on 2026-05-02: defer the code-level Effect pilot until the external-investments WIP is stabilized. The package and worker sync path are currently part of a broad untracked integration surface, so adding a new runtime abstraction there would mix dependency introduction, provider orchestration, and unsettled feature code in one review. The safe follow-up spec is:
+The next safe follow-up spec is:
 
 1. Add focused tests around one read-only provider operation covering success, timeout, retry exhaustion, redacted failure mapping, and unchanged public return shape.
-2. Add `effect` only to the owning package.
-3. Wrap exactly one isolated provider call with `Effect.tryPromise`, a bounded timeout, a small retry `Schedule`, and typed/redacted provider errors.
-4. Keep existing exported functions and credential behavior unchanged.
-5. Prove compatibility with `pnpm --filter @finance-os/external-investments test`, worker typecheck, and the E2E demo smoke.
+2. Apply the existing `runExternalInvestmentProviderOperation` helper to exactly one read-only IBKR or Binance provider call.
+3. Keep existing exported functions and credential behavior unchanged.
+4. Prove compatibility with `pnpm --filter @finance-os/external-investments test`, worker typecheck, and the E2E demo smoke.
 
 ### Bigger architectural migrations
 
@@ -2239,7 +2244,7 @@ Phase 2 decision on 2026-05-02: defer the code-level Effect pilot until the exte
 - Nx/Turbo/Moon only if a measured affected-task script is insufficient.
 - Vite 8/Rolldown migration only after TanStack Start compatibility and plugin behavior are validated in a branch.
 - Full AI/knowledge architecture rewrite only after redaction/budget/context contract tests exist.
-- Python service extraction/shared workspace after uv/Ruff/pytest baseline exists.
+- Python service extraction/shared workspace after shared Python packages exist.
 
 ### Risky experiments to defer
 
@@ -2259,10 +2264,8 @@ Phase 2 decision on 2026-05-02: defer the code-level Effect pilot until the exte
 
 ## 14. Open questions
 
-1. Should root `pnpm lint` become the required CI lint after fixing the existing Biome violations, or should Biome be scoped differently?
-2. Should Python services use one root uv workspace or separate uv lockfiles per service?
-3. Should quant-service be built/published in the release workflow alongside knowledge-service?
-4. What is the first accepted Effect pilot domain: external investments, Powens sync, market/news providers, or AI provider clients?
-5. Which route should own enrichment notes in the product UI?
-6. What is the minimum acceptable E2E coverage for local-only personal deployment versus production smoke checks?
-7. Should zod v3/v4 duplication be converged now, or deferred until package owners are clarified?
+1. Should Python services move to one root uv workspace once a shared Python package appears, or stay independently locked for deployment isolation?
+2. Should quant-service be built/published in the release workflow alongside knowledge-service?
+3. Which route should own enrichment notes in the product UI?
+4. What is the minimum acceptable E2E coverage for local-only personal deployment versus production smoke checks?
+5. Should zod v3/v4 duplication be converged now, or deferred until package owners are clarified?

@@ -12,16 +12,15 @@ const CHART_COLORS = [
   'var(--chart-7)',
 ]
 const MAX_VISIBLE_SERIES = 7
+const CHART_WIDTH = 760
+const CHART_HEIGHT = 260
+const CHART_MARGIN = { top: 18, right: 24, bottom: 30, left: 12 }
 
 export function RelativePerformanceRibbon({
   items,
 }: {
   items: DashboardMarketQuote[]
 }) {
-  const width = 760
-  const height = 260
-  const margin = { top: 18, right: 24, bottom: 30, left: 12 }
-
   const data = useMemo(() => {
     return items
       .slice(0, MAX_VISIBLE_SERIES)
@@ -53,14 +52,14 @@ export function RelativePerformanceRibbon({
     const x = d3
       .scaleLinear()
       .domain([0, Math.max(1, Math.max(...data.map(item => item.values.length - 1)))])
-      .range([margin.left, width - margin.right])
+      .range([CHART_MARGIN.left, CHART_WIDTH - CHART_MARGIN.right])
     const values = flat.map(point => point.value)
     const extent = d3.extent(values) as [number, number]
     const pad = Math.max(1.5, ((extent[1] ?? 100) - (extent[0] ?? 100)) * 0.16)
     const y = d3
       .scaleLinear()
       .domain([(extent[0] ?? 100) - pad, (extent[1] ?? 100) + pad])
-      .range([height - margin.bottom, margin.top])
+      .range([CHART_HEIGHT - CHART_MARGIN.bottom, CHART_MARGIN.top])
 
     const line = d3
       .line<{ date: string; value: number }>()
@@ -118,7 +117,7 @@ export function RelativePerformanceRibbon({
       </div>
 
       <svg
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className="h-[260px] w-full"
         role="img"
         aria-label="Performance relative des actifs suivis"
@@ -128,15 +127,15 @@ export function RelativePerformanceRibbon({
           return (
             <g key={`grid-${value}`}>
               <line
-                x1={margin.left}
-                x2={width - margin.right}
+                x1={CHART_MARGIN.left}
+                x2={CHART_WIDTH - CHART_MARGIN.right}
                 y1={y}
                 y2={y}
                 stroke="oklch(from var(--border) l c h / 35%)"
                 strokeDasharray="4 6"
               />
               <text
-                x={width - margin.right}
+                x={CHART_WIDTH - CHART_MARGIN.right}
                 y={y - 6}
                 textAnchor="end"
                 className="fill-muted-foreground/70 text-[11px]"
@@ -148,8 +147,8 @@ export function RelativePerformanceRibbon({
         })}
 
         <line
-          x1={margin.left}
-          x2={width - margin.right}
+          x1={CHART_MARGIN.left}
+          x2={CHART_WIDTH - CHART_MARGIN.right}
           y1={chart.baselineY}
           y2={chart.baselineY}
           stroke="oklch(from var(--primary) l c h / 55%)"

@@ -35,6 +35,7 @@ def _to_ohlcv(data: list[dict[str, Any]]) -> pd.DataFrame:
 # EMA
 # ---------------------------------------------------------------------------
 
+
 def compute_ema(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
     period = int(params.get("period", 20))
     close = _to_series(data)
@@ -46,6 +47,7 @@ def compute_ema(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict
 # SMA
 # ---------------------------------------------------------------------------
 
+
 def compute_sma(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
     period = int(params.get("period", 20))
     close = _to_series(data)
@@ -56,6 +58,7 @@ def compute_sma(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict
 # ---------------------------------------------------------------------------
 # RSI
 # ---------------------------------------------------------------------------
+
 
 def compute_rsi(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
     period = int(params.get("period", 14))
@@ -74,6 +77,7 @@ def compute_rsi(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict
 # MACD
 # ---------------------------------------------------------------------------
 
+
 def compute_macd(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
     fast = int(params.get("fast", 12))
     slow = int(params.get("slow", 26))
@@ -88,12 +92,14 @@ def compute_macd(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dic
     for d in macd_line.index:
         if np.isnan(macd_line[d]):
             continue
-        result.append({
-            "date": str(d.date()),
-            "macd": round(float(macd_line[d]), 4),
-            "signal": round(float(signal_line[d]), 4),
-            "histogram": round(float(histogram[d]), 4),
-        })
+        result.append(
+            {
+                "date": str(d.date()),
+                "macd": round(float(macd_line[d]), 4),
+                "signal": round(float(signal_line[d]), 4),
+                "histogram": round(float(histogram[d]), 4),
+            }
+        )
     return result
 
 
@@ -101,7 +107,10 @@ def compute_macd(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dic
 # Parabolic SAR
 # ---------------------------------------------------------------------------
 
-def compute_parabolic_sar(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
+
+def compute_parabolic_sar(
+    data: list[dict[str, Any]], params: dict[str, Any]
+) -> list[dict[str, Any]]:
     af_start = float(params.get("af_start", 0.02))
     af_step = float(params.get("af_step", 0.02))
     af_max = float(params.get("af_max", 0.2))
@@ -160,12 +169,15 @@ def compute_parabolic_sar(data: list[dict[str, Any]], params: dict[str, Any]) ->
 # ATR (Average True Range)
 # ---------------------------------------------------------------------------
 
+
 def compute_atr(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
     period = int(params.get("period", 14))
     df = _to_ohlcv(data)
     high, low, close = df["high"], df["low"], df["close"]
     prev_close = close.shift(1)
-    tr = pd.concat([high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1).max(axis=1)
+    tr = pd.concat([high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1).max(
+        axis=1
+    )
     atr = tr.ewm(alpha=1 / period, min_periods=period).mean()
     return [{"date": str(d.date()), "atr": round(v, 4)} for d, v in atr.items() if not np.isnan(v)]
 
@@ -174,7 +186,10 @@ def compute_atr(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict
 # Bollinger Bands
 # ---------------------------------------------------------------------------
 
-def compute_bollinger_bands(data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
+
+def compute_bollinger_bands(
+    data: list[dict[str, Any]], params: dict[str, Any]
+) -> list[dict[str, Any]]:
     period = int(params.get("period", 20))
     num_std = float(params.get("num_std", 2.0))
     close = _to_series(data)
@@ -186,18 +201,21 @@ def compute_bollinger_bands(data: list[dict[str, Any]], params: dict[str, Any]) 
     for d in sma.index:
         if np.isnan(sma[d]):
             continue
-        result.append({
-            "date": str(d.date()),
-            "middle": round(float(sma[d]), 4),
-            "upper": round(float(upper[d]), 4),
-            "lower": round(float(lower[d]), 4),
-        })
+        result.append(
+            {
+                "date": str(d.date()),
+                "middle": round(float(sma[d]), 4),
+                "upper": round(float(upper[d]), 4),
+                "lower": round(float(lower[d]), 4),
+            }
+        )
     return result
 
 
 # ---------------------------------------------------------------------------
 # Support / Resistance (simple pivot-based)
 # ---------------------------------------------------------------------------
+
 
 def compute_support_resistance(
     data: list[dict[str, Any]], params: dict[str, Any]
@@ -212,9 +230,13 @@ def compute_support_resistance(
         window_high = high.iloc[i - lookback : i + lookback + 1]
         window_low = low.iloc[i - lookback : i + lookback + 1]
         if high.iloc[i] == window_high.max():
-            resistances.append({"date": str(df.index[i].date()), "level": round(float(high.iloc[i]), 4)})
+            resistances.append(
+                {"date": str(df.index[i].date()), "level": round(float(high.iloc[i]), 4)}
+            )
         if low.iloc[i] == window_low.min():
-            supports.append({"date": str(df.index[i].date()), "level": round(float(low.iloc[i]), 4)})
+            supports.append(
+                {"date": str(df.index[i].date()), "level": round(float(low.iloc[i]), 4)}
+            )
 
     return [{"supports": supports[-10:], "resistances": resistances[-10:]}]
 
@@ -237,7 +259,9 @@ INDICATOR_MAP = {
 AVAILABLE_INDICATORS = sorted(INDICATOR_MAP.keys())
 
 
-def compute_indicator(indicator: str, data: list[dict[str, Any]], params: dict[str, Any]) -> list[dict[str, Any]]:
+def compute_indicator(
+    indicator: str, data: list[dict[str, Any]], params: dict[str, Any]
+) -> list[dict[str, Any]]:
     fn = INDICATOR_MAP.get(indicator)
     if fn is None:
         raise ValueError(f"Unknown indicator: {indicator}. Available: {AVAILABLE_INDICATORS}")

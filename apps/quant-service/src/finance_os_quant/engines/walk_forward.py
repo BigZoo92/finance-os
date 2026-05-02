@@ -14,6 +14,7 @@ Notes:
   rolling validation.
 - Caps the number of windows to keep CPU bounded.
 """
+
 from __future__ import annotations
 
 import statistics
@@ -85,8 +86,7 @@ def run_walk_forward(
             "degradation_ratio": None,
             "overfit_warning": "INSUFFICIENT_DATA",
             "summary": (
-                f"Need at least {train_bars + test_bars} bars for walk-forward; "
-                f"got {total}."
+                f"Need at least {train_bars + test_bars} bars for walk-forward; got {total}."
             ),
         }
 
@@ -99,10 +99,7 @@ def run_walk_forward(
     out_of_sample_dd: list[float | None] = []
 
     cursor = 0
-    while (
-        cursor + train_bars + test_bars <= total
-        and len(windows) < MAX_WINDOWS
-    ):
+    while cursor + train_bars + test_bars <= total and len(windows) < MAX_WINDOWS:
         train_slice = data[cursor : cursor + train_bars]
         test_slice = data[cursor + train_bars : cursor + train_bars + test_bars]
 
