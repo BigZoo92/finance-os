@@ -1,6 +1,8 @@
 import type { KnowledgeContextBundle } from '@finance-os/ai'
+import { createExternalInvestmentsRepository } from '@finance-os/external-investments'
 import { buildAdvisorKnowledgeContextQuery } from '@finance-os/finance-engine'
 import { logApiEvent, toErrorLogFields } from '../../observability/logger'
+import { createExternalInvestmentsJobQueueRepository } from '../integrations/external-investments/repositories/external-investments-job-queue-repository'
 import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
 import {
   type AdvisorKnowledgeContextFetcher,
@@ -119,6 +121,11 @@ export const createDashboardRouteRuntime = ({
   aiUsdToEurRate,
   advisorXSignalsMode,
   knowledgeConfig,
+  externalInvestmentsEnabled,
+  externalInvestmentsSafeMode,
+  externalInvestmentsStaleAfterMinutes,
+  ibkrFlexEnabled,
+  binanceSpotEnabled,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -191,6 +198,11 @@ export const createDashboardRouteRuntime = ({
   aiUsdToEurRate: number
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
   knowledgeConfig: KnowledgeServiceClientConfig
+  externalInvestmentsEnabled: boolean
+  externalInvestmentsSafeMode: boolean
+  externalInvestmentsStaleAfterMinutes: number
+  ibkrFlexEnabled: boolean
+  binanceSpotEnabled: boolean
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const newsRepository = createDashboardNewsRepository({ db })
@@ -198,6 +210,11 @@ export const createDashboardRouteRuntime = ({
   const advisorRepository = createDashboardAdvisorRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
   const powensJobs = createPowensJobQueueRepository(redisClient)
+  const externalInvestmentJobs = createExternalInvestmentsJobQueueRepository(redisClient)
+  const externalInvestments = createExternalInvestmentsRepository({
+    db,
+    staleAfterMinutes: externalInvestmentsStaleAfterMinutes,
+  })
 
   const getSummary = createGetDashboardSummaryUseCase({
     listAccountsWithConnections: readModel.listAccountsWithConnections,
@@ -392,6 +409,8 @@ export const createDashboardRouteRuntime = ({
     getSummary,
     getGoals,
     getNewsContextBundle: news.getNewsContextBundle,
+    getInvestmentContextBundle: async () =>
+      (await externalInvestments.getLatestContextBundle())?.bundle ?? null,
     getTransactions,
     getKnowledgeContextBundle,
     config: {
@@ -434,6 +453,14 @@ export const createDashboardRouteRuntime = ({
     newsRepository,
     marketsRepository,
     enqueueAllConnectionsSync: powensJobs.enqueueAllConnectionsSync,
+    enqueueExternalInvestmentProviderSync: async ({ provider, requestId }) =>
+      externalInvestmentJobs.enqueueProviderSync({
+        provider,
+        ...(requestId ? { requestId } : {}),
+      }),
+    getExternalInvestmentStatus: () => externalInvestments.getStatus(),
+    generateExternalInvestmentContextBundle: ({ requestId }) =>
+      externalInvestments.generateContextBundle({ requestId }),
     ingestNews: news.ingestNews,
     refreshMarkets: markets.refreshMarkets,
     runAdvisorDaily: advisor.runAdvisorDaily,
@@ -471,6 +498,74 @@ export const createDashboardRouteRuntime = ({
       getMarketsMacro: markets.getMacro,
       getMarketsContextBundle: markets.getContextBundle,
       refreshMarkets: markets.refreshMarkets,
+      getExternalInvestmentsSummary: async ({ requestId }) => {
+        const [status, latestBundle, positions] = await Promise.all([
+          externalInvestments.getStatus(),
+          externalInvestments.getLatestContextBundle(),
+          externalInvestments.listPositions(),
+        ])
+
+        return {
+          requestId,
+          source: 'cache' as const,
+          enabled: externalInvestmentsEnabled,
+          safeModeActive: externalInvestmentsSafeMode,
+          providerEnabled: {
+            ibkr: ibkrFlexEnabled,
+            binance: binanceSpotEnabled,
+          },
+          generatedAt: latestBundle?.generatedAt ?? null,
+          dataStatus: latestBundle
+            ? {
+                status: 'ready' as const,
+                message: null,
+              }
+            : {
+                status: positions.length > 0 ? 'degraded' : 'empty',
+                message:
+                  positions.length > 0
+                    ? 'No persisted Advisor investment bundle is available yet.'
+                    : 'No external investment snapshot has been imported yet.',
+              },
+          status,
+          bundle: latestBundle?.bundle ?? null,
+          latestBundleMeta: latestBundle
+            ? {
+                schemaVersion: latestBundle.schemaVersion,
+                generatedAt: latestBundle.generatedAt,
+                requestId: latestBundle.requestId,
+                staleAfterMinutes: latestBundle.staleAfterMinutes,
+                updatedAt: latestBundle.updatedAt,
+              }
+            : null,
+          positionCount: positions.length,
+        }
+      },
+      getExternalInvestmentsAccounts: async ({ requestId }) => ({
+        requestId,
+        source: 'cache' as const,
+        items: await externalInvestments.listAccounts(),
+      }),
+      getExternalInvestmentsPositions: async ({ requestId }) => ({
+        requestId,
+        source: 'cache' as const,
+        items: await externalInvestments.listPositions(),
+      }),
+      getExternalInvestmentsTrades: async ({ requestId, limit = 50 }) => ({
+        requestId,
+        source: 'cache' as const,
+        items: await externalInvestments.listTrades(limit),
+      }),
+      getExternalInvestmentsCashFlows: async ({ requestId, limit = 50 }) => ({
+        requestId,
+        source: 'cache' as const,
+        items: await externalInvestments.listCashFlows(limit),
+      }),
+      getExternalInvestmentsContextBundle: async ({ requestId }) => ({
+        requestId,
+        source: 'cache' as const,
+        item: await externalInvestments.getLatestContextBundle(),
+      }),
       getAdvisorOverview: advisor.getAdvisorOverview,
       getAdvisorDailyBrief: advisor.getAdvisorDailyBrief,
       getAdvisorRecommendations: advisor.getAdvisorRecommendations,

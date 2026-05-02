@@ -19,6 +19,10 @@ graph LR
     subgraph "Services externes"
         Powens["Powens
         Agregation bancaire PSD2"]
+        IBKR["IBKR Flex Web Service
+        Reporting read-only"]
+        Binance["Binance Spot / Wallet
+        Read-only USER_DATA"]
         NewsBackbone["News backbone
         HN + GDELT + ECB + Fed + SEC + FRED"]
         MarketBackbone["Market backbone
@@ -34,6 +38,8 @@ graph LR
     end
 
     Worker -->|"OAuth2 + REST"| Powens
+    Worker -->|"Flex XML reporting"| IBKR
+    Worker -->|"Signed GET allowlist"| Binance
     API -->|"REST + RSS + XML + HTML head scrape"| NewsBackbone
     API -->|"REST quotes + macro observations"| MarketBackbone
     API -->|"Internal HTTP only"| Knowledge
@@ -100,6 +106,72 @@ Regles:
 ### Kill-switches
 - `EXTERNAL_INTEGRATIONS_SAFE_MODE` : desactive toutes les syncs
 - `POWENS_SYNC_DISABLED_PROVIDERS` : desactive par provider
+
+---
+
+## 1.bis Investissements externes -- IBKR / Binance
+
+Rapport detaille: [EXTERNAL-INVESTMENTS.md](EXTERNAL-INVESTMENTS.md)
+
+### IBKR Flex Web Service
+
+| Detail | Valeur |
+|---|---|
+| **Type** | XML reporting API |
+| **Role** | Import read-only de statements, positions, trades et cash transactions |
+| **Base URL** | `IBKR_FLEX_BASE_URL` |
+| **Auth** | Flex token chiffre en DB |
+| **Consommateur** | Worker `externalInvestments.sync*` |
+| **Docs officielles** | <https://www.interactivebrokers.com/campus/ibkr-api-page/flex-web-service/> |
+
+Endpoints utilises:
+
+| Methode | Endpoint | Usage |
+|---|---|---|
+| `GET` | `FlexStatementService.SendRequest` | Genere une requete de rapport pour un Flex Query ID configure |
+| `GET` | `FlexStatementService.GetStatement` | Recupere le statement XML via reference code |
+
+Regles:
+
+- reporting uniquement, pas de Client Portal trading
+- User-Agent explicite
+- XML parse avec attributs conserves
+- erreurs provider normalisees en codes safe
+
+### Binance Spot / Wallet read-only
+
+| Detail | Valeur |
+|---|---|
+| **Type** | REST Spot API + Wallet USER_DATA |
+| **Role** | Import read-only des soldes Spot, trades, depots, retraits historiques et metadata coins |
+| **Base URL** | `BINANCE_SPOT_BASE_URL` |
+| **Auth** | API key + secret chiffres en DB, signature HMAC cote worker |
+| **Consommateur** | Worker `externalInvestments.sync*` |
+| **Docs officielles** | <https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints> |
+
+Endpoints allowlist:
+
+| Methode | Endpoint | Usage |
+|---|---|---|
+| `GET` | `/api/v3/account` | Balances Spot |
+| `GET` | `/api/v3/myTrades` | Trades par symbole connu |
+| `GET` | `/api/v3/exchangeInfo` | Metadata marche publique si necessaire |
+| `GET` | `/api/v3/time` | Verification temps serveur |
+| `GET` | `/sapi/v1/capital/deposit/hisrec` | Historique depots |
+| `GET` | `/sapi/v1/capital/withdraw/history` | Historique retraits lu comme fait historique |
+| `GET` | `/sapi/v1/capital/config/getall` | Metadata coins/reseaux |
+
+Interdits explicitement:
+
+- `POST` ou toute methode mutante
+- order/openOrders, withdraw apply, transfer, convert
+- margin, futures, staking, simple earn et toute operation qui modifie un solde
+
+### Variables et secrets
+
+- Les reglages app-level sont documentes dans [ENV-REFERENCE.md](ENV-REFERENCE.md).
+- Les credentials provider sont configures en admin et chiffres avec `APP_ENCRYPTION_KEY`.
+- Aucune cle Binance, secret, signature, URL signee, token IBKR ou query sensible ne doit apparaitre dans les logs ou le navigateur.
 
 ---
 

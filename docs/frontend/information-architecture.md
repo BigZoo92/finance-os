@@ -11,12 +11,14 @@
 |-------|------|------|---------------------|
 | `/` | **Cockpit** | Vue d'ensemble — KPIs, tendance patrimoine, top dépenses, connexions, objectifs, entry point IA | `dashboardSummary`, `financialGoals`, `powensStatus`, `dashboardAdvisor` |
 | `/depenses` | **Dépenses** | Transactions, structure des dépenses, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
-| `/patrimoine` | **Patrimoine** | Actifs, historique patrimoine, soldes par connexion | `dashboardSummary` |
-| `/investissements` | **Investissements** | Positions d'investissement, valorisation, P&L | `dashboardSummary` (positions) |
+| `/patrimoine` | **Patrimoine** | Actifs, historique patrimoine, soldes par connexion, investissements externes | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions` |
+| `/investissements` | **Investissements** | Cockpit positions, IBKR/Binance, valorisation, P&L, qualite data | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions`, `externalInvestmentsTrades`, `externalInvestmentsCashFlows` |
 | `/objectifs` | **Objectifs** | Objectifs financiers personnels (CRUD) | `financialGoals` |
 | `/integrations` | **Intégrations** | Connexions Powens, sync runs, diagnostics, audit trail | `powensStatus`, `powensSyncRuns`, `powensDiagnostics`, `powensAuditTrail` |
 | `/sante` | **Santé** | Vue consolidée de l'état système | Tous les endpoints status/health |
 | `/parametres` | **Paramètres** | Notifications push, derived recompute, exports | `pushSettings`, `derivedRecomputeStatus` |
+
+Note investissements externes: `/integrations` gere aussi les credentials admin IBKR/Binance, leur health et leurs sync runs. `/sante` expose ces providers avec request IDs, comptes raw/normalises et erreurs safe.
 
 ### Section 2 : IA
 

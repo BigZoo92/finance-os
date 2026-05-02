@@ -531,6 +531,7 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
       justification:
         'Le drawdown est observe sur les snapshots de richesse disponibles, et non extrapole depuis des prix absents.',
     },
+    ...(input.contextAssumptions ?? []),
   ]
 
   return {

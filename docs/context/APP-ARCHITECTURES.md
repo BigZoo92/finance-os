@@ -31,6 +31,8 @@ graph TB
         Validation env vars"]
         Powens["packages/powens
         Client API + crypto"]
+        ExternalInvestments["packages/external-investments
+        IBKR/Binance read-only ingestion"]
         Redis["packages/redis
         Client wrapper"]
         Prelude["packages/prelude
@@ -44,12 +46,14 @@ graph TB
     API --> DB
     API --> Env
     API --> Powens
+    API --> ExternalInvestments
     API --> Redis
     API --> Prelude
     API --> Knowledge
     Worker --> DB
     Worker --> Env
     Worker --> Powens
+    Worker --> ExternalInvestments
     Worker --> Redis
     Worker --> Prelude
 ```
@@ -203,6 +207,8 @@ graph TB
                 + ingest use cases"]
                 Markets["get-markets overview/watchlist/macro
                 + refresh + context bundle"]
+                ExternalInv["external investments cache reads
+                + context bundle"]
                 Advisor["advisor use cases
                 overview + brief + recs + runs
                 + chat + relabel + evals
@@ -234,6 +240,8 @@ graph TB
                 clients + pricing registry"]
                 FinanceEngine["packages/finance-engine
                 deterministic metrics + recommendations"]
+                ExternalInvPkg["packages/external-investments
+                credentials + normalization + bundle"]
             end
         end
 
@@ -253,6 +261,16 @@ graph TB
             subgraph "services/"
                 PowClient["powens client service"]
             end
+        end
+
+        subgraph "routes/integrations/external-investments/"
+            ExternalRouter["router.ts"]
+            ExternalCredentials["admin credential routes
+            configure/delete/test"]
+            ExternalSync["admin sync routes
+            all/provider enqueue"]
+            ExternalStatus["status, sync runs,
+            diagnostics"]
         end
 
         subgraph "routes/enrichment/"

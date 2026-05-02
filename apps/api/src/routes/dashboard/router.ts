@@ -5,6 +5,7 @@ import { createAdvisorRoute } from './routes/advisor'
 import { createAdvisorKnowledgeRoute } from './routes/advisor-knowledge'
 import { createAnalyticsRoute } from './routes/analytics'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
+import { createExternalInvestmentsDashboardRoute } from './routes/external-investments'
 import { createGoalsRoute } from './routes/goals'
 import { createManualAssetsRoute } from './routes/manual-assets'
 import { createMarketsRoute } from './routes/markets'
@@ -100,6 +101,11 @@ export const createDashboardRoutes = ({
   quantServiceUrl,
   quantServiceTimeoutMs,
   tradingLabGraphIngestEnabled,
+  externalInvestmentsEnabled,
+  externalInvestmentsSafeMode,
+  externalInvestmentsStaleAfterMinutes,
+  ibkrFlexEnabled,
+  binanceSpotEnabled,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -183,6 +189,11 @@ export const createDashboardRoutes = ({
   quantServiceUrl: string
   quantServiceTimeoutMs: number
   tradingLabGraphIngestEnabled: boolean
+  externalInvestmentsEnabled: boolean
+  externalInvestmentsSafeMode: boolean
+  externalInvestmentsStaleAfterMinutes: number
+  ibkrFlexEnabled: boolean
+  binanceSpotEnabled: boolean
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -264,6 +275,11 @@ export const createDashboardRoutes = ({
       maxPathDepth: knowledgeGraphMaxPathDepth,
       minConfidence: knowledgeGraphMinConfidence,
     },
+    externalInvestmentsEnabled,
+    externalInvestmentsSafeMode,
+    externalInvestmentsStaleAfterMinutes,
+    ibkrFlexEnabled,
+    binanceSpotEnabled,
   })
 
   return new Elysia({ prefix: '/dashboard' })
@@ -302,6 +318,7 @@ export const createDashboardRoutes = ({
     )
     .use(createDerivedRecomputeRoute())
     .use(createGoalsRoute())
+    .use(createExternalInvestmentsDashboardRoute())
     .use(createTransactionsRoute())
     .use(createTransactionClassificationRoute())
     .use(createSignalSourcesRoute({ db }))

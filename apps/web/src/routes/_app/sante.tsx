@@ -11,6 +11,11 @@ import {
   powensStatusQueryOptionsWithMode,
   powensSyncRunsQueryOptionsWithMode,
 } from '@/features/powens/query-options'
+import {
+  externalInvestmentsStatusQueryOptionsWithMode,
+  externalInvestmentsSyncRunsQueryOptionsWithMode,
+} from '@/features/external-investments/query-options'
+import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
 import { pushSettingsQueryOptionsWithMode } from '@/features/notifications/query-options'
 import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
 import { formatDateTime, formatDuration } from '@/lib/format'
@@ -19,6 +24,9 @@ import { PageHeader } from '@/components/surfaces/page-header'
 import { useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import PixelBlast from '@/components/reactbits/pixel-blast'
+
+const providerLabel = (provider: ExternalInvestmentProvider) =>
+  provider === 'ibkr' ? 'IBKR' : 'Binance'
 
 export const Route = createFileRoute('/_app/sante')({
   loader: async ({ context }) => {
@@ -30,6 +38,8 @@ export const Route = createFileRoute('/_app/sante')({
       context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(powensSyncRunsQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(powensDiagnosticsQueryOptionsWithMode(opts)),
+      context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode(opts)),
+      context.queryClient.ensureQueryData(externalInvestmentsSyncRunsQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(dashboardDerivedRecomputeStatusQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(dashboardSummaryQueryOptionsWithMode({ range: '30d', ...opts })),
       context.queryClient.ensureQueryData(pushSettingsQueryOptionsWithMode(opts)),
@@ -61,6 +71,8 @@ function SantePage() {
   const statusQuery = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
   const syncRunsQuery = useQuery(powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
   const diagnosticsQuery = useQuery(powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
+  const externalStatusQuery = useQuery(externalInvestmentsStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
+  const externalSyncRunsQuery = useQuery(externalInvestmentsSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
   const derivedQuery = useQuery(dashboardDerivedRecomputeStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
   const summaryQuery = useQuery(dashboardSummaryQueryOptionsWithMode({ range: '30d', ...(authMode ? { mode: authMode } : {}) }))
   const pushQuery = useQuery(pushSettingsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
@@ -68,6 +80,10 @@ function SantePage() {
   const connections = statusQuery.data?.connections ?? []
   const syncRuns = syncRunsQuery.data?.runs ?? []
   const diagnostics = diagnosticsQuery.data
+  const externalConnections = externalStatusQuery.data?.connections ?? []
+  const externalHealth = externalStatusQuery.data?.health ?? []
+  const externalSyncRuns = externalSyncRunsQuery.data?.items ?? []
+  const externalSafeModeActive = externalStatusQuery.data?.safeModeActive ?? false
   const derived = derivedQuery.data
   const latestSync = getLatestSyncStatus(syncRuns)
   const safeModeActive = statusQuery.data?.safeModeActive ?? false
@@ -104,6 +120,22 @@ function SantePage() {
       label: 'Safe mode',
       status: safeModeActive ? 'warning' : 'ok',
       detail: safeModeActive ? 'Actif — intégrations bloquées' : 'Inactif',
+    },
+    {
+      label: 'Investissements externes',
+      status: externalHealth.some(item => item.status === 'failing')
+        ? 'error'
+        : externalHealth.some(item => item.status === 'degraded')
+          ? 'warning'
+          : externalConnections.length > 0
+            ? 'ok'
+            : 'unknown',
+      detail: `${externalConnections.filter(item => item.credentialStatus === 'configured').length}/${externalConnections.length} providers configures`,
+    },
+    {
+      label: 'Safe mode investissements',
+      status: externalSafeModeActive ? 'warning' : 'ok',
+      detail: externalSafeModeActive ? 'Actif - providers non appeles' : 'Inactif',
     },
     {
       label: 'Notifications push',
@@ -247,6 +279,125 @@ function SantePage() {
                 >
                   {run.result}
                 </Badge>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Synchronisations investissements</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {externalSyncRuns.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Aucun run IBKR/Binance recent.
+            </p>
+          ) : (
+            externalSyncRuns.slice(0, 8).map(run => (
+              <div
+                key={run.id}
+                className="rounded-lg border border-border/40 bg-surface-1 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-2"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm">
+                      <span className="font-medium">{providerLabel(run.provider)}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {formatDateTime(run.startedAt)}
+                      </span>
+                      {formatDuration(run.startedAt, run.finishedAt) && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          · {formatDuration(run.startedAt, run.finishedAt)}
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate font-mono text-[11px] text-muted-foreground">
+                      request {run.requestId ?? '-'}
+                    </p>
+                    {run.errorMessage && (
+                      <p className="truncate text-xs text-negative">{run.errorMessage}</p>
+                    )}
+                    {run.degradedReasons.length > 0 && (
+                      <p className="truncate text-xs text-warning">
+                        {run.degradedReasons.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge
+                      variant={
+                        run.status === 'success'
+                          ? 'positive'
+                          : run.status === 'running'
+                            ? 'outline'
+                            : run.status === 'degraded'
+                              ? 'warning'
+                              : 'destructive'
+                      }
+                      className="text-xs"
+                    >
+                      {run.status}
+                    </Badge>
+                    {run.rowCounts && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {Object.entries(run.rowCounts)
+                          .map(([key, value]) => `${key}:${value}`)
+                          .join(' · ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Health providers investissements</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {externalHealth.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Aucun diagnostic IBKR/Binance disponible.
+            </p>
+          ) : (
+            externalHealth.map(item => (
+              <div
+                key={item.provider}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-surface-1 px-4 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{providerLabel(item.provider)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Dernier appel {formatDateTime(item.lastAttemptAt)} · succes {formatDateTime(item.lastSuccessAt)}
+                  </p>
+                  {item.lastErrorMessage && (
+                    <p className="truncate text-xs text-negative">{item.lastErrorMessage}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <Badge
+                    variant={
+                      item.status === 'healthy'
+                        ? 'positive'
+                        : item.status === 'failing'
+                          ? 'destructive'
+                          : item.status === 'degraded'
+                            ? 'warning'
+                            : 'outline'
+                    }
+                    className="text-xs"
+                  >
+                    {item.status}
+                  </Badge>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    raw {item.lastRawImportCount} · rows {item.lastNormalizedRowCount}
+                  </p>
+                </div>
               </div>
             ))
           )}

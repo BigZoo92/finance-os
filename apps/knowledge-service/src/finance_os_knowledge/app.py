@@ -29,7 +29,6 @@ from .ingest import (
 )
 from .models import (
     ContextBundleRequest,
-    HealthResponse,
     KnowledgeExplainRequest,
     KnowledgeIngestRequest,
     KnowledgeQueryRequest,

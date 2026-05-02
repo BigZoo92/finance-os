@@ -204,6 +204,63 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 
 ---
 
+## 6.bis Investissements externes IBKR / Binance
+
+**Routes UI** : `/patrimoine`, `/investissements`, `/integrations`, `/sante`
+**Routes API dashboard cache-only** : `/dashboard/external-investments/*`
+**Routes API admin/internal** : `/integrations/external-investments/*`
+**Rapport detaille** : [EXTERNAL-INVESTMENTS.md](EXTERNAL-INVESTMENTS.md)
+
+### Fonctionnement
+
+- Configuration admin chiffree pour IBKR Flex et Binance Spot.
+- Demo: fixtures deterministes, zero DB write, zero provider call.
+- Admin: lectures dashboard cache-only depuis PostgreSQL; syncs uniquement sur action explicite ou job worker.
+- Worker Redis:
+  - `externalInvestments.syncAll`
+  - `externalInvestments.syncProvider`
+  - `externalInvestments.syncConnection`
+- Verrou par connexion/provider pour eviter les syncs concurrentes.
+- Erreurs fail-soft: IBKR peut echouer sans bloquer Binance, news, marches ou Advisor.
+
+### Donnees normalisees
+
+- comptes externes
+- instruments avec symboles, ISIN/CUSIP/conid ou asset Binance quand disponibles
+- positions avec quantite, free/locked, valeurs connues ou inconnues
+- trades avec side, prix, quantite, frais/commission
+- cash flows: depot, retrait historique, dividende, interet, fee, tax, transfer, unknown
+- raw import metadata: hash/digest, taille, statut, reference provider, sans payload secret brut dans les logs
+
+### Valuation
+
+- Priorite: valeur provider reportee, puis cache marche existant si present, puis valeur manuelle deja supportee, sinon unknown.
+- Pas de nouvelle dependance paid market data.
+- Pas de prix crypto invente.
+- Les positions sans valeur ou cout de base gardent des warnings explicites.
+
+### UI
+
+- `/patrimoine` ajoute un bloc investissements externes avec provider freshness, allocations et warnings.
+- `/investissements` devient un cockpit avec filtres provider/compte/classe/recherche, table positions, trades recents, cash flows et quality panel.
+- `/integrations` permet la configuration des credentials, le retrait et la sync manuelle par provider.
+- `/sante` expose health providers, derniers runs, request IDs, raw imports et compte de lignes normalisees.
+
+### Advisor
+
+- Un bundle compact `advisor_investment_context_bundle` alimente le moteur deterministe, le brief, les recommandations, le challenger, le chat grounded, les assumptions et les evals.
+- Le bundle contient uniquement des faits normalises et des hypotheses; jamais le JSON/XML provider brut.
+- L'Advisor peut repondre sur crypto exposure, provider stale, cout de base inconnu, concentration, part valorisee vs inconnue et limites de qualite data.
+
+### Limites
+
+- Pas de trading, retrait, transfert, reequilibrage execute ou endpoint Binance mutant.
+- Pas d'IBKR Client Portal trading.
+- Pas de reporting fiscal; les donnees utiles sont preservees pour un futur travail dedie.
+- Binance trade backfill est volontairement conservateur et limite aux symboles connus.
+
+---
+
 ## 7. Projections de fin de mois
 
 ### Contenu

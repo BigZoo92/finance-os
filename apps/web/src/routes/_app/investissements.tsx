@@ -2,17 +2,28 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
+import { Badge, Input } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query-options'
+import {
+  externalInvestmentsCashFlowsQueryOptionsWithMode,
+  externalInvestmentsPositionsQueryOptionsWithMode,
+  externalInvestmentsSummaryQueryOptionsWithMode,
+  externalInvestmentsTradesQueryOptionsWithMode,
+} from '@/features/external-investments/query-options'
+import type {
+  ExternalInvestmentAssetClass,
+  ExternalInvestmentProvider,
+} from '@/features/external-investments/types'
 import type { DashboardRange } from '@/features/dashboard-types'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import {
   buildSocialBenchmarkExplainability,
   logSocialBenchmarkExplainabilityEvent,
 } from '@/features/social-benchmark-explainability'
-import { formatMoney, formatQuantity } from '@/lib/format'
+import { formatDateTime, formatMoney, formatQuantity } from '@/lib/format'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
@@ -21,10 +32,23 @@ import { pushToast } from '@/lib/toast-store'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
+  provider: z.enum(['all', 'ibkr', 'binance']).optional(),
+  account: z.string().optional(),
+  assetClass: z.string().optional(),
+  q: z.string().optional(),
 })
 
 const resolveRange = (value: string | undefined): DashboardRange => {
   return value === '7d' || value === '90d' ? value : '30d'
+}
+
+const SELECT_CLASS_NAME =
+  'flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs'
+
+const providerLabel = (provider: ExternalInvestmentProvider | 'all') => {
+  if (provider === 'ibkr') return 'IBKR'
+  if (provider === 'binance') return 'Binance'
+  return 'Tous'
 }
 
 export const Route = createFileRoute('/_app/investissements')({
@@ -37,14 +61,26 @@ export const Route = createFileRoute('/_app/investissements')({
     await context.queryClient.ensureQueryData(
       dashboardSummaryQueryOptionsWithMode({ range: deps.range, mode })
     )
+    await Promise.all([
+      context.queryClient.ensureQueryData(externalInvestmentsSummaryQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(externalInvestmentsPositionsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(
+        externalInvestmentsTradesQueryOptionsWithMode({ mode, limit: 20 })
+      ),
+      context.queryClient.ensureQueryData(
+        externalInvestmentsCashFlowsQueryOptionsWithMode({ mode, limit: 20 })
+      ),
+    ])
   },
   component: InvestissementsPage,
 })
 
 
 function InvestissementsPage() {
-  const { range: searchRange } = Route.useSearch()
+  const { range: searchRange, provider = 'all', account = 'all', assetClass = 'all', q = '' } =
+    Route.useSearch()
   const range = resolveRange(searchRange)
+  const navigate = Route.useNavigate()
 
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
@@ -58,16 +94,84 @@ function InvestissementsPage() {
   const summaryQuery = useQuery(
     dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) })
   )
+  const externalSummaryQuery = useQuery(
+    externalInvestmentsSummaryQueryOptionsWithMode({ ...(authMode ? { mode: authMode } : {}) })
+  )
+  const externalPositionsQuery = useQuery(
+    externalInvestmentsPositionsQueryOptionsWithMode({ ...(authMode ? { mode: authMode } : {}) })
+  )
+  const externalTradesQuery = useQuery(
+    externalInvestmentsTradesQueryOptionsWithMode({
+      ...(authMode ? { mode: authMode } : {}),
+      limit: 20,
+    })
+  )
+  const externalCashFlowsQuery = useQuery(
+    externalInvestmentsCashFlowsQueryOptionsWithMode({
+      ...(authMode ? { mode: authMode } : {}),
+      limit: 20,
+    })
+  )
   const adaptedSummary = adaptDashboardSummaryLegacy({
     range, summary: summaryQuery.data, ...(authMode ? { mode: authMode } : {}),
   })
   const positions = adaptedSummary.positions
+  const externalPositions = externalPositionsQuery.data?.items ?? []
+  const externalBundle = externalSummaryQuery.data?.bundle ?? null
   const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
 
   const totalValue = positions.reduce(
     (sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0),
     0
   )
+  const externalKnownValue = externalBundle?.totalKnownValue ?? 0
+  const cryptoExposure = externalBundle?.cryptoExposure
+  const binanceKnownValue =
+    externalBundle?.allocationByProvider.find(item => item.key === 'binance')?.value ?? 0
+  const ibkrKnownValue =
+    externalBundle?.allocationByProvider.find(item => item.key === 'ibkr')?.value ?? 0
+  const providerOptions = ['all', 'ibkr', 'binance'] as const
+  const accountOptions = [
+    'all',
+    ...Array.from(new Set(externalPositions.map(position => position.accountAlias ?? position.accountExternalId))),
+  ]
+  const assetClassOptions = [
+    'all',
+    ...Array.from(new Set(externalPositions.map(position => position.assetClass))),
+  ] as Array<'all' | ExternalInvestmentAssetClass>
+  const filteredExternalPositions = externalPositions.filter(position => {
+    const matchesProvider =
+      provider === 'all' || position.provider === (provider as ExternalInvestmentProvider)
+    const accountLabel = position.accountAlias ?? position.accountExternalId
+    const matchesAccount = account === 'all' || accountLabel === account
+    const matchesAssetClass = assetClass === 'all' || position.assetClass === assetClass
+    const normalizedQuery = q.trim().toLowerCase()
+    const matchesSearch =
+      normalizedQuery.length === 0 ||
+      `${position.name} ${position.symbol ?? ''} ${position.provider}`.toLowerCase().includes(normalizedQuery)
+    return matchesProvider && matchesAccount && matchesAssetClass && matchesSearch
+  })
+  const externalTrades = externalTradesQuery.data?.items ?? []
+  const externalCashFlows = externalCashFlowsQuery.data?.items ?? []
+  const qualityWarningCount =
+    (externalBundle?.unknownCostBasisWarnings.length ?? 0) +
+    (externalBundle?.missingMarketDataWarnings.length ?? 0) +
+    (externalBundle?.staleDataWarnings.length ?? 0)
+  const updateExternalSearch = (next: {
+    provider?: ExternalInvestmentProvider | 'all'
+    account?: string
+    assetClass?: string
+    q?: string
+  }) =>
+    navigate({
+      search: {
+        range,
+        provider: next.provider ?? provider,
+        account: next.account ?? account,
+        assetClass: next.assetClass ?? assetClass,
+        q: next.q ?? q,
+      },
+    })
   const explainabilityModel = useMemo(
     () =>
       buildSocialBenchmarkExplainability({
@@ -109,6 +213,260 @@ function InvestissementsPage() {
           loading={summaryQuery.isPending}
           hint="Cette vue ne filtre pas encore par date."
         />
+        <KpiTile
+          label="Externe connu"
+          value={externalKnownValue}
+          display={formatMoney(externalKnownValue)}
+          tone="positive"
+          loading={externalSummaryQuery.isPending}
+          hint={`${externalPositions.length} position${externalPositions.length !== 1 ? 's' : ''} IBKR/Binance`}
+        />
+        <KpiTile
+          label="Crypto connu"
+          value={cryptoExposure?.value ?? 0}
+          display={formatMoney(cryptoExposure?.value ?? 0)}
+          tone={cryptoExposure && cryptoExposure.unknownValueCount > 0 ? 'warning' : 'violet'}
+          loading={externalSummaryQuery.isPending}
+          hint={`${cryptoExposure?.weightPct ?? 0}% du portefeuille externe valorise`}
+        />
+      </div>
+
+      <Panel
+        title="Cockpit externe"
+        description="Positions IBKR Flex et Binance Spot lues depuis le cache, sans appel provider depuis l'UI."
+        icon={<span aria-hidden="true">◇</span>}
+        tone="brand"
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">IBKR</p>
+            <p className="font-financial mt-1 text-lg font-semibold">{formatMoney(ibkrKnownValue)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Reporting Flex uniquement.</p>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Binance</p>
+            <p className="font-financial mt-1 text-lg font-semibold">{formatMoney(binanceKnownValue)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Spot USER_DATA / Wallet en lecture seule.</p>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Qualite</p>
+            <p className="mt-1 text-lg font-semibold">{qualityWarningCount === 0 ? 'OK' : `${qualityWarningCount} alerte${qualityWarningCount !== 1 ? 's' : ''}`}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {externalBundle?.confidence ? `Confiance ${externalBundle.confidence}` : 'Bundle non genere'}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+          <label className="space-y-2 text-sm">
+            <span className="text-muted-foreground">Provider</span>
+            <select
+              value={provider}
+              onChange={event =>
+                updateExternalSearch({
+                  provider: event.target.value as ExternalInvestmentProvider | 'all',
+                })
+              }
+              className={SELECT_CLASS_NAME}
+            >
+              {providerOptions.map(option => (
+                <option key={option} value={option}>
+                  {providerLabel(option)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-2 text-sm">
+            <span className="text-muted-foreground">Compte</span>
+            <select
+              value={account}
+              onChange={event => updateExternalSearch({ account: event.target.value })}
+              className={SELECT_CLASS_NAME}
+            >
+              {accountOptions.map(option => (
+                <option key={option} value={option}>
+                  {option === 'all' ? 'Tous' : option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-2 text-sm">
+            <span className="text-muted-foreground">Classe</span>
+            <select
+              value={assetClass}
+              onChange={event => updateExternalSearch({ assetClass: event.target.value })}
+              className={SELECT_CLASS_NAME}
+            >
+              {assetClassOptions.map(option => (
+                <option key={option} value={option}>
+                  {option === 'all' ? 'Toutes' : option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-2 text-sm" htmlFor="external-investment-search">
+            <span className="text-muted-foreground">Recherche</span>
+            <Input
+              id="external-investment-search"
+              value={q}
+              onChange={event => updateExternalSearch({ q: event.target.value })}
+              placeholder="Symbole, nom, provider..."
+            />
+          </label>
+        </div>
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="min-w-[760px] w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="py-3 pr-4">Position</th>
+                <th className="px-4 py-3">Provider</th>
+                <th className="px-4 py-3 text-right">Quantite</th>
+                <th className="px-4 py-3 text-right">Valeur</th>
+                <th className="px-4 py-3 text-right">P/L</th>
+                <th className="py-3 pl-4">Qualite</th>
+              </tr>
+            </thead>
+            <tbody>
+              {externalPositionsQuery.isPending ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    Chargement du cache externe...
+                  </td>
+                </tr>
+              ) : filteredExternalPositions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    Aucune position externe pour ces filtres.
+                  </td>
+                </tr>
+              ) : (
+                filteredExternalPositions.map(position => {
+                  const value = position.normalizedValue ?? position.providerValue
+                  const pnl = position.unrealizedPnl ?? position.realizedPnl
+                  return (
+                    <tr key={position.positionKey} className="border-b border-border/50">
+                      <td className="py-3 pr-4">
+                        <p className="font-medium">{position.symbol ?? position.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {position.name} · {position.assetClass}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={position.provider === 'ibkr' ? 'violet' : 'default'}>
+                          {providerLabel(position.provider)}
+                        </Badge>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {position.accountAlias ?? position.accountExternalId}
+                        </p>
+                      </td>
+                      <td className="font-financial px-4 py-3 text-right">
+                        {formatQuantity(position.quantity)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <p className="font-financial font-medium">
+                          {value === null
+                            ? '-'
+                            : formatMoney(value, position.valueCurrency ?? position.currency ?? 'EUR')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{position.valueSource}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <p
+                          className={`font-financial ${
+                            pnl === null ? 'text-muted-foreground' : pnl >= 0 ? 'text-positive' : 'text-negative'
+                          }`}
+                        >
+                          {pnl === null ? '-' : formatMoney(pnl, position.valueCurrency ?? 'EUR')}
+                        </p>
+                      </td>
+                      <td className="py-3 pl-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {position.costBasis === null && <Badge variant="warning">cout inconnu</Badge>}
+                          {position.valueSource === 'unknown' && <Badge variant="warning">valeur inconnue</Badge>}
+                          {position.degradedReasons.map(reason => (
+                            <Badge key={reason} variant="outline">
+                              {reason}
+                            </Badge>
+                          ))}
+                          {position.degradedReasons.length === 0 &&
+                            position.costBasis !== null &&
+                            position.valueSource !== 'unknown' && <Badge variant="positive">OK</Badge>}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {externalBundle && (
+          <div className="mt-4 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+            <p>Provider coverage: {externalBundle.providerCoverage.map(item => `${providerLabel(item.provider)} ${item.status}`).join(' · ')}</p>
+            <p>Valeurs inconnues: {externalBundle.unknownValuePositionCount}</p>
+            <p>Hypotheses: {externalBundle.assumptions.slice(0, 2).join(' · ') || '-'}</p>
+          </div>
+        )}
+      </Panel>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel title="Trades recents" icon={<span aria-hidden="true">↕</span>} tone="violet">
+          {externalTrades.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Aucun trade externe dans le cache.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {externalTrades.slice(0, 6).map(trade => (
+                <div key={trade.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{trade.symbol ?? 'Instrument inconnu'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {providerLabel(trade.provider)} · {formatDateTime(trade.tradedAt)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={trade.side === 'buy' ? 'positive' : trade.side === 'sell' ? 'destructive' : 'outline'}>
+                      {trade.side}
+                    </Badge>
+                    <p className="font-financial mt-1 text-xs text-muted-foreground">
+                      {trade.netAmount === null ? formatQuantity(trade.quantity) : formatMoney(trade.netAmount, trade.currency ?? 'EUR')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Flux cash" icon={<span aria-hidden="true">⇄</span>} tone="positive">
+          {externalCashFlows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Aucun flux externe dans le cache.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {externalCashFlows.slice(0, 6).map(flow => (
+                <div key={flow.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{flow.type}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {providerLabel(flow.provider)} · {formatDateTime(flow.occurredAt)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-financial text-sm font-medium">
+                      {flow.amount === null ? '-' : formatQuantity(flow.amount)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{flow.currency ?? flow.asset ?? '-'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
       </div>
 
       {/* Positions */}

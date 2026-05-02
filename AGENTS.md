@@ -37,6 +37,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 - Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
 - The Temporal Knowledge Graph / GraphRAG layer is internal-only derived memory for the AI Advisor. It enriches, explains, and challenges deterministic finance-engine outputs; it is not a source of truth for transactions, not part of the agentic development pipeline, and must never enable trading execution.
 - Knowledge graph demo mode must use deterministic fixtures only. Admin mode may call the internal knowledge service, but it must fail soft when unavailable and must preserve request IDs, safe errors, provenance, confidence, recency, temporal validity, and contradiction history.
+- External investment ingestion is read-only analytics only. IBKR must stay on Flex reporting; Binance must stay on signed read-only Spot/Wallet `GET` allowlists. Never add trading, order, withdrawal, transfer, convert, margin/futures, staking/earn mutation, automatic rebalancing, or hidden execution-ready paths.
 - `batch:` issues are first-class product briefs. Preserve their context, objectives, design principles, non-negotiable constraints, expected result, cost bias, decision rules, and explicit out-of-scope when spawning downstream work.
 - Autopilot workflow invariants:
   - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs
@@ -150,6 +151,7 @@ Comprehensive reference docs for agents and external chats (maintained by agents
 - [docs/context/STACK.md](docs/context/STACK.md) — Full technical stack, architecture graphs, CI/CD pipeline, deployment
 - [docs/context/FEATURES.md](docs/context/FEATURES.md) — All business features in detail (Powens, goals, transactions, news, etc.)
 - [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) — End-to-end news pipeline: provider, ingestion, cache, fail-soft, web consumption, tests, and known gaps
+- [docs/context/EXTERNAL-INVESTMENTS.md](docs/context/EXTERNAL-INVESTMENTS.md) — Read-only IBKR Flex and Binance Spot ingestion, safety boundaries, sync, normalization, Advisor bundle, diagnostics
 - [docs/context/DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md) — Artistic direction, color palette, typography, motion, layout patterns
 - [docs/context/CONVENTIONS.md](docs/context/CONVENTIONS.md) — Best practices, coding conventions, review process, security rules
 - [docs/context/ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md) — All environment variables, feature flags, where to set them, how to generate
@@ -172,7 +174,7 @@ Knowledge graph over the full codebase (`gitnexus@1.4.10`, devDep). Available as
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **finance-os** (2178 symbols, 4633 relationships, 88 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **finance-os** (5024 symbols, 12504 relationships, 295 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -268,25 +270,5 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Domain area (96 symbols) | `.claude/skills/generated/domain/SKILL.md` |
-| Work in the Dashboard area (83 symbols) | `.claude/skills/generated/dashboard/SKILL.md` |
-| Work in the Routes area (72 symbols) | `.claude/skills/generated/routes/SKILL.md` |
-| Work in the Auth area (66 symbols) | `.claude/skills/generated/auth/SKILL.md` |
-| Work in the Repositories area (50 symbols) | `.claude/skills/generated/repositories/SKILL.md` |
-| Work in the Features area (32 symbols) | `.claude/skills/generated/features/SKILL.md` |
-| Work in the Powens area (30 symbols) | `.claude/skills/generated/powens/SKILL.md` |
-| Work in the Services area (27 symbols) | `.claude/skills/generated/services/SKILL.md` |
-| Work in the Ui area (20 symbols) | `.claude/skills/generated/ui/SKILL.md` |
-| Work in the Mocks area (16 symbols) | `.claude/skills/generated/mocks/SKILL.md` |
-| Work in the Cluster_1 area (13 symbols) | `.claude/skills/generated/cluster-1/SKILL.md` |
-| Work in the Cluster_3 area (12 symbols) | `.claude/skills/generated/cluster-3/SKILL.md` |
-| Work in the Debug area (11 symbols) | `.claude/skills/generated/debug/SKILL.md` |
-| Work in the Cluster_47 area (10 symbols) | `.claude/skills/generated/cluster-47/SKILL.md` |
-| Work in the Logging area (9 symbols) | `.claude/skills/generated/logging/SKILL.md` |
-| Work in the Goals area (8 symbols) | `.claude/skills/generated/goals/SKILL.md` |
-| Work in the _app area (8 symbols) | `.claude/skills/generated/app/SKILL.md` |
-| Work in the Cluster_17 area (7 symbols) | `.claude/skills/generated/cluster-17/SKILL.md` |
-| Work in the Cluster_48 area (7 symbols) | `.claude/skills/generated/cluster-48/SKILL.md` |
-| Work in the Shell area (7 symbols) | `.claude/skills/generated/shell/SKILL.md` |
 
 <!-- gitnexus:end -->

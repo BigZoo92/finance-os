@@ -1,9 +1,7 @@
 import { randomUUID } from 'node:crypto'
+import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
 import { logApiEvent, toErrorLogFields } from '../../../../observability/logger'
-import type {
-  DashboardAdvisorManualOperationResponse,
-  DashboardAdvisorManualRefreshAndRunPostResponse,
-} from '../../advisor-contract'
+import type { DashboardAdvisorManualRefreshAndRunPostResponse } from '../../advisor-contract'
 import type {
   DashboardAdvisorRepository,
   DashboardMarketsRepository,
@@ -17,11 +15,21 @@ const MANUAL_OPERATION_LOCK_KEY = 'advisor:dashboard:manual-refresh-and-run:lock
 const MANUAL_OPERATION_LOCK_TTL_SECONDS = 15 * 60
 const POWENS_SYNC_WAIT_TIMEOUT_MS = 90_000
 const POWENS_SYNC_POLL_INTERVAL_MS = 2_000
+const EXTERNAL_INVESTMENT_SYNC_WAIT_TIMEOUT_MS = 90_000
+const EXTERNAL_INVESTMENT_SYNC_POLL_INTERVAL_MS = 2_000
 
 const MANUAL_OPERATION_STEPS = [
   {
     stepKey: 'personal_sync',
     label: 'Synchronisation donnees personnelles',
+  },
+  {
+    stepKey: 'ibkr_sync',
+    label: 'Synchronisation IBKR',
+  },
+  {
+    stepKey: 'binance_sync',
+    label: 'Synchronisation Binance',
   },
   {
     stepKey: 'news_refresh',
@@ -32,12 +40,29 @@ const MANUAL_OPERATION_STEPS = [
     label: 'Rafraichissement marches',
   },
   {
+    stepKey: 'investment_bundle',
+    label: 'Contexte investissements',
+  },
+  {
     stepKey: 'advisor_run',
     label: 'Analyse advisor',
   },
 ] as const
 
 type ManualOperationStepKey = (typeof MANUAL_OPERATION_STEPS)[number]['stepKey']
+
+type ExternalInvestmentStatusView = {
+  connections: Array<{
+    provider: ExternalInvestmentProvider
+    credentialStatus: string
+    status: string
+    lastSyncAttemptAt: string | null
+    lastSuccessAt: string | null
+    lastFailedAt: string | null
+    lastSyncReasonCode: string | null
+    lastErrorCode: string | null
+  }>
+}
 
 type StepResolution =
   | {
@@ -196,6 +221,197 @@ const runPersonalSyncStep = async ({
   }
 }
 
+const parseDateMs = (value: string | null | undefined) => {
+  if (!value) {
+    return 0
+  }
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const summarizeExternalInvestmentProviderSync = ({
+  status,
+  provider,
+  stageStartedAt,
+}: {
+  status: ExternalInvestmentStatusView
+  provider: ExternalInvestmentProvider
+  stageStartedAt: Date
+}) => {
+  const connection = status.connections.find(item => item.provider === provider)
+  if (!connection || connection.credentialStatus !== 'configured') {
+    return {
+      done: true,
+      stepStatus: 'skipped' as const,
+      details: {
+        provider,
+        configured: false,
+        message: `${provider} credentials are not configured.`,
+      },
+    }
+  }
+
+  const stageStartedAtMs = stageStartedAt.getTime()
+  const attemptedForThisRun = parseDateMs(connection.lastSyncAttemptAt) >= stageStartedAtMs
+  const successForThisRun = parseDateMs(connection.lastSuccessAt) >= stageStartedAtMs
+  const failedForThisRun =
+    attemptedForThisRun &&
+    (connection.status === 'error' || parseDateMs(connection.lastFailedAt) >= stageStartedAtMs)
+
+  if (successForThisRun) {
+    return {
+      done: true,
+      stepStatus:
+        connection.status === 'degraded' || connection.lastSyncReasonCode !== 'SUCCESS'
+          ? ('degraded' as const)
+          : ('completed' as const),
+      details: {
+        provider,
+        configured: true,
+        status: connection.status,
+        lastSuccessAt: connection.lastSuccessAt,
+        lastSyncReasonCode: connection.lastSyncReasonCode,
+        lastErrorCode: connection.lastErrorCode,
+      },
+    }
+  }
+
+  if (failedForThisRun) {
+    return {
+      done: true,
+      stepStatus: 'degraded' as const,
+      details: {
+        provider,
+        configured: true,
+        status: connection.status,
+        lastFailedAt: connection.lastFailedAt,
+        lastErrorCode: connection.lastErrorCode,
+        lastSyncReasonCode: connection.lastSyncReasonCode,
+      },
+    }
+  }
+
+  return {
+    done: false,
+    stepStatus: 'degraded' as const,
+    details: {
+      provider,
+      configured: true,
+      status: connection.status,
+      attemptedForThisRun,
+    },
+  }
+}
+
+const runExternalInvestmentProviderSyncStep = async ({
+  provider,
+  enqueueProviderSync,
+  getStatus,
+  requestId,
+}: {
+  provider: ExternalInvestmentProvider
+  enqueueProviderSync:
+    | ((input: { provider: ExternalInvestmentProvider; requestId?: string }) => Promise<void>)
+    | undefined
+  getStatus: (() => Promise<ExternalInvestmentStatusView>) | undefined
+  requestId: string
+}): Promise<StepResolution> => {
+  if (!enqueueProviderSync || !getStatus) {
+    return {
+      status: 'skipped',
+      details: {
+        provider,
+        message: 'Runtime investissements externes indisponible.',
+      },
+    }
+  }
+
+  const stageStartedAt = new Date()
+  try {
+    const initial = summarizeExternalInvestmentProviderSync({
+      status: await getStatus(),
+      provider,
+      stageStartedAt,
+    })
+    if (initial.stepStatus === 'skipped') {
+      return {
+        status: 'skipped',
+        details: initial.details,
+      }
+    }
+
+    await enqueueProviderSync({ provider, requestId })
+
+    const deadline = Date.now() + EXTERNAL_INVESTMENT_SYNC_WAIT_TIMEOUT_MS
+    let latest = summarizeExternalInvestmentProviderSync({
+      status: await getStatus(),
+      provider,
+      stageStartedAt,
+    })
+
+    while (!latest.done && Date.now() < deadline) {
+      await delay(EXTERNAL_INVESTMENT_SYNC_POLL_INTERVAL_MS)
+      latest = summarizeExternalInvestmentProviderSync({
+        status: await getStatus(),
+        provider,
+        stageStartedAt,
+      })
+    }
+
+    return {
+      status: latest.done ? latest.stepStatus : 'degraded',
+      details: {
+        ...latest.details,
+        timedOut: !latest.done,
+      },
+    }
+  } catch (error) {
+    return {
+      status: 'degraded',
+      details: {
+        provider,
+        message: toSafeErrorMessage(error),
+      },
+    }
+  }
+}
+
+const runInvestmentBundleStep = async ({
+  generateContextBundle,
+  requestId,
+}: {
+  generateContextBundle: ((input: { requestId: string }) => Promise<unknown>) | undefined
+  requestId: string
+}): Promise<StepResolution> => {
+  if (!generateContextBundle) {
+    return {
+      status: 'skipped',
+      details: {
+        message: 'Runtime contexte investissements indisponible.',
+      },
+    }
+  }
+
+  try {
+    const bundle = await generateContextBundle({ requestId })
+    return {
+      status: 'completed',
+      details: {
+        generated: true,
+        bundle,
+      },
+    }
+  } catch (error) {
+    return {
+      status: 'degraded',
+      details: {
+        generated: false,
+        message: toSafeErrorMessage(error),
+      },
+    }
+  }
+}
+
 const runNewsRefreshStep = async ({
   repository,
   ingestNews,
@@ -327,6 +543,9 @@ export const createAdvisorManualRefreshAndRunUseCases = ({
   newsRepository,
   marketsRepository,
   enqueueAllConnectionsSync,
+  enqueueExternalInvestmentProviderSync,
+  getExternalInvestmentStatus,
+  generateExternalInvestmentContextBundle,
   ingestNews,
   refreshMarkets,
   runAdvisorDaily,
@@ -337,6 +556,12 @@ export const createAdvisorManualRefreshAndRunUseCases = ({
   newsRepository?: DashboardNewsRepository
   marketsRepository?: DashboardMarketsRepository
   enqueueAllConnectionsSync: (params?: { requestId?: string }) => Promise<void>
+  enqueueExternalInvestmentProviderSync?: (input: {
+    provider: ExternalInvestmentProvider
+    requestId?: string
+  }) => Promise<void>
+  getExternalInvestmentStatus?: () => Promise<ExternalInvestmentStatusView>
+  generateExternalInvestmentContextBundle?: (input: { requestId: string }) => Promise<unknown>
   ingestNews?: DashboardUseCases['ingestNews']
   refreshMarkets?: DashboardUseCases['refreshMarkets']
   runAdvisorDaily?: DashboardUseCases['runAdvisorDaily']
@@ -432,6 +657,25 @@ export const createAdvisorManualRefreshAndRunUseCases = ({
           continue
         }
 
+        if (step.stepKey === 'ibkr_sync' || step.stepKey === 'binance_sync') {
+          const result = await runExternalInvestmentProviderSyncStep({
+            provider: step.stepKey === 'ibkr_sync' ? 'ibkr' : 'binance',
+            enqueueProviderSync: enqueueExternalInvestmentProviderSync,
+            getStatus: getExternalInvestmentStatus,
+            requestId,
+          })
+          if (result.status === 'degraded') {
+            operationDegraded = true
+          }
+          await markStep({
+            stepKey: step.stepKey,
+            status: result.status,
+            startedAt: stepStartedAt,
+            ...(result.details ? { details: result.details } : {}),
+          })
+          continue
+        }
+
         if (step.stepKey === 'news_refresh') {
           const result = await runNewsRefreshStep({
             repository: newsRepository,
@@ -454,6 +698,23 @@ export const createAdvisorManualRefreshAndRunUseCases = ({
           const result = await runMarketRefreshStep({
             repository: marketsRepository,
             refreshMarkets,
+            requestId,
+          })
+          if (result.status === 'degraded') {
+            operationDegraded = true
+          }
+          await markStep({
+            stepKey: step.stepKey,
+            status: result.status,
+            startedAt: stepStartedAt,
+            ...(result.details ? { details: result.details } : {}),
+          })
+          continue
+        }
+
+        if (step.stepKey === 'investment_bundle') {
+          const result = await runInvestmentBundleStep({
+            generateContextBundle: generateExternalInvestmentContextBundle,
             requestId,
           })
           if (result.status === 'degraded') {

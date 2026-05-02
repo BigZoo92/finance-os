@@ -17,6 +17,7 @@ import {
   TRANSACTION_LABELS_PROMPT,
   type TransactionLabelSuggestionDraft,
 } from '@finance-os/ai'
+import type { ExternalInvestmentBundle } from '@finance-os/external-investments'
 import {
   type AdvisorSnapshot,
   calculateAdvisorSnapshot,
@@ -24,6 +25,7 @@ import {
   generateAdvisorRecommendations,
 } from '@finance-os/finance-engine'
 import { getDashboardSummaryMock } from '../../../../mocks/dashboardSummary.mock'
+import { getExternalInvestmentsBundleMock } from '../../../../mocks/externalInvestments.mock'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorChatPostResponse,
@@ -558,6 +560,7 @@ const buildPreviewArtifacts = ({
   summary,
   goals,
   newsBundle,
+  investmentBundle,
   spend,
   mode,
   requestId,
@@ -566,6 +569,7 @@ const buildPreviewArtifacts = ({
   summary: DashboardSummaryResponse
   goals: DashboardGoalResponse[]
   newsBundle?: NewsContextBundle | null
+  investmentBundle?: ExternalInvestmentBundle | null
   spend: DashboardAdvisorSpendAnalyticsResponse
   mode: 'demo' | 'admin'
   requestId: string
@@ -578,11 +582,19 @@ const buildPreviewArtifacts = ({
   signals: DashboardAdvisorSignalsResponse
   snapshot: AdvisorSnapshot
   deterministicRecommendations: DeterministicRecommendation[]
+  investmentBundle: ExternalInvestmentBundle | null
 } => {
+  const effectiveInvestmentBundle =
+    investmentBundle !== undefined
+      ? investmentBundle
+      : mode === 'demo'
+        ? getExternalInvestmentsBundleMock()
+        : null
   const engineInput = mapSummaryToFinanceEngineInput({
     summary,
     goals,
     ...(newsBundle ? { newsBundle } : {}),
+    ...(effectiveInvestmentBundle ? { investmentBundle: effectiveInvestmentBundle } : {}),
   })
   const snapshot = calculateAdvisorSnapshot(engineInput)
   const deterministicRecommendations = generateAdvisorRecommendations({
@@ -594,6 +606,14 @@ const buildPreviewArtifacts = ({
     recommendations: deterministicRecommendations,
     signals: mapNewsBundleToSignals(newsBundle),
   })
+  const investmentWatchItems =
+    effectiveInvestmentBundle === null
+      ? []
+      : [
+          ...effectiveInvestmentBundle.missingMarketDataWarnings.slice(0, 2),
+          ...effectiveInvestmentBundle.unknownCostBasisWarnings.slice(0, 2),
+          ...effectiveInvestmentBundle.staleDataWarnings.slice(0, 2),
+        ]
   const brief: DashboardAdvisorDailyBriefResponse = {
     id: 0,
     runId: 0,
@@ -602,7 +622,10 @@ const buildPreviewArtifacts = ({
     keyFacts: briefDraft.keyFacts,
     opportunities: briefDraft.opportunities,
     risks: briefDraft.risks,
-    watchItems: briefDraft.watchItems,
+    watchItems: Array.from(new Set([...briefDraft.watchItems, ...investmentWatchItems])).slice(
+      0,
+      8
+    ),
     recommendationNotes: briefDraft.recommendationNotes as Array<Record<string, unknown>>,
     provider: null,
     model: null,
@@ -666,6 +689,7 @@ const buildPreviewArtifacts = ({
     signals,
     snapshot,
     deterministicRecommendations,
+    investmentBundle: effectiveInvestmentBundle,
   }
 }
 
@@ -740,6 +764,7 @@ export const createDashboardAdvisorUseCases = ({
   getSummary,
   getGoals,
   getNewsContextBundle,
+  getInvestmentContextBundle,
   getTransactions,
   getKnowledgeContextBundle,
   config,
@@ -748,6 +773,7 @@ export const createDashboardAdvisorUseCases = ({
   getSummary: DashboardUseCases['getSummary']
   getGoals: DashboardUseCases['getGoals']
   getNewsContextBundle?: DashboardUseCases['getNewsContextBundle']
+  getInvestmentContextBundle?: (input: { requestId: string }) => Promise<ExternalInvestmentBundle | null>
   getTransactions: DashboardUseCases['getTransactions']
   getKnowledgeContextBundle?: AdvisorKnowledgeContextFetcher
   config: DashboardAdvisorConfig
@@ -847,6 +873,41 @@ export const createDashboardAdvisorUseCases = ({
     }
   }
 
+  const investmentContextForPrompt = (
+    bundle: ExternalInvestmentBundle | null | undefined
+  ): {
+    investmentContext?: Record<string, unknown>
+  } => {
+    if (!bundle) {
+      return {}
+    }
+
+    return {
+      investmentContext: {
+        schemaVersion: bundle.schemaVersion,
+        generatedAt: bundle.generatedAt,
+        providerCoverage: bundle.providerCoverage,
+        totalKnownValue: bundle.totalKnownValue,
+        unknownValuePositionCount: bundle.unknownValuePositionCount,
+        allocationByAssetClass: bundle.allocationByAssetClass.slice(0, 8),
+        allocationByProvider: bundle.allocationByProvider,
+        allocationByCurrency: bundle.allocationByCurrency.slice(0, 8),
+        topConcentrations: bundle.topConcentrations.slice(0, 8),
+        cryptoExposure: bundle.cryptoExposure,
+        stablecoinExposure: bundle.stablecoinExposure,
+        cashDrag: bundle.cashDrag,
+        pnlSummary: bundle.pnlSummary,
+        feesSummary: bundle.feesSummary,
+        unknownCostBasisWarnings: bundle.unknownCostBasisWarnings.slice(0, 8),
+        missingMarketDataWarnings: bundle.missingMarketDataWarnings.slice(0, 8),
+        staleDataWarnings: bundle.staleDataWarnings.slice(0, 8),
+        riskFlags: bundle.riskFlags.slice(0, 8),
+        assumptions: bundle.assumptions.slice(0, 8),
+        confidence: bundle.confidence,
+      },
+    }
+  }
+
   const runStructuredStep = async <TOutput>({
     runId,
     stepKey,
@@ -929,11 +990,14 @@ export const createDashboardAdvisorUseCases = ({
   }
 
   const loadAdminPreview = async ({ requestId }: { requestId: string }) => {
-    const [summary, goalsResponse, newsBundle, spend] = await Promise.all([
+    const [summary, goalsResponse, newsBundle, investmentBundle, spend] = await Promise.all([
       getSummary('30d'),
       getGoals(),
       getNewsContextBundle
         ? getNewsContextBundle({ requestId, range: '7d' })
+        : Promise.resolve(null),
+      getInvestmentContextBundle
+        ? getInvestmentContextBundle({ requestId })
         : Promise.resolve(null),
       repository.getSpendAnalytics(buildSpendInput(config)),
     ])
@@ -942,6 +1006,7 @@ export const createDashboardAdvisorUseCases = ({
       summary,
       goals: goalsResponse.items,
       ...(newsBundle ? { newsBundle } : {}),
+      ...(investmentBundle ? { investmentBundle } : {}),
       spend,
       mode: 'admin',
       requestId,
@@ -995,11 +1060,14 @@ export const createDashboardAdvisorUseCases = ({
     })
 
     try {
-      const [summary, goalsResponse, newsBundle, transactionsResponse] = await Promise.all([
+      const [summary, goalsResponse, newsBundle, investmentBundle, transactionsResponse] = await Promise.all([
         getSummary('30d'),
         getGoals(),
         getNewsContextBundle
           ? getNewsContextBundle({ requestId, range: '7d' })
+          : Promise.resolve(null),
+        getInvestmentContextBundle
+          ? getInvestmentContextBundle({ requestId })
           : Promise.resolve(null),
         getTransactions({
           range: '30d',
@@ -1012,6 +1080,7 @@ export const createDashboardAdvisorUseCases = ({
         summary,
         goals: goalsResponse.items,
         ...(newsBundle ? { newsBundle } : {}),
+        ...(investmentBundle ? { investmentBundle } : {}),
         spend,
         mode: 'admin',
         requestId,
@@ -1023,6 +1092,14 @@ export const createDashboardAdvisorUseCases = ({
       let transactionSuggestions = buildDeterministicTransactionSuggestions(
         transactionsResponse.items
       )
+      if (
+        investmentBundle &&
+        (investmentBundle.staleDataWarnings.length > 0 ||
+          investmentBundle.missingMarketDataWarnings.length > 0 ||
+          investmentBundle.unknownCostBasisWarnings.length > 0)
+      ) {
+        degradedReasons.push('investment_context_degraded')
+      }
 
       await repository.updateRunStep({
         stepId: deterministicStepId,
@@ -1092,6 +1169,7 @@ export const createDashboardAdvisorUseCases = ({
                     ]
                   : [],
             assumptions: preview.assumptions.items.slice(0, 8),
+            ...investmentContextForPrompt(investmentBundle),
             ...knowledgeContextForPrompt(dailyKnowledge.bundle),
           },
           maxOutputTokens: 1400,
@@ -1165,6 +1243,7 @@ export const createDashboardAdvisorUseCases = ({
                   ? ['Social signals are supplementary context. Verify before citing.']
                   : [],
               assumptions: preview.assumptions.items.slice(0, 8),
+              ...investmentContextForPrompt(investmentBundle),
               ...knowledgeContextForPrompt(challengeKnowledge.bundle),
             },
             maxOutputTokens: 1000,
@@ -1733,6 +1812,7 @@ export const createDashboardAdvisorUseCases = ({
                   config.maxChatMessagesContext
                 )
               )?.messages ?? [],
+            ...investmentContextForPrompt(previewForChat.investmentBundle),
             ...knowledgeContextForPrompt(chatKnowledge.bundle),
           },
           maxOutputTokens: 1200,

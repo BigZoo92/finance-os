@@ -382,6 +382,46 @@ const powensShape = {
   APP_ENCRYPTION_KEY: encryptionKeySchema,
 } satisfies z.ZodRawShape
 
+const externalInvestmentsShape = {
+  EXTERNAL_INVESTMENTS_ENABLED: z
+    .string()
+    .optional()
+    .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+  EXTERNAL_INVESTMENTS_SAFE_MODE: z
+    .string()
+    .optional()
+    .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+  EXTERNAL_INVESTMENTS_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
+  EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(24 * 60),
+  IBKR_FLEX_ENABLED: z
+    .string()
+    .optional()
+    .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+  IBKR_FLEX_BASE_URL: z
+    .string()
+    .url('IBKR_FLEX_BASE_URL must be a valid URL')
+    .default('https://ndcdyn.interactivebrokers.com'),
+  IBKR_FLEX_USER_AGENT: z
+    .string()
+    .min(1, 'IBKR_FLEX_USER_AGENT is required')
+    .default('Finance-OS External Investments/1.0'),
+  IBKR_FLEX_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  BINANCE_SPOT_ENABLED: z
+    .string()
+    .optional()
+    .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+  BINANCE_SPOT_BASE_URL: z
+    .string()
+    .url('BINANCE_SPOT_BASE_URL must be a valid URL')
+    .default('https://api.binance.com'),
+  BINANCE_SPOT_RECV_WINDOW_MS: z.coerce.number().int().positive().default(5000),
+  BINANCE_SPOT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+} satisfies z.ZodRawShape
+
 const assertProductionApiEnv = (values: {
   NODE_ENV: 'development' | 'test' | 'production'
   POWENS_REDIRECT_URI_PROD?: string | undefined
@@ -826,6 +866,7 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => toBooleanEnv(value)),
+    ...externalInvestmentsShape,
     ...powensShape,
   })
 
@@ -977,6 +1018,7 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => toBooleanEnv(value)),
+    ...externalInvestmentsShape,
     PWA_NOTIFICATIONS_ENABLED: z
       .string()
       .optional()

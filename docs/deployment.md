@@ -164,6 +164,19 @@ POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS=7
 POWENS_FORCE_FULL_SYNC=false
 POWENS_SYNC_DISABLED_PROVIDERS=
 
+EXTERNAL_INVESTMENTS_ENABLED=true
+EXTERNAL_INVESTMENTS_SAFE_MODE=false
+EXTERNAL_INVESTMENTS_SYNC_COOLDOWN_SECONDS=300
+EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES=1440
+IBKR_FLEX_ENABLED=true
+IBKR_FLEX_BASE_URL=https://ndcdyn.interactivebrokers.com
+IBKR_FLEX_USER_AGENT=Finance-OS External Investments/1.0
+IBKR_FLEX_TIMEOUT_MS=30000
+BINANCE_SPOT_ENABLED=true
+BINANCE_SPOT_BASE_URL=https://api.binance.com
+BINANCE_SPOT_RECV_WINDOW_MS=5000
+BINANCE_SPOT_TIMEOUT_MS=30000
+
 ALERTS_ENABLED=true
 ALERTS_WEBHOOK_URL=<webhook-ops>
 ALERTS_WEBHOOK_HEADERS_JSON={"Authorization":"Bearer <token>"}
@@ -208,6 +221,8 @@ Ne pas mettre dans Dokploy:
 - `POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS` regle la fenetre de rattrapage incremental (recommande: 3-7 jours) autour de `last_success_at` pour absorber les operations retardees
 - `POWENS_FORCE_FULL_SYNC=true` force temporairement tous les jobs en mode full-sync (kill-switch rollback en cas de doute sur l'incremental)
 - `POWENS_SYNC_DISABLED_PROVIDERS` desactive la sync pour les providers listes (CSV) sans couper toute l'integration
+- `EXTERNAL_INVESTMENTS_SAFE_MODE=true` coupe uniquement les syncs IBKR/Binance; les lectures cache/demo et diagnostics restent disponibles
+- Les credentials IBKR/Binance ne doivent pas etre mis en env Dokploy: les configurer via `/integrations`, chiffres avec `APP_ENCRYPTION_KEY`
 - `DERIVED_RECOMPUTE_ENABLED=false` coupe le trigger admin de recompute derivee sans changer le snapshot courant
 - `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
 - `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure

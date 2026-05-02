@@ -22,6 +22,7 @@ COPY apps/worker/package.json apps/worker/package.json
 COPY packages/ai/package.json packages/ai/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
+COPY packages/external-investments/package.json packages/external-investments/package.json
 COPY packages/finance-engine/package.json packages/finance-engine/package.json
 COPY packages/powens/package.json packages/powens/package.json
 COPY packages/prelude/package.json packages/prelude/package.json
@@ -60,6 +61,7 @@ COPY apps/api apps/api
 COPY packages/ai packages/ai
 COPY packages/db packages/db
 COPY packages/env packages/env
+COPY packages/external-investments packages/external-investments
 COPY packages/finance-engine packages/finance-engine
 COPY packages/powens packages/powens
 COPY packages/prelude packages/prelude
@@ -86,6 +88,7 @@ COPY --from=bundle-api --chown=app:app /app/apps/api ./apps/api
 COPY --from=bundle-api --chown=app:app /app/packages/ai ./packages/ai
 COPY --from=bundle-api --chown=app:app /app/packages/db ./packages/db
 COPY --from=bundle-api --chown=app:app /app/packages/env ./packages/env
+COPY --from=bundle-api --chown=app:app /app/packages/external-investments ./packages/external-investments
 COPY --from=bundle-api --chown=app:app /app/packages/finance-engine ./packages/finance-engine
 COPY --from=bundle-api --chown=app:app /app/packages/powens ./packages/powens
 COPY --from=bundle-api --chown=app:app /app/packages/prelude ./packages/prelude
@@ -103,6 +106,7 @@ FROM deps-worker AS bundle-worker
 COPY apps/worker apps/worker
 COPY packages/db packages/db
 COPY packages/env packages/env
+COPY packages/external-investments packages/external-investments
 COPY packages/powens packages/powens
 COPY packages/prelude packages/prelude
 COPY packages/redis packages/redis
@@ -127,6 +131,7 @@ COPY --from=bundle-worker --chown=app:app /app/node_modules ./node_modules
 COPY --from=bundle-worker --chown=app:app /app/apps/worker ./apps/worker
 COPY --from=bundle-worker --chown=app:app /app/packages/db ./packages/db
 COPY --from=bundle-worker --chown=app:app /app/packages/env ./packages/env
+COPY --from=bundle-worker --chown=app:app /app/packages/external-investments ./packages/external-investments
 COPY --from=bundle-worker --chown=app:app /app/packages/powens ./packages/powens
 COPY --from=bundle-worker --chown=app:app /app/packages/prelude ./packages/prelude
 COPY --from=bundle-worker --chown=app:app /app/packages/redis ./packages/redis

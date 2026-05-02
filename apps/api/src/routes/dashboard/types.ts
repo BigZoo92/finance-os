@@ -11,6 +11,7 @@ import type {
   DashboardAdvisorEvalRunResponse,
   DashboardAdvisorEvalsResponse,
   DashboardAdvisorManualOperationResponse,
+  DashboardAdvisorManualOperationStepKey,
   DashboardAdvisorManualRefreshAndRunPostResponse,
   DashboardAdvisorOverviewResponse,
   DashboardAdvisorRecommendationsResponse,
@@ -1076,7 +1077,7 @@ export interface DashboardAdvisorRepository {
     mode: 'admin'
     triggerSource: string
     requestId: string
-    currentStage?: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run' | null
+    currentStage?: DashboardAdvisorManualOperationStepKey | null
     statusMessage?: string | null
     degraded: boolean
     advisorRunId?: number | null
@@ -1086,7 +1087,7 @@ export interface DashboardAdvisorRepository {
   updateManualOperation: (input: {
     operationId: string
     status?: 'queued' | 'running' | 'completed' | 'failed' | 'degraded'
-    currentStage?: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run' | null
+    currentStage?: DashboardAdvisorManualOperationStepKey | null
     statusMessage?: string | null
     degraded?: boolean
     errorCode?: string | null
@@ -1099,7 +1100,7 @@ export interface DashboardAdvisorRepository {
   }) => Promise<void>
   upsertManualOperationStep: (input: {
     operationId: string
-    stepKey: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run'
+    stepKey: DashboardAdvisorManualOperationStepKey
     label: string
     status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
     startedAt?: Date | null
@@ -1208,6 +1209,18 @@ export interface DashboardUseCases {
     signalCount: number
     providerResults: MarketProviderRunResult[]
   }>
+  getExternalInvestmentsSummary?: (input: { requestId: string }) => Promise<unknown>
+  getExternalInvestmentsAccounts?: (input: { requestId: string }) => Promise<unknown>
+  getExternalInvestmentsPositions?: (input: { requestId: string }) => Promise<unknown>
+  getExternalInvestmentsTrades?: (input: {
+    requestId: string
+    limit?: number
+  }) => Promise<unknown>
+  getExternalInvestmentsCashFlows?: (input: {
+    requestId: string
+    limit?: number
+  }) => Promise<unknown>
+  getExternalInvestmentsContextBundle?: (input: { requestId: string }) => Promise<unknown>
   getAdvisorOverview?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

@@ -22,6 +22,10 @@ import {
   dashboardSummaryQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
 import {
+  externalInvestmentsPositionsQueryOptionsWithMode,
+  externalInvestmentsSummaryQueryOptionsWithMode,
+} from '@/features/external-investments/query-options'
+import {
   deleteDashboardManualAsset,
   patchDashboardManualAsset,
   postDashboardManualAsset,
@@ -54,6 +58,10 @@ export const Route = createFileRoute('/_app/patrimoine')({
         mode,
       })
     )
+    await Promise.all([
+      context.queryClient.ensureQueryData(externalInvestmentsSummaryQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(externalInvestmentsPositionsQueryOptionsWithMode({ mode })),
+    ])
   },
   component: PatrimoinePage,
 })
@@ -161,6 +169,16 @@ function PatrimoinePage() {
       ...(isAdmin && authMode ? { mode: authMode } : {}),
     })
   )
+  const externalSummaryQuery = useQuery(
+    externalInvestmentsSummaryQueryOptionsWithMode({
+      ...(authMode ? { mode: authMode } : {}),
+    })
+  )
+  const externalPositionsQuery = useQuery(
+    externalInvestmentsPositionsQueryOptionsWithMode({
+      ...(authMode ? { mode: authMode } : {}),
+    })
+  )
   const adapted = adaptDashboardSummaryLegacy({
     range,
     summary: summaryQuery.data,
@@ -177,6 +195,10 @@ function PatrimoinePage() {
   })
   const delta = (sparkData.at(-1)?.value ?? 0) - (sparkData[0]?.value ?? 0)
   const manualAssets = manualAssetsQuery.data?.items ?? []
+  const externalBundle = externalSummaryQuery.data?.bundle ?? null
+  const externalPositions = externalPositionsQuery.data?.items ?? []
+  const externalKnownValue = externalBundle?.totalKnownValue ?? 0
+  const externalUnknownCount = externalBundle?.unknownValuePositionCount ?? 0
 
   const resetManualAssetForm = () => {
     setManualAssetDraft(EMPTY_MANUAL_ASSET_DRAFT)
@@ -476,6 +498,109 @@ function PatrimoinePage() {
               Aucun actif.
             </p>
           )}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
+              Investissements externes
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              IBKR et Binance sont lus depuis les snapshots persistants. Aucun provider n est appele par cette vue.
+            </p>
+          </div>
+          <Badge variant={externalSummaryQuery.isError ? 'destructive' : externalUnknownCount > 0 ? 'outline' : 'secondary'}>
+            {externalSummaryQuery.isPending
+              ? 'chargement'
+              : externalUnknownCount > 0
+                ? `${externalUnknownCount} valuation inconnue`
+                : 'cache pret'}
+          </Badge>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="rounded-2xl border border-border/40 bg-card/55 p-4">
+            <p className="text-sm font-medium">Valeur externe connue</p>
+            <p className="mt-2 font-financial text-3xl font-semibold">
+              {externalSummaryQuery.isPending ? '...' : formatMoney(externalKnownValue)}
+            </p>
+            <div className="mt-4 space-y-2">
+              {(externalBundle?.providerCoverage ?? []).map(provider => (
+                <div key={provider.provider} className="flex items-center justify-between gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        provider.status === 'healthy'
+                          ? 'bg-positive'
+                          : provider.status === 'degraded'
+                            ? 'bg-warning'
+                            : provider.status === 'failing'
+                              ? 'bg-negative'
+                              : 'bg-muted-foreground'
+                      }`}
+                    />
+                    <span className="uppercase">{provider.provider}</span>
+                  </div>
+                  <span className="text-muted-foreground">
+                    {provider.stale ? 'stale' : provider.configured ? 'configure' : 'manquant'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/40 bg-card/55 p-4">
+            <p className="text-sm font-medium">Allocation externe</p>
+            <div className="mt-4 space-y-3">
+              {(externalBundle?.allocationByAssetClass ?? []).map(item => (
+                <div key={item.key} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="uppercase tracking-[0.12em] text-muted-foreground">{item.key}</span>
+                    <span className="font-financial">{formatMoney(item.value)} · {item.weightPct.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-surface-0">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, item.weightPct)}%` }} />
+                  </div>
+                </div>
+              ))}
+              {!externalSummaryQuery.isPending && (externalBundle?.allocationByAssetClass.length ?? 0) === 0 ? (
+                <p className="py-4 text-sm text-muted-foreground">Aucun snapshot externe importe.</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {(externalBundle?.missingMarketDataWarnings.length ?? 0) > 0 ||
+        (externalBundle?.unknownCostBasisWarnings.length ?? 0) > 0 ? (
+          <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+            {[...(externalBundle?.missingMarketDataWarnings ?? []), ...(externalBundle?.unknownCostBasisWarnings ?? [])]
+              .slice(0, 3)
+              .map(item => (
+                <p key={item}>{item}</p>
+              ))}
+          </div>
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {externalPositions.slice(0, 4).map(position => (
+            <div key={position.positionKey} className="rounded-2xl border border-border/40 bg-surface-1 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{position.name}</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                    {position.provider} · {position.assetClass}
+                  </p>
+                </div>
+                <p className="font-financial text-sm font-semibold">
+                  {position.normalizedValue === null
+                    ? 'Valeur inconnue'
+                    : formatMoney(position.normalizedValue, position.valueCurrency ?? position.currency ?? 'EUR')}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

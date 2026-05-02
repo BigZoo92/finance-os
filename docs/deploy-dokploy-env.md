@@ -10,4 +10,5 @@ Rappels critiques:
 - `APP_IMAGE_TAG=vX.Y.Z`
 - ne jamais utiliser `latest`
 - ne jamais definir `VITE_PRIVATE_ACCESS_TOKEN`
+- ne jamais definir de credentials IBKR/Binance en env; utiliser la configuration admin chiffree dans `/integrations`
 - preferer `AUTH_ADMIN_PASSWORD_HASH_B64`

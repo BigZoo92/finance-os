@@ -85,6 +85,7 @@ export interface FinanceEngineInput {
   signals?: ExternalSignalSummary[]
   explicitRiskProfile?: RiskProfile | null
   inflationAssumptionPct?: number | null
+  contextAssumptions?: AdvisorAssumptionLog[]
 }
 
 export interface AssetClassAssumption {

@@ -1,6 +1,7 @@
 export * from './assets'
 export * from './ai'
 export * from './derived-recompute'
+export * from './external-investments'
 export * from './goals'
 export * from './powens'
 export * from './recurring-commitments'

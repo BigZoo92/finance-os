@@ -1,0 +1,23 @@
+{
+  "name": "@finance-os/external-investments",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./binance": "./src/binance-readonly-client.ts",
+    "./credentials": "./src/credentials.ts",
+    "./ibkr": "./src/ibkr-flex-client.ts",
+    "./jobs": "./src/jobs.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@finance-os/db": "workspace:*",
+    "@finance-os/powens": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "fast-xml-parser": "^5.5.11"
+  }
+}

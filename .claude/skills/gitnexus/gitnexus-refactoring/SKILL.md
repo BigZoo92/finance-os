@@ -1,8 +1,3 @@
-<!-- GENERATED — DO NOT EDIT
-     Source: .agentic/source/skills/gitnexus/gitnexus-refactoring/SKILL.md
-     Hash:   sha256:6aab994ee0266063
-     Sync:   pnpm agent:skills:sync -->
-
 ---
 name: gitnexus-refactoring
 description: "Use when the user wants to rename, extract, split, move, or restructure code safely. Examples: \"Rename this function\", \"Extract this into a module\", \"Refactor this class\", \"Move this to a separate file\""

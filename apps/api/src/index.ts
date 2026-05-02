@@ -23,6 +23,7 @@ import { isApiDebugEnabled, logApiEvent, toErrorLogFields } from './observabilit
 import { createDashboardRoutes } from './routes/dashboard/router'
 import { createDebugRoutes } from './routes/debug/router'
 import { createEnrichmentRoutes } from './routes/enrichment/router'
+import { createExternalInvestmentsRoutes } from './routes/integrations/external-investments/router'
 import { createPowensRoutes } from './routes/integrations/powens/router'
 import { createNotificationsRoutes } from './routes/notifications/router'
 import { registerSystemRoutes } from './routes/system'
@@ -68,7 +69,13 @@ const NO_STORE_EXACT_PATHS = new Set([
   '/version',
 ])
 
-const NO_STORE_PREFIX_PATHS = ['/auth/', '/integrations/powens/', '/enrichment/', '/debug/']
+const NO_STORE_PREFIX_PATHS = [
+  '/auth/',
+  '/integrations/powens/',
+  '/integrations/external-investments/',
+  '/enrichment/',
+  '/debug/',
+]
 
 const normalizeCompatibilityPath = (pathname: string) => {
   if (pathname === '/api') {
@@ -341,10 +348,23 @@ const registerAppRoutes = (app: Elysia) => {
         quantServiceUrl: env.QUANT_SERVICE_URL,
         quantServiceTimeoutMs: env.QUANT_SERVICE_TIMEOUT_MS,
         tradingLabGraphIngestEnabled: env.TRADING_LAB_GRAPH_INGEST_ENABLED,
+        externalInvestmentsEnabled: env.EXTERNAL_INVESTMENTS_ENABLED,
+        externalInvestmentsSafeMode:
+          env.EXTERNAL_INTEGRATIONS_SAFE_MODE || env.EXTERNAL_INVESTMENTS_SAFE_MODE,
+        externalInvestmentsStaleAfterMinutes: env.EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES,
+        ibkrFlexEnabled: env.IBKR_FLEX_ENABLED,
+        binanceSpotEnabled: env.BINANCE_SPOT_ENABLED,
       })
     )
     .use(
       createPowensRoutes({
+        db,
+        redisClient: redisClient.client,
+        env,
+      })
+    )
+    .use(
+      createExternalInvestmentsRoutes({
         db,
         redisClient: redisClient.client,
         env,

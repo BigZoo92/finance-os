@@ -137,6 +137,33 @@
 
 ---
 
+## 8.bis Investissements externes -- IBKR / Binance
+
+Ces variables sont des reglages applicatifs serveur. Les credentials IBKR/Binance ne sont pas des variables d'env: ils sont configures en admin via `/integrations`, chiffres en DB avec `APP_ENCRYPTION_KEY`, et jamais exposes dans `VITE_*`.
+
+| Variable | Default | Ou la definir | Consommateur | Description |
+|---|---|---|---|---|
+| `EXTERNAL_INVESTMENTS_ENABLED` | `true` | Dokploy, Local | API, Worker | Active les routes cache-only, la configuration admin et les jobs worker |
+| `EXTERNAL_INVESTMENTS_SAFE_MODE` | `false` | Dokploy, Local | API, Worker | Kill-switch dedie IBKR/Binance: bloque les syncs provider et laisse les lectures cache/demo disponibles |
+| `EXTERNAL_INVESTMENTS_SYNC_COOLDOWN_SECONDS` | `300` | Dokploy, Local | API | Cooldown des syncs manuelles IBKR/Binance |
+| `EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES` | `1440` | Dokploy, Local | API, Worker | Seuil de fraicheur pour health, UI et Advisor bundle |
+| `IBKR_FLEX_ENABLED` | `true` | Dokploy, Local | API, Worker | Active le provider IBKR Flex Web Service |
+| `IBKR_FLEX_BASE_URL` | `https://ndcdyn.interactivebrokers.com` | Dokploy, Local | API, Worker | Base URL Flex par defaut; surcharge possible par credential admin |
+| `IBKR_FLEX_USER_AGENT` | `Finance-OS External Investments/1.0` | Dokploy, Local | API, Worker | User-Agent requis pour les appels Flex |
+| `IBKR_FLEX_TIMEOUT_MS` | `30000` | Dokploy, Local | Worker | Timeout des appels Flex |
+| `BINANCE_SPOT_ENABLED` | `true` | Dokploy, Local | API, Worker | Active le provider Binance Spot/Wallet read-only |
+| `BINANCE_SPOT_BASE_URL` | `https://api.binance.com` | Dokploy, Local | API, Worker | Base URL Spot REST par defaut; surcharge possible par credential admin |
+| `BINANCE_SPOT_RECV_WINDOW_MS` | `5000` | Dokploy, Local | Worker | `recvWindow` signe pour les endpoints USER_DATA |
+| `BINANCE_SPOT_TIMEOUT_MS` | `30000` | Dokploy, Local | Worker | Timeout des appels Binance |
+
+Notes:
+
+- `APP_ENCRYPTION_KEY` est obligatoire pour chiffrer/dechiffrer les credentials.
+- `EXTERNAL_INTEGRATIONS_SAFE_MODE` reste le kill-switch global; `EXTERNAL_INVESTMENTS_SAFE_MODE` est le kill-switch specifique IBKR/Binance.
+- Aucune permission trading, withdrawal, transfer, convert, margin/futures ou staking/earn mutation n'est acceptee.
+
+---
+
 ## 9. Worker
 
 | Variable | Default | Ou la definir | Consommateur | Description |

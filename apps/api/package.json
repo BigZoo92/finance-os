@@ -15,6 +15,7 @@
     "@finance-os/ai": "workspace:*",
     "@finance-os/db": "workspace:*",
     "@finance-os/env": "workspace:*",
+    "@finance-os/external-investments": "workspace:*",
     "@finance-os/finance-engine": "workspace:*",
     "@finance-os/powens": "workspace:*",
     "@finance-os/prelude": "workspace:*",

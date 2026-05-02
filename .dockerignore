@@ -15,6 +15,13 @@ dist
 .tmp
 .turbo
 **/.next
+apps/desktop/src-tauri/target
+apps/desktop/src-tauri/static
+apps/desktop/src-tauri/gen
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+**/.pytest_cache
 
 # ── Secrets ────────────────────────────────────
 .env

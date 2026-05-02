@@ -29,6 +29,8 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
 - The Temporal Knowledge Graph / GraphRAG service is AI Advisor memory for personal financial context, not the Codex/Claude agentic development pipeline.
 - Deterministic `packages/finance-engine` outputs remain first; graph context only enriches, explains, and challenges recommendations.
 - Never treat graph memory as trading execution infrastructure. Technical/trading nodes are knowledge-only and paper-trading-ready at most.
+- External investment context comes from the compact `advisor_investment_context_bundle`; never prompt from raw IBKR XML, Binance JSON, provider credentials, signed URLs or secrets.
+- IBKR/Binance ingestion is read-only analytics only: no orders, withdrawals, transfers, convert, margin/futures, staking/earn mutations, or execution-ready abstractions.
 
 ## Skills System
 
@@ -81,7 +83,7 @@ Local Finance-OS skills > recommended external > optional external > experimenta
 ## Context Documentation
 
 For full project context (stack, features, design, env vars, architecture), read `docs/context/`:
-- [STACK.md](docs/context/STACK.md), [FEATURES.md](docs/context/FEATURES.md), [DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md), [CONVENTIONS.md](docs/context/CONVENTIONS.md), [ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md), [EXTERNAL-SERVICES.md](docs/context/EXTERNAL-SERVICES.md), [APP-ARCHITECTURES.md](docs/context/APP-ARCHITECTURES.md)
+- [STACK.md](docs/context/STACK.md), [FEATURES.md](docs/context/FEATURES.md), [EXTERNAL-INVESTMENTS.md](docs/context/EXTERNAL-INVESTMENTS.md), [DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md), [CONVENTIONS.md](docs/context/CONVENTIONS.md), [ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md), [EXTERNAL-SERVICES.md](docs/context/EXTERNAL-SERVICES.md), [APP-ARCHITECTURES.md](docs/context/APP-ARCHITECTURES.md)
 - Update these docs when changes affect stack, features, env vars, or services.
 
 ## Agent Efficiency System
@@ -110,7 +112,7 @@ Edit skills in `.agentic/source/skills/`, then run `pnpm agent:skills:sync`.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **finance-os** (2178 symbols, 4633 relationships, 88 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **finance-os** (5024 symbols, 12504 relationships, 295 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -206,26 +208,6 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Domain area (96 symbols) | `.claude/skills/generated/domain/SKILL.md` |
-| Work in the Dashboard area (83 symbols) | `.claude/skills/generated/dashboard/SKILL.md` |
-| Work in the Routes area (72 symbols) | `.claude/skills/generated/routes/SKILL.md` |
-| Work in the Auth area (66 symbols) | `.claude/skills/generated/auth/SKILL.md` |
-| Work in the Repositories area (50 symbols) | `.claude/skills/generated/repositories/SKILL.md` |
-| Work in the Features area (32 symbols) | `.claude/skills/generated/features/SKILL.md` |
-| Work in the Powens area (30 symbols) | `.claude/skills/generated/powens/SKILL.md` |
-| Work in the Services area (27 symbols) | `.claude/skills/generated/services/SKILL.md` |
-| Work in the Ui area (20 symbols) | `.claude/skills/generated/ui/SKILL.md` |
-| Work in the Mocks area (16 symbols) | `.claude/skills/generated/mocks/SKILL.md` |
-| Work in the Cluster_1 area (13 symbols) | `.claude/skills/generated/cluster-1/SKILL.md` |
-| Work in the Cluster_3 area (12 symbols) | `.claude/skills/generated/cluster-3/SKILL.md` |
-| Work in the Debug area (11 symbols) | `.claude/skills/generated/debug/SKILL.md` |
-| Work in the Cluster_47 area (10 symbols) | `.claude/skills/generated/cluster-47/SKILL.md` |
-| Work in the Logging area (9 symbols) | `.claude/skills/generated/logging/SKILL.md` |
-| Work in the Goals area (8 symbols) | `.claude/skills/generated/goals/SKILL.md` |
-| Work in the _app area (8 symbols) | `.claude/skills/generated/app/SKILL.md` |
-| Work in the Cluster_17 area (7 symbols) | `.claude/skills/generated/cluster-17/SKILL.md` |
-| Work in the Cluster_48 area (7 symbols) | `.claude/skills/generated/cluster-48/SKILL.md` |
-| Work in the Shell area (7 symbols) | `.claude/skills/generated/shell/SKILL.md` |
 
 <!-- gitnexus:end -->
 # CLAUDE.md

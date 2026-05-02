@@ -13,6 +13,10 @@ import {
   parsePowensJob,
   serializePowensJob,
 } from '@finance-os/powens'
+import {
+  EXTERNAL_INVESTMENTS_JOB_QUEUE_KEY,
+  parseExternalInvestmentsJob,
+} from '@finance-os/external-investments'
 import { buildRuntimeHealthWithFlags, resolveRuntimeVersion } from '@finance-os/prelude'
 import { createRedisClient } from '@finance-os/redis'
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
@@ -56,6 +60,7 @@ import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
 import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
 import { detectSyncIntegrityIssues } from './sync-integrity-checks'
 import { detectTransactionGaps } from './transaction-gap-detection'
+import { createExternalInvestmentsSyncWorker } from './external-investments-sync'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -65,6 +70,12 @@ const powensClient = createPowensClient({
   clientSecret: env.POWENS_CLIENT_SECRET,
   userAgent: 'finance-os-worker/1.0',
   maxRetries: 2,
+})
+const externalInvestmentsSyncWorker = createExternalInvestmentsSyncWorker({
+  db: dbClient.db,
+  redisClient: redisClient.client,
+  env,
+  log: logWorkerEvent,
 })
 
 const TRANSACTION_BATCH_SIZE = 800
@@ -1511,9 +1522,34 @@ const startSocialScheduler = () => {
 const consumeJobs = async () => {
   while (keepRunning) {
     try {
-      const message = await redisClient.client.blPop(POWENS_JOB_QUEUE_KEY, 5)
+      const message = await redisClient.client.blPop(
+        [POWENS_JOB_QUEUE_KEY, EXTERNAL_INVESTMENTS_JOB_QUEUE_KEY],
+        5
+      )
 
       if (!message) {
+        continue
+      }
+
+      if (message.key === EXTERNAL_INVESTMENTS_JOB_QUEUE_KEY) {
+        const job = parseExternalInvestmentsJob(message.element)
+        if (!job) {
+          continue
+        }
+
+        logWorkerEvent({
+          level: 'info',
+          msg: 'worker processing external investments job',
+          jobType: job.type,
+          requestId: job.requestId ?? 'n/a',
+          ...(job.type === 'externalInvestments.syncProvider'
+            ? { provider: job.provider }
+            : {}),
+          ...(job.type === 'externalInvestments.syncConnection'
+            ? { provider: job.provider, connectionId: job.connectionId }
+            : {}),
+        })
+        await externalInvestmentsSyncWorker.handleJob(job)
         continue
       }
 

@@ -437,9 +437,18 @@ export interface DashboardAdvisorEvalsResponse {
   latestRun: DashboardAdvisorEvalRunResponse | null
 }
 
+export type DashboardAdvisorManualOperationStepKey =
+  | 'personal_sync'
+  | 'ibkr_sync'
+  | 'binance_sync'
+  | 'news_refresh'
+  | 'market_refresh'
+  | 'investment_bundle'
+  | 'advisor_run'
+
 export interface DashboardAdvisorManualOperationStepResponse {
   id: number
-  stepKey: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run'
+  stepKey: DashboardAdvisorManualOperationStepKey
   label: string
   status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
   startedAt: string | null
@@ -459,12 +468,7 @@ export interface DashboardAdvisorManualOperationResponse {
     | 'completed'
     | 'failed'
     | 'degraded'
-  currentStage:
-    | 'personal_sync'
-    | 'news_refresh'
-    | 'market_refresh'
-    | 'advisor_run'
-    | null
+  currentStage: DashboardAdvisorManualOperationStepKey | null
   statusMessage: string | null
   triggerSource: string
   startedAt: string

@@ -35,6 +35,8 @@ Recommended now:
 - `WORKER_AUTO_SYNC_ENABLED=false`
 - `NEWS_AUTO_INGEST_ENABLED=false`
 - `MARKET_DATA_AUTO_REFRESH_ENABLED=false`
+- `EXTERNAL_INVESTMENTS_ENABLED=true`
+- `EXTERNAL_INVESTMENTS_SAFE_MODE=false`
 
 Operational consequence:
 
@@ -46,6 +48,7 @@ Operational consequence:
 - the full mission is started manually from the admin button `Tout rafraichir et analyser`
 - no background advisor scheduler runs by itself
 - no Powens auto-sync scheduler runs by itself
+- no IBKR/Binance sync runs by itself unless the admin starts a sync or a worker job is explicitly queued
 - no news auto-ingest scheduler runs by itself
 - no market auto-refresh scheduler runs by itself
 
@@ -67,7 +70,13 @@ Prepared for later, not fully activated:
   - targeted role 2: degraded-mode prose fallback when OpenAI/Anthropic calls are budget-capped or unavailable
   - targeted role 3: local prompt-eval sandbox for privacy-sensitive experimentation before paid-provider rollout
 - Twitter/X ingestion
-- crypto ingestion
+
+Read-only external investment ingestion is active through the deterministic bundle path:
+
+- IBKR Flex Web Service reporting
+- Binance Spot / Wallet USER_DATA read-only endpoints
+- no trading, transfer, withdrawal or rebalancing execution
+- Advisor consumes `advisor_investment_context_bundle`, never raw provider payloads
 
 ## Keys And Tokens To Generate
 
@@ -178,6 +187,9 @@ Do not put provider API keys in `VITE_*`.
 - `AI_SPEND_ALERT_DAILY_THRESHOLD_PCT`
 - `AI_SPEND_ALERT_MONTHLY_THRESHOLD_PCT`
 - `AI_MAX_CHAT_MESSAGES_CONTEXT`
+- `EXTERNAL_INVESTMENTS_ENABLED`
+- `EXTERNAL_INVESTMENTS_SAFE_MODE`
+- `EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES`
 
 ### Worker and scheduler flags
 
@@ -189,6 +201,14 @@ Do not put provider API keys in `VITE_*`.
 - `NEWS_FETCH_INTERVAL_MS`
 - `MARKET_DATA_AUTO_REFRESH_ENABLED`
 - `MARKET_DATA_REFRESH_INTERVAL_MS`
+- `IBKR_FLEX_ENABLED`
+- `IBKR_FLEX_BASE_URL`
+- `IBKR_FLEX_USER_AGENT`
+- `IBKR_FLEX_TIMEOUT_MS`
+- `BINANCE_SPOT_ENABLED`
+- `BINANCE_SPOT_BASE_URL`
+- `BINANCE_SPOT_RECV_WINDOW_MS`
+- `BINANCE_SPOT_TIMEOUT_MS`
 - `PRIVATE_ACCESS_TOKEN`
 
 ## Recommended Configurations
@@ -211,6 +231,8 @@ AI_DAILY_AUTO_RUN_ENABLED=false
 WORKER_AUTO_SYNC_ENABLED=false
 NEWS_AUTO_INGEST_ENABLED=false
 MARKET_DATA_AUTO_REFRESH_ENABLED=false
+EXTERNAL_INVESTMENTS_ENABLED=true
+EXTERNAL_INVESTMENTS_SAFE_MODE=false
 
 AI_BUDGET_DAILY_USD=5
 AI_BUDGET_MONTHLY_USD=75

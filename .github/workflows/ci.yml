@@ -65,9 +65,26 @@ jobs:
         with:
           bun-version: ${{ vars.BUN_VERSION || '1.2.22' }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Lint
+
+      # TODO: make this blocking after the existing root Biome baseline is fixed.
+      - name: Root lint (known failing baseline)
+        continue-on-error: true
+        run: pnpm lint
+
+      - name: Docker workspace manifest drift check
+        run: pnpm docker:check
+
+      - name: Workspace lint
         run: pnpm -r --if-present lint
 
       - name: Typecheck
@@ -76,8 +93,44 @@ jobs:
       - name: Test
         run: pnpm -r --if-present test
 
+      - name: Python checks
+        run: pnpm python:check
+
       - name: Build
         run: pnpm -r --if-present build
+
+  e2e-smoke:
+    name: E2E Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run demo E2E smoke
+        run: pnpm test:e2e
 
 
   tauri-validate:

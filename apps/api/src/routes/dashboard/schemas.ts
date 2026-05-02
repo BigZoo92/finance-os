@@ -62,6 +62,10 @@ export const dashboardMarketsRefreshBodySchema = t.Object({
   trigger: t.Optional(t.Union([t.Literal('manual'), t.Literal('scheduled')])),
 })
 
+export const dashboardExternalInvestmentsListQuerySchema = t.Object({
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200 })),
+})
+
 export const dashboardTransactionClassificationParamsSchema = t.Object({
   transactionId: t.Numeric({ minimum: 1 }),
 })

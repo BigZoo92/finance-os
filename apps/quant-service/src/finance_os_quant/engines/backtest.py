@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .indicators import compute_ema, compute_rsi, compute_macd, compute_parabolic_sar
+from .indicators import compute_parabolic_sar
 from .metrics import compute_all_metrics, compute_drawdowns
 
 

@@ -27,6 +27,8 @@ The implementation lives in:
 - `apps/worker/src/advisor-daily-scheduler.ts`
 - `apps/api/src/routes/dashboard/domain/advisor/create-manual-refresh-and-run-use-case.ts`
 - `apps/api/src/routes/dashboard/domain/dashboard-manual-assets.ts`
+- `packages/external-investments`
+- `packages/db/src/schema/external-investments.ts`
 - `apps/web/src/components/dashboard/ai-advisor-panel.tsx`
 
 ## Research Inputs That Shaped The Design
@@ -56,6 +58,7 @@ Implementation consequences:
 6. Fail-soft: demo stays fully deterministic. Admin can degrade to deterministic preview artifacts when DB/provider freshness or budget guardrails block deeper runs, and can degrade knowledge answers to browse-only topics when retrieval is disabled or low-confidence.
 7. Cost-aware by default: every model call writes model usage and cost ledger records. Budgets can disable challenger or deeper analysis before hard stop.
 8. Graph memory is enrichment only: `KnowledgeContextBundle` can add concepts, evidence, contradictions and graph paths, but deterministic `packages/finance-engine` remains the recommendation source of truth.
+9. External investment context is bundle-only: Advisor may consume `advisor_investment_context_bundle` but never raw IBKR XML, Binance JSON, provider credentials, signatures or wallet/account-sensitive payloads.
 
 ## Temporal Knowledge Graph Memory
 
@@ -158,6 +161,8 @@ Responsibilities:
 
 `dashboard-manual-assets.ts` reuses the existing unified asset system for admin-authored manual assets instead of a parallel asset store.
 
+`@finance-os/external-investments` owns read-only IBKR/Binance ingestion, canonical normalization, safe credential encryption/masking, provider health, sync runs and deterministic investment context bundle generation. The Advisor reads only the persisted compact bundle.
+
 ### Worker
 
 `apps/worker/src/advisor-daily-scheduler.ts`:
@@ -196,6 +201,21 @@ The advisor persistence layer adds:
 - signals and labeling: `ai_macro_signal`, `ai_news_signal`, `ai_transaction_label_suggestion`
 - grounding: `ai_assumption_log`, `ai_chat_thread`, `ai_chat_message`
 - evaluation: `ai_eval_case`, `ai_eval_run`
+- investment context: `advisor_investment_context_bundle`
+
+The external investment layer adds provider-agnostic canonical tables:
+
+- `external_investment_connection`
+- `external_investment_credential`
+- `external_investment_sync_run`
+- `external_investment_provider_health`
+- `external_investment_raw_import`
+- `external_investment_account`
+- `external_investment_instrument`
+- `external_investment_position`
+- `external_investment_trade`
+- `external_investment_cash_flow`
+- `external_investment_valuation_snapshot`
 
 Design goals:
 
@@ -214,18 +234,21 @@ The flow is:
 
 1. create a manual operation row and acquire a concurrency lock
 2. enqueue personal sync for real connections when needed
-3. wait for sufficient freshness or mark the step degraded explicitly
-4. run `POST /dashboard/news/ingest` logic through the existing use case stack
-5. run `POST /dashboard/markets/refresh` logic through the existing use case stack
-6. execute the advisor pipeline
-7. persist operation steps, advisor artifacts, usages, costs, and evals
-8. expose status through `GET /dashboard/advisor/manual-refresh-and-run*`
+3. enqueue and wait for IBKR sync when configured
+4. enqueue and wait for Binance sync when configured
+5. wait for sufficient freshness or mark each step degraded explicitly
+6. run `POST /dashboard/news/ingest` logic through the existing use case stack
+7. run `POST /dashboard/markets/refresh` logic through the existing use case stack
+8. generate the external investment context bundle
+9. execute the advisor pipeline
+10. persist operation steps, advisor artifacts, usages, costs, and evals
+11. expose status through `GET /dashboard/advisor/manual-refresh-and-run*`
 
 ### Advisor pipeline itself
 
 Once freshness gates are satisfied, the advisor flow is:
 
-1. read dashboard summary, goals, transactions, and news context bundle
+1. read dashboard summary, goals, transactions, news context bundle, and external investment context bundle
 2. compute deterministic finance snapshot
 3. generate deterministic candidate recommendations
 4. build deterministic daily brief fallback

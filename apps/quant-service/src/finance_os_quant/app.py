@@ -27,7 +27,6 @@ from .models import (
     HealthResponse,
     IndicatorRequest,
     MetricsRequest,
-    MetricsResult,
     ScenarioEvaluateRequest,
     ScenarioEvaluateResult,
     VersionResponse,

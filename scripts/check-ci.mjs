@@ -26,7 +26,18 @@ const coreSteps = [
     args: ['install', '--frozen-lockfile'],
   },
   {
-    name: 'Lint',
+    name: 'Root lint (known failing baseline)',
+    args: ['lint'],
+    allowFailure: true,
+    failureMessage:
+      'Root Biome lint is intentionally visible here and in CI until the existing baseline is fixed.',
+  },
+  {
+    name: 'Docker workspace manifest drift check',
+    args: ['docker:check'],
+  },
+  {
+    name: 'Workspace lint',
     args: ['-r', '--if-present', 'lint'],
   },
   {
@@ -93,6 +104,7 @@ function buildStepsForScope(selectedScope) {
 }
 
 const { steps, desktopDecision } = buildStepsForScope(scope)
+const knownFailingChecks = []
 
 if (desktopDecision && !desktopDecision.required && scope === 'auto') {
   console.log('\n==> Desktop CI skipped')
@@ -116,9 +128,30 @@ for (const step of steps) {
     throw result.error
   }
 
+  if (typeof result.status === 'number' && result.status !== 0 && step.allowFailure) {
+    knownFailingChecks.push({
+      name: step.name,
+      message: step.failureMessage,
+    })
+    console.log(`\nKnown failing check did not pass: ${step.name}`)
+    console.log(step.failureMessage)
+    continue
+  }
+
   if (typeof result.status === 'number' && result.status !== 0) {
     process.exit(result.status)
   }
 }
 
-console.log(`\ncheck:ci (${scope}) completed successfully.`)
+if (knownFailingChecks.length > 0) {
+  console.log('\nKnown failing checks reported explicitly:')
+  for (const check of knownFailingChecks) {
+    console.log(`- ${check.name}: ${check.message}`)
+  }
+}
+
+console.log(
+  `\ncheck:ci (${scope}) completed successfully${
+    knownFailingChecks.length > 0 ? ' with known failing checks reported explicitly' : ''
+  }.`
+)
