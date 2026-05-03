@@ -176,19 +176,15 @@ Responsibilities:
 
 ### Web
 
-`AiAdvisorPanel` renders:
+The user-facing Advisor IA routes render the same persisted artifacts with a decision-support hierarchy:
 
-- daily brief
-- recommendations and challenger outcome
-- signals and assumptions
-- AI spend analytics
-- run history
-- educational Q&A with confidence badge, citations, and browse-only topic fallback
-- manual full-mission status
-- grounded chat
-- eval status
+- `/ia`: synthesis, structured recommendations, assumptions/limits, suggested questions, a non-persistent decision-journal placeholder, and links to chat/memory/admin surfaces
+- `/ia/chat`: grounded finance chat with prompt starters and visible data-limit warnings; demo remains read-only/deterministic
+- `/ia/memoire`: text inspection of derived memory, provenance, confidence, freshness and context bundles
 
 `/_app/patrimoine` renders the admin manual-asset CRUD surface backed by `/dashboard/manual-assets`.
+
+The Advisor UI must not present outputs as regulated financial advice or execution instructions. It must surface missing investor profile data, stale context, assumptions, risk/limit copy, confidence, and manual next steps. Force Graph 3D, the Advisor learning loop and fiscality/tax modules remain separate prompts.
 
 ## Data Model
 

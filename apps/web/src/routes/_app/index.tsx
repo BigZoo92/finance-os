@@ -381,13 +381,13 @@ function CockpitPage() {
             className="group rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md transition-all hover:border-primary/30 hover:bg-card/80"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-aurora/70">
-              ▣ résumé IA
+              ▣ synthèse Advisor
             </p>
             <p className="mt-3 text-lg font-semibold text-foreground group-hover:text-primary">
               {advisorQ.data?.brief?.title ?? 'Brief quotidien'}
             </p>
             <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-              {advisorQ.data?.brief?.summary ?? 'Tes données personnelles, sans le bruit des signaux experts.'}
+              {advisorQ.data?.brief?.summary ?? 'Ce que l’Advisor comprend, ce qui manque, et quoi vérifier ensuite.'}
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -397,6 +397,7 @@ function CockpitPage() {
               {activeRecs.length > 0 && (
                 <span className="text-primary">{activeRecs.length} recommandation{activeRecs.length > 1 ? 's' : ''}</span>
               )}
+              <span>aide à la décision</span>
             </div>
           </Link>
 

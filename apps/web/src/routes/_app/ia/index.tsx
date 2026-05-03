@@ -1,12 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Badge, Button, Card, CardContent } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
-import {
-  postDashboardAdvisorManualRefreshAndRun,
-} from '@/features/dashboard-api'
+import { postDashboardAdvisorManualRefreshAndRun } from '@/features/dashboard-api'
 import {
   dashboardAdvisorAssumptionsQueryOptionsWithMode,
   dashboardAdvisorEvalsQueryOptionsWithMode,
@@ -14,9 +12,9 @@ import {
   dashboardAdvisorManualOperationLatestQueryOptionsWithMode,
   dashboardAdvisorQueryOptionsWithMode,
   dashboardAdvisorRecommendationsQueryOptionsWithMode,
+  dashboardAdvisorRunsQueryOptionsWithMode,
   dashboardAdvisorSignalsQueryOptionsWithMode,
   dashboardAdvisorSpendQueryOptionsWithMode,
-  dashboardAdvisorRunsQueryOptionsWithMode,
   dashboardQueryKeys,
 } from '@/features/dashboard-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -25,8 +23,13 @@ import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { StatusDot } from '@/components/surfaces/status-dot'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
-import { MiniSparkline } from '@/components/ui/d3-sparkline'
-import { Badge, Button, Card, CardContent } from '@finance-os/ui/components'
+import {
+  AdvisorAssumptionsPanel,
+  AdvisorDecisionJournal,
+  AdvisorQuestionStarters,
+  AdvisorRecommendationCard,
+  type AdvisorQuestionStarter,
+} from '@/components/advisor/advisor-decision-ui'
 
 export const Route = createFileRoute('/_app/ia/')({
   loader: async ({ context }) => {
@@ -37,42 +40,29 @@ export const Route = createFileRoute('/_app/ia/')({
 
     const advisorFlags = getAiAdvisorUiFlags()
     const advisorVisible = advisorFlags.enabled && (!advisorFlags.adminOnly || mode === 'admin')
+    if (!advisorVisible) return
 
-    const prefetches: Array<Promise<unknown>> = []
-
-    if (advisorVisible) {
-      prefetches.push(
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorQueryOptionsWithMode({ range: '30d', mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorRecommendationsQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorSignalsQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorSpendQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorRunsQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorManualOperationLatestQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorAssumptionsQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorEvalsQueryOptionsWithMode({ mode })
-        ),
-        context.queryClient.ensureQueryData(
-          dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode({ mode })
-        ),
-      )
-    }
-
-    await Promise.all(prefetches)
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        dashboardAdvisorQueryOptionsWithMode({ range: '30d', mode })
+      ),
+      context.queryClient.ensureQueryData(
+        dashboardAdvisorRecommendationsQueryOptionsWithMode({ mode })
+      ),
+      context.queryClient.ensureQueryData(dashboardAdvisorSignalsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(dashboardAdvisorSpendQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(dashboardAdvisorRunsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(
+        dashboardAdvisorManualOperationLatestQueryOptionsWithMode({ mode })
+      ),
+      context.queryClient.ensureQueryData(
+        dashboardAdvisorAssumptionsQueryOptionsWithMode({ mode })
+      ),
+      context.queryClient.ensureQueryData(dashboardAdvisorEvalsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(
+        dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode({ mode })
+      ),
+    ])
   },
   component: IaOverviewPage,
 })
@@ -88,6 +78,36 @@ const readMetricNumber = (
 const formatPercent = (value: number | null, digits = 1) =>
   value === null ? '-' : `${value.toFixed(digits)}%`
 
+const BASE_ADVISOR_QUESTIONS: AdvisorQuestionStarter[] = [
+  {
+    label: 'Est-ce que je peux investir ce mois-ci ?',
+    detail: 'À vérifier avec cashflow, épargne de précaution et horizon.',
+    prompt:
+      'Est-ce que je peux investir ce mois-ci avec les données Finance-OS disponibles ? Dis-moi aussi ce qui manque.',
+    tone: 'brand',
+  },
+  {
+    label: 'Quelles données manquent ?',
+    detail: 'Liste les limites avant de suivre une recommandation.',
+    prompt: 'Quelles données manquent ou sont trop anciennes pour me conseiller correctement ?',
+    tone: 'warning',
+  },
+  {
+    label: 'Mon allocation est-elle trop risquée ?',
+    detail: 'Demande une lecture prudente, pas un ordre d’achat.',
+    prompt:
+      'Analyse mon allocation actuelle, ses risques et les questions à clarifier avant toute décision.',
+    tone: 'plain',
+  },
+  {
+    label: 'Explique-moi mon patrimoine simplement',
+    detail: 'Transforme les chiffres en lecture actionnable.',
+    prompt:
+      'Explique-moi mon patrimoine simplement: ce qui est liquide, investi, incertain, et ce que je devrais vérifier.',
+    tone: 'plain',
+  },
+]
+
 function IaOverviewPage() {
   const queryClient = useQueryClient()
   const authQuery = useQuery(authMeQueryOptions())
@@ -101,7 +121,6 @@ function IaOverviewPage() {
 
   const aiAdvisorFlags = getAiAdvisorUiFlags()
   const aiAdvisorVisible = aiAdvisorFlags.enabled && (!aiAdvisorFlags.adminOnly || isAdmin)
-
   const modeOpts = aiAdvisorVisible && authMode ? { mode: authMode } : {}
 
   const manualOperationQuery = useQuery({
@@ -112,7 +131,8 @@ function IaOverviewPage() {
     },
   })
   const manualOperationActive =
-    manualOperationQuery.data?.status === 'queued' || manualOperationQuery.data?.status === 'running'
+    manualOperationQuery.data?.status === 'queued' ||
+    manualOperationQuery.data?.status === 'running'
   const advisorRefetchInterval = manualOperationActive ? 4_000 : false
 
   const overviewQuery = useQuery({
@@ -143,6 +163,10 @@ function IaOverviewPage() {
     ...dashboardAdvisorEvalsQueryOptionsWithMode(modeOpts),
     refetchInterval: advisorRefetchInterval,
   })
+  const knowledgeTopicsQuery = useQuery({
+    ...dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode(modeOpts),
+    refetchInterval: advisorRefetchInterval,
+  })
 
   const manualRefreshAndRunMutation = useMutation({
     mutationFn: postDashboardAdvisorManualRefreshAndRun,
@@ -162,8 +186,40 @@ function IaOverviewPage() {
 
   const overview = overviewQuery.data
   const snapshotMetrics = overview?.snapshot?.metrics
-  const spendSeries = spendQuery.data?.daily.map(point => point.usd) ?? []
   const recs = recommendationsQuery.data?.items ?? []
+  const assumptions = assumptionsQuery.data?.items ?? []
+  const signals = signalsQuery.data
+  const latestRun = overview?.latestRun ?? runsQuery.data?.items[0] ?? null
+  const highRiskRecs = recs.filter(rec => rec.riskLevel === 'high')
+  const contextualQuestions: AdvisorQuestionStarter[] = recs[0]
+    ? [
+        {
+          label: 'Clarifie la première recommandation',
+          detail: recs[0].title,
+          prompt: `Explique la recommandation "${recs[0].title}" avec ses hypothèses, ses limites et les données utilisées.`,
+          tone: recs[0].riskLevel === 'high' ? 'warning' : 'brand',
+        },
+      ]
+    : []
+  const questionStarters = [...BASE_ADVISOR_QUESTIONS, ...contextualQuestions].slice(0, 5)
+  const missingItems = [
+    ...(overview?.snapshot ? [] : ['Snapshot financier Advisor absent ou pas encore généré.']),
+    ...(overview?.status === 'degraded' && overview.degradedMessage ? [overview.degradedMessage] : []),
+    ...(recs.length === 0 ? ['Aucune recommandation persistée pour le moment.'] : []),
+    ...(assumptions.length === 0 ? ['Aucune hypothèse explicite enregistrée pour l’instant.'] : []),
+    ...(signals?.socialSignals.freshnessState === 'stale' ||
+    signals?.socialSignals.freshnessState === 'empty'
+      ? ['Signaux sociaux absents ou anciens; ils ne doivent pas piloter une décision.']
+      : []),
+    ...(spendQuery.data?.summary.blocked
+      ? ['Budget IA bloqué: l’Advisor doit rester sur les artefacts existants.']
+      : []),
+    ...(spendQuery.data?.anomalies.map(anomaly => anomaly.message) ?? []),
+    ...recs.flatMap(rec => [
+      ...rec.blockingFactors,
+      ...(rec.challenge?.missingSignals ?? []),
+    ]),
+  ]
 
   const advisorError = [
     overviewQuery.error,
@@ -173,17 +229,18 @@ function IaOverviewPage() {
     runsQuery.error,
     assumptionsQuery.error,
     evalsQuery.error,
+    knowledgeTopicsQuery.error,
   ].find(Boolean)
 
   if (!aiAdvisorVisible) {
     const reason = !aiAdvisorFlags.enabled
-      ? 'La surface advisor est désactivée par configuration runtime.'
-      : 'La surface advisor est réservée à la session admin. Connecte-toi en admin.'
+      ? 'La surface Advisor est désactivée par configuration runtime.'
+      : 'La surface Advisor est réservée à la session admin. Connecte-toi en admin.'
     return (
       <div className="space-y-8">
         <PageHeader
           eyebrow="Advisor IA"
-          icon="▣"
+          icon="□"
           title="Advisor IA"
           description="Conseils digestes sur tes finances personnelles. Les surfaces techniques restent séparées."
         />
@@ -201,17 +258,18 @@ function IaOverviewPage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Advisor IA"
-        icon="▣"
+        icon="□"
         title="Advisor IA"
-        description="Brief quotidien et recommandations compréhensibles, nourris par les données sans exposer tout le bruit."
+        description="Synthèse, recommandations, hypothèses et questions utiles. Pas un terminal de signaux bruts."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {overview && (
+            {overview ? (
               <Badge variant="outline" className="text-xs">
                 Généré le {formatDateTime(overview.generatedAt)}
               </Badge>
-            )}
-            {isAdmin && (
+            ) : null}
+            {isDemo ? <Badge variant="warning">démo déterministe</Badge> : null}
+            {isAdmin ? (
               <Button
                 type="button"
                 size="sm"
@@ -222,43 +280,41 @@ function IaOverviewPage() {
                   ? 'Mission en cours...'
                   : 'Tout rafraîchir'}
               </Button>
-            )}
+            ) : null}
           </div>
         }
       />
 
-      {advisorError && (
-        <Panel
-          tone="warning"
-          title="Surface dégradée"
-          icon={<StatusDot tone="warn" size={8} pulse />}
-        >
+      {advisorError ? (
+        <Panel tone="warning" title="Surface dégradée" icon={<StatusDot tone="warn" size={8} pulse />}>
           <p className="text-sm text-muted-foreground">{toErrorMessage(advisorError)}</p>
         </Panel>
-      )}
+      ) : null}
 
-      {/* ── Quick metrics ── */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiTile
-          label="Cash drag"
-          value={readMetricNumber(snapshotMetrics, 'cashDragPct') ?? 0}
-          display={formatPercent(readMetricNumber(snapshotMetrics, 'cashDragPct'), 2)}
-          tone="brand"
-          loading={overviewQuery.isPending}
-        />
-        <KpiTile
-          label="Allocation cash"
+          label="Cash à examiner"
           value={readMetricNumber(snapshotMetrics, 'cashAllocationPct') ?? 0}
           display={formatPercent(readMetricNumber(snapshotMetrics, 'cashAllocationPct'))}
-          tone="plain"
+          tone="brand"
           loading={overviewQuery.isPending}
+          hint="Part de liquidités dans le snapshot"
         />
         <KpiTile
-          label="Retour attendu"
+          label="Friction cash"
+          value={readMetricNumber(snapshotMetrics, 'cashDragPct') ?? 0}
+          display={formatPercent(readMetricNumber(snapshotMetrics, 'cashDragPct'), 2)}
+          tone="warning"
+          loading={overviewQuery.isPending}
+          hint="Hypothèse, pas certitude"
+        />
+        <KpiTile
+          label="Rendement attendu"
           value={readMetricNumber(snapshotMetrics, 'expectedAnnualReturnPct') ?? 0}
           display={formatPercent(readMetricNumber(snapshotMetrics, 'expectedAnnualReturnPct'))}
           tone="positive"
           loading={overviewQuery.isPending}
+          hint="Projection indicative"
         />
         <KpiTile
           label="Diversification"
@@ -266,205 +322,148 @@ function IaOverviewPage() {
           display={readMetricNumber(snapshotMetrics, 'diversificationScore')?.toFixed(0) ?? '-'}
           tone="plain"
           loading={overviewQuery.isPending}
+          hint="Score du moteur déterministe"
         />
       </section>
 
-      {/* ── Daily brief ── */}
-      {overview?.brief && (
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
         <Panel
-          title={overview.brief.title}
+          title="Synthèse"
+          description="Ce que l'Advisor comprend maintenant, sans te demander de lire les signaux bruts."
           tone="brand"
-          icon={<span aria-hidden="true">▣</span>}
-          actions={
-            overview.brief.model ? <Badge variant="outline">{overview.brief.model}</Badge> : null
-          }
+          icon={<span aria-hidden="true">□</span>}
+          actions={overview?.brief?.model ? <Badge variant="outline">{overview.brief.model}</Badge> : null}
         >
-          <p className="text-sm leading-relaxed text-muted-foreground">{overview.brief.summary}</p>
-          {overview.brief.keyFacts && overview.brief.keyFacts.length > 0 && (
-            <ul className="mt-4 space-y-1.5">
-              {overview.brief.keyFacts.slice(0, 5).map((fact: string) => (
-                <li key={fact} className="flex gap-2 text-sm text-muted-foreground">
-                  <span className="text-primary">-</span>
-                  <span>{fact}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        {/* ── Recommendations ── */}
-        <Panel
-          title="Recommandations"
-          tone="brand"
-          icon={<span aria-hidden="true">◎</span>}
-          description="Conseils actifs, challengés par le moteur déterministe et la mémoire IA."
-        >
-          {recs.length > 0 ? (
-            <div className="space-y-3">
-              {recs.slice(0, 6).map(rec => (
-                <div
-                  key={rec.id}
-                  className="rounded-xl border border-border/60 bg-surface-1/60 p-4 transition-colors hover:bg-surface-1"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground">{rec.title}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2">
-                        {rec.description}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        variant={
-                          rec.riskLevel === 'high'
-                            ? 'destructive'
-                            : rec.riskLevel === 'medium'
-                              ? 'outline'
-                              : 'secondary'
-                        }
-                      >
-                        {rec.riskLevel}
-                      </Badge>
-                      <span className="font-financial text-xs text-primary">
-                        {Math.round(rec.confidence * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                  {rec.evidence.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {rec.evidence.slice(0, 3).map((ev) => (
-                        <span
-                          key={ev}
-                          className="rounded bg-background px-2 py-0.5 text-[11px] text-muted-foreground/70"
-                        >
-                          {ev}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+          {overview?.brief ? (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">{overview.brief.title}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {overview.brief.summary}
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <BriefList title="Ce qui est sain" items={overview.brief.opportunities} tone="positive" />
+                <BriefList title="À surveiller" items={overview.brief.risks} tone="warning" />
+                <BriefList title="Ce qui a changé" items={overview.brief.keyFacts} tone="plain" />
+              </div>
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Aucune recommandation disponible. Lancez un refresh pour générer le premier brief.
+            <p className="py-8 text-sm text-muted-foreground">
+              Synthèse indisponible pour l'instant. Le cockpit reste utilisable avec les données existantes.
             </p>
           )}
         </Panel>
 
-        {/* ── Quick links + AI spend + status ── */}
-        <div className="space-y-4">
-          {/* Navigation cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <Link
-              to="/ia/chat"
-              className="group rounded-xl border border-border/60 bg-surface-1/60 p-4 transition-all hover:border-primary/30 hover:bg-surface-1"
-            >
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-aurora/70">◬ Chat</p>
-              <p className="mt-2 text-sm font-medium text-foreground group-hover:text-primary">
-                Chat finance
+        <Panel
+          title="Attention"
+          description="Points à clarifier avant de transformer un conseil en décision."
+          icon={<StatusDot tone={missingItems.length > 0 ? 'warn' : 'ok'} size={8} pulse={missingItems.length > 0} />}
+          tone={missingItems.length > 0 ? 'warning' : 'positive'}
+        >
+          <div className="space-y-2">
+            {highRiskRecs.length > 0 ? (
+              <p className="rounded-xl border border-warning/30 bg-warning/8 px-3 py-2 text-sm text-warning">
+                {highRiskRecs.length} recommandation{highRiskRecs.length > 1 ? 's' : ''} à risque élevé.
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pose une question sur tes dépenses, ton patrimoine ou tes investissements.
+            ) : null}
+            {latestRun?.degraded ? (
+              <p className="rounded-xl border border-warning/30 bg-warning/8 px-3 py-2 text-sm text-warning">
+                Dernier run dégradé: {latestRun.fallbackReason ?? 'raison non précisée'}.
               </p>
-            </Link>
-            <Link
-              to="/ia/memoire"
-              className="group rounded-xl border border-border/60 bg-surface-1/60 p-4 transition-all hover:border-primary/30 hover:bg-surface-1"
-            >
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-aurora/70">[#] Mémoire</p>
-              <p className="mt-2 text-sm font-medium text-foreground group-hover:text-primary">
-                Mémoire & connaissances
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Ce que l'Advisor retient, avec provenance et confiance.
-              </p>
-            </Link>
-          </div>
-
-          {/* AI Spend mini */}
-          <Panel
-            title="Suivi technique IA"
-            tone="plain"
-            icon={<span aria-hidden="true">⊘</span>}
-            actions={
-              isAdmin ? (
-                <Link
-                  to="/ia/couts"
-                  className="text-xs text-primary hover:underline"
-                >
-                  Détails
-                </Link>
-              ) : null
-            }
-          >
-            {spendQuery.data ? (
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-muted-foreground">Dépenses du jour</span>
-                  <span className="font-financial text-lg font-semibold">
-                    ${spendQuery.data.summary.dailyUsdSpent.toFixed(4)}
-                  </span>
-                </div>
-                {spendSeries.length > 1 && (
-                  <MiniSparkline
-                    data={spendSeries}
-                    width={260}
-                    height={36}
-                    color="var(--accent-2)"
-                  />
-                )}
-                <div className="flex items-baseline justify-between text-xs text-muted-foreground">
-                  <span>Mois: ${spendQuery.data.summary.monthlyUsdSpent.toFixed(4)}</span>
-                  <span>{spendQuery.data.daily.length}j de données</span>
-                </div>
-              </div>
+            ) : null}
+            {missingItems.length > 0 ? (
+              missingItems.slice(0, 4).map(item => (
+                <p key={item} className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-2 text-sm text-muted-foreground">
+                  {item}
+                </p>
+              ))
             ) : (
-              <p className="py-4 text-sm text-muted-foreground">Aucune donnée de coût.</p>
+              <p className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm text-muted-foreground">
+                Aucun blocage majeur dans les artefacts actuels. Vérifie tout de même ton horizon et ta tolérance au risque.
+              </p>
             )}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
+        <Panel
+          title="Conseils & recommandations"
+          tone="brand"
+          icon={<span aria-hidden="true">◎</span>}
+          description="Aide à la décision uniquement: aucune instruction d'achat, aucune exécution."
+        >
+          {recs.length > 0 ? (
+            <div className="space-y-4">
+              {recs.slice(0, 5).map(rec => (
+                <AdvisorRecommendationCard key={rec.id} recommendation={rec} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/45 bg-surface-1/35 px-4 py-8 text-center">
+              <p className="text-sm font-semibold text-foreground">Aucune recommandation disponible</p>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                L'Advisor a besoin d'un run récent ou de données plus complètes. En admin, tu peux relancer la mission.
+              </p>
+            </div>
+          )}
+        </Panel>
+
+        <div className="space-y-4">
+          <Panel
+            title="Questions à poser"
+            description="Des questions utiles pour clarifier, pas pour déclencher une opération."
+            icon={<span aria-hidden="true">?</span>}
+            tone="violet"
+          >
+            <AdvisorQuestionStarters questions={questionStarters} />
           </Panel>
 
-          {/* Evals mini */}
-          {evalsQuery.data && evalsQuery.data.cases.length > 0 && (
-            <Panel title="Confiance & évals" tone="plain" icon={<span aria-hidden="true">⊙</span>}>
-              <div className="space-y-2">
-                {evalsQuery.data.cases.slice(0, 3).map(evalCase => (
-                  <div
-                    key={evalCase.id}
-                    className="flex items-center justify-between rounded-lg border border-border/50 bg-background/60 px-3 py-2"
-                  >
-                    <span className="text-xs text-muted-foreground">{evalCase.description}</span>
-                    <Badge
-                      variant={evalCase.active ? 'secondary' : 'outline'}
-                      className="text-[10px]"
-                    >
-                      {evalCase.category}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          )}
-
-          {/* Assumptions */}
-          {assumptionsQuery.data && assumptionsQuery.data.items.length > 0 && (
-            <Panel title="Hypothèses" tone="plain" icon={<span aria-hidden="true">⊿</span>}>
-              <ul className="space-y-1.5">
-                {assumptionsQuery.data.items.slice(0, 4).map(a => (
-                  <li key={a.id} className="flex gap-2 text-xs text-muted-foreground">
-                    <span className="text-primary/60">-</span>
-                    <span>{a.assumptionKey}: {a.justification}</span>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
+          <Panel
+            title="Accès utiles"
+            description="Les surfaces techniques restent séparées du conseil quotidien."
+            icon={<span aria-hidden="true">→</span>}
+            tone="plain"
+          >
+            <div className="grid gap-2">
+              <Link to="/ia/chat" className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1">
+                Chat finance
+                <span className="mt-1 block text-xs text-muted-foreground">Poser une question sur tes données Finance-OS.</span>
+              </Link>
+              <Link to="/ia/memoire" className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1">
+                Mémoire & connaissances
+                <span className="mt-1 block text-xs text-muted-foreground">Voir provenance, confiance et contexte utilisé.</span>
+              </Link>
+              {isAdmin ? (
+                <Link to="/ia/couts" className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1">
+                  Coûts IA
+                  <span className="mt-1 block text-xs text-muted-foreground">Audit technique, pas une surface de décision.</span>
+                </Link>
+              ) : null}
+            </div>
+          </Panel>
         </div>
-      </div>
+      </section>
 
-      {/* Status bar */}
+      <AdvisorAssumptionsPanel assumptions={assumptions} missingItems={missingItems} />
+
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <AdvisorDecisionJournal recommendations={recs} />
+        <Panel
+          title="Garde-fou investissement"
+          description="L'Advisor aide à réfléchir. La décision reste manuelle et personnelle."
+          icon={<span aria-hidden="true">!</span>}
+          tone="warning"
+        >
+          <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+            <p>Pas d'ordre d'achat, de vente, de transfert, de staking ou de rééquilibrage automatique.</p>
+            <p>Avant une décision: objectif, horizon, épargne de précaution, expérience, tolérance au risque et besoin de liquidité doivent être clairs.</p>
+            <p>Si une donnée manque, baisse la confiance et demande une clarification dans le chat.</p>
+          </div>
+        </Panel>
+      </section>
+
       <footer className="rounded-2xl border border-border/50 bg-card/60 px-5 py-3 backdrop-blur-md">
         <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
           <span className="text-muted-foreground/55">
@@ -483,11 +482,46 @@ function IaOverviewPage() {
             runs<span className="mx-1 text-muted-foreground/25">:</span>
             <span className="text-foreground/85">{runsQuery.data?.items.length ?? 0}</span>
           </span>
-          {isDemo && (
-            <span className="text-warning">demo deterministic</span>
-          )}
+          <span className="text-muted-foreground/55">
+            topics<span className="mx-1 text-muted-foreground/25">:</span>
+            <span className="text-foreground/85">{knowledgeTopicsQuery.data?.topics.length ?? 0}</span>
+          </span>
         </div>
       </footer>
+    </div>
+  )
+}
+
+function BriefList({
+  title,
+  items,
+  tone,
+}: {
+  title: string
+  items: string[]
+  tone: 'positive' | 'warning' | 'plain'
+}) {
+  const toneClass =
+    tone === 'positive'
+      ? 'border-positive/30 bg-positive/8'
+      : tone === 'warning'
+        ? 'border-warning/30 bg-warning/8'
+        : 'border-border/45 bg-surface-1/45'
+
+  return (
+    <div className={`rounded-xl border p-3 ${toneClass}`}>
+      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-foreground">{title}</p>
+      <div className="mt-2 space-y-1.5">
+        {items.length > 0 ? (
+          items.slice(0, 4).map(item => (
+            <p key={item} className="text-xs leading-relaxed text-muted-foreground">
+              {item}
+            </p>
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground">Aucun élément explicite.</p>
+        )}
+      </div>
     </div>
   )
 }

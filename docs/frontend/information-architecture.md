@@ -23,11 +23,29 @@ Les intégrations ne sont plus dans ce groupe: elles restent accessibles depuis 
 
 | Route | Page | Rôle | Données principales |
 |---|---|---|---|
-| `/ia` | Vue IA | Hub Advisor: brief quotidien, conseils et recommandations compréhensibles | `dashboardAdvisor*`, `dashboardAdvisorRecommendations` |
-| `/ia/chat` | Chat | Questions directes à l'Advisor sur dépenses, patrimoine et investissements | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics` |
-| `/ia/memoire` | Mémoire | Inspection de la mémoire, provenance, confiance et contexte utilisé par l'Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
+| `/ia` | Vue IA | Hub Advisor: synthèse, recommandations, hypothèses, questions utiles et journal de décisions non persistant | `dashboardAdvisor*`, `dashboardAdvisorRecommendations`, `dashboardAdvisorAssumptions` |
+| `/ia/chat` | Chat | Questions directes à l'Advisor sur dépenses, patrimoine et investissements, avec garde-fous de décision | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics`, `dashboardAdvisor` |
+| `/ia/memoire` | Mémoire | Inspection de la mémoire dérivée, provenance, confiance et contexte utilisé par l'Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
 
 Le Trading Lab et les coûts IA ne sont pas des surfaces Advisor quotidiennes. Ils restent disponibles dans Intelligence & Admin.
+
+#### Structure Advisor User-Facing
+
+L'Advisor IA est organisé autour de cinq zones lisibles:
+
+1. **Synthèse**: ce que l'Advisor voit, ce qui change, ce qui est sain et ce qui demande attention.
+2. **Conseils & recommandations**: chaque recommandation expose pourquoi maintenant, données utilisées, hypothèses, risques/limites, confiance et prochaine question à poser.
+3. **Questions à poser**: starters contextualisés pour clarifier les décisions sans transformer le chat en bouton d'exécution.
+4. **Hypothèses & limites**: données manquantes, fraîcheur, budget IA et signaux faibles qui réduisent la confiance.
+5. **Journal de décisions**: surface préparatoire non persistante. Elle ne prétend pas sauvegarder tant qu'un modèle dédié n'existe pas.
+
+Bornes explicites:
+
+- pas de Force Graph 3D dans `/ia/memoire`; la visualisation graph reste un chantier séparé;
+- pas de learning loop ou apprentissage automatique depuis les décisions utilisateur;
+- pas de fiscalité/tax advice définitif;
+- pas de trading, transfert, ordre, staking, rééquilibrage automatique ou chemin d'exécution;
+- l'Advisor est séparé de la pipeline agentique de développement.
 
 ### 3. Intelligence & Admin
 

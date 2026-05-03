@@ -1,6 +1,6 @@
 import { Badge, Button, Input } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
@@ -145,8 +145,49 @@ function MemoirePage() {
         eyebrow="Advisor IA · Mémoire"
         icon="[#]"
         title="Mémoire & connaissances"
-        description="Inspection de ce que l'Advisor utilise pour expliquer ses conseils. Visualisation graphe 3D prévue plus tard."
+        description="Mémoire dérivée pour expliquer et challenger l'Advisor. Les tables financières restent la source de vérité."
       />
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <Panel
+          title="Ce que cette mémoire contient"
+          description="Contexte, concepts, provenance, confiance et temporalité utilisés pour expliquer les réponses."
+          icon={<span aria-hidden="true">[#]</span>}
+          tone="brand"
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MemoryPrinciple
+              title="Dérivée"
+              text="Elle enrichit l'Advisor, mais ne remplace pas les comptes, transactions, actifs ou positions."
+            />
+            <MemoryPrinciple
+              title="Traçable"
+              text="Chaque résultat doit rester lisible avec provenance, confiance et fraîcheur."
+            />
+            <MemoryPrinciple
+              title="Prudente"
+              text="Si le service est dégradé, l'Advisor doit expliquer la limite au lieu d'inventer."
+            />
+          </div>
+        </Panel>
+
+        <Panel
+          title="Visualisation graphe"
+          description="Chantier séparé, non implémenté dans ce prompt."
+          icon={<span aria-hidden="true">3D</span>}
+          tone="plain"
+          actions={
+            <Link to="/ia" className="text-xs text-primary hover:underline">
+              Vue Advisor
+            </Link>
+          }
+        >
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Visualisation graph 3D prévue dans un chantier dédié. Cette page reste volontairement
+            une inspection textuelle des concepts, scores, relations et inconnues.
+          </p>
+        </Panel>
+      </section>
 
       <section className="grid gap-4 md:grid-cols-4">
         <Metric label="Entités" value={statsQuery.data?.entityCount ?? 0} loading={statsQuery.isPending} />
@@ -163,8 +204,8 @@ function MemoirePage() {
 
       <Panel
         tone={degraded ? 'warning' : 'brand'}
-        title="Recherche hybride"
-        description="Recherche, temporalité, confiance et provenance. Surface d'inspection, pas une source de vérité financière."
+        title="Explorer la mémoire"
+        description="Recherche, temporalité, confiance et provenance. Utile pour comprendre l'Advisor, pas nécessaire au quotidien."
         icon={<span aria-hidden="true">[#]</span>}
         actions={
           <div className="flex items-center gap-2 text-xs">
@@ -456,6 +497,15 @@ function Temporal({ label, value }: { label: string; value: string | null }) {
     <div className="rounded-xl border border-border/50 bg-surface-1 p-3">
       <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-1 truncate text-sm text-foreground">{formatDateTime(value)}</p>
+    </div>
+  )
+}
+
+function MemoryPrinciple({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3">
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
     </div>
   )
 }
