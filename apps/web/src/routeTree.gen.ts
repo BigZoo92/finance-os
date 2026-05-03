@@ -25,6 +25,7 @@ import { Route as AppMemoireRouteImport } from './routes/_app/memoire'
 import { Route as AppMarchesRouteImport } from './routes/_app/marches'
 import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
+import { Route as AppFiscaliteRouteImport } from './routes/_app/fiscalite'
 import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
@@ -117,6 +118,11 @@ const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFiscaliteRoute = AppFiscaliteRouteImport.update({
+  id: '/fiscalite',
+  path: '/fiscalite',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDepensesRoute = AppDepensesRouteImport.update({
   id: '/depenses',
   path: '/depenses',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/version': typeof VersionRoute
   '/actualites': typeof AppActualitesRoute
   '/depenses': typeof AppDepensesRoute
+  '/fiscalite': typeof AppFiscaliteRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
   '/marches': typeof AppMarchesRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/version': typeof VersionRoute
   '/actualites': typeof AppActualitesRoute
   '/depenses': typeof AppDepensesRoute
+  '/fiscalite': typeof AppFiscaliteRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
   '/marches': typeof AppMarchesRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/version': typeof VersionRoute
   '/_app/actualites': typeof AppActualitesRoute
   '/_app/depenses': typeof AppDepensesRoute
+  '/_app/fiscalite': typeof AppFiscaliteRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/investissements': typeof AppInvestissementsRoute
   '/_app/marches': typeof AppMarchesRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/version'
     | '/actualites'
     | '/depenses'
+    | '/fiscalite'
     | '/integrations'
     | '/investissements'
     | '/marches'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/version'
     | '/actualites'
     | '/depenses'
+    | '/fiscalite'
     | '/integrations'
     | '/investissements'
     | '/marches'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/version'
     | '/_app/actualites'
     | '/_app/depenses'
+    | '/_app/fiscalite'
     | '/_app/integrations'
     | '/_app/investissements'
     | '/_app/marches'
@@ -482,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIntegrationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/fiscalite': {
+      id: '/_app/fiscalite'
+      path: '/fiscalite'
+      fullPath: '/fiscalite'
+      preLoaderRoute: typeof AppFiscaliteRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/depenses': {
       id: '/_app/depenses'
       path: '/depenses'
@@ -572,6 +591,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppActualitesRoute: typeof AppActualitesRoute
   AppDepensesRoute: typeof AppDepensesRoute
+  AppFiscaliteRoute: typeof AppFiscaliteRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppInvestissementsRoute: typeof AppInvestissementsRoute
   AppMarchesRoute: typeof AppMarchesRoute
@@ -596,6 +616,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppActualitesRoute: AppActualitesRoute,
   AppDepensesRoute: AppDepensesRoute,
+  AppFiscaliteRoute: AppFiscaliteRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppInvestissementsRoute: AppInvestissementsRoute,
   AppMarchesRoute: AppMarchesRoute,

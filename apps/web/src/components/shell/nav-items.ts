@@ -85,6 +85,13 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'cockpit',
   },
   {
+    to: '/fiscalite',
+    label: 'Fiscalité',
+    icon: '§',
+    description: 'Dossier préparatoire à vérifier',
+    group: 'cockpit',
+  },
+  {
     to: '/objectifs',
     label: 'Objectifs',
     icon: '◎',

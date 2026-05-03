@@ -15,9 +15,30 @@ Finance-OS ne doit pas montrer tout ce qu'il sait au même niveau. Le cockpit qu
 | `/depenses` | Dépenses & revenus | Transactions, revenus, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
 | `/patrimoine` | Patrimoine | Actifs, historique patrimoine, soldes par connexion, investissements externes résumés | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions` |
 | `/investissements` | Investissements | Positions et portefeuille lisible; détails provider en contexte | `dashboardSummary`, `externalInvestments*` |
+| `/fiscalite` | Fiscalité | Dossier fiscal personnel préparatoire: comptes à vérifier, événements potentiellement concernés, données manquantes et exports de revue | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions`, `externalInvestmentsTrades`, `externalInvestmentsCashFlows` |
 | `/objectifs` | Objectifs | Objectifs financiers personnels et progression | `financialGoals` |
 
 Les intégrations ne sont plus dans ce groupe: elles restent accessibles depuis le cockpit quand une connexion demande attention, mais leur page complète vit dans Intelligence & Admin.
+
+#### Fiscalité
+
+`/fiscalite` est une surface de préparation personnelle, pas une surface Advisor IA ni un outil de déclaration.
+
+Posture produit:
+
+- prépare un dossier fiscal personnel à vérifier ou transmettre au foyer fiscal de rattachement;
+- tient compte du contexte actuel: utilisateur rattaché au foyer fiscal de sa mère;
+- ne calcule pas l'impôt complet du foyer;
+- ne se connecte pas à impots.gouv, ne soumet rien, ne génère aucun Cerfa officiel;
+- ne fournit pas de conseil fiscal, juridique ou de stratégie de réduction d'impôt;
+- affiche les formulaires `3916 / 3916-bis`, `2086`, `2074` et `PEA` seulement comme indices de revue.
+
+Comportement données:
+
+- demo: déterministe, mock-backed, avec exemples Binance, IBKR, PEA, cession crypto ou données crypto manquantes, contrôle CTO et données manquantes;
+- admin: lecture seule depuis les chemins existants, sans sync automatique ni appel provider depuis la page;
+- si une lecture admin retombe sur une fixture demo existante, la page l'exclut du dossier et affiche un état dégradé plutôt que de mélanger les exemples avec le réel;
+- les exports sont des CSV ou une impression de dossier préparatoire à vérifier, jamais des formulaires officiels.
 
 ### 2. Advisor IA
 
@@ -98,7 +119,7 @@ Les items `adminOnly` sont masqués en navigation hors session admin, mais les r
 
 ### Mobile
 
-La bottom nav reste volontairement courte: Vue d'ensemble, Dépenses & revenus, Patrimoine, Vue IA, puis "Plus". Le drawer "Plus" reprend les mêmes groupes que la sidebar.
+La bottom nav reste volontairement courte: Vue d'ensemble, Dépenses & revenus, Patrimoine, Vue IA, puis "Plus". Le drawer "Plus" reprend les mêmes groupes que la sidebar, dont Fiscalité sous Cockpit personnel.
 
 ## Workflow Quotidien Prioritaire
 
@@ -106,7 +127,8 @@ La bottom nav reste volontairement courte: Vue d'ensemble, Dépenses & revenus, 
 2. `/depenses` - contrôler les flux.
 3. `/ia` ou `/ia/chat` - lire un conseil ou poser une question.
 4. `/patrimoine` et `/investissements` - vérifier le stock patrimonial.
-5. `/objectifs` - suivre la progression.
+5. `/fiscalite` - préparer les comptes, mouvements et justificatifs à vérifier avant déclaration.
+6. `/objectifs` - suivre la progression.
 
 Les surfaces Intelligence & Admin se consultent pour auditer, diagnostiquer ou rechercher. Elles alimentent l'Advisor, mais ne sont pas une routine obligatoire.
 
@@ -117,3 +139,4 @@ Les surfaces Intelligence & Admin se consultent pour auditer, diagnostiquer ou r
 3. Intelligence & Admin expose les données brutes, la fraîcheur, les diagnostics et la recherche.
 4. Demo reste déterministe et mock-backed; admin peut lire les providers derrière les garde-fous existants.
 5. Les routes existantes restent accessibles ou redirigées.
+6. Fiscalité prépare un dossier personnel non définitif; elle ne fait ni dépôt automatisé, ni conseil fiscal officiel, ni connexion impots.gouv.

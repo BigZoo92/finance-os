@@ -197,7 +197,7 @@ Common error codes:
 
 ## Limitations
 
-- No tax reporting; raw/canonical facts are preserved for future work only.
+- No official tax reporting; `/fiscalite` can reuse normalized facts only as a preparatory checklist and missing-data review.
 - Cost basis may be absent, especially for Binance balances.
 - Multi-currency totals are not guessed when FX is missing.
 - Binance trade backfill is conservative and symbol-scoped.

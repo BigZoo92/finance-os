@@ -12,6 +12,7 @@ const KEYWORDS: Record<string, string> = {
   '/depenses': 'transactions budgets projections quotidien',
   '/patrimoine': 'actifs soldes assets wealth',
   '/investissements': 'positions portfolio bourse invest',
+  '/fiscalite': 'fiscalite impots taxes declaration comptes etrangers crypto 3916 2086 2074 pea',
   '/objectifs': 'goals épargne cibles progression',
   '/integrations': 'powens sync banque connexion provider admin expert',
   '/sante': 'health diagnostics système admin expert',
