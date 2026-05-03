@@ -41,6 +41,15 @@ const GOAL_TYPE_ICON: Record<FinancialGoalType, string> = {
   custom: '◎',
 }
 
+const GOAL_STATUS_LABEL: Record<string, string> = {
+  Reached: 'Atteint',
+  Archived: 'Archivé',
+  'On track': 'Sur la bonne voie',
+  'In progress': 'En cours',
+  Behind: 'En retard',
+  'At risk': 'À surveiller',
+}
+
 type GoalEditorState =
   | {
       mode: 'create'
@@ -77,7 +86,7 @@ type RecoverableErrorState =
     }
 
 const formatMoney = (value: number, currency: string) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
@@ -86,7 +95,7 @@ const formatMoney = (value: number, currency: string) => {
 
 const formatDate = (value: string | null) => {
   if (!value) {
-    return 'No target date'
+    return 'Aucune date cible'
   }
 
   const parsed = new Date(`${value}T00:00:00.000Z`)
@@ -94,7 +103,7 @@ const formatDate = (value: string | null) => {
     return value
   }
 
-  return parsed.toLocaleDateString('en-US', {
+  return parsed.toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -237,11 +246,11 @@ const ErrorBanner = ({
       <p className="font-semibold text-destructive">{error.title}</p>
       <p className="mt-1 text-destructive/90">{error.message}</p>
       <p className="mt-2 text-xs text-muted-foreground">
-        This issue is non-blocking: other dashboard modules remain available while you retry.
+        Ce problème ne bloque pas le reste du cockpit. Tu peux réessayer sans perdre le contexte.
       </p>
       {error.offline ? (
         <p className="mt-2 text-xs text-destructive/90">
-          Offline or API unreachable. Retry once the connection is back.
+          Connexion ou API indisponible. Réessaie quand le service revient.
         </p>
       ) : null}
       {error.requestId ? (
@@ -255,11 +264,11 @@ const ErrorBanner = ({
           onClick={onRetry}
           disabled={!error.retryable}
         >
-          Retry
+          Réessayer
         </Button>
         {onDismiss ? (
           <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
-            Dismiss
+            Masquer
           </Button>
         ) : null}
       </div>
@@ -320,21 +329,21 @@ export function PersonalFinancialGoalsCard({
       setEditorState(null)
       setFormState(EMPTY_GOAL_FORM)
       pushToast({
-        title: variables.mode === 'create' ? 'Goal created' : 'Goal updated',
-        description: 'Progress and targets are now up to date.',
+        title: variables.mode === 'create' ? 'Objectif créé' : 'Objectif mis à jour',
+        description: 'La progression et la cible sont à jour.',
         tone: 'success',
       })
     },
     onError: error => {
       const nextError = createRecoverableError({
         source: 'save',
-        title: 'Unable to save this goal',
+        title: 'Impossible de sauvegarder cet objectif',
         error,
       })
 
       setRecoverableError(nextError)
       pushToast({
-        title: 'Goal save failed',
+        title: 'Sauvegarde impossible',
         description: nextError.message,
         tone: 'error',
       })
@@ -348,21 +357,21 @@ export function PersonalFinancialGoalsCard({
       setRecoverableError(null)
       setEditorState(null)
       pushToast({
-        title: 'Goal archived',
-        description: 'The goal was moved out of the active list.',
+        title: 'Objectif archivé',
+        description: 'Il sort de la liste active.',
         tone: 'success',
       })
     },
     onError: error => {
       const nextError = createRecoverableError({
         source: 'archive',
-        title: 'Unable to archive this goal',
+        title: 'Impossible d’archiver cet objectif',
         error,
       })
 
       setRecoverableError(nextError)
       pushToast({
-        title: 'Archive failed',
+        title: 'Archivage impossible',
         description: nextError.message,
         tone: 'error',
       })
@@ -487,7 +496,7 @@ export function PersonalFinancialGoalsCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
-              <span className="text-lg" aria-hidden="true">◎</span> Objectifs financiers
+              <span className="text-lg" aria-hidden="true">◎</span> Mes objectifs
             </p>
             {isDemo && <Badge variant="warning" className="mt-1 text-xs">DÉMO — lecture seule</Badge>}
           </div>
@@ -509,7 +518,7 @@ export function PersonalFinancialGoalsCard({
         {/* Alerts */}
         {isAdmin && !goalsQuery.isPending && !goalsQuery.isError && goalAlerts.length > 0 ? (
           <div className="rounded-2xl border border-warning/20 bg-warning/5 px-5 py-4 text-sm">
-            <p className="font-semibold text-warning">⚡ Alertes</p>
+            <p className="font-semibold text-warning">Objectifs à reprendre</p>
             <ul className="mt-2 space-y-1.5">
               {goalAlerts.map(alert => (
                 <li key={alert.goalId} className={`text-xs ${alert.level === 'high' ? 'text-negative font-medium' : 'text-muted-foreground'}`}>
@@ -526,7 +535,7 @@ export function PersonalFinancialGoalsCard({
             <span className="text-4xl" aria-hidden="true">◎</span>
             <div>
               <p className="text-lg font-semibold">Aucun objectif</p>
-              <p className="mt-1 text-sm text-muted-foreground">Créez votre premier objectif pour suivre votre progression.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Crée ton premier objectif pour donner une direction au cockpit.</p>
             </div>
             {isAdmin && (
               <Button type="button" onClick={openCreateDrawer}>Créer un objectif</Button>
@@ -578,7 +587,7 @@ export function PersonalFinancialGoalsCard({
                               variant={status.label === 'On track' || status.label === 'Reached' ? 'positive' : status.label === 'Behind' ? 'destructive' : 'warning'}
                               className="text-xs"
                             >
-                              {status.label}
+                              {GOAL_STATUS_LABEL[status.label] ?? status.label}
                             </Badge>
                           </div>
                         </div>
@@ -669,7 +678,7 @@ export function PersonalFinancialGoalsCard({
         <div className="fixed inset-0 z-50 bg-black/45 p-4 backdrop-blur-sm">
           <button
             type="button"
-            aria-label="Close goal editor"
+            aria-label="Fermer l'editeur d'objectif"
             className="absolute inset-0"
             onClick={closeDrawer}
           />
@@ -683,19 +692,19 @@ export function PersonalFinancialGoalsCard({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    {editorState.mode === 'create' ? 'Create' : 'Edit'}
+                    {editorState.mode === 'create' ? 'Creation' : 'Edition'}
                   </p>
                   <h2 id="goal-editor-title" className="mt-1 text-lg font-semibold">
                     {editorState.mode === 'create'
-                      ? 'New personal goal'
-                      : `Edit ${editorState.goal.name}`}
+                      ? 'Nouvel objectif personnel'
+                      : `Modifier ${editorState.goal.name}`}
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Keep the list compact and reveal the full form only when editing.
+                    Garde la cible simple: montant, date, progression actuelle.
                   </p>
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={closeDrawer}>
-                  Close
+                  Fermer
                 </Button>
               </div>
             </div>
@@ -718,7 +727,7 @@ export function PersonalFinancialGoalsCard({
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="goal-name">
-                    Goal name
+                    Nom de l’objectif
                   </label>
                   <Input
                     id="goal-name"
@@ -729,7 +738,7 @@ export function PersonalFinancialGoalsCard({
                         name: event.target.value,
                       }))
                     }
-                    placeholder="Emergency runway"
+                    placeholder="Épargne de sécurité"
                     required
                   />
                 </div>
@@ -737,7 +746,7 @@ export function PersonalFinancialGoalsCard({
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="goal-type">
-                      Goal type
+                      Type d’objectif
                     </label>
                     <select
                       id="goal-type"
@@ -760,7 +769,7 @@ export function PersonalFinancialGoalsCard({
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="goal-currency">
-                      Currency
+                      Devise
                     </label>
                     <Input
                       id="goal-currency"
@@ -779,7 +788,7 @@ export function PersonalFinancialGoalsCard({
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="goal-target-amount">
-                      Target amount
+                      Montant cible
                     </label>
                     <Input
                       id="goal-target-amount"
@@ -798,7 +807,7 @@ export function PersonalFinancialGoalsCard({
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="goal-current-amount">
-                      Current amount
+                      Montant actuel
                     </label>
                     <Input
                       id="goal-current-amount"
@@ -818,7 +827,7 @@ export function PersonalFinancialGoalsCard({
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="goal-target-date">
-                    Target date
+                    Date cible
                   </label>
                   <Input
                     id="goal-target-date"
@@ -847,18 +856,18 @@ export function PersonalFinancialGoalsCard({
                         note: event.target.value ? event.target.value.slice(0, 280) : null,
                       }))
                     }
-                    placeholder="Keep this aligned with the next big cash need."
+                    placeholder="Pourquoi cet objectif compte, ou ce qu’il finance."
                   />
                 </div>
 
                 <div className="rounded-xl border border-border/70 bg-muted/10 p-4">
-                  <p className="text-sm font-medium">Preview</p>
+                  <p className="text-sm font-medium">Aperçu</p>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
                     <p className="font-medium">
-                      {formatMoney(formState.currentAmount, formState.currency || 'EUR')} saved
+                      {formatMoney(formState.currentAmount, formState.currency || 'EUR')} déjà financés
                     </p>
                     <p className="text-muted-foreground">
-                      {clampProgressFromInput(formState)}% funded
+                      {clampProgressFromInput(formState)}% financé
                     </p>
                   </div>
                 </div>
@@ -873,7 +882,7 @@ export function PersonalFinancialGoalsCard({
                         variant="destructive"
                         size="sm"
                         onClick={() => {
-                          if (!window.confirm(`Archive "${editorState.goal.name}"?`)) {
+                          if (!window.confirm(`Archiver "${editorState.goal.name}" ?`)) {
                             return
                           }
 
@@ -882,23 +891,23 @@ export function PersonalFinancialGoalsCard({
                         }}
                         disabled={archiveGoalMutation.isPending || saveGoalMutation.isPending}
                       >
-                        {archiveGoalMutation.isPending ? 'Archiving...' : 'Archive goal'}
+                        {archiveGoalMutation.isPending ? 'Archivage...' : 'Archiver'}
                       </Button>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="ghost" onClick={closeDrawer}>
-                      Cancel
+                      Annuler
                     </Button>
                     <Button
                       type="submit"
                       disabled={saveGoalMutation.isPending || archiveGoalMutation.isPending}
                     >
                       {saveGoalMutation.isPending
-                        ? 'Saving...'
+                        ? 'Enregistrement...'
                         : editorState.mode === 'create'
-                          ? 'Create goal'
-                          : 'Save changes'}
+                          ? 'Créer'
+                          : 'Enregistrer'}
                     </Button>
                   </div>
                 </div>

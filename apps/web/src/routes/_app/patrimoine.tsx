@@ -36,6 +36,14 @@ import { getTrendDirection } from '@/components/dashboard/trend-visuals'
 import { formatDateTime, formatMoney } from '@/lib/format'
 import { D3Sparkline, MiniSparkline } from '@/components/ui/d3-sparkline'
 import { RangePill } from '@/components/surfaces/range-pill'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import {
+  PersonalActionsPanel,
+  PersonalEmptyState,
+  PersonalSectionHeading,
+  type PersonalActionItem,
+} from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (value: string | undefined): DashboardRange =>
@@ -199,6 +207,48 @@ function PatrimoinePage() {
   const externalPositions = externalPositionsQuery.data?.items ?? []
   const externalKnownValue = externalBundle?.totalKnownValue ?? 0
   const externalUnknownCount = externalBundle?.unknownValuePositionCount ?? 0
+  const liquidAssetsValue = adapted.assets
+    .filter(asset => asset.enabled && asset.type === 'cash')
+    .reduce((sum, asset) => sum + asset.valuation, 0)
+  const manualAssetsValue = adapted.assets
+    .filter(asset => asset.enabled && asset.type === 'manual')
+    .reduce((sum, asset) => sum + asset.valuation, 0)
+  const investmentAssetsValue = adapted.assets
+    .filter(asset => asset.enabled && asset.type === 'investment')
+    .reduce((sum, asset) => sum + asset.valuation, 0)
+  const staleAssetCount = adapted.assets.filter(asset => {
+    if (!asset.valuationAsOf) return false
+    const ageMs = Date.now() - new Date(asset.valuationAsOf).getTime()
+    return Number.isFinite(ageMs) && ageMs > 45 * 86_400_000
+  }).length
+  const patrimoineActions: PersonalActionItem[] = [
+    {
+      label: isAdmin ? 'Ajouter un actif manuel' : 'Voir les actifs manuels',
+      description: isAdmin
+        ? 'Compléter ce que les banques ne remontent pas automatiquement.'
+        : 'Connecte-toi en admin pour modifier les actifs manuels.',
+      to: '/patrimoine',
+      icon: '◇',
+      tone: isAdmin ? 'brand' : 'plain',
+      disabled: !isAdmin,
+    },
+    {
+      label: 'Vérifier les intégrations',
+      description: externalUnknownCount > 0 || staleAssetCount > 0
+        ? 'Certaines valorisations ou sources méritent une vérification.'
+        : 'Contrôler les connexions si un solde semble absent.',
+      to: '/integrations',
+      icon: '⊞',
+      tone: externalUnknownCount > 0 || staleAssetCount > 0 ? 'warning' : 'plain',
+    },
+    {
+      label: 'Voir les investissements',
+      description: 'Passer du patrimoine global aux positions détenues.',
+      to: '/investissements',
+      icon: '△',
+      tone: 'plain',
+    },
+  ]
 
   const resetManualAssetForm = () => {
     setManualAssetDraft(EMPTY_MANUAL_ASSET_DRAFT)
@@ -269,6 +319,14 @@ function PatrimoinePage() {
 
   return (
     <div className="space-y-10">
+      <PageHeader
+        eyebrow="Cockpit personnel"
+        icon="◇"
+        title="Patrimoine"
+        description="Ce que tu possèdes, ce qui est liquide, et les valorisations à vérifier."
+        compact
+      />
+
       {/* ──────────────────────────────────────────────────────────────────
          HERO — portfolio viewer card.
          Structure:
@@ -425,6 +483,52 @@ function PatrimoinePage() {
         </div>
       </section>
 
+      <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Aujourd'hui"
+          title="Ce que tu possèdes"
+          description="Une lecture simple: liquidités, investissements, actifs manuels et données à vérifier."
+        />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <Panel
+            title="Répartition lisible"
+            description="Liquidités = argent plus facilement mobilisable. Le reste demande souvent plus de temps ou de vérification."
+            icon={<span aria-hidden="true">◇</span>}
+            tone="brand"
+          >
+            <div className="grid gap-3 sm:grid-cols-3">
+              <WealthBucket label="Liquidités" value={liquidAssetsValue} detail="Comptes et cash détectés" />
+              <WealthBucket
+                label="Investi"
+                value={investmentAssetsValue + externalKnownValue}
+                detail="Positions et snapshots externes"
+              />
+              <WealthBucket label="Manuel" value={manualAssetsValue} detail="Actifs ajoutés ou à maintenir" />
+            </div>
+            {externalUnknownCount > 0 || staleAssetCount > 0 ? (
+              <div className="mt-4 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-warning">
+                {externalUnknownCount > 0 ? `${externalUnknownCount} position${externalUnknownCount > 1 ? 's' : ''} externe${externalUnknownCount > 1 ? 's' : ''} sans valeur fiable. ` : ''}
+                {staleAssetCount > 0 ? `${staleAssetCount} actif${staleAssetCount > 1 ? 's' : ''} avec valorisation ancienne.` : ''}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">Aucune donnée patrimoniale importante à vérifier pour l'instant.</p>
+            )}
+          </Panel>
+
+          <PersonalActionsPanel
+            title="Prochaines actions"
+            description="Compléter ou vérifier le patrimoine sans appeler de provider depuis cette page."
+            items={patrimoineActions}
+          />
+        </div>
+      </section>
+
+      <PersonalSectionHeading
+        eyebrow="Mes données"
+        title="Comptes et actifs"
+        description="Les détails viennent après le résumé pour garder la lecture calme."
+      />
+
       <section>
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
           Soldes par connexion
@@ -454,9 +558,10 @@ function PatrimoinePage() {
               </motion.div>
             ))
           ) : (
-            <p className="py-6 text-center text-sm text-muted-foreground/40">
-              Aucune connexion.
-            </p>
+            <PersonalEmptyState
+              title="Aucune connexion bancaire"
+              description="Connecte un compte depuis Intégrations ou reste en démo avec les fixtures déterministes."
+            />
           )}
         </div>
       </section>
@@ -494,14 +599,22 @@ function PatrimoinePage() {
               </motion.div>
             ))
           ) : (
-            <p className="col-span-full py-6 text-center text-sm text-muted-foreground/40">
-              Aucun actif.
-            </p>
+            <div className="col-span-full">
+              <PersonalEmptyState
+                title="Aucun actif détecté"
+                description="Les actifs bancaires, les investissements et les actifs manuels apparaîtront ici quand ils existent."
+              />
+            </div>
           )}
         </div>
       </section>
 
       <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Données à vérifier"
+          title="Investissements externes"
+          description="Snapshots IBKR/Binance en lecture seule, utiles pour expliquer le patrimoine sans transformer cette page en diagnostic provider."
+        />
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
@@ -868,6 +981,24 @@ function PatrimoinePage() {
           </div>
         </section>
       ) : null}
+    </div>
+  )
+}
+
+function WealthBucket({
+  label,
+  value,
+  detail,
+}: {
+  label: string
+  value: number
+  detail: string
+}) {
+  return (
+    <div className="rounded-xl border border-border/45 bg-surface-1/55 px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-1 font-financial text-lg font-semibold">{formatMoney(value)}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </div>
   )
 }

@@ -20,6 +20,14 @@ import { MonthEndProjectionCard } from '@/components/dashboard/month-end-project
 import { formatMoney, formatDate, toErrorMessage } from '@/lib/format'
 import { exportTransactionsCsv } from '@/lib/export'
 import { pushToast } from '@/lib/toast-store'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { Panel } from '@/components/surfaces/panel'
+import {
+  PersonalActionsPanel,
+  PersonalEmptyState,
+  PersonalSectionHeading,
+  type PersonalActionItem,
+} from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -79,6 +87,51 @@ function DepensesPage() {
   )
 
   const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
+  const summaryQuery = useQuery(
+    dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) })
+  )
+  const totalExpenses = transactions
+    .filter(transaction => transaction.direction === 'expense')
+    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
+  const totalIncomes = transactions
+    .filter(transaction => transaction.direction === 'income')
+    .reduce((sum, transaction) => sum + transaction.amount, 0)
+  const netFlow = totalIncomes - totalExpenses
+  const uncategorizedTransactions = transactions.filter(transaction => !transaction.category)
+  const topExpenseCategory = [...transactions
+    .filter(transaction => transaction.direction === 'expense')
+    .reduce<Map<string, number>>((map, transaction) => {
+      const key = (transaction.category ?? 'Sans catégorie').trim() || 'Sans catégorie'
+      map.set(key, (map.get(key) ?? 0) + Math.abs(transaction.amount))
+      return map
+    }, new Map())]
+    .sort((left, right) => right[1] - left[1])[0]
+  const expenseActions: PersonalActionItem[] = [
+    {
+      label: uncategorizedTransactions.length > 0 ? 'Catégoriser les transactions' : 'Revoir les dernières lignes',
+      description:
+        uncategorizedTransactions.length > 0
+          ? `${uncategorizedTransactions.length} transaction${uncategorizedTransactions.length > 1 ? 's' : ''} sans catégorie.`
+          : 'Vérifier les libellés et les montants récents.',
+      to: '/depenses',
+      icon: '↔',
+      tone: uncategorizedTransactions.length > 0 ? 'warning' : 'plain',
+    },
+    {
+      label: 'Voir les objectifs',
+      description: 'Relier tes dépenses à ce que tu veux financer.',
+      to: '/objectifs',
+      icon: '◎',
+      tone: 'brand',
+    },
+    {
+      label: "Demander à l'Advisor",
+      description: 'Obtenir une lecture simple de ce qui pèse le plus.',
+      to: '/ia/chat',
+      icon: '□',
+      tone: 'plain',
+    },
+  ]
 
   const classifyMutation = useMutation({
     mutationFn: async (transaction: DashboardTransactionsResponse['items'][number]) => {
@@ -116,7 +169,7 @@ function DepensesPage() {
         eyebrow="Cockpit personnel"
         icon="↔"
         title="Dépenses & revenus"
-        description="Tes flux du quotidien: transactions, revenus, budgets et projection de fin de mois."
+        description="Comprendre ce qui sort, ce qui rentre, et quelles lignes méritent une vérification."
         actions={
           <>
             <Button
@@ -140,6 +193,90 @@ function DepensesPage() {
         }
       />
 
+      <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Aujourd'hui"
+          title="Tes flux en clair"
+          description="Le résumé avant les catégories et la table de transactions."
+        />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiTile
+            label="Dépenses"
+            value={totalExpenses}
+            display={formatMoney(totalExpenses)}
+            tone="negative"
+            loading={transactionsQuery.isPending}
+            hint={`${transactions.filter(transaction => transaction.direction === 'expense').length} sortie${transactions.filter(transaction => transaction.direction === 'expense').length > 1 ? 's' : ''}`}
+          />
+          <KpiTile
+            label="Revenus"
+            value={totalIncomes}
+            display={formatMoney(totalIncomes)}
+            tone="positive"
+            loading={transactionsQuery.isPending}
+            hint={`${transactions.filter(transaction => transaction.direction === 'income').length} entrée${transactions.filter(transaction => transaction.direction === 'income').length > 1 ? 's' : ''}`}
+          />
+          <KpiTile
+            label="Solde de période"
+            value={netFlow}
+            display={formatMoney(netFlow)}
+            tone={netFlow >= 0 ? 'positive' : 'negative'}
+            loading={transactionsQuery.isPending}
+            hint={netFlow >= 0 ? 'Flux net positif' : 'Flux net négatif'}
+          />
+          <KpiTile
+            label="À revoir"
+            value={uncategorizedTransactions.length}
+            display={String(uncategorizedTransactions.length)}
+            tone={uncategorizedTransactions.length > 0 ? 'warning' : 'plain'}
+            loading={transactionsQuery.isPending}
+            hint="Transactions sans catégorie"
+          />
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <Panel
+          title="Ce qui pèse le plus"
+          description="Une lecture simple du principal poste de dépense sur la période."
+          icon={<span aria-hidden="true">↔</span>}
+          tone="negative"
+        >
+          {transactionsQuery.isPending ? (
+            <div className="h-16 animate-shimmer rounded-xl" />
+          ) : topExpenseCategory ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Poste principal</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight">{topExpenseCategory[0]}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  À comparer avec tes budgets et objectifs avant de couper quoi que ce soit.
+                </p>
+              </div>
+              <p className="font-financial text-3xl font-semibold text-negative">
+                {formatMoney(topExpenseCategory[1])}
+              </p>
+            </div>
+          ) : (
+            <PersonalEmptyState
+              title="Aucune dépense sur cette période"
+              description="Essaie une plage plus large ou connecte un compte bancaire pour alimenter cette vue."
+            />
+          )}
+        </Panel>
+        <PersonalActionsPanel
+          title="Prochaines actions"
+          description="Garder la page utile sans transformer chaque ligne en problème."
+          items={expenseActions}
+        />
+      </section>
+
+      <PersonalSectionHeading
+        eyebrow="Ma trajectoire"
+        title="Structure et projection"
+        description="Les catégories, budgets et fin de mois viennent après le résumé."
+      />
+
       {/* Expense structure + budgets */}
       <div className="grid gap-6 md:grid-cols-2">
         <ExpenseStructureCard range={range} transactions={transactions} demo={isDemo} />
@@ -149,10 +286,21 @@ function DepensesPage() {
       {/* Projection */}
       <MonthEndProjectionCard isAdmin={isAdmin} transactions={transactions} />
 
+      <PersonalSectionHeading
+        eyebrow="Mes données"
+        title="Transactions"
+        description="Inspecte les lignes, exporte si besoin, et classe uniquement en session admin."
+      />
+
       {/* Transactions table */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Dernières transactions</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {summaryQuery.isError
+              ? 'Données indisponibles pour l’instant, la liste reste utilisable si elle est déjà en cache.'
+              : `${transactions.length} transaction${transactions.length > 1 ? 's' : ''} chargée${transactions.length > 1 ? 's' : ''} sur ${range}.`}
+          </p>
         </CardHeader>
         <CardContent>
           {transactionsQuery.isPending ? (
@@ -162,9 +310,10 @@ function DepensesPage() {
               ))}
             </div>
           ) : transactions.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Aucune transaction sur cette période.
-            </p>
+            <PersonalEmptyState
+              title="Aucune transaction pour cette période"
+              description="Essaie 90 jours ou vérifie les intégrations si tu attends des mouvements bancaires."
+            />
           ) : (
             <>
               {/* Desktop table — hidden on mobile */}
@@ -196,6 +345,11 @@ function DepensesPage() {
                             {tx.category ?? 'Non catégorisé'}
                             {tx.subcategory ? ` / ${tx.subcategory}` : ''}
                           </span>
+                          {!tx.category ? (
+                            <span className="ml-2 rounded-full border border-warning/25 bg-warning/10 px-2 py-0.5 text-[10px] text-warning">
+                              à classer
+                            </span>
+                          ) : null}
                         </td>
                         <td className={`whitespace-nowrap px-6 py-3 text-right font-financial font-medium ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
                           {formatMoney(tx.amount, tx.currency)}

@@ -10,6 +10,11 @@ import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-fina
 import { PageHeader } from '@/components/surfaces/page-header'
 import { CircularEmblem } from '@/components/brand/circular-emblem'
 import Antigravity from '@/components/reactbits/antigravity'
+import {
+  PersonalActionsPanel,
+  PersonalSectionHeading,
+  type PersonalActionItem,
+} from '@/components/personal/personal-ux'
 
 export const Route = createFileRoute('/_app/objectifs')({
   loader: async ({ context }) => {
@@ -35,6 +40,18 @@ function ObjectifsPage() {
   const goals = goalsQuery.data?.items ?? []
   const completed = goals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount >= 1).length
   const inProgress = goals.filter(g => !g.archivedAt).length
+  const activeGoals = goals.filter(g => !g.archivedAt)
+  const goalsNeedingAttention = activeGoals.filter(
+    goal => goal.targetAmount > 0 && goal.currentAmount / goal.targetAmount < 0.25
+  )
+  const nextMilestone = [...activeGoals]
+    .filter(goal => goal.targetAmount > 0 && goal.currentAmount < goal.targetAmount)
+    .sort((left, right) => {
+      if (!left.targetDate && !right.targetDate) return left.id - right.id
+      if (!left.targetDate) return 1
+      if (!right.targetDate) return -1
+      return left.targetDate.localeCompare(right.targetDate)
+    })[0]
   const overallProgress = goals.length
     ? Math.round(
         (goals.reduce((sum, g) => sum + Math.min(1, g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0), 0) /
@@ -47,6 +64,34 @@ function ObjectifsPage() {
   const [mounted, setMounted] = useState(false)
   const [hovering, setHovering] = useState(false)
   useEffect(() => setMounted(true), [])
+  const goalActions: PersonalActionItem[] = [
+    {
+      label: isAdmin ? 'Créer ou mettre à jour un objectif' : 'Se connecter pour modifier',
+      description: isAdmin
+        ? 'Ajuster le montant, la date ou la progression réelle.'
+        : 'La démo reste lisible mais les modifications sont réservées à l’admin.',
+      to: '/objectifs',
+      icon: '◎',
+      tone: isAdmin ? 'brand' : 'plain',
+      disabled: !isAdmin,
+    },
+    {
+      label: 'Comparer avec les dépenses',
+      description: 'Voir si le cashflow actuel soutient tes objectifs.',
+      to: '/depenses',
+      icon: '↔',
+      tone: 'plain',
+    },
+    {
+      label: "Demander à l'Advisor",
+      description: nextMilestone
+        ? `Questionner la trajectoire de "${nextMilestone.name}".`
+        : 'Demander quel premier objectif créer.',
+      to: '/ia/chat',
+      icon: '□',
+      tone: goalsNeedingAttention.length > 0 ? 'warning' : 'plain',
+    },
+  ]
 
   return (
     <div className="space-y-8">
@@ -54,9 +99,16 @@ function ObjectifsPage() {
         eyebrow="Cockpit personnel"
         icon="◎"
         title="Objectifs"
-        description="Tes cibles d'épargne et de patrimoine, avec une progression lisible."
+        description="Ce que tu veux financer, où tu en es, et ce qui mérite une action."
       />
 
+      <PersonalSectionHeading
+        eyebrow="Aujourd'hui"
+        title="Progression et prochaine étape"
+        description="Une vue simple avant la liste complète des objectifs."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       {/* Hero — Antigravity particle ring (hover-only) + circular emblem */}
       <section
         className="group/hero relative isolate overflow-hidden rounded-[28px] border border-border/60"
@@ -111,9 +163,20 @@ function ObjectifsPage() {
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               {goals.length === 0
-                ? 'Définissez vos premiers objectifs ci-dessous.'
+                ? 'Définis ton premier objectif ci-dessous.'
                 : `${completed} terminé${completed > 1 ? 's' : ''} · ${inProgress - completed} en cours sur ${goals.length}.`}
             </p>
+            {nextMilestone ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Prochaine cible: <span className="text-foreground">{nextMilestone.name}</span>
+                {nextMilestone.targetDate ? ` · ${nextMilestone.targetDate}` : ''}
+              </p>
+            ) : null}
+            {goalsNeedingAttention.length > 0 ? (
+              <p className="mt-2 text-sm text-warning">
+                {goalsNeedingAttention.length} objectif{goalsNeedingAttention.length > 1 ? 's' : ''} à reprendre.
+              </p>
+            ) : null}
           </div>
 
           <CircularEmblem
@@ -127,6 +190,19 @@ function ObjectifsPage() {
           </CircularEmblem>
         </div>
       </section>
+
+      <PersonalActionsPanel
+        title="Prochaines actions"
+        description="Relier les objectifs au cashflow et au patrimoine."
+        items={goalActions}
+      />
+      </div>
+
+      <PersonalSectionHeading
+        eyebrow="Mes données"
+        title="Objectifs actifs"
+        description="Chaque carte doit dire où tu en es et ce qui manque pour atteindre la cible."
+      />
 
       <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
     </div>

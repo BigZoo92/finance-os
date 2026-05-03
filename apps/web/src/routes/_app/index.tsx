@@ -26,6 +26,11 @@ import { Panel } from '@/components/surfaces/panel'
 import { StatusDot } from '@/components/surfaces/status-dot'
 import { attentionItemsQueryOptions } from '@/features/trading-lab-query-options'
 import type { AttentionItem } from '@/features/trading-lab-api'
+import {
+  PersonalActionsPanel,
+  PersonalSectionHeading,
+  type PersonalActionItem,
+} from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (v: string | undefined): DashboardRange => (v === '7d' || v === '90d' ? v : '30d')
@@ -110,6 +115,13 @@ function CockpitPage() {
   const conns = statusQ.data?.connections ?? []
   const connsOk = conns.filter(c => c.status === 'connected').length
   const connsFail = conns.filter(c => c.status === 'error' || c.status === 'reconnect_required').length
+  const cashAssetsValue = adapted.assets
+    .filter(asset => asset.enabled && asset.type === 'cash')
+    .reduce((sum, asset) => sum + asset.valuation, 0)
+  const availableLiquidity =
+    cashAssetsValue > 0
+      ? cashAssetsValue
+      : adapted.accounts.filter(account => account.enabled).reduce((sum, account) => sum + account.balance, 0)
 
   const advisorFlags = getAiAdvisorUiFlags()
   const advisorVisible = advisorFlags.enabled && (!advisorFlags.adminOnly || isAdmin)
@@ -129,6 +141,68 @@ function CockpitPage() {
   const goals = goalsQ.data?.items ?? []
   const activeGoals = goals.filter(g => !g.archivedAt)
   const activeRecs = recsQ.data?.items ?? []
+  const goalsNeedingAttention = activeGoals.filter(
+    goal => goal.targetAmount > 0 && goal.currentAmount / goal.targetAmount < 0.25
+  )
+  const highRiskRecommendations = activeRecs.filter(rec => rec.riskLevel === 'high')
+  const attentionTotal = attentionItems.length + connsFail + goalsNeedingAttention.length + highRiskRecommendations.length
+  const latestSyncTimestamp = conns
+    .map(connection => connection.lastSuccessAt ?? connection.lastSyncAt ?? connection.lastSyncAttemptAt)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1)
+  const latestSyncLabel = latestSyncTimestamp
+    ? new Date(latestSyncTimestamp).toLocaleString('fr-FR')
+    : conns.length > 0
+      ? 'Synchronisation à vérifier'
+      : 'Aucune connexion'
+
+  const nextActions: PersonalActionItem[] = []
+  if (connsFail > 0) {
+    nextActions.push({
+      label: 'Vérifier les intégrations',
+      description: `${connsFail} connexion${connsFail > 1 ? 's' : ''} à reprendre avant de faire confiance aux chiffres.`,
+      to: '/integrations',
+      icon: '⊞',
+      tone: 'warning',
+    })
+  }
+  if (goalsNeedingAttention.length > 0) {
+    nextActions.push({
+      label: 'Revoir les objectifs',
+      description: `${goalsNeedingAttention.length} objectif${goalsNeedingAttention.length > 1 ? 's' : ''} encore bas dans la progression.`,
+      to: '/objectifs',
+      icon: '◎',
+      tone: 'brand',
+    })
+  }
+  if (highRiskRecommendations.length > 0) {
+    nextActions.push({
+      label: "Lire l'Advisor",
+      description: `${highRiskRecommendations.length} recommandation${highRiskRecommendations.length > 1 ? 's' : ''} à examiner.`,
+      to: '/ia',
+      icon: '□',
+      tone: 'warning',
+    })
+  }
+  if (nextActions.length < 5) {
+    nextActions.push({
+      label: 'Inspecter les dépenses',
+      description: 'Comprendre où part le cash et vérifier les transactions récentes.',
+      to: '/depenses',
+      icon: '↔',
+      tone: cf.direction === 'down' ? 'negative' : 'plain',
+    })
+  }
+  if (nextActions.length < 5) {
+    nextActions.push({
+      label: 'Voir le détail du patrimoine',
+      description: 'Passer des chiffres globaux aux comptes, actifs et positions.',
+      to: '/patrimoine',
+      icon: '◇',
+      tone: 'plain',
+    })
+  }
 
   const sparkData = adapted.dailyWealthSnapshots.map(s => ({ date: s.date, value: s.balance }))
   const [secondaryReady, setSecondaryReady] = useState(false)
@@ -156,7 +230,59 @@ function CockpitPage() {
         isAdmin={isAdmin}
       />
 
+      <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Aujourd'hui"
+          title="Ta situation en un coup d'œil"
+          description="Les chiffres utiles maintenant, avec le bruit expert gardé en arrière-plan."
+        />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+          <Panel
+            title={attentionTotal > 0 ? 'Ce qui mérite ton attention' : 'Aucune alerte importante'}
+            description={
+              attentionTotal > 0
+                ? 'À traiter avant de tirer des conclusions fortes.'
+                : 'Le cockpit reste lisible avec les données disponibles.'
+            }
+            icon={<StatusDot tone={attentionTotal > 0 ? 'warn' : 'ok'} size={8} pulse={attentionTotal > 0} />}
+            tone={attentionTotal > 0 ? 'warning' : 'positive'}
+          >
+            <div className="grid gap-3 sm:grid-cols-3">
+              <TodayMetric
+                label="Argent disponible"
+                value={formatMoney(availableLiquidity)}
+                detail={cashAssetsValue > 0 ? 'Liquidités détectées' : 'Estimation depuis les comptes actifs'}
+              />
+              <TodayMetric
+                label="Cashflow"
+                value={formatMoney(cf.net)}
+                detail={cf.direction === 'down' ? 'Dépenses supérieures aux revenus' : 'Revenus et dépenses sous contrôle'}
+                tone={cf.direction === 'down' ? 'negative' : cf.direction === 'up' ? 'positive' : 'plain'}
+              />
+              <TodayMetric
+                label="Données"
+                value={connsFail > 0 ? 'À vérifier' : connsOk > 0 ? 'À jour' : 'Démo'}
+                detail={latestSyncLabel}
+                tone={connsFail > 0 ? 'warning' : 'plain'}
+              />
+            </div>
+          </Panel>
+
+          <PersonalActionsPanel
+            title="Prochaines actions"
+            description="Pas plus de quelques gestes utiles pour avancer."
+            items={nextActions}
+          />
+        </div>
+      </section>
+
       {/* ── Wealth chart + KPI rail ── */}
+      <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Ma trajectoire"
+          title="Ce qui change sur la période"
+          description="Patrimoine, revenus, dépenses et cashflow réunis dans une lecture simple."
+        />
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
         <Panel
           title={
@@ -231,6 +357,7 @@ function CockpitPage() {
             loading={summaryQ.isPending}
           />
         </div>
+      </section>
       </section>
 
       {staleData ? (
@@ -327,15 +454,15 @@ function CockpitPage() {
                   </Link>
                 </div>
               )}
-              {activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length > 0 && (
+              {goalsNeedingAttention.length > 0 && (
                 <div className="flex items-center gap-2 text-sm">
                   <StatusDot tone="warn" size={6} />
                   <Link to="/objectifs" className="text-foreground hover:text-primary">
-                    {activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length} objectif{activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length > 1 ? 's' : ''} en retard
+                    {goalsNeedingAttention.length} objectif{goalsNeedingAttention.length > 1 ? 's' : ''} à reprendre
                   </Link>
                 </div>
               )}
-              {connsFail === 0 && activeRecs.filter(r => r.riskLevel === 'high').length === 0 && activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length === 0 && attentionItems.length === 0 && (
+              {attentionTotal === 0 && (
                 <p className="py-2 text-sm text-muted-foreground">
                   Rien de critique aujourd'hui.
                 </p>
@@ -346,6 +473,12 @@ function CockpitPage() {
       )}
 
       {/* ── Insights — top expenses / connections / goals ── */}
+      <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Mes données"
+          title="Les détails à portée de main"
+          description="Dépenses, connexions et objectifs restent accessibles sans remplir la page de données brutes."
+        />
       <section className="grid gap-5 md:gap-6 lg:grid-cols-3">
         {!secondaryReady ? (
           <Panel title="Chargement progressif" description="Affinage des surfaces quotidiennes…" tone="plain">
@@ -477,6 +610,7 @@ function CockpitPage() {
           </>
         ) : null}
       </section>
+      </section>
 
       {/* ── Status bar — mono cockpit footer ── */}
       <footer className="rounded-2xl border border-border/50 bg-card/60 px-5 py-3 backdrop-blur-md">
@@ -496,6 +630,35 @@ function CockpitPage() {
           <Stat label="période" value={range} />
         </div>
       </footer>
+    </div>
+  )
+}
+
+function TodayMetric({
+  label,
+  value,
+  detail,
+  tone = 'plain',
+}: {
+  label: string
+  value: string
+  detail: string
+  tone?: 'plain' | 'positive' | 'negative' | 'warning'
+}) {
+  const valueClass =
+    tone === 'positive'
+      ? 'text-positive'
+      : tone === 'negative'
+        ? 'text-negative'
+        : tone === 'warning'
+          ? 'text-warning'
+          : 'text-foreground'
+
+  return (
+    <div className="rounded-xl border border-border/45 bg-surface-1/55 px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className={`mt-1 font-financial text-lg font-semibold ${valueClass}`}>{value}</p>
+      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </div>
   )
 }

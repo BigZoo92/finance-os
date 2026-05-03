@@ -29,6 +29,12 @@ import { Panel } from '@/components/surfaces/panel'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { ActionDock } from '@/components/surfaces/action-dock'
 import { pushToast } from '@/lib/toast-store'
+import {
+  PersonalActionsPanel,
+  PersonalEmptyState,
+  PersonalSectionHeading,
+  type PersonalActionItem,
+} from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -157,6 +163,32 @@ function InvestissementsPage() {
     (externalBundle?.unknownCostBasisWarnings.length ?? 0) +
     (externalBundle?.missingMarketDataWarnings.length ?? 0) +
     (externalBundle?.staleDataWarnings.length ?? 0)
+  const investmentActions: PersonalActionItem[] = [
+    {
+      label: qualityWarningCount > 0 ? 'Vérifier les données' : 'Contrôler les intégrations',
+      description:
+        qualityWarningCount > 0
+          ? `${qualityWarningCount} alerte${qualityWarningCount > 1 ? 's' : ''}: coût, prix ou fraîcheur à clarifier.`
+          : 'S’assurer que les snapshots IBKR/Binance sont bien récents.',
+      to: '/integrations',
+      icon: '⊞',
+      tone: qualityWarningCount > 0 ? 'warning' : 'plain',
+    },
+    {
+      label: "Demander à l'Advisor",
+      description: 'Comprendre les risques, la concentration ou les données manquantes.',
+      to: '/ia/chat',
+      icon: '□',
+      tone: 'brand',
+    },
+    {
+      label: 'Voir le patrimoine global',
+      description: 'Replacer les investissements dans l’ensemble de tes actifs.',
+      to: '/patrimoine',
+      icon: '◇',
+      tone: 'plain',
+    },
+  ]
   const updateExternalSearch = (next: {
     provider?: ExternalInvestmentProvider | 'all'
     account?: string
@@ -192,10 +224,15 @@ function InvestissementsPage() {
         eyebrow="Cockpit personnel"
         icon="△"
         title="Investissements"
-        description="Tes positions et ton portefeuille, avec les détails provider gardés en contexte plutôt qu'en point d'entrée."
+        description="Ce que tu détiens, ce qui est valorisé, et ce qui doit rester en lecture seule ou à vérifier."
       />
 
-      {/* Totals */}
+      <section className="space-y-4">
+        <PersonalSectionHeading
+          eyebrow="Aujourd'hui"
+          title="Ton portefeuille en clair"
+          description="Les providers restent en arrière-plan; la première lecture porte sur les montants et la qualité des données."
+        />
       <div className="grid gap-3 sm:grid-cols-2">
         <KpiTile
           label="Valorisation totale"
@@ -230,10 +267,49 @@ function InvestissementsPage() {
           hint={`${cryptoExposure?.weightPct ?? 0}% du portefeuille externe valorise`}
         />
       </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <Panel
+          title={qualityWarningCount > 0 ? 'Données à vérifier' : 'Données de portefeuille utilisables'}
+          description="Coût d'achat, prix de marché et fraîcheur changent le niveau de confiance, pas les garde-fous read-only."
+          icon={<span aria-hidden="true">△</span>}
+          tone={qualityWarningCount > 0 ? 'warning' : 'positive'}
+        >
+          {qualityWarningCount > 0 ? (
+            <div className="space-y-2 text-sm">
+              {externalBundle?.unknownCostBasisWarnings.slice(0, 2).map(item => (
+                <p key={item} className="text-warning">Coût inconnu: {item}</p>
+              ))}
+              {externalBundle?.missingMarketDataWarnings.slice(0, 2).map(item => (
+                <p key={item} className="text-warning">Prix manquant: {item}</p>
+              ))}
+              {externalBundle?.staleDataWarnings.slice(0, 2).map(item => (
+                <p key={item} className="text-warning">Donnée ancienne: {item}</p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Aucune alerte majeure sur les positions chargées. Les données externes restent lues depuis le cache.
+            </p>
+          )}
+        </Panel>
+        <PersonalActionsPanel
+          title="Prochaines actions"
+          description="Comprendre et vérifier, sans action de marché."
+          items={investmentActions}
+        />
+      </section>
+
+      <PersonalSectionHeading
+        eyebrow="Mes données"
+        title="Positions et allocations"
+        description="Les détails provider sont disponibles, mais secondaires par rapport à tes avoirs."
+      />
 
       <Panel
-        title="Cockpit externe"
-        description="Positions IBKR Flex et Binance Spot lues depuis le cache, sans appel provider depuis l'UI."
+        title="Portefeuille externe"
+        description="Positions IBKR Flex et Binance Spot lues depuis le cache. Aucun ordre, aucune exécution."
         icon={<span aria-hidden="true">◇</span>}
         tone="brand"
       >
@@ -337,7 +413,7 @@ function InvestissementsPage() {
               ) : filteredExternalPositions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                    Aucune position externe pour ces filtres.
+                    Aucune position externe pour ces filtres. Efface la recherche ou choisis "Tous".
                   </td>
                 </tr>
               ) : (
@@ -412,11 +488,17 @@ function InvestissementsPage() {
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Trades recents" icon={<span aria-hidden="true">↕</span>} tone="violet">
+        <Panel
+          title="Mouvements récents"
+          description="Historique lu en cache pour comprendre ce qui a changé."
+          icon={<span aria-hidden="true">↕</span>}
+          tone="violet"
+        >
           {externalTrades.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Aucun trade externe dans le cache.
-            </p>
+            <PersonalEmptyState
+              title="Aucun mouvement en cache"
+              description="Les trades apparaîtront ici après ingestion read-only depuis les rapports ou APIs autorisés."
+            />
           ) : (
             <div className="space-y-2">
               {externalTrades.slice(0, 6).map(trade => (
@@ -441,11 +523,12 @@ function InvestissementsPage() {
           )}
         </Panel>
 
-        <Panel title="Flux cash" icon={<span aria-hidden="true">⇄</span>} tone="positive">
+        <Panel title="Flux cash" description="Entrées et sorties de cash liées aux providers externes." icon={<span aria-hidden="true">⇄</span>} tone="positive">
           {externalCashFlows.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Aucun flux externe dans le cache.
-            </p>
+            <PersonalEmptyState
+              title="Aucun flux cash en cache"
+              description="Aucune entrée ou sortie externe n'est disponible pour cette période."
+            />
           ) : (
             <div className="space-y-2">
               {externalCashFlows.slice(0, 6).map(flow => (
@@ -470,7 +553,7 @@ function InvestissementsPage() {
       </div>
 
       {/* Positions */}
-      <Panel title="Positions" icon={<span aria-hidden="true">△</span>} tone="brand">
+      <Panel title="Positions internes" description="Positions déjà présentes dans le résumé patrimonial." icon={<span aria-hidden="true">△</span>} tone="brand">
           {summaryQuery.isPending ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }, (_, index) => `investments-position-skeleton-${index + 1}`).map(key => (
@@ -478,9 +561,10 @@ function InvestissementsPage() {
               ))}
             </div>
           ) : positions.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Aucune position d'investissement active.
-            </p>
+            <PersonalEmptyState
+              title="Aucune position active"
+              description="Tes positions apparaîtront ici quand elles seront présentes dans les données du cockpit."
+            />
           ) : (
             <div className="space-y-3">
               {positions.map(position => {
