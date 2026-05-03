@@ -21,7 +21,7 @@ import { formatDateTime, toErrorMessage } from '@/lib/format'
 
 const defaultQuery = 'cash drag inflation concentration risk'
 
-export const Route = createFileRoute('/_app/ia/memoire')({
+export const Route = createFileRoute('/_app/ia/memoire/')({
   loader: async ({ context }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
     const mode: AuthMode | undefined =
@@ -172,19 +172,24 @@ function MemoirePage() {
         </Panel>
 
         <Panel
-          title="Visualisation graphe"
-          description="Chantier séparé, non implémenté dans ce prompt."
+          title="Carte mémoire 3D"
+          description="Exploration immersive de la mémoire dérivée Advisor."
           icon={<span aria-hidden="true">3D</span>}
-          tone="plain"
+          tone="violet"
           actions={
-            <Link to="/ia" className="text-xs text-primary hover:underline">
-              Vue Advisor
+            <Link
+              to="/ia/memoire/graph"
+              search={{ node: undefined, lens: undefined }}
+              className="rounded-md border border-accent-2/30 bg-accent-2/10 px-2.5 py-1 text-[11px] font-medium text-accent-2 transition-colors hover:bg-accent-2/15"
+            >
+              Ouvrir →
             </Link>
           }
         >
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Visualisation graph 3D prévue dans un chantier dédié. Cette page reste volontairement
-            une inspection textuelle des concepts, scores, relations et inconnues.
+            Cette page reste l&apos;inspection textuelle. La carte 3D affiche concepts, signaux,
+            recommandations, contradictions et provenance avec confiance et fraîcheur encodées
+            visuellement. Mémoire dérivée — la finance-engine reste source de vérité.
           </p>
         </Panel>
       </section>

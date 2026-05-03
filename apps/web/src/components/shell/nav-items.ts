@@ -115,6 +115,13 @@ export const NAV_ITEMS: NavItem[] = [
     description: 'Contexte, sources et connaissances IA',
     group: 'ia',
   },
+  {
+    to: '/ia/memoire/graph',
+    label: 'Carte 3D',
+    icon: '◴',
+    description: 'Carte mémoire 3D, concepts et relations',
+    group: 'ia',
+  },
 
   // Intelligence & Admin
   {

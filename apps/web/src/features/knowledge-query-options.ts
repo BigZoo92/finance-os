@@ -1,6 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
+import type { AdvisorKnowledgeGraphScope } from './advisor-graph-dto'
 import type { AuthMode } from './auth-types'
 import {
+  fetchKnowledgeGraphDto,
   fetchKnowledgeSchema,
   fetchKnowledgeStats,
   postKnowledgeContextBundle,
@@ -16,7 +18,34 @@ export const knowledgeQueryKeys = {
     [...knowledgeQueryKeys.all, 'query', query, retrievalMode] as const,
   contextBundle: (query: string, retrievalMode: KnowledgeRetrievalMode) =>
     [...knowledgeQueryKeys.all, 'context-bundle', query, retrievalMode] as const,
+  graph: (scope: AdvisorKnowledgeGraphScope, includeExamples: boolean) =>
+    [...knowledgeQueryKeys.all, 'graph', scope, includeExamples] as const,
 }
+
+export const knowledgeGraphQueryOptionsWithMode = ({
+  mode,
+  scope,
+  includeExamples,
+  limit,
+}: {
+  mode?: AuthMode
+  scope: AdvisorKnowledgeGraphScope
+  includeExamples: boolean
+  limit?: number
+}) =>
+  queryOptions({
+    queryKey: knowledgeQueryKeys.graph(scope, includeExamples),
+    queryFn: () => {
+      const args: { scope: AdvisorKnowledgeGraphScope; includeExamples: boolean; limit?: number } = {
+        scope,
+        includeExamples,
+      }
+      if (typeof limit === 'number') args.limit = limit
+      return fetchKnowledgeGraphDto(args)
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
 
 export const knowledgeStatsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({

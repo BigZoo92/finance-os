@@ -33,9 +33,10 @@ import { Route as AppSignauxSourcesRouteImport } from './routes/_app/signaux/sou
 import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
 import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
 import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
-import { Route as AppIaMemoireRouteImport } from './routes/_app/ia/memoire'
 import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
 import { Route as AppIaChatRouteImport } from './routes/_app/ia/chat'
+import { Route as AppIaMemoireIndexRouteImport } from './routes/_app/ia/memoire/index'
+import { Route as AppIaMemoireGraphRouteImport } from './routes/_app/ia/memoire/graph'
 
 const VersionRoute = VersionRouteImport.update({
   id: '/version',
@@ -156,11 +157,6 @@ const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
   path: '/ia/trading-lab',
   getParentRoute: () => AppRoute,
 } as any)
-const AppIaMemoireRoute = AppIaMemoireRouteImport.update({
-  id: '/ia/memoire',
-  path: '/ia/memoire',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppIaCoutsRoute = AppIaCoutsRouteImport.update({
   id: '/ia/couts',
   path: '/ia/couts',
@@ -169,6 +165,16 @@ const AppIaCoutsRoute = AppIaCoutsRouteImport.update({
 const AppIaChatRoute = AppIaChatRouteImport.update({
   id: '/ia/chat',
   path: '/ia/chat',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaMemoireIndexRoute = AppIaMemoireIndexRouteImport.update({
+  id: '/ia/memoire/',
+  path: '/ia/memoire/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIaMemoireGraphRoute = AppIaMemoireGraphRouteImport.update({
+  id: '/ia/memoire/graph',
+  path: '/ia/memoire/graph',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -192,13 +198,14 @@ export interface FileRoutesByFullPath {
   '/powens/callback': typeof PowensCallbackRoute
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
-  '/ia/memoire': typeof AppIaMemoireRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
   '/ia/': typeof AppIaIndexRoute
   '/signaux/': typeof AppSignauxIndexRoute
+  '/ia/memoire/graph': typeof AppIaMemoireGraphRoute
+  '/ia/memoire/': typeof AppIaMemoireIndexRoute
 }
 export interface FileRoutesByTo {
   '/health': typeof HealthRoute
@@ -220,13 +227,14 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
-  '/ia/memoire': typeof AppIaMemoireRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
   '/ia': typeof AppIaIndexRoute
   '/signaux': typeof AppSignauxIndexRoute
+  '/ia/memoire/graph': typeof AppIaMemoireGraphRoute
+  '/ia/memoire': typeof AppIaMemoireIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -250,13 +258,14 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/ia/chat': typeof AppIaChatRoute
   '/_app/ia/couts': typeof AppIaCoutsRoute
-  '/_app/ia/memoire': typeof AppIaMemoireRoute
   '/_app/ia/trading-lab': typeof AppIaTradingLabRoute
   '/_app/signaux/marches': typeof AppSignauxMarchesRoute
   '/_app/signaux/social': typeof AppSignauxSocialRoute
   '/_app/signaux/sources': typeof AppSignauxSourcesRoute
   '/_app/ia/': typeof AppIaIndexRoute
   '/_app/signaux/': typeof AppSignauxIndexRoute
+  '/_app/ia/memoire/graph': typeof AppIaMemoireGraphRoute
+  '/_app/ia/memoire/': typeof AppIaMemoireIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -280,13 +289,14 @@ export interface FileRouteTypes {
     | '/powens/callback'
     | '/ia/chat'
     | '/ia/couts'
-    | '/ia/memoire'
     | '/ia/trading-lab'
     | '/signaux/marches'
     | '/signaux/social'
     | '/signaux/sources'
     | '/ia/'
     | '/signaux/'
+    | '/ia/memoire/graph'
+    | '/ia/memoire/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/health'
@@ -308,13 +318,14 @@ export interface FileRouteTypes {
     | '/'
     | '/ia/chat'
     | '/ia/couts'
-    | '/ia/memoire'
     | '/ia/trading-lab'
     | '/signaux/marches'
     | '/signaux/social'
     | '/signaux/sources'
     | '/ia'
     | '/signaux'
+    | '/ia/memoire/graph'
+    | '/ia/memoire'
   id:
     | '__root__'
     | '/_app'
@@ -337,13 +348,14 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/ia/chat'
     | '/_app/ia/couts'
-    | '/_app/ia/memoire'
     | '/_app/ia/trading-lab'
     | '/_app/signaux/marches'
     | '/_app/signaux/social'
     | '/_app/signaux/sources'
     | '/_app/ia/'
     | '/_app/signaux/'
+    | '/_app/ia/memoire/graph'
+    | '/_app/ia/memoire/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -526,13 +538,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaTradingLabRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/ia/memoire': {
-      id: '/_app/ia/memoire'
-      path: '/ia/memoire'
-      fullPath: '/ia/memoire'
-      preLoaderRoute: typeof AppIaMemoireRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/ia/couts': {
       id: '/_app/ia/couts'
       path: '/ia/couts'
@@ -545,6 +550,20 @@ declare module '@tanstack/react-router' {
       path: '/ia/chat'
       fullPath: '/ia/chat'
       preLoaderRoute: typeof AppIaChatRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/memoire/': {
+      id: '/_app/ia/memoire/'
+      path: '/ia/memoire'
+      fullPath: '/ia/memoire/'
+      preLoaderRoute: typeof AppIaMemoireIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/memoire/graph': {
+      id: '/_app/ia/memoire/graph'
+      path: '/ia/memoire/graph'
+      fullPath: '/ia/memoire/graph'
+      preLoaderRoute: typeof AppIaMemoireGraphRouteImport
       parentRoute: typeof AppRoute
     }
   }
@@ -564,13 +583,14 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppIaChatRoute: typeof AppIaChatRoute
   AppIaCoutsRoute: typeof AppIaCoutsRoute
-  AppIaMemoireRoute: typeof AppIaMemoireRoute
   AppIaTradingLabRoute: typeof AppIaTradingLabRoute
   AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
   AppSignauxSocialRoute: typeof AppSignauxSocialRoute
   AppSignauxSourcesRoute: typeof AppSignauxSourcesRoute
   AppIaIndexRoute: typeof AppIaIndexRoute
   AppSignauxIndexRoute: typeof AppSignauxIndexRoute
+  AppIaMemoireGraphRoute: typeof AppIaMemoireGraphRoute
+  AppIaMemoireIndexRoute: typeof AppIaMemoireIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -587,13 +607,14 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppIaChatRoute: AppIaChatRoute,
   AppIaCoutsRoute: AppIaCoutsRoute,
-  AppIaMemoireRoute: AppIaMemoireRoute,
   AppIaTradingLabRoute: AppIaTradingLabRoute,
   AppSignauxMarchesRoute: AppSignauxMarchesRoute,
   AppSignauxSocialRoute: AppSignauxSocialRoute,
   AppSignauxSourcesRoute: AppSignauxSourcesRoute,
   AppIaIndexRoute: AppIaIndexRoute,
   AppSignauxIndexRoute: AppSignauxIndexRoute,
+  AppIaMemoireGraphRoute: AppIaMemoireGraphRoute,
+  AppIaMemoireIndexRoute: AppIaMemoireIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -26,6 +26,7 @@ Les intégrations ne sont plus dans ce groupe: elles restent accessibles depuis 
 | `/ia` | Vue IA | Hub Advisor: synthèse, recommandations, hypothèses, questions utiles et journal de décisions non persistant | `dashboardAdvisor*`, `dashboardAdvisorRecommendations`, `dashboardAdvisorAssumptions` |
 | `/ia/chat` | Chat | Questions directes à l'Advisor sur dépenses, patrimoine et investissements, avec garde-fous de décision | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics`, `dashboardAdvisor` |
 | `/ia/memoire` | Mémoire | Inspection de la mémoire dérivée, provenance, confiance et contexte utilisé par l'Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
+| `/ia/memoire/graph` | Carte mémoire 3D | Visualisation force-directed 3D de la mémoire Advisor: concepts, signaux, recommandations, contradictions, sources. Strictement enrichissement, pas une base de vérité. | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
 
 Le Trading Lab et les coûts IA ne sont pas des surfaces Advisor quotidiennes. Ils restent disponibles dans Intelligence & Admin.
 
@@ -41,7 +42,8 @@ L'Advisor IA est organisé autour de cinq zones lisibles:
 
 Bornes explicites:
 
-- pas de Force Graph 3D dans `/ia/memoire`; la visualisation graph reste un chantier séparé;
+- la visualisation Force Graph 3D vit sur `/ia/memoire/graph` (chantier dédié), `/ia/memoire` reste l'inspection texte;
+- la carte 3D est une **mémoire dérivée**: elle n'est pas la base de vérité financière, ne pilote aucun ordre et n'expose aucun payload provider brut;
 - pas de learning loop ou apprentissage automatique depuis les décisions utilisateur;
 - pas de fiscalité/tax advice définitif;
 - pas de trading, transfert, ordre, staking, rééquilibrage automatique ou chemin d'exécution;

@@ -10,8 +10,23 @@ import {
   getDemoKnowledgeStats,
 } from '../domain/advisor/knowledge-graph-demo'
 import {
+  buildAdminKnowledgeGraphDto,
+  type KnowledgeBundleShape,
+  type KnowledgeQueryShape,
+} from '../domain/advisor/knowledge-graph-dto-admin'
+import {
+  buildDemoKnowledgeGraphDto,
+  buildExampleOverlay,
+} from '../domain/advisor/knowledge-graph-dto-demo'
+import type {
+  AdvisorKnowledgeGraphDto,
+  AdvisorKnowledgeGraphScope,
+} from '../domain/advisor/knowledge-graph-dto'
+import { hardenGraphDto } from '../domain/advisor/knowledge-graph-dto'
+import {
   dashboardAdvisorKnowledgeContextBundleBodySchema,
   dashboardAdvisorKnowledgeExplainBodySchema,
+  dashboardAdvisorKnowledgeGraphQuerySchema,
   dashboardAdvisorKnowledgeQueryBodySchema,
   dashboardAdvisorKnowledgeRebuildBodySchema,
 } from '../schemas'
@@ -330,6 +345,117 @@ export const createAdvisorKnowledgeRoute = ({
       },
       {
         body: dashboardAdvisorKnowledgeRebuildBodySchema,
+      }
+    )
+    .get(
+      '/advisor/knowledge/graph',
+      async context => {
+        const accessError = ensureAdvisorAccess({ context, advisorEnabled, adminOnly })
+        if (accessError) return accessError
+
+        const auth = getAuth(context)
+        const requestId = getRequestMeta(context).requestId
+        const query = context.query as {
+          scope?: AdvisorKnowledgeGraphScope
+          limit?: number
+          includeExamples?: boolean
+        }
+        const scope: AdvisorKnowledgeGraphScope = query.scope ?? 'overview'
+        const limit = Math.min(1000, Math.max(1, query.limit ?? 500))
+        const includeExamples = query.includeExamples === true
+        const generatedAt = new Date().toISOString()
+
+        if (auth.mode === 'demo') {
+          return buildDemoKnowledgeGraphDto({ scope, limit })
+        }
+
+        // Admin: pull bundle + query from the knowledge service. Both are
+        // read-only fetches; failures degrade to an empty DTO with a reason.
+        let bundle: KnowledgeBundleShape | undefined
+        let queryResp: KnowledgeQueryShape | undefined
+        let serviceFailed = false
+        try {
+          const baseQuery = 'advisor knowledge graph overview'
+          const bundleInput: KnowledgeContextBundleInput = {
+            query: baseQuery,
+            mode: 'admin',
+            retrievalMode: 'hybrid',
+            maxResults: Math.min(64, limit),
+            maxPathDepth: 3,
+            maxTokens: 1800,
+            includeContradictions: true,
+            includeEvidence: true,
+          }
+          const queryInput: KnowledgeQueryInput = {
+            query: baseQuery,
+            mode: 'admin',
+            retrievalMode: 'hybrid',
+            maxResults: Math.min(64, limit),
+            maxPathDepth: 3,
+            includeContradictions: true,
+            includeEvidence: true,
+          }
+          const [bundleRes, queryRes] = await Promise.allSettled([
+            client.contextBundle(bundleInput, requestId),
+            client.query(queryInput, requestId),
+          ])
+          if (bundleRes.status === 'fulfilled') bundle = bundleRes.value as KnowledgeBundleShape
+          else serviceFailed = true
+          if (queryRes.status === 'fulfilled') queryResp = queryRes.value as KnowledgeQueryShape
+          else serviceFailed = true
+        } catch (error) {
+          logApiEvent({
+            level: 'warn',
+            msg: 'advisor knowledge graph fallback',
+            requestId,
+            ...toErrorLogFields({ error, includeStack: false }),
+          })
+          serviceFailed = true
+        }
+
+        let dto: AdvisorKnowledgeGraphDto = buildAdminKnowledgeGraphDto({
+          scope,
+          limit,
+          generatedAt,
+          ...(bundle ? { bundle } : {}),
+          ...(queryResp ? { query: queryResp } : {}),
+        })
+
+        if (serviceFailed && dto.meta.origin === 'empty') {
+          dto = {
+            ...dto,
+            meta: {
+              ...dto.meta,
+              origin: 'degraded',
+              degraded: true,
+              reason: 'Knowledge service unavailable; deterministic finance-engine remains primary.',
+              source: 'fallback',
+            },
+          }
+        }
+
+        if (includeExamples) {
+          const overlay = buildExampleOverlay(scope, limit)
+          const merged = hardenGraphDto({
+            nodes: [...dto.nodes, ...overlay.nodes],
+            links: [...dto.links, ...overlay.links],
+            meta: {
+              ...dto.meta,
+              origin: 'mixed',
+              source: dto.meta.source ?? 'advisor-artifacts',
+              reason:
+                dto.nodes.length > 0
+                  ? 'Réel + exemples curés. Les nœuds exemples sont marqués origin="example".'
+                  : 'Aperçu enrichi avec exemples curés (mémoire réelle vide).',
+            },
+          })
+          return merged
+        }
+
+        return dto
+      },
+      {
+        query: dashboardAdvisorKnowledgeGraphQuerySchema,
       }
     )
 }

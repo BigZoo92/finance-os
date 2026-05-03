@@ -180,6 +180,29 @@ export const dashboardAdvisorKnowledgeRebuildBodySchema = t.Object({
   dryRun: t.Optional(t.Boolean()),
 })
 
+const dashboardAdvisorKnowledgeGraphScopeSchema = t.Union([
+  t.Literal('overview'),
+  t.Literal('advisor'),
+  t.Literal('recommendations'),
+  t.Literal('sources'),
+  t.Literal('risk'),
+  t.Literal('personal'),
+])
+
+export type DashboardAdvisorKnowledgeGraphScope =
+  | 'overview'
+  | 'advisor'
+  | 'recommendations'
+  | 'sources'
+  | 'risk'
+  | 'personal'
+
+export const dashboardAdvisorKnowledgeGraphQuerySchema = t.Object({
+  scope: t.Optional(dashboardAdvisorKnowledgeGraphScopeSchema),
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 1000 })),
+  includeExamples: t.Optional(t.Boolean()),
+})
+
 export const dashboardAdvisorChatBodySchema = t.Object({
   threadKey: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
   message: t.String({

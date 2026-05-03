@@ -181,10 +181,11 @@ The user-facing Advisor IA routes render the same persisted artifacts with a dec
 - `/ia`: synthesis, structured recommendations, assumptions/limits, suggested questions, a non-persistent decision-journal placeholder, and links to chat/memory/admin surfaces
 - `/ia/chat`: grounded finance chat with prompt starters and visible data-limit warnings; demo remains read-only/deterministic
 - `/ia/memoire`: text inspection of derived memory, provenance, confidence, freshness and context bundles
+- `/ia/memoire/graph`: 3D force-directed visualization of the derived Advisor memory. Built on `react-force-graph-3d`, strictly client-rendered, SSR-safe via dynamic import. Adapts the same `knowledgeContextBundle` / `knowledgeQuery` / `knowledgeStats` endpoints into a typed graph view-model (`AdvisorGraphNode` / `AdvisorGraphLink`) with semantic color/opacity/particle encoding for node kind, confidence, freshness and contradiction. Demo mode renders a deterministic curated graph (no provider calls). The page is enrichment only: no orders, no execution, no raw provider payloads.
 
 `/_app/patrimoine` renders the admin manual-asset CRUD surface backed by `/dashboard/manual-assets`.
 
-The Advisor UI must not present outputs as regulated financial advice or execution instructions. It must surface missing investor profile data, stale context, assumptions, risk/limit copy, confidence, and manual next steps. Force Graph 3D, the Advisor learning loop and fiscality/tax modules remain separate prompts.
+The Advisor UI must not present outputs as regulated financial advice or execution instructions. It must surface missing investor profile data, stale context, assumptions, risk/limit copy, confidence, and manual next steps. The Advisor learning loop and fiscality/tax modules remain separate prompts.
 
 ## Data Model
 
