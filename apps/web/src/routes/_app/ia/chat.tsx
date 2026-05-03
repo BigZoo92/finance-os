@@ -107,10 +107,10 @@ function IaChatPage() {
     return (
       <div className="space-y-8">
         <PageHeader
-          eyebrow="IA · Chat"
+          eyebrow="Advisor IA · Chat"
           icon="◬"
           title="Chat finance"
-          description="Conversation financière enrichie par le contexte de vos données."
+          description="Pose une question à l'Advisor sur tes dépenses, ton patrimoine ou tes investissements."
         />
         <Card>
           <CardContent className="py-8 text-sm text-muted-foreground">
@@ -126,10 +126,10 @@ function IaChatPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="IA · Chat"
+        eyebrow="Advisor IA · Chat"
         icon="◬"
         title="Chat finance"
-        description="Posez vos questions financières. Le contexte de vos comptes, du graphe de connaissances et des signaux externes est injecté automatiquement."
+        description="Pose une question à l'Advisor. Il utilise ton contexte financier sans t'obliger à lire les signaux bruts."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">

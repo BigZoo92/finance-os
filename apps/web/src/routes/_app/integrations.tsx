@@ -372,10 +372,10 @@ function IntegrationsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Connexions bancaires"
+        eyebrow="Intelligence & Admin"
         icon="⊞"
         title="Intégrations"
-        description="Connexions Powens, orchestration de la synchronisation et diagnostics opérationnels."
+        description="Connexions, synchronisations et diagnostics provider. Le cockpit reste utilisable si une source est dégradée."
         actions={
           <>
             <Button

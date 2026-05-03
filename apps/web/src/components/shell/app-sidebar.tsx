@@ -1,10 +1,13 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { BrandMark } from '@/components/brand/brand-mark'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
   NAV_GROUPS,
-  NAV_ITEMS,
+  getVisibleNavItems,
   getMobileTabItems,
   getMobileDrawerItems,
   type NavItem,
@@ -16,6 +19,12 @@ import {
 
 export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const currentPath = useRouterState().location.pathname
+  const authQuery = useQuery(authMeQueryOptions())
+  const authViewState = resolveAuthViewState({
+    isPending: authQuery.isPending,
+    ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
+  })
+  const navItems = getVisibleNavItems(authViewState)
 
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
@@ -56,20 +65,23 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
         </Link>
       </div>
 
-      {/* Navigation — 3 groups */}
+      {/* Navigation — 3 product spaces */}
       <nav className="flex-1 overflow-y-auto px-3 pt-1 pb-4" aria-label="Navigation principale">
         {NAV_GROUPS.map((group, gi) => {
-          const items = NAV_ITEMS.filter(i => i.group === group.id)
+          const items = navItems.filter(i => i.group === group.id)
           if (items.length === 0) return null
           return (
             <div key={group.id} className={gi > 0 ? 'mt-3' : ''}>
               {gi > 0 && <div className="mb-3 hair-rule" />}
               {!collapsed && (
-                <p
-                  className={`mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.22em] ${group.color}`}
-                >
-                  {group.label}
-                </p>
+                <div className="mb-2 px-3">
+                  <p className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${group.color}`}>
+                    {group.label}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-snug text-muted-foreground/55">
+                    {group.description}
+                  </p>
+                </div>
               )}
               {collapsed && gi > 0 && (
                 <p
@@ -190,14 +202,19 @@ export function MobileNav() {
   const currentPath = useRouterState().location.pathname
   const prefersReducedMotion = useReducedMotion()
   const [isOpen, setIsOpen] = useState(false)
+  const authQuery = useQuery(authMeQueryOptions())
+  const authViewState = resolveAuthViewState({
+    isPending: authQuery.isPending,
+    ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
+  })
 
   const isActive = (to: string) => {
     if (to === '/') return currentPath === '/'
     return currentPath === to || currentPath.startsWith(`${to}/`)
   }
 
-  const tabItems = getMobileTabItems()
-  const drawerItems = getMobileDrawerItems()
+  const tabItems = getMobileTabItems(authViewState)
+  const drawerItems = getMobileDrawerItems(authViewState)
 
   return (
     <>
@@ -284,11 +301,14 @@ export function MobileNav() {
                   if (items.length === 0) return null
                   return (
                     <div key={group.id} className="mb-4">
-                      <p
-                        className={`mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
-                      >
-                        {group.label}
-                      </p>
+                      <div className="mb-2 px-1">
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}>
+                          {group.label}
+                        </p>
+                        <p className="mt-1 text-xs leading-snug text-muted-foreground/60">
+                          {group.description}
+                        </p>
+                      </div>
                       <ul className="space-y-0.5">
                         {items.map((item, i) => {
                           const active = isActive(item.to)

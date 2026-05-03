@@ -246,7 +246,7 @@ function CockpitPage() {
         </Panel>
       ) : null}
 
-      {/* ── AI Advisor entry + attention items ── */}
+      {/* ── AI Advisor digest + personal attention summary ── */}
       {advisorVisible && (
         <section className="grid gap-4 md:grid-cols-2">
           <Link
@@ -254,13 +254,13 @@ function CockpitPage() {
             className="group rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md transition-all hover:border-primary/30 hover:bg-card/80"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-aurora/70">
-              ▣ advisor IA
+              ▣ résumé IA
             </p>
             <p className="mt-3 text-lg font-semibold text-foreground group-hover:text-primary">
               {advisorQ.data?.brief?.title ?? 'Brief quotidien'}
             </p>
             <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-              {advisorQ.data?.brief?.summary ?? 'Consultez l\'Advisor IA pour vos recommandations personnalisées.'}
+              {advisorQ.data?.brief?.summary ?? 'Tes données personnelles, sans le bruit des signaux experts.'}
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -276,7 +276,7 @@ function CockpitPage() {
           <div className="space-y-2 rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md">
             <div className="flex items-center justify-between">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-negative/70">
-                ⚠ demande attention
+                ⚠ à traiter
               </p>
               {attentionCount > 0 ? (
                 <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">
@@ -285,7 +285,7 @@ function CockpitPage() {
               ) : null}
             </div>
             <div className="space-y-1.5">
-              {/* Real attention items from API (signals, providers, trading-lab, system) */}
+              {/* Digested attention items from API; raw expert surfaces stay outside the daily flow. */}
               {attentionItems.slice(0, 4).map(item => {
                 const tone =
                   item.severity === 'critical' ? 'err' : item.severity === 'important' ? 'warn' : 'ok'
@@ -337,7 +337,7 @@ function CockpitPage() {
               )}
               {connsFail === 0 && activeRecs.filter(r => r.riskLevel === 'high').length === 0 && activeGoals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount < 0.25).length === 0 && attentionItems.length === 0 && (
                 <p className="py-2 text-sm text-muted-foreground">
-                  Rien de critique. Tout est en ordre.
+                  Rien de critique aujourd'hui.
                 </p>
               )}
             </div>

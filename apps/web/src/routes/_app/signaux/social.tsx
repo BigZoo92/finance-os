@@ -61,10 +61,10 @@ function SignauxSocialPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Donnees & signaux"
+        eyebrow="Intelligence & Admin"
         icon="⊕"
-        title="Comptes a surveiller"
-        description="Gerez les comptes sociaux surveilles pour alimenter vos signaux financiers et IA/tech."
+        title="Comptes à surveiller"
+        description="Sources sociales avancées pour les signaux financiers et IA/tech. Espace expert, pas routine quotidienne."
       />
 
       {/* Provider status banner */}

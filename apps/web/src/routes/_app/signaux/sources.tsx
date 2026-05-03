@@ -102,10 +102,10 @@ function SignauxSourcesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Données & signaux"
+        eyebrow="Intelligence & Admin"
         icon="⊡"
         title="Sources & fraîcheur"
-        description="Provenance, fraîcheur et qualité des données qui alimentent le cockpit et l'Advisor IA."
+        description="Provenance, fraîcheur et qualité des sources. Surface admin pour diagnostiquer ce que l'Advisor observe."
         status={
           <div className="flex items-center gap-2">
             <StatusDot tone={anyDegraded ? 'warn' : 'ok'} size={7} pulse={anyDegraded} />

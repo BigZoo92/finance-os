@@ -58,10 +58,10 @@ function SignauxActualitesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Donnees & signaux"
+        eyebrow="Intelligence & Admin"
         icon="⊟"
         title="Signaux"
-        description="Hub de donnees et signaux externes. Contexte pour l'IA Advisor et le graphe de connaissances."
+        description="Données brutes et signaux avancés utilisés par l'Advisor. Utile pour comprendre, pas nécessaire au quotidien."
       />
 
       {/* Quick overview strip */}
@@ -77,7 +77,7 @@ function SignauxActualitesPage() {
       {lastRun && (
         <Panel>
           <div className="flex items-center justify-between text-xs text-text-secondary">
-            <span>Derniere ingestion: {lastRun.provider} ({lastRun.runType})</span>
+            <span>Dernière ingestion: {lastRun.provider} ({lastRun.runType})</span>
             <span>
               {lastRun.insertedCount} inseres, {lastRun.dedupedCount} dedup, {lastRun.graphIngestedCount} graph
               {lastRun.status === 'success' ? ' — OK' : lastRun.status === 'failed' ? ' — Echec' : ''}
@@ -90,7 +90,7 @@ function SignauxActualitesPage() {
       {/* Attention-needed signals */}
       {attentionItems.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-text-primary mb-2">Signaux necessitant votre attention</h3>
+          <h3 className="text-sm font-medium text-text-primary mb-2">Signaux experts à vérifier</h3>
           <div className="space-y-2">
             {attentionItems.slice(0, 5).map(item => (
               <SignalItemCard key={item.id} item={item} isAdmin={isAdmin} />
@@ -106,8 +106,8 @@ function SignauxActualitesPage() {
             <div className="flex items-center gap-2">
               <span className="text-lg">≈</span>
               <div>
-                <p className="text-sm font-medium text-text-primary">Marches & macro</p>
-                <p className="text-xs text-text-tertiary">Panorama et signaux deterministes</p>
+                <p className="text-sm font-medium text-text-primary">Marchés & macro</p>
+                <p className="text-xs text-text-tertiary">Panorama brut et signaux déterministes</p>
               </div>
             </div>
           </Panel>
@@ -129,8 +129,8 @@ function SignauxActualitesPage() {
               <div className="flex items-center gap-2">
                 <span className="text-lg">⊡</span>
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Sources & fraicheur</p>
-                  <p className="text-xs text-text-tertiary">Qualite et provenance des donnees</p>
+                  <p className="text-sm font-medium text-text-primary">Sources & fraîcheur</p>
+                  <p className="text-xs text-text-tertiary">Qualité et provenance des données</p>
                 </div>
               </div>
             </Panel>

@@ -1,4 +1,6 @@
-export type NavGroup = 'cockpit' | 'ia' | 'signaux'
+import type { AuthViewState } from '@/features/auth-view-state'
+
+export type NavGroup = 'cockpit' | 'ia' | 'expert'
 
 export type NavItem = {
   to: string
@@ -17,6 +19,7 @@ export type NavGroupMeta = {
   label: string
   /** Short label for collapsed sidebar divider tooltips. */
   shortLabel: string
+  description: string
   icon: string
   color: string
 }
@@ -26,168 +29,177 @@ export const NAV_GROUPS: NavGroupMeta[] = [
     id: 'cockpit',
     label: 'Cockpit personnel',
     shortLabel: 'Cockpit',
+    description: 'Ton argent au quotidien, sans le bruit expert.',
     icon: '◈',
     color: 'text-primary/55',
   },
   {
     id: 'ia',
-    label: 'IA',
+    label: 'Advisor IA',
     shortLabel: 'IA',
-    icon: '▣',
+    description: 'Conseils, questions et mémoire compréhensibles.',
+    icon: '□',
     color: 'text-aurora/70',
   },
   {
-    id: 'signaux',
-    label: 'Données & signaux',
-    shortLabel: 'Signaux',
-    icon: '≈',
+    id: 'expert',
+    label: 'Intelligence & Admin',
+    shortLabel: 'Expert',
+    description: 'Données brutes, ingestion, diagnostics et recherche.',
+    icon: '≋',
     color: 'text-accent-2/55',
   },
 ]
 
 export const NAV_ITEMS: NavItem[] = [
-  // ── Cockpit personnel ──────────────────────────────────────
+  // Cockpit personnel
   {
     to: '/',
-    label: 'Cockpit',
+    label: "Vue d'ensemble",
     icon: '◈',
-    description: "Vue d'ensemble du jour",
+    description: 'Résumé actionnable de ta situation',
     group: 'cockpit',
     mobilePriority: 1,
   },
   {
     to: '/depenses',
-    label: 'Dépenses',
+    label: 'Dépenses & revenus',
     icon: '↔',
-    description: 'Suivi quotidien des transactions',
+    description: 'Transactions, budgets et cashflow',
     group: 'cockpit',
     mobilePriority: 2,
   },
   {
     to: '/patrimoine',
     label: 'Patrimoine',
-    icon: '◊',
-    description: 'Actifs et soldes',
+    icon: '◇',
+    description: 'Actifs, soldes et trajectoire',
     group: 'cockpit',
     mobilePriority: 3,
   },
   {
     to: '/investissements',
-    label: 'Invest.',
+    label: 'Investissements',
     icon: '△',
-    description: 'Positions et portfolio',
+    description: 'Positions et portefeuille lisible',
     group: 'cockpit',
   },
   {
     to: '/objectifs',
     label: 'Objectifs',
     icon: '◎',
-    description: 'Cap et progression',
-    group: 'cockpit',
-  },
-  {
-    to: '/integrations',
-    label: 'Intégrations',
-    icon: '⊞',
-    description: 'Connexions bancaires et sync',
-    group: 'cockpit',
-  },
-  {
-    to: '/sante',
-    label: 'Santé',
-    icon: '♡',
-    description: "Diagnostics de l'app",
-    group: 'cockpit',
-  },
-  {
-    to: '/parametres',
-    label: 'Paramètres',
-    icon: '⚙',
-    description: 'Configuration',
+    description: 'Cibles, épargne et progression',
     group: 'cockpit',
   },
 
-  // ── IA ─────────────────────────────────────────────────────
+  // Advisor IA
   {
     to: '/ia',
-    label: 'Advisor',
-    icon: '▣',
-    description: 'Brief, recommandations et chat IA',
+    label: 'Vue IA',
+    icon: '□',
+    description: 'Brief, conseils et recommandations',
     group: 'ia',
     mobilePriority: 4,
   },
   {
     to: '/ia/chat',
-    label: 'Chat finance',
-    icon: '◬',
-    description: 'Conversation financière avec contexte',
+    label: 'Chat',
+    icon: '▱',
+    description: "Questions à l'Advisor sur tes finances",
     group: 'ia',
   },
   {
     to: '/ia/memoire',
     label: 'Mémoire',
     icon: '[#]',
-    description: 'Graphe de connaissances et contexte',
+    description: 'Contexte, sources et connaissances IA',
     group: 'ia',
-  },
-  {
-    to: '/ia/trading-lab',
-    label: 'Trading Lab',
-    icon: '⟐',
-    description: 'Paper-trading, backtest et recherche',
-    group: 'ia',
-  },
-  {
-    to: '/ia/couts',
-    label: 'Coûts IA',
-    icon: '⊘',
-    description: 'Tokens, modèles et budget',
-    group: 'ia',
-    adminOnly: true,
   },
 
-  // ── Données & signaux ──────────────────────────────────────
+  // Intelligence & Admin
   {
     to: '/signaux',
-    label: 'Actualités',
+    label: 'Signaux',
     icon: '⊟',
-    description: 'Flux macro-financier et news',
-    group: 'signaux',
+    description: "Données brutes résumées pour l'IA",
+    group: 'expert',
   },
   {
     to: '/signaux/marches',
     label: 'Marchés',
-    icon: '≈',
-    description: 'Contexte macro et signaux',
-    group: 'signaux',
+    icon: '≋',
+    description: 'Macro, watchlist et signaux marché',
+    group: 'expert',
   },
   {
     to: '/signaux/social',
     label: 'Social',
     icon: '⊕',
-    description: 'Comptes X, Bluesky et imports manuels',
-    group: 'signaux',
+    description: 'Comptes surveillés et imports manuels',
+    group: 'expert',
   },
   {
     to: '/signaux/sources',
     label: 'Sources',
-    icon: '⊡',
-    description: 'Fraîcheur et qualité des données',
-    group: 'signaux',
+    icon: '⚡',
+    description: 'Fraîcheur, provenance et qualité',
+    group: 'expert',
     adminOnly: true,
+  },
+  {
+    to: '/ia/trading-lab',
+    label: 'Trading Lab',
+    icon: '⟐',
+    description: 'Recherche papier et backtests, sans exécution',
+    group: 'expert',
+  },
+  {
+    to: '/ia/couts',
+    label: 'Coûts IA',
+    icon: '⊘',
+    description: 'Tokens, modèles et budget technique',
+    group: 'expert',
+    adminOnly: true,
+  },
+  {
+    to: '/integrations',
+    label: 'Intégrations',
+    icon: '⊞',
+    description: 'Connexions, sync et diagnostics provider',
+    group: 'expert',
+  },
+  {
+    to: '/sante',
+    label: 'Santé',
+    icon: '♡',
+    description: "État système et pipelines de données",
+    group: 'expert',
+  },
+  {
+    to: '/parametres',
+    label: 'Paramètres',
+    icon: '⚙',
+    description: 'Notifications, exports et configuration',
+    group: 'expert',
   },
 ]
 
+export const isNavItemVisible = (item: NavItem, authViewState: AuthViewState): boolean =>
+  !item.adminOnly || authViewState === 'admin'
+
+export const getVisibleNavItems = (authViewState: AuthViewState): NavItem[] =>
+  NAV_ITEMS.filter(item => isNavItemVisible(item, authViewState))
+
 /** Items for mobile bottom tabs, sorted by priority. */
-export const getMobileTabItems = (): NavItem[] =>
-  NAV_ITEMS.filter(i => i.mobilePriority !== undefined).sort(
-    (a, b) => (a.mobilePriority ?? 99) - (b.mobilePriority ?? 99)
-  )
+export const getMobileTabItems = (authViewState: AuthViewState): NavItem[] =>
+  getVisibleNavItems(authViewState)
+    .filter(i => i.mobilePriority !== undefined)
+    .sort((a, b) => (a.mobilePriority ?? 99) - (b.mobilePriority ?? 99))
 
 /** Items for mobile drawer (everything not in bottom tabs). */
-export const getMobileDrawerItems = (): NavItem[] =>
-  NAV_ITEMS.filter(i => i.mobilePriority === undefined)
+export const getMobileDrawerItems = (authViewState: AuthViewState): NavItem[] =>
+  getVisibleNavItems(authViewState).filter(i => i.mobilePriority === undefined)
 
 /** Items for a specific group. */
-export const getGroupItems = (group: NavGroup): NavItem[] =>
-  NAV_ITEMS.filter(i => i.group === group)
+export const getGroupItems = (group: NavGroup, authViewState: AuthViewState): NavItem[] =>
+  getVisibleNavItems(authViewState).filter(i => i.group === group)

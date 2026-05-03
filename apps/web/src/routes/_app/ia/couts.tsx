@@ -58,10 +58,10 @@ function IaCoutsPage() {
     return (
       <div className="space-y-8">
         <PageHeader
-          eyebrow="IA · Coûts"
+          eyebrow="Admin · Coûts IA"
           icon="⊘"
           title="Coûts IA"
-          description="Suivi des tokens, modèles et budget de l'advisor IA."
+          description="Surface technique pour contrôler tokens, modèles et budget de l'Advisor."
         />
         <Card>
           <CardContent className="py-8 text-sm text-muted-foreground">
@@ -75,10 +75,10 @@ function IaCoutsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="IA · Coûts"
+        eyebrow="Admin · Coûts IA"
         icon="⊘"
         title="Coûts IA"
-        description="Suivi détaillé des tokens consommés, modèles utilisés et budget de l'advisor IA. Séparé de la pipeline agentique de développement."
+        description="Suivi détaillé des tokens, modèles et budget de l'Advisor in-app. Séparé de la pipeline agentique de développement."
         actions={
           isDemo ? <Badge variant="warning">démo</Badge> : null
         }

@@ -60,10 +60,10 @@ function SignauxMarchesPage() {
     return (
       <div className="space-y-8">
         <PageHeader
-          eyebrow="Données & signaux"
+          eyebrow="Intelligence & Admin"
           icon="≈"
           title="Marchés & macro"
-          description="Contexte macro-économique, signaux de marché et watchlist mondiale."
+          description="Surface expert: contexte macro, signaux de marché et watchlist mondiale."
         />
         <Card>
           <CardContent className="space-y-3 py-10 text-center">
@@ -83,10 +83,10 @@ function SignauxMarchesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Données & signaux"
+        eyebrow="Intelligence & Admin"
         icon="≈"
         title="Marchés & macro"
-        description="Panorama macro-économique et signaux de marché. Ces données alimentent le contexte de l'Advisor IA."
+        description="Panorama macro et signaux de marché. L'Advisor en extrait seulement ce qui compte pour tes décisions."
         actions={
           isAdmin ? (
             <Button

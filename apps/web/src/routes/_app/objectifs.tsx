@@ -51,10 +51,10 @@ function ObjectifsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Épargne & cibles"
+        eyebrow="Cockpit personnel"
         icon="◎"
         title="Objectifs"
-        description="Suivi de vos cibles d'épargne et de patrimoine personnel, avec projections."
+        description="Tes cibles d'épargne et de patrimoine, avec une progression lisible."
       />
 
       {/* Hero — Antigravity particle ring (hover-only) + circular emblem */}

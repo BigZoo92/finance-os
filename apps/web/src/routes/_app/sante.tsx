@@ -163,10 +163,10 @@ function SantePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Diagnostics"
+        eyebrow="Intelligence & Admin"
         icon="♡"
         title="Santé"
-        description="État consolidé des intégrations, de la synchronisation et du pipeline dérivé."
+        description="Diagnostics système, synchronisation et pipelines dérivés. Utile pour vérifier les sources, pas nécessaire au quotidien."
       />
 
       {/* Overall status hero — PixelBlast in the OK state, calm gradient otherwise */}

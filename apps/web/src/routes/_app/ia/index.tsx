@@ -182,10 +182,10 @@ function IaOverviewPage() {
     return (
       <div className="space-y-8">
         <PageHeader
-          eyebrow="Intelligence artificielle"
+          eyebrow="Advisor IA"
           icon="▣"
           title="Advisor IA"
-          description="Conseiller financier ancré sur vos données, enrichi par le graphe de connaissances."
+          description="Conseils digestes sur tes finances personnelles. Les surfaces techniques restent séparées."
         />
         <Card>
           <CardContent className="space-y-2 py-8 text-sm text-muted-foreground">
@@ -200,10 +200,10 @@ function IaOverviewPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Intelligence artificielle"
+        eyebrow="Advisor IA"
         icon="▣"
         title="Advisor IA"
-        description="Brief quotidien, recommandations challengées, signaux persistants et suivi de coût IA."
+        description="Brief quotidien et recommandations compréhensibles, nourris par les données sans exposer tout le bruit."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {overview && (
@@ -299,7 +299,7 @@ function IaOverviewPage() {
           title="Recommandations"
           tone="brand"
           icon={<span aria-hidden="true">◎</span>}
-          description="Recommandations actives, challengées par le moteur déterministe et le graphe de connaissances."
+          description="Conseils actifs, challengés par le moteur déterministe et la mémoire IA."
         >
           {recs.length > 0 ? (
             <div className="space-y-3">
@@ -367,7 +367,7 @@ function IaOverviewPage() {
                 Chat finance
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Conversation avec contexte financier complet
+                Pose une question sur tes dépenses, ton patrimoine ou tes investissements.
               </p>
             </Link>
             <Link
@@ -379,14 +379,14 @@ function IaOverviewPage() {
                 Mémoire & connaissances
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Graphe temporel, recherche hybride et contexte
+                Ce que l'Advisor retient, avec provenance et confiance.
               </p>
             </Link>
           </div>
 
           {/* AI Spend mini */}
           <Panel
-            title="Coûts IA"
+            title="Suivi technique IA"
             tone="plain"
             icon={<span aria-hidden="true">⊘</span>}
             actions={

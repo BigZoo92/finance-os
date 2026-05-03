@@ -1,0 +1,70 @@
+LOG /src/lib/ssr-logger.ts:105:5 - http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Flib%2Fssr-logger.ts%3A105%3A5
+ →  [web:ssr] request failed {
+  requestId: '548a03ce-eeea-4c86-a0d3-10f6fdcf6b68',
+  url: 'http://localhost:3000/api/auth/me',
+  status: 502,
+  code: null,
+  hint: 'api_internal_error',
+  bodyPreview: '{\n' +
+    '  "error": true,\n' +
+    '  "stack": [\n' +
+    '    "fetch failed",\n' +
+    '    "at proxy (C:/Users/giver/dev/finance-os/node_modules/.pnpm/h3@2.0.1-rc.21_crossws@0.4.5_srvx@0.11.15_/node_modules/h3/dist/h3-CRCltuUf.mjs:1262:9)",\n' +
+    '    "at processTicksAndRejections (node:internal/process/task_queues:105:5)",\n' +
+    '    "at ViteEnvR...',
+  baseUrl: 'http://localhost:3000/api',
+  baseUrlSource: 'origin_fallback',
+  cookiesForwarded: false,
+  internalTokenForwarded: false,
+  method: 'GET',
+  path: '/auth/me'
+}
+LOG /src/lib/ssr-logger.ts:105:5 - http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Flib%2Fssr-logger.ts%3A105%3A5
+ →  [web:ssr] request failed {
+  requestId: '548a03ce-eeea-4c86-a0d3-10f6fdcf6b68',
+  url: 'http://localhost:3000/api/auth/me',
+  status: 502,
+  code: null,
+  hint: 'api_internal_error',
+  bodyPreview: '{\n' +
+    '  "error": true,\n' +
+    '  "stack": [\n' +
+    '    "fetch failed",\n' +
+    '    "at proxy (C:/Users/giver/dev/finance-os/node_modules/.pnpm/h3@2.0.1-rc.21_crossws@0.4.5_srvx@0.11.15_/node_modules/h3/dist/h3-CRCltuUf.mjs:1262:9)",\n' +
+    '    "at processTicksAndRejections (node:internal/process/task_queues:105:5)",\n' +
+    '    "at ViteEnvR...',
+  baseUrl: 'http://localhost:3000/api',
+  baseUrlSource: 'origin_fallback',
+  cookiesForwarded: false,
+  internalTokenForwarded: false,
+  method: 'GET',
+  path: '/auth/me'
+}
+LOG /src/lib/ssr-logger.ts:138:3 - http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Flib%2Fssr-logger.ts%3A138%3A3
+ →  [web:ssr] request failed {
+  source: 'request',
+  method: undefined,
+  route: '/',
+  message: 'Auth SSR unavailable (502): fetch failed [requestId=548a03ce-eeea-4c86-a0d3-10f6fdcf6b68]'
+}
+LOG /src/lib/ssr-logger.ts:105:5 - http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Flib%2Fssr-logger.ts%3A105%3A5
+ →  [web:ssr] request failed {
+  requestId: '548a03ce-eeea-4c86-a0d3-10f6fdcf6b68',
+  url: 'http://localhost:3000/api/dashboard/trading-lab/attention?status=open',
+  status: 502,
+  code: null,
+  hint: 'api_internal_error',
+  bodyPreview: '{\n' +
+    '  "error": true,\n' +
+    '  "stack": [\n' +
+    '    "fetch failed",\n' +
+    '    "at proxy (C:/Users/giver/dev/finance-os/node_modules/.pnpm/h3@2.0.1-rc.21_crossws@0.4.5_srvx@0.11.15_/node_modules/h3/dist/h3-CRCltuUf.mjs:1262:9)",\n' +
+    '    "at processTicksAndRejections (node:internal/process/task_queues:105:5)",\n' +
+    '    "at ViteEnvR...',
+  baseUrl: 'http://localhost:3000/api',
+  baseUrlSource: 'origin_fallback',
+  cookiesForwarded: false,
+  internalTokenForwarded: false,
+  method: 'GET',
+  path: '/dashboard/trading-lab/attention?status=open'
+}

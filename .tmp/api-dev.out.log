@@ -1,0 +1,10 @@
+
+> finance-os@0.0.0 api:dev C:\Users\giver\dev\finance-os
+> pnpm --filter @finance-os/api dev
+
+
+> @finance-os/api@0.0.0 dev C:\Users\giver\dev\finance-os\apps\api
+> bun run --watch src/bootstrap.ts
+
+[dotenv@17.3.1] injecting env (192) from ..\..\.env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+{"timestamp":"2026-05-03T13:57:30.018Z","service":"api","level":"info","msg":"api migrations starting","migrationsFolder":"C:\\Users\\giver\\dev\\finance-os\\packages\\db\\drizzle"}

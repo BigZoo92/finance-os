@@ -113,10 +113,10 @@ function DepensesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Transactions & budgets"
+        eyebrow="Cockpit personnel"
         icon="↔"
-        title="Dépenses"
-        description="Vos transactions, structure de dépenses, budgets catégoriels et projection de fin de mois."
+        title="Dépenses & revenus"
+        description="Tes flux du quotidien: transactions, revenus, budgets et projection de fin de mois."
         actions={
           <>
             <Button

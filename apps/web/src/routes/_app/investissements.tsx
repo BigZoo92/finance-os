@@ -189,10 +189,10 @@ function InvestissementsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Positions & valorisation"
+        eyebrow="Cockpit personnel"
         icon="△"
         title="Investissements"
-        description="Vue des positions d'investissement, coût d'acquisition et PnL latent."
+        description="Tes positions et ton portefeuille, avec les détails provider gardés en contexte plutôt qu'en point d'entrée."
       />
 
       {/* Totals */}

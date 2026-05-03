@@ -1,0 +1,46 @@
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\client.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\env\src\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\errors\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\logging\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\runtime\index.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\enrichment.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\goals.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\recurring-commitments.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\powens.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\markets.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\technical-probe.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\trading-lab.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\signals.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\news.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\assets.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\external-investments.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\derived-recompute.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\db\src\schema\ai.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\errors\toSafeErrorMessage.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\logging\json-logger.ts is not in the project directory and will not be watched
+warn: File C:\Users\giver\dev\finance-os\packages\prelude\src\runtime\system.ts is not in the project directory and will not be watched
+36 |   async queryWithCache(queryString, params, query) {
+37 |     if (this.cache === void 0 || is(this.cache, NoopCache) || this.queryMetadata === void 0) {
+38 |       try {
+39 |         return await query();
+40 |       } catch (e) {
+41 |         throw new DrizzleQueryError(queryString, params, e);
+                   ^
+error: Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle"
+params: 
+  query: "CREATE SCHEMA IF NOT EXISTS \"drizzle\"",
+ params: [],
+
+      at queryWithCache (C:\Users\giver\dev\finance-os\node_modules\.pnpm\drizzle-orm@0.45.1_@types+p_f23fddcb854f831077126f04ee74c64b\node_modules\drizzle-orm\pg-core\session.js:41:15)
+
+error: connect ECONNREFUSED 127.0.0.1:55432
+   errno: -4078,
+ syscall: "connect",
+    port: 55432,
+ address: "127.0.0.1",
+    code: "ECONNREFUSED"
+
+      at new ExceptionWithHostPort (internal:shared:42:10)

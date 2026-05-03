@@ -1,8 +1,11 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { NAV_GROUPS, NAV_ITEMS } from './nav-items'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import { resolveAuthViewState } from '@/features/auth-view-state'
+import { NAV_GROUPS, NAV_ITEMS, isNavItemVisible } from './nav-items'
 
 const KEYWORDS: Record<string, string> = {
   '/': 'accueil home dashboard vue ensemble quotidien',
@@ -10,16 +13,18 @@ const KEYWORDS: Record<string, string> = {
   '/patrimoine': 'actifs soldes assets wealth',
   '/investissements': 'positions portfolio bourse invest',
   '/objectifs': 'goals épargne cibles progression',
-  '/integrations': 'powens sync banque connexion',
-  '/sante': 'health diagnostics système',
-  '/parametres': 'settings notifications export config',
-  '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils',
+  '/integrations': 'powens sync banque connexion provider admin expert',
+  '/sante': 'health diagnostics système admin expert',
+  '/parametres': 'settings notifications export config admin',
+  '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils vue ia',
   '/ia/chat': 'chat conversation question reponse advisor dialogue',
   '/ia/memoire': 'graphe connaissances graphrag memoire knowledge neo4j qdrant',
-  '/ia/couts': 'tokens couts budget modeles llm depenses ia usage',
-  '/signaux': 'news actualites feed flux macro signal briefing',
-  '/signaux/marches': 'macro watchlist regime taux inflation fred eodhd marches bourse',
-  '/signaux/sources': 'sources api fraicheur qualite donnees providers',
+  '/ia/trading-lab': 'trading lab papier paper backtest recherche strategies expert',
+  '/ia/couts': 'tokens couts budget modeles llm depenses ia usage admin expert',
+  '/signaux': 'news actualites feed flux macro signal briefing donnees brutes expert',
+  '/signaux/marches': 'macro watchlist regime taux inflation fred eodhd marches bourse expert',
+  '/signaux/social': 'social x bluesky comptes surveilles imports expert',
+  '/signaux/sources': 'sources api fraicheur qualite donnees providers admin expert',
 }
 
 const PAGES = NAV_ITEMS.map(item => ({
@@ -27,18 +32,31 @@ const PAGES = NAV_ITEMS.map(item => ({
   label: item.label,
   glyph: item.icon,
   group: item.group,
+  adminOnly: item.adminOnly ?? false,
   keywords: KEYWORDS[item.to] ?? '',
 }))
-
-const GROUP_DISPLAY: Record<string, { heading: string; color: string }> = {
-  cockpit: { heading: 'Cockpit personnel', color: 'text-primary/55' },
-  ia: { heading: 'IA', color: 'text-aurora/70' },
-  signaux: { heading: 'Données & signaux', color: 'text-accent-2/55' },
-}
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const authQuery = useQuery(authMeQueryOptions())
+  const authViewState = resolveAuthViewState({
+    isPending: authQuery.isPending,
+    ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
+  })
+  const visiblePages = PAGES.filter(page =>
+    isNavItemVisible(
+      {
+        to: page.to,
+        label: page.label,
+        icon: page.glyph,
+        description: '',
+        group: page.group,
+        ...(page.adminOnly ? { adminOnly: true } : {}),
+      },
+      authViewState
+    )
+  )
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -116,14 +134,13 @@ export function CommandPalette() {
                   </Command.Empty>
 
                   {NAV_GROUPS.map(group => {
-                    const groupPages = PAGES.filter(p => p.group === group.id)
+                    const groupPages = visiblePages.filter(p => p.group === group.id)
                     if (groupPages.length === 0) return null
-                    const display = GROUP_DISPLAY[group.id]
                     return (
                       <Command.Group
                         key={group.id}
-                        heading={display?.heading ?? group.label}
-                        className={`px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${display?.color ?? 'text-muted-foreground'}`}
+                        heading={group.label}
+                        className={`px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
                       >
                         {groupPages.map(page => (
                           <Command.Item

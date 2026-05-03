@@ -142,10 +142,10 @@ function MemoirePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="IA · Mémoire"
+        eyebrow="Advisor IA · Mémoire"
         icon="[#]"
         title="Mémoire & connaissances"
-        description="Graphe temporel interne pour enrichir, expliquer et challenger les recommandations sans remplacer le moteur déterministe."
+        description="Inspection de ce que l'Advisor utilise pour expliquer ses conseils. Visualisation graphe 3D prévue plus tard."
       />
 
       <section className="grid gap-4 md:grid-cols-4">
@@ -164,7 +164,7 @@ function MemoirePage() {
       <Panel
         tone={degraded ? 'warning' : 'brand'}
         title="Recherche hybride"
-        description="BM25, similarité sémantique locale, traversal relationnel, temporalité, confiance et provenance."
+        description="Recherche, temporalité, confiance et provenance. Surface d'inspection, pas une source de vérité financière."
         icon={<span aria-hidden="true">[#]</span>}
         actions={
           <div className="flex items-center gap-2 text-xs">

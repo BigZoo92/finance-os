@@ -1,193 +1,99 @@
-# Architecture d'information — Finance-OS
+# Architecture d'information - Finance-OS
 
 > Carte des pages, rôle de chaque surface, principes de navigation.
-> Refactorisée en Prompt 3 (2026-04-26) : 3 sections (Cockpit personnel, IA, Données & signaux).
+> Refactorisée le 2026-05-03 pour séparer l'usage quotidien, l'Advisor IA et les surfaces expert/admin.
 
-## Structure des routes
+## Structure Produit
 
-### Section 1 : Cockpit personnel
+Finance-OS ne doit pas montrer tout ce qu'il sait au même niveau. Le cockpit quotidien expose les décisions et les alertes utiles; les signaux bruts, diagnostics et outils de recherche restent disponibles dans un espace avancé.
 
-| Route | Page | Rôle | Données principales |
-|-------|------|------|---------------------|
-| `/` | **Cockpit** | Vue d'ensemble — KPIs, tendance patrimoine, top dépenses, connexions, objectifs, entry point IA | `dashboardSummary`, `financialGoals`, `powensStatus`, `dashboardAdvisor` |
-| `/depenses` | **Dépenses** | Transactions, structure des dépenses, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
-| `/patrimoine` | **Patrimoine** | Actifs, historique patrimoine, soldes par connexion, investissements externes | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions` |
-| `/investissements` | **Investissements** | Cockpit positions, IBKR/Binance, valorisation, P&L, qualite data | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions`, `externalInvestmentsTrades`, `externalInvestmentsCashFlows` |
-| `/objectifs` | **Objectifs** | Objectifs financiers personnels (CRUD) | `financialGoals` |
-| `/integrations` | **Intégrations** | Connexions Powens, sync runs, diagnostics, audit trail | `powensStatus`, `powensSyncRuns`, `powensDiagnostics`, `powensAuditTrail` |
-| `/sante` | **Santé** | Vue consolidée de l'état système | Tous les endpoints status/health |
-| `/parametres` | **Paramètres** | Notifications push, derived recompute, exports | `pushSettings`, `derivedRecomputeStatus` |
-
-Note investissements externes: `/integrations` gere aussi les credentials admin IBKR/Binance, leur health et leurs sync runs. `/sante` expose ces providers avec request IDs, comptes raw/normalises et erreurs safe.
-
-### Section 2 : IA
+### 1. Cockpit Personnel
 
 | Route | Page | Rôle | Données principales |
-|-------|------|------|---------------------|
-| `/ia` | **Advisor** | Brief quotidien, recommandations, métriques, navigation IA | `dashboardAdvisor*`, `dashboardAdvisorRecommendations`, `dashboardAdvisorSpend` |
-| `/ia/chat` | **Chat finance** | Conversation financière avec contexte + Q&A pédagogique | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics` |
-| `/ia/memoire` | **Mémoire & connaissances** | Graphe temporel, recherche hybride, provenance, contexte bundle | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
-| `/ia/trading-lab` | **Trading Lab** | Paper-trading, backtesting, stratégies, scénarios (paper-only) | `tradingLabStrategies`, `tradingLabBacktests`, `tradingLabScenarios`, `tradingLabCapabilities`, `attentionItems` |
-| `/ia/couts` | **Coûts IA** | Tokens, modèles, budget, runs (admin-only) | `dashboardAdvisorSpend`, `dashboardAdvisorRuns` |
+|---|---|---|---|
+| `/` | Vue d'ensemble / Cockpit | Entrée quotidienne: KPIs, tendance patrimoine, dépenses, connexions, objectifs, résumé IA digéré | `dashboardSummary`, `financialGoals`, `powensStatus`, `dashboardAdvisor` |
+| `/depenses` | Dépenses & revenus | Transactions, revenus, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
+| `/patrimoine` | Patrimoine | Actifs, historique patrimoine, soldes par connexion, investissements externes résumés | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions` |
+| `/investissements` | Investissements | Positions et portefeuille lisible; détails provider en contexte | `dashboardSummary`, `externalInvestments*` |
+| `/objectifs` | Objectifs | Objectifs financiers personnels et progression | `financialGoals` |
 
-### Section 3 : Données & signaux
+Les intégrations ne sont plus dans ce groupe: elles restent accessibles depuis le cockpit quand une connexion demande attention, mais leur page complète vit dans Intelligence & Admin.
+
+### 2. Advisor IA
 
 | Route | Page | Rôle | Données principales |
-|-------|------|------|---------------------|
-| `/signaux` | **Signaux** | Hub de signaux externes — news, overview, navigation | `dashboardNews`, `signalHealth`, `signalSources` |
-| `/signaux/marches` | **Marchés & macro** | Panorama marché, macro, watchlist mondiale | `marketsOverview` |
-| `/signaux/social` | **Comptes sociaux** | Gestion des comptes X, Bluesky, imports manuels | `signalSources`, `signalHealth` |
-| `/signaux/sources` | **Sources & fraîcheur** | Provenance et qualité des données (admin-only) | Multiple health queries |
+|---|---|---|---|
+| `/ia` | Vue IA | Hub Advisor: brief quotidien, conseils et recommandations compréhensibles | `dashboardAdvisor*`, `dashboardAdvisorRecommendations` |
+| `/ia/chat` | Chat | Questions directes à l'Advisor sur dépenses, patrimoine et investissements | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics` |
+| `/ia/memoire` | Mémoire | Inspection de la mémoire, provenance, confiance et contexte utilisé par l'Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
 
-### Redirections (ancien vers nouveau)
+Le Trading Lab et les coûts IA ne sont pas des surfaces Advisor quotidiennes. Ils restent disponibles dans Intelligence & Admin.
+
+### 3. Intelligence & Admin
+
+| Route | Page | Rôle | Données principales |
+|---|---|---|---|
+| `/signaux` | Signaux | Hub de données brutes et signaux avancés utilisés par l'Advisor | `dashboardNews`, `signalHealth`, `signalSources` |
+| `/signaux/marches` | Marchés | Panorama macro, watchlist mondiale et signaux marché | `marketsOverview` |
+| `/signaux/social` | Social | Comptes sociaux surveillés et imports manuels | `signalSources`, `signalHealth` |
+| `/signaux/sources` | Sources | Provenance, fraîcheur et qualité des données, admin-only en navigation | Multiple health queries |
+| `/ia/trading-lab` | Trading Lab | Recherche papier, backtests et scénarios, sans trading réel | `tradingLab*`, `attentionItems` |
+| `/ia/couts` | Coûts IA | Tokens, modèles, budget et runs Advisor, admin-only en navigation | `dashboardAdvisorSpend`, `dashboardAdvisorRuns` |
+| `/integrations` | Intégrations | Connexions Powens, sync runs, diagnostics, audit trail, credentials read-only externes | `powens*`, `externalInvestments*` |
+| `/sante` | Santé | État système, provider health, sync et pipelines dérivés | Tous les endpoints status/health |
+| `/parametres` | Paramètres | Notifications, exports, recompute dérivé et configuration avancée | `pushSettings`, `derivedRecomputeStatus` |
+
+## Redirections Conservées
 
 | Ancienne route | Nouvelle route | Type |
-|----------------|----------------|------|
+|---|---|---|
 | `/actualites` | `/signaux` | 301 |
 | `/memoire` | `/ia/memoire` | 301 |
 | `/marches` | `/signaux/marches` | 301 |
 
-### Routes système (hors layout)
+## Routes Système Hors Shell
 
 | Route | Rôle |
-|-------|------|
+|---|---|
 | `/login` | Authentification |
-| `/transactions` | Navigateur de transactions legacy (conservé, hors shell) |
-| `/powens/callback` | Callback Powens (SSR) |
-| `/health` | Health check |
-| `/healthz` | Health check avec flags |
-| `/version` | Info version |
+| `/transactions` | Navigateur de transactions legacy conservé hors shell |
+| `/powens/callback` | Callback Powens SSR |
+| `/health` | Health check public |
+| `/healthz` | Health check legacy avec flags |
+| `/version` | Version applicative |
 
-## Shell applicatif
+## Navigation
 
-### Desktop (>=1024px)
+`apps/web/src/components/shell/nav-items.ts` reste la source unique des groupes, labels, descriptions, priorités mobile et items admin-only.
 
-```
-┌──────────────────┬──────────────────────────────┐
-│  Sidebar (248px)  │  Topbar (brand, demo, auth)  │
-│                   ├──────────────────────────────│
-│  Cockpit personnel│                              │
-│  ◈ Cockpit        │  [Contenu de page]           │
-│  ↔ Dépenses       │                              │
-│  ◊ Patrimoine     │  max-width: 7xl (1280px)     │
-│  △ Invest.        │                              │
-│  ◎ Objectifs      │                              │
-│  ⊞ Intégrations   │                              │
-│  ♡ Santé          │                              │
-│  ⚙ Paramètres     │                              │
-│  ──────────────── │                              │
-│  IA               │                              │
-│  ▣ Advisor        │                              │
-│  ◬ Chat finance   │                              │
-│  [#] Mémoire      │                              │
-│  ⊘ Coûts IA       │                              │
-│  ──────────────── │                              │
-│  Données & signaux│                              │
-│  ⊟ Signaux        │                              │
-│  ≈ Marchés        │                              │
-│  ⊕ Social         │                              │
-│  ⊡ Sources        │                              │
-│                   │                              │
-│  [Réduire]        │                              │
-└──────────────────┴──────────────────────────────┘
-```
+### Desktop
 
-- La sidebar se réduit à 72px (icônes seules) via toggle
-- 3 groupes avec séparateurs et headers
-- L'indicateur de page active utilise `motion layoutId` pour une animation fluide
+La sidebar affiche trois espaces avec une courte description:
 
-### Mobile (<1024px)
+1. Cockpit personnel: argent personnel, dépenses, patrimoine, investissements, objectifs.
+2. Advisor IA: vue IA, chat, mémoire.
+3. Intelligence & Admin: signaux bruts, marchés, social, sources, Trading Lab, coûts IA, intégrations, santé, paramètres.
 
-```
-┌──────────────────────────────────┐
-│  Topbar (brand, démo, session)   │
-├──────────────────────────────────│
-│                                  │
-│  [Contenu de page]               │
-│  padding-bottom: safe area       │
-│                                  │
-├──────────────────────────────────│
-│  ◈   ↔   ◊   ▣   ⋯             │
-│  Bottom navigation               │
-└──────────────────────────────────┘
-```
+Les items `adminOnly` sont masqués en navigation hors session admin, mais les routes conservent leur propre comportement de dégradation ou de garde-fou.
 
-Tabs bottom bar : Cockpit, Dépenses, Patrimoine, IA (Advisor)
-Bouton "Plus" ouvre un drawer avec tous les autres items, groupés par section.
+### Mobile
 
-## Workflow quotidien prioritaire
+La bottom nav reste volontairement courte: Vue d'ensemble, Dépenses & revenus, Patrimoine, Vue IA, puis "Plus". Le drawer "Plus" reprend les mêmes groupes que la sidebar.
 
-1. `Cockpit` — point d'entrée, synthèse, "qu'est-ce qui demande attention ?"
-2. `Dépenses` — contrôle du flux du jour
-3. `IA > Advisor` — briefing IA, recommandations, agir
-4. `Patrimoine` — état du stock patrimonial
-5. `Objectifs` — arbitrage et progression
+## Workflow Quotidien Prioritaire
 
-Les signaux (Actualités, Marchés) sont consultés quand le contexte est nécessaire, pas comme routine quotidienne. Ils alimentent l'IA en arrière-plan.
+1. `/` - comprendre ce qui compte aujourd'hui.
+2. `/depenses` - contrôler les flux.
+3. `/ia` ou `/ia/chat` - lire un conseil ou poser une question.
+4. `/patrimoine` et `/investissements` - vérifier le stock patrimonial.
+5. `/objectifs` - suivre la progression.
 
-## Principes de navigation
+Les surfaces Intelligence & Admin se consultent pour auditer, diagnostiquer ou rechercher. Elles alimentent l'Advisor, mais ne sont pas une routine obligatoire.
 
-1. **3 sections claires** — finances personnelles, IA, données externes
-2. **Chaque page a un rôle clair** — pas de chevauchement
-3. **Progressive disclosure** — le cockpit montre l'essentiel, les pages dédiées montrent le détail
-4. **URL = état** — les filtres (range, etc.) vivent dans les search params URL
-5. **Loaders = fraîcheur** — chaque page prefetch ses données dans le loader TanStack
-6. **Fail-soft** — si une query échoue, la page reste utilisable
-7. **IA first-class** — l'IA a sa propre section, pas un widget dans une page news
+## Principes
 
-## Relation entre surfaces métier
-
-```
-                    ┌─────────────┐
-                    │   COCKPIT   │ ← point d'entrée
-                    │ (synthèse)  │
-                    └──────┬──────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-    ┌─────┴─────┐   ┌─────┴─────┐   ┌─────┴──────┐
-    │ Dépenses  │   │ Patrimoine│   │ Investiss. │
-    │(flux)     │   │(stock)    │   │(positions) │
-    └───────────┘   └───────────┘   └────────────┘
-          │
-    ┌─────┴─────┐
-    │ Objectifs │
-    │(planning) │
-    └───────────┘
-
-    ┌─────────────────────────────────────┐
-    │             IA                      │
-    │  Advisor → Chat → Mémoire → Coûts  │
-    │  (enrichi par Données & signaux)    │
-    └─────────────────────────────────────┘
-                     ↑
-    ┌────────────────┼──────────────────┐
-    │ Actualités │ Marchés │ Sources    │
-    │ (contexte externe / signaux)      │
-    └───────────────────────────────────┘
-```
-
-## Guidelines pour les futures évolutions
-
-### Ajouter une page
-
-1. Créer `apps/web/src/routes/_app/{section}/{nom}.tsx`
-2. Ajouter le loader avec prefetch des queries nécessaires
-3. Ajouter l'entrée dans `NAV_ITEMS` (`nav-items.ts`) avec le bon `group`
-4. Mettre à jour ce document
-5. Vérifier que la bottom nav mobile reste gérable (max 4 tabs + Plus)
-
-### Ajouter au cockpit
-
-Le cockpit ne doit PAS grossir indéfiniment. Avant d'ajouter une carte :
-- Est-ce que l'utilisateur a besoin de cette info **chaque jour** ?
-- Est-ce que ça ne fait pas doublon avec une page dédiée ?
-- Est-ce que ça peut être un **lien** vers la page dédiée plutôt qu'une duplication ?
-
-### Navigation source de vérité
-
-`apps/web/src/components/shell/nav-items.ts` est la source unique pour :
-- tous les items de navigation
-- les groupes (cockpit, ia, signaux)
-- les priorités mobile
-- les descriptions et icônes
+1. Le cockpit digère; il ne copie pas les terminaux experts.
+2. L'Advisor explique et recommande; il ne remplace pas les sources de vérité financières.
+3. Intelligence & Admin expose les données brutes, la fraîcheur, les diagnostics et la recherche.
+4. Demo reste déterministe et mock-backed; admin peut lire les providers derrière les garde-fous existants.
+5. Les routes existantes restent accessibles ou redirigées.

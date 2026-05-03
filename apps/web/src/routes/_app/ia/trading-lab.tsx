@@ -101,8 +101,9 @@ function TradingLabPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Expert · Recherche papier"
         title="Trading Lab"
-        description="Recherche papier, backtests et stratégies — pas de trading réel."
+        description="Espace expert pour simulation et backtests. Aucun capital réel, aucun ordre, aucune exécution."
       />
 
       {/* Paper-only warning */}

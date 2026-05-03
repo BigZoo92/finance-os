@@ -152,10 +152,10 @@ function ParametresPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Système"
+        eyebrow="Intelligence & Admin"
         icon="⚙"
         title="Paramètres"
-        description="Notifications, exports, recompute dérivé et configuration de votre cockpit."
+        description="Configuration avancée: notifications, exports, recompute dérivé et réglages du cockpit."
       />
 
       {/* Push notifications */}
