@@ -1,5 +1,6 @@
 export * from './assets'
 export * from './ai'
+export * from './advisor-journal'
 export * from './derived-recompute'
 export * from './external-investments'
 export * from './goals'

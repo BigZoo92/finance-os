@@ -1,10 +1,16 @@
 import { computeAiBudgetState } from '@finance-os/ai'
 import { schema } from '@finance-os/db'
-import { desc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorDailyBriefResponse,
+  DashboardAdvisorDecisionJournalEntryResponse,
+  DashboardAdvisorDecisionJournalListResponse,
+  DashboardAdvisorDecisionKind,
+  DashboardAdvisorDecisionOutcomeKind,
+  DashboardAdvisorDecisionOutcomeResponse,
+  DashboardAdvisorDecisionReasonCode,
   DashboardAdvisorEvalRunResponse,
   DashboardAdvisorEvalsResponse,
   DashboardAdvisorManualOperationResponse,
@@ -35,6 +41,120 @@ const toNumber = (value: unknown) => {
 const toNumericString = (value: number, digits = 6) => value.toFixed(digits)
 
 const toIsoString = (value: Date | null | undefined) => value?.toISOString() ?? null
+
+const JOURNAL_LIST_LIMIT_DEFAULT = 50
+const JOURNAL_LIST_LIMIT_MAX = 200
+
+const clampJournalLimit = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) {
+    return JOURNAL_LIST_LIMIT_DEFAULT
+  }
+  return Math.min(Math.floor(value), JOURNAL_LIST_LIMIT_MAX)
+}
+
+const KNOWN_DECISION_KINDS: ReadonlySet<DashboardAdvisorDecisionKind> = new Set([
+  'accepted',
+  'rejected',
+  'deferred',
+  'ignored',
+])
+
+const KNOWN_OUTCOME_KINDS: ReadonlySet<DashboardAdvisorDecisionOutcomeKind> = new Set([
+  'positive',
+  'negative',
+  'neutral',
+  'mixed',
+  'unknown',
+])
+
+const KNOWN_REASON_CODES: ReadonlySet<DashboardAdvisorDecisionReasonCode> = new Set([
+  'accepted',
+  'rejected_low_confidence',
+  'rejected_disagree_thesis',
+  'rejected_risk_mismatch',
+  'deferred_need_more_data',
+  'ignored_no_action',
+  'other',
+])
+
+const normalizeDecisionKind = (raw: string): DashboardAdvisorDecisionKind =>
+  KNOWN_DECISION_KINDS.has(raw as DashboardAdvisorDecisionKind)
+    ? (raw as DashboardAdvisorDecisionKind)
+    : 'ignored'
+
+const normalizeReasonCode = (raw: string): DashboardAdvisorDecisionReasonCode =>
+  KNOWN_REASON_CODES.has(raw as DashboardAdvisorDecisionReasonCode)
+    ? (raw as DashboardAdvisorDecisionReasonCode)
+    : 'other'
+
+const normalizeOutcomeKind = (raw: string): DashboardAdvisorDecisionOutcomeKind =>
+  KNOWN_OUTCOME_KINDS.has(raw as DashboardAdvisorDecisionOutcomeKind)
+    ? (raw as DashboardAdvisorDecisionOutcomeKind)
+    : 'unknown'
+
+interface AdvisorDecisionJournalRow {
+  id: number
+  recommendationId: number | null
+  runId: number | null
+  recommendationKey: string | null
+  decision: string
+  reasonCode: string
+  freeNote: string | null
+  decidedBy: string
+  decidedAt: Date
+  expectedOutcomeAt: Date | null
+  scope: string
+  metadata: Record<string, unknown> | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface AdvisorDecisionOutcomeRow {
+  id: number
+  decisionId: number
+  observedAt: Date
+  outcomeKind: string
+  deltaMetrics: Record<string, unknown> | null
+  learningTags: string[]
+  freeNote: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+const mapDecisionOutcomeRow = (
+  row: AdvisorDecisionOutcomeRow
+): DashboardAdvisorDecisionOutcomeResponse => ({
+  id: row.id,
+  decisionId: row.decisionId,
+  observedAt: row.observedAt.toISOString(),
+  outcomeKind: normalizeOutcomeKind(row.outcomeKind),
+  deltaMetrics: row.deltaMetrics ?? null,
+  learningTags: row.learningTags ?? [],
+  freeNote: row.freeNote ?? null,
+  createdAt: row.createdAt.toISOString(),
+  updatedAt: row.updatedAt.toISOString(),
+})
+
+const mapDecisionJournalRow = (
+  row: AdvisorDecisionJournalRow,
+  outcomes: DashboardAdvisorDecisionOutcomeResponse[]
+): DashboardAdvisorDecisionJournalEntryResponse => ({
+  id: row.id,
+  recommendationId: row.recommendationId ?? null,
+  runId: row.runId ?? null,
+  recommendationKey: row.recommendationKey ?? null,
+  decision: normalizeDecisionKind(row.decision),
+  reasonCode: normalizeReasonCode(row.reasonCode),
+  freeNote: row.freeNote ?? null,
+  decidedBy: row.decidedBy,
+  decidedAt: row.decidedAt.toISOString(),
+  expectedOutcomeAt: toIsoString(row.expectedOutcomeAt),
+  scope: row.scope,
+  metadata: row.metadata ?? null,
+  createdAt: row.createdAt.toISOString(),
+  updatedAt: row.updatedAt.toISOString(),
+  outcomes,
+})
 
 const startOfToday = () => {
   const now = new Date()
@@ -1583,6 +1703,158 @@ export const createDashboardAdvisorRepository = ({
         summary: row.summary,
         createdAt: row.createdAt.toISOString(),
       } satisfies DashboardAdvisorEvalRunResponse
+    },
+
+    async createDecisionJournalEntry(input) {
+      const [created] = await db
+        .insert(schema.advisorDecisionJournal)
+        .values({
+          ...(input.recommendationId !== undefined && input.recommendationId !== null
+            ? { recommendationId: input.recommendationId }
+            : {}),
+          ...(input.runId !== undefined && input.runId !== null ? { runId: input.runId } : {}),
+          ...(input.recommendationKey !== undefined && input.recommendationKey !== null
+            ? { recommendationKey: input.recommendationKey }
+            : {}),
+          decision: input.decision,
+          reasonCode: input.reasonCode,
+          ...(input.freeNote !== undefined && input.freeNote !== null
+            ? { freeNote: input.freeNote }
+            : {}),
+          decidedBy: input.decidedBy,
+          ...(input.expectedOutcomeAt !== undefined && input.expectedOutcomeAt !== null
+            ? { expectedOutcomeAt: input.expectedOutcomeAt }
+            : {}),
+          scope: input.scope,
+          ...(input.metadata !== undefined && input.metadata !== null
+            ? { metadata: input.metadata }
+            : {}),
+        })
+        .returning()
+
+      if (!created) {
+        throw new Error('Failed to create advisor decision journal entry')
+      }
+
+      return mapDecisionJournalRow(created, [])
+    },
+
+    async listDecisionJournalEntries(input) {
+      const limit = clampJournalLimit(input.limit)
+      const conditions: SQL[] = []
+      if (typeof input.recommendationId === 'number') {
+        conditions.push(eq(schema.advisorDecisionJournal.recommendationId, input.recommendationId))
+      }
+      if (typeof input.runId === 'number') {
+        conditions.push(eq(schema.advisorDecisionJournal.runId, input.runId))
+      }
+      if (input.decision) {
+        conditions.push(eq(schema.advisorDecisionJournal.decision, input.decision))
+      }
+      if (input.scope) {
+        conditions.push(eq(schema.advisorDecisionJournal.scope, input.scope))
+      }
+
+      const baseQuery = db.select().from(schema.advisorDecisionJournal).$dynamic()
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+      const rows: AdvisorDecisionJournalRow[] = await (whereClause
+        ? baseQuery.where(whereClause)
+        : baseQuery
+      )
+        .orderBy(
+          desc(schema.advisorDecisionJournal.decidedAt),
+          desc(schema.advisorDecisionJournal.id)
+        )
+        .limit(limit)
+
+      if (rows.length === 0) {
+        return { items: [] } satisfies DashboardAdvisorDecisionJournalListResponse
+      }
+
+      const decisionIds = rows.map(row => row.id)
+      const outcomeRows = await db
+        .select()
+        .from(schema.advisorDecisionOutcome)
+        .where(inArray(schema.advisorDecisionOutcome.decisionId, decisionIds))
+        .orderBy(
+          asc(schema.advisorDecisionOutcome.decisionId),
+          asc(schema.advisorDecisionOutcome.observedAt),
+          asc(schema.advisorDecisionOutcome.id)
+        )
+
+      const outcomesByDecision = new Map<number, DashboardAdvisorDecisionOutcomeResponse[]>()
+      for (const outcome of outcomeRows) {
+        const mapped = mapDecisionOutcomeRow(outcome)
+        const list = outcomesByDecision.get(mapped.decisionId)
+        if (list) {
+          list.push(mapped)
+        } else {
+          outcomesByDecision.set(mapped.decisionId, [mapped])
+        }
+      }
+
+      return {
+        items: rows.map(row => mapDecisionJournalRow(row, outcomesByDecision.get(row.id) ?? [])),
+      } satisfies DashboardAdvisorDecisionJournalListResponse
+    },
+
+    async getDecisionJournalEntryById(decisionId) {
+      const [row] = await db
+        .select()
+        .from(schema.advisorDecisionJournal)
+        .where(eq(schema.advisorDecisionJournal.id, decisionId))
+        .limit(1)
+
+      if (!row) {
+        return null
+      }
+
+      const outcomeRows = await db
+        .select()
+        .from(schema.advisorDecisionOutcome)
+        .where(eq(schema.advisorDecisionOutcome.decisionId, decisionId))
+        .orderBy(
+          asc(schema.advisorDecisionOutcome.observedAt),
+          asc(schema.advisorDecisionOutcome.id)
+        )
+
+      return mapDecisionJournalRow(row, outcomeRows.map(mapDecisionOutcomeRow))
+    },
+
+    async createDecisionOutcome(input) {
+      const [created] = await db
+        .insert(schema.advisorDecisionOutcome)
+        .values({
+          decisionId: input.decisionId,
+          outcomeKind: input.outcomeKind,
+          ...(input.deltaMetrics !== undefined && input.deltaMetrics !== null
+            ? { deltaMetrics: input.deltaMetrics }
+            : {}),
+          ...(input.learningTags !== undefined ? { learningTags: input.learningTags } : {}),
+          ...(input.freeNote !== undefined && input.freeNote !== null
+            ? { freeNote: input.freeNote }
+            : {}),
+        })
+        .returning()
+
+      if (!created) {
+        throw new Error('Failed to create advisor decision outcome')
+      }
+
+      return mapDecisionOutcomeRow(created)
+    },
+
+    async listDecisionOutcomesByDecisionId(decisionId) {
+      const rows = await db
+        .select()
+        .from(schema.advisorDecisionOutcome)
+        .where(eq(schema.advisorDecisionOutcome.decisionId, decisionId))
+        .orderBy(
+          asc(schema.advisorDecisionOutcome.observedAt),
+          asc(schema.advisorDecisionOutcome.id)
+        )
+
+      return rows.map(mapDecisionOutcomeRow)
     },
   }
 }

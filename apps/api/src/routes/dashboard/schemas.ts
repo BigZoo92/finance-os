@@ -218,6 +218,72 @@ export const dashboardAdvisorRunBodySchema = t.Object({
   ),
 })
 
+export const dashboardAdvisorDecisionKindSchema = t.Union([
+  t.Literal('accepted'),
+  t.Literal('rejected'),
+  t.Literal('deferred'),
+  t.Literal('ignored'),
+])
+
+export const dashboardAdvisorDecisionReasonCodeSchema = t.Union([
+  t.Literal('accepted'),
+  t.Literal('rejected_low_confidence'),
+  t.Literal('rejected_disagree_thesis'),
+  t.Literal('rejected_risk_mismatch'),
+  t.Literal('deferred_need_more_data'),
+  t.Literal('ignored_no_action'),
+  t.Literal('other'),
+])
+
+export const dashboardAdvisorDecisionOutcomeKindSchema = t.Union([
+  t.Literal('positive'),
+  t.Literal('negative'),
+  t.Literal('neutral'),
+  t.Literal('mixed'),
+  t.Literal('unknown'),
+])
+
+const isoTimestampPattern =
+  '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,3})?)?(Z|[+-]\\d{2}:?\\d{2})?$'
+
+export const dashboardAdvisorJournalListQuerySchema = t.Object({
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200 })),
+  recommendationId: t.Optional(t.Numeric({ minimum: 1 })),
+  runId: t.Optional(t.Numeric({ minimum: 1 })),
+  decision: t.Optional(dashboardAdvisorDecisionKindSchema),
+})
+
+export const dashboardAdvisorJournalParamsSchema = t.Object({
+  decisionId: t.Numeric({ minimum: 1 }),
+})
+
+export const dashboardAdvisorJournalCreateBodySchema = t.Object({
+  recommendationId: t.Optional(t.Union([t.Integer({ minimum: 1 }), t.Null()])),
+  runId: t.Optional(t.Union([t.Integer({ minimum: 1 }), t.Null()])),
+  recommendationKey: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 200 }), t.Null()])),
+  decision: dashboardAdvisorDecisionKindSchema,
+  reasonCode: dashboardAdvisorDecisionReasonCodeSchema,
+  freeNote: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+  decidedBy: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 80 }), t.Null()])),
+  expectedOutcomeAt: t.Optional(
+    t.Union([t.String({ pattern: isoTimestampPattern, maxLength: 40 }), t.Null()])
+  ),
+  metadata: t.Optional(
+    t.Union([t.Record(t.String({ minLength: 1, maxLength: 80 }), t.Any()), t.Null()])
+  ),
+})
+
+export const dashboardAdvisorDecisionOutcomeCreateBodySchema = t.Object({
+  outcomeKind: dashboardAdvisorDecisionOutcomeKindSchema,
+  deltaMetrics: t.Optional(
+    t.Union([t.Record(t.String({ minLength: 1, maxLength: 80 }), t.Any()), t.Null()])
+  ),
+  learningTags: t.Optional(
+    t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 32 })
+  ),
+  freeNote: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+})
+
 export const dashboardAdvisorManualOperationParamsSchema = t.Object({
   operationId: t.String({
     minLength: 1,

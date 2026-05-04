@@ -8,6 +8,7 @@ import {
   type AdvisorKnowledgeContextFetcher,
   createDashboardAdvisorUseCases,
 } from './domain/advisor/create-dashboard-advisor-use-cases'
+import { createDecisionJournalUseCases } from './domain/advisor/create-decision-journal-use-cases'
 import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
 import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
@@ -447,6 +448,10 @@ export const createDashboardRouteRuntime = ({
     },
   })
 
+  const advisorDecisionJournal = createDecisionJournalUseCases({
+    repository: advisorRepository,
+  })
+
   const manualAdvisorOrchestration = createAdvisorManualRefreshAndRunUseCases({
     repository: advisorRepository,
     readModel,
@@ -598,6 +603,10 @@ export const createDashboardRouteRuntime = ({
       getAdvisorChat: advisor.getAdvisorChat,
       postAdvisorChat: advisor.postAdvisorChat,
       getAdvisorEvals: advisor.getAdvisorEvals,
+      listAdvisorDecisionJournal: advisorDecisionJournal.listAdvisorDecisionJournal,
+      getAdvisorDecisionJournalEntry: advisorDecisionJournal.getAdvisorDecisionJournalEntry,
+      createAdvisorDecisionJournalEntry: advisorDecisionJournal.createAdvisorDecisionJournalEntry,
+      createAdvisorDecisionOutcome: advisorDecisionJournal.createAdvisorDecisionOutcome,
     },
   }
 }

@@ -1,11 +1,16 @@
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
-import { requireAdminOrInternalToken } from '../../../auth/guard'
+import { requireAdmin, requireAdminOrInternalToken } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
+import { isDecisionJournalValidationError } from '../domain/advisor/create-decision-journal-use-cases'
 import {
   dashboardAdvisorChatBodySchema,
   dashboardAdvisorChatQuerySchema,
+  dashboardAdvisorDecisionOutcomeCreateBodySchema,
+  dashboardAdvisorJournalCreateBodySchema,
+  dashboardAdvisorJournalListQuerySchema,
+  dashboardAdvisorJournalParamsSchema,
   dashboardAdvisorKnowledgeAnswerQuerySchema,
   dashboardAdvisorListQuerySchema,
   dashboardAdvisorManualOperationParamsSchema,
@@ -98,6 +103,26 @@ const ensureAdminMutationAccess = ({
 }) => {
   try {
     requireAdminOrInternalToken(context)
+    return null
+  } catch {
+    return buildAdvisorRouteError({
+      context,
+      status: 403,
+      code: 'DEMO_MODE_FORBIDDEN',
+      message,
+    })
+  }
+}
+
+const ensureAdminSessionOnly = ({
+  context,
+  message,
+}: {
+  context: object & { set: { status?: number | string } }
+  message: string
+}) => {
+  try {
+    requireAdmin(context)
     return null
   } catch {
     return buildAdvisorRouteError({
@@ -690,6 +715,231 @@ export const createAdvisorRoute = ({
         requestId: requestMeta.requestId,
       })
     })
+    .get(
+      '/advisor/journal',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.listAdvisorDecisionJournal) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor decision journal runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.listAdvisorDecisionJournal({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.limit !== undefined ? { limit: context.query.limit } : {}),
+          ...(context.query.recommendationId !== undefined
+            ? { recommendationId: context.query.recommendationId }
+            : {}),
+          ...(context.query.runId !== undefined ? { runId: context.query.runId } : {}),
+          ...(context.query.decision !== undefined ? { decision: context.query.decision } : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorJournalListQuerySchema,
+      }
+    )
+    .get(
+      '/advisor/journal/:decisionId',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorDecisionJournalEntry) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor decision journal runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        const entry = await dashboard.useCases.getAdvisorDecisionJournalEntry({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          decisionId: context.params.decisionId,
+        })
+
+        if (!entry) {
+          return buildAdvisorRouteError({
+            context,
+            status: 404,
+            code: 'NOT_FOUND',
+            message: 'Decision journal entry not found.',
+          })
+        }
+
+        return entry
+      },
+      {
+        params: dashboardAdvisorJournalParamsSchema,
+      }
+    )
+    .post(
+      '/advisor/journal',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const adminError = ensureAdminSessionOnly({
+          context,
+          message: 'Admin session required for decision journal entries.',
+        })
+        if (adminError) {
+          return adminError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.createAdvisorDecisionJournalEntry) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor decision journal runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        try {
+          const created = await dashboard.useCases.createAdvisorDecisionJournalEntry({
+            mode: auth.mode,
+            requestId: requestMeta.requestId,
+            decision: context.body.decision,
+            reasonCode: context.body.reasonCode,
+            ...(context.body.recommendationId !== undefined
+              ? { recommendationId: context.body.recommendationId }
+              : {}),
+            ...(context.body.runId !== undefined ? { runId: context.body.runId } : {}),
+            ...(context.body.recommendationKey !== undefined
+              ? { recommendationKey: context.body.recommendationKey }
+              : {}),
+            ...(context.body.freeNote !== undefined ? { freeNote: context.body.freeNote } : {}),
+            ...(context.body.decidedBy !== undefined ? { decidedBy: context.body.decidedBy } : {}),
+            ...(context.body.expectedOutcomeAt !== undefined
+              ? { expectedOutcomeAt: context.body.expectedOutcomeAt }
+              : {}),
+            ...(context.body.metadata !== undefined ? { metadata: context.body.metadata } : {}),
+          })
+          context.set.status = 201
+          return created
+        } catch (error) {
+          if (isDecisionJournalValidationError(error)) {
+            return buildAdvisorRouteError({
+              context,
+              status: 422,
+              code: error.code,
+              message: error.message,
+            })
+          }
+          throw error
+        }
+      },
+      {
+        body: dashboardAdvisorJournalCreateBodySchema,
+      }
+    )
+    .post(
+      '/advisor/journal/:decisionId/outcomes',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const adminError = ensureAdminSessionOnly({
+          context,
+          message: 'Admin session required for decision outcome entries.',
+        })
+        if (adminError) {
+          return adminError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (
+          !dashboard.useCases.createAdvisorDecisionOutcome ||
+          !dashboard.useCases.getAdvisorDecisionJournalEntry
+        ) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor decision journal runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+
+        const parent = await dashboard.useCases.getAdvisorDecisionJournalEntry({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          decisionId: context.params.decisionId,
+        })
+
+        if (!parent) {
+          return buildAdvisorRouteError({
+            context,
+            status: 404,
+            code: 'NOT_FOUND',
+            message: 'Decision journal entry not found.',
+          })
+        }
+
+        context.set.status = 201
+        return dashboard.useCases.createAdvisorDecisionOutcome({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          decisionId: context.params.decisionId,
+          outcomeKind: context.body.outcomeKind,
+          ...(context.body.deltaMetrics !== undefined
+            ? { deltaMetrics: context.body.deltaMetrics }
+            : {}),
+          ...(context.body.learningTags !== undefined
+            ? { learningTags: context.body.learningTags }
+            : {}),
+          ...(context.body.freeNote !== undefined ? { freeNote: context.body.freeNote } : {}),
+        })
+      },
+      {
+        params: dashboardAdvisorJournalParamsSchema,
+        body: dashboardAdvisorDecisionOutcomeCreateBodySchema,
+      }
+    )
     .post(
       '/advisor/run-daily',
       async context => {

@@ -4,6 +4,12 @@ import type { createRedisClient } from '@finance-os/redis'
 import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorDecisionJournalCreateInput,
+  DashboardAdvisorDecisionJournalEntryResponse,
+  DashboardAdvisorDecisionJournalListResponse,
+  DashboardAdvisorDecisionKind,
+  DashboardAdvisorDecisionOutcomeCreateInput,
+  DashboardAdvisorDecisionOutcomeResponse,
   DashboardAdvisorKnowledgeAnswerResponse,
   DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatPostResponse,
@@ -1115,6 +1121,38 @@ export interface DashboardAdvisorRepository {
   getLatestManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
   listManualOperations: (limit: number) => Promise<DashboardAdvisorManualOperationResponse[]>
   getLatestActiveManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
+  createDecisionJournalEntry: (input: {
+    recommendationId?: number | null
+    runId?: number | null
+    recommendationKey?: string | null
+    decision: DashboardAdvisorDecisionKind
+    reasonCode: string
+    freeNote?: string | null
+    decidedBy: string
+    expectedOutcomeAt?: Date | null
+    metadata?: Record<string, unknown> | null
+    scope: string
+  }) => Promise<DashboardAdvisorDecisionJournalEntryResponse>
+  listDecisionJournalEntries: (input: {
+    limit: number
+    recommendationId?: number | null
+    runId?: number | null
+    decision?: DashboardAdvisorDecisionKind | null
+    scope?: string | null
+  }) => Promise<DashboardAdvisorDecisionJournalListResponse>
+  getDecisionJournalEntryById: (
+    decisionId: number
+  ) => Promise<DashboardAdvisorDecisionJournalEntryResponse | null>
+  createDecisionOutcome: (input: {
+    decisionId: number
+    outcomeKind: string
+    deltaMetrics?: Record<string, unknown> | null
+    learningTags?: string[]
+    freeNote?: string | null
+  }) => Promise<DashboardAdvisorDecisionOutcomeResponse>
+  listDecisionOutcomesByDecisionId: (
+    decisionId: number
+  ) => Promise<DashboardAdvisorDecisionOutcomeResponse[]>
 }
 
 export interface DashboardDerivedRecomputeRepository {
@@ -1313,6 +1351,29 @@ export interface DashboardUseCases {
     mode: 'demo' | 'admin'
     requestId: string
   }) => Promise<DashboardAdvisorEvalsResponse>
+  listAdvisorDecisionJournal?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    limit?: number
+    recommendationId?: number | null
+    runId?: number | null
+    decision?: DashboardAdvisorDecisionKind | null
+  }) => Promise<DashboardAdvisorDecisionJournalListResponse>
+  getAdvisorDecisionJournalEntry?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    decisionId: number
+  }) => Promise<DashboardAdvisorDecisionJournalEntryResponse | null>
+  createAdvisorDecisionJournalEntry?: (
+    input: { mode: 'demo' | 'admin'; requestId: string } & DashboardAdvisorDecisionJournalCreateInput
+  ) => Promise<DashboardAdvisorDecisionJournalEntryResponse>
+  createAdvisorDecisionOutcome?: (
+    input: {
+      mode: 'demo' | 'admin'
+      requestId: string
+      decisionId: number
+    } & DashboardAdvisorDecisionOutcomeCreateInput
+  ) => Promise<DashboardAdvisorDecisionOutcomeResponse>
 }
 
 export interface DashboardNewsUseCases {

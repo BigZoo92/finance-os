@@ -508,3 +508,74 @@ export interface DashboardAdvisorManualRefreshAndRunPostResponse {
   alreadyRunning: boolean
   operation: DashboardAdvisorManualOperationResponse
 }
+
+export type DashboardAdvisorDecisionKind = 'accepted' | 'rejected' | 'deferred' | 'ignored'
+
+export type DashboardAdvisorDecisionReasonCode =
+  | 'accepted'
+  | 'rejected_low_confidence'
+  | 'rejected_disagree_thesis'
+  | 'rejected_risk_mismatch'
+  | 'deferred_need_more_data'
+  | 'ignored_no_action'
+  | 'other'
+
+export type DashboardAdvisorDecisionOutcomeKind =
+  | 'positive'
+  | 'negative'
+  | 'neutral'
+  | 'mixed'
+  | 'unknown'
+
+export interface DashboardAdvisorDecisionOutcomeResponse {
+  id: number
+  decisionId: number
+  observedAt: string
+  outcomeKind: DashboardAdvisorDecisionOutcomeKind
+  deltaMetrics: Record<string, unknown> | null
+  learningTags: string[]
+  freeNote: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DashboardAdvisorDecisionJournalEntryResponse {
+  id: number
+  recommendationId: number | null
+  runId: number | null
+  recommendationKey: string | null
+  decision: DashboardAdvisorDecisionKind
+  reasonCode: DashboardAdvisorDecisionReasonCode
+  freeNote: string | null
+  decidedBy: string
+  decidedAt: string
+  expectedOutcomeAt: string | null
+  scope: string
+  metadata: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+  outcomes: DashboardAdvisorDecisionOutcomeResponse[]
+}
+
+export interface DashboardAdvisorDecisionJournalListResponse {
+  items: DashboardAdvisorDecisionJournalEntryResponse[]
+}
+
+export interface DashboardAdvisorDecisionJournalCreateInput {
+  recommendationId?: number | null
+  runId?: number | null
+  recommendationKey?: string | null
+  decision: DashboardAdvisorDecisionKind
+  reasonCode: DashboardAdvisorDecisionReasonCode
+  freeNote?: string | null
+  decidedBy?: string | null
+  expectedOutcomeAt?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
+export interface DashboardAdvisorDecisionOutcomeCreateInput {
+  outcomeKind: DashboardAdvisorDecisionOutcomeKind
+  deltaMetrics?: Record<string, unknown> | null
+  learningTags?: string[]
+  freeNote?: string | null
+}
