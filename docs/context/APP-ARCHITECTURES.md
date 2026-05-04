@@ -330,6 +330,7 @@ Route handler (HTTP in/out)
 |---|---|---|
 | `/auth` | Authentification | login, logout, me |
 | `/dashboard` | Cockpit | summary, transactions, analytics, goals, news, news/context, markets, advisor, manual-assets, derived-recompute |
+| `/ops/refresh` | Orchestration admin | jobs, status, runs, trigger global, trigger individuel |
 | `/integrations/powens` | Banques | connect-url, callback, sync, status, audit-trail, backlog, sync-runs, diagnostics |
 | `/enrichment` | Enrichissement | notes, bulk-triage |
 | `/notifications/push` | Notifications | settings, subscription, delivery |
@@ -388,6 +389,11 @@ graph TB
             AI_DAILY_INTERVAL_MS
             POST /dashboard/advisor/run-daily
             (optionnel)"]
+            DailyIntel["setInterval
+            DAILY_INTELLIGENCE_CRON
+            POST /ops/refresh/all
+            lock Redis
+            (optionnel)"]
         end
 
         subgraph "Heartbeat"
@@ -416,12 +422,14 @@ graph TB
     Entry --> NewsSync
     Entry --> MarketSync
     Entry --> AdvisorDaily
+    Entry --> DailyIntel
 ```
 
 Posture recommandee actuelle:
 
 - la mission complete advisor est lancee manuellement depuis l'API/web
 - les schedulers Powens/news/markets/advisor restent prets pour plus tard, mais desactives par env dans la configuration recommandee
+- `DAILY_INTELLIGENCE_ENABLED=true` active une orchestration globale admin/internal a 09:00 Europe/Paris du lundi au vendredi par defaut
 
 ### Types de jobs
 
@@ -429,6 +437,22 @@ Posture recommandee actuelle:
 |---|---|---|
 | `powens.syncConnection` | Manual sync, callback | Sync une connexion specifique |
 | `powens.syncAll` | Scheduler auto-sync | Sync toutes les connexions actives |
+| `daily-intelligence` | Worker cron ou UI admin `/orchestration` | Appelle `/ops/refresh/all`, qui reutilise l'orchestrateur Advisor manuel et historise les etapes existantes |
+
+### Orchestration refresh
+
+Le registry `apps/api/src/routes/ops/refresh-registry.ts` declare les jobs disponibles avec `id`, domaine, dependances, activation, autorisation manuelle, timeout et retry policy. Une nouvelle source doit ajouter un job dans ce registry et brancher son runner sur un use-case domaine; les routes HTTP restent limitees a la validation/auth/reponse.
+
+Endpoints admin/internal:
+
+- `GET /ops/refresh/jobs`
+- `GET /ops/refresh/runs`
+- `GET /ops/refresh/runs/:runId`
+- `GET /ops/refresh/status`
+- `POST /ops/refresh/all`
+- `POST /ops/refresh/jobs/:jobId/run`
+
+Demo renvoie des metadonnees deterministes en lecture et bloque les triggers reels. Les erreurs exposees sont redigees et les logs doivent garder `requestId`, `runId` et `jobId` sans secrets.
 
 ### Metriques Redis (par le worker)
 

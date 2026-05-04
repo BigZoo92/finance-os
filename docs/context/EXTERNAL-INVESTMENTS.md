@@ -150,6 +150,10 @@ The manual `Tout rafraichir et analyser` mission now runs:
 
 IBKR failure does not block Binance. External investment failures do not block news, markets or Advisor; they mark the operation degraded with request IDs and safe reason codes.
 
+The Daily Intelligence Run reuses this same safe path through `/ops/refresh/all`. Individual refresh jobs are also exposed for `external-investments`, `ibkr`, and `binance-crypto`; they enqueue read-only syncs, regenerate the compact investment context bundle when available, and never expose provider credentials or raw signed payloads to the browser.
+
+Crypto coverage is deliberately conservative: Binance Spot/Wallet data, persisted crypto valuation signals, market/news context, staleness warnings, concentration and diversification risks can reach the Advisor bundle, but no job can create orders, withdrawals, transfers, convert/margin/futures/staking paths, or direct buy/sell advice.
+
 ## Environment
 
 Server-only app-level settings:

@@ -16,6 +16,7 @@ const KEYWORDS: Record<string, string> = {
   '/objectifs': 'goals épargne cibles progression',
   '/integrations': 'powens sync banque connexion provider admin expert',
   '/sante': 'health diagnostics système admin expert',
+  '/orchestration': 'refresh daily intelligence cron jobs ops orchestration sync admin',
   '/parametres': 'settings notifications export config admin',
   '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils vue ia',
   '/ia/chat': 'chat conversation question reponse advisor dialogue',

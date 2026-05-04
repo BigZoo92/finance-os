@@ -566,6 +566,13 @@ export const createDashboardRouteRuntime = ({
         source: 'cache' as const,
         item: await externalInvestments.getLatestContextBundle(),
       }),
+      triggerExternalInvestmentProviderSync: async ({ provider, requestId }) =>
+        externalInvestmentJobs.enqueueProviderSync({
+          provider,
+          requestId,
+        }),
+      generateExternalInvestmentContextBundle: ({ requestId }) =>
+        externalInvestments.generateContextBundle({ requestId }),
       getAdvisorOverview: advisor.getAdvisorOverview,
       getAdvisorDailyBrief: advisor.getAdvisorDailyBrief,
       getAdvisorRecommendations: advisor.getAdvisorRecommendations,
@@ -578,6 +585,8 @@ export const createDashboardRouteRuntime = ({
       runAdvisorDaily: advisor.runAdvisorDaily,
       getLatestAdvisorManualOperation: async () =>
         manualAdvisorOrchestration.getLatestManualOperation(),
+      listAdvisorManualOperations: async ({ limit }) =>
+        manualAdvisorOrchestration.listManualOperations(limit),
       getAdvisorManualOperationById: async ({ operationId }) =>
         manualAdvisorOrchestration.getManualOperationById(operationId),
       runAdvisorManualRefreshAndAnalysis: async ({ requestId, triggerSource }) =>

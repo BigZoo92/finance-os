@@ -1,6 +1,6 @@
 # Finance-OS -- Variables d'environnement & Feature Flags
 
-> **Derniere mise a jour** : 2026-04-26
+> **Derniere mise a jour** : 2026-05-03
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle variable ajoutee.
 
@@ -178,6 +178,12 @@ Notes:
 | `NEWS_FETCH_INTERVAL_MS` | `14400000` | Dokploy | Worker | Intervalle du scheduler news (4h par defaut) |
 | `MARKET_DATA_AUTO_REFRESH_ENABLED` | `false` | Dokploy | Worker | Activer le scheduler de refresh marches |
 | `MARKET_DATA_REFRESH_INTERVAL_MS` | `21600000` | Dokploy | Worker | Intervalle du scheduler marches (6h par defaut) |
+| `DAILY_INTELLIGENCE_ENABLED` | `false` | Dokploy, Local | Worker | Active le scheduler Daily Intelligence Run |
+| `DAILY_INTELLIGENCE_CRON` | `0 9 * * 1-5` | Dokploy, Local | Worker | Heure cible du run global. Le worker applique minute/heure et garde en plus lundi-vendredi |
+| `DAILY_INTELLIGENCE_TIMEZONE` | `Europe/Paris` | Dokploy, Local | Worker | Timezone du run global |
+| `DAILY_INTELLIGENCE_MARKET_OPEN_HOUR` | `9` | Dokploy, Local | Worker | Heure locale de repli si le champ heure du cron est absent ou wildcard |
+
+Daily Intelligence appelle `POST API_INTERNAL_URL/ops/refresh/all` avec `PRIVATE_ACCESS_TOKEN` en `x-internal-token`. Le lock Redis `daily-intelligence:run:lock` evite les doubles executions entre instances worker.
 
 ---
 

@@ -34,6 +34,10 @@ import {
   startDashboardAdvisorScheduler,
   triggerDashboardAdvisorDailyRun,
 } from './advisor-daily-scheduler'
+import {
+  startDailyIntelligenceScheduler,
+  triggerDailyIntelligenceRun,
+} from './daily-intelligence-scheduler'
 import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
 import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
 import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
@@ -113,6 +117,7 @@ let schedulerTimer: ReturnType<typeof setInterval> | null = null
 let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let marketSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let advisorSchedulerTimer: ReturnType<typeof setInterval> | null = null
+let dailyIntelligenceSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let socialSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let attentionSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
@@ -1474,6 +1479,30 @@ const startAdvisorScheduler = () => {
   })
 }
 
+const startDailyIntelligenceRunScheduler = () => {
+  dailyIntelligenceSchedulerTimer = startDailyIntelligenceScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    enabled: env.DAILY_INTELLIGENCE_ENABLED,
+    cron: env.DAILY_INTELLIGENCE_CRON,
+    timezone: env.DAILY_INTELLIGENCE_TIMEZONE,
+    marketOpenHour: env.DAILY_INTELLIGENCE_MARKET_OPEN_HOUR,
+    trigger: () =>
+      triggerDailyIntelligenceRun({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker daily intelligence scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
 const startAttentionScheduler = () => {
   attentionSchedulerTimer = startAttentionRebuildScheduler({
     externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
@@ -1623,6 +1652,7 @@ const start = async () => {
   startNewsScheduler()
   startMarketScheduler()
   startAdvisorScheduler()
+  startDailyIntelligenceRunScheduler()
   startSocialScheduler()
   startAttentionScheduler()
   await consumeJobs()
@@ -1659,6 +1689,11 @@ const shutdown = async (signal: string) => {
   if (advisorSchedulerTimer) {
     clearInterval(advisorSchedulerTimer)
     advisorSchedulerTimer = null
+  }
+
+  if (dailyIntelligenceSchedulerTimer) {
+    clearInterval(dailyIntelligenceSchedulerTimer)
+    dailyIntelligenceSchedulerTimer = null
   }
 
   if (socialSchedulerTimer) {

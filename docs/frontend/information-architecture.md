@@ -81,6 +81,7 @@ Bornes explicites:
 | `/ia/trading-lab` | Trading Lab | Recherche papier, backtests et scénarios, sans trading réel | `tradingLab*`, `attentionItems` |
 | `/ia/couts` | Coûts IA | Tokens, modèles, budget et runs Advisor, admin-only en navigation | `dashboardAdvisorSpend`, `dashboardAdvisorRuns` |
 | `/integrations` | Intégrations | Connexions Powens, sync runs, diagnostics, audit trail, credentials read-only externes | `powens*`, `externalInvestments*` |
+| `/orchestration` | Orchestration | Daily Intelligence Run, relance globale et relances individuelles, admin-only en navigation | `opsRefreshStatus`, `opsRefreshJobs` |
 | `/sante` | Santé | État système, provider health, sync et pipelines dérivés | Tous les endpoints status/health |
 | `/parametres` | Paramètres | Notifications, exports, recompute dérivé et configuration avancée | `pushSettings`, `derivedRecomputeStatus` |
 

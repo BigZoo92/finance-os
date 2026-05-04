@@ -83,6 +83,7 @@ const NO_STORE_PREFIX_PATHS = [
   '/auth/',
   '/integrations/powens/',
   '/integrations/external-investments/',
+  '/ops/refresh/',
   '/enrichment/',
   '/debug/',
 ]

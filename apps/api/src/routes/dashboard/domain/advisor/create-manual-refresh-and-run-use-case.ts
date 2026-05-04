@@ -821,6 +821,8 @@ export const createAdvisorManualRefreshAndRunUseCases = ({
   return {
     getLatestManualOperation: async () => repository.getLatestManualOperation(),
 
+    listManualOperations: async (limit: number) => repository.listManualOperations(limit),
+
     getManualOperationById: async (operationId: string) => repository.getManualOperation(operationId),
 
     startManualRefreshAndRun: async ({

@@ -20,6 +20,7 @@ import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
 import { Route as AppSanteRouteImport } from './routes/_app/sante'
 import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
 import { Route as AppParametresRouteImport } from './routes/_app/parametres'
+import { Route as AppOrchestrationRouteImport } from './routes/_app/orchestration'
 import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
 import { Route as AppMemoireRouteImport } from './routes/_app/memoire'
 import { Route as AppMarchesRouteImport } from './routes/_app/marches'
@@ -91,6 +92,11 @@ const AppPatrimoineRoute = AppPatrimoineRouteImport.update({
 const AppParametresRoute = AppParametresRouteImport.update({
   id: '/parametres',
   path: '/parametres',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrchestrationRoute = AppOrchestrationRouteImport.update({
+  id: '/orchestration',
+  path: '/orchestration',
   getParentRoute: () => AppRoute,
 } as any)
 const AppObjectifsRoute = AppObjectifsRouteImport.update({
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/marches': typeof AppMarchesRoute
   '/memoire': typeof AppMemoireRoute
   '/objectifs': typeof AppObjectifsRoute
+  '/orchestration': typeof AppOrchestrationRoute
   '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
   '/sante': typeof AppSanteRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/marches': typeof AppMarchesRoute
   '/memoire': typeof AppMemoireRoute
   '/objectifs': typeof AppObjectifsRoute
+  '/orchestration': typeof AppOrchestrationRoute
   '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
   '/sante': typeof AppSanteRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/_app/marches': typeof AppMarchesRoute
   '/_app/memoire': typeof AppMemoireRoute
   '/_app/objectifs': typeof AppObjectifsRoute
+  '/_app/orchestration': typeof AppOrchestrationRoute
   '/_app/parametres': typeof AppParametresRoute
   '/_app/patrimoine': typeof AppPatrimoineRoute
   '/_app/sante': typeof AppSanteRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/marches'
     | '/memoire'
     | '/objectifs'
+    | '/orchestration'
     | '/parametres'
     | '/patrimoine'
     | '/sante'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/marches'
     | '/memoire'
     | '/objectifs'
+    | '/orchestration'
     | '/parametres'
     | '/patrimoine'
     | '/sante'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '/_app/marches'
     | '/_app/memoire'
     | '/_app/objectifs'
+    | '/_app/orchestration'
     | '/_app/parametres'
     | '/_app/patrimoine'
     | '/_app/sante'
@@ -457,6 +469,13 @@ declare module '@tanstack/react-router' {
       path: '/parametres'
       fullPath: '/parametres'
       preLoaderRoute: typeof AppParametresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orchestration': {
+      id: '/_app/orchestration'
+      path: '/orchestration'
+      fullPath: '/orchestration'
+      preLoaderRoute: typeof AppOrchestrationRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/objectifs': {
@@ -597,6 +616,7 @@ interface AppRouteChildren {
   AppMarchesRoute: typeof AppMarchesRoute
   AppMemoireRoute: typeof AppMemoireRoute
   AppObjectifsRoute: typeof AppObjectifsRoute
+  AppOrchestrationRoute: typeof AppOrchestrationRoute
   AppParametresRoute: typeof AppParametresRoute
   AppPatrimoineRoute: typeof AppPatrimoineRoute
   AppSanteRoute: typeof AppSanteRoute
@@ -622,6 +642,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMarchesRoute: AppMarchesRoute,
   AppMemoireRoute: AppMemoireRoute,
   AppObjectifsRoute: AppObjectifsRoute,
+  AppOrchestrationRoute: AppOrchestrationRoute,
   AppParametresRoute: AppParametresRoute,
   AppPatrimoineRoute: AppPatrimoineRoute,
   AppSanteRoute: AppSanteRoute,

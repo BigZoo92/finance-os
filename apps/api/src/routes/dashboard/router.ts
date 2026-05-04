@@ -17,6 +17,7 @@ import { createTransactionClassificationRoute } from './routes/transaction-class
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
 import type { ApiDb, RedisClient } from './types'
+import { createOpsRefreshRoute } from '../ops/refresh'
 
 export const createDashboardRoutes = ({
   db,
@@ -282,61 +283,78 @@ export const createDashboardRoutes = ({
     binanceSpotEnabled,
   })
 
-  return new Elysia({ prefix: '/dashboard' })
-    .use(createDashboardRuntimePlugin(runtime))
-    .use(createSummaryRoute())
-    .use(createNewsRoute())
+  return new Elysia()
     .use(
-      createMarketsRoute({
-        marketDataForceFixtureFallback,
-      })
+      new Elysia({ prefix: '/dashboard' })
+        .use(createDashboardRuntimePlugin(runtime))
+        .use(createSummaryRoute())
+        .use(createNewsRoute())
+        .use(
+          createMarketsRoute({
+            marketDataForceFixtureFallback,
+          })
+        )
+        .use(createAnalyticsRoute())
+        .use(createManualAssetsRoute())
+        .use(
+          createAdvisorRoute({
+            advisorEnabled: aiAdvisorEnabled,
+            adminOnly: aiAdvisorAdminOnly,
+            chatEnabled: aiChatEnabled,
+            relabelEnabled: aiRelabelEnabled,
+          })
+        )
+        .use(
+          createAdvisorKnowledgeRoute({
+            advisorEnabled: aiAdvisorEnabled,
+            adminOnly: aiAdvisorAdminOnly,
+            knowledgeConfig: {
+              enabled: knowledgeServiceEnabled,
+              url: knowledgeServiceUrl,
+              timeoutMs: knowledgeServiceTimeoutMs,
+              maxContextTokens: knowledgeGraphMaxContextTokens,
+              retrievalMode: knowledgeGraphRetrievalMode,
+              maxPathDepth: knowledgeGraphMaxPathDepth,
+              minConfidence: knowledgeGraphMinConfidence,
+            },
+          })
+        )
+        .use(createDerivedRecomputeRoute())
+        .use(createGoalsRoute())
+        .use(createExternalInvestmentsDashboardRoute())
+        .use(createTransactionsRoute())
+        .use(createTransactionClassificationRoute())
+        .use(createSignalSourcesRoute({ db }))
+        .use(
+          createTradingLabRoute({
+            db,
+            quantServiceEnabled,
+            quantServiceUrl,
+            quantServiceTimeoutMs,
+            knowledgeServiceEnabled,
+            knowledgeServiceUrl,
+            graphIngestEnabled: tradingLabGraphIngestEnabled,
+            marketDataDeps: {
+              eodhdApiKey,
+              twelveDataApiKey,
+              marketDataEodhdEnabled,
+              marketDataTwelveDataEnabled,
+              forceFixtureFallback: marketDataForceFixtureFallback,
+            },
+          })
+        )
     )
-    .use(createAnalyticsRoute())
-    .use(createManualAssetsRoute())
     .use(
-      createAdvisorRoute({
-        advisorEnabled: aiAdvisorEnabled,
-        adminOnly: aiAdvisorAdminOnly,
-        chatEnabled: aiChatEnabled,
-        relabelEnabled: aiRelabelEnabled,
-      })
-    )
-    .use(
-      createAdvisorKnowledgeRoute({
-        advisorEnabled: aiAdvisorEnabled,
-        adminOnly: aiAdvisorAdminOnly,
-        knowledgeConfig: {
-          enabled: knowledgeServiceEnabled,
-          url: knowledgeServiceUrl,
-          timeoutMs: knowledgeServiceTimeoutMs,
-          maxContextTokens: knowledgeGraphMaxContextTokens,
-          retrievalMode: knowledgeGraphRetrievalMode,
-          maxPathDepth: knowledgeGraphMaxPathDepth,
-          minConfidence: knowledgeGraphMinConfidence,
-        },
-      })
-    )
-    .use(createDerivedRecomputeRoute())
-    .use(createGoalsRoute())
-    .use(createExternalInvestmentsDashboardRoute())
-    .use(createTransactionsRoute())
-    .use(createTransactionClassificationRoute())
-    .use(createSignalSourcesRoute({ db }))
-    .use(
-      createTradingLabRoute({
-        db,
-        quantServiceEnabled,
-        quantServiceUrl,
-        quantServiceTimeoutMs,
-        knowledgeServiceEnabled,
-        knowledgeServiceUrl,
-        graphIngestEnabled: tradingLabGraphIngestEnabled,
-        marketDataDeps: {
-          eodhdApiKey,
-          twelveDataApiKey,
-          marketDataEodhdEnabled,
-          marketDataTwelveDataEnabled,
-          forceFixtureFallback: marketDataForceFixtureFallback,
+      createOpsRefreshRoute({
+        runtime,
+        config: {
+          externalInvestmentsEnabled,
+          ibkrFlexEnabled,
+          binanceSpotEnabled,
+          newsEnabled: liveNewsIngestionEnabled,
+          marketsEnabled: marketDataEnabled && marketDataRefreshEnabled,
+          advisorEnabled: aiAdvisorEnabled,
+          socialEnabled: false,
         },
       })
     )

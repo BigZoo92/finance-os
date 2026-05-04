@@ -146,6 +146,8 @@ Le `POST` accepte:
 
 Le bouton advisor `Tout rafraichir et analyser` ne contourne pas ce contrat: il orchestre la meme logique d'ingestion cote serveur, puis attend un etat de fraicheur utilisable avant de lancer l'analyse advisor.
 
+Le Daily Intelligence Run utilise le meme contrat via `POST /ops/refresh/all`. Les jobs `news-finance` et `news-crypto` du registry refresh ne font pas de lecture live depuis le web: ils appellent l'ingestion admin/interne puis lisent le `NewsContextBundle` cache-only pour mesurer les signaux crypto injectables dans le dossier Advisor.
+
 ### 3.4 Scheduler worker
 
 Le worker ajoute un scheduler dedie:
@@ -183,6 +185,13 @@ Ce qui change:
   - chat grounded
 
 Autrement dit, la news stack reste une source structuree et cachee, et l'advisor consomme ses artefacts au lieu d'aller reparcourir le web en direct.
+
+Couverture crypto:
+
+- la taxonomie news couvre crypto/blockchain via le pipeline general;
+- le job `news-crypto` verifie les signaux dont le titre, les entites ou les secteurs contiennent le contexte crypto;
+- le bundle Advisor conserve provenance, score, fraicheur et degradation au lieu d'envoyer un dump brut;
+- les recommandations crypto restent informatives: exposition, concentration, volatilite, diversification et evenements a surveiller, jamais ordre ou promesse de rendement.
 
 ### 3.6 Memoire temporelle
 

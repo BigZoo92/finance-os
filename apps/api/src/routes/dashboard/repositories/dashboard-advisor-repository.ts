@@ -1208,6 +1208,19 @@ export const createDashboardAdvisorRepository = ({
       })
     },
 
+    async listManualOperations(limit) {
+      const rows = await db
+        .select({
+          id: schema.aiManualOperation.id,
+        })
+        .from(schema.aiManualOperation)
+        .orderBy(desc(schema.aiManualOperation.startedAt), desc(schema.aiManualOperation.id))
+        .limit(Math.min(Math.max(limit, 1), 20))
+
+      const operations = await Promise.all(rows.map(row => this.getManualOperation(row.id)))
+      return operations.filter(operation => operation !== null)
+    },
+
     async getLatestActiveManualOperation() {
       return getManualOperationByPredicate({
         db,

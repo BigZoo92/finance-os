@@ -1,6 +1,7 @@
 import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
 import type { createRedisClient } from '@finance-os/redis'
+import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorKnowledgeAnswerResponse,
@@ -1112,6 +1113,7 @@ export interface DashboardAdvisorRepository {
   }) => Promise<void>
   getManualOperation: (operationId: string) => Promise<DashboardAdvisorManualOperationResponse | null>
   getLatestManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
+  listManualOperations: (limit: number) => Promise<DashboardAdvisorManualOperationResponse[]>
   getLatestActiveManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
 }
 
@@ -1221,6 +1223,11 @@ export interface DashboardUseCases {
     limit?: number
   }) => Promise<unknown>
   getExternalInvestmentsContextBundle?: (input: { requestId: string }) => Promise<unknown>
+  triggerExternalInvestmentProviderSync?: (input: {
+    provider: ExternalInvestmentProvider
+    requestId: string
+  }) => Promise<void>
+  generateExternalInvestmentContextBundle?: (input: { requestId: string }) => Promise<unknown>
   getAdvisorOverview?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1276,6 +1283,11 @@ export interface DashboardUseCases {
     requestId: string
     operationId: string
   }) => Promise<DashboardAdvisorManualOperationResponse | null>
+  listAdvisorManualOperations?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    limit: number
+  }) => Promise<DashboardAdvisorManualOperationResponse[]>
   runAdvisorManualRefreshAndAnalysis?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

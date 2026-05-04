@@ -1018,6 +1018,13 @@ export const getWorkerEnv = () =>
     AI_DAILY_MARKET_OPEN_MINUTE: z.coerce.number().int().min(0).max(59).default(30),
     AI_DAILY_MARKET_OPEN_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(45),
     AI_DAILY_MARKET_OPEN_LAG_MINUTES: z.coerce.number().int().min(0).max(240).default(90),
+    DAILY_INTELLIGENCE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    DAILY_INTELLIGENCE_CRON: z.string().default('0 9 * * 1-5'),
+    DAILY_INTELLIGENCE_TIMEZONE: z.string().default('Europe/Paris'),
+    DAILY_INTELLIGENCE_MARKET_OPEN_HOUR: z.coerce.number().int().min(0).max(23).default(9),
     MARKET_DATA_AUTO_REFRESH_ENABLED: z
       .string()
       .optional()

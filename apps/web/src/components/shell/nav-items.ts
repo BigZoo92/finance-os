@@ -190,6 +190,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'expert',
   },
   {
+    to: '/orchestration',
+    label: 'Orchestration',
+    icon: '<>',
+    description: 'Daily Intelligence Run et relances manuelles',
+    group: 'expert',
+    adminOnly: true,
+  },
+  {
     to: '/parametres',
     label: 'Paramètres',
     icon: '⚙',
