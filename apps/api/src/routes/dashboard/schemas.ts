@@ -218,6 +218,10 @@ export const dashboardAdvisorRunBodySchema = t.Object({
   ),
 })
 
+export const dashboardAdvisorPostMortemParamsSchema = t.Object({
+  postMortemId: t.Numeric({ minimum: 1 }),
+})
+
 export const dashboardAdvisorDecisionKindSchema = t.Union([
   t.Literal('accepted'),
   t.Literal('rejected'),

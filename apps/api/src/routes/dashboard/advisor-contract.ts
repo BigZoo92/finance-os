@@ -579,3 +579,70 @@ export interface DashboardAdvisorDecisionOutcomeCreateInput {
   learningTags?: string[]
   freeNote?: string | null
 }
+
+// PR4 — Advisor Post-Mortem.
+//
+// Auth contract for `POST /advisor/post-mortem/run` (PR4-fix-2):
+//   • Admin session only. Internal-token-only callers are rejected with 403.
+//   • The worker scheduler is deferred to a future PR; when that scheduler lands it will own
+//     its own dedicated, tested internal-token execution context, at which point the route
+//     guard may be widened.
+//
+// Two distinct status enums live on this surface, on purpose:
+//
+//   • `DashboardAdvisorPostMortemStatus` — applied to a *persisted DB row* on
+//     `advisor_post_mortem.status`. It tracks the lifecycle of one row: pending → completed,
+//     pending → skipped, or pending → failed. This enum is the schema contract for the table.
+//
+//   • `DashboardAdvisorPostMortemRunStatus` — returned by `POST /advisor/post-mortem/run`. It
+//     describes the outcome of *one run invocation* (a batch). It carries richer codes such as
+//     `skipped_disabled` (feature flag off) and `skipped_budget_blocked` (budget gate) that
+//     have no meaning on a per-row basis.
+//
+// Keep them separate. Do not unify them — they answer different questions.
+export type DashboardAdvisorPostMortemStatus = 'pending' | 'completed' | 'skipped' | 'failed'
+
+export interface DashboardAdvisorPostMortemRow {
+  id: number
+  runId: number | null
+  recommendationId: number | null
+  decisionId: number | null
+  recommendationKey: string | null
+  status: DashboardAdvisorPostMortemStatus
+  horizonDays: number | null
+  evaluatedAt: string | null
+  expectedOutcomeAt: string | null
+  inputSummary: Record<string, unknown> | null
+  findings: Record<string, unknown> | null
+  learningActions: Array<Record<string, unknown>> | null
+  calibration: Record<string, unknown> | null
+  riskNotes: Record<string, unknown> | null
+  skippedReason: string | null
+  errorCode: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DashboardAdvisorPostMortemListResponse {
+  items: DashboardAdvisorPostMortemRow[]
+}
+
+export type DashboardAdvisorPostMortemRunStatus =
+  | 'completed'
+  | 'skipped_disabled'
+  | 'skipped_budget_blocked'
+  | 'skipped_no_due_items'
+  | 'failed'
+
+export interface DashboardAdvisorPostMortemRunResponse {
+  status: DashboardAdvisorPostMortemRunStatus
+  feature: 'post_mortem'
+  evaluatedAt: string
+  totalDue: number
+  processed: number
+  remaining: number
+  persistedIds: number[]
+  failedItems: number
+  reason: string | null
+  budgetReasons: string[]
+}

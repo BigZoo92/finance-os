@@ -218,6 +218,13 @@
       "when": 1777891733938,
       "tag": "0030_flat_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1778148116666,
+      "tag": "0031_goofy_human_torch",
+      "breakpoints": true
     }
   ]
 }

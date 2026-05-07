@@ -14,6 +14,7 @@ import {
   dashboardAdvisorKnowledgeAnswerQuerySchema,
   dashboardAdvisorListQuerySchema,
   dashboardAdvisorManualOperationParamsSchema,
+  dashboardAdvisorPostMortemParamsSchema,
   dashboardAdvisorRunBodySchema,
   dashboardSummaryQuerySchema,
 } from '../schemas'
@@ -715,6 +716,101 @@ export const createAdvisorRoute = ({
         requestId: requestMeta.requestId,
       })
     })
+    .get('/advisor/post-mortem', async context => {
+      const accessError = ensureAdvisorAccess({ context, advisorEnabled, adminOnly })
+      if (accessError) return accessError
+
+      const dashboard = getDashboardRuntime(context)
+      if (!dashboard.useCases.listAdvisorPostMortems) {
+        return buildAdvisorRouteError({
+          context,
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor post-mortem runtime is unavailable.',
+        })
+      }
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.listAdvisorPostMortems({
+        mode: auth.mode,
+        requestId: requestMeta.requestId,
+      })
+    })
+    .get(
+      '/advisor/post-mortem/:postMortemId',
+      async context => {
+        const accessError = ensureAdvisorAccess({ context, advisorEnabled, adminOnly })
+        if (accessError) return accessError
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorPostMortemById) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor post-mortem runtime is unavailable.',
+          })
+        }
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        const row = await dashboard.useCases.getAdvisorPostMortemById({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          postMortemId: context.params.postMortemId,
+        })
+        if (!row) {
+          return buildAdvisorRouteError({
+            context,
+            status: 404,
+            code: 'NOT_FOUND',
+            message: 'Post-mortem not found.',
+          })
+        }
+        return row
+      },
+      {
+        params: dashboardAdvisorPostMortemParamsSchema,
+      }
+    )
+    .post(
+      '/advisor/post-mortem/run',
+      async context => {
+        const accessError = ensureAdvisorAccess({ context, advisorEnabled, adminOnly })
+        if (accessError) return accessError
+
+        // PR4-fix-2: admin-session only. The worker scheduler is deferred (PR4 deferred
+        // decision); internal-token trigger support will land alongside the scheduler PR with
+        // its own dedicated tested execution context. Keeping this guard strict avoids the
+        // route/use-case auth contract mismatch surfaced during PR4-fix testing where an
+        // internal-token-only caller passed the route but tripped the use-case's defensive
+        // demo-mode throw.
+        const adminError = ensureAdminSessionOnly({
+          context,
+          message: 'Admin session required for post-mortem runs.',
+        })
+        if (adminError) return adminError
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.runAdvisorPostMortem) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor post-mortem runtime is unavailable.',
+          })
+        }
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.runAdvisorPostMortem({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          triggerSource: context.body.trigger ?? 'manual',
+        })
+      },
+      {
+        body: dashboardAdvisorRunBodySchema,
+      }
+    )
     .get(
       '/advisor/journal',
       async context => {

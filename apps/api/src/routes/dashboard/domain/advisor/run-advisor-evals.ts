@@ -1,4 +1,5 @@
 import type { AiBudgetState, AiEvalCaseSeed } from '@finance-os/ai'
+import { isScoredCategory, scoreCase } from '@finance-os/ai'
 import type { AdvisorSnapshot, DeterministicRecommendation } from '@finance-os/finance-engine'
 
 export const runAdvisorEvals = ({
@@ -15,8 +16,30 @@ export const runAdvisorEvals = ({
   degraded: boolean
 }) => {
   const failures: string[] = []
+  // Per-case structured failure detail for the new deterministic scorer categories.
+  // The shape of `summary.failedCaseKeys` is unchanged; this is an additive sibling field.
+  const failedCaseDetails: Array<{
+    caseId: string
+    category: AiEvalCaseSeed['category']
+    failedExpectations: string[]
+  }> = []
 
   for (const item of cases) {
+    // PR2 deterministic scorers (causal_reasoning, strategy_quality, risk_calibration).
+    // Each scorer is pure: no network, no LLM, no provider, no graph.
+    if (isScoredCategory(item.category)) {
+      const result = scoreCase(item)
+      if (result && !result.passed) {
+        failures.push(item.key)
+        failedCaseDetails.push({
+          caseId: result.caseId,
+          category: item.category,
+          failedExpectations: result.failedExpectations,
+        })
+      }
+      continue
+    }
+
     if (item.key === 'budget-overrun-disables-deep') {
       if (budgetState.dailyUsdSpent / Math.max(budgetState.dailyBudgetUsd, 1) >= 0.8 && budgetState.deepAnalysisAllowed) {
         failures.push(item.key)
@@ -61,6 +84,9 @@ export const runAdvisorEvals = ({
     failedCases: failures.length,
     summary: {
       failedCaseKeys: failures,
+      // Additive: detailed reasons for the new scorer categories. Existing consumers that read
+      // `failedCaseKeys` continue to work unchanged.
+      failedCaseDetails,
       degraded,
       recommendationCount: recommendations.length,
     },

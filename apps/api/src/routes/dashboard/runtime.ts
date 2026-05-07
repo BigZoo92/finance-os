@@ -1,4 +1,8 @@
-import type { KnowledgeContextBundle } from '@finance-os/ai'
+import {
+  createAnthropicMessagesClient,
+  createOpenAiResponsesClient,
+  type KnowledgeContextBundle,
+} from '@finance-os/ai'
 import { createExternalInvestmentsRepository } from '@finance-os/external-investments'
 import { buildAdvisorKnowledgeContextQuery } from '@finance-os/finance-engine'
 import { logApiEvent, toErrorLogFields } from '../../observability/logger'
@@ -10,6 +14,7 @@ import {
 } from './domain/advisor/create-dashboard-advisor-use-cases'
 import { createDecisionJournalUseCases } from './domain/advisor/create-decision-journal-use-cases'
 import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
+import { createPostMortemUseCases } from './domain/advisor/post-mortem/create-post-mortem-use-cases'
 import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
 import { createUpdateTransactionClassificationUseCase } from './domain/create-update-transaction-classification-use-case'
@@ -28,7 +33,9 @@ import {
 } from './domain/derived-recompute'
 import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/failsoft-policy'
 import { recordCategorizationMigrationSnapshot } from './domain/transaction-categorization-migration-observability'
+import { getAdvisorPostMortemListMock } from '../../mocks/advisorPostMortem.mock'
 import { createDashboardAdvisorRepository } from './repositories/dashboard-advisor-repository'
+import { createDashboardAdvisorPostMortemRepository } from './repositories/dashboard-advisor-post-mortem-repository'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
 import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
 import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
@@ -120,6 +127,10 @@ export const createDashboardRouteRuntime = ({
   aiBudgetDisableDeepAnalysisRatio,
   aiMaxChatMessagesContext,
   aiUsdToEurRate,
+  aiPostMortemEnabled,
+  aiPostMortemHorizonDays,
+  aiPostMortemBatchLimit,
+  aiPostMortemModel,
   advisorXSignalsMode,
   knowledgeConfig,
   externalInvestmentsEnabled,
@@ -197,6 +208,10 @@ export const createDashboardRouteRuntime = ({
   aiBudgetDisableDeepAnalysisRatio: number
   aiMaxChatMessagesContext: number
   aiUsdToEurRate: number
+  aiPostMortemEnabled: boolean
+  aiPostMortemHorizonDays: number
+  aiPostMortemBatchLimit: number
+  aiPostMortemModel: string
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
   knowledgeConfig: KnowledgeServiceClientConfig
   externalInvestmentsEnabled: boolean
@@ -452,6 +467,87 @@ export const createDashboardRouteRuntime = ({
     repository: advisorRepository,
   })
 
+  // PR4 — Advisor Post-Mortem.
+  // Build the use-case lazily-resolved provider/budget so that demo or feature-flag-off code
+  // paths NEVER touch the LLM client construction. The runner is only built on demand inside
+  // the use-case factory's runStructured shim below.
+  const advisorPostMortemRepository = createDashboardAdvisorPostMortemRepository({ db })
+
+  const buildPostMortemRunner = () => {
+    if (aiAnthropicApiKey) {
+      return createAnthropicMessagesClient({
+        apiKey: aiAnthropicApiKey,
+        ...(aiAnthropicBaseUrl ? { baseUrl: aiAnthropicBaseUrl } : {}),
+        usdToEurRate: aiUsdToEurRate,
+      })
+    }
+    if (aiOpenAiApiKey) {
+      return createOpenAiResponsesClient({
+        apiKey: aiOpenAiApiKey,
+        ...(aiOpenAiBaseUrl ? { baseUrl: aiOpenAiBaseUrl } : {}),
+        usdToEurRate: aiUsdToEurRate,
+      })
+    }
+    return null
+  }
+
+  const advisorPostMortem = createPostMortemUseCases({
+    repository: advisorPostMortemRepository,
+    runner: {
+      runStructured: async request => {
+        const client = buildPostMortemRunner()
+        if (!client) {
+          throw new Error('No LLM provider client configured for post-mortem.')
+        }
+        return client.runStructured(request)
+      },
+    },
+    budget: {
+      fetchBudgetState: async () => {
+        const overview = await advisorRepository.getAdvisorOverview({
+          dailyBudgetUsd: aiBudgetDailyUsd,
+          monthlyBudgetUsd: aiBudgetMonthlyUsd,
+          challengerDisableRatio: aiBudgetDisableChallengerRatio,
+          deepAnalysisDisableRatio: aiBudgetDisableDeepAnalysisRatio,
+          chatEnabled: aiChatEnabled,
+        })
+        // The overview returns a `spend` field with the budget state shape. If the overview is
+        // unavailable (no run yet), fall back to a synthetic state computed from configured
+        // budgets so post-mortem can still run from a fresh deployment.
+        if (overview?.spend) {
+          return {
+            dailyUsdSpent: overview.spend.dailyUsdSpent,
+            monthlyUsdSpent: overview.spend.monthlyUsdSpent,
+            dailyBudgetUsd: overview.spend.dailyBudgetUsd,
+            monthlyBudgetUsd: overview.spend.monthlyBudgetUsd,
+            challengerAllowed: overview.spend.challengerAllowed,
+            deepAnalysisAllowed: overview.spend.deepAnalysisAllowed,
+            blocked: overview.spend.blocked,
+            reasons: [...overview.spend.reasons],
+          }
+        }
+        return {
+          dailyUsdSpent: 0,
+          monthlyUsdSpent: 0,
+          dailyBudgetUsd: aiBudgetDailyUsd,
+          monthlyBudgetUsd: aiBudgetMonthlyUsd,
+          challengerAllowed: true,
+          deepAnalysisAllowed: aiBudgetDailyUsd > 0 && aiBudgetMonthlyUsd > 0,
+          blocked: aiBudgetDailyUsd <= 0 || aiBudgetMonthlyUsd <= 0,
+          reasons: [],
+        }
+      },
+    },
+    config: {
+      enabled: aiPostMortemEnabled,
+      horizonDays: aiPostMortemHorizonDays,
+      batchLimit: aiPostMortemBatchLimit,
+      model: aiPostMortemModel,
+      feature: 'post_mortem',
+    },
+    demoFixtures: { list: getAdvisorPostMortemListMock().items },
+  })
+
   const manualAdvisorOrchestration = createAdvisorManualRefreshAndRunUseCases({
     repository: advisorRepository,
     readModel,
@@ -607,6 +703,9 @@ export const createDashboardRouteRuntime = ({
       getAdvisorDecisionJournalEntry: advisorDecisionJournal.getAdvisorDecisionJournalEntry,
       createAdvisorDecisionJournalEntry: advisorDecisionJournal.createAdvisorDecisionJournalEntry,
       createAdvisorDecisionOutcome: advisorDecisionJournal.createAdvisorDecisionOutcome,
+      listAdvisorPostMortems: advisorPostMortem.listPostMortems,
+      getAdvisorPostMortemById: advisorPostMortem.getPostMortemById,
+      runAdvisorPostMortem: advisorPostMortem.runPostMortem,
     },
   }
 }

@@ -149,14 +149,20 @@ export interface AiPromptTemplateDefinition {
   userPromptTemplate: string
 }
 
+export type AiEvalCategory =
+  | 'transaction_classification'
+  | 'recommendation_quality'
+  | 'challenger'
+  | 'data_sufficiency'
+  | 'cost_control'
+  | 'causal_reasoning'
+  | 'strategy_quality'
+  | 'risk_calibration'
+  | 'post_mortem_safety'
+
 export interface AiEvalCaseSeed {
   key: string
-  category:
-    | 'transaction_classification'
-    | 'recommendation_quality'
-    | 'challenger'
-    | 'data_sufficiency'
-    | 'cost_control'
+  category: AiEvalCategory
   description: string
   input: Record<string, unknown>
   expectation: Record<string, unknown>

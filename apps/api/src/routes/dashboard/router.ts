@@ -90,6 +90,10 @@ export const createDashboardRoutes = ({
   aiBudgetDisableDeepAnalysisRatio,
   aiMaxChatMessagesContext,
   aiUsdToEurRate,
+  aiPostMortemEnabled,
+  aiPostMortemHorizonDays,
+  aiPostMortemBatchLimit,
+  aiPostMortemModel,
   advisorXSignalsMode,
   knowledgeServiceEnabled,
   knowledgeServiceUrl,
@@ -178,6 +182,10 @@ export const createDashboardRoutes = ({
   aiBudgetDisableDeepAnalysisRatio: number
   aiMaxChatMessagesContext: number
   aiUsdToEurRate: number
+  aiPostMortemEnabled: boolean
+  aiPostMortemHorizonDays: number
+  aiPostMortemBatchLimit: number
+  aiPostMortemModel: string
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
   knowledgeServiceEnabled: boolean
   knowledgeServiceUrl: string
@@ -266,6 +274,10 @@ export const createDashboardRoutes = ({
     aiBudgetDisableDeepAnalysisRatio,
     aiMaxChatMessagesContext,
     aiUsdToEurRate,
+    aiPostMortemEnabled,
+    aiPostMortemHorizonDays,
+    aiPostMortemBatchLimit,
+    aiPostMortemModel,
     advisorXSignalsMode,
     knowledgeConfig: {
       enabled: knowledgeServiceEnabled,

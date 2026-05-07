@@ -30,6 +30,7 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test": "node --test scripts/agentic/*.test.mjs scripts/desktop-scope.test.mjs scripts/agent-context/agent-context.test.mjs scripts/agent-context/sync-skills.test.mjs",
+    "evals:run": "bun scripts/run-evals.ts",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",

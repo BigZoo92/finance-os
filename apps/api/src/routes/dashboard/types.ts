@@ -21,6 +21,9 @@ import type {
   DashboardAdvisorManualOperationStepKey,
   DashboardAdvisorManualRefreshAndRunPostResponse,
   DashboardAdvisorOverviewResponse,
+  DashboardAdvisorPostMortemListResponse,
+  DashboardAdvisorPostMortemRow,
+  DashboardAdvisorPostMortemRunResponse,
   DashboardAdvisorRecommendationsResponse,
   DashboardAdvisorRelabelResponse,
   DashboardAdvisorRunDailyResponse,
@@ -1351,6 +1354,21 @@ export interface DashboardUseCases {
     mode: 'demo' | 'admin'
     requestId: string
   }) => Promise<DashboardAdvisorEvalsResponse>
+  listAdvisorPostMortems?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    limit?: number
+  }) => Promise<DashboardAdvisorPostMortemListResponse>
+  getAdvisorPostMortemById?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    postMortemId: number
+  }) => Promise<DashboardAdvisorPostMortemRow | null>
+  runAdvisorPostMortem?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    triggerSource?: string
+  }) => Promise<DashboardAdvisorPostMortemRunResponse>
   listAdvisorDecisionJournal?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

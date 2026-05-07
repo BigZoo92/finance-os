@@ -739,6 +739,13 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_POST_MORTEM_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_POST_MORTEM_HORIZON_DAYS: z.coerce.number().int().positive().default(30),
+    AI_POST_MORTEM_BATCH_LIMIT: z.coerce.number().int().positive().max(100).default(10),
+    AI_POST_MORTEM_MODEL: z.string().min(1).default('claude-sonnet-4-6'),
     ADVISOR_X_SIGNALS_MODE: z.enum(['off', 'shadow', 'enforced']).default('shadow'),
     AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED: z
       .string()

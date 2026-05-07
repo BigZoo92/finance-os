@@ -3,6 +3,11 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import {
+  createHypothesisUseCases,
+  isHypothesisValidationError,
+} from '../domain/trading-lab/hypotheses/create-hypothesis-use-cases'
+import { isHypothesisExecutionInstructionError } from '../domain/trading-lab/hypotheses/detect-execution-instruction'
 import { createDashboardTradingLabRepository } from '../repositories/dashboard-trading-lab-repository'
 import { createDashboardSignalItemsRepository } from '../repositories/dashboard-signal-items-repository'
 import {
@@ -176,6 +181,76 @@ const DEMO_CAPABILITIES = {
   ],
 }
 
+// PR3 — Hypothesis Lab demo fixtures.
+// A "manual hypothesis" is just a tradingLabStrategy row with strategyType='manual-hypothesis'.
+// Hypothesis-specific data lives under the structured `parameters.hypothesis` namespace; caveats
+// remain free-form, human-readable strings.
+const DEMO_HYPOTHESES = [
+  {
+    id: 101,
+    name: 'EUR/USD mean reversion after FOMC drift',
+    slug: 'eur-usd-fomc-mean-reversion',
+    description:
+      'Paper-only manual hypothesis: after FOMC days, EUR/USD overshoots intraday and reverts within 48h.',
+    strategyType: 'manual-hypothesis',
+    status: 'active-paper',
+    enabled: true,
+    tags: ['paper-only', 'fx', 'macro'],
+    parameters: {
+      hypothesis: {
+        thesis: 'Post-FOMC drift mean-reverts within 48h.',
+        invalidationCriteria: [
+          'Drift persists beyond 72h after FOMC across 3 consecutive events',
+          'Realized volatility in EUR/USD exceeds 1.5x historical median',
+        ],
+      },
+    },
+    indicators: [],
+    entryRules: [],
+    exitRules: [],
+    riskRules: [],
+    assumptions: [
+      'Liquidity is comparable to the historical sample',
+      'Macro releases continue to surprise within historical bounds',
+    ],
+    caveats: ['Paper-only run, not financial advice'],
+    scope: 'demo',
+    createdAt: '2026-04-26T10:00:00Z',
+    updatedAt: '2026-04-26T10:00:00Z',
+  },
+  {
+    id: 102,
+    name: 'Defensive sector rotation under late-cycle indicators',
+    slug: 'defensive-rotation-late-cycle',
+    description:
+      'Paper-only manual hypothesis: defensive sectors outperform once 3 of 5 late-cycle indicators flip.',
+    strategyType: 'manual-hypothesis',
+    status: 'draft',
+    enabled: true,
+    tags: ['paper-only', 'sectors', 'macro'],
+    parameters: {
+      hypothesis: {
+        thesis:
+          '3-of-5 late-cycle indicator flip presages defensive outperformance over 90 days.',
+        invalidationCriteria: [
+          'Defensives underperform cyclicals over the next 90 trading days',
+          'Late-cycle indicators flip back within 21 days',
+        ],
+        horizon: '90d',
+      },
+    },
+    indicators: [],
+    entryRules: [],
+    exitRules: [],
+    riskRules: [],
+    assumptions: ['Indicator definitions remain stable across the observation window'],
+    caveats: ['Paper-only run, not financial advice'],
+    scope: 'demo',
+    createdAt: '2026-04-28T09:00:00Z',
+    updatedAt: '2026-04-28T09:00:00Z',
+  },
+] as const
+
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
@@ -207,6 +282,7 @@ export const createTradingLabRoute = ({
 }) => {
   const repo = createDashboardTradingLabRepository({ db })
   const signalItemsRepo = createDashboardSignalItemsRepository({ db })
+  const hypotheses = createHypothesisUseCases({ repository: repo })
 
   const callQuantService = async (
     path: string,
@@ -395,6 +471,304 @@ export const createTradingLabRoute = ({
         },
       })
     })
+
+    // --- Hypothesis Lab (PR3) ---
+    // A manual hypothesis is a tradingLabStrategy row with strategyType='manual-hypothesis'.
+    // No new table; reuses the existing strategy + paper-scenario surface.
+    .get('/hypotheses', async context => {
+      return demoOrReal({
+        context,
+        demo: () => ({ ok: true, hypotheses: DEMO_HYPOTHESES }),
+        real: async () => {
+          const items = await hypotheses.listManualHypotheses()
+          return { ok: true, hypotheses: items }
+        },
+      })
+    })
+    .get('/hypotheses/:id', async context => {
+      const id = Number(context.params.id)
+      const requestId = getRequestMeta(context).requestId
+      return demoOrReal({
+        context,
+        demo: () => {
+          const found = DEMO_HYPOTHESES.find(h => h.id === id)
+          if (!found) {
+            context.set.status = 404
+            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+          }
+          return { ok: true, hypothesis: found }
+        },
+        real: async () => {
+          const found = await hypotheses.getManualHypothesisById(id)
+          if (!found) {
+            context.set.status = 404
+            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+          }
+          return { ok: true, hypothesis: found }
+        },
+      })
+    })
+    .post(
+      '/hypotheses',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        return demoOrReal({
+          context,
+          demo: () => {
+            context.set.status = 403
+            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+          },
+          real: async () => {
+            requireAdmin(context)
+            try {
+              const hypothesis = await hypotheses.createManualHypothesis({
+                name: context.body.name,
+                slug: context.body.slug,
+                ...(context.body.description !== undefined ? { description: context.body.description } : {}),
+                ...(context.body.thesis !== undefined ? { thesis: context.body.thesis } : {}),
+                ...(context.body.assumptions !== undefined ? { assumptions: context.body.assumptions } : {}),
+                ...(context.body.caveats !== undefined ? { caveats: context.body.caveats } : {}),
+                invalidationCriteria: context.body.invalidationCriteria,
+                ...(context.body.entryRules !== undefined ? { entryRules: context.body.entryRules } : {}),
+                ...(context.body.exitRules !== undefined ? { exitRules: context.body.exitRules } : {}),
+                ...(context.body.riskRules !== undefined ? { riskRules: context.body.riskRules } : {}),
+                ...(context.body.parameters !== undefined ? { parameters: context.body.parameters } : {}),
+                ...(context.body.indicators !== undefined ? { indicators: context.body.indicators } : {}),
+                ...(context.body.tags !== undefined ? { tags: context.body.tags } : {}),
+                ...(context.body.status !== undefined ? { status: context.body.status } : {}),
+              })
+              context.set.status = 201
+              return { ok: true, hypothesis }
+            } catch (error) {
+              if (isHypothesisExecutionInstructionError(error)) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: error.code,
+                  message: error.message,
+                  matches: error.matches,
+                  requestId,
+                }
+              }
+              if (isHypothesisValidationError(error)) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: error.code,
+                  message: error.message,
+                  field: error.field,
+                  requestId,
+                }
+              }
+              logApiEvent({
+                level: 'error',
+                msg: 'trading_lab_hypothesis_create_failed',
+                requestId,
+                ...toErrorLogFields({ error, includeStack: false }),
+              })
+              context.set.status = 400
+              return { ok: false, code: 'CREATE_FAILED', message: 'Failed to create hypothesis', requestId }
+            }
+          },
+        })
+      },
+      {
+        body: t.Object({
+          name: t.String({ minLength: 1, maxLength: 120 }),
+          slug: t.String({ minLength: 1, maxLength: 120, pattern: '^[a-z0-9-]+$' }),
+          description: t.Optional(t.String({ maxLength: 4000 })),
+          thesis: t.Optional(t.String({ maxLength: 2000 })),
+          assumptions: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
+          caveats: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
+          invalidationCriteria: t.Array(t.String({ minLength: 1, maxLength: 400 }), {
+            minItems: 1,
+            maxItems: 32,
+          }),
+          entryRules: t.Optional(
+            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
+          ),
+          exitRules: t.Optional(
+            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
+          ),
+          riskRules: t.Optional(
+            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
+          ),
+          parameters: t.Optional(t.Record(t.String(), t.Unknown())),
+          indicators: t.Optional(
+            t.Array(t.Object({ name: t.String({ minLength: 1, maxLength: 80 }), params: t.Record(t.String(), t.Unknown()) }), { maxItems: 16 })
+          ),
+          tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 24 })),
+          status: t.Optional(
+            t.Union([t.Literal('draft'), t.Literal('active-paper'), t.Literal('archived')])
+          ),
+        }),
+      }
+    )
+    .patch(
+      '/hypotheses/:id',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        const id = Number(context.params.id)
+        return demoOrReal({
+          context,
+          demo: () => {
+            context.set.status = 403
+            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+          },
+          real: async () => {
+            requireAdmin(context)
+            try {
+              const updated = await hypotheses.updateManualHypothesis(id, context.body)
+              if (!updated) {
+                context.set.status = 404
+                return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+              }
+              return { ok: true, hypothesis: updated }
+            } catch (error) {
+              if (isHypothesisExecutionInstructionError(error)) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: error.code,
+                  message: error.message,
+                  matches: error.matches,
+                  requestId,
+                }
+              }
+              if (isHypothesisValidationError(error)) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: error.code,
+                  message: error.message,
+                  field: error.field,
+                  requestId,
+                }
+              }
+              throw error
+            }
+          },
+        })
+      },
+      {
+        body: t.Object({
+          name: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+          description: t.Optional(t.Union([t.String({ maxLength: 4000 }), t.Null()])),
+          thesis: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+          assumptions: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
+          caveats: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
+          invalidationCriteria: t.Optional(
+            t.Array(t.String({ minLength: 1, maxLength: 400 }), { minItems: 1, maxItems: 32 })
+          ),
+          entryRules: t.Optional(
+            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
+          ),
+          exitRules: t.Optional(
+            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
+          ),
+          riskRules: t.Optional(
+            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
+          ),
+          parameters: t.Optional(t.Record(t.String(), t.Unknown())),
+          indicators: t.Optional(
+            t.Array(t.Object({ name: t.String({ minLength: 1, maxLength: 80 }), params: t.Record(t.String(), t.Unknown()) }), { maxItems: 16 })
+          ),
+          tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 24 })),
+          status: t.Optional(
+            t.Union([t.Literal('draft'), t.Literal('active-paper'), t.Literal('archived')])
+          ),
+        }),
+      }
+    )
+    .post('/hypotheses/:id/archive', async context => {
+      const requestId = getRequestMeta(context).requestId
+      const id = Number(context.params.id)
+      return demoOrReal({
+        context,
+        demo: () => {
+          context.set.status = 403
+          return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+        },
+        real: async () => {
+          requireAdmin(context)
+          const archived = await hypotheses.archiveManualHypothesis(id)
+          if (!archived) {
+            context.set.status = 404
+            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+          }
+          return { ok: true, hypothesis: archived }
+        },
+      })
+    })
+    .post(
+      '/hypotheses/:id/scenarios',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        const id = Number(context.params.id)
+        return demoOrReal({
+          context,
+          demo: () => {
+            context.set.status = 403
+            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+          },
+          real: async () => {
+            requireAdmin(context)
+            try {
+              const scenario = await hypotheses.createScenarioForHypothesis(id, {
+                name: context.body.name,
+                ...(context.body.description !== undefined ? { description: context.body.description } : {}),
+                ...(context.body.thesis !== undefined ? { thesis: context.body.thesis } : {}),
+                ...(context.body.expectedOutcome !== undefined ? { expectedOutcome: context.body.expectedOutcome } : {}),
+                invalidationCriteria: context.body.invalidationCriteria,
+                ...(context.body.riskNotes !== undefined ? { riskNotes: context.body.riskNotes } : {}),
+                ...(context.body.linkedSignalItemId !== undefined ? { linkedSignalItemId: context.body.linkedSignalItemId } : {}),
+                ...(context.body.linkedNewsArticleId !== undefined ? { linkedNewsArticleId: context.body.linkedNewsArticleId } : {}),
+              })
+              if (!scenario) {
+                context.set.status = 404
+                return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+              }
+              context.set.status = 201
+              return { ok: true, scenario }
+            } catch (error) {
+              if (isHypothesisExecutionInstructionError(error)) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: error.code,
+                  message: error.message,
+                  matches: error.matches,
+                  requestId,
+                }
+              }
+              if (isHypothesisValidationError(error)) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: error.code,
+                  message: error.message,
+                  field: error.field,
+                  requestId,
+                }
+              }
+              throw error
+            }
+          },
+        })
+      },
+      {
+        body: t.Object({
+          name: t.String({ minLength: 1, maxLength: 120 }),
+          description: t.Optional(t.String({ maxLength: 4000 })),
+          thesis: t.Optional(t.String({ maxLength: 2000 })),
+          expectedOutcome: t.Optional(t.String({ maxLength: 2000 })),
+          invalidationCriteria: t.String({ minLength: 1, maxLength: 1200 }),
+          riskNotes: t.Optional(t.String({ maxLength: 2000 })),
+          linkedSignalItemId: t.Optional(t.Number()),
+          linkedNewsArticleId: t.Optional(t.Number()),
+        }),
+      }
+    )
 
     // --- Backtest runs ---
     .get('/backtests', async context => {

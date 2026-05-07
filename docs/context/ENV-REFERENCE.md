@@ -409,6 +409,10 @@ Notes:
 | `AI_SPEND_ALERT_DAILY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget journalier |
 | `AI_SPEND_ALERT_MONTHLY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget mensuel |
 | `AI_MAX_CHAT_MESSAGES_CONTEXT` | `8` | Dokploy, `.env` | API | Non | Taille max du contexte chat persiste |
+| `AI_POST_MORTEM_ENABLED` | `false` | Dokploy, `.env` | API | Non | Active le post-mortem advisor (PR4). Quand `false`, le runner LLM est inaccessible et `POST /dashboard/advisor/post-mortem/run` retourne `skipped_disabled`. |
+| `AI_POST_MORTEM_HORIZON_DAYS` | `30` | Dokploy, `.env` | API | Non | Horizon par defaut pour considerer une recommandation expiree dans le batch post-mortem |
+| `AI_POST_MORTEM_BATCH_LIMIT` | `10` | Dokploy, `.env` | API | Non | Cap dur d'items traites par run post-mortem (un seul appel LLM batch) |
+| `AI_POST_MORTEM_MODEL` | `claude-sonnet-4-6` | Dokploy, `.env` | API | Non | Modele LLM utilise par le post-mortem |
 | `AI_DAILY_AUTO_RUN_ENABLED` | `false` | Dokploy, `.env` | Worker | Non | Scheduler quotidien advisor. Doit rester `false` dans le mode manuel recommande |
 | `AI_DAILY_INTERVAL_MS` | `900000` | Dokploy, `.env` | Worker | Non | Frequence de verification du scheduler advisor (tick periodique) |
 | `AI_DAILY_MARKET_OPEN_WINDOW_ENABLED` | `true` | Dokploy, `.env` | Worker | Non | Active la garde de fenetre autour de l'ouverture de marche pour `run-daily` |
