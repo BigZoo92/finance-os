@@ -4,6 +4,8 @@ import { Badge, Button, Card, CardContent } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
+import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
+import { shouldShowLearningLoopOnIa } from '@/features/learning-loop-visibility'
 import { postDashboardAdvisorManualRefreshAndRun } from '@/features/dashboard-api'
 import {
   dashboardAdvisorAssumptionsQueryOptionsWithMode,
@@ -30,6 +32,10 @@ import {
   AdvisorRecommendationCard,
   type AdvisorQuestionStarter,
 } from '@/components/advisor/advisor-decision-ui'
+import { BehaviorAnalyticsCard } from '@/components/advisor/behavior-analytics-card'
+import { DecisionRecorder } from '@/components/advisor/decision-recorder'
+import { EvalScorecard } from '@/components/advisor/eval-scorecard'
+import { PostMortemFeed } from '@/components/advisor/post-mortem-feed'
 
 export const Route = createFileRoute('/_app/ia/')({
   loader: async ({ context }) => {
@@ -122,6 +128,15 @@ function IaOverviewPage() {
   const aiAdvisorFlags = getAiAdvisorUiFlags()
   const aiAdvisorVisible = aiAdvisorFlags.enabled && (!aiAdvisorFlags.adminOnly || isAdmin)
   const modeOpts = aiAdvisorVisible && authMode ? { mode: authMode } : {}
+  // PR5 — Learning Loop UI flag. Off by default; hides Decision Recorder, Eval Scorecard,
+  // Post-Mortem feed when false. Existing Advisor surfaces stay unchanged.
+  // PR6 — Visibility delegated to a pure predicate so smoke tests can assert the truth table
+  // exhaustively (see `learning-loop-visibility.test.ts`).
+  const learningLoopVisible = shouldShowLearningLoopOnIa({
+    aiAdvisorVisible,
+    learningLoopFlag: getLearningLoopUiFlags().enabled,
+    mode: authMode,
+  })
 
   const manualOperationQuery = useQuery({
     ...dashboardAdvisorManualOperationLatestQueryOptionsWithMode(modeOpts),
@@ -397,7 +412,12 @@ function IaOverviewPage() {
           {recs.length > 0 ? (
             <div className="space-y-4">
               {recs.slice(0, 5).map(rec => (
-                <AdvisorRecommendationCard key={rec.id} recommendation={rec} />
+                <div key={rec.id}>
+                  <AdvisorRecommendationCard recommendation={rec} />
+                  {learningLoopVisible && authMode ? (
+                    <DecisionRecorder recommendation={rec} mode={authMode} />
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : (
@@ -447,6 +467,18 @@ function IaOverviewPage() {
       </section>
 
       <AdvisorAssumptionsPanel assumptions={assumptions} missingItems={missingItems} />
+
+      {learningLoopVisible && authMode ? (
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <EvalScorecard mode={authMode} />
+          <PostMortemFeed mode={authMode} />
+        </section>
+      ) : null}
+
+      {/* PR15A — Advisor Behavior Analytics. Same flag gate as the rest of the Learning Loop. */}
+      {learningLoopVisible && authMode ? (
+        <BehaviorAnalyticsCard mode={authMode} learningLoopEnabled={true} />
+      ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <AdvisorDecisionJournal recommendations={recs} />

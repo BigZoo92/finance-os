@@ -363,6 +363,7 @@ const registerAppRoutes = (app: Elysia) => {
         quantServiceUrl: env.QUANT_SERVICE_URL,
         quantServiceTimeoutMs: env.QUANT_SERVICE_TIMEOUT_MS,
         tradingLabGraphIngestEnabled: env.TRADING_LAB_GRAPH_INGEST_ENABLED,
+        advisorGraphIngestEnabled: env.ADVISOR_GRAPH_INGEST_ENABLED,
         externalInvestmentsEnabled: env.EXTERNAL_INVESTMENTS_ENABLED,
         externalInvestmentsSafeMode:
           env.EXTERNAL_INTEGRATIONS_SAFE_MODE || env.EXTERNAL_INVESTMENTS_SAFE_MODE,

@@ -12,6 +12,7 @@ import {
   createPostMortemUseCases,
   type ExpiredRecommendationContext,
   type PersistedPostMortemRow,
+  type PostMortemGraphIngestHook,
   type PostMortemRepositoryAdapter,
   type PostMortemStructuredRunner,
 } from './create-post-mortem-use-cases'
@@ -496,5 +497,151 @@ describe('createPostMortemUseCases', () => {
     const list = await useCases.listPostMortems({ mode: 'admin', requestId: 'req-test' })
     expect(list.items.length).toBe(0)
     expect(repoState.listCalls).toBe(1)
+  })
+})
+
+describe('createPostMortemUseCases · PR8 graph ingest hook', () => {
+  const buildHook = () => {
+    const calls: Array<{
+      persistedRowId: number
+      contextRecKey: string | null
+      learningActionsCount: number
+      overall: string
+    }> = []
+    const hook: PostMortemGraphIngestHook = {
+      ingestPostMortemActions: async ({ persistedRow, context, parsed }) => {
+        calls.push({
+          persistedRowId: persistedRow.id,
+          contextRecKey: context.recommendationKey,
+          learningActionsCount: parsed.learningActions.length,
+          overall: parsed.overallOutcome,
+        })
+      },
+    }
+    return { hook, calls }
+  }
+
+  it('fires the graph hook once per persisted row on the happy path', async () => {
+    const contexts = [makeContext({ recommendationKey: 'rec-a' }), makeContext({ recommendationKey: 'rec-b' })]
+    const { repo } = buildFakeRepo(contexts)
+    const { runner } = buildFakeRunner(makeOutput())
+    const { hook, calls } = buildHook()
+    const useCases = createPostMortemUseCases({
+      repository: repo,
+      runner,
+      budget: { fetchBudgetState: async () => makeBudget() },
+      config: baseConfig,
+      demoFixtures: { list: [] },
+      graphIngest: hook,
+    })
+
+    const result = await useCases.runPostMortem({ mode: 'admin', requestId: 'req-test' })
+    expect(result.status).toBe('completed')
+    expect(calls).toHaveLength(2)
+    expect(calls.map(c => c.contextRecKey).sort()).toEqual(['rec-a', 'rec-b'])
+    expect(calls.every(c => c.learningActionsCount === 1)).toBe(true)
+  })
+
+  it('does NOT fire the graph hook when execution-directive is detected', async () => {
+    const tainted = makeOutput({
+      summary:
+        'I recommend you BUY 10 shares of XYZ tomorrow morning regardless of conditions. Place the order now.',
+    })
+    const { repo } = buildFakeRepo([makeContext()])
+    const { runner } = buildFakeRunner(tainted)
+    const { hook, calls } = buildHook()
+    const useCases = createPostMortemUseCases({
+      repository: repo,
+      runner,
+      budget: { fetchBudgetState: async () => makeBudget() },
+      config: baseConfig,
+      demoFixtures: { list: [] },
+      graphIngest: hook,
+    })
+
+    const result = await useCases.runPostMortem({ mode: 'admin', requestId: 'req-test' })
+    expect(result.status).toBe('failed')
+    expect(result.reason).toBe('execution_directive_emitted')
+    expect(calls).toHaveLength(0)
+  })
+
+  it('does NOT fire the graph hook when LLM call fails', async () => {
+    const { repo } = buildFakeRepo([makeContext()])
+    const { runner } = buildFakeRunner({ error: new Error('upstream timeout') })
+    const { hook, calls } = buildHook()
+    const useCases = createPostMortemUseCases({
+      repository: repo,
+      runner,
+      budget: { fetchBudgetState: async () => makeBudget() },
+      config: baseConfig,
+      demoFixtures: { list: [] },
+      graphIngest: hook,
+    })
+
+    const result = await useCases.runPostMortem({ mode: 'admin', requestId: 'req-test' })
+    expect(result.status).toBe('failed')
+    expect(result.reason).toBe('llm_call_failed')
+    expect(calls).toHaveLength(0)
+  })
+
+  it('does NOT fire the graph hook when feature flag is off', async () => {
+    const { repo } = buildFakeRepo([makeContext()])
+    const { runner } = buildFakeRunner(makeOutput())
+    const { hook, calls } = buildHook()
+    const useCases = createPostMortemUseCases({
+      repository: repo,
+      runner,
+      budget: { fetchBudgetState: async () => makeBudget() },
+      config: { ...baseConfig, enabled: false },
+      demoFixtures: { list: [] },
+      graphIngest: hook,
+    })
+
+    await useCases.runPostMortem({ mode: 'admin', requestId: 'req-test' })
+    expect(calls).toHaveLength(0)
+  })
+
+  it('swallows hook errors so graph failures never leak to the caller', async () => {
+    const { repo, state } = buildFakeRepo([makeContext()])
+    const { runner } = buildFakeRunner(makeOutput())
+    const failingHook: PostMortemGraphIngestHook = {
+      ingestPostMortemActions: async () => {
+        throw new Error('graph service down')
+      },
+    }
+    const useCases = createPostMortemUseCases({
+      repository: repo,
+      runner,
+      budget: { fetchBudgetState: async () => makeBudget() },
+      config: baseConfig,
+      demoFixtures: { list: [] },
+      graphIngest: failingHook,
+    })
+
+    const result = await useCases.runPostMortem({ mode: 'admin', requestId: 'req-test' })
+    expect(result.status).toBe('completed')
+    expect(state.inserted).toHaveLength(1)
+    expect(state.inserted[0]?.riskNotes).toMatchObject({
+      graphIngest: 'attempted',
+      scope: 'advisory-only',
+    })
+  })
+
+  it('persists riskNotes.graphIngest=disabled when no hook is provided', async () => {
+    const { repo, state } = buildFakeRepo([makeContext()])
+    const { runner } = buildFakeRunner(makeOutput())
+    const useCases = createPostMortemUseCases({
+      repository: repo,
+      runner,
+      budget: { fetchBudgetState: async () => makeBudget() },
+      config: baseConfig,
+      demoFixtures: { list: [] },
+    })
+
+    await useCases.runPostMortem({ mode: 'admin', requestId: 'req-test' })
+    expect(state.inserted[0]?.riskNotes).toMatchObject({
+      graphIngest: 'disabled',
+      scope: 'advisory-only',
+    })
   })
 })

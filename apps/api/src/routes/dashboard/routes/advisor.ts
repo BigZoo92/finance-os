@@ -5,9 +5,11 @@ import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
 import { isDecisionJournalValidationError } from '../domain/advisor/create-decision-journal-use-cases'
 import {
+  dashboardAdvisorBehaviorAnalyticsQuerySchema,
   dashboardAdvisorChatBodySchema,
   dashboardAdvisorChatQuerySchema,
   dashboardAdvisorDecisionOutcomeCreateBodySchema,
+  dashboardAdvisorEvalsTrendsQuerySchema,
   dashboardAdvisorJournalCreateBodySchema,
   dashboardAdvisorJournalListQuerySchema,
   dashboardAdvisorJournalParamsSchema,
@@ -716,6 +718,78 @@ export const createAdvisorRoute = ({
         requestId: requestMeta.requestId,
       })
     })
+    .get(
+      '/advisor/behavior-analytics',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorBehaviorAnalytics) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor behavior analytics runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorBehaviorAnalytics({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.windowDays !== undefined
+            ? { windowDays: context.query.windowDays }
+            : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorBehaviorAnalyticsQuerySchema,
+      }
+    )
+    .get(
+      '/advisor/evals/trends',
+      async context => {
+        const accessError = ensureAdvisorAccess({
+          context,
+          advisorEnabled,
+          adminOnly,
+        })
+        if (accessError) {
+          return accessError
+        }
+
+        const dashboard = getDashboardRuntime(context)
+        if (!dashboard.useCases.getAdvisorEvalsTrends) {
+          return buildAdvisorRouteError({
+            context,
+            status: 503,
+            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+            message: 'Advisor eval trends runtime is unavailable.',
+          })
+        }
+
+        const auth = getAuth(context)
+        const requestMeta = getRequestMeta(context)
+        return dashboard.useCases.getAdvisorEvalsTrends({
+          mode: auth.mode,
+          requestId: requestMeta.requestId,
+          ...(context.query.windowDays !== undefined
+            ? { windowDays: context.query.windowDays }
+            : {}),
+        })
+      },
+      {
+        query: dashboardAdvisorEvalsTrendsQuerySchema,
+      }
+    )
     .get('/advisor/post-mortem', async context => {
       const accessError = ensureAdvisorAccess({ context, advisorEnabled, adminOnly })
       if (accessError) return accessError
@@ -778,15 +852,15 @@ export const createAdvisorRoute = ({
         const accessError = ensureAdvisorAccess({ context, advisorEnabled, adminOnly })
         if (accessError) return accessError
 
-        // PR4-fix-2: admin-session only. The worker scheduler is deferred (PR4 deferred
-        // decision); internal-token trigger support will land alongside the scheduler PR with
-        // its own dedicated tested execution context. Keeping this guard strict avoids the
-        // route/use-case auth contract mismatch surfaced during PR4-fix testing where an
-        // internal-token-only caller passed the route but tripped the use-case's defensive
-        // demo-mode throw.
-        const adminError = ensureAdminSessionOnly({
+        // PR7 — admin session OR valid internal token. Internal-token support was deliberately
+        // withheld in PR4-fix-2 because no tested execution context existed for it. PR7 ships
+        // the worker scheduler, which is the dedicated tested execution context that this
+        // route now serves. The use-case still throws on demo-mode regardless of token, so the
+        // server-side defense remains: only admin sessions or worker-issued internal-token
+        // calls reach the post-mortem use-case logic.
+        const adminError = ensureAdminMutationAccess({
           context,
-          message: 'Admin session required for post-mortem runs.',
+          message: 'Admin session or internal token required for post-mortem runs.',
         })
         if (adminError) return adminError
 
@@ -800,9 +874,16 @@ export const createAdvisorRoute = ({
           })
         }
         const auth = getAuth(context)
+        const internalAuth = getInternalAuth(context)
         const requestMeta = getRequestMeta(context)
+        // PR7 — internal-token-only callers (worker) elevate to admin mode for THIS route.
+        // The use-case throws on `mode === 'demo'` as a defensive belt-and-suspenders check;
+        // the route guard already accepts internal token, so the only legitimate caller with
+        // `auth.mode='demo'` is the worker — and we want it to proceed as admin.
+        const effectiveMode: 'admin' | 'demo' =
+          auth.mode === 'admin' || internalAuth.hasValidToken ? 'admin' : auth.mode
         return dashboard.useCases.runAdvisorPostMortem({
-          mode: auth.mode,
+          mode: effectiveMode,
           requestId: requestMeta.requestId,
           triggerSource: context.body.trigger ?? 'manual',
         })

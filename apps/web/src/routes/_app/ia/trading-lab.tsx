@@ -23,6 +23,11 @@ import { BacktestRunner } from '@/components/trading-lab/backtest-runner'
 import { StrategyEditor } from '@/components/trading-lab/strategy-editor'
 import { GraphPathPreview } from '@/components/trading-lab/path-preview'
 import { DataSourceBadge } from '@/components/trading-lab/data-source-badge'
+import { HypothesisLabSection } from '@/components/trading-lab/hypothesis-lab'
+import { PatternDetectionPanel } from '@/components/trading-lab/pattern-detection-panel'
+import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
+import { shouldShowHypothesisLabOnTradingLab } from '@/features/learning-loop-visibility'
+import type { AuthMode } from '@/features/auth-types'
 
 export const Route = createFileRoute('/_app/ia/trading-lab')({
   loader: async ({ context }) => {
@@ -342,6 +347,26 @@ function TradingLabPage() {
           </div>
         )}
       </Panel>
+
+      {/* PR5 — Hypothesis Lab tab/section. Visible only when LEARNING_LOOP_UI_ENABLED is true.
+          PR6 — Visibility delegated to a shared predicate (see learning-loop-visibility.ts).
+          PR11 — Pattern detection panel reuses the same flag gate so demo/admin behaviour is
+          consistent across the Trading Lab learning-loop surfaces. */}
+      {(() => {
+        const mode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
+        const visible =
+          shouldShowHypothesisLabOnTradingLab({
+            learningLoopFlag: getLearningLoopUiFlags().enabled,
+            mode,
+          }) && mode !== undefined
+        if (!visible || mode === undefined) return null
+        return (
+          <>
+            <HypothesisLabSection mode={mode} />
+            <PatternDetectionPanel mode={mode} />
+          </>
+        )
+      })()}
 
       {/* Scenarios */}
       <Panel title="Scénarios papier">

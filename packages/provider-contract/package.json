@@ -1,0 +1,17 @@
+{
+  "name": "@finance-os/provider-contract",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./capabilities": "./src/capabilities.ts",
+    "./errors": "./src/error.ts",
+    "./provider": "./src/provider.ts",
+    "./result": "./src/result.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test src"
+  }
+}

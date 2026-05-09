@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -20,6 +21,7 @@ from .config import get_settings
 from .engines.backtest import AVAILABLE_STRATEGIES, run_backtest
 from .engines.indicators import AVAILABLE_INDICATORS, compute_indicator
 from .engines.metrics import compute_all_metrics
+from .engines.patterns import detect_patterns
 from .engines.walk_forward import run_walk_forward
 from .models import (
     BacktestRequest,
@@ -27,6 +29,7 @@ from .models import (
     HealthResponse,
     IndicatorRequest,
     MetricsRequest,
+    PatternDetectRequest,
     ScenarioEvaluateRequest,
     ScenarioEvaluateResult,
     VersionResponse,
@@ -59,6 +62,10 @@ METRIC_NAMES = [
 def _request_id(request: Request) -> str:
     candidate = request.headers.get("x-request-id", "").strip()
     return candidate or str(uuid4())
+
+
+def __now_iso() -> str:
+    return datetime.now(UTC).isoformat()
 
 
 def _log(level: str, message: str, **fields: object) -> None:
@@ -169,6 +176,49 @@ def create_app() -> FastAPI:
         except Exception as exc:
             _log("error", "indicator_error", requestId=rid, error=str(exc))
             return _safe_error(rid, 400, "INDICATOR_ERROR", str(exc))
+
+    # --- Patterns (PR10) ---
+    # Read-only deterministic pattern detection. NEVER returns an execution
+    # directive; the engine self-scans for forbidden vocabulary before output.
+    @app.post("/quant/patterns/detect", response_class=ORJSONResponse)
+    async def patterns_detect(request: Request, body: PatternDetectRequest) -> ORJSONResponse:
+        rid = _request_id(request)
+        _log(
+            "info",
+            "pattern_detect_request",
+            requestId=rid,
+            symbol=body.symbol,
+            timeframe=body.timeframe,
+            candles=len(body.candles),
+            patterns=body.patterns,
+        )
+
+        if not settings.quant_service_enabled:
+            return _safe_error(rid, 503, "SERVICE_DISABLED", "Quant service is disabled")
+
+        try:
+            candles_dict = [c.model_dump() for c in body.candles]
+            payload = detect_patterns(
+                candles=candles_dict,
+                timeframe=body.timeframe,
+                symbol=body.symbol,
+                requested=list(body.patterns) if body.patterns else None,
+                options=body.options.model_dump(exclude_none=True) if body.options else None,
+                generated_at=__now_iso(),
+            )
+            payload["requestId"] = rid
+            payload["caveats"] = [
+                "Patterns are deterministic research observations only. Not financial advice.",
+                "Research-only output; no order routing. Paper-only research layer.",
+                "Confidence is conservative; technical patterns can fail in any market regime.",
+            ]
+            return ORJSONResponse(
+                payload,
+                headers={"x-request-id": rid, "cache-control": "no-store"},
+            )
+        except Exception as exc:  # noqa: BLE001
+            _log("error", "pattern_detect_error", requestId=rid, error=str(exc))
+            return _safe_error(rid, 400, "PATTERNS_ERROR", str(exc))
 
     # --- Backtest ---
     @app.post("/quant/backtest", response_class=ORJSONResponse)

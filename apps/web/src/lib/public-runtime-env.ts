@@ -18,6 +18,7 @@ export type PublicRuntimeEnvKey =
   | 'VITE_CTA_POLICY_REGISTRY_V1'
   | 'VITE_CTA_ORCHESTRATION_OFF'
   | 'VITE_CTA_EMERGENCY_DISABLE_LIST'
+  | 'VITE_LEARNING_LOOP_UI_ENABLED'
 
 export type PublicRuntimeEnv = Partial<Record<PublicRuntimeEnvKey, string>>
 
@@ -39,6 +40,7 @@ const PUBLIC_RUNTIME_ENV_KEYS: PublicRuntimeEnvKey[] = [
   'VITE_CTA_POLICY_REGISTRY_V1',
   'VITE_CTA_ORCHESTRATION_OFF',
   'VITE_CTA_EMERGENCY_DISABLE_LIST',
+  'VITE_LEARNING_LOOP_UI_ENABLED',
 ]
 
 const toOptionalEnv = (value: string | undefined) => {
@@ -110,6 +112,10 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
   ...withDefined(
     'VITE_CTA_EMERGENCY_DISABLE_LIST',
     toOptionalEnv(env.VITE_CTA_EMERGENCY_DISABLE_LIST)
+  ),
+  ...withDefined(
+    'VITE_LEARNING_LOOP_UI_ENABLED',
+    toOptionalEnv(env.VITE_LEARNING_LOOP_UI_ENABLED)
   ),
 })
 

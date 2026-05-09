@@ -16,7 +16,12 @@ Common rules across adapters:
   populated by these adapters to avoid PII leakage.
 """
 
-from .advisor import AdvisorIngestRequest, build_advisor_ingest
+from .advisor import (
+    AdvisorDecisionPointInput,
+    AdvisorIngestRequest,
+    AdvisorLearningActionInput,
+    build_advisor_ingest,
+)
 from .cost_ledger import CostLedgerIngestRequest, build_cost_ledger_ingest
 from .markets import MarketsIngestRequest, build_markets_ingest
 from .news import NewsIngestRequest, build_news_ingest
@@ -24,7 +29,9 @@ from .social import SocialIngestRequest, build_social_ingest
 from .trading_lab import TradingLabIngestRequest, build_trading_lab_ingest
 
 __all__ = [
+    "AdvisorDecisionPointInput",
     "AdvisorIngestRequest",
+    "AdvisorLearningActionInput",
     "CostLedgerIngestRequest",
     "MarketsIngestRequest",
     "NewsIngestRequest",

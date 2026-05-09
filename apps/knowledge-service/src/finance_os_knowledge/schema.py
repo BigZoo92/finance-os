@@ -30,6 +30,8 @@ KnowledgeNodeType = Literal[
     "Recommendation",
     "Assumption",
     "Evidence",
+    "DecisionPoint",
+    "LearningAction",
     "Model",
     "AgentSkill",
     "AgentRun",
@@ -47,6 +49,10 @@ KnowledgeRelationType = Literal[
     "DERIVED_FROM",
     "SUPPORTED_BY",
     "CONTRADICTED_BY",
+    "SUPPORTS",
+    "HAS_EVIDENCE",
+    "VALIDATED_BY",
+    "INVALIDATED_BY",
     "IMPACTS",
     "CAUSES",
     "CORRELATES_WITH",
@@ -86,9 +92,13 @@ RELATION_TYPES: tuple[str, ...] = tuple(KnowledgeRelationType.__args__)  # type:
 
 RELATION_WEIGHTS: dict[str, float] = {
     "SUPPORTED_BY": 1.0,
+    "SUPPORTS": 1.0,
+    "HAS_EVIDENCE": 0.94,
     "CONTRADICTED_BY": 0.98,
     "SUPERSEDES": 0.96,
     "INVALIDATES": 0.96,
+    "VALIDATED_BY": 0.94,
+    "INVALIDATED_BY": 0.94,
     "CAUSES": 0.92,
     "IMPACTS": 0.9,
     "JUSTIFIES": 0.88,
@@ -106,4 +116,4 @@ RELATION_WEIGHTS: dict[str, float] = {
     "GENERATED_SCENARIO": 0.7,
 }
 
-SCHEMA_VERSION = "2026-04-26.temporal-graph-v2"
+SCHEMA_VERSION = "2026-05-08.advisor-learning-loop-v1"

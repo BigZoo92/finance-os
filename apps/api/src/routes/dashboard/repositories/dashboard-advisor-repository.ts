@@ -1682,6 +1682,84 @@ export const createDashboardAdvisorRepository = ({
       } satisfies DashboardAdvisorEvalsResponse
     },
 
+    async listAdvisorEvalTrendRuns({ windowDays, limit }) {
+      // Window start is `now − windowDays`. Bounded above by `limit` to protect against
+      // pathological history sizes; the use-case clamps both before calling here.
+      const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+      const rows = await db
+        .select()
+        .from(schema.aiEvalRun)
+        .where(gte(schema.aiEvalRun.createdAt, cutoff))
+        .orderBy(desc(schema.aiEvalRun.createdAt), desc(schema.aiEvalRun.id))
+        .limit(Math.max(1, limit))
+
+      return rows.map(row => ({
+        id: row.id,
+        runId: row.runId ?? null,
+        status: row.status,
+        totalCases: row.totalCases,
+        passedCases: row.passedCases,
+        failedCases: row.failedCases,
+        summary: row.summary,
+        createdAt: row.createdAt.toISOString(),
+      }))
+    },
+
+    // PR15A — narrow read for behavior analytics. Selects ONLY the columns the analytics
+    // layer needs and EXPLICITLY EXCLUDES `free_note` columns from both the journal and the
+    // outcome tables — defense-in-depth on the "no raw freeNote in analytics responses or
+    // logs" rule. The two-step query is intentional (no JOIN spread): we fetch decisions in
+    // the window, then their outcomes by id IN (...).
+    async listDecisionsForBehaviorAnalytics({ windowDays, limit }) {
+      const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+      const decisions = await db
+        .select({
+          id: schema.advisorDecisionJournal.id,
+          decision: schema.advisorDecisionJournal.decision,
+          reasonCode: schema.advisorDecisionJournal.reasonCode,
+          decidedAt: schema.advisorDecisionJournal.decidedAt,
+          scope: schema.advisorDecisionJournal.scope,
+          recommendationId: schema.advisorDecisionJournal.recommendationId,
+          runId: schema.advisorDecisionJournal.runId,
+        })
+        .from(schema.advisorDecisionJournal)
+        .where(gte(schema.advisorDecisionJournal.decidedAt, cutoff))
+        .orderBy(
+          desc(schema.advisorDecisionJournal.decidedAt),
+          desc(schema.advisorDecisionJournal.id)
+        )
+        .limit(Math.max(1, Math.min(limit, 5000)))
+
+      if (decisions.length === 0) return { decisions: [], outcomes: [] }
+
+      const ids = decisions.map(d => d.id)
+      const outcomes = await db
+        .select({
+          decisionId: schema.advisorDecisionOutcome.decisionId,
+          outcomeKind: schema.advisorDecisionOutcome.outcomeKind,
+          observedAt: schema.advisorDecisionOutcome.observedAt,
+        })
+        .from(schema.advisorDecisionOutcome)
+        .where(inArray(schema.advisorDecisionOutcome.decisionId, ids))
+
+      return {
+        decisions: decisions.map(d => ({
+          id: d.id,
+          decision: d.decision,
+          reasonCode: d.reasonCode,
+          decidedAt: d.decidedAt.toISOString(),
+          scope: d.scope,
+          recommendationId: d.recommendationId ?? null,
+          runId: d.runId ?? null,
+        })),
+        outcomes: outcomes.map(o => ({
+          decisionId: o.decisionId,
+          outcomeKind: o.outcomeKind,
+          observedAt: o.observedAt.toISOString(),
+        })),
+      }
+    },
+
     async getLatestEvalRun() {
       const [row] = await db
         .select()

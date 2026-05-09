@@ -268,11 +268,10 @@ describe('createAdvisorRoute · post-mortem', () => {
     expect(payload.code).toBe('NOT_FOUND')
   })
 
-  it('POST /advisor/post-mortem/run rejects internal-token-only callers (admin session required, PR4-fix-2)', async () => {
-    // Internal-token support is deferred until the worker-scheduler PR lands. Until then, the
-    // route guard must reject internal-token-only callers (mode='demo' + valid internal token)
-    // with 403 BEFORE the use-case is invoked. This avoids the route/use-case auth contract
-    // mismatch that previously surfaced as a 500.
+  it('POST /advisor/post-mortem/run accepts a valid internal-token caller (PR7 worker scheduler)', async () => {
+    // PR7 widened the guard from admin-session-only to admin-OR-internal-token because the
+    // worker scheduler now exists. The route additionally elevates `mode` to 'admin' for
+    // internal-token callers so the use-case's defensive demo-mode throw is not triggered.
     const calls: PostMortemCalls = {
       list: 0,
       getById: 0,
@@ -295,12 +294,60 @@ describe('createAdvisorRoute · post-mortem', () => {
         body: JSON.stringify({ trigger: 'internal' }),
       })
     )
-    const payload = (await response.json()) as { code: string; message?: string }
+    const payload = (await response.json()) as {
+      status: string
+      feature: string
+    }
 
-    expect(response.status).toBe(403)
-    expect(payload.code).toBe('DEMO_MODE_FORBIDDEN')
-    // Critical: the use-case must NOT be invoked. The guard short-circuits BEFORE delegation.
-    expect(calls.run).toBe(0)
+    expect(response.status).toBe(200)
+    expect(payload.status).toBe('completed')
+    expect(payload.feature).toBe('post_mortem')
+    expect(calls.run).toBe(1)
+  })
+
+  it('POST /advisor/post-mortem/run forwards mode="admin" to the use-case for internal-token callers (no demo-mode throw)', async () => {
+    // The use-case throws when `mode === 'demo'`. The route MUST NOT forward 'demo' to the
+    // use-case when an internal-token is presented; it elevates to 'admin'. This test would
+    // have surfaced as a 500 in PR4-fix-1 — PR7 makes it a clean 200.
+    let observedMode: 'admin' | 'demo' | null = null
+    const runtime = createPostMortemRuntime({
+      runStub: { kind: 'completed' },
+    })
+    // Override `runAdvisorPostMortem` to capture the mode the route forwards.
+    ;(runtime.useCases as { runAdvisorPostMortem?: unknown }).runAdvisorPostMortem = async (
+      input: { mode: 'admin' | 'demo' }
+    ) => {
+      observedMode = input.mode
+      return {
+        status: 'completed',
+        feature: 'post_mortem',
+        evaluatedAt: '2026-05-07T12:00:00.000Z',
+        totalDue: 0,
+        processed: 0,
+        remaining: 0,
+        persistedIds: [],
+        failedItems: 0,
+        reason: null,
+        budgetReasons: [],
+      }
+    }
+
+    const app = createApp({
+      mode: 'demo',
+      runtime,
+      internalAuth: { hasValidToken: true, tokenSource: 'x-internal-token' },
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/post-mortem/run', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ trigger: 'scheduled' }),
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(observedMode).toBe('admin')
   })
 
   it('POST /advisor/post-mortem/run is forbidden in demo mode and never invokes the use-case', async () => {

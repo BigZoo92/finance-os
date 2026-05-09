@@ -1,9 +1,13 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import {
+  fetchAdvisorDecisionJournal,
+  fetchAdvisorPostMortems,
   fetchDashboardAdvisor,
   fetchDashboardAdvisorAssumptions,
   fetchDashboardAdvisorChat,
   fetchDashboardAdvisorEvals,
+  fetchDashboardAdvisorBehaviorAnalytics,
+  fetchDashboardAdvisorEvalsTrends,
   fetchDashboardAdvisorKnowledgeTopics,
   fetchDashboardAdvisorLatestManualOperation,
   fetchDashboardAdvisorManualOperationById,
@@ -12,10 +16,16 @@ import {
   fetchDashboardAdvisorSignals,
   fetchDashboardAdvisorSpend,
   fetchDashboardManualAssets,
+  fetchTradingLabHypotheses,
+  fetchTradingLabStrategyScorecard,
+  getDemoTradingLabStrategyScorecard,
+  fetchTradingLabHypothesisById,
   getDemoDashboardAdvisor,
   getDemoDashboardAdvisorAssumptions,
   getDemoDashboardAdvisorChat,
+  getDemoDashboardAdvisorBehaviorAnalytics,
   getDemoDashboardAdvisorEvals,
+  getDemoDashboardAdvisorEvalsTrends,
   getDemoDashboardAdvisorKnowledgeTopics,
   getDemoDashboardManualAssets,
   getDemoDashboardAdvisorRecommendations,
@@ -27,6 +37,11 @@ import {
   fetchDashboardSummary,
   fetchDashboardTransactions,
 } from './dashboard-api'
+import {
+  getDemoAdvisorDecisionJournal,
+  getDemoAdvisorPostMortems,
+  getDemoTradingLabHypotheses,
+} from './learning-loop-demo-data'
 import type { AuthMode } from './auth-types'
 import {
   getDemoDashboardDerivedRecomputeStatus,
@@ -110,7 +125,43 @@ export const dashboardQueryKeys = {
     [...dashboardQueryKeys.all, 'advisor-manual-operation', operationId] as const,
   advisorChat: (threadKey: string) => [...dashboardQueryKeys.all, 'advisor-chat', threadKey] as const,
   advisorEvals: () => [...dashboardQueryKeys.all, 'advisor-evals'] as const,
+  // PR9 — keep separate from advisorEvals so trends can be invalidated independently if needed.
+  advisorEvalsTrends: (windowDays?: number) =>
+    windowDays !== undefined
+      ? ([...dashboardQueryKeys.all, 'advisor-evals-trends', windowDays] as const)
+      : ([...dashboardQueryKeys.all, 'advisor-evals-trends'] as const),
+  // PR15A — Advisor Behavior Analytics. Keyed per windowDays so different windows can coexist
+  // in the cache.
+  advisorBehaviorAnalytics: (windowDays?: number) =>
+    windowDays !== undefined
+      ? ([...dashboardQueryKeys.all, 'advisor-behavior-analytics', windowDays] as const)
+      : ([...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const),
   manualAssets: () => [...dashboardQueryKeys.all, 'manual-assets'] as const,
+  // PR5 — Learning Loop surface query keys.
+  advisorJournal: (params?: {
+    limit?: number
+    recommendationId?: number
+    runId?: number
+    decision?: 'accepted' | 'rejected' | 'deferred' | 'ignored'
+  }) =>
+    [
+      ...dashboardQueryKeys.all,
+      'advisor-journal',
+      params?.limit ?? null,
+      params?.recommendationId ?? null,
+      params?.runId ?? null,
+      params?.decision ?? null,
+    ] as const,
+  advisorPostMortems: () => [...dashboardQueryKeys.all, 'advisor-post-mortems'] as const,
+  advisorPostMortem: (postMortemId: number) =>
+    [...dashboardQueryKeys.all, 'advisor-post-mortem', postMortemId] as const,
+  tradingLabHypotheses: () => [...dashboardQueryKeys.all, 'trading-lab-hypotheses'] as const,
+  // PR12 — Strategy scorecards. Keyed per strategy id so each card can be invalidated
+  // individually (e.g. after a backtest run completes for that strategy).
+  tradingLabStrategyScorecard: (strategyId: number) =>
+    [...dashboardQueryKeys.all, 'trading-lab-strategy-scorecard', strategyId] as const,
+  tradingLabHypothesis: (id: number) =>
+    [...dashboardQueryKeys.all, 'trading-lab-hypothesis', id] as const,
 }
 
 export const dashboardSummaryQueryOptions = (range: DashboardRange) =>
@@ -435,6 +486,58 @@ export const dashboardAdvisorEvalsQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
+// PR9 — Advisor Eval Trends. Flag-gated: when learningLoopEnabled is false, the query NEVER
+// fires (consumers also gate the component, but `enabled` here is the second line of defence).
+// Demo path returns deterministic fixtures; admin path hits the read-only trends endpoint.
+export const dashboardAdvisorEvalsTrendsQueryOptionsWithMode = ({
+  mode,
+  learningLoopEnabled,
+  windowDays,
+}: {
+  mode?: AuthMode
+  learningLoopEnabled: boolean
+  windowDays?: number
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorEvalsTrends(windowDays),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoDashboardAdvisorEvalsTrends(windowDays)
+      }
+      return fetchDashboardAdvisorEvalsTrends(windowDays)
+    },
+    enabled: mode !== undefined && learningLoopEnabled,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+    // Trends are enrichment, not load-bearing. Keep a single retry — if it fails, the UI
+    // surfaces a degraded badge rather than blocking the scorecard.
+    retry: 1,
+  })
+
+// PR15A — Advisor Behavior Analytics. Flag-gated; same enrichment-only retry posture as PR9
+// trends so a transient backend failure surfaces an inline degraded note rather than blocking
+// the rest of `/ia`.
+export const dashboardAdvisorBehaviorAnalyticsQueryOptionsWithMode = ({
+  mode,
+  learningLoopEnabled,
+  windowDays,
+}: {
+  mode?: AuthMode
+  learningLoopEnabled: boolean
+  windowDays?: number
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorBehaviorAnalytics(windowDays),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoDashboardAdvisorBehaviorAnalytics(windowDays)
+      }
+      return fetchDashboardAdvisorBehaviorAnalytics(windowDays)
+    },
+    enabled: mode !== undefined && learningLoopEnabled,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+    retry: 1,
+  })
+
 export const dashboardManualAssetsQueryOptionsWithMode = ({
   mode,
 }: {
@@ -491,3 +594,165 @@ export const dashboardTransactionsInfiniteQueryOptionsWithMode = (params: {
     getNextPageParam: lastPage => lastPage.nextCursor ?? undefined,
     staleTime: params.mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
+
+// ----------------------------------------------------------------------------------------------
+// PR5 — Advisor Learning Loop query options.
+//
+// Mode-aware: demo branches use deterministic fixtures; admin branches hit the API. All read
+// helpers stay short staleTime; mutations live in dashboard-api.ts and the components that call
+// them invalidate via `LEARNING_LOOP_INVALIDATION_KEYS` below.
+// ----------------------------------------------------------------------------------------------
+
+export const dashboardAdvisorJournalQueryOptionsWithMode = ({
+  mode,
+  limit,
+  recommendationId,
+  runId,
+  decision,
+}: {
+  mode?: AuthMode
+  limit?: number
+  recommendationId?: number
+  runId?: number
+  decision?: 'accepted' | 'rejected' | 'deferred' | 'ignored'
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorJournal({
+      ...(limit !== undefined ? { limit } : {}),
+      ...(recommendationId !== undefined ? { recommendationId } : {}),
+      ...(runId !== undefined ? { runId } : {}),
+      ...(decision ? { decision } : {}),
+    }),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoAdvisorDecisionJournal()
+      }
+      return fetchAdvisorDecisionJournal({
+        ...(limit !== undefined ? { limit } : {}),
+        ...(recommendationId !== undefined ? { recommendationId } : {}),
+        ...(runId !== undefined ? { runId } : {}),
+        ...(decision ? { decision } : {}),
+      })
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
+  })
+
+export const dashboardAdvisorPostMortemsQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorPostMortems(),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoAdvisorPostMortems()
+      }
+      return fetchAdvisorPostMortems()
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+export const dashboardTradingLabHypothesesQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.tradingLabHypotheses(),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoTradingLabHypotheses()
+      }
+      return fetchTradingLabHypotheses()
+    },
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+// PR12 — Strategy Scorecard query options. Flag-gated by the same Learning Loop UI flag as
+// the rest of the train: when the flag is off, the query NEVER fires (`enabled: false`).
+export const dashboardTradingLabStrategyScorecardQueryOptionsWithMode = ({
+  mode,
+  strategyId,
+  learningLoopEnabled,
+}: {
+  mode?: AuthMode
+  strategyId: number
+  learningLoopEnabled: boolean
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.tradingLabStrategyScorecard(strategyId),
+    queryFn: () => {
+      if (mode === 'demo') {
+        return getDemoTradingLabStrategyScorecard(strategyId)
+      }
+      return fetchTradingLabStrategyScorecard(strategyId)
+    },
+    enabled:
+      mode !== undefined && learningLoopEnabled && Number.isFinite(strategyId) && strategyId > 0,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+    // Scorecard is enrichment, not load-bearing. One retry only — on persistent failure the UI
+    // surfaces an inline degraded note rather than blocking the hypothesis row.
+    retry: 1,
+  })
+
+export const dashboardTradingLabHypothesisQueryOptionsWithMode = ({
+  mode,
+  id,
+}: {
+  mode?: AuthMode
+  id: number
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.tradingLabHypothesis(id),
+    queryFn: () => {
+      if (mode === 'demo') {
+        const fixture = getDemoTradingLabHypotheses()
+        const found = fixture.hypotheses.find(h => h.id === id)
+        if (!found) {
+          throw new Error('Hypothesis not found in demo fixtures')
+        }
+        return { ok: true, hypothesis: found }
+      }
+      return fetchTradingLabHypothesisById(id)
+    },
+    enabled: mode !== undefined && Number.isFinite(id),
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+// Centralized list of partial query-key prefixes to invalidate after a learning-loop mutation.
+// React Query's `invalidateQueries({ queryKey })` invalidates by prefix match, so these short
+// arrays cover every variant (with or without filters) of the matching query.
+export const LEARNING_LOOP_INVALIDATION_KEYS = {
+  afterDecisionJournal: () => [
+    [...dashboardQueryKeys.all, 'advisor-journal'] as const,
+    [...dashboardQueryKeys.all, 'advisor-recommendations'] as const,
+    // PR15A — new journal entries shift the analytics window aggregates.
+    [...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const,
+  ],
+  afterDecisionOutcome: () => [
+    [...dashboardQueryKeys.all, 'advisor-journal'] as const,
+    // PR15A — outcome creation can change reason-code aggregation + outcome coverage.
+    [...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const,
+  ],
+  afterHypothesisChange: () => [
+    [...dashboardQueryKeys.all, 'trading-lab-hypotheses'] as const,
+    [...dashboardQueryKeys.all, 'trading-lab-hypothesis'] as const,
+    // PR12 — scorecards aggregate across hypothesis state; a new hypothesis or
+    // archive transition can change the grade.
+    [...dashboardQueryKeys.all, 'trading-lab-strategy-scorecard'] as const,
+  ],
+  afterPostMortemRun: () => [
+    [...dashboardQueryKeys.all, 'advisor-post-mortems'] as const,
+    [...dashboardQueryKeys.all, 'advisor-evals'] as const,
+    [...dashboardQueryKeys.all, 'advisor-evals-trends'] as const,
+  ],
+  // PR9 — fire after a manual evals run completes so the trends scorecard refetches.
+  afterAdvisorEvalsRun: () => [
+    [...dashboardQueryKeys.all, 'advisor-evals'] as const,
+    [...dashboardQueryKeys.all, 'advisor-evals-trends'] as const,
+  ],
+} as const

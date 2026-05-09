@@ -317,6 +317,7 @@ Notes:
 | `TRADING_LAB_DEFAULT_FEES_BPS` | `10` | Dokploy, Local | Quant Service | Frais par defaut en bps |
 | `TRADING_LAB_DEFAULT_SLIPPAGE_BPS` | `5` | Dokploy, Local | Quant Service | Slippage par defaut en bps |
 | `TRADING_LAB_GRAPH_INGEST_ENABLED` | `true` | Dokploy, Local | API | Ingest strategies/backtests vers knowledge graph |
+| `ADVISOR_GRAPH_INGEST_ENABLED` | **`false`** | Dokploy, Local | API | PR8 — ingest DecisionPoint (journal entries) + LearningAction (post-mortem) vers knowledge graph. **Default `false` au premier release.** Both ce flag ET `KNOWLEDGE_SERVICE_ENABLED` doivent etre `true` pour qu'un appel reseau soit emis. Fail-soft enrichment uniquement, Postgres reste canonique. Voir rollout dans `LEARNING-LOOP-RELEASE-CHECKLIST.md`. |
 | `ATTENTION_SYSTEM_ENABLED` | `true` | Dokploy, Local | API | Active le systeme d'attention |
 | `ATTENTION_SIGNAL_MIN_RELEVANCE` | `60` | Dokploy, Local | API | Seuil minimum relevance pour attention signal |
 | `ATTENTION_SIGNAL_MIN_CONFIDENCE` | `50` | Dokploy, Local | API | Seuil minimum confidence pour attention signal |
@@ -413,6 +414,11 @@ Notes:
 | `AI_POST_MORTEM_HORIZON_DAYS` | `30` | Dokploy, `.env` | API | Non | Horizon par defaut pour considerer une recommandation expiree dans le batch post-mortem |
 | `AI_POST_MORTEM_BATCH_LIMIT` | `10` | Dokploy, `.env` | API | Non | Cap dur d'items traites par run post-mortem (un seul appel LLM batch) |
 | `AI_POST_MORTEM_MODEL` | `claude-sonnet-4-6` | Dokploy, `.env` | API | Non | Modele LLM utilise par le post-mortem |
+| `AI_POST_MORTEM_AUTO_RUN_ENABLED` | `false` | Dokploy, `.env` | Worker | Non | PR7 — Active le scheduler post-mortem (worker). Quand `false`, le worker n'envoie aucun POST. La route accepte toujours admin OR internal token, mais aucun trigger automatique n'est emis. |
+| `AI_POST_MORTEM_CRON` | `0 7 * * *` | Dokploy, `.env` | Worker | Non | Expression cron (champs minute + heure) pour le scheduler post-mortem. Convention identique a `DAILY_INTELLIGENCE_CRON`. |
+| `AI_POST_MORTEM_TIMEZONE` | `Europe/Paris` | Dokploy, `.env` | Worker | Non | Fuseau horaire de reference pour le cron post-mortem. |
+| `AI_POST_MORTEM_TRIGGER_TIMEOUT_MS` | `30000` | Dokploy, `.env` | Worker | Non | Timeout AbortController du POST interne vers `POST /dashboard/advisor/post-mortem/run`. |
+| `AI_POST_MORTEM_LOCK_TTL_SECONDS` | `1800` | Dokploy, `.env` | Worker | Non | TTL du lock Redis `finance-os:post-mortem:scheduler-lock` qui empeche les runs paralleles. |
 | `AI_DAILY_AUTO_RUN_ENABLED` | `false` | Dokploy, `.env` | Worker | Non | Scheduler quotidien advisor. Doit rester `false` dans le mode manuel recommande |
 | `AI_DAILY_INTERVAL_MS` | `900000` | Dokploy, `.env` | Worker | Non | Frequence de verification du scheduler advisor (tick periodique) |
 | `AI_DAILY_MARKET_OPEN_WINDOW_ENABLED` | `true` | Dokploy, `.env` | Worker | Non | Active la garde de fenetre autour de l'ouverture de marche pour `run-daily` |
@@ -443,6 +449,7 @@ Notes:
 | `VITE_PWA_CRITICAL_ENABLED` | -- | GitHub vars | Alertes critiques push |
 | `VITE_AI_ADVISOR_ENABLED` | -- | GitHub vars | Feature conseiller IA |
 | `VITE_AI_ADVISOR_ADMIN_ONLY` | -- | GitHub vars | Restreindre IA aux admins. Recommande `true` pour le mode manuel actuel |
+| `VITE_LEARNING_LOOP_UI_ENABLED` | `false` | GitHub vars | PR5 — Active les surfaces UI du Advisor Learning Loop (Decision Recorder, Hypothesis Lab, Eval Scorecard, Post-Mortem feed). Off par defaut. |
 | `VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED` | `true` | GitHub vars | Active/desactive le panneau d'explicabilite benchmark social |
 | `VITE_CTA_POLICY_REGISTRY_V1` | `false` | GitHub vars | Active le registre CTA policy-first v1 (fallback legacy si desactive) |
 | `VITE_CTA_ORCHESTRATION_OFF` | `false` | GitHub vars | Kill-switch global pour couper l'orchestration CTA policy-first |

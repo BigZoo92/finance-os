@@ -106,6 +106,7 @@ export const createDashboardRoutes = ({
   quantServiceUrl,
   quantServiceTimeoutMs,
   tradingLabGraphIngestEnabled,
+  advisorGraphIngestEnabled,
   externalInvestmentsEnabled,
   externalInvestmentsSafeMode,
   externalInvestmentsStaleAfterMinutes,
@@ -198,6 +199,7 @@ export const createDashboardRoutes = ({
   quantServiceUrl: string
   quantServiceTimeoutMs: number
   tradingLabGraphIngestEnabled: boolean
+  advisorGraphIngestEnabled: boolean
   externalInvestmentsEnabled: boolean
   externalInvestmentsSafeMode: boolean
   externalInvestmentsStaleAfterMinutes: number
@@ -288,6 +290,7 @@ export const createDashboardRoutes = ({
       maxPathDepth: knowledgeGraphMaxPathDepth,
       minConfidence: knowledgeGraphMinConfidence,
     },
+    advisorGraphIngestEnabled,
     externalInvestmentsEnabled,
     externalInvestmentsSafeMode,
     externalInvestmentsStaleAfterMinutes,

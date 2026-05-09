@@ -95,10 +95,19 @@ const filterDemoList = (
   return { items }
 }
 
+export interface DecisionJournalGraphIngestHook {
+  ingestDecisionPoint: (params: {
+    entry: DashboardAdvisorDecisionJournalEntryResponse
+    requestId: string
+  }) => Promise<void>
+}
+
 export const createDecisionJournalUseCases = ({
   repository,
+  graphIngest,
 }: {
   repository: DashboardAdvisorRepository
+  graphIngest?: DecisionJournalGraphIngestHook
 }) => ({
   async listAdvisorDecisionJournal(input: {
     mode: 'demo' | 'admin'
@@ -152,7 +161,7 @@ export const createDecisionJournalUseCases = ({
     const expectedOutcomeAt = parseExpectedOutcome(input.expectedOutcomeAt)
     const freeNote = truncateFreeNote(input.freeNote)
 
-    return repository.createDecisionJournalEntry({
+    const created = await repository.createDecisionJournalEntry({
       ...(input.recommendationId !== undefined
         ? { recommendationId: input.recommendationId }
         : {}),
@@ -168,6 +177,19 @@ export const createDecisionJournalUseCases = ({
       ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
       scope: 'admin',
     })
+
+    // Best-effort graph ingest. The hook itself is fail-soft, but we wrap in
+    // try/catch as belt-and-suspenders so a misbehaving hook can never block
+    // the journal create response.
+    if (graphIngest) {
+      try {
+        await graphIngest.ingestDecisionPoint({ entry: created, requestId: input.requestId })
+      } catch {
+        // intentionally swallow — graph is enrichment only.
+      }
+    }
+
+    return created
   },
 
   async createAdvisorDecisionOutcome(

@@ -38,6 +38,10 @@ import {
   startDailyIntelligenceScheduler,
   triggerDailyIntelligenceRun,
 } from './daily-intelligence-scheduler'
+import {
+  startPostMortemScheduler,
+  triggerAdvisorPostMortemRun,
+} from './post-mortem-scheduler'
 import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
 import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
 import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
@@ -118,6 +122,7 @@ let newsSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let marketSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let advisorSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let dailyIntelligenceSchedulerTimer: ReturnType<typeof setInterval> | null = null
+let postMortemSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let socialSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let attentionSchedulerTimer: ReturnType<typeof setInterval> | null = null
 let statusServer: Server | null = null
@@ -1503,6 +1508,34 @@ const startDailyIntelligenceRunScheduler = () => {
   })
 }
 
+// PR7 — Advisor Post-Mortem worker scheduler. Off by default. The scheduler only fires an
+// internal HTTP POST against the API; all post-mortem logic, gates, validation, and DB writes
+// remain on the API side. See `apps/worker/src/post-mortem-scheduler.ts`.
+const startAdvisorPostMortemRunScheduler = () => {
+  postMortemSchedulerTimer = startPostMortemScheduler({
+    externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
+    enabled: env.AI_POST_MORTEM_AUTO_RUN_ENABLED,
+    cron: env.AI_POST_MORTEM_CRON,
+    timezone: env.AI_POST_MORTEM_TIMEZONE,
+    trigger: () =>
+      triggerAdvisorPostMortemRun({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        lockTtlSeconds: env.AI_POST_MORTEM_LOCK_TTL_SECONDS,
+        triggerTimeoutMs: env.AI_POST_MORTEM_TRIGGER_TIMEOUT_MS,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+      }),
+    log: event =>
+      logWorkerEvent({
+        ...event,
+        ...(event.msg === 'worker post-mortem scheduler started'
+          ? { apiInternalUrl: env.API_INTERNAL_URL }
+          : {}),
+      }),
+  })
+}
+
 const startAttentionScheduler = () => {
   attentionSchedulerTimer = startAttentionRebuildScheduler({
     externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
@@ -1653,6 +1686,7 @@ const start = async () => {
   startMarketScheduler()
   startAdvisorScheduler()
   startDailyIntelligenceRunScheduler()
+  startAdvisorPostMortemRunScheduler()
   startSocialScheduler()
   startAttentionScheduler()
   await consumeJobs()
@@ -1694,6 +1728,11 @@ const shutdown = async (signal: string) => {
   if (dailyIntelligenceSchedulerTimer) {
     clearInterval(dailyIntelligenceSchedulerTimer)
     dailyIntelligenceSchedulerTimer = null
+  }
+
+  if (postMortemSchedulerTimer) {
+    clearInterval(postMortemSchedulerTimer)
+    postMortemSchedulerTimer = null
   }
 
   if (socialSchedulerTimer) {

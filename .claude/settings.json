@@ -1,5 +1,7 @@
 {
   "permissions": {
+    "defaultMode": "auto",
+    "disableAutoMode": "disable",
     "allow": [
       "Read(//Users/enzogivernaud/dev/**)",
       "Bash(python -c \"from finance_os_knowledge.app import create_app; app = create_app\\(\\); print\\('app created ok'\\)\")",
@@ -14,7 +16,27 @@
       "Bash(pnpm -r --if-present test)",
       "Bash(pnpm -r --if-present build)",
       "Bash(pnpm -w lint)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(.venv/bin/pytest tests/test_ingest_adapters.py -x -q)",
+      "Bash(.venv/bin/python -m pip install -q --upgrade pip)",
+      "Bash(.venv/bin/python -m pip install -q -e \".[dev]\")",
+      "Bash(mise which *)",
+      "Bash(python3 -c \"import ast; [ast.parse\\(open\\(f\\).read\\(\\), f\\) for f in ['src/finance_os_knowledge/schema.py', 'src/finance_os_knowledge/ingest/advisor.py', 'src/finance_os_knowledge/ingest/__init__.py', 'tests/test_ingest_adapters.py']]; print\\('OK: AST parse clean'\\)\")",
+      "Bash(bun test *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm evals:run)",
+      "Bash(pnpm evals:run -- --strict)",
+      "Bash(uv --version)",
+      "Bash(curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv-install.sh)",
+      "Bash(sh /tmp/uv-install.sh -q)",
+      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")",
+      "Bash(uv run *)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(pnpm --filter @finance-os/web test -- learning-loop-trends-view-model)",
+      "Bash(pnpm --filter @finance-os/web test -- learning-loop-smoke)",
+      "Bash(bun -e ' *)"
     ]
   }
 }

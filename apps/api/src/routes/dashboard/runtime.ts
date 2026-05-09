@@ -14,6 +14,8 @@ import {
 } from './domain/advisor/create-dashboard-advisor-use-cases'
 import { createDecisionJournalUseCases } from './domain/advisor/create-decision-journal-use-cases'
 import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
+import { createAdvisorBehaviorAnalyticsUseCase } from './domain/advisor/get-advisor-behavior-analytics'
+import { createAdvisorEvalTrendsUseCase } from './domain/advisor/get-advisor-eval-trends'
 import { createPostMortemUseCases } from './domain/advisor/post-mortem/create-post-mortem-use-cases'
 import { createGetDashboardSummaryUseCase } from './domain/create-get-dashboard-summary-use-case'
 import { createGetDashboardTransactionsUseCase } from './domain/create-get-dashboard-transactions-use-case'
@@ -40,6 +42,10 @@ import { createDashboardDerivedRecomputeRepository } from './repositories/dashbo
 import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
 import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
+import {
+  sendDecisionPointToKnowledgeGraph,
+  sendPostMortemToKnowledgeGraph,
+} from './services/advisor-graph-ingest'
 import { createLiveMarketDataRefreshService } from './services/fetch-live-market-data'
 import { createLiveNewsIngestionService } from './services/fetch-live-news'
 import {
@@ -133,6 +139,7 @@ export const createDashboardRouteRuntime = ({
   aiPostMortemModel,
   advisorXSignalsMode,
   knowledgeConfig,
+  advisorGraphIngestEnabled,
   externalInvestmentsEnabled,
   externalInvestmentsSafeMode,
   externalInvestmentsStaleAfterMinutes,
@@ -214,6 +221,7 @@ export const createDashboardRouteRuntime = ({
   aiPostMortemModel: string
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
   knowledgeConfig: KnowledgeServiceClientConfig
+  advisorGraphIngestEnabled: boolean
   externalInvestmentsEnabled: boolean
   externalInvestmentsSafeMode: boolean
   externalInvestmentsStaleAfterMinutes: number
@@ -463,8 +471,51 @@ export const createDashboardRouteRuntime = ({
     },
   })
 
+  // PR9 — Advisor Eval Trends. Read-only; no LLM, provider, graph, or knowledge-service call.
+  const advisorEvalTrends = createAdvisorEvalTrendsUseCase({ repository: advisorRepository })
+
+  // PR15A — Advisor Behavior Analytics. Read-only; freeNote-free read helper; no LLM,
+  // provider, graph, or knowledge-service call.
+  const advisorBehaviorAnalytics = createAdvisorBehaviorAnalyticsUseCase({
+    repository: advisorRepository,
+  })
+
+  // PR8 — Advisor Learning Loop graph ingest hooks. Both hooks are fail-soft;
+  // if KNOWLEDGE_SERVICE_ENABLED or ADVISOR_GRAPH_INGEST_ENABLED is false, the
+  // adapter short-circuits with `ok=false` and never touches the network.
   const advisorDecisionJournal = createDecisionJournalUseCases({
     repository: advisorRepository,
+    graphIngest: {
+      ingestDecisionPoint: async ({ entry, requestId }) => {
+        const result = await sendDecisionPointToKnowledgeGraph({
+          knowledgeServiceUrl: knowledgeConfig.url,
+          knowledgeServiceEnabled: knowledgeConfig.enabled,
+          ingestEnabled: advisorGraphIngestEnabled,
+          requestId,
+          input: {
+            decisionId: entry.id,
+            decision: entry.decision,
+            reasonCode: entry.reasonCode,
+            decidedAt: entry.decidedAt,
+            decidedBy: entry.decidedBy,
+            expectedOutcomeAt: entry.expectedOutcomeAt,
+            recommendationId: entry.recommendationId,
+            recommendationKey: entry.recommendationKey,
+            runId: entry.runId,
+            freeNote: entry.freeNote,
+          },
+          timeoutMs: knowledgeConfig.timeoutMs,
+        })
+        if (!result.ok && result.reason && !result.reason.includes('disabled')) {
+          logApiEvent({
+            level: 'warn',
+            msg: 'advisor decision point graph ingest skipped',
+            requestId,
+            reason: result.reason,
+          })
+        }
+      },
+    },
   })
 
   // PR4 — Advisor Post-Mortem.
@@ -546,6 +597,47 @@ export const createDashboardRouteRuntime = ({
       feature: 'post_mortem',
     },
     demoFixtures: { list: getAdvisorPostMortemListMock().items },
+    graphIngest: {
+      ingestPostMortemActions: async ({ persistedRow, context, parsed, requestId }) => {
+        if (parsed.learningActions.length === 0) return
+        const overall = parsed.overallOutcome
+        const status: 'validates_recommendation' | 'invalidates_recommendation' | 'neutral' =
+          overall === 'positive'
+            ? 'validates_recommendation'
+            : overall === 'negative'
+              ? 'invalidates_recommendation'
+              : 'neutral'
+        const result = await sendPostMortemToKnowledgeGraph({
+          knowledgeServiceUrl: knowledgeConfig.url,
+          knowledgeServiceEnabled: knowledgeConfig.enabled,
+          ingestEnabled: advisorGraphIngestEnabled,
+          requestId,
+          actions: parsed.learningActions.map((action, index) => ({
+            postMortemId: persistedRow.id,
+            actionIndex: index,
+            title: action.title,
+            description: action.description,
+            appliesTo: [...action.appliesTo],
+            status,
+            confidence: 0.6,
+            recommendationId: context.recommendationId,
+            recommendationKey: context.recommendationKey,
+            decisionId: context.decisionId,
+            runId: context.runId,
+            evaluatedAt: persistedRow.evaluatedAt,
+          })),
+          timeoutMs: knowledgeConfig.timeoutMs,
+        })
+        if (!result.ok && result.reason && !result.reason.includes('disabled')) {
+          logApiEvent({
+            level: 'warn',
+            msg: 'advisor post-mortem graph ingest skipped',
+            requestId,
+            reason: result.reason,
+          })
+        }
+      },
+    },
   })
 
   const manualAdvisorOrchestration = createAdvisorManualRefreshAndRunUseCases({
@@ -699,6 +791,8 @@ export const createDashboardRouteRuntime = ({
       getAdvisorChat: advisor.getAdvisorChat,
       postAdvisorChat: advisor.postAdvisorChat,
       getAdvisorEvals: advisor.getAdvisorEvals,
+      getAdvisorEvalsTrends: advisorEvalTrends.getAdvisorEvalsTrends,
+      getAdvisorBehaviorAnalytics: advisorBehaviorAnalytics.getAdvisorBehaviorAnalytics,
       listAdvisorDecisionJournal: advisorDecisionJournal.listAdvisorDecisionJournal,
       getAdvisorDecisionJournalEntry: advisorDecisionJournal.getAdvisorDecisionJournalEntry,
       createAdvisorDecisionJournalEntry: advisorDecisionJournal.createAdvisorDecisionJournalEntry,

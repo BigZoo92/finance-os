@@ -8,6 +8,12 @@ import {
   isHypothesisValidationError,
 } from '../domain/trading-lab/hypotheses/create-hypothesis-use-cases'
 import { isHypothesisExecutionInstructionError } from '../domain/trading-lab/hypotheses/detect-execution-instruction'
+import {
+  buildDemoStrategyScorecard,
+  createStrategyScorecardUseCase,
+  type StrategyScorecardInputBacktestRun,
+  type StrategyScorecardInputStrategy,
+} from '../domain/trading-lab/scorecard/compute-strategy-scorecard'
 import { createDashboardTradingLabRepository } from '../repositories/dashboard-trading-lab-repository'
 import { createDashboardSignalItemsRepository } from '../repositories/dashboard-signal-items-repository'
 import {
@@ -15,6 +21,7 @@ import {
   type DataSourcePreference,
 } from '../services/trading-lab-market-data'
 import { sendBacktestToKnowledgeGraph } from '../services/trading-lab-graph-ingest'
+import { buildDemoPatternDetectionResponse } from '../services/pattern-detection-demo'
 import type { ApiDb } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -181,6 +188,9 @@ const DEMO_CAPABILITIES = {
   ],
 }
 
+// PR10 — pattern detection demo fixture lives in `services/pattern-detection-demo.ts` so unit
+// tests can import it without pulling the full route factory's transitive DB dependencies.
+
 // PR3 — Hypothesis Lab demo fixtures.
 // A "manual hypothesis" is just a tradingLabStrategy row with strategyType='manual-hypothesis'.
 // Hypothesis-specific data lives under the structured `parameters.hypothesis` namespace; caveats
@@ -284,6 +294,44 @@ export const createTradingLabRoute = ({
   const signalItemsRepo = createDashboardSignalItemsRepository({ db })
   const hypotheses = createHypothesisUseCases({ repository: repo })
 
+  // PR12 — Strategy Scorecard. Pure read use-case that aggregates the QUALITY OF EVIDENCE
+  // behind a strategy/hypothesis. NEVER calls quant-service directly, the LLM, the graph, or a
+  // provider; reads only Postgres rows that already exist (`tradingLabStrategy` + completed
+  // `tradingLabBacktestRun`s).
+  const scorecardUseCase = createStrategyScorecardUseCase({
+    repository: {
+      getStrategy: async id => {
+        const row = await repo.getStrategy(id)
+        if (!row) return null
+        const strategy: StrategyScorecardInputStrategy = {
+          id: row.id,
+          strategyType: row.strategyType,
+          status: row.status,
+        }
+        return strategy
+      },
+      listBacktestRunsForStrategy: async strategyId => {
+        const rows = await repo.listBacktestRuns({ strategyId, limit: 100 })
+        return rows.map(
+          (row): StrategyScorecardInputBacktestRun => ({
+            id: row.id,
+            runStatus: row.runStatus,
+            feesBps: row.feesBps,
+            slippageBps: row.slippageBps,
+            metrics: (row.metrics ?? null) as Record<string, unknown> | null,
+            resultSummary: (row.resultSummary ?? null) as Record<string, unknown> | null,
+            createdAt: row.createdAt,
+            trades: row.trades,
+            // PR14 — pass the equity curve through so the scorecard's advanced-metrics helper
+            // can compute Calmar / Ulcer / VaR / rolling Sharpe / etc. The shape matches:
+            //   Array<{ date: string; equity: number }>
+            equityCurve: row.equityCurve ?? null,
+          })
+        )
+      },
+    },
+  })
+
   const callQuantService = async (
     path: string,
     body: unknown,
@@ -339,6 +387,89 @@ export const createTradingLabRoute = ({
       })
     })
 
+    // --- Patterns (PR10) ---
+    // Read-only proxy to quant-service /quant/patterns/detect. Demo returns
+    // deterministic fixtures; admin forwards the request. NEVER an execution
+    // path; the quant-service self-scans output for execution vocabulary.
+    .post(
+      '/patterns/detect',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        return demoOrReal({
+          context,
+          demo: () => buildDemoPatternDetectionResponse(context.body),
+          real: async () => {
+            if (!quantServiceEnabled) {
+              context.set.status = 503
+              return {
+                ok: false,
+                code: 'QUANT_SERVICE_DISABLED',
+                message: 'Quant service is disabled',
+                requestId,
+              }
+            }
+            const result = await callQuantService(
+              '/quant/patterns/detect',
+              context.body,
+              requestId
+            )
+            if (!result.ok) {
+              context.set.status = 503
+              return {
+                ok: false,
+                code: 'QUANT_SERVICE_UNAVAILABLE',
+                message: result.error ?? 'Quant service unreachable',
+                requestId,
+              }
+            }
+            return { ok: true, ...(result.data as object) }
+          },
+        })
+      },
+      {
+        body: t.Object({
+          symbol: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+          timeframe: t.String({ minLength: 1, maxLength: 16 }),
+          candles: t.Array(
+            t.Object({
+              timestamp: t.String({ minLength: 1, maxLength: 64 }),
+              open: t.Number(),
+              high: t.Number(),
+              low: t.Number(),
+              close: t.Number(),
+              volume: t.Optional(t.Union([t.Number(), t.Null()])),
+            }),
+            { maxItems: 5000 }
+          ),
+          patterns: t.Optional(
+            t.Array(
+              t.Union([
+                t.Literal('ema20_horizontal_level'),
+                t.Literal('ema200_one_touch'),
+                t.Literal('parabolic_sar_rci'),
+                t.Literal('volume_profile_zones'),
+                // PR15B — SMC/ICT deterministic detector pack
+                t.Literal('fair_value_gap'),
+                t.Literal('liquidity_sweep'),
+                t.Literal('break_of_structure'),
+                t.Literal('change_of_character'),
+                t.Literal('order_block_candidate'),
+              ]),
+              { maxItems: 9 }
+            )
+          ),
+          options: t.Optional(
+            t.Object({
+              horizontalLevelTolerancePct: t.Optional(t.Number({ minimum: 0.05, maximum: 5 })),
+              emaTouchTolerancePct: t.Optional(t.Number({ minimum: 0.05, maximum: 5 })),
+              minCandles: t.Optional(t.Number({ minimum: 10, maximum: 2000 })),
+              volumeProfileBins: t.Optional(t.Number({ minimum: 4, maximum: 200 })),
+            })
+          ),
+        }),
+      }
+    )
+
     // --- Strategies ---
     .get('/strategies', async context => {
       return demoOrReal({
@@ -370,6 +501,32 @@ export const createTradingLabRoute = ({
             return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
           }
           return { ok: true, strategy }
+        },
+      })
+    })
+    // PR12 — Strategy Scorecard. Read-only evidence-quality view; never an execution path.
+    .get('/strategies/:id/scorecard', async context => {
+      const id = Number(context.params.id)
+      const requestId = getRequestMeta(context).requestId
+      if (!Number.isFinite(id) || id <= 0) {
+        context.set.status = 400
+        return { ok: false, code: 'INVALID_ID', message: 'Invalid strategy id', requestId }
+      }
+      return demoOrReal({
+        context,
+        demo: () =>
+          buildDemoStrategyScorecard({ strategyId: id, generatedAt: new Date() }),
+        real: async () => {
+          const scorecard = await scorecardUseCase.getStrategyScorecard({
+            mode: 'admin',
+            requestId,
+            strategyId: id,
+          })
+          if (!scorecard) {
+            context.set.status = 404
+            return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
+          }
+          return scorecard
         },
       })
     })

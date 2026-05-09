@@ -106,6 +106,18 @@ export const dashboardAdvisorListQuerySchema = t.Object({
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
 })
 
+// PR9 — eval trends. windowDays clamped 7..90 by the use-case; the validator caps at 90 to
+// avoid excessive query ranges hitting the DB.
+export const dashboardAdvisorEvalsTrendsQuerySchema = t.Object({
+  windowDays: t.Optional(t.Numeric({ minimum: 1, maximum: 90 })),
+})
+
+// PR15A — behavior analytics. windowDays clamped 7..365 by the use-case; the validator caps
+// at 365 (the use-case also clamps below the floor when windowDays is given).
+export const dashboardAdvisorBehaviorAnalyticsQuerySchema = t.Object({
+  windowDays: t.Optional(t.Numeric({ minimum: 1, maximum: 365 })),
+})
+
 export const dashboardAdvisorChatQuerySchema = t.Object({
   threadKey: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
 })

@@ -13,9 +13,10 @@
 // `failed` (with `errorCode='execution_directive_emitted'`) and the learning actions are NOT
 // persisted as usable.
 //
-// Graph ingest of LearningAction / DecisionPoint is **deferred** in PR4 (the existing
-// knowledge-service advisor ingest doesn't accept those node types). This module is structured
-// so that a graph-ingest hook can be wired in a future PR without changing the public contract.
+// PR8 wires graph ingest of LearningAction / DecisionPoint via an optional `graphIngest` hook
+// passed to the factory. The hook fires ONLY on the happy path (status='completed') after each
+// row has been persisted, never on `failed`, `skipped_*`, or `execution_directive_emitted`. The
+// hook itself is fail-soft and any exception is swallowed — graph is enrichment, not canonical.
 
 import {
   EXECUTION_VOCABULARY,
@@ -353,18 +354,29 @@ export interface PostMortemUseCases {
   }) => Promise<PersistedPostMortemRow | null>
 }
 
+export interface PostMortemGraphIngestHook {
+  ingestPostMortemActions: (params: {
+    persistedRow: PersistedPostMortemRow
+    context: ExpiredRecommendationContext
+    parsed: PostMortemOutput
+    requestId: string
+  }) => Promise<void>
+}
+
 export const createPostMortemUseCases = ({
   repository,
   runner,
   budget,
   config,
   demoFixtures,
+  graphIngest,
 }: {
   repository: PostMortemRepositoryAdapter
   runner: PostMortemStructuredRunner
   budget: BudgetStateProvider
   config: PostMortemConfig
   demoFixtures: PostMortemDemoFixtures
+  graphIngest?: PostMortemGraphIngestHook
 }): PostMortemUseCases => {
   const buildSkipped = (
     status: PostMortemRunSummaryStatus,
@@ -595,13 +607,24 @@ export const createPostMortemUseCases = ({
           calibration: parsed.confidenceCalibration as unknown as Record<string, unknown>,
           learningActions: parsed.learningActions as unknown as Array<Record<string, unknown>>,
           riskNotes: {
-            // PR4 ships persistence only; graph ingest of LearningAction / DecisionPoint is
-            // deferred. The persisted row is the source of truth for now.
-            graphIngest: 'deferred',
+            graphIngest: graphIngest ? 'attempted' : 'disabled',
             scope: 'advisory-only',
           },
         })
         persistedIds.push(row.id)
+
+        if (graphIngest) {
+          try {
+            await graphIngest.ingestPostMortemActions({
+              persistedRow: row,
+              context: ctx,
+              parsed,
+              requestId: input.requestId,
+            })
+          } catch {
+            // intentionally swallow — graph is enrichment only.
+          }
+        }
       }
 
       return {

@@ -133,3 +133,68 @@ async def test_no_live_trading_endpoints(client):
         assert resp.status_code in (404, 405), f"Unexpected endpoint found: {path}"
         resp = await client.post(path, json={})
         assert resp.status_code in (404, 422), f"Unexpected endpoint found: {path}"
+
+
+@pytest.mark.anyio
+async def test_patterns_detect_endpoint_returns_data_quality_and_caveats(client):
+    candles = [
+        {
+            "timestamp": f"2025-01-{i:02d}T00:00:00+00:00",
+            "open": 100.0 + (i % 5) * 0.1,
+            "high": 100.4 + (i % 5) * 0.1,
+            "low": 99.6 + (i % 5) * 0.1,
+            "close": 100.0 + (i % 5) * 0.1,
+            "volume": 1000,
+        }
+        for i in range(1, 31)
+    ]
+    resp = await client.post(
+        "/quant/patterns/detect",
+        json={
+            "symbol": "TEST",
+            "timeframe": "1d",
+            "candles": candles,
+            "patterns": ["ema20_horizontal_level"],
+            "options": {"minCandles": 25},
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["timeframe"] == "1d"
+    assert data["symbol"] == "TEST"
+    assert "dataQuality" in data
+    assert data["dataQuality"]["candleCount"] == 30
+    assert isinstance(data["detections"], list)
+    assert "caveats" in data
+    assert any("Not financial advice" in c for c in data["caveats"])
+    assert any("Research-only" in c for c in data["caveats"])
+
+
+@pytest.mark.anyio
+async def test_patterns_detect_endpoint_handles_volume_missing(client):
+    candles = [
+        {
+            "timestamp": f"2025-02-{i:02d}T00:00:00+00:00",
+            "open": 100.0,
+            "high": 100.5,
+            "low": 99.5,
+            "close": 100.0,
+        }
+        for i in range(1, 31)
+    ]
+    resp = await client.post(
+        "/quant/patterns/detect",
+        json={
+            "timeframe": "1d",
+            "candles": candles,
+            "patterns": ["volume_profile_zones"],
+            "options": {"minCandles": 25},
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["dataQuality"]["hasVolume"] is False
+    # No volume-profile detection should fire without volume.
+    vp = [d for d in data["detections"] if d["patternType"] == "volume_profile_zones"]
+    assert vp == []
+    assert any("Volume Profile" in w for w in data["dataQuality"]["warnings"])

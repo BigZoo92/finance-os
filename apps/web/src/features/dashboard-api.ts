@@ -7,7 +7,9 @@ import type {
   DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorChatThreadResponse,
+  DashboardAdvisorBehaviorAnalyticsResponse,
   DashboardAdvisorEvalsResponse,
+  DashboardAdvisorEvalTrendsResponse,
   DashboardAdvisorManualOperationResponse,
   DashboardAdvisorManualRefreshAndRunPostResponse,
   DashboardAdvisorOverviewResponse,
@@ -486,6 +488,126 @@ export const getDemoDashboardAdvisorEvals = (): DashboardAdvisorEvalsResponse =>
   latestRun: null,
 })
 
+// PR9 — Advisor Eval Trends demo fixture. Deterministic, never randomized; mirrors the seeded
+// scored categories so the UI can render every status branch (improving / stable / insufficient).
+export const getDemoDashboardAdvisorEvalsTrends = (
+  windowDays = 30
+): DashboardAdvisorEvalTrendsResponse => {
+  const generatedAt = DEMO_ADVISOR_GENERATED_AT
+  const previousAt = '2026-04-30T08:00:00.000Z'
+  const mkLatest = (
+    passed: number,
+    failed: number
+  ): DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number]['latest'] => {
+    const denom = passed + failed
+    return {
+      runId: 'demo-latest',
+      createdAt: generatedAt,
+      passRate: denom > 0 ? passed / denom : null,
+      passed,
+      failed,
+      skipped: 0,
+      failedCaseKeys: [],
+    }
+  }
+  const mkPrev = (
+    rate: number | null
+  ): DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number]['previous'] =>
+    rate === null ? null : { runId: 'demo-prev', createdAt: previousAt, passRate: rate }
+
+  const causal: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'causal_reasoning',
+    totalRuns: 4,
+    latest: mkLatest(1, 0),
+    previous: mkPrev(0.5),
+    delta: 0.5,
+    status: 'improving',
+  }
+  const strategy: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'strategy_quality',
+    totalRuns: 4,
+    latest: mkLatest(1, 0),
+    previous: mkPrev(1),
+    delta: 0,
+    status: 'stable',
+  }
+  const recommendation: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'recommendation_quality',
+    totalRuns: 1,
+    latest: mkLatest(0, 0),
+    previous: null,
+    delta: null,
+    status: 'insufficient_data',
+  }
+  const challenger: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'challenger',
+    totalRuns: 1,
+    latest: mkLatest(0, 0),
+    previous: null,
+    delta: null,
+    status: 'insufficient_data',
+  }
+  const postMortem: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'post_mortem_safety',
+    totalRuns: 3,
+    latest: mkLatest(1, 0),
+    previous: mkPrev(1),
+    delta: 0,
+    status: 'stable',
+  }
+  const risk: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'risk_calibration',
+    totalRuns: 3,
+    latest: mkLatest(1, 0),
+    previous: mkPrev(1),
+    delta: 0,
+    status: 'stable',
+  }
+  const cost: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
+    category: 'cost_control',
+    totalRuns: 1,
+    latest: mkLatest(0, 0),
+    previous: null,
+    delta: null,
+    status: 'insufficient_data',
+  }
+  return {
+    generatedAt,
+    mode: 'demo',
+    windowDays,
+    groups: [
+      {
+        group: 'quality',
+        totalRuns: 4,
+        latestPassRate: 1,
+        previousPassRate: 0.75,
+        delta: 0.25,
+        categories: [causal, recommendation, strategy],
+      },
+      {
+        group: 'safety',
+        totalRuns: 3,
+        latestPassRate: 1,
+        previousPassRate: 1,
+        delta: 0,
+        categories: [challenger, postMortem, risk],
+      },
+      {
+        group: 'economics',
+        totalRuns: 1,
+        latestPassRate: null,
+        previousPassRate: null,
+        delta: null,
+        categories: [cost],
+      },
+    ],
+    caveats: [
+      'Mode démo : données déterministes, non issues d’une exécution réelle.',
+      'Tendances basées sur les evals déterministes ; aucune affirmation de profitabilité ou de prédictivité.',
+    ],
+  }
+}
+
 export const getDemoDashboardAdvisorKnowledgeTopics = (): DashboardAdvisorKnowledgeTopicsResponse => ({
   mode: 'demo',
   requestId: 'demo-advisor-request',
@@ -762,6 +884,65 @@ export const fetchDashboardAdvisorEvals = async () => {
   return apiFetch<DashboardAdvisorEvalsResponse>('/dashboard/advisor/evals')
 }
 
+export const fetchDashboardAdvisorEvalsTrends = async (windowDays?: number) => {
+  const path =
+    windowDays !== undefined
+      ? `/dashboard/advisor/evals/trends?windowDays=${windowDays}`
+      : '/dashboard/advisor/evals/trends'
+  return apiFetch<DashboardAdvisorEvalTrendsResponse>(path)
+}
+
+// PR15A — Advisor Behavior Analytics fetch + deterministic demo fixture. Read-only.
+export const fetchDashboardAdvisorBehaviorAnalytics = async (windowDays?: number) => {
+  const path =
+    windowDays !== undefined
+      ? `/dashboard/advisor/behavior-analytics?windowDays=${windowDays}`
+      : '/dashboard/advisor/behavior-analytics'
+  return apiFetch<DashboardAdvisorBehaviorAnalyticsResponse>(path)
+}
+
+export const getDemoDashboardAdvisorBehaviorAnalytics = (
+  windowDays = 30
+): DashboardAdvisorBehaviorAnalyticsResponse => ({
+  generatedAt: '2026-05-09T09:00:00.000Z',
+  mode: 'demo',
+  windowDays,
+  summary: {
+    totalDecisions: 20,
+    decisionsWithOutcomes: 12,
+    outcomeCoverageRate: 0.6,
+    acceptedRate: 0.45,
+    rejectedRate: 0.25,
+    deferredRate: 0.2,
+    ignoredRate: 0.1,
+  },
+  decisionBreakdown: [
+    { decision: 'accepted', count: 9, rate: 0.45, outcomeMix: { positive: 4, negative: 2, neutral: 1, mixed: 0, unknown: 2 } },
+    { decision: 'rejected', count: 5, rate: 0.25, outcomeMix: { positive: 1, negative: 2, neutral: 0, mixed: 0, unknown: 2 } },
+    { decision: 'deferred', count: 4, rate: 0.2, outcomeMix: { positive: 0, negative: 0, neutral: 0, mixed: 0, unknown: 4 } },
+    { decision: 'ignored', count: 2, rate: 0.1, outcomeMix: { positive: 0, negative: 0, neutral: 0, mixed: 0, unknown: 2 } },
+  ],
+  reasonCodeBreakdown: [
+    { reasonCode: 'accepted', count: 9, positiveOutcomes: 4, negativeOutcomes: 2, unknownOutcomes: 3, caution: null },
+    { reasonCode: 'rejected_low_confidence', count: 3, positiveOutcomes: 1, negativeOutcomes: 1, unknownOutcomes: 1, caution: null },
+    { reasonCode: 'deferred_need_more_data', count: 4, positiveOutcomes: 0, negativeOutcomes: 0, unknownOutcomes: 4, caution: null },
+    { reasonCode: 'rejected_disagree_thesis', count: 2, positiveOutcomes: 0, negativeOutcomes: 1, unknownOutcomes: 1, caution: null },
+    { reasonCode: 'ignored_no_action', count: 2, positiveOutcomes: 0, negativeOutcomes: 0, unknownOutcomes: 2, caution: null },
+  ],
+  learningSignals: [
+    {
+      kind: 'low_outcome_coverage',
+      severity: 'warning',
+      message: "Seulement 60% des décisions disposent d'un suivi d'outcome.",
+    },
+  ],
+  caveats: [
+    "Analyse rétrospective basée sur le journal de décisions. Ne constitue pas une recommandation.",
+    "Aucune causalité inférée : un schéma observé n'est pas une preuve d'effet.",
+    "Les notes libres ne sont jamais incluses dans cette analyse.",
+  ],
+})
+
 export const fetchDashboardAdvisorKnowledgeTopics = async () => {
   return apiFetch<DashboardAdvisorKnowledgeTopicsResponse>('/dashboard/advisor/knowledge-topics')
 }
@@ -968,4 +1149,402 @@ export const postDashboardDerivedRecompute = async () => {
   }
 
   return result.data
+}
+
+// ----------------------------------------------------------------------------------------------
+// PR5 — Advisor Learning Loop client surface.
+//
+// Read endpoints are DB-only; admin mutations require a real session. Every helper here is a
+// thin pass-through to an existing API route — no new backend surface, no LLM/provider/graph
+// call. Demo behavior is enforced server-side; the helpers are mode-agnostic.
+// ----------------------------------------------------------------------------------------------
+
+import type {
+  DashboardAdvisorDecisionJournalCreateInput,
+  DashboardAdvisorDecisionJournalEntryResponse,
+  DashboardAdvisorDecisionJournalListResponse,
+  DashboardAdvisorDecisionOutcomeCreateInput,
+  DashboardAdvisorDecisionOutcomeResponse,
+  DashboardAdvisorPostMortemListResponse,
+  DashboardAdvisorPostMortemRow,
+  DashboardAdvisorPostMortemRunResponse,
+  DashboardTradingLabHypothesis,
+  DashboardTradingLabHypothesisCreateInput,
+  DashboardTradingLabHypothesisDetailResponse,
+  DashboardTradingLabHypothesisListResponse,
+  DashboardTradingLabHypothesisScenarioCreateInput,
+  DashboardTradingLabHypothesisUpdateInput,
+  DashboardTradingLabPatternCandle,
+  DashboardTradingLabPatternDetectRequest,
+  DashboardTradingLabPatternDetectResponse,
+  DashboardTradingLabPatternDetection,
+  DashboardTradingLabStrategyScorecardResponse,
+} from './dashboard-types'
+
+// --- Advisor Decision Journal (PR1) -----------------------------------------------------------
+
+export const fetchAdvisorDecisionJournal = async (params?: {
+  limit?: number
+  recommendationId?: number
+  runId?: number
+  decision?: 'accepted' | 'rejected' | 'deferred' | 'ignored'
+}) => {
+  const query = toSearchParams({
+    ...(params?.limit !== undefined ? { limit: String(params.limit) } : {}),
+    ...(params?.recommendationId !== undefined
+      ? { recommendationId: String(params.recommendationId) }
+      : {}),
+    ...(params?.runId !== undefined ? { runId: String(params.runId) } : {}),
+    ...(params?.decision ? { decision: params.decision } : {}),
+  })
+  const path = query
+    ? `/dashboard/advisor/journal?${query}`
+    : '/dashboard/advisor/journal'
+  return apiFetch<DashboardAdvisorDecisionJournalListResponse>(path)
+}
+
+export const postAdvisorDecisionJournal = async (
+  input: DashboardAdvisorDecisionJournalCreateInput
+) => {
+  return apiFetch<DashboardAdvisorDecisionJournalEntryResponse>('/dashboard/advisor/journal', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export const postAdvisorDecisionOutcome = async (params: {
+  decisionId: number
+  input: DashboardAdvisorDecisionOutcomeCreateInput
+}) => {
+  return apiFetch<DashboardAdvisorDecisionOutcomeResponse>(
+    `/dashboard/advisor/journal/${params.decisionId}/outcomes`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(params.input),
+    }
+  )
+}
+
+// --- Trading Lab Hypothesis Lab (PR3) ---------------------------------------------------------
+
+export const fetchTradingLabHypotheses = async () => {
+  return apiFetch<DashboardTradingLabHypothesisListResponse>(
+    '/dashboard/trading-lab/hypotheses'
+  )
+}
+
+export const fetchTradingLabHypothesisById = async (id: number) => {
+  return apiFetch<DashboardTradingLabHypothesisDetailResponse>(
+    `/dashboard/trading-lab/hypotheses/${id}`
+  )
+}
+
+export const postTradingLabHypothesis = async (
+  input: DashboardTradingLabHypothesisCreateInput
+) => {
+  return apiFetch<{ ok: boolean; hypothesis: DashboardTradingLabHypothesis }>(
+    '/dashboard/trading-lab/hypotheses',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }
+  )
+}
+
+// PR11 — Pattern detection client. Calls the API proxy added in PR10. The API itself routes
+// the request to quant-service in admin mode; demo mode returns a deterministic fixture without
+// any network call. NEVER an execution path.
+export const postTradingLabPatternDetection = async (
+  input: DashboardTradingLabPatternDetectRequest
+) => {
+  return apiFetch<DashboardTradingLabPatternDetectResponse>(
+    '/dashboard/trading-lab/patterns/detect',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }
+  )
+}
+
+// Demo mode never hits the network — the panel renders this fixture directly so users in demo
+// mode see what an admin run looks like without any backend dependency.
+export const getDemoTradingLabPatternDetection = (
+  input: DashboardTradingLabPatternDetectRequest
+): DashboardTradingLabPatternDetectResponse => {
+  const candleCount = input.candles.length
+  const requested =
+    input.patterns && input.patterns.length > 0
+      ? input.patterns
+      : [
+          // PR15B — SMC/ICT research keys exposed for demo selection. Only `fair_value_gap`
+          // returns a deterministic detection in demo; other SMC keys can be selected but
+          // do not produce a fixture (the panel renders the empty-state).
+          'fair_value_gap' as const,
+          'ema20_horizontal_level' as const,
+          'ema200_one_touch' as const,
+          'parabolic_sar_rci' as const,
+          'volume_profile_zones' as const,
+        ]
+  const observedAt = '2026-05-07T16:00:00+00:00'
+  const detections: DashboardTradingLabPatternDetection[] = []
+  if (requested.includes('fair_value_gap')) {
+    detections.push({
+      id: 'det_demo_fvg_bullish',
+      patternType: 'fair_value_gap',
+      direction: 'bullish',
+      confidence: 'low',
+      observedAt,
+      evidence: [
+        '3-candle FVG (bullish) detected on a displacement candle (demo fixture).',
+        'Gap range: [99.95, 100.65].',
+        'Mitigation: no.',
+      ],
+      invalidationHints: [
+        'Gap mitigation by a subsequent candle invalidates the unmitigated FVG read.',
+        'A reversal in the displacement direction within a few candles weakens the FVG inference.',
+      ],
+      metrics: {
+        gapLow: 99.95,
+        gapHigh: 100.65,
+        displacementAtr: 0.42,
+        mitigated: false,
+        mitigationIndex: -1,
+        candlesUsed: candleCount,
+      },
+      limitations: [
+        'Demo fixture: numbers are illustrative. Run an admin session for real detections.',
+        'Detection is heuristic; SMC/ICT concepts are interpretive and subjective.',
+        'Pattern is observational; it does NOT predict price direction.',
+      ],
+    })
+  }
+  if (requested.includes('ema20_horizontal_level')) {
+    detections.push({
+      id: 'det_demo_ema20_level',
+      patternType: 'ema20_horizontal_level',
+      direction: 'neutral',
+      confidence: 'low',
+      observedAt,
+      evidence: [
+        'EMA20 confluence with retested horizontal level (demo fixture).',
+        'Demo fixture is deterministic and not derived from live market data.',
+      ],
+      invalidationHints: [
+        'A sustained close beyond the level by more than the tolerance band invalidates the confluence.',
+      ],
+      metrics: { level: 100, ema20: 100.05, retestCount: 4, candlesUsed: candleCount },
+      limitations: [
+        'Demo fixture: numbers are illustrative. Run an admin session for real detections.',
+        'Pattern is observational; it does NOT predict price direction.',
+      ],
+    })
+  }
+  if (requested.includes('parabolic_sar_rci')) {
+    detections.push({
+      id: 'det_demo_sar_rci',
+      patternType: 'parabolic_sar_rci',
+      direction: 'neutral',
+      confidence: 'low',
+      observedAt,
+      evidence: ['Demo SAR/RCI fixture, low confidence.'],
+      invalidationHints: ['SAR flip on the next candle invalidates the alignment read.'],
+      metrics: {
+        sarTrend: 1,
+        rci14: 12.5,
+        aligned: false,
+        diverged: false,
+        candlesUsed: candleCount,
+      },
+      limitations: [
+        'Demo fixture: not based on live data.',
+        'Pattern reads regime, not outcome. No directional certainty implied.',
+      ],
+    })
+  }
+  return {
+    ok: true,
+    generatedAt: '2026-05-08T09:00:00.000Z',
+    timeframe: input.timeframe,
+    ...(input.symbol !== undefined ? { symbol: input.symbol } : {}),
+    dataQuality: {
+      candleCount,
+      hasVolume: input.candles.some(c => typeof c.volume === 'number' && c.volume > 0),
+      sufficient: candleCount >= 60,
+      warnings:
+        candleCount < 60
+          ? ['Demo fixture: candle count below recommended threshold.']
+          : [],
+    },
+    detections,
+    caveats: [
+      'Mode démo : données déterministes, non issues d’une session réelle.',
+      'Patterns are deterministic research observations only. Not financial advice.',
+      'Research-only output; no order routing. Paper-only research layer.',
+    ],
+  }
+}
+
+// Deterministic OHLCV fixture used to prefill the panel in demo mode. ~80 candles oscillating
+// near 100 — enough to flip dataQuality.sufficient = true with default minCandles=60.
+export const DEMO_TRADING_LAB_PATTERN_CANDLES: DashboardTradingLabPatternCandle[] = Array.from(
+  { length: 80 },
+  (_, i) => {
+    const oscillation = 0.6 * (((i % 10) - 5) / 5)
+    const close = 100 + oscillation
+    return {
+      timestamp: `2025-01-${String((i % 28) + 1).padStart(2, '0')}T00:00:00+00:00`,
+      open: close - 0.1,
+      high: close + 0.4,
+      low: close - 0.4,
+      close,
+      volume: 1000 + (i % 7) * 50,
+    }
+  }
+)
+
+// PR12 — Strategy Scorecard. Read-only evidence-quality view; never an execution path.
+export const fetchTradingLabStrategyScorecard = async (strategyId: number) => {
+  return apiFetch<DashboardTradingLabStrategyScorecardResponse>(
+    `/dashboard/trading-lab/strategies/${strategyId}/scorecard`
+  )
+}
+
+// Deterministic demo fixture used in demo mode (no network call). Mirrors the backend's
+// `buildDemoStrategyScorecard` shape so the UI exercises the "promising / no walk-forward"
+// branch without contacting the API.
+export const getDemoTradingLabStrategyScorecard = (
+  strategyId: number
+): DashboardTradingLabStrategyScorecardResponse => ({
+  generatedAt: '2026-05-08T09:00:00.000Z',
+  strategyId: String(strategyId),
+  strategyType: 'manual-hypothesis',
+  mode: 'demo',
+  evidenceGrade: 'promising',
+  summary: {
+    totalBacktests: 4,
+    totalTrades: 48,
+    bestRunId: 'demo-best',
+    latestRunId: 'demo-latest',
+    latestRunAt: '2026-04-26T10:05:02.000Z',
+  },
+  metrics: {
+    winRate: 0.55,
+    expectancy: null,
+    profitFactor: 1.32,
+    maxDrawdown: 0.18,
+    sharpe: 1.05,
+    sortino: 1.4,
+    averageTradeReturn: null,
+    feesIncluded: true,
+    slippageIncluded: true,
+    walkForwardRuns: 0,
+  },
+  // PR14 — additive advanced metrics fixture. Deterministic; mirrors the backend
+  // `buildDemoAdvancedRiskMetrics` shape. Never randomized.
+  advancedMetrics: {
+    calmarRatio: 0.62,
+    marRatio: 0.62,
+    recoveryFactor: 0.94,
+    ulcerIndex: 0.0421,
+    tailRatio: 1.18,
+    omegaRatio: 1.27,
+    valueAtRisk95: -0.0142,
+    expectedShortfall95: -0.0218,
+    rollingSharpe: { latest: 1.12, min: 0.34, max: 1.85, average: 1.05, window: 30 },
+    rollingMaxDrawdown: { latest: -0.087, worst: -0.182, window: 30 },
+    payoffRatio: 1.31,
+    averageWin: 124.6,
+    averageLoss: -95.2,
+    assumptions: {
+      annualizationPeriods: 252,
+      riskFreeRate: 0,
+      varConfidence: 0.95 as const,
+      rollingWindow: 30,
+    },
+    warnings: [
+      "Mode démo : métriques déterministes, non issues d'une session réelle.",
+    ],
+  },
+  qualityFlags: [
+    {
+      kind: 'paper_only',
+      severity: 'info',
+      message: 'Recherche paper uniquement, aucune exécution.',
+    },
+    {
+      kind: 'no_walk_forward',
+      severity: 'warning',
+      message: 'Aucun walk-forward exécuté — robustesse hors-échantillon non vérifiée.',
+    },
+  ],
+  caveats: [
+    "Paper only. Cette analyse n'est pas une recommandation.",
+    'Qualité de preuve, pas une prédiction de performance future.',
+    'Les métriques passées ne prédisent pas les résultats futurs.',
+  ],
+})
+
+export const patchTradingLabHypothesis = async (params: {
+  id: number
+  input: DashboardTradingLabHypothesisUpdateInput
+}) => {
+  return apiFetch<{ ok: boolean; hypothesis: DashboardTradingLabHypothesis }>(
+    `/dashboard/trading-lab/hypotheses/${params.id}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(params.input),
+    }
+  )
+}
+
+export const archiveTradingLabHypothesis = async (id: number) => {
+  return apiFetch<{ ok: boolean; hypothesis: DashboardTradingLabHypothesis }>(
+    `/dashboard/trading-lab/hypotheses/${id}/archive`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+    }
+  )
+}
+
+export const postTradingLabHypothesisScenario = async (params: {
+  hypothesisId: number
+  input: DashboardTradingLabHypothesisScenarioCreateInput
+}) => {
+  return apiFetch<{ ok: boolean; scenario: Record<string, unknown> }>(
+    `/dashboard/trading-lab/hypotheses/${params.hypothesisId}/scenarios`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(params.input),
+    }
+  )
+}
+
+// --- Advisor Post-Mortem (PR4) ----------------------------------------------------------------
+
+export const fetchAdvisorPostMortems = async () => {
+  return apiFetch<DashboardAdvisorPostMortemListResponse>('/dashboard/advisor/post-mortem')
+}
+
+export const fetchAdvisorPostMortemById = async (postMortemId: number) => {
+  return apiFetch<DashboardAdvisorPostMortemRow>(
+    `/dashboard/advisor/post-mortem/${postMortemId}`
+  )
+}
+
+export const postAdvisorPostMortemRun = async (trigger: 'manual' | 'scheduled' = 'manual') => {
+  return apiFetch<DashboardAdvisorPostMortemRunResponse>(
+    '/dashboard/advisor/post-mortem/run',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ trigger }),
+    }
+  )
 }

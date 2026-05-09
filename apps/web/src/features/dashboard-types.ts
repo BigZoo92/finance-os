@@ -857,6 +857,120 @@ export type DashboardAdvisorEvalsResponse = {
   latestRun: DashboardAdvisorEvalRunResponse | null
 }
 
+// PR15A — Advisor Behavior Analytics. Read-only, paper-only, retrospective. NEVER returns
+// freeNote content. NEVER claims causality, profitability, or predictive value.
+
+export type DashboardAdvisorBehaviorOutcomeMix = {
+  positive: number
+  negative: number
+  neutral: number
+  mixed: number
+  unknown: number
+}
+
+export type DashboardAdvisorBehaviorSummary = {
+  totalDecisions: number
+  decisionsWithOutcomes: number
+  outcomeCoverageRate: number | null
+  acceptedRate: number | null
+  rejectedRate: number | null
+  deferredRate: number | null
+  ignoredRate: number | null
+}
+
+export type DashboardAdvisorBehaviorDecisionBreakdownEntry = {
+  decision: 'accepted' | 'rejected' | 'deferred' | 'ignored'
+  count: number
+  rate: number | null
+  outcomeMix: DashboardAdvisorBehaviorOutcomeMix
+}
+
+export type DashboardAdvisorBehaviorReasonCodeBreakdownEntry = {
+  reasonCode: string
+  count: number
+  positiveOutcomes: number
+  negativeOutcomes: number
+  unknownOutcomes: number
+  caution: string | null
+}
+
+export type DashboardAdvisorBehaviorLearningSignalKind =
+  | 'low_outcome_coverage'
+  | 'over_deferral'
+  | 'high_negative_acceptance'
+  | 'ignored_followups'
+  | 'positive_rejections'
+  | 'insufficient_sample'
+
+export type DashboardAdvisorBehaviorLearningSignal = {
+  kind: DashboardAdvisorBehaviorLearningSignalKind
+  severity: 'info' | 'warning' | 'danger'
+  message: string
+}
+
+export type DashboardAdvisorBehaviorAnalyticsResponse = {
+  generatedAt: string
+  mode: 'demo' | 'admin'
+  windowDays: number
+  summary: DashboardAdvisorBehaviorSummary
+  decisionBreakdown: DashboardAdvisorBehaviorDecisionBreakdownEntry[]
+  reasonCodeBreakdown: DashboardAdvisorBehaviorReasonCodeBreakdownEntry[]
+  learningSignals: DashboardAdvisorBehaviorLearningSignal[]
+  caveats: string[]
+}
+
+// PR9 — Advisor Eval Trends. Read-only, deterministic, never fabricated.
+
+export type DashboardAdvisorEvalTrendsGroup = 'quality' | 'safety' | 'economics'
+
+export type DashboardAdvisorEvalTrendStatus =
+  | 'improving'
+  | 'stable'
+  | 'regressing'
+  | 'insufficient_data'
+
+export type DashboardAdvisorEvalTrendCategoryLatest = {
+  runId: string | null
+  createdAt: string | null
+  passRate: number | null
+  passed: number
+  failed: number
+  skipped: number
+  failedCaseKeys: string[]
+}
+
+export type DashboardAdvisorEvalTrendCategoryPrevious = {
+  runId: string | null
+  createdAt: string | null
+  passRate: number | null
+}
+
+export type DashboardAdvisorEvalTrendCategory = {
+  category: string
+  totalRuns: number
+  latest: DashboardAdvisorEvalTrendCategoryLatest
+  previous: DashboardAdvisorEvalTrendCategoryPrevious | null
+  delta: number | null
+  status: DashboardAdvisorEvalTrendStatus
+}
+
+export type DashboardAdvisorEvalTrendGroup = {
+  group: DashboardAdvisorEvalTrendsGroup
+  totalRuns: number
+  latestPassRate: number | null
+  previousPassRate: number | null
+  delta: number | null
+  categories: DashboardAdvisorEvalTrendCategory[]
+}
+
+export type DashboardAdvisorEvalTrendsResponse = {
+  generatedAt: string
+  mode: 'demo' | 'admin'
+  windowDays: number
+  groups: DashboardAdvisorEvalTrendGroup[]
+  caveats: string[]
+}
+
 export type DashboardAdvisorManualOperationStepResponse = {
   id: number
   stepKey: 'personal_sync' | 'news_refresh' | 'market_refresh' | 'advisor_run'
@@ -934,4 +1048,376 @@ export type DashboardManualAssetResponse = {
 
 export type DashboardManualAssetsResponse = {
   items: DashboardManualAssetResponse[]
+}
+
+// ----------------------------------------------------------------------------------------------
+// PR1 — Advisor Decision Journal
+// ----------------------------------------------------------------------------------------------
+
+export type DashboardAdvisorDecisionKind = 'accepted' | 'rejected' | 'deferred' | 'ignored'
+
+export type DashboardAdvisorDecisionReasonCode =
+  | 'accepted'
+  | 'rejected_low_confidence'
+  | 'rejected_disagree_thesis'
+  | 'rejected_risk_mismatch'
+  | 'deferred_need_more_data'
+  | 'ignored_no_action'
+  | 'other'
+
+export type DashboardAdvisorDecisionOutcomeKind =
+  | 'positive'
+  | 'negative'
+  | 'neutral'
+  | 'mixed'
+  | 'unknown'
+
+export type DashboardAdvisorDecisionOutcomeResponse = {
+  id: number
+  decisionId: number
+  observedAt: string
+  outcomeKind: DashboardAdvisorDecisionOutcomeKind
+  deltaMetrics: Record<string, unknown> | null
+  learningTags: string[]
+  freeNote: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardAdvisorDecisionJournalEntryResponse = {
+  id: number
+  recommendationId: number | null
+  runId: number | null
+  recommendationKey: string | null
+  decision: DashboardAdvisorDecisionKind
+  reasonCode: DashboardAdvisorDecisionReasonCode
+  freeNote: string | null
+  decidedBy: string
+  decidedAt: string
+  expectedOutcomeAt: string | null
+  scope: string
+  metadata: Record<string, unknown> | null
+  createdAt: string
+  updatedAt: string
+  outcomes: DashboardAdvisorDecisionOutcomeResponse[]
+}
+
+export type DashboardAdvisorDecisionJournalListResponse = {
+  items: DashboardAdvisorDecisionJournalEntryResponse[]
+}
+
+export type DashboardAdvisorDecisionJournalCreateInput = {
+  recommendationId?: number | null
+  runId?: number | null
+  recommendationKey?: string | null
+  decision: DashboardAdvisorDecisionKind
+  reasonCode: DashboardAdvisorDecisionReasonCode
+  freeNote?: string | null
+  decidedBy?: string | null
+  expectedOutcomeAt?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
+export type DashboardAdvisorDecisionOutcomeCreateInput = {
+  outcomeKind: DashboardAdvisorDecisionOutcomeKind
+  deltaMetrics?: Record<string, unknown> | null
+  learningTags?: string[]
+  freeNote?: string | null
+}
+
+// ----------------------------------------------------------------------------------------------
+// PR3 — Trading Lab Hypothesis Lab (manual-hypothesis strategies + linked paper scenarios)
+// ----------------------------------------------------------------------------------------------
+
+export type DashboardTradingLabHypothesisStatus = 'draft' | 'active-paper' | 'archived'
+
+export type DashboardTradingLabHypothesis = {
+  id: number
+  name: string
+  slug: string
+  description: string | null
+  strategyType: string
+  status: DashboardTradingLabHypothesisStatus
+  enabled: boolean
+  tags: string[]
+  parameters: Record<string, unknown>
+  indicators: Array<{ name: string; params: Record<string, unknown> }>
+  entryRules: Array<{ id: string; description: string; condition: string }>
+  exitRules: Array<{ id: string; description: string; condition: string }>
+  riskRules: Array<{ id: string; description: string; condition: string }>
+  assumptions: string[]
+  caveats: string[]
+  scope: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardTradingLabHypothesisListResponse = {
+  ok: boolean
+  hypotheses: DashboardTradingLabHypothesis[]
+}
+
+export type DashboardTradingLabHypothesisDetailResponse = {
+  ok: boolean
+  hypothesis: DashboardTradingLabHypothesis
+}
+
+export type DashboardTradingLabHypothesisCreateInput = {
+  name: string
+  slug: string
+  description?: string | null
+  thesis?: string | null
+  assumptions?: string[]
+  caveats?: string[]
+  invalidationCriteria: string[]
+  evidenceNotes?: string[]
+  horizon?: string | null
+  entryRules?: Array<{ id: string; description: string; condition: string }>
+  exitRules?: Array<{ id: string; description: string; condition: string }>
+  riskRules?: Array<{ id: string; description: string; condition: string }>
+  parameters?: Record<string, unknown>
+  indicators?: Array<{ name: string; params: Record<string, unknown> }>
+  tags?: string[]
+  status?: DashboardTradingLabHypothesisStatus
+}
+
+export type DashboardTradingLabHypothesisUpdateInput =
+  Partial<DashboardTradingLabHypothesisCreateInput>
+
+// PR11 — Trading Lab pattern detection (proxied from quant-service /quant/patterns/detect).
+// Read-only research observations. NEVER trading signals. Mirror of the API contract.
+
+export type DashboardTradingLabPatternKey =
+  | 'ema20_horizontal_level'
+  | 'ema200_one_touch'
+  | 'parabolic_sar_rci'
+  | 'volume_profile_zones'
+  // PR15B — SMC/ICT deterministic detector pack (research / paper-only).
+  | 'fair_value_gap'
+  | 'liquidity_sweep'
+  | 'break_of_structure'
+  | 'change_of_character'
+  | 'order_block_candidate'
+
+export type DashboardTradingLabPatternDirection = 'bullish' | 'bearish' | 'neutral' | 'unknown'
+
+export type DashboardTradingLabPatternConfidence = 'low' | 'medium' | 'high'
+
+export type DashboardTradingLabPatternCandle = {
+  timestamp: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume?: number | null
+}
+
+export type DashboardTradingLabPatternDetectRequest = {
+  symbol?: string
+  timeframe: string
+  candles: DashboardTradingLabPatternCandle[]
+  patterns?: DashboardTradingLabPatternKey[]
+  options?: {
+    horizontalLevelTolerancePct?: number
+    emaTouchTolerancePct?: number
+    minCandles?: number
+    volumeProfileBins?: number
+  }
+}
+
+export type DashboardTradingLabPatternDataQuality = {
+  candleCount: number
+  hasVolume: boolean
+  sufficient: boolean
+  warnings: string[]
+}
+
+export type DashboardTradingLabPatternDetection = {
+  id: string
+  patternType: DashboardTradingLabPatternKey
+  direction: DashboardTradingLabPatternDirection
+  confidence: DashboardTradingLabPatternConfidence
+  observedAt: string
+  evidence: string[]
+  invalidationHints: string[]
+  metrics: Record<string, number | string | boolean | null>
+  limitations: string[]
+}
+
+export type DashboardTradingLabPatternDetectResponse = {
+  ok?: boolean
+  generatedAt: string
+  symbol?: string
+  timeframe: string
+  dataQuality: DashboardTradingLabPatternDataQuality
+  detections: DashboardTradingLabPatternDetection[]
+  caveats?: string[]
+  // Returned only when the proxy or quant-service short-circuited.
+  code?: string
+  message?: string
+}
+
+// PR12 — Strategy Scorecard. Read-only evidence-quality view; never an execution path.
+
+export type DashboardTradingLabStrategyScorecardEvidenceGrade =
+  | 'insufficient'
+  | 'weak'
+  | 'promising'
+  | 'strong_but_unproven'
+  | 'invalidated'
+
+export type DashboardTradingLabStrategyScorecardQualityFlagKind =
+  | 'low_sample_size'
+  | 'missing_fees'
+  | 'missing_slippage'
+  | 'high_drawdown'
+  | 'no_walk_forward'
+  | 'unstable_results'
+  | 'insufficient_data'
+  | 'paper_only'
+  | 'archived'
+
+export type DashboardTradingLabStrategyScorecardQualityFlag = {
+  kind: DashboardTradingLabStrategyScorecardQualityFlagKind
+  severity: 'info' | 'warning' | 'danger'
+  message: string
+}
+
+export type DashboardTradingLabStrategyScorecardSummary = {
+  totalBacktests: number
+  totalTrades: number
+  bestRunId: string | null
+  latestRunId: string | null
+  latestRunAt: string | null
+}
+
+export type DashboardTradingLabStrategyScorecardMetrics = {
+  winRate: number | null
+  expectancy: number | null
+  profitFactor: number | null
+  maxDrawdown: number | null
+  sharpe: number | null
+  sortino: number | null
+  averageTradeReturn: number | null
+  feesIncluded: boolean | null
+  slippageIncluded: boolean | null
+  walkForwardRuns: number
+}
+
+// PR14 — Advanced risk metrics (curated QuantStats-inspired subset, re-implemented under our
+// license). Read-only / retrospective / paper-only. NEVER influences `evidenceGrade`.
+export type DashboardTradingLabStrategyScorecardAdvancedRollingSharpe = {
+  latest: number | null
+  min: number | null
+  max: number | null
+  average: number | null
+  window: number | null
+}
+
+export type DashboardTradingLabStrategyScorecardAdvancedRollingMaxDrawdown = {
+  latest: number | null
+  worst: number | null
+  window: number | null
+}
+
+export type DashboardTradingLabStrategyScorecardAdvancedAssumptions = {
+  annualizationPeriods: number | null
+  riskFreeRate: number
+  varConfidence: 0.95
+  rollingWindow: number | null
+}
+
+export type DashboardTradingLabStrategyScorecardAdvancedMetrics = {
+  calmarRatio: number | null
+  marRatio: number | null
+  recoveryFactor: number | null
+  ulcerIndex: number | null
+  tailRatio: number | null
+  omegaRatio: number | null
+  valueAtRisk95: number | null
+  expectedShortfall95: number | null
+  rollingSharpe: DashboardTradingLabStrategyScorecardAdvancedRollingSharpe
+  rollingMaxDrawdown: DashboardTradingLabStrategyScorecardAdvancedRollingMaxDrawdown
+  payoffRatio: number | null
+  averageWin: number | null
+  averageLoss: number | null
+  assumptions: DashboardTradingLabStrategyScorecardAdvancedAssumptions
+  warnings: string[]
+}
+
+export type DashboardTradingLabStrategyScorecardResponse = {
+  generatedAt: string
+  strategyId: string
+  strategyType: string
+  mode: 'demo' | 'admin'
+  evidenceGrade: DashboardTradingLabStrategyScorecardEvidenceGrade
+  summary: DashboardTradingLabStrategyScorecardSummary
+  metrics: DashboardTradingLabStrategyScorecardMetrics
+  /** PR14 — additive curated QuantStats-inspired metrics. `null` when no completed run with
+   *  usable data. NEVER changes `evidenceGrade`. */
+  advancedMetrics: DashboardTradingLabStrategyScorecardAdvancedMetrics | null
+  qualityFlags: DashboardTradingLabStrategyScorecardQualityFlag[]
+  caveats: string[]
+}
+
+export type DashboardTradingLabHypothesisScenarioCreateInput = {
+  name: string
+  description?: string | null
+  thesis?: string | null
+  expectedOutcome?: string | null
+  invalidationCriteria?: string
+  riskNotes?: string | null
+  linkedSignalItemId?: number | null
+  linkedNewsArticleId?: number | null
+}
+
+// ----------------------------------------------------------------------------------------------
+// PR4 — Advisor Post-Mortem
+// ----------------------------------------------------------------------------------------------
+
+export type DashboardAdvisorPostMortemStatus = 'pending' | 'completed' | 'skipped' | 'failed'
+
+export type DashboardAdvisorPostMortemRow = {
+  id: number
+  runId: number | null
+  recommendationId: number | null
+  decisionId: number | null
+  recommendationKey: string | null
+  status: DashboardAdvisorPostMortemStatus
+  horizonDays: number | null
+  evaluatedAt: string | null
+  expectedOutcomeAt: string | null
+  inputSummary: Record<string, unknown> | null
+  findings: Record<string, unknown> | null
+  learningActions: Array<Record<string, unknown>> | null
+  calibration: Record<string, unknown> | null
+  riskNotes: Record<string, unknown> | null
+  skippedReason: string | null
+  errorCode: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardAdvisorPostMortemListResponse = {
+  items: DashboardAdvisorPostMortemRow[]
+}
+
+export type DashboardAdvisorPostMortemRunStatus =
+  | 'completed'
+  | 'skipped_disabled'
+  | 'skipped_budget_blocked'
+  | 'skipped_no_due_items'
+  | 'failed'
+
+export type DashboardAdvisorPostMortemRunResponse = {
+  status: DashboardAdvisorPostMortemRunStatus
+  feature: 'post_mortem'
+  evaluatedAt: string
+  totalDue: number
+  processed: number
+  remaining: number
+  persistedIds: number[]
+  failedItems: number
+  reason: string | null
+  budgetReasons: string[]
 }

@@ -87,6 +87,11 @@ export const env = createEnv({
     VITE_CTA_POLICY_REGISTRY_V1: createBooleanUiFlagSchema('VITE_CTA_POLICY_REGISTRY_V1').optional(),
     VITE_CTA_ORCHESTRATION_OFF: createBooleanUiFlagSchema('VITE_CTA_ORCHESTRATION_OFF').optional(),
     VITE_CTA_EMERGENCY_DISABLE_LIST: z.string().min(1).optional(),
+    // PR5 — Advisor Learning Loop UI flag. Off by default. Hides Decision Recorder,
+    // Hypothesis Lab tab, Eval Scorecard widget, Post-Mortem feed when false.
+    VITE_LEARNING_LOOP_UI_ENABLED: createBooleanUiFlagSchema(
+      'VITE_LEARNING_LOOP_UI_ENABLED'
+    ).optional(),
   },
 
   /**

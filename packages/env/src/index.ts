@@ -818,6 +818,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    ADVISOR_GRAPH_INGEST_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     ATTENTION_SYSTEM_ENABLED: z
       .string()
       .optional()
@@ -1032,6 +1036,24 @@ export const getWorkerEnv = () =>
     DAILY_INTELLIGENCE_CRON: z.string().default('0 9 * * 1-5'),
     DAILY_INTELLIGENCE_TIMEZONE: z.string().default('Europe/Paris'),
     DAILY_INTELLIGENCE_MARKET_OPEN_HOUR: z.coerce.number().int().min(0).max(23).default(9),
+    // PR7 — Advisor Post-Mortem worker scheduler. Off by default. The route + the LLM call
+    // remain server-owned; the worker only sends an internal HTTP POST.
+    AI_POST_MORTEM_AUTO_RUN_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    AI_POST_MORTEM_CRON: z.string().default('0 7 * * *'),
+    AI_POST_MORTEM_TIMEZONE: z.string().default('Europe/Paris'),
+    AI_POST_MORTEM_TRIGGER_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30_000),
+    AI_POST_MORTEM_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30 * 60),
     MARKET_DATA_AUTO_REFRESH_ENABLED: z
       .string()
       .optional()

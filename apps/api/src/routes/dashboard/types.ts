@@ -15,8 +15,10 @@ import type {
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorChatThreadResponse,
   DashboardAdvisorDailyBriefResponse,
+  DashboardAdvisorBehaviorAnalyticsResponse,
   DashboardAdvisorEvalRunResponse,
   DashboardAdvisorEvalsResponse,
+  DashboardAdvisorEvalTrendsResponse,
   DashboardAdvisorManualOperationResponse,
   DashboardAdvisorManualOperationStepKey,
   DashboardAdvisorManualRefreshAndRunPostResponse,
@@ -1081,6 +1083,33 @@ export interface DashboardAdvisorRepository {
   }) => Promise<DashboardAdvisorChatPostResponse>
   getEvals: () => Promise<DashboardAdvisorEvalsResponse>
   getLatestEvalRun: () => Promise<DashboardAdvisorEvalRunResponse | null>
+  // PR9 — windowed read of historical eval runs (newest first) for trend computation.
+  listAdvisorEvalTrendRuns: (input: {
+    windowDays: number
+    limit: number
+  }) => Promise<DashboardAdvisorEvalRunResponse[]>
+  // PR15A — narrow freeNote-free read for behavior analytics over advisor_decision_journal +
+  // advisor_decision_outcome. Defense-in-depth: the column list is hand-typed to exclude
+  // `free_note` so the analytics layer cannot accidentally expose raw notes.
+  listDecisionsForBehaviorAnalytics: (input: {
+    windowDays: number
+    limit: number
+  }) => Promise<{
+    decisions: Array<{
+      id: number
+      decision: 'accepted' | 'rejected' | 'deferred' | 'ignored' | string
+      reasonCode: string
+      decidedAt: string
+      scope: string
+      recommendationId: number | null
+      runId: number | null
+    }>
+    outcomes: Array<{
+      decisionId: number
+      outcomeKind: 'positive' | 'negative' | 'neutral' | 'mixed' | 'unknown' | string
+      observedAt: string
+    }>
+  }>
   createManualOperation: (input: {
     operationId: string
     status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded'
@@ -1354,6 +1383,18 @@ export interface DashboardUseCases {
     mode: 'demo' | 'admin'
     requestId: string
   }) => Promise<DashboardAdvisorEvalsResponse>
+  // PR9 — Advisor Eval Trends. Demo returns deterministic fixtures, admin reads aiEvalRun history.
+  getAdvisorEvalsTrends?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    windowDays?: number | null
+  }) => Promise<DashboardAdvisorEvalTrendsResponse>
+  // PR15A — Advisor Behavior Analytics. Read-only; freeNote-free.
+  getAdvisorBehaviorAnalytics?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    windowDays?: number | null
+  }) => Promise<DashboardAdvisorBehaviorAnalyticsResponse>
   listAdvisorPostMortems?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

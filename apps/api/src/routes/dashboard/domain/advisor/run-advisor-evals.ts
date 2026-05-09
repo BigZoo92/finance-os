@@ -77,6 +77,29 @@ export const runAdvisorEvals = ({
     }
   }
 
+  // PR9 — additively emit per-category breakdown so trend reads do not need to reconstruct from
+  // the (mutable) active-case list. `summary.byCategory` is keyed by category and exposes
+  // total/passed/failed/skipped/failedCaseKeys per category. Existing consumers ignore this.
+  const failureKeys = new Set(failures)
+  const byCategory: Record<
+    string,
+    { total: number; passed: number; failed: number; skipped: number; failedCaseKeys: string[] }
+  > = {}
+  for (const item of cases) {
+    let bucket = byCategory[item.category]
+    if (!bucket) {
+      bucket = { total: 0, passed: 0, failed: 0, skipped: 0, failedCaseKeys: [] }
+      byCategory[item.category] = bucket
+    }
+    bucket.total += 1
+    if (failureKeys.has(item.key)) {
+      bucket.failed += 1
+      bucket.failedCaseKeys.push(item.key)
+    } else {
+      bucket.passed += 1
+    }
+  }
+
   return {
     status: failures.length > 0 ? ('degraded' as const) : ('completed' as const),
     totalCases: cases.length,
@@ -89,6 +112,7 @@ export const runAdvisorEvals = ({
       failedCaseDetails,
       degraded,
       recommendationCount: recommendations.length,
+      byCategory,
     },
   }
 }

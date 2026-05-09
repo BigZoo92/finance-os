@@ -437,6 +437,120 @@ export interface DashboardAdvisorEvalsResponse {
   latestRun: DashboardAdvisorEvalRunResponse | null
 }
 
+// PR9 — Eval Trends. Read-only, DB-only, deterministic. Never LLM/provider/graph-derived.
+
+export type DashboardAdvisorEvalTrendsGroup = 'quality' | 'safety' | 'economics'
+
+export type DashboardAdvisorEvalTrendStatus =
+  | 'improving'
+  | 'stable'
+  | 'regressing'
+  | 'insufficient_data'
+
+export interface DashboardAdvisorEvalTrendCategoryLatest {
+  runId: string | null
+  createdAt: string | null
+  passRate: number | null
+  passed: number
+  failed: number
+  skipped: number
+  failedCaseKeys: string[]
+}
+
+export interface DashboardAdvisorEvalTrendCategoryPrevious {
+  runId: string | null
+  createdAt: string | null
+  passRate: number | null
+}
+
+export interface DashboardAdvisorEvalTrendCategory {
+  category: string
+  totalRuns: number
+  latest: DashboardAdvisorEvalTrendCategoryLatest
+  previous: DashboardAdvisorEvalTrendCategoryPrevious | null
+  delta: number | null
+  status: DashboardAdvisorEvalTrendStatus
+}
+
+export interface DashboardAdvisorEvalTrendGroup {
+  group: DashboardAdvisorEvalTrendsGroup
+  totalRuns: number
+  latestPassRate: number | null
+  previousPassRate: number | null
+  delta: number | null
+  categories: DashboardAdvisorEvalTrendCategory[]
+}
+
+// PR15A — Advisor Behavior Analytics. Read-only, paper-only, retrospective. NEVER returns
+// `freeNote` content. NEVER claims causality, profitability, or predictive value.
+
+export type DashboardAdvisorBehaviorOutcomeMix = {
+  positive: number
+  negative: number
+  neutral: number
+  mixed: number
+  unknown: number
+}
+
+export interface DashboardAdvisorBehaviorSummary {
+  totalDecisions: number
+  decisionsWithOutcomes: number
+  outcomeCoverageRate: number | null
+  acceptedRate: number | null
+  rejectedRate: number | null
+  deferredRate: number | null
+  ignoredRate: number | null
+}
+
+export interface DashboardAdvisorBehaviorDecisionBreakdownEntry {
+  decision: 'accepted' | 'rejected' | 'deferred' | 'ignored'
+  count: number
+  rate: number | null
+  outcomeMix: DashboardAdvisorBehaviorOutcomeMix
+}
+
+export interface DashboardAdvisorBehaviorReasonCodeBreakdownEntry {
+  reasonCode: string
+  count: number
+  positiveOutcomes: number
+  negativeOutcomes: number
+  unknownOutcomes: number
+  caution: string | null
+}
+
+export type DashboardAdvisorBehaviorLearningSignalKind =
+  | 'low_outcome_coverage'
+  | 'over_deferral'
+  | 'high_negative_acceptance'
+  | 'ignored_followups'
+  | 'positive_rejections'
+  | 'insufficient_sample'
+
+export interface DashboardAdvisorBehaviorLearningSignal {
+  kind: DashboardAdvisorBehaviorLearningSignalKind
+  severity: 'info' | 'warning' | 'danger'
+  message: string
+}
+
+export interface DashboardAdvisorBehaviorAnalyticsResponse {
+  generatedAt: string
+  mode: 'demo' | 'admin'
+  windowDays: number
+  summary: DashboardAdvisorBehaviorSummary
+  decisionBreakdown: DashboardAdvisorBehaviorDecisionBreakdownEntry[]
+  reasonCodeBreakdown: DashboardAdvisorBehaviorReasonCodeBreakdownEntry[]
+  learningSignals: DashboardAdvisorBehaviorLearningSignal[]
+  caveats: string[]
+}
+
+export interface DashboardAdvisorEvalTrendsResponse {
+  generatedAt: string
+  mode: 'demo' | 'admin'
+  windowDays: number
+  groups: DashboardAdvisorEvalTrendGroup[]
+  caveats: string[]
+}
+
 export type DashboardAdvisorManualOperationStepKey =
   | 'personal_sync'
   | 'ibkr_sync'
@@ -582,11 +696,15 @@ export interface DashboardAdvisorDecisionOutcomeCreateInput {
 
 // PR4 — Advisor Post-Mortem.
 //
-// Auth contract for `POST /advisor/post-mortem/run` (PR4-fix-2):
-//   • Admin session only. Internal-token-only callers are rejected with 403.
-//   • The worker scheduler is deferred to a future PR; when that scheduler lands it will own
-//     its own dedicated, tested internal-token execution context, at which point the route
-//     guard may be widened.
+// Auth contract for `POST /advisor/post-mortem/run` (PR7):
+//   • Admin session OR valid internal token (see `requireAdminOrInternalToken`).
+//   • Demo browser sessions without an internal token receive 403 `DEMO_MODE_FORBIDDEN`.
+//   • Internal-token callers have their effective mode elevated to 'admin' before the
+//     use-case is invoked, so the use-case's defensive demo-mode throw is not triggered.
+//   • The worker scheduler at `apps/worker/src/post-mortem-scheduler.ts` is the only
+//     internal-token caller in production. It is off by default (`AI_POST_MORTEM_AUTO_RUN_ENABLED=false`).
+//   • Internal-token does NOT grant access to other Decision Journal mutations or unrelated
+//     advisor write endpoints — those keep their original guards.
 //
 // Two distinct status enums live on this surface, on purpose:
 //

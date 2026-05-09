@@ -436,6 +436,14 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - `GET /dashboard/advisor/chat`
 - `POST /dashboard/advisor/chat`
 - `GET /dashboard/advisor/evals`
+- `GET /dashboard/advisor/evals/trends` *(PR9, read-only, DB-only, `windowDays` 7..90)*
+- `GET /dashboard/advisor/behavior-analytics` *(PR15A, read-only, DB-only, `windowDays` 7..365. Aggregates `advisor_decision_journal` × `advisor_decision_outcome` into a freeNote-free behavior view: decision counts/rates, outcome coverage, reason-code breakdown with descriptive cautions, learning signals. Surfaced on `/ia` behind `VITE_LEARNING_LOOP_UI_ENABLED`. Tradetally-inspired pattern, re-implemented under our license; no Tradetally dependency. Never claims causality, profitability, or predictive value; never returns or logs `freeNote` content.)*
+- `POST /dashboard/trading-lab/patterns/detect` *(PR10 + PR15B, read-only proxy to `quant-service POST /quant/patterns/detect`. Research/paper-only; no order routing. PR15B adds five SMC/ICT deterministic detectors — `fair_value_gap`, `liquidity_sweep`, `break_of_structure`, `change_of_character`, `order_block_candidate` — re-implemented under our license. SMC detections are capped at low/medium confidence; surfaced in the UI with a "SMC/ICT research" badge and a "Candidate structure · Not a signal · Paper only" caption per detection card.)*
+- *(PR11)* Trading Lab UI exposes a flag-gated **Pattern Detection Panel** (`/ia/trading-lab`) that calls the PR10 endpoint and converts a detection into a manual hypothesis draft via the existing PR3 hypothesis endpoint. Demo mode renders a deterministic fixture without a network call; admin mode runs the detection. No persistence of raw detections; no graph ingest; no LLM/provider calls.
+- `GET /dashboard/trading-lab/strategies/:id/scorecard` *(PR12 + PR14, read-only Strategy Scorecard. Aggregates `tradingLabBacktestRun` history into an evidence-quality grade — never a profitability or predictive claim. PR14 additively adds `advancedMetrics` — a curated QuantStats-inspired subset re-implemented under our license: Calmar, MAR, Recovery factor, Ulcer index, Tail ratio, Omega, historical VaR/CVaR 95, rolling Sharpe + rolling DD, win/loss/payoff. Paper-only. No new DB table. `advancedMetrics` NEVER changes `evidenceGrade`; insufficient data → null fields + warnings, never fabricated zeros.)* — surfaced in the Hypothesis Lab UI as a collapsible per-hypothesis card with a nested "Métriques avancées" subsection, all behind the existing `VITE_LEARNING_LOOP_UI_ENABLED` flag.
+- *(PR13 — research / documentation only)* External-repos audit + decision matrix: see [`docs/research/advisor-external-repos-audit.md`](../research/advisor-external-repos-audit.md) and [`docs/research/advisor-external-repos-decision-matrix.md`](../research/advisor-external-repos-decision-matrix.md). **30 distinct repositories + 15 concepts** evaluated (the user-supplied list contained 32 entries: one typo `jesses-ai/jesse` → `jesse-ai/jesse`, and one case-variant duplicate `tauricresearch/tradingagents` ≡ `TauricResearch/TradingAgents`). Primary-decision split: `adapt pattern` 8 / `research only` 15 / `avoid` 7. Informs the proposed PR14–PR18 roadmap. **No runtime code, no UI, no DB, no LLM, no provider, no graph, no worker, no execution change in this PR.**
+- *(PR16 — research / ADR only)* Provider-abstraction v2 proposal: see [`docs/adr/provider-abstraction-v2.md`](../adr/provider-abstraction-v2.md) and the companion notes [`docs/research/provider-abstraction-openbb-hyperswitch-notes.md`](../research/provider-abstraction-openbb-hyperswitch-notes.md). Status `proposed`. Audits the current Finance-OS provider landscape (news, market-data, Powens, IBKR, Binance, knowledge-service, quant-service), enumerates 10 concrete gaps, and proposes a 5-layer model with capability registry + closed-set error taxonomy + redaction harness + idempotent sync metadata. Migration plan splits into PR17A (capability registry types) → PR17B (error taxonomy + redaction) → PR17C (provider health diagnostics) → PR17D (normalized sync metadata) → PR17E (provider docs + test harness). **No runtime code, no dependency, no DB schema, no migration in this PR.**
+- *(PR17A — types-only foundation, no runtime activated)* Provider Capability Registry + Interface in the new [`packages/provider-contract/`](../../packages/provider-contract/) workspace. Defines the read-only contract surface every future adapter MUST honor: `Provider<C>`, `ProviderId`, `ProviderCapability` (13 read-only keys: `knowledge.context_bundle.read`, `knowledge.query.read`, `quant.patterns.detect`, `quant.metrics.compute`, `quant.indicators.compute`, `market.quotes.read`, `market.macro.read`, `news.items.read`, `banking.accounts.read`, `banking.transactions.read`, `external_investments.positions.read`, `external_investments.trades.read`, `crypto.wallet.read`), `ProviderResult<T>` (discriminated `{ ok: true } | { ok: false }`), `ProviderError` + closed-union `ProviderErrorCode` (14 codes), `ProviderHealth`, `ProviderCallContext` (`mode: 'demo' | 'admin'` REQUIRED, plus optional `budgetPolicy`, `freshnessPolicy`, `dryRun`), `ProviderMeta` + `ProviderSourceMeta`, `ProviderRegistryContract`. Includes a compile-time guard (`__PROVIDER_CAPABILITY_GUARD_OK`) that fails to type-check if any of the 8 forbidden execution / write capabilities (`trading.order.create`, `trading.order.cancel`, `trading.position.open`, `trading.position.close`, `crypto.swap.execute`, `crypto.transfer.create`, `payment.charge.create`, `bank.transfer.create`) ever leaks into the allowed union. **No adapter migrated, no provider call routed through the new types, no DB or runtime change.** Existing inline provider code keeps working unchanged. Implements ADR §11.1.
 - `GET /dashboard/advisor/manual-refresh-and-run`
 - `GET /dashboard/advisor/manual-refresh-and-run/:operationId`
 - `POST /dashboard/advisor/manual-refresh-and-run`
@@ -677,3 +685,32 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 | `market_provider_state` | Health et compteurs par provider marches |
 | `market_context_bundle_snapshot` | Snapshot du bundle IA marches |
 | `derived_recompute_run` | Statut recompute background |
+
+## Advisor Learning Loop (PR1–PR5)
+
+L'Advisor Learning Loop est une suite additive et non-breaking au-dessus de l'AI Advisor existant. Voir [`docs/adr/advisor-learning-loop.md`](../adr/advisor-learning-loop.md) pour les decisions d'architecture et la sequence de PRs.
+
+### Backend (PR1–PR4)
+- **Decision Journal** (`advisor_decision_journal` + `advisor_decision_outcome`) — capture la decision humaine sur une recommandation (accepted/rejected/deferred/ignored), un `reasonCode`, une note libre, une date de suivi. Endpoints `GET/POST /dashboard/advisor/journal`. Mutations admin-session-only.
+- **Deterministic evals** — categories `causal_reasoning`, `strategy_quality`, `risk_calibration`, `post_mortem_safety`. Scorers deterministes, jamais de LLM-as-judge. CLI `pnpm evals:run` (dry-run, exit 0 par defaut).
+- **Hypothesis Lab** (reuse path) — manual hypothesis = `tradingLabStrategy.strategyType='manual-hypothesis'`. Donnees structurees sous `parameters.hypothesis = { thesis, invalidationCriteria, evidenceNotes?, horizon? }`. Routes `/dashboard/trading-lab/hypotheses*`.
+- **Post-Mortem** (`advisor_post_mortem`) — analyse retrospective batch d'une recommandation expiree. Sortie LLM strict-validee, scope `advisory-only`, banlist execution-vocabulary. Endpoints `GET /dashboard/advisor/post-mortem`, `GET /:id`, `POST /run`. Run admin-session-only. Gate par `AI_POST_MORTEM_ENABLED` (default `false`) + `computeAiBudgetState().deepAnalysisAllowed`. Worker scheduler et graph ingest differes.
+
+### UI (PR5)
+
+| Surface | Route | Description |
+|---|---|---|
+| Decision Recorder | `/ia` (inline sur chaque carte de recommandation) | Permet de noter sa decision (Suivre / Reporter / Refuser / Ignorer) avec raison et note. Aucune execution. |
+| Hypothesis Lab | `/ia/trading-lab` (section paper-only) | Liste des hypotheses manuelles, creation / archivage / scenario lie. Badge `Paper only` permanent. |
+| Eval Scorecard | `/ia` (panneau "Garde-fous qualite") | Cas et statut du dernier run d'evaluation, regroupes en `quality / safety / economics`. |
+| Post-Mortem feed | `/ia` (panneau "Post-Mortems") | Lecture seule des analyses persistees + bouton de declenchement admin-only. Etats `skipped_disabled` / `skipped_budget_blocked` surfaces explicitement. |
+
+### Feature flags
+
+| Flag | Default | Effect |
+|---|---|---|
+| `AI_POST_MORTEM_ENABLED` (server, API) | `false` | Quand `false`, `POST /dashboard/advisor/post-mortem/run` retourne `skipped_disabled` sans appel LLM. |
+| `AI_POST_MORTEM_HORIZON_DAYS` (server, API) | `30` | Horizon par defaut pour considerer une recommandation expiree. |
+| `AI_POST_MORTEM_BATCH_LIMIT` (server, API) | `10` | Cap dur d'items traites par run. Un seul appel LLM par batch. |
+| `AI_POST_MORTEM_MODEL` (server, API) | `claude-sonnet-4-6` | Modele LLM utilise. |
+| `VITE_LEARNING_LOOP_UI_ENABLED` (client UI) | `false` | Quand `false`, masque Decision Recorder, Hypothesis Lab, Eval Scorecard, Post-Mortem feed. Les surfaces Advisor et Trading Lab existantes ne sont pas affectees. |

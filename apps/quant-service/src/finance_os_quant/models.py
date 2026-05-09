@@ -197,3 +197,49 @@ class ScenarioEvaluateResult(BaseModel):
             "Scenario evaluation is heuristic-based. Not financial advice.",
         ]
     )
+
+
+# ---------------------------------------------------------------------------
+# Patterns (PR10) — deterministic technical pattern detection.
+#
+# Research / paper-only. NEVER an execution path. Pattern observations carry
+# limitations + invalidation hints; the engine self-scans for execution
+# vocabulary before returning.
+# ---------------------------------------------------------------------------
+
+PatternKey = Literal[
+    "ema20_horizontal_level",
+    "ema200_one_touch",
+    "parabolic_sar_rci",
+    "volume_profile_zones",
+    # PR15B — SMC/ICT deterministic detector pack.
+    "fair_value_gap",
+    "liquidity_sweep",
+    "break_of_structure",
+    "change_of_character",
+    "order_block_candidate",
+]
+
+
+class PatternCandle(BaseModel):
+    timestamp: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: Optional[float] = None
+
+
+class PatternDetectOptions(BaseModel):
+    horizontalLevelTolerancePct: Optional[float] = Field(default=None, ge=0.05, le=5.0)
+    emaTouchTolerancePct: Optional[float] = Field(default=None, ge=0.05, le=5.0)
+    minCandles: Optional[int] = Field(default=None, ge=10, le=2000)
+    volumeProfileBins: Optional[int] = Field(default=None, ge=4, le=200)
+
+
+class PatternDetectRequest(BaseModel):
+    symbol: Optional[str] = None
+    timeframe: str
+    candles: List[PatternCandle] = Field(default_factory=list)
+    patterns: Optional[List[PatternKey]] = None
+    options: Optional[PatternDetectOptions] = None

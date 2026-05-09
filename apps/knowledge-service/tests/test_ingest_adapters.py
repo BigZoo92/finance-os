@@ -13,8 +13,13 @@ from finance_os_knowledge.ingest import (
 )
 from finance_os_knowledge.ingest.advisor import (
     AdvisorAssumptionInput,
+    AdvisorDecisionPointInput,
     AdvisorEvidenceInput,
+    AdvisorLearningActionInput,
     AdvisorRecommendationInput,
+    decision_point_node_id,
+    learning_action_node_id,
+    recommendation_node_id,
 )
 from finance_os_knowledge.ingest.cost_ledger import CostLedgerEntryInput
 from finance_os_knowledge.ingest.markets import (
@@ -168,6 +173,217 @@ def test_advisor_ingest_creates_recommendation_with_assumptions_and_evidence(tmp
     store = _store(tmp_path)
     response = store.ingest(ingest, request_id="adv-1")
     assert response.inserted_entities >= 4
+
+
+def test_advisor_ingest_emits_decision_points_with_recommendation_link(tmp_path):
+    request = AdvisorIngestRequest(
+        mode="admin",
+        decisionPoints=[
+            AdvisorDecisionPointInput(
+                decisionId=42,
+                decision="accepted",
+                reasonCode="rebalance_to_target_weights",
+                decidedAt=datetime(2026, 4, 26, tzinfo=UTC),
+                decidedBy="admin",
+                expectedOutcomeAt=datetime(2026, 5, 26, tzinfo=UTC),
+                recommendationKey="rec-cash-drag",
+                recommendationId=7,
+                runId=11,
+                freeNoteExcerpt="Will reduce cash by 5pp over the month",
+            )
+        ],
+    )
+
+    ingest = build_advisor_ingest(request)
+    types = {entity.type for entity in ingest.entities}
+    rel_types = {rel.type for rel in ingest.relations}
+    assert "DecisionPoint" in types
+    assert "LEADS_TO" in rel_types
+
+    decision_node = next(e for e in ingest.entities if e.type == "DecisionPoint")
+    assert decision_node.id == decision_point_node_id(42)
+    assert "advisory-only" in decision_node.tags
+    assert decision_node.metadata["recommendationKey"] == "rec-cash-drag"
+
+    leads_to_rel = next(r for r in ingest.relations if r.type == "LEADS_TO")
+    assert leads_to_rel.from_id == recommendation_node_id("rec-cash-drag")
+    assert leads_to_rel.to_id == decision_node.id
+
+    store = _store(tmp_path)
+    response = store.ingest(ingest, request_id="dp-1")
+    assert response.inserted_entities >= 1
+
+    # Idempotent re-ingest.
+    response2 = store.ingest(ingest, request_id="dp-2")
+    assert response2.inserted_entities == 0
+
+
+def test_advisor_ingest_emits_learning_actions_with_invalidates_relation(tmp_path):
+    request = AdvisorIngestRequest(
+        mode="admin",
+        learningActions=[
+            AdvisorLearningActionInput(
+                postMortemId=99,
+                actionIndex=0,
+                title="Tighten cash floor before rebalancing",
+                description="Outcome contradicted the cash-drag thesis; raise minimum cash buffer.",
+                appliesTo=["cash-drag-reduction"],
+                status="invalidates_recommendation",
+                confidence=0.7,
+                recommendationKey="rec-cash-drag",
+                decisionId=42,
+                runId=11,
+                evaluatedAt=datetime(2026, 5, 28, tzinfo=UTC),
+            ),
+            AdvisorLearningActionInput(
+                postMortemId=99,
+                actionIndex=1,
+                title="Document inflation assumption sensitivity",
+                description="Add an explicit inflation-band assumption check in the next run.",
+                appliesTo=["assumption-tracking"],
+                status="neutral",
+                confidence=0.55,
+                recommendationKey="rec-cash-drag",
+                evaluatedAt=datetime(2026, 5, 28, tzinfo=UTC),
+            ),
+        ],
+    )
+
+    ingest = build_advisor_ingest(request)
+    types = {entity.type for entity in ingest.entities}
+    rel_types = {rel.type for rel in ingest.relations}
+    assert "LearningAction" in types
+    assert "INVALIDATED_BY" in rel_types
+    assert "SUPPORTS" in rel_types
+    assert "LEADS_TO" in rel_types  # decision -> learning action
+
+    invalidating = next(e for e in ingest.entities if "invalidates_recommendation" in e.tags)
+    assert invalidating.id == learning_action_node_id(99, 0)
+    assert "advisory-only" in invalidating.tags
+
+    invalidated_by_rel = next(r for r in ingest.relations if r.type == "INVALIDATED_BY")
+    assert invalidated_by_rel.from_id == recommendation_node_id("rec-cash-drag")
+    assert invalidated_by_rel.to_id == invalidating.id
+
+    supports_rel = next(r for r in ingest.relations if r.type == "SUPPORTS")
+    assert supports_rel.to_id == recommendation_node_id("rec-cash-drag")
+    assert supports_rel.from_id == learning_action_node_id(99, 1)
+
+    decision_to_action = next(
+        r
+        for r in ingest.relations
+        if r.type == "LEADS_TO" and r.to_id == learning_action_node_id(99, 0)
+    )
+    assert decision_to_action.from_id == decision_point_node_id(42)
+
+    store = _store(tmp_path)
+    response = store.ingest(ingest, request_id="la-1")
+    assert response.inserted_entities >= 2
+
+    # Idempotent re-ingest.
+    response2 = store.ingest(ingest, request_id="la-2")
+    assert response2.inserted_entities == 0
+
+
+def test_advisor_ingest_pr8_nodes_always_carry_advisory_only_tag(tmp_path):
+    """Invariant: every DecisionPoint and LearningAction node MUST carry the
+    'advisory-only' tag. The adapter is the single place that injects it; this
+    test verifies the contract holds across both node types and across mixed
+    inputs in the same request.
+    """
+
+    request = AdvisorIngestRequest(
+        mode="admin",
+        decisionPoints=[
+            AdvisorDecisionPointInput(
+                decisionId=1,
+                decision="accepted",
+                reasonCode="rebalance",
+                decidedAt=datetime(2026, 5, 1, tzinfo=UTC),
+                recommendationKey="rec-a",
+            ),
+            AdvisorDecisionPointInput(
+                decisionId=2,
+                decision="rejected",
+                reasonCode="risk_too_high",
+                decidedAt=datetime(2026, 5, 2, tzinfo=UTC),
+                recommendationKey="rec-b",
+            ),
+        ],
+        learningActions=[
+            AdvisorLearningActionInput(
+                postMortemId=10,
+                actionIndex=0,
+                title="Tighten threshold",
+                status="invalidates_recommendation",
+                recommendationKey="rec-a",
+            ),
+            AdvisorLearningActionInput(
+                postMortemId=10,
+                actionIndex=1,
+                title="Confirm assumption",
+                status="validates_recommendation",
+                recommendationKey="rec-b",
+            ),
+            AdvisorLearningActionInput(
+                postMortemId=10,
+                actionIndex=2,
+                title="Document drift",
+                status="neutral",
+                recommendationKey="rec-c",
+            ),
+        ],
+    )
+
+    ingest = build_advisor_ingest(request)
+    pr8_nodes = [e for e in ingest.entities if e.type in ("DecisionPoint", "LearningAction")]
+    assert len(pr8_nodes) == 5
+    for node in pr8_nodes:
+        assert "advisory-only" in node.tags, (
+            f"node {node.id} ({node.type}) is missing the 'advisory-only' tag"
+        )
+        assert node.metadata.get("scope") == "advisory-only", (
+            f"node {node.id} ({node.type}) metadata.scope must be 'advisory-only'"
+        )
+
+
+def test_advisor_ingest_pr8_idempotent_across_repeated_ingest(tmp_path):
+    """Re-confirm idempotency for a mixed PR8 batch — no new nodes/relations
+    should be created on a second ingest of the exact same payload.
+    """
+
+    request = AdvisorIngestRequest(
+        mode="admin",
+        decisionPoints=[
+            AdvisorDecisionPointInput(
+                decisionId=42,
+                decision="accepted",
+                reasonCode="accepted",
+                decidedAt=datetime(2026, 5, 1, tzinfo=UTC),
+                recommendationKey="rec-cash-drag",
+            )
+        ],
+        learningActions=[
+            AdvisorLearningActionInput(
+                postMortemId=99,
+                actionIndex=0,
+                title="Cap confidence",
+                status="invalidates_recommendation",
+                recommendationKey="rec-cash-drag",
+                decisionId=42,
+            )
+        ],
+    )
+
+    ingest = build_advisor_ingest(request)
+    store = _store(tmp_path)
+
+    first = store.ingest(ingest, request_id="pr8-1")
+    second = store.ingest(ingest, request_id="pr8-2")
+
+    assert first.inserted_entities >= 2
+    assert second.inserted_entities == 0
+    assert second.dedupe_count >= first.inserted_entities
 
 
 def test_cost_ledger_ingest_creates_model_run_token_cost_chain(tmp_path):
