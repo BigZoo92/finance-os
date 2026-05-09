@@ -53,6 +53,12 @@ importers:
       '@finance-os/prelude':
         specifier: workspace:*
         version: link:../../packages/prelude
+      '@finance-os/provider-contract':
+        specifier: workspace:*
+        version: link:../../packages/provider-contract
+      '@finance-os/provider-runtime':
+        specifier: workspace:*
+        version: link:../../packages/provider-runtime
       '@finance-os/redis':
         specifier: workspace:*
         version: link:../../packages/redis
@@ -338,6 +344,14 @@ importers:
   packages/powens: {}
 
   packages/prelude: {}
+
+  packages/provider-contract: {}
+
+  packages/provider-runtime:
+    dependencies:
+      '@finance-os/provider-contract':
+        specifier: workspace:*
+        version: link:../provider-contract
 
   packages/redis:
     dependencies:

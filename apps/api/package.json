@@ -19,6 +19,8 @@
     "@finance-os/finance-engine": "workspace:*",
     "@finance-os/powens": "workspace:*",
     "@finance-os/prelude": "workspace:*",
+    "@finance-os/provider-contract": "workspace:*",
+    "@finance-os/provider-runtime": "workspace:*",
     "@finance-os/redis": "workspace:*",
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",

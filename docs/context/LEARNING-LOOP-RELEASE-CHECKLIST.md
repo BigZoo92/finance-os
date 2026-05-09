@@ -337,6 +337,173 @@ ProviderError taxonomy + redaction → provider-health diagnostics → normalize
 → provider docs + test harness). Each of those is a separate implementation PR with its
 own pre-merge gates; PR16 itself adds no runtime gate.
 
+## Macro Prompt 2-fix — first runtime canary *(quant-patterns-detect rewired)*
+
+Rewires the `/dashboard/trading-lab/patterns/detect` admin handler through
+`quantPatternsDetectProvider`. First real runtime consumer of the provider
+abstraction. The other quant endpoints stay on the inline helper; knowledge-service
+rewiring is deferred. **No public response shape changes. No env / DB / worker /
+UI / sensitive-provider changes. No new third-party deps.**
+
+**Scope shipped**
+
+- `apps/api/src/routes/dashboard/routes/trading-lab.ts` instantiates
+  `quantPatternsDetectProvider` once at route-factory init and uses it for the admin
+  branch of `/patterns/detect`. Inline `callQuantService` is kept for the other
+  endpoints (`/capabilities`, `/backtest`, `/walk-forward`).
+- `apps/api/src/routes/dashboard/routes/trading-lab-patterns-detect.test.ts` —
+  route-level test that mounts a minimal Elysia app reproducing the admin handler
+  exactly, exercises the real wrapper against a fake fetch, and asserts:
+  - admin success → 200 `{ ok: true, ...upstreamBody }` shape preserved
+  - admin disabled → 503 `QUANT_SERVICE_DISABLED`, no fetch call
+  - admin HTTP 5xx / thrown → 503 `QUANT_SERVICE_UNAVAILABLE`
+  - demo branch never invokes fetch
+  - log lines never contain candle values, upstream error bodies, or thrown error
+    text
+  - public response on failure contains no execution vocabulary
+
+**Pre-merge gates**
+
+- [ ] `bun test apps/api/src/routes/dashboard/routes/trading-lab-patterns-detect.test.ts`
+      — 7 tests, all pass.
+- [ ] `bun test apps/api/src/routes/dashboard/services/providers` — 15 tests, all
+      pass (unchanged).
+- [ ] `pnpm --filter @finance-os/provider-runtime test` — unchanged, 64 tests pass.
+- [ ] `pnpm --filter @finance-os/provider-contract test` — unchanged, 16 tests pass.
+- [ ] `KNOWLEDGE_SERVICE_ENABLED`, `ADVISOR_GRAPH_INGEST_ENABLED`, and
+      `QUANT_SERVICE_ENABLED` defaults unchanged.
+- [ ] `/dashboard/trading-lab/patterns/detect` response shape unchanged.
+
+**Out of scope (deferred)**
+
+- Knowledge-service route rewiring. The advisor consumers depend on the typed
+  `KnowledgeServiceClient` surface (`stats` / `schema` / `query` / `contextBundle`
+  / `rebuild` / `explain`). Replacing a single call site with the
+  single-capability wrapper is non-trivial without exporting `query` / `stats` /
+  `explain` as capabilities; deferred.
+- `quant.metrics.compute` / `quant.indicators.compute` rewiring.
+- `quant.backtest` / `quant.walk_forward` — neither is in
+  `ALLOWED_PROVIDER_CAPABILITIES`; would need an ADR amendment first.
+- Knowledge graph **ingest**. No write capability is allowed; `advisor-graph-ingest.ts`
+  continues to operate fail-soft as today.
+- `GET /dashboard/providers/diagnostics` endpoint.
+- Sensitive providers (Powens, IBKR, Binance, market-data, news) untouched.
+
+## Macro Prompt 2 — Internal provider migration batch *(knowledge-service + quant-service wrappers)*
+
+First migration onto the Provider Foundation. Adds standalone `Provider<C>` wrappers
+for the two safest internal read paths — `knowledge.context_bundle.read` and
+`quant.patterns.detect` — with unit tests, per-provider docs, and a registry mount.
+Routes still use the existing inline helpers; the wrappers are not yet consumed by
+production code paths. **No public API response shape changes. No env / DB / worker /
+UI / sensitive-provider changes.**
+
+**Scope shipped**
+
+- `apps/api/src/routes/dashboard/services/providers/knowledge-context-bundle-provider.ts`
+  wrapping `KnowledgeServiceClient.contextBundle` as
+  `Provider<knowledge.context_bundle.read>`.
+- `apps/api/src/routes/dashboard/services/providers/quant-patterns-detect-provider.ts`
+  wrapping the existing `/quant/patterns/detect` HTTP shape as
+  `Provider<quant.patterns.detect>`. Demo branch reuses `buildDemoPatternDetectionResponse`
+  and never hits the network.
+- `apps/api/src/routes/dashboard/services/providers/internal-provider-registry.ts`
+  mounts both into a `ProviderRegistry`. No consumers yet.
+- Unit tests for both wrappers and the registry mount; every result and every captured
+  log line is asserted via the runtime invariant harness; raw upstream payloads (synthetic
+  secrets, candle values, error bodies) are explicitly asserted to never appear in logs.
+- `docs/providers/knowledge-service.md` and `docs/providers/quant-service.md`.
+- `apps/api/package.json` gains workspace deps on `@finance-os/provider-contract` and
+  `@finance-os/provider-runtime`. No third-party deps.
+
+**Pre-merge gates**
+
+- [ ] `bun test apps/api/src/routes/dashboard/services/providers` — 16 tests, all pass.
+- [ ] `pnpm --filter @finance-os/provider-runtime test` — unchanged, 64 tests pass.
+- [ ] `pnpm --filter @finance-os/provider-contract test` — unchanged, 16 tests pass.
+- [ ] `pnpm exec biome lint apps/api/src/routes/dashboard/services/providers` — clean.
+- [ ] `pnpm evals:run` — unchanged; no production code path activated.
+- [ ] `KNOWLEDGE_SERVICE_ENABLED` and `ADVISOR_GRAPH_INGEST_ENABLED` defaults unchanged.
+- [ ] `/dashboard/trading-lab/patterns/detect` response shape unchanged.
+
+**Out of scope (deferred)**
+
+- Rewiring routes to consume the wrappers (route closures still call
+  `createKnowledgeServiceClient` / inline `callQuantService` directly).
+- `quant.metrics.compute` / `quant.indicators.compute` wrappers.
+- `quant.backtest` / `quant.walk_forward` wrappers — neither is in
+  `ALLOWED_PROVIDER_CAPABILITIES`. Adding them would require an ADR amendment first.
+- Knowledge graph **ingest** wrapping. No write capability is allowed by the contract;
+  `advisor-graph-ingest.ts` continues to operate fail-soft as today.
+- `GET /dashboard/providers/diagnostics` endpoint. Diagnostics use-case remains pure.
+- Sensitive providers (Powens, IBKR, Binance, market-data, news) untouched.
+
+## PR17B–E — Provider Foundation Bundle *(runtime helpers + diagnostics use-case + docs + harness)*
+
+The Provider Foundation Bundle adds [`packages/provider-runtime/`](../../packages/provider-runtime/)
+on top of the PR17A type-only contract. It is **runtime-additive only**: no adapter
+migrated, no provider call added, no DB schema, no migration, no worker behavior
+change, no public API response shape change.
+
+**Scope shipped**
+
+- New workspace `@finance-os/provider-runtime` depending only on
+  `@finance-os/provider-contract`. Eight modules: `error.ts`, `result.ts`,
+  `redaction.ts`, `logger.ts`, `registry.ts`, `sync-meta.ts`, `diagnostics.ts`,
+  `test-harness.ts`, plus `index.ts` barrel.
+- `createProviderError`, `normalizeProviderError`, `isProviderError`,
+  `providerErrorToSafeJson`, `providerErrorTypeOf` close the error-construction surface
+  and emit a browser-safe JSON projection that never includes stack traces or
+  arbitrary cause fields. `safeDetails` is funnelled through redaction at construction
+  time.
+- `providerOk` / `providerErr` / `mapProviderResult` / `mapProviderError` /
+  `unwrapProviderResultOrThrow` enforce the meta-on-both-branches invariant.
+- `redactProviderPayload`, `redactProviderLogFields`,
+  `assertNoSensitiveProviderFields`, `createSensitiveKeyMatcher` form the redaction
+  harness. Sensitive key fragments redact recursively; cycles return `[Circular]`;
+  Errors keep only `name + message`; Dates serialize to ISO; class instances are
+  tagged, not spread; long strings are clamped (default 1000 chars).
+- `logProviderEvent` adapts the prelude `createJsonLogger` shape to a closed event
+  vocabulary (`provider.call.started|succeeded|failed|skipped`,
+  `provider.health.checked`, `provider.sync.started|succeeded|failed|skipped`) with a
+  closed allowlist of fields. Unknown fields are dropped; sensitive values are
+  redacted before reaching the underlying logger; `errorType` derives from the closed
+  `ProviderErrorCode` union.
+- In-memory `createProviderRegistry` skeleton (`listProviders`, `listCapabilities`,
+  `getProvider`, `findProvidersByCapability`, `healthAll`). Pure: it does not
+  instantiate adapters, read env, or perform any network call.
+- `ProviderSyncStatus` / `ProviderSyncState` / `ProviderSyncRunMeta` /
+  `ProviderFreshnessState` types and `createProviderSyncState` /
+  `computeProviderFreshness` helpers preserve `null` over fake-zero for unknown
+  numerics and only flip `stale` when a known `maxAgeMinutes` budget is exceeded.
+- `computeProviderDiagnostics(registry, context)` pure use-case returns
+  `{generatedAt, mode, providers[], summary, caveats[]}`. Demo mode returns a
+  deterministic empty fixture; admin mode reads `getHealth()` snapshots only and
+  never invokes `call()`. **Endpoint deferred** — wiring into
+  `apps/api/src/routes/dashboard/router.ts` left for a focused future PR.
+- Invariant test harness: `assertProviderContract`,
+  `assertProviderDoesNotExposeForbiddenCapabilities`, `assertProviderResultSafe`,
+  `assertProviderErrorSafe`, `assertProviderLogsSafe`.
+- Provider author guide and template under [`docs/providers/`](../providers/),
+  pinned by docs-sanity tests inside the runtime package.
+
+**Pre-merge gates**
+
+- [ ] `pnpm --filter @finance-os/provider-runtime test` — 64 tests, all pass.
+- [ ] `pnpm --filter @finance-os/provider-runtime typecheck` — clean.
+- [ ] `pnpm --filter @finance-os/provider-contract test` — unchanged, all pass.
+- [ ] `pnpm exec biome lint packages/provider-runtime` — clean.
+- [ ] `pnpm evals:run` — unchanged; the bundle activates no provider path.
+
+**Out of scope (still deferred)**
+
+- No third-party adapter migrated (Powens, IBKR, Binance, market-data, news,
+  knowledge-service, quant-service all keep their current code paths).
+- No `GET /dashboard/providers/diagnostics` Elysia route. The use-case is callable
+  and tested; only the route wiring is deferred.
+- No DB schema for `provider_sync_state`. Worker / sync job behavior is unchanged.
+- No canary integration of the runtime into knowledge-service or quant-service.
+
 ## PR17A — Provider Capability Registry + Interface *(types-only foundation)*
 
 PR17A lands the Layer 3 type surface from ADR §11.1 in a brand-new workspace

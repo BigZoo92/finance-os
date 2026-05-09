@@ -1,6 +1,6 @@
 # ADR: Provider Abstraction v2
 
-> **Status**: partially implemented — §11.1 (PR17A) shipped as types only on 2026-05-09. Remaining slices (§11.2–§11.5) still proposed.
+> **Status**: foundation in place + first internal migration batch + first runtime canary — §11.1 (PR17A, types) shipped 2026-05-09; §11.2 (error taxonomy + redaction harness, PR17B), §11.3 (diagnostics use-case only — endpoint deferred, PR17C), §11.4 (sync-metadata types + freshness helper only — no schema, PR17D), §11.5 (provider docs + invariant test harness, PR17E) shipped together as the Provider Foundation Bundle on 2026-05-09. Macro Prompt 2 (2026-05-09) shipped standalone `Provider<C>` wrappers + tests + docs for `knowledge-service` (`knowledge.context_bundle.read`) and `quant-service` (`quant.patterns.detect`). Macro Prompt 2-fix (2026-05-09) **rewires the `/dashboard/trading-lab/patterns/detect` admin route through `quantPatternsDetectProvider`** — first real runtime consumer of the provider abstraction. Public response shape unchanged (success/disabled/unavailable mapping verified by route-level tests). Knowledge-service rewiring deferred (see §11.7). Sensitive providers (Powens, IBKR, Binance, market-data, news) remain untouched. Diagnostics endpoint and worker/sync DB-state writers remain proposed.
 > **Date**: 2026-05-09
 > **PR**: 16 (research) → 17A (types-only foundation)
 > **Companion**: [`docs/research/provider-abstraction-openbb-hyperswitch-notes.md`](../research/provider-abstraction-openbb-hyperswitch-notes.md)
@@ -474,59 +474,133 @@ each merge a slice.
 - Capability-keyed input/output DTOs (§6.3) deferred — PR17A leaves `Provider<C>` generic over
   `TInput` / `TOutput`; per-capability DTOs land incrementally as adapters migrate.
 
-### 11.2 PR17B — Error taxonomy + redaction harness
+### 11.2 PR17B — Error taxonomy + redaction harness ✅ shipped 2026-05-09
 
-- Implement `ProviderError` runtime class + `logProviderEvent` redacted-logger.
-- Migrate 1 provider (recommended: knowledge-service, smallest surface) to throw
-  `ProviderError` with codes mapped from current ad-hoc strings.
-- Snapshot test the redaction harness against a payload containing every value from PR8's
-  `SENSITIVE_KEY_PARTS` list.
-- Other providers continue to throw their current errors; the registry layer maps them on
-  the way out as a transitional adapter-of-adapter.
+- `packages/provider-runtime/` created as a workspace package depending only on
+  `@finance-os/provider-contract` (PR17A).
+- `createProviderError`, `normalizeProviderError`, `isProviderError`,
+  `providerErrorToSafeJson`, and `providerErrorTypeOf` close the error code surface and
+  give callers a browser-safe JSON projection that never carries stacks or arbitrary
+  cause fields.
+- `providerOk`, `providerErr`, `mapProviderResult`, `mapProviderError`,
+  `unwrapProviderResultOrThrow` enforce the meta-on-both-branches invariant.
+- Recursive redaction harness (`redactProviderPayload`, `redactProviderLogFields`,
+  `assertNoSensitiveProviderFields`, `createSensitiveKeyMatcher`) handles cycles,
+  Errors, Dates, class instances, and clamps long strings.
+- `logProviderEvent` adapts the prelude JSON-logger shape to a closed event vocabulary
+  (`provider.call.started|succeeded|failed|skipped`,
+  `provider.health.checked`, `provider.sync.started|succeeded|failed|skipped`) with an
+  allowlist of fields that funnel through redaction before reaching the underlying logger.
+- No third-party adapter migrated yet. Existing providers keep their current code paths.
 
-### 11.3 PR17C — Provider health + diagnostics surface
+### 11.3 PR17C — Provider health + diagnostics surface ⚠️ partial — endpoint deferred
 
-- Land `health()` on each provider (default: degraded if last-success > stale threshold,
-  unavailable if last-failure within last 60s).
-- New `GET /dashboard/providers/diagnostics` route (admin-only). Returns
-  `Record<ProviderId, ProviderHealth>`.
-- Optional small UI badge on `/ia` showing the current health roll-up. (UI is optional
-  and should be a separate small follow-up if found load-bearing.)
+- Registry skeleton (`createProviderRegistry`) added with `listProviders`,
+  `listCapabilities`, `getProvider`, `findProvidersByCapability`, `healthAll`. It is a
+  pure in-memory registry — it does not instantiate adapters, read env, or perform any
+  call beyond delegating `getHealth()` to the providers it was given.
+- `computeProviderDiagnostics(registry, context)` is a pure use-case returning the
+  browser-safe diagnostics shape directly. Demo mode returns a deterministic empty
+  fixture; admin mode reads `getHealth()` snapshots only and never invokes `call()`.
+- The Elysia endpoint (`GET /dashboard/providers/diagnostics`) was deferred from this
+  bundle — the use-case is independently testable and a focused PR can wire it through
+  `apps/api/src/routes/dashboard/router.ts` with no further runtime change.
 
-### 11.4 PR17D — Normalized sync metadata + idempotent jobs
+### 11.4 PR17D — Normalized sync metadata + idempotent jobs ⚠️ partial — types + helpers only
 
-- Extract a shared `provider_sync_state` shape (NOT necessarily a new DB table — could
-  live as a jsonb column on existing per-provider tables, decided in PR17D).
-- Migrate Powens / IBKR / Binance sync jobs to compare-and-delete Redis locks (mirroring
-  PR7-fix).
-- Standardize `lastSuccessAt`, `lastFailureAt`, `lastFailureCode`, `nextEligibleAt` columns
-  / fields.
+- `ProviderSyncStatus`, `ProviderSyncState`, `ProviderSyncRunMeta`,
+  `ProviderFreshnessState` shapes added.
+- `createProviderSyncState` and `computeProviderFreshness` cover the common
+  unknown-vs-zero pitfall: missing numerics stay `null`, never `0`. `stale` and
+  `degraded` only flip true under a known `maxAgeMinutes` budget.
+- No DB schema, no migration, no job behavior change. The Powens/IBKR/Binance Redis-lock
+  rewrite remains scope for a future focused PR.
 
-### 11.5 PR17E — Provider docs + test harness
+### 11.5 PR17E — Provider docs + test harness ✅ shipped 2026-05-09
 
-- One-page-per-provider docs under `docs/providers/` (URL, capabilities declared, env vars
-  consumed, freshness model, ToS / paper-only caveats).
-- Shared test harness that asserts, for every adapter:
-  - Demo mode returns deterministic output without I/O.
-  - All thrown errors are `ProviderError` with valid `code`.
-  - Redaction harness silences every `SENSITIVE_KEY_PARTS` substring.
-  - No `process.env.X` direct read (uses `packages/env`).
-  - `meta.capabilities` does not contain any forbidden write capability.
+- `docs/providers/README.md` and `docs/providers/_template.md` created. Pinned by a
+  small bun-test suite in `provider-runtime` so a future edit cannot silently drop a
+  required section.
+- Test harness (`assertProviderContract`,
+  `assertProviderDoesNotExposeForbiddenCapabilities`, `assertProviderResultSafe`,
+  `assertProviderErrorSafe`, `assertProviderLogsSafe`) reusable from any adapter test
+  suite once migrations begin.
 
 ### 11.6 Existing-provider migration order (informative)
 
-| Order | Provider | Reason |
-|---|---|---|
-| 1 | knowledge-service | smallest surface; structured client already exists |
-| 2 | quant-service | wrap inline `callQuantService` into an adapter |
-| 3 | News providers | already have an adapter — formalize over the existing shape |
-| 4 | Market data (EODHD, Twelve Data, FRED) | the highest-value win — converts the 600 LOC inline file to 3 adapters + 1 fallback config |
-| 5 | Powens | preserve `packages/powens/` workspace; wrap as one adapter |
-| 6 | External investments (IBKR, Binance) | preserve `packages/external-investments/` workspace; wrap as adapters |
+| Order | Provider | Reason | Status |
+|---|---|---|---|
+| 1 | knowledge-service | smallest surface; structured client already exists | ⚠️ Wrapper + tests + docs shipped 2026-05-09 (Macro Prompt 2). Routes not yet rewired (deferred — see §11.8). Graph ingest remains out of scope (no write capability in `ALLOWED_PROVIDER_CAPABILITIES`). |
+| 2 | quant-service | wrap inline `callQuantService` into an adapter | ✅ Wrapper + tests + docs for `quant.patterns.detect` shipped 2026-05-09 (Macro Prompt 2). **Admin route `/dashboard/trading-lab/patterns/detect` rewired through the wrapper 2026-05-09 (Macro Prompt 2-fix)** — first real runtime consumer. `metrics`, `indicators`, `backtest`, `walk-forward` still use inline `callQuantService`; deferred to a later batch. |
+| 3 | News providers | already have an adapter — formalize over the existing shape | not started |
+| 4 | Market data (EODHD, Twelve Data, FRED) | the highest-value win — converts the 600 LOC inline file to 3 adapters + 1 fallback config | not started |
+| 5 | Powens | preserve `packages/powens/` workspace; wrap as one adapter | not started — sensitive provider, untouched |
+| 6 | External investments (IBKR, Binance) | preserve `packages/external-investments/` workspace; wrap as adapters | not started — sensitive providers, untouched |
 
 Each step is one PR. Existing providers keep working through the migration because the
 registry resolves to whichever adapter exists — pre-migration adapters are just the current
 inline code wrapped by a thin shim.
+
+### 11.7 Macro Prompt 2 — Internal provider migration batch ✅ shipped 2026-05-09
+
+- `apps/api/src/routes/dashboard/services/providers/knowledge-context-bundle-provider.ts`
+  wraps `KnowledgeServiceClient.contextBundle` as `Provider<knowledge.context_bundle.read>`.
+- `apps/api/src/routes/dashboard/services/providers/quant-patterns-detect-provider.ts`
+  wraps the existing `/quant/patterns/detect` HTTP shape as `Provider<quant.patterns.detect>`.
+- `apps/api/src/routes/dashboard/services/providers/internal-provider-registry.ts` mounts
+  both into a local `ProviderRegistry`. No consumers yet.
+- `apps/api` gains workspace deps on `@finance-os/provider-contract` and
+  `@finance-os/provider-runtime`. No new third-party deps. No env vars added.
+- Public response shapes for `/dashboard/trading-lab/patterns/detect` and the advisor
+  context-bundle path are unchanged. The `ADVISOR_GRAPH_INGEST_ENABLED` and
+  `KNOWLEDGE_SERVICE_ENABLED` defaults are unchanged. Worker behavior unchanged. Demo /
+  admin split preserved. No DB schema or migrations.
+- Deferred to a follow-up batch: rewiring routes onto the wrappers; the diagnostics
+  endpoint; `quant.metrics.compute` / `quant.indicators.compute` / backtest / walk-forward
+  wrappers (latter two are not in `ALLOWED_PROVIDER_CAPABILITIES` and would require an
+  ADR amendment); knowledge graph **ingest** wrapping (no write capability is allowed by
+  the contract; `advisor-graph-ingest.ts` continues to operate fail-soft as today).
+
+### 11.8 Macro Prompt 2-fix — first runtime canary ✅ shipped 2026-05-09
+
+- `apps/api/src/routes/dashboard/routes/trading-lab.ts` instantiates
+  `quantPatternsDetectProvider` once at route-factory init using the existing
+  `quantServiceEnabled` / `quantServiceUrl` / `quantServiceTimeoutMs` config and the
+  shared API logger as the `ProviderLogTarget`.
+- The `/dashboard/trading-lab/patterns/detect` POST handler's **admin** branch is
+  rewired to call `quantPatternsDetectProvider.call(body, { mode: 'admin', requestId,
+  now, reason })` instead of the inline `callQuantService` helper. The inline
+  `callQuantService` closure remains in place for the other quant endpoints
+  (`/capabilities`, `/backtest`, `/walk-forward`) — those wrappers are still deferred.
+- The **demo** branch is intentionally NOT routed through the wrapper. The constraint
+  is "demo route does NOT call the quant provider wrapper or quant-service"; the demo
+  branch keeps calling `buildDemoPatternDetectionResponse(context.body)` directly.
+- Public response shape preserved verbatim and asserted by route-level tests
+  ([`apps/api/src/routes/dashboard/routes/trading-lab-patterns-detect.test.ts`](../../apps/api/src/routes/dashboard/routes/trading-lab-patterns-detect.test.ts)):
+  - success → 200 `{ ok: true, ...upstreamBody }` (e.g. `detections`, `paramsHash`,
+    `dataHash`, `timeframe`, `generatedAt` flow through unchanged).
+  - `disabled_by_flag` → 503 `{ ok: false, code: 'QUANT_SERVICE_DISABLED', message,
+    requestId }` and never calls fetch.
+  - any other failure (HTTP 5xx, thrown network error, etc.) → 503
+    `{ ok: false, code: 'QUANT_SERVICE_UNAVAILABLE', message, requestId }`. The public
+    `message` is `error.causeRedacted` (already clamped/sanitized by
+    `createProviderError`) or the literal `'Quant service unreachable'` fallback —
+    upstream raw bodies are explicitly never echoed.
+- All emissions go through `logProviderEvent`. Tests assert that synthetic upstream
+  error bodies and concrete candle values never reach any captured log line.
+- Knowledge-service rewiring is deferred. Reason: the advisor's context-bundle
+  consumers depend on `KnowledgeServiceClient`'s typed methods (`stats`, `schema`,
+  `query`, `contextBundle`, `rebuild`, `explain`) and its retry semantics. Replacing
+  one of those call sites with the single-capability wrapper is non-trivial without
+  also exporting `query` / `stats` / `explain` capabilities, which is out of scope
+  for this canary. The wrapper remains exercised by unit tests; no advisor consumer
+  is rewired in this batch.
+
+**Out of scope confirmed unchanged:** Powens, IBKR, Binance, banking sync,
+external-investments sync, market-data, news, worker behavior, DB schema, env defaults
+(`KNOWLEDGE_SERVICE_ENABLED`, `ADVISOR_GRAPH_INGEST_ENABLED`, `QUANT_SERVICE_ENABLED`),
+graph ingest semantics, LLM call paths, UI. No execution / trading / payment
+capabilities added.
 
 ## 12. Risks
 

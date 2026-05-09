@@ -22,6 +22,7 @@ import {
 } from '../services/trading-lab-market-data'
 import { sendBacktestToKnowledgeGraph } from '../services/trading-lab-graph-ingest'
 import { buildDemoPatternDetectionResponse } from '../services/pattern-detection-demo'
+import { createQuantPatternsDetectProvider } from '../services/providers/quant-patterns-detect-provider'
 import type { ApiDb } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -332,6 +333,19 @@ export const createTradingLabRoute = ({
     },
   })
 
+  // Macro Prompt 2-fix — first runtime canary on the provider abstraction.
+  // The `/patterns/detect` admin handler is rewired to call `quantPatternsDetectProvider`
+  // below. The other quant-service endpoints (capabilities, backtest, walk-forward) keep
+  // using the inline helper for now; broader migration is intentionally deferred.
+  const quantPatternsDetectProvider = createQuantPatternsDetectProvider({
+    config: {
+      enabled: quantServiceEnabled,
+      url: quantServiceUrl,
+      timeoutMs: quantServiceTimeoutMs,
+    },
+    logTarget: { logEvent: logApiEvent },
+  })
+
   const callQuantService = async (
     path: string,
     body: unknown,
@@ -391,6 +405,14 @@ export const createTradingLabRoute = ({
     // Read-only proxy to quant-service /quant/patterns/detect. Demo returns
     // deterministic fixtures; admin forwards the request. NEVER an execution
     // path; the quant-service self-scans output for execution vocabulary.
+    //
+    // Macro Prompt 2-fix — admin path rewired through the provider abstraction
+    // (`quantPatternsDetectProvider`). Public response shape is preserved verbatim:
+    //   - success → { ok: true, ...upstreamBody }
+    //   - disabled → 503 { ok: false, code: 'QUANT_SERVICE_DISABLED', message, requestId }
+    //   - any other failure → 503 { ok: false, code: 'QUANT_SERVICE_UNAVAILABLE', message, requestId }
+    // Demo branch is intentionally NOT routed through the wrapper — the constraint
+    // is "demo route does NOT call the quant provider wrapper or quant-service".
     .post(
       '/patterns/detect',
       async context => {
@@ -399,8 +421,20 @@ export const createTradingLabRoute = ({
           context,
           demo: () => buildDemoPatternDetectionResponse(context.body),
           real: async () => {
-            if (!quantServiceEnabled) {
-              context.set.status = 503
+            const result = await quantPatternsDetectProvider.call(
+              context.body as Parameters<typeof quantPatternsDetectProvider.call>[0],
+              {
+                mode: 'admin',
+                requestId,
+                now: new Date(),
+                reason: 'route:trading-lab.patterns.detect',
+              }
+            )
+            if (result.ok) {
+              return { ok: true, ...(result.data.response as object) }
+            }
+            context.set.status = 503
+            if (result.error.code === 'disabled_by_flag') {
               return {
                 ok: false,
                 code: 'QUANT_SERVICE_DISABLED',
@@ -408,21 +442,12 @@ export const createTradingLabRoute = ({
                 requestId,
               }
             }
-            const result = await callQuantService(
-              '/quant/patterns/detect',
-              context.body,
-              requestId
-            )
-            if (!result.ok) {
-              context.set.status = 503
-              return {
-                ok: false,
-                code: 'QUANT_SERVICE_UNAVAILABLE',
-                message: result.error ?? 'Quant service unreachable',
-                requestId,
-              }
+            return {
+              ok: false,
+              code: 'QUANT_SERVICE_UNAVAILABLE',
+              message: result.error.causeRedacted ?? 'Quant service unreachable',
+              requestId,
             }
-            return { ok: true, ...(result.data as object) }
           },
         })
       },
