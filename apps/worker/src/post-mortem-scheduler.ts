@@ -35,7 +35,7 @@ type RedisLockClient = {
   eval: (
     script: string,
     options: { keys: string[]; arguments: string[] }
-  ) => Promise<number | string | null | undefined>
+  ) => Promise<unknown>
 }
 
 // Lua compare-and-delete: only releases when the stored value matches the supplied token.
@@ -341,7 +341,7 @@ export const triggerAdvisorPostMortemRun = async ({
         keys: [POST_MORTEM_SCHEDULER_LOCK_KEY],
         arguments: [ownerToken],
       })
-      if (released !== 1 && released !== '1') {
+      if (released !== 1 && released !== 1n && released !== '1') {
         log({
           level: 'warn',
           msg: 'worker post-mortem lock release skipped: token mismatch',

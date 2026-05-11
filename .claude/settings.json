@@ -4,6 +4,8 @@
     "disableAutoMode": "disable",
     "allow": [
       "*",
+      "Bash(*)",
+      "Bash(pnpm *)",
       "Read(//Users/enzogivernaud/dev/**)",
       "Bash(python -c \"from finance_os_knowledge.app import create_app; app = create_app\\(\\); print\\('app created ok'\\)\")",
       "Read(//opt/homebrew/bin/**)",
