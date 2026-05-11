@@ -1,5 +1,6 @@
 import type { AiEvalCaseSeed, AiEvalCategory } from '../../types'
 import { scoreCausalReasoning } from './causal'
+import { scoreClosureSafety } from './closure'
 import { scorePostMortemSafety } from './post-mortem'
 import { scoreRiskCalibration } from './risk'
 import type { ScoringResult } from './shared'
@@ -22,12 +23,14 @@ export { scoreCausalReasoning } from './causal'
 export { scoreStrategyQuality } from './strategy'
 export { scoreRiskCalibration } from './risk'
 export { scorePostMortemSafety } from './post-mortem'
+export { scoreClosureSafety } from './closure'
 
 export const SCORED_CATEGORIES: ReadonlySet<AiEvalCategory> = new Set([
   'causal_reasoning',
   'strategy_quality',
   'risk_calibration',
   'post_mortem_safety',
+  'closure_safety',
 ])
 
 export const isScoredCategory = (category: AiEvalCategory): boolean =>
@@ -45,6 +48,8 @@ export const scoreCase = (caseSeed: AiEvalCaseSeed): ScoringResult | null => {
       return scoreRiskCalibration(caseSeed)
     case 'post_mortem_safety':
       return scorePostMortemSafety(caseSeed)
+    case 'closure_safety':
+      return scoreClosureSafety(caseSeed)
     default:
       return null
   }

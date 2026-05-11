@@ -2,6 +2,14 @@ import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
 import type { createRedisClient } from '@finance-os/redis'
 import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
+import type { ProviderRegistry } from '@finance-os/provider-runtime'
+import type {
+  AdvisorV2CapabilitiesResponse,
+  AdvisorV2PreviewResponse,
+} from './domain/advisor/v2/committee-types'
+import type { AdvisorReplayResponse } from './domain/advisor/replay/replay-types'
+import type { AdvisorFineTuningReadinessResponse } from './domain/advisor/fine-tuning/fine-tuning-types'
+import type { DataQualityResponse } from './domain/data-quality/data-quality-types'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorDecisionJournalCreateInput,
@@ -1433,6 +1441,36 @@ export interface DashboardUseCases {
       decisionId: number
     } & DashboardAdvisorDecisionOutcomeCreateInput
   ) => Promise<DashboardAdvisorDecisionOutcomeResponse>
+  // Macro Prompt 5 — Data quality + advisor readiness scoring. Read-only,
+  // deterministic, no provider/LLM/graph IO. Demo returns a fixture.
+  getDataQuality?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<DataQualityResponse>
+  // Macro Prompt 6 — Advisor v2 committee skeleton. Read-only, deterministic,
+  // no LLM/provider/graph call. Default-off via AI_ADVISOR_V2_ENABLED.
+  getAdvisorV2Capabilities?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<AdvisorV2CapabilitiesResponse>
+  buildAdvisorV2Preview?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<AdvisorV2PreviewResponse>
+  // Macro Prompt 6 — Advisor replay. Read-only deterministic review of
+  // existing recommendations / decisions / outcomes / post-mortems / data
+  // quality. No provider, no LLM, no graph. No DB writes.
+  getAdvisorReplay?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    windowDays?: number | null
+  }) => Promise<AdvisorReplayResponse>
+  // Macro Prompt 6 — Fine-tuning readiness gate. Read-only deterministic
+  // gating decision. NOT fine-tuning; no model call, no data export.
+  getAdvisorFineTuningReadiness?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<AdvisorFineTuningReadinessResponse>
 }
 
 export interface DashboardNewsUseCases {
@@ -1475,4 +1513,12 @@ export interface DashboardRouteRuntime {
     derivedRecompute: DashboardDerivedRecomputeRepository
   }
   useCases: DashboardUseCases
+  providerRegistry: ProviderRegistry
+  /**
+   * Macro Prompt 4 — refreshes the in-memory health snapshots for the sensitive
+   * provider wrappers (powens / ibkr / binance) from local DB rows. Optional so test
+   * fixtures that build a runtime via cast can omit it; the diagnostics route awaits
+   * it only when defined. Never performs a live call to Powens / IBKR / Binance.
+   */
+  refreshProviderHealth?: () => Promise<void>
 }

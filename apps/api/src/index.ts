@@ -329,6 +329,7 @@ const registerAppRoutes = (app: Elysia) => {
         aiAdvisorEnabled: env.AI_ADVISOR_ENABLED,
         aiAdvisorAdminOnly: env.AI_ADVISOR_ADMIN_ONLY,
         aiAdvisorForceLocalOnly: env.AI_ADVISOR_FORCE_LOCAL_ONLY,
+        aiAdvisorV2Enabled: env.AI_ADVISOR_V2_ENABLED,
         aiKnowledgeQaRetrievalEnabled: env.AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED,
         aiChatEnabled: env.AI_CHAT_ENABLED,
         aiChallengerEnabled: env.AI_CHALLENGER_ENABLED,

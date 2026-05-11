@@ -124,4 +124,100 @@ describe('computeProviderDiagnostics', () => {
       'status',
     ])
   })
+
+  // Macro Prompt 5 — diagnostics hardening tests.
+
+  it('returns providers sorted alphabetically by providerId regardless of registry order', () => {
+    const reg1 = createProviderRegistry([
+      makeProvider({ id: 'powens', status: 'ok' }),
+      makeProvider({ id: 'binance', status: 'ok' }),
+      makeProvider({ id: 'ibkr', status: 'ok' }),
+    ])
+    const reg2 = createProviderRegistry([
+      makeProvider({ id: 'ibkr', status: 'ok' }),
+      makeProvider({ id: 'powens', status: 'ok' }),
+      makeProvider({ id: 'binance', status: 'ok' }),
+    ])
+    const out1 = computeProviderDiagnostics({ registry: reg1, context: baseContext('admin') })
+    const out2 = computeProviderDiagnostics({ registry: reg2, context: baseContext('admin') })
+    expect(out1.providers.map(p => p.providerId)).toEqual(out2.providers.map(p => p.providerId))
+    expect(out1.providers.map(p => p.providerId)).toEqual(['binance', 'ibkr', 'powens'])
+  })
+
+  it('does NOT report `unconfigured` providers as `down` and surfaces a caveat', () => {
+    const reg = createProviderRegistry([
+      makeProvider({
+        id: 'powens',
+        status: 'degraded',
+        lastErrorCode: 'unconfigured',
+      }),
+    ])
+    const out = computeProviderDiagnostics({ registry: reg, context: baseContext('admin') })
+    const entry = out.providers[0]
+    expect(entry?.status).toBe('degraded')
+    expect(entry?.errorCode).toBe('unconfigured')
+    expect(entry?.caveats.some(c => c.includes('unconfigured'))).toBe(true)
+    expect(out.summary.down).toBe(0)
+    expect(out.summary.degraded).toBe(1)
+  })
+
+  it('does NOT report `disabled_by_flag` providers as `down` and surfaces a caveat', () => {
+    const reg = createProviderRegistry([
+      makeProvider({
+        id: 'binance',
+        status: 'degraded',
+        lastErrorCode: 'disabled_by_flag',
+      }),
+    ])
+    const out = computeProviderDiagnostics({ registry: reg, context: baseContext('admin') })
+    const entry = out.providers[0]
+    expect(entry?.errorCode).toBe('disabled_by_flag')
+    expect(entry?.caveats.some(c => c.includes('disabled by feature flag'))).toBe(true)
+    expect(out.summary.down).toBe(0)
+  })
+
+  it('summary counts are correct under mixed states (ok + degraded + down + disabled-by-flag)', () => {
+    const reg = createProviderRegistry([
+      makeProvider({ id: 'a', status: 'ok' }),
+      makeProvider({ id: 'b', status: 'degraded', lastErrorCode: 'unconfigured' }),
+      makeProvider({ id: 'c', status: 'degraded', lastErrorCode: 'disabled_by_flag' }),
+      makeProvider({ id: 'd', status: 'degraded', lastErrorCode: 'rate_limited' }),
+      makeProvider({ id: 'e', status: 'down', lastErrorCode: 'provider_unavailable' }),
+    ])
+    const out = computeProviderDiagnostics({ registry: reg, context: baseContext('admin') })
+    expect(out.summary).toEqual({
+      total: 5,
+      healthy: 1,
+      degraded: 3,
+      down: 1,
+      unknown: 0,
+      disabled: 0,
+    })
+  })
+
+  it('does not invoke provider.call() when computing diagnostics', () => {
+    let calls = 0
+    const reg = createProviderRegistry([
+      {
+        id: asProviderId('powens'),
+        capability: 'banking.accounts.read',
+        call: async () => {
+          calls += 1
+          throw new Error('should never be called')
+        },
+        getHealth: () => ({ status: 'ok', lastSuccessAt: null, lastErrorCode: null }),
+      },
+      {
+        id: asProviderId('ibkr'),
+        capability: 'external_investments.positions.read',
+        call: async () => {
+          calls += 1
+          throw new Error('should never be called')
+        },
+        getHealth: () => ({ status: 'ok', lastSuccessAt: null, lastErrorCode: null }),
+      },
+    ])
+    computeProviderDiagnostics({ registry: reg, context: baseContext('admin') })
+    expect(calls).toBe(0)
+  })
 })

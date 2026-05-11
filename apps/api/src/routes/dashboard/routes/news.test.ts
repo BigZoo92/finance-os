@@ -1,16 +1,19 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
-import { createDashboardRuntimePlugin } from '../plugin'
 import { getDashboardNewsFixture } from '../domain/static-fixture-pack'
-import { createNewsRoute } from './news'
+import { createDashboardRuntimePlugin } from '../plugin'
 import type { DashboardNewsResponse, DashboardRouteRuntime } from '../types'
+import { createNewsRoute } from './news'
 
 const createNewsPayload = (requestId: string): DashboardNewsResponse => ({
   ...getDashboardNewsFixture(requestId),
   source: 'cache',
 })
 
-const createDashboardRuntime = (overrides?: Partial<DashboardRouteRuntime['useCases']>): DashboardRouteRuntime => ({
+const createDashboardRuntime = (
+  overrides?: Partial<DashboardRouteRuntime['useCases']>
+): DashboardRouteRuntime => ({
   repositories: {
     readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
     news: {} as NonNullable<DashboardRouteRuntime['repositories']['news']>,
@@ -64,9 +67,15 @@ const createDashboardRuntime = (overrides?: Partial<DashboardRouteRuntime['useCa
       causalHypotheses: [],
       references: [],
     }),
-    ingestNews: async () => ({ fetchedCount: 0, insertedCount: 0, mergedCount: 0, dedupeDropCount: 0 }),
+    ingestNews: async () => ({
+      fetchedCount: 0,
+      insertedCount: 0,
+      mergedCount: 0,
+      dedupeDropCount: 0,
+    }),
     ...overrides,
   },
+  providerRegistry: createProviderRegistry([]),
 })
 
 const createNewsTestApp = ({

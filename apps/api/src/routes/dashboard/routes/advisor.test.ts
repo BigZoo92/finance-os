@@ -1,18 +1,19 @@
 import { describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
-import { createDashboardRuntimePlugin } from '../plugin'
-import { createAdvisorRoute } from './advisor'
 import type {
   DashboardAdvisorChatPostResponse,
   DashboardAdvisorKnowledgeAnswerResponse,
   DashboardAdvisorKnowledgeTopicsResponse,
+  DashboardAdvisorManualOperationResponse,
   DashboardAdvisorManualRefreshAndRunPostResponse,
   DashboardAdvisorOverviewResponse,
-  DashboardAdvisorManualOperationResponse,
   DashboardAdvisorRecommendationsResponse,
   DashboardAdvisorRunDailyResponse,
 } from '../advisor-contract'
+import { createDashboardRuntimePlugin } from '../plugin'
 import type { DashboardRouteRuntime } from '../types'
+import { createAdvisorRoute } from './advisor'
 
 const sampleBudgetState = {
   dailyUsdSpent: 0,
@@ -284,82 +285,85 @@ const createDashboardRuntime = (
         },
       ],
     }),
-    getAdvisorKnowledgeAnswer:
-      async ({ mode, requestId, question }): Promise<DashboardAdvisorKnowledgeAnswerResponse> => ({
-        mode,
-        source: mode === 'demo' ? 'demo_fixture' : 'retrieval',
-        requestId,
-        generatedAt: '2026-04-14T08:00:03.000Z',
-        status: 'answered',
-        question,
-        answer: {
-          headline: 'Diversification: repere pedagogique',
-          summary: 'Diversifier reduit le risque specifique.',
-          keyPoints: ['Evite la concentration', 'Ne supprime pas le risque global'],
-          nextStep: 'Cartographier les expositions principales.',
-          guardrail: 'Contenu educatif uniquement.',
+    getAdvisorKnowledgeAnswer: async ({
+      mode,
+      requestId,
+      question,
+    }): Promise<DashboardAdvisorKnowledgeAnswerResponse> => ({
+      mode,
+      source: mode === 'demo' ? 'demo_fixture' : 'retrieval',
+      requestId,
+      generatedAt: '2026-04-14T08:00:03.000Z',
+      status: 'answered',
+      question,
+      answer: {
+        headline: 'Diversification: repere pedagogique',
+        summary: 'Diversifier reduit le risque specifique.',
+        keyPoints: ['Evite la concentration', 'Ne supprime pas le risque global'],
+        nextStep: 'Cartographier les expositions principales.',
+        guardrail: 'Contenu educatif uniquement.',
+      },
+      confidenceScore: 0.82,
+      confidenceLabel: 'high',
+      lowConfidence: false,
+      fallbackReason: null,
+      retrievalEnabled: true,
+      retrieval: {
+        intent: 'definition',
+        matchedTopicIds: ['diversification'],
+        hitCount: 1,
+        guardrailTriggered: false,
+        stageLatenciesMs: {
+          queryParse: 2,
+          retrieval: 3,
+          answerAssembly: 4,
+          total: 9,
         },
-        confidenceScore: 0.82,
-        confidenceLabel: 'high',
-        lowConfidence: false,
-        fallbackReason: null,
-        retrievalEnabled: true,
-        retrieval: {
-          intent: 'definition',
-          matchedTopicIds: ['diversification'],
-          hitCount: 1,
-          guardrailTriggered: false,
-          stageLatenciesMs: {
-            queryParse: 2,
-            retrieval: 3,
-            answerAssembly: 4,
-            total: 9,
-          },
-          stages: [
-            {
-              stage: 'query_parse',
-              status: 'completed',
-              detail: 'Question normalisee.',
-            },
-            {
-              stage: 'retrieval',
-              status: 'completed',
-              detail: '1 sujet trouve.',
-            },
-            {
-              stage: 'answer_assembly',
-              status: 'completed',
-              detail: 'Reponse assemblee.',
-            },
-            {
-              stage: 'fallback',
-              status: 'skipped',
-              detail: 'Aucun fallback.',
-            },
-          ],
-        },
-        citations: [
+        stages: [
           {
-            citationId: 'diversification-role',
-            topicId: 'diversification',
-            topicTitle: 'Diversification',
-            sectionTitle: 'Role',
-            label: 'Diversification · Role',
-            excerpt: 'Diversifier reduit la dependance a un seul scenario.',
+            stage: 'query_parse',
+            status: 'completed',
+            detail: 'Question normalisee.',
+          },
+          {
+            stage: 'retrieval',
+            status: 'completed',
+            detail: '1 sujet trouve.',
+          },
+          {
+            stage: 'answer_assembly',
+            status: 'completed',
+            detail: 'Reponse assemblee.',
+          },
+          {
+            stage: 'fallback',
+            status: 'skipped',
+            detail: 'Aucun fallback.',
           },
         ],
-        suggestedTopics: [
-          {
-            topicId: 'diversification',
-            title: 'Diversification',
-            summary: 'Evite la concentration sur un seul scenario.',
-            difficulty: 'beginner',
-            estimatedReadMinutes: 5,
-            tags: ['portfolio', 'risk'],
-            relatedQuestions: ['Pourquoi diversifier un portefeuille ?'],
-          },
-        ],
-      }),
+      },
+      citations: [
+        {
+          citationId: 'diversification-role',
+          topicId: 'diversification',
+          topicTitle: 'Diversification',
+          sectionTitle: 'Role',
+          label: 'Diversification · Role',
+          excerpt: 'Diversifier reduit la dependance a un seul scenario.',
+        },
+      ],
+      suggestedTopics: [
+        {
+          topicId: 'diversification',
+          title: 'Diversification',
+          summary: 'Evite la concentration sur un seul scenario.',
+          difficulty: 'beginner',
+          estimatedReadMinutes: 5,
+          tags: ['portfolio', 'risk'],
+          relatedQuestions: ['Pourquoi diversifier un portefeuille ?'],
+        },
+      ],
+    }),
     getLatestAdvisorManualOperation: async () => sampleManualOperation,
     getAdvisorManualOperationById: async () => sampleManualOperation,
     runAdvisorManualRefreshAndAnalysis:
@@ -413,6 +417,7 @@ const createDashboardRuntime = (
     }),
     ...overrides,
   },
+  providerRegistry: createProviderRegistry([]),
 })
 
 const createAdvisorTestApp = ({
@@ -494,7 +499,6 @@ describe('createAdvisorRoute', () => {
     expect(payload.answer?.headline).toContain('Diversification')
     expect(payload.citations[0]?.topicId).toBe('diversification')
   })
-
 
   it('answers financial datasets educational question', async () => {
     const app = createAdvisorTestApp({ mode: 'admin' })

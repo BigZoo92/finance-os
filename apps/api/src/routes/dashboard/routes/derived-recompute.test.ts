@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import { getDashboardDerivedRecomputeStatusMock } from '../../../mocks/dashboardDerivedRecompute.mock'
 import {
@@ -6,8 +7,8 @@ import {
   DashboardDerivedRecomputeDisabledError,
 } from '../domain/derived-recompute'
 import { createDashboardRuntimePlugin } from '../plugin'
-import { createDerivedRecomputeRoute } from './derived-recompute'
 import type { DashboardDerivedRecomputeStatusResponse, DashboardRouteRuntime } from '../types'
+import { createDerivedRecomputeRoute } from './derived-recompute'
 
 const createDerivedRecomputePayload = () => ({
   featureEnabled: true,
@@ -85,6 +86,7 @@ const createDashboardRuntime = (
       runDerivedRecompute: async () => payload,
       ...overrides,
     },
+    providerRegistry: createProviderRegistry([]),
   }
 }
 

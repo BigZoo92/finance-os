@@ -141,19 +141,42 @@ export const computeProviderDiagnostics = (
     }
   }
 
-  const entries: ProviderDiagnosticsEntry[] = providers.map(provider => {
-    const health = provider.getHealth()
-    return {
-      providerId: provider.id,
-      status: healthToDiagnosticsStatus(health),
-      capabilities: [provider.capability],
-      lastCheckedAt: health.lastSuccessAt,
-      degraded: health.status === 'degraded',
-      freshnessMinutes: null,
-      errorCode: health.lastErrorCode,
-      caveats: [],
-    }
-  })
+  const entries: ProviderDiagnosticsEntry[] = providers
+    // Macro Prompt 5 — stable ordering: alphabetize by `providerId` so the
+    // diagnostics response shape is deterministic regardless of registry
+    // construction order. Existing tests look up entries by `providerId`, so
+    // this is non-breaking.
+    .slice()
+    .sort((a, b) => (a.id as unknown as string).localeCompare(b.id as unknown as string))
+    .map(provider => {
+      const health = provider.getHealth()
+      // Macro Prompt 5 — caveat normalization. `unconfigured` and
+      // `disabled_by_flag` MUST surface explicit reasons in `caveats` and MUST
+      // NOT be reported as `down`. Local health helpers already map those
+      // states to `degraded` with the appropriate `lastErrorCode`; this caveat
+      // normalization makes the semantics visible to downstream consumers
+      // without changing the closed `status` vocabulary.
+      const caveats: string[] = []
+      if (health.lastErrorCode === 'unconfigured') {
+        caveats.push('provider unconfigured — not a runtime failure')
+      }
+      if (health.lastErrorCode === 'disabled_by_flag') {
+        caveats.push('provider disabled by feature flag — not a runtime failure')
+      }
+      if (health.note) {
+        caveats.push(health.note)
+      }
+      return {
+        providerId: provider.id,
+        status: healthToDiagnosticsStatus(health),
+        capabilities: [provider.capability],
+        lastCheckedAt: health.lastSuccessAt,
+        degraded: health.status === 'degraded',
+        freshnessMinutes: null,
+        errorCode: health.lastErrorCode,
+        caveats,
+      }
+    })
 
   return {
     generatedAt,

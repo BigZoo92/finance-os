@@ -1,15 +1,21 @@
 import { Elysia } from 'elysia'
+import { createOpsRefreshRoute } from '../ops/refresh'
 import type { FailsoftSource } from './domain/failsoft-policy'
 import { createDashboardRuntimePlugin } from './plugin'
 import { createAdvisorRoute } from './routes/advisor'
+import { createAdvisorFineTuningReadinessRoute } from './routes/advisor-fine-tuning-readiness'
 import { createAdvisorKnowledgeRoute } from './routes/advisor-knowledge'
+import { createAdvisorReplayRoute } from './routes/advisor-replay'
+import { createAdvisorV2Route } from './routes/advisor-v2'
 import { createAnalyticsRoute } from './routes/analytics'
+import { createDataQualityRoute } from './routes/data-quality'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
 import { createExternalInvestmentsDashboardRoute } from './routes/external-investments'
 import { createGoalsRoute } from './routes/goals'
 import { createManualAssetsRoute } from './routes/manual-assets'
 import { createMarketsRoute } from './routes/markets'
 import { createNewsRoute } from './routes/news'
+import { createProvidersDiagnosticsRoute } from './routes/providers-diagnostics'
 import { createSignalSourcesRoute } from './routes/signal-sources'
 import { createSummaryRoute } from './routes/summary'
 import { createTradingLabRoute } from './routes/trading-lab'
@@ -17,7 +23,6 @@ import { createTransactionClassificationRoute } from './routes/transaction-class
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardRouteRuntime } from './runtime'
 import type { ApiDb, RedisClient } from './types'
-import { createOpsRefreshRoute } from '../ops/refresh'
 
 export const createDashboardRoutes = ({
   db,
@@ -72,6 +77,7 @@ export const createDashboardRoutes = ({
   aiAdvisorEnabled,
   aiAdvisorAdminOnly,
   aiAdvisorForceLocalOnly,
+  aiAdvisorV2Enabled,
   aiKnowledgeQaRetrievalEnabled,
   aiChatEnabled,
   aiChallengerEnabled,
@@ -165,6 +171,7 @@ export const createDashboardRoutes = ({
   aiAdvisorEnabled: boolean
   aiAdvisorAdminOnly: boolean
   aiAdvisorForceLocalOnly: boolean
+  aiAdvisorV2Enabled: boolean
   aiKnowledgeQaRetrievalEnabled: boolean
   aiChatEnabled: boolean
   aiChallengerEnabled: boolean
@@ -258,6 +265,7 @@ export const createDashboardRoutes = ({
     aiAdvisorEnabled,
     aiAdvisorAdminOnly,
     aiAdvisorForceLocalOnly,
+    aiAdvisorV2Enabled,
     aiKnowledgeQaRetrievalEnabled,
     aiChatEnabled,
     aiChallengerEnabled,
@@ -290,6 +298,9 @@ export const createDashboardRoutes = ({
       maxPathDepth: knowledgeGraphMaxPathDepth,
       minConfidence: knowledgeGraphMinConfidence,
     },
+    quantServiceEnabled,
+    quantServiceUrl,
+    quantServiceTimeoutMs,
     advisorGraphIngestEnabled,
     externalInvestmentsEnabled,
     externalInvestmentsSafeMode,
@@ -340,6 +351,11 @@ export const createDashboardRoutes = ({
         .use(createTransactionsRoute())
         .use(createTransactionClassificationRoute())
         .use(createSignalSourcesRoute({ db }))
+        .use(createProvidersDiagnosticsRoute())
+        .use(createDataQualityRoute())
+        .use(createAdvisorV2Route({ v2Enabled: aiAdvisorV2Enabled }))
+        .use(createAdvisorReplayRoute())
+        .use(createAdvisorFineTuningReadinessRoute())
         .use(
           createTradingLabRoute({
             db,

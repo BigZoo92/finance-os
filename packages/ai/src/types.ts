@@ -159,6 +159,11 @@ export type AiEvalCategory =
   | 'strategy_quality'
   | 'risk_calibration'
   | 'post_mortem_safety'
+  // Macro Prompt 6 — closure guardrails: deterministic checks that the new
+  // surfaces (Advisor v2 preview, replay, fine-tuning gate) never emit
+  // execution vocabulary, never overclaim causality, and never leak sensitive
+  // sentinels. Scored by `scoreClosureSafety` in scorers/closure.ts.
+  | 'closure_safety'
 
 export interface AiEvalCaseSeed {
   key: string

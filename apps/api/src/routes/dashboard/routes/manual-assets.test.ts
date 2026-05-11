@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import { createDashboardRuntimePlugin } from '../plugin'
-import { createManualAssetsRoute } from './manual-assets'
 import type { DashboardManualAssetResponse, DashboardRouteRuntime } from '../types'
+import { createManualAssetsRoute } from './manual-assets'
 
 const sampleManualAsset: DashboardManualAssetResponse = {
   assetId: 42,
@@ -61,6 +62,7 @@ const createRuntime = (
     }),
     ...overrides,
   },
+  providerRegistry: createProviderRegistry([]),
 })
 
 const createApp = ({

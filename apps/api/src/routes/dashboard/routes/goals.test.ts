@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import { getDashboardGoalsMock } from '../../../mocks/dashboardGoals.mock'
 import { createDashboardRuntimePlugin } from '../plugin'
-import { createGoalsRoute } from './goals'
 import type { DashboardGoalResponse, DashboardRouteRuntime } from '../types'
+import { createGoalsRoute } from './goals'
 
 const createGoalPayload = (): DashboardGoalResponse => ({
   id: 91,
@@ -73,6 +74,7 @@ const createDashboardRuntime = (
       }),
       ...overrides,
     },
+    providerRegistry: createProviderRegistry([]),
   }
 }
 

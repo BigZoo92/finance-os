@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import type { DashboardAdvisorEvalTrendsResponse } from '../advisor-contract'
 import { createDashboardRuntimePlugin } from '../plugin'
@@ -54,7 +55,14 @@ const buildTrendsRuntime = ({
           },
         ],
       },
-      { group: 'safety', totalRuns: 0, latestPassRate: null, previousPassRate: null, delta: null, categories: [] },
+      {
+        group: 'safety',
+        totalRuns: 0,
+        latestPassRate: null,
+        previousPassRate: null,
+        delta: null,
+        categories: [],
+      },
       {
         group: 'economics',
         totalRuns: 0,
@@ -82,6 +90,7 @@ const buildTrendsRuntime = ({
       },
       ...(override ?? {}),
     } as unknown as DashboardRouteRuntime['useCases'],
+    providerRegistry: createProviderRegistry([]),
   }
 }
 
@@ -143,9 +152,7 @@ describe('createAdvisorRoute · GET /advisor/evals/trends', () => {
     const runtime = buildTrendsRuntime({ mode: 'demo', calls })
     const app = buildTrendsApp({ mode: 'demo', runtime })
 
-    const response = await app.handle(
-      new Request('http://finance-os.local/advisor/evals/trends')
-    )
+    const response = await app.handle(new Request('http://finance-os.local/advisor/evals/trends'))
     expect(response.status).toBe(200)
     const payload = (await response.json()) as DashboardAdvisorEvalTrendsResponse
     expect(payload.mode).toBe('demo')
@@ -169,12 +176,11 @@ describe('createAdvisorRoute · GET /advisor/evals/trends', () => {
     const runtime: DashboardRouteRuntime = {
       repositories: {} as unknown as DashboardRouteRuntime['repositories'],
       useCases: {} as unknown as DashboardRouteRuntime['useCases'],
+      providerRegistry: createProviderRegistry([]),
     }
     const app = buildTrendsApp({ mode: 'admin', runtime })
 
-    const response = await app.handle(
-      new Request('http://finance-os.local/advisor/evals/trends')
-    )
+    const response = await app.handle(new Request('http://finance-os.local/advisor/evals/trends'))
     expect(response.status).toBe(503)
   })
 })

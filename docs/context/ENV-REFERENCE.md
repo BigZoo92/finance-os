@@ -410,6 +410,7 @@ Notes:
 | `AI_SPEND_ALERT_DAILY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget journalier |
 | `AI_SPEND_ALERT_MONTHLY_THRESHOLD_PCT` | `0.8` | Dokploy, `.env` | API | Non | Alerte de budget mensuel |
 | `AI_MAX_CHAT_MESSAGES_CONTEXT` | `8` | Dokploy, `.env` | API | Non | Taille max du contexte chat persiste |
+| `AI_ADVISOR_V2_ENABLED` | **`false`** | Dokploy, `.env` | API | Non | Macro Prompt 6 — squelette committee Advisor v2. Quand `false`, `GET /dashboard/advisor/v2/capabilities` reporte `previewAvailable: false` et `POST /dashboard/advisor/v2/preview` retourne `status: "skipped_disabled"` (200, pas 503). N'affecte PAS le `runAdvisorDaily` existant. **Doit rester `false` jusqu'a une ADR dediee.** Aucun appel LLM/provider/graph n'est emis quand desactive. |
 | `AI_POST_MORTEM_ENABLED` | `false` | Dokploy, `.env` | API | Non | Active le post-mortem advisor (PR4). Quand `false`, le runner LLM est inaccessible et `POST /dashboard/advisor/post-mortem/run` retourne `skipped_disabled`. |
 | `AI_POST_MORTEM_HORIZON_DAYS` | `30` | Dokploy, `.env` | API | Non | Horizon par defaut pour considerer une recommandation expiree dans le batch post-mortem |
 | `AI_POST_MORTEM_BATCH_LIMIT` | `10` | Dokploy, `.env` | API | Non | Cap dur d'items traites par run post-mortem (un seul appel LLM batch) |

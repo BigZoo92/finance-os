@@ -4,6 +4,15 @@
 > **Date**: 2026-05-08
 > **Scope**: 30 distinct GitHub repositories + 15 concepts collected for the Finance-OS AI Advisor.
 >
+> **Macro Prompt 6 annotation (2026-05-10).** The Advisor v2 committee skeleton shipped in
+> Macro Prompt 6 (`apps/api/src/routes/dashboard/domain/advisor/v2/committee-types.ts`)
+> borrows **role-naming inspiration only** from `TauricResearch/TradingAgents` (§3.C.2) and
+> `virattt/ai-hedge-fund` (§3.C.5). No code, no prompt, and no runtime behavior was reused.
+> The Finance-OS committee is deterministic, advisory-only, and ships with five hard-coded
+> forbidden roles (`executor`, `trader`, `order_manager`, `portfolio_manager_with_execution`,
+> `broker_operator`) precisely because those external repos sometimes encode execution
+> personas. Finance-OS remains structurally unable to express such a role.
+>
 > The user-supplied list contained 32 entries that resolved to **30 distinct repositories**:
 > 1. `jesses-ai/jesse` returned 404 — it is a typo for the canonical `jesse-ai/jesse`. We audit the canonical entry. Net: 1 entry, 1 repo.
 > 2. `tauricresearch/tradingagents` and `TauricResearch/TradingAgents` are the same repository (GitHub usernames are case-insensitive for routing). Net: 2 entries, 1 repo.

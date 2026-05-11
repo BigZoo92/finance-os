@@ -1,6 +1,6 @@
 # ADR: Provider Abstraction v2
 
-> **Status**: foundation in place + first internal migration batch + first runtime canary — §11.1 (PR17A, types) shipped 2026-05-09; §11.2 (error taxonomy + redaction harness, PR17B), §11.3 (diagnostics use-case only — endpoint deferred, PR17C), §11.4 (sync-metadata types + freshness helper only — no schema, PR17D), §11.5 (provider docs + invariant test harness, PR17E) shipped together as the Provider Foundation Bundle on 2026-05-09. Macro Prompt 2 (2026-05-09) shipped standalone `Provider<C>` wrappers + tests + docs for `knowledge-service` (`knowledge.context_bundle.read`) and `quant-service` (`quant.patterns.detect`). Macro Prompt 2-fix (2026-05-09) **rewires the `/dashboard/trading-lab/patterns/detect` admin route through `quantPatternsDetectProvider`** — first real runtime consumer of the provider abstraction. Public response shape unchanged (success/disabled/unavailable mapping verified by route-level tests). Knowledge-service rewiring deferred (see §11.7). Sensitive providers (Powens, IBKR, Binance, market-data, news) remain untouched. Diagnostics endpoint and worker/sync DB-state writers remain proposed.
+> **Status**: foundation in place + first internal migration batch + first runtime canary + diagnostics endpoint live + news aggregation wrapper registered + sensitive provider health-only wrappers landed + data quality + advisor readiness scoring layer added — §11.1 (PR17A, types) shipped 2026-05-09; §11.2 (error taxonomy + redaction harness, PR17B), §11.3 (diagnostics use-case only — endpoint deferred, PR17C), §11.4 (sync-metadata types + freshness helper only — no schema, PR17D), §11.5 (provider docs + invariant test harness, PR17E) shipped together as the Provider Foundation Bundle on 2026-05-09. Macro Prompt 2 (2026-05-09) shipped standalone `Provider<C>` wrappers + tests + docs for `knowledge-service` (`knowledge.context_bundle.read`) and `quant-service` (`quant.patterns.detect`). Macro Prompt 2-fix (2026-05-09) **rewires the `/dashboard/trading-lab/patterns/detect` admin route through `quantPatternsDetectProvider`** — first real runtime consumer of the provider abstraction. Macro Prompt 3 (2026-05-09) **wires `GET /dashboard/providers/diagnostics`** (admin-only, demo-deterministic, read-only) and adds the aggregation-level `news-service` wrapper (`news.items.read`) registered in the internal provider registry. Macro Prompt 4 (2026-05-09) adds **health-only `Provider<C>` wrappers** for the sensitive providers — `powens` (`banking.accounts.read`), `ibkr` (`external_investments.positions.read`), `binance` (`crypto.wallet.read`) — registered in the internal provider registry and surfaced through the diagnostics endpoint. **`provider.call()` for these three returns `unsupported_capability` with `safeDetails.reason = "deferred_read_routing"`** — production routes still consume the existing repositories directly; sync behavior, credential storage, and encryption are unchanged. Macro Prompt 5 (2026-05-10) **adds `GET /dashboard/data-quality`** (deterministic data quality + Advisor readiness scoring across 8 canonical dimensions, demo-fixture in demo mode, no `provider.call()`, no LLM, no graph, no sync) and **hardens `GET /dashboard/providers/diagnostics`** with stable alphabetical ordering by `providerId` and additive caveat normalization (`unconfigured` and `disabled_by_flag` surface explicit caveats and remain `degraded`, never `down`). Public response shape unchanged across every existing route. Per-source news wrappers and the market-data migration (EODHD / Twelve Data / FRED) remain explicitly deferred. Banking sync, external-investments sync, worker schedules, and Redis lock semantics remain untouched. Worker/sync DB-state writers remain proposed.
 > **Date**: 2026-05-09
 > **PR**: 16 (research) → 17A (types-only foundation)
 > **Companion**: [`docs/research/provider-abstraction-openbb-hyperswitch-notes.md`](../research/provider-abstraction-openbb-hyperswitch-notes.md)
@@ -493,7 +493,7 @@ each merge a slice.
   allowlist of fields that funnel through redaction before reaching the underlying logger.
 - No third-party adapter migrated yet. Existing providers keep their current code paths.
 
-### 11.3 PR17C — Provider health + diagnostics surface ⚠️ partial — endpoint deferred
+### 11.3 PR17C — Provider health + diagnostics surface ✅ endpoint shipped 2026-05-09 (Macro Prompt 3)
 
 - Registry skeleton (`createProviderRegistry`) added with `listProviders`,
   `listCapabilities`, `getProvider`, `findProvidersByCapability`, `healthAll`. It is a
@@ -502,9 +502,17 @@ each merge a slice.
 - `computeProviderDiagnostics(registry, context)` is a pure use-case returning the
   browser-safe diagnostics shape directly. Demo mode returns a deterministic empty
   fixture; admin mode reads `getHealth()` snapshots only and never invokes `call()`.
-- The Elysia endpoint (`GET /dashboard/providers/diagnostics`) was deferred from this
-  bundle — the use-case is independently testable and a focused PR can wire it through
-  `apps/api/src/routes/dashboard/router.ts` with no further runtime change.
+- **Macro Prompt 3 (2026-05-09):** the Elysia endpoint
+  `GET /dashboard/providers/diagnostics` is now wired through
+  [`apps/api/src/routes/dashboard/routes/providers-diagnostics.ts`](../../apps/api/src/routes/dashboard/routes/providers-diagnostics.ts)
+  and mounted in [`router.ts`](../../apps/api/src/routes/dashboard/router.ts).
+  Demo callers (no admin session, no internal token) receive the deterministic empty
+  fixture from `computeDemoProviderDiagnostics`; admin callers (or callers carrying a
+  valid internal token) receive the full health snapshot of every registered provider.
+  No external HTTP traffic is generated by the route — only `getHealth()` is read.
+  Closed-shape response: `{generatedAt, mode, providers[], summary, caveats[]}`. No
+  credentials, raw config, or upstream payloads are surfaced. Coverage:
+  [`providers-diagnostics.test.ts`](../../apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts).
 
 ### 11.4 PR17D — Normalized sync metadata + idempotent jobs ⚠️ partial — types + helpers only
 
@@ -532,10 +540,10 @@ each merge a slice.
 |---|---|---|---|
 | 1 | knowledge-service | smallest surface; structured client already exists | ⚠️ Wrapper + tests + docs shipped 2026-05-09 (Macro Prompt 2). Routes not yet rewired (deferred — see §11.8). Graph ingest remains out of scope (no write capability in `ALLOWED_PROVIDER_CAPABILITIES`). |
 | 2 | quant-service | wrap inline `callQuantService` into an adapter | ✅ Wrapper + tests + docs for `quant.patterns.detect` shipped 2026-05-09 (Macro Prompt 2). **Admin route `/dashboard/trading-lab/patterns/detect` rewired through the wrapper 2026-05-09 (Macro Prompt 2-fix)** — first real runtime consumer. `metrics`, `indicators`, `backtest`, `walk-forward` still use inline `callQuantService`; deferred to a later batch. |
-| 3 | News providers | already have an adapter — formalize over the existing shape | not started |
-| 4 | Market data (EODHD, Twelve Data, FRED) | the highest-value win — converts the 600 LOC inline file to 3 adapters + 1 fallback config | not started |
-| 5 | Powens | preserve `packages/powens/` workspace; wrap as one adapter | not started — sensitive provider, untouched |
-| 6 | External investments (IBKR, Binance) | preserve `packages/external-investments/` workspace; wrap as adapters | not started — sensitive providers, untouched |
+| 3 | News providers | already have an adapter — formalize over the existing shape | ⚠️ Aggregation-level `news-service` wrapper (`news.items.read`) shipped 2026-05-09 (Macro Prompt 3). Wraps the existing `NewsProviderAdapter[]` pool with counts/status only — never article bodies/URLs. Registered in the internal provider registry; exercised by tests + diagnostics. **Routes still consume the adapter pool directly** (no rewiring of `/dashboard/news` or `ingestNews`). Per-source wrappers (HN / GDELT / ECB / Fed / SEC EDGAR / FRED / X-Twitter) intentionally deferred — see §11.9. |
+| 4 | Market data (EODHD, Twelve Data, FRED) | the highest-value win — converts the 600 LOC inline file to 3 adapters + 1 fallback config | not started — explicitly deferred from Macro Prompt 3 (sensitive scope: ~600 LOC fallback logic, US-fresh-overlay heuristics, EODHD/Twelve Data API keys; risk of accidental key/URL leak in logs is non-trivial). |
+| 5 | Powens | preserve `packages/powens/` workspace; wrap as one adapter | ⚠️ **Health-only `Provider<C>` wrapper** (`banking.accounts.read`) shipped 2026-05-09 (Macro Prompt 4). `provider.call()` returns `unsupported_capability` (`deferred_read_routing`); routes consume `packages/powens` and `powensConnection` repository directly. Health snapshot derived from local `listConnectionStatuses()` — no Powens upstream call, no live diagnostics probe. Sync, encryption, credentials, worker schedules unchanged. See §11.10. |
+| 6 | External investments (IBKR, Binance) | preserve `packages/external-investments/` workspace; wrap as adapters | ⚠️ **Health-only `Provider<C>` wrappers** for `ibkr` (`external_investments.positions.read`) and `binance` (`crypto.wallet.read`) shipped 2026-05-09 (Macro Prompt 4). `provider.call()` returns `unsupported_capability` (`deferred_read_routing`); routes consume `packages/external-investments` directly. Health snapshots derived from local `externalInvestmentProviderHealth` + `externalInvestmentConnection` — no IBKR Flex / Binance API call, no live diagnostics probe. Sync, encryption, credentials, worker schedules unchanged. See §11.10. |
 
 Each step is one PR. Existing providers keep working through the migration because the
 registry resolves to whichever adapter exists — pre-migration adapters are just the current
@@ -601,6 +609,124 @@ external-investments sync, market-data, news, worker behavior, DB schema, env de
 (`KNOWLEDGE_SERVICE_ENABLED`, `ADVISOR_GRAPH_INGEST_ENABLED`, `QUANT_SERVICE_ENABLED`),
 graph ingest semantics, LLM call paths, UI. No execution / trading / payment
 capabilities added.
+
+### 11.9 Macro Prompt 3 — Diagnostics endpoint + news-service aggregation wrapper ✅ shipped 2026-05-09
+
+- **Diagnostics endpoint** (`GET /dashboard/providers/diagnostics`) wired through
+  [`providers-diagnostics.ts`](../../apps/api/src/routes/dashboard/routes/providers-diagnostics.ts)
+  and mounted in [`router.ts`](../../apps/api/src/routes/dashboard/router.ts). Demo callers
+  receive the deterministic empty fixture from `computeDemoProviderDiagnostics`; admin
+  callers (or callers carrying a valid internal token) receive `getHealth()` snapshots
+  for every registered provider. The endpoint never invokes `Provider.call()` and never
+  generates external HTTP traffic. Closed response shape:
+  `{generatedAt, mode, providers[], summary, caveats[]}` — no credentials, no raw
+  config, no upstream payloads. Coverage:
+  [`providers-diagnostics.test.ts`](../../apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts).
+- **`news-service` wrapper** (`news.items.read`) added at
+  [`news-service-provider.ts`](../../apps/api/src/routes/dashboard/services/providers/news-service-provider.ts).
+  Aggregation-level wrapper around the existing `NewsProviderAdapter[]` pool — preserves
+  per-source `enabled` / `cooldownMs` semantics and surfaces only counts/status/durations,
+  never article bodies, URLs, or upstream raw payloads. Demo mode returns a deterministic
+  per-source `'skipped'` snapshot without touching the network. `disabled_by_flag` when
+  zero adapters are enabled. All-failed → `provider_unavailable`; mixed →
+  `providerOk` with per-source `'failed'` and `errorCode: 'provider_unavailable'`.
+  Health: `'ok'` / `'degraded'` / `'down'` derived from the last call's outcome (no IO).
+  Logs go through `logProviderEvent` with closed-vocab fields; tests assert that fake
+  upstream tokens / URLs / raw bodies never reach any output DTO or captured log line.
+- **Internal provider registry** ([`internal-provider-registry.ts`](../../apps/api/src/routes/dashboard/services/providers/internal-provider-registry.ts))
+  now mounts three providers: `knowledge-service`, `quant-service`, `news-service`.
+  Built once during `createDashboardRouteRuntime` and exposed as
+  `runtime.providerRegistry`; consumed by the diagnostics route only.
+- **Routes NOT rewired in this batch:** `/dashboard/news` (GET cached read),
+  `/dashboard/news/ingest` (POST admin), `/dashboard/news/context`,
+  `/dashboard/markets/*`. They keep using `dashboard.useCases` directly. Public response
+  shapes are byte-for-byte unchanged.
+- **Market-data migration** (EODHD / Twelve Data / FRED) explicitly deferred. Reason:
+  ~600 LOC of inline branching with API keys, US-fresh-overlay heuristics, and
+  per-provider freshness windows. Migrating safely needs three adapters + a fallback
+  config + a redaction story for keys-in-URLs. That is its own PR.
+- **Per-source news wrappers** (HN / GDELT / ECB-RSS / ECB-Data / Fed-RSS / SEC-EDGAR /
+  FRED / X-Twitter) intentionally deferred. The aggregation-level wrapper covers the
+  diagnostics-and-contract-locking need at far lower migration surface. A follow-up batch
+  can split them as routes start consuming the registry.
+- **Workspace deps:** unchanged. `@finance-os/provider-contract` and
+  `@finance-os/provider-runtime` were already deps of `apps/api`.
+
+**Out of scope confirmed unchanged:** Powens, IBKR, Binance, banking sync,
+external-investments sync, market-data adapters, news raw payloads, worker behavior,
+DB schema, env defaults, graph ingest semantics, LLM call paths, UI, public response
+shapes for every existing route. No execution / trading / payment / write capabilities
+added. No new third-party deps. No new env vars.
+
+### 11.10 Macro Prompt 4 — Sensitive providers foundation (health-only) ✅ shipped 2026-05-09
+
+- **Three health-only wrappers** added at
+  [`powens-provider.ts`](../../apps/api/src/routes/dashboard/services/providers/powens-provider.ts),
+  [`ibkr-provider.ts`](../../apps/api/src/routes/dashboard/services/providers/ibkr-provider.ts),
+  [`binance-provider.ts`](../../apps/api/src/routes/dashboard/services/providers/binance-provider.ts).
+  IBKR + Binance share a closed-vocabulary health-mapping helper at
+  [`external-investments-provider-shared.ts`](../../apps/api/src/routes/dashboard/services/providers/external-investments-provider-shared.ts).
+  Provider ids: `powens`, `ibkr`, `binance`. Capabilities (each from
+  `ALLOWED_PROVIDER_CAPABILITIES`):
+  - `powens` → `banking.accounts.read`
+  - `ibkr` → `external_investments.positions.read`
+  - `binance` → `crypto.wallet.read`
+- **`provider.call()` is deferred** for all three. It returns `providerErr` with
+  `code: 'unsupported_capability'` and `safeDetails.reason: 'deferred_read_routing'`.
+  The wrappers do NOT route reads. Existing routes (`/integrations/powens/*`,
+  `/dashboard/external-investments/*`) continue to consume the underlying repositories
+  unchanged.
+- **Health snapshots are local-only.** `getHealth()` is sync and reads an in-memory
+  state object updated by `refreshHealth()`. The wrappers expose `refreshHealth()`
+  as an extra method aggregated by `createInternalProviderRegistry` into
+  `refreshSensitiveProviderHealth()`. The `/dashboard/providers/diagnostics` admin
+  route awaits this BEFORE reading `getHealth()`. **No live Powens / IBKR Flex /
+  Binance call is performed at any point** — only the local DB tables
+  (`powensConnection`, `externalInvestmentProviderHealth`,
+  `externalInvestmentConnection`) are queried, and only for closed-vocabulary
+  columns. Demo callers never trigger a refresh.
+- **Health-status mapping rules** (per Macro Prompt 4 explicit feedback):
+  `down` is RESERVED for a configured provider with a clear repeated local failure
+  state. Unconfigured / disabled / never-synced / no-rows scenarios all map to
+  `degraded` with a `lastErrorCode` of `unconfigured` or `disabled_by_flag` and a
+  caveat note. Repository read failure inside `refreshHealth()` is caught and DROPPED
+  (the exception object can carry connection ids, account aliases, or `lastError`
+  bodies); only `lastErrorCode: 'transient'` and a closed-vocab note flag the
+  failure.
+- **Diagnostics endpoint** (`/dashboard/providers/diagnostics`) admin response now
+  includes `powens`, `ibkr`, `binance` entries in addition to the existing
+  `knowledge-service`, `quant-service`, `news-service`. Public response shape is
+  additive (the existing closed `{generatedAt, mode, providers[], summary, caveats[]}`
+  shape stays — only the `providers[]` array gains entries). Tests assert that no
+  token / secret / apiKey / signature / account-number sentinel reaches the
+  serialized response.
+- **Routes NOT rewired in this batch:** `/integrations/powens/status`,
+  `/integrations/powens/diagnostics` (the existing live-probe-capable diagnostic),
+  `/integrations/powens/sync-runs`, `/integrations/external-investments/status`,
+  `/integrations/external-investments/diagnostics`,
+  `/dashboard/external-investments/*`, `/dashboard/transactions`. They keep using
+  their existing repositories. Public response shapes are byte-for-byte unchanged.
+- **No DB migrations.** No schema changes. No env var changes. No new third-party
+  deps. The wrappers are wired purely from existing closures.
+- **No worker behavior change.** No sync schedule change. No Redis lock semantics
+  change. No credential storage / encryption change. No callback / connect / token
+  exchange changes.
+- **Deferred (call to action for follow-up macros):**
+  - Read routing through `provider.call()` for `powens` / `ibkr` / `binance`.
+  - `banking.transactions.read` and `external_investments.trades.read` wrappers
+    (one local read source each — adding a separate wrapper before its read is
+    rewired through `provider.call()` would be empty surface area).
+  - Consolidating the existing `/integrations/powens/diagnostics` live-probe
+    endpoint with the registry-based diagnostics endpoint.
+
+**Out of scope confirmed unchanged:** Powens / IBKR / Binance live API calls (none
+are performed by the wrappers — neither for diagnostics nor for any other purpose),
+banking sync, external-investments sync, market-data adapters, news raw payloads,
+worker behavior, DB schema, env defaults
+(`POWENS_*`, `IBKR_FLEX_ENABLED`, `BINANCE_SPOT_ENABLED`, `APP_ENCRYPTION_KEY`),
+graph ingest semantics, LLM call paths, UI, public response shapes for every
+existing route. No execution / trading / payment / write capabilities added. No
+new third-party deps. No new env vars. No DB migrations.
 
 ## 12. Risks
 

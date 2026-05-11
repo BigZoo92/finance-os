@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'bun:test'
+import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
-import { createDashboardRuntimePlugin } from '../plugin'
-import { createAnalyticsRoute } from './analytics'
-import type { DashboardRouteRuntime, DashboardSummaryResponse } from '../types'
 import type { DashboardAnalyticsResponse } from '../domain/analytics-contract'
+import { createDashboardRuntimePlugin } from '../plugin'
+import type { DashboardRouteRuntime, DashboardSummaryResponse } from '../types'
+import { createAnalyticsRoute } from './analytics'
 
 const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => ({
   range,
@@ -99,6 +100,7 @@ const createDashboardRuntime = (
     },
     ...overrides,
   },
+  providerRegistry: createProviderRegistry([]),
 })
 
 const createAnalyticsTestApp = ({

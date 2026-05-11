@@ -337,6 +337,256 @@ ProviderError taxonomy + redaction → provider-health diagnostics → normalize
 → provider docs + test harness). Each of those is a separate implementation PR with its
 own pre-merge gates; PR16 itself adds no runtime gate.
 
+## Macro Prompt 5 — Hardening, observability, and data quality scoring
+
+Adds a deterministic data quality + Advisor readiness scoring layer plus
+diagnostics hardening, with no new provider calls, no live probes, no DB
+schema changes, no LLM, no graph ingest, no sync/worker/credential/encryption
+changes, no UI in this batch.
+
+**Scope shipped**
+
+- `apps/api/src/routes/dashboard/domain/data-quality/` — pure helpers
+  (`data-quality-types.ts`, `compute-data-quality.ts`,
+  `build-data-quality-snapshot.ts`,
+  `data-quality-demo-fixture.ts`,
+  `create-get-data-quality-use-case.ts`). Deterministic scoring across 8
+  canonical dimensions: `banking`, `investments`, `crypto`, `market_data`,
+  `news`, `advisor_memory`, `evals`, `post_mortems`. Includes an additive
+  `advisorReadiness` block (`ready` / `usable_with_caveats` / `limited` /
+  `not_ready`). Score `null` for missing inputs (never `0`). Unconfigured /
+  disabled-by-flag is reported as `unknown` / `degraded` — never as `down`.
+- `apps/api/src/routes/dashboard/routes/data-quality.ts` — new
+  `GET /dashboard/data-quality` route. Demo callers receive a deterministic
+  fixture (no DB read, no provider IO). Admin / internal-token callers receive
+  scores derived from already-cached local rows and the already-computed
+  provider diagnostics health snapshots. **No `provider.call()`. No sync
+  trigger. No LLM. No graph call.**
+- `apps/api/src/routes/dashboard/runtime.ts` wires the use-case using the
+  existing `powensConnections.listConnectionStatuses()`,
+  `externalInvestments.getStatus()`,
+  `marketsRepository.getMarketCacheState()`,
+  `newsRepository.getNewsCacheState()`,
+  `advisorRepository.getLatestEvalRun()`,
+  `advisorPostMortemRepository.listPostMortems()` — no new repositories, no
+  new queries.
+- `apps/api/src/routes/dashboard/router.ts` mounts the route under the existing
+  `/dashboard` prefix.
+- `packages/provider-runtime/src/diagnostics.ts` hardened: providers are now
+  emitted in stable alphabetical order by `providerId`, and `unconfigured` /
+  `disabled_by_flag` error codes surface explicit caveats. `down` is preserved
+  exclusively for clearly configured + clearly failing local state. Existing
+  diagnostics response keys are unchanged.
+- Tests:
+  `apps/api/src/routes/dashboard/domain/data-quality/compute-data-quality.test.ts`,
+  `build-data-quality-snapshot.test.ts`,
+  `apps/api/src/routes/dashboard/routes/data-quality.test.ts`,
+  updated `packages/provider-runtime/src/diagnostics.test.ts` (stable order,
+  unconfigured-not-down, disabled-by-flag-not-down, summary counts under mixed
+  states, no `provider.call()` invocation). Sensitive-sentinel sweeps assert
+  none of `token` / `secret` / `apiKey` / `api_key` / `signature` /
+  `access_token` / `refresh_token` / `client_secret` / `cookie` /
+  `authorization` / `bearer` / raw XML / raw JSON / account-number sentinels
+  appear in any response payload.
+- Operator guide: `docs/operations/data-quality-and-provider-diagnostics.md`
+  (provider statuses, grades, stale/degraded/missing semantics, advisor
+  readiness rules, what does NOT happen).
+- Updates: `docs/context/FEATURES.md`,
+  `docs/adr/provider-abstraction-v2.md` (status header + diagnostics-semantics
+  note for Macro Prompt 5).
+
+**Pre-merge gates**
+
+| Command | Expected | Why |
+|---|---|---|
+| `bun test apps/api/src/routes/dashboard/domain/data-quality/` | green | Pure compute helpers, snapshot builder, demo determinism, sentinel sweep, advisor readiness rules. |
+| `bun test apps/api/src/routes/dashboard/routes/data-quality.test.ts` | green | Endpoint demo/admin shape, internal-token elevation, 503 when use-case not wired, sentinel sweep, closed top-level shape. |
+| `bun test packages/provider-runtime/src/diagnostics.test.ts` | green | Existing diagnostics shape + new hardening assertions (stable order, caveat normalization, summary counts, no `provider.call()`). |
+| `bun test apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts` | green | Existing route still passes; entries are still looked up by `providerId`. |
+| `bun test apps/api/src/routes/dashboard/services/providers/internal-provider-registry.test.ts` | green | Sensitive provider wrappers integration unchanged. |
+| `pnpm exec biome check packages/provider-runtime apps/api/src/routes/dashboard/domain/data-quality apps/api/src/routes/dashboard/routes/data-quality.ts apps/api/src/routes/dashboard/routes/data-quality.test.ts apps/api/src/routes/dashboard/runtime.ts apps/api/src/routes/dashboard/router.ts` | 0 issues | New files + edits comply with repo style. |
+| `pnpm typecheck` | unchanged baseline | Total error count must stay at the long-standing drizzle-orm-at-workspace-boundary noise. |
+
+**Behaviour invariants this batch guarantees**
+
+- No new provider calls. No live provider probes.
+- No `provider.call()` invocation from `/dashboard/data-quality` or from
+  `/dashboard/providers/diagnostics`.
+- No DB schema, migration, or new query.
+- No worker / sync / Redis lock / credential / encryption change.
+- No LLM, no graph ingest, no `ADVISOR_GRAPH_INGEST_ENABLED` default change.
+- No raw provider payload exposure. No token / secret / signature / account id
+  in any response or log produced by these endpoints.
+- No execution / trading / payment / write capability added.
+- No existing public response shape broken. The `dataQuality` response is a
+  new endpoint shape; `providersDiagnostics` adds caveats and stable ordering
+  additively (existing keys, types, and per-provider lookup unchanged).
+
+---
+
+## Macro Prompt 4 — Sensitive providers foundation (health-only wrappers)
+
+Adds health-only `Provider<C>` wrappers for the three sensitive providers — `powens`
+(`banking.accounts.read`), `ibkr` (`external_investments.positions.read`), and
+`binance` (`crypto.wallet.read`) — registered in the internal provider registry and
+surfaced through `GET /dashboard/providers/diagnostics`. **`provider.call()` returns
+`unsupported_capability` (`deferred_read_routing`) for all three; production routes
+still consume `packages/powens` and `packages/external-investments` directly.**
+**No public response shape changes. No DB schema changes. No env vars added or
+defaults changed. No worker / sync / Redis lock / credential / encryption / UI / LLM
+/ graph behavior change. No live Powens / IBKR Flex / Binance call from the wrappers
+at any point — no live diagnostics probe. No execution / trading / payment / write /
+order / transfer / swap capabilities added.**
+
+**Scope shipped**
+
+- `apps/api/src/routes/dashboard/services/providers/powens-provider.ts` — health-only
+  `Provider<banking.accounts.read>` wrapper. Reads from injected
+  `listConnectionStatuses()` closure (closed-vocab subset of `powensConnection`); no
+  Powens client touched, no token decrypted, no `lastError` body forwarded.
+  `provider.call()` is deferred (`unsupported_capability` + `deferred_read_routing`).
+  Health mapping: empty / unconfigured / never-synced → `degraded` + `unconfigured`;
+  reconnect_required → `degraded` + `auth_failed`; mixed errors → `degraded` +
+  `transient`; all-error-no-success → `down` + `provider_unavailable`; healthy →
+  `ok`.
+- `apps/api/src/routes/dashboard/services/providers/ibkr-provider.ts` and
+  `apps/api/src/routes/dashboard/services/providers/binance-provider.ts` — health-only
+  wrappers for `external_investments.positions.read` and `crypto.wallet.read`,
+  sharing the closed-vocab health mapping helper at
+  `apps/api/src/routes/dashboard/services/providers/external-investments-provider-shared.ts`.
+  Read from injected `getProviderSnapshot()` closures (closed-vocab subset of
+  `externalInvestmentProviderHealth` + `externalInvestmentConnection`). Mapping:
+  null / unconfigured / disabled / idle → `degraded`; `failing` → `down`;
+  `degraded` → `degraded` + `transient`; `healthy` → `ok`.
+- `apps/api/src/routes/dashboard/services/providers/internal-provider-registry.ts`
+  now mounts six providers (knowledge / quant / news / powens / ibkr / binance) and
+  exposes `refreshSensitiveProviderHealth()` aggregating the three sensitive
+  wrappers' async refresh closures.
+- `apps/api/src/routes/dashboard/runtime.ts` constructs the closures from
+  `createPowensConnectionRepository(db, redisClient).listConnectionStatuses()` and
+  `externalInvestments.getStatus()` (already-existing repositories — no new tables).
+  `DashboardRouteRuntime` gains an optional `refreshProviderHealth?:
+  () => Promise<void>` field; the `/dashboard/providers/diagnostics` admin path
+  awaits it before computing diagnostics. Demo callers never trigger a refresh.
+- Tests:
+  `apps/api/src/routes/dashboard/services/providers/powens-provider.test.ts`,
+  `ibkr-provider.test.ts`, `binance-provider.test.ts`,
+  updated `internal-provider-registry.test.ts` (covers all 6 providers + refresh
+  parallelism + exception swallowing) and updated
+  `apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts` (admin path
+  asserts powens / ibkr / binance entries with capabilities; refresh-hook is
+  awaited on admin and skipped on demo; sentinels for token / apiKey / secret /
+  signature / accessToken / flexToken / account ids never appear in payload).
+- Per-provider docs: `docs/providers/powens.md`, `docs/providers/ibkr.md`,
+  `docs/providers/binance.md`. Updated `docs/providers/README.md` migrated-providers
+  table. Updated `docs/adr/provider-abstraction-v2.md` header status; §11.6 reflects
+  Powens / IBKR / Binance health-only partial migration; new §11.10.
+
+**Pre-merge gates**
+
+- [ ] `bun test apps/api/src/routes/dashboard/services/providers` — knowledge / quant
+      / news / powens / ibkr / binance + registry tests all pass.
+- [ ] `bun test apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts` —
+      all paths (demo deterministic, admin shape, internal token, sensitive entries,
+      refresh hook called/skipped, no-sentinel) pass.
+- [ ] `pnpm --filter @finance-os/provider-runtime test` — unchanged.
+- [ ] `pnpm --filter @finance-os/provider-contract test` — unchanged.
+- [ ] `bun test apps/api/src/routes/integrations/powens` — Powens routes unchanged.
+- [ ] `bun test packages/external-investments` — unchanged.
+- [ ] `pnpm exec biome check apps/api/src/routes/dashboard packages/provider-contract
+      packages/provider-runtime` — passes.
+- [ ] No new env vars; no env defaults changed; no DB migrations.
+- [ ] `/integrations/powens/*`, `/dashboard/external-investments/*`,
+      `/dashboard/transactions`, `/dashboard/news`, `/dashboard/markets/*` response
+      shapes unchanged (no live provider call from diagnostics; no sync trigger).
+
+**Out of scope (deferred)**
+
+- Read routing through `provider.call()` for `powens` / `ibkr` / `binance` — the
+  wrappers stay deferred (`unsupported_capability`) until a follow-up macro prompt
+  rewires reads.
+- `banking.transactions.read` and `external_investments.trades.read` wrappers.
+- Consolidating the existing `/integrations/powens/diagnostics` live-probe endpoint
+  with the registry-based `/dashboard/providers/diagnostics`. The two endpoints
+  remain separate; the new endpoint is local-snapshot only.
+- Market-data migration (still deferred from Macro Prompt 3).
+- Per-source news wrappers (still deferred from Macro Prompt 3).
+- Knowledge-service route rewiring (still deferred from Macro Prompt 2-fix).
+- Worker / sync / encryption / credential changes — never in scope.
+
+## Macro Prompt 3 — Provider diagnostics endpoint + news-service aggregation wrapper
+
+Wires `GET /dashboard/providers/diagnostics` (admin-only, demo-deterministic, read-only)
+through the existing internal provider registry, and registers the aggregation-level
+`news-service` wrapper (`news.items.read`) alongside `knowledge-service` and
+`quant-service`. **No public response shape changes. No new env vars. No new
+third-party deps. Sensitive providers (Powens, IBKR, Binance, market-data adapters,
+banking sync, external-investments sync) untouched.**
+
+**Scope shipped**
+
+- `apps/api/src/routes/dashboard/services/providers/news-service-provider.ts` —
+  aggregation-level `Provider<news.items.read>` wrapper around the existing
+  `NewsProviderAdapter[]` pool. Returns counts/status/durations only; never article
+  bodies, URLs, or upstream raw payloads. Demo mode returns a deterministic per-source
+  `'skipped'` snapshot without touching the network. `disabled_by_flag` when no
+  adapters are enabled. All-failed → `provider_unavailable`; mixed → `providerOk`
+  with per-source `'failed'`.
+- `apps/api/src/routes/dashboard/services/providers/internal-provider-registry.ts`
+  now mounts three providers (knowledge-service, quant-service, news-service) and
+  is built once during `createDashboardRouteRuntime`, exposed as
+  `runtime.providerRegistry`.
+- `apps/api/src/routes/dashboard/routes/providers-diagnostics.ts` — new Elysia route
+  serving `GET /dashboard/providers/diagnostics`. Demo callers (no admin session, no
+  internal token) receive `computeDemoProviderDiagnostics` output; admin callers (or
+  callers with a valid internal token) receive `computeProviderDiagnostics` over the
+  registry. Never invokes `Provider.call()`. Closed shape:
+  `{generatedAt, mode, providers[], summary, caveats[]}`.
+- `apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts` — demo
+  determinism, admin shape with mixed health states, summary counts, empty registry,
+  internal-token grants admin shape, no `apiKey` / `token` / `secret` substrings in
+  payload.
+- `apps/api/src/routes/dashboard/services/providers/news-service-provider.test.ts` —
+  contract harness, demo determinism, `disabled_by_flag` skip, redaction proof
+  (synthetic SECRET-TOKEN-7 / RAW ARTICLE BODY never reach output or logs),
+  per-source success/failure aggregation, `provider_unavailable` on total failure,
+  `degraded` health on mixed outcomes.
+- `docs/providers/news-service.md` — populated from `_template.md`.
+- `docs/adr/provider-abstraction-v2.md` — header status updated; §11.3 marked
+  endpoint-shipped; §11.6 reflects news partial migration; new §11.9.
+
+**Pre-merge gates**
+
+- [ ] `bun test apps/api/src/routes/dashboard/services/providers` — news-service +
+      registry tests pass alongside the existing wrappers.
+- [ ] `bun test apps/api/src/routes/dashboard/routes/providers-diagnostics.test.ts` —
+      all paths pass.
+- [ ] `bun test apps/api/src/routes/dashboard/routes/news.test.ts` — unchanged,
+      public response shapes intact.
+- [ ] `pnpm --filter @finance-os/provider-runtime test` — unchanged.
+- [ ] `pnpm --filter @finance-os/provider-contract test` — unchanged.
+- [ ] `pnpm exec biome check apps/api/src/routes/dashboard packages/provider-contract
+      packages/provider-runtime` — passes.
+- [ ] No new env vars; no env defaults changed.
+- [ ] `/dashboard/news`, `/dashboard/news/ingest`, `/dashboard/news/context`,
+      `/dashboard/markets/*` response shapes unchanged.
+
+**Out of scope (deferred)**
+
+- Per-source news wrappers (HN / GDELT / ECB-RSS / ECB-Data / Fed-RSS / SEC-EDGAR /
+  FRED / X-Twitter). The aggregation-level wrapper covers diagnostics-and-contract
+  needs at far lower migration surface.
+- Market-data migration (EODHD / Twelve Data / FRED). ~600 LOC of inline branching
+  with API keys, US-fresh-overlay heuristics, per-provider freshness windows.
+  Migrating safely needs three adapters + a fallback config + a redaction story for
+  keys-in-URLs. Its own PR.
+- Rewiring `/dashboard/news`, `/dashboard/news/ingest`, `/dashboard/markets/*` onto
+  `runtime.providerRegistry`. Routes still consume `dashboard.useCases` and the
+  adapter pool directly.
+- Knowledge-service route rewiring (still deferred from Macro Prompt 2-fix).
+- Sensitive providers (Powens, IBKR, Binance, banking sync, external-investments
+  sync, crypto wallet sync) — never touched.
+
 ## Macro Prompt 2-fix — first runtime canary *(quant-patterns-detect rewired)*
 
 Rewires the `/dashboard/trading-lab/patterns/detect` admin handler through
@@ -625,3 +875,79 @@ then triage:
 - [ ] Backend lead — ADR safety constraints respected, no execution path added.
 - [ ] Frontend lead — flag-off path renders unchanged; smoke tests passing.
 - [ ] Ops — both production flags confirmed `false` in the deployment manifest.
+
+## Macro Prompt 6 — Advisor closure (advisor v2 skeleton, replay, fine-tuning gate)
+
+> **Status**: closure of the AI Advisor roadmap.
+> **Date**: 2026-05-10
+> **Scope**: read-only additive endpoints, deterministic eval guardrails, and the operating
+> guide. **Do not flip `AI_ADVISOR_V2_ENABLED` to `true` until the items below are ticked AND an
+> ADR has reviewed the committee's deterministic synthesis output.**
+
+### Pre-merge gates
+
+- [x] No new DB migration / schema (Phase 0 confirmed existing tables suffice).
+- [x] No live provider call. No `provider.call()` invocation in any new path. Sensitive
+      provider read routing remains deferred.
+- [x] No graph ingest. `ADVISOR_GRAPH_INGEST_ENABLED` default unchanged (`false`).
+- [x] No LLM call in any new code path. Advisor v2 preview, replay, and fine-tuning gate are
+      deterministic.
+- [x] No new autonomous execution agent. Forbidden roles (`executor`, `trader`,
+      `order_manager`, `portfolio_manager_with_execution`, `broker_operator`) are encoded as
+      data and asserted by tests.
+- [x] No fine-tuning. `GET /dashboard/advisor/fine-tuning-readiness` is a deterministic gate
+      that returns `not_recommended` / `premature` by default and ships with three default
+      blockers (`privacy_export_plan_not_accepted`, `measurable_improvement_target_missing`,
+      `rollback_plan_missing`).
+- [x] No UI shipped this batch (deferred per spec — adds scope).
+- [x] Existing advisor route response shapes unchanged.
+- [x] One env flag added: `AI_ADVISOR_V2_ENABLED` (default `false`).
+
+### New endpoints
+
+- [x] `GET /dashboard/advisor/v2/capabilities` — closed-vocabulary capability listing.
+- [x] `POST /dashboard/advisor/v2/preview` — admin-only, deterministic, returns
+      `skipped_disabled` when flag is off, `skipped_data_not_ready` when readiness is below
+      `usable_with_caveats`.
+- [x] `GET /dashboard/advisor/replay?windowDays=N` — admin-only, clamps to `[1, 90]`,
+      surfaces patterns, never returns `freeNote`, always `dataQualityAtReview: "current_only"`.
+- [x] `GET /dashboard/advisor/fine-tuning-readiness` — admin-only, conservative gate.
+
+### Eval guardrails
+
+- [x] `advisor_v2_committee_safety` — healthy baseline; checks data quality respected, no
+      execution vocabulary, no sentinel leakage.
+- [x] `replay_no_causality_overclaim` — healthy baseline; bans causality overclaim phrasing.
+- [x] `fine_tuning_gate_privacy` — healthy baseline; asserts the privacy blocker fires by
+      default, no raw financial data in response.
+- [x] `advisor_readiness_respected` — healthy baseline; asserts readiness level is exposed.
+- [x] Negative fixtures live in `packages/ai/src/evals/scorers/closure.test.ts`.
+- [x] `pnpm evals:run` exit 0 (verified locally — 8 passed, 0 failed, 5 skipped — closure
+      cases all green).
+
+### Documentation
+
+- [x] `docs/operations/ai-advisor-operating-guide.md` created (16 sections covering daily /
+      weekly / bi-weekly cadence, warning signs, advisory-only contract).
+- [x] `docs/context/FEATURES.md` updated with closure section (endpoints, eval guardrails,
+      flag).
+- [x] `docs/context/LEARNING-LOOP-RELEASE-CHECKLIST.md` updated with this section.
+- [x] `docs/research/advisor-external-repos-audit.md` annotated with the pattern-only
+      inspiration link to TradingAgents / ai-hedge-fund (committee role naming only — no code
+      reuse).
+
+### Production flag posture (do NOT flip without ADR)
+
+| Flag | Production default |
+|---|---|
+| `AI_ADVISOR_V2_ENABLED` | `false` |
+| `ADVISOR_GRAPH_INGEST_ENABLED` | `false` (unchanged) |
+| All other Macro Prompt 6 surfaces | always-on (read-only, admin-only) |
+
+### Sign-off
+
+- [ ] Backend lead — closure surfaces are read-only, deterministic, and never call
+      provider/LLM/graph paths.
+- [ ] Ops — `AI_ADVISOR_V2_ENABLED=false` confirmed in the deployment manifest.
+- [ ] Operator — has read `docs/operations/ai-advisor-operating-guide.md` and understands
+      the daily / weekly / bi-weekly cadence.

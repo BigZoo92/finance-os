@@ -739,6 +739,14 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    // Macro Prompt 6 — Advisor v2 committee skeleton. Default false. When false,
+    // POST /dashboard/advisor/v2/preview returns `skipped_disabled` and the
+    // capabilities endpoint reports the committee as not active. The flag does
+    // NOT replace `runAdvisorDaily`; the existing daily run is unaffected.
+    AI_ADVISOR_V2_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     AI_POST_MORTEM_ENABLED: z
       .string()
       .optional()

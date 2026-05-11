@@ -1,14 +1,19 @@
 # Provider abstraction v2 — author guide
 
-> **Status**: foundation + first internal migration batch. PR17A shipped the type-only
+> **Status**: foundation + early migration batches. PR17A shipped the type-only
 > contract; PR17B–E shipped the runtime, redaction, logger, registry skeleton,
 > sync-metadata foundation, diagnostics use-case, docs, and invariant test harness.
-> Macro Prompt 2 (this batch) migrates the **internal-only** read paths
+> Macro Prompt 2 migrated the internal-only read paths
 > [`knowledge-service`](./knowledge-service.md) (`knowledge.context_bundle.read`) and
 > [`quant-service`](./quant-service.md) (`quant.patterns.detect`) onto the contract via
-> standalone `Provider<C>` wrappers. Routes still consume the existing inline helpers;
-> rewiring is deferred. **No third-party adapter has migrated yet.** Sensitive providers
-> (Powens, IBKR, Binance, market-data, news) remain untouched.
+> standalone `Provider<C>` wrappers. Macro Prompt 3 added
+> [`news-service`](./news-service.md) (`news.items.read`) and the
+> `/dashboard/providers/diagnostics` endpoint. Macro Prompt 4 added health-only
+> wrappers for the sensitive providers ([`powens`](./powens.md),
+> [`ibkr`](./ibkr.md), [`binance`](./binance.md)) — read routing for those three is
+> still deferred; only their health snapshots are surfaced through the diagnostics
+> endpoint. **Routes still consume the existing inline helpers; rewiring is
+> deferred.** Market-data adapters remain unwrapped.
 
 This guide is for anyone adding a new provider or migrating an existing one onto the
 contract. It encodes the safety invariants every adapter must hold; see also
@@ -140,9 +145,17 @@ forbidden string that leaks into the allowed union.
 | Provider | Capability | Wrapper | Status |
 |---|---|---|---|
 | `knowledge-service` | `knowledge.context_bundle.read` | [knowledge-context-bundle-provider.ts](../../apps/api/src/routes/dashboard/services/providers/knowledge-context-bundle-provider.ts) | Wrapper + tests + docs. Routes not yet rewired. |
-| `quant-service` | `quant.patterns.detect` | [quant-patterns-detect-provider.ts](../../apps/api/src/routes/dashboard/services/providers/quant-patterns-detect-provider.ts) | Wrapper + tests + docs. Routes not yet rewired. |
+| `quant-service` | `quant.patterns.detect` | [quant-patterns-detect-provider.ts](../../apps/api/src/routes/dashboard/services/providers/quant-patterns-detect-provider.ts) | Wrapper + tests + docs. Routes rewired (admin path). |
+| `news-service` | `news.items.read` | [news-service-provider.ts](../../apps/api/src/routes/dashboard/services/providers/news-service-provider.ts) | Wrapper + tests + docs. Routes not yet rewired. |
+| `powens` | `banking.accounts.read` | [powens-provider.ts](../../apps/api/src/routes/dashboard/services/providers/powens-provider.ts) | **Health-only.** Wrapper + tests + docs. `provider.call()` is deferred (`unsupported_capability`). Routes not rewired. |
+| `ibkr` | `external_investments.positions.read` | [ibkr-provider.ts](../../apps/api/src/routes/dashboard/services/providers/ibkr-provider.ts) | **Health-only.** Wrapper + tests + docs. `provider.call()` is deferred. Routes not rewired. |
+| `binance` | `crypto.wallet.read` | [binance-provider.ts](../../apps/api/src/routes/dashboard/services/providers/binance-provider.ts) | **Health-only.** Wrapper + tests + docs. `provider.call()` is deferred. Routes not rewired. |
 
 A registry mount module
 [internal-provider-registry.ts](../../apps/api/src/routes/dashboard/services/providers/internal-provider-registry.ts)
-composes both providers into a single `ProviderRegistry`. It has no consumers yet; the
-diagnostics endpoint and route-level adoption land in a follow-up macro prompt.
+composes the providers into a single `ProviderRegistry`. The
+`/dashboard/providers/diagnostics` admin endpoint reads `getHealth()` snapshots from
+this registry; for the sensitive wrappers (powens / ibkr / binance) it first awaits
+the registry's `refreshSensitiveProviderHealth()` to refresh their in-memory snapshots
+from local DB rows. Diagnostics never invokes `provider.call()` and never calls Powens
+/ IBKR / Binance upstream.
