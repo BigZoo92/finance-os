@@ -1,4 +1,4 @@
-import { apiFetch, ApiRequestError } from '@/lib/api'
+import { ApiRequestError, apiFetch } from '@/lib/api'
 import {
   getDemoExternalInvestmentCashFlows,
   getDemoExternalInvestmentPositions,
@@ -97,9 +97,13 @@ export const postExternalInvestmentSync = (provider?: ExternalInvestmentProvider
   const path = provider
     ? `/integrations/external-investments/${provider}/sync`
     : '/integrations/external-investments/sync'
-  return apiFetch<{ ok: boolean; requestId: string; enqueued: ExternalInvestmentProvider[] }>(path, {
-    method: 'POST',
-  })
+  return apiFetch<{ ok: boolean; requestId: string; enqueued: ExternalInvestmentProvider[] }>(
+    path,
+    {
+      method: 'POST',
+      body: JSON.stringify({ trigger: 'manual' }),
+    }
+  )
 }
 
 export const putExternalInvestmentCredential = (input: ExternalInvestmentCredentialInput) => {
@@ -119,9 +123,11 @@ export const putExternalInvestmentCredential = (input: ExternalInvestmentCredent
 }
 
 export const deleteExternalInvestmentCredential = (provider: ExternalInvestmentProvider) =>
-  apiFetch<{ ok: boolean; requestId: string; provider: ExternalInvestmentProvider; deleted: boolean }>(
-    `/integrations/external-investments/${provider}/credential`,
-    {
-      method: 'DELETE',
-    }
-  )
+  apiFetch<{
+    ok: boolean
+    requestId: string
+    provider: ExternalInvestmentProvider
+    deleted: boolean
+  }>(`/integrations/external-investments/${provider}/credential`, {
+    method: 'DELETE',
+  })

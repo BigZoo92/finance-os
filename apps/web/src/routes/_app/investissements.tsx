@@ -1,12 +1,24 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Badge, Input } from '@finance-os/ui/components'
 import { useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
-import { Badge, Input } from '@finance-os/ui/components'
-import type { AuthMode } from '@/features/auth-types'
+import {
+  type PersonalActionItem,
+  PersonalActionsPanel,
+  PersonalEmptyState,
+  PersonalSectionHeading,
+} from '@/components/personal/personal-ux'
+import { ActionDock } from '@/components/surfaces/action-dock'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
 import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
+import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
 import { dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query-options'
+import type { DashboardRange } from '@/features/dashboard-types'
 import {
   externalInvestmentsCashFlowsQueryOptionsWithMode,
   externalInvestmentsPositionsQueryOptionsWithMode,
@@ -17,24 +29,16 @@ import type {
   ExternalInvestmentAssetClass,
   ExternalInvestmentProvider,
 } from '@/features/external-investments/types'
-import type { DashboardRange } from '@/features/dashboard-types'
-import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
+import {
+  getUnpositionedPowensInvestmentAssets,
+  sumPowensInvestmentAssetValuations,
+} from '@/features/investments/powens-investment-assets'
 import {
   buildSocialBenchmarkExplainability,
   logSocialBenchmarkExplainabilityEvent,
 } from '@/features/social-benchmark-explainability'
 import { formatDateTime, formatMoney, formatQuantity } from '@/lib/format'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { Panel } from '@/components/surfaces/panel'
-import { KpiTile } from '@/components/surfaces/kpi-tile'
-import { ActionDock } from '@/components/surfaces/action-dock'
 import { pushToast } from '@/lib/toast-store'
-import {
-  PersonalActionsPanel,
-  PersonalEmptyState,
-  PersonalSectionHeading,
-  type PersonalActionItem,
-} from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -62,14 +66,17 @@ export const Route = createFileRoute('/_app/investissements')({
   loaderDeps: ({ search }) => ({ range: resolveRange(search.range) }),
   loader: async ({ context, deps }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-    const mode: AuthMode | undefined = auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
+    const mode: AuthMode | undefined =
+      auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
     await context.queryClient.ensureQueryData(
       dashboardSummaryQueryOptionsWithMode({ range: deps.range, mode })
     )
     await Promise.all([
       context.queryClient.ensureQueryData(externalInvestmentsSummaryQueryOptionsWithMode({ mode })),
-      context.queryClient.ensureQueryData(externalInvestmentsPositionsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(
+        externalInvestmentsPositionsQueryOptionsWithMode({ mode })
+      ),
       context.queryClient.ensureQueryData(
         externalInvestmentsTradesQueryOptionsWithMode({ mode, limit: 20 })
       ),
@@ -81,10 +88,14 @@ export const Route = createFileRoute('/_app/investissements')({
   component: InvestissementsPage,
 })
 
-
 function InvestissementsPage() {
-  const { range: searchRange, provider = 'all', account = 'all', assetClass = 'all', q = '' } =
-    Route.useSearch()
+  const {
+    range: searchRange,
+    provider = 'all',
+    account = 'all',
+    assetClass = 'all',
+    q = '',
+  } = Route.useSearch()
   const range = resolveRange(searchRange)
   const navigate = Route.useNavigate()
 
@@ -119,16 +130,27 @@ function InvestissementsPage() {
     })
   )
   const adaptedSummary = adaptDashboardSummaryLegacy({
-    range, summary: summaryQuery.data, ...(authMode ? { mode: authMode } : {}),
+    range,
+    summary: summaryQuery.data,
+    ...(authMode ? { mode: authMode } : {}),
   })
   const positions = adaptedSummary.positions
+  const powensInvestmentAssets = useMemo(
+    () =>
+      getUnpositionedPowensInvestmentAssets({
+        assets: adaptedSummary.assets,
+        positions,
+      }),
+    [adaptedSummary.assets, positions]
+  )
+  const powensInvestmentAssetsValue = sumPowensInvestmentAssetValuations(powensInvestmentAssets)
   const externalPositions = externalPositionsQuery.data?.items ?? []
   const externalBundle = externalSummaryQuery.data?.bundle ?? null
   const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
 
   const totalValue = positions.reduce(
     (sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0),
-    0
+    powensInvestmentAssetsValue
   )
   const externalKnownValue = externalBundle?.totalKnownValue ?? 0
   const cryptoExposure = externalBundle?.cryptoExposure
@@ -139,7 +161,11 @@ function InvestissementsPage() {
   const providerOptions = ['all', 'ibkr', 'binance'] as const
   const accountOptions = [
     'all',
-    ...Array.from(new Set(externalPositions.map(position => position.accountAlias ?? position.accountExternalId))),
+    ...Array.from(
+      new Set(
+        externalPositions.map(position => position.accountAlias ?? position.accountExternalId)
+      )
+    ),
   ]
   const assetClassOptions = [
     'all',
@@ -154,7 +180,9 @@ function InvestissementsPage() {
     const normalizedQuery = q.trim().toLowerCase()
     const matchesSearch =
       normalizedQuery.length === 0 ||
-      `${position.name} ${position.symbol ?? ''} ${position.provider}`.toLowerCase().includes(normalizedQuery)
+      `${position.name} ${position.symbol ?? ''} ${position.provider}`
+        .toLowerCase()
+        .includes(normalizedQuery)
     return matchesProvider && matchesAccount && matchesAssetClass && matchesSearch
   })
   const externalTrades = externalTradesQuery.data?.items ?? []
@@ -233,45 +261,55 @@ function InvestissementsPage() {
           title="Ton portefeuille en clair"
           description="Les providers restent en arrière-plan; la première lecture porte sur les montants et la qualité des données."
         />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <KpiTile
-          label="Valorisation totale"
-          value={totalValue}
-          display={formatMoney(totalValue)}
-          tone="brand"
-          size="lg"
-          loading={summaryQuery.isPending}
-          hint={`${positions.length} position${positions.length !== 1 ? 's' : ''} active${positions.length !== 1 ? 's' : ''}`}
-        />
-        <KpiTile
-          label="Période"
-          display={range}
-          tone="violet"
-          loading={summaryQuery.isPending}
-          hint="Cette vue ne filtre pas encore par date."
-        />
-        <KpiTile
-          label="Externe connu"
-          value={externalKnownValue}
-          display={formatMoney(externalKnownValue)}
-          tone="positive"
-          loading={externalSummaryQuery.isPending}
-          hint={`${externalPositions.length} position${externalPositions.length !== 1 ? 's' : ''} IBKR/Binance`}
-        />
-        <KpiTile
-          label="Crypto connu"
-          value={cryptoExposure?.value ?? 0}
-          display={formatMoney(cryptoExposure?.value ?? 0)}
-          tone={cryptoExposure && cryptoExposure.unknownValueCount > 0 ? 'warning' : 'violet'}
-          loading={externalSummaryQuery.isPending}
-          hint={`${cryptoExposure?.weightPct ?? 0}% du portefeuille externe valorise`}
-        />
-      </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <KpiTile
+            label="Valorisation totale"
+            value={totalValue}
+            display={formatMoney(totalValue)}
+            tone="brand"
+            size="lg"
+            loading={summaryQuery.isPending}
+            hint={`${positions.length} position${positions.length !== 1 ? 's' : ''}, ${powensInvestmentAssets.length} compte${powensInvestmentAssets.length !== 1 ? 's' : ''} Powens`}
+          />
+          <KpiTile
+            label="Période"
+            display={range}
+            tone="violet"
+            loading={summaryQuery.isPending}
+            hint="Cette vue ne filtre pas encore par date."
+          />
+          <KpiTile
+            label="Externe connu"
+            value={externalKnownValue}
+            display={formatMoney(externalKnownValue)}
+            tone="positive"
+            loading={externalSummaryQuery.isPending}
+            hint={`${externalPositions.length} position${externalPositions.length !== 1 ? 's' : ''} IBKR/Binance`}
+          />
+          <KpiTile
+            label="Powens investi"
+            value={powensInvestmentAssetsValue}
+            display={formatMoney(powensInvestmentAssetsValue)}
+            tone="positive"
+            loading={summaryQuery.isPending}
+            hint={`${powensInvestmentAssets.length} compte${powensInvestmentAssets.length !== 1 ? 's' : ''} niveau compte`}
+          />
+          <KpiTile
+            label="Crypto connu"
+            value={cryptoExposure?.value ?? 0}
+            display={formatMoney(cryptoExposure?.value ?? 0)}
+            tone={cryptoExposure && cryptoExposure.unknownValueCount > 0 ? 'warning' : 'violet'}
+            loading={externalSummaryQuery.isPending}
+            hint={`${cryptoExposure?.weightPct ?? 0}% du portefeuille externe valorise`}
+          />
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <Panel
-          title={qualityWarningCount > 0 ? 'Données à vérifier' : 'Données de portefeuille utilisables'}
+          title={
+            qualityWarningCount > 0 ? 'Données à vérifier' : 'Données de portefeuille utilisables'
+          }
           description="Coût d'achat, prix de marché et fraîcheur changent le niveau de confiance, pas les garde-fous read-only."
           icon={<span aria-hidden="true">△</span>}
           tone={qualityWarningCount > 0 ? 'warning' : 'positive'}
@@ -279,18 +317,25 @@ function InvestissementsPage() {
           {qualityWarningCount > 0 ? (
             <div className="space-y-2 text-sm">
               {externalBundle?.unknownCostBasisWarnings.slice(0, 2).map(item => (
-                <p key={item} className="text-warning">Coût inconnu: {item}</p>
+                <p key={item} className="text-warning">
+                  Coût inconnu: {item}
+                </p>
               ))}
               {externalBundle?.missingMarketDataWarnings.slice(0, 2).map(item => (
-                <p key={item} className="text-warning">Prix manquant: {item}</p>
+                <p key={item} className="text-warning">
+                  Prix manquant: {item}
+                </p>
               ))}
               {externalBundle?.staleDataWarnings.slice(0, 2).map(item => (
-                <p key={item} className="text-warning">Donnée ancienne: {item}</p>
+                <p key={item} className="text-warning">
+                  Donnée ancienne: {item}
+                </p>
               ))}
             </div>
           ) : (
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Aucune alerte majeure sur les positions chargées. Les données externes restent lues depuis le cache.
+              Aucune alerte majeure sur les positions chargées. Les données externes restent lues
+              depuis le cache.
             </p>
           )}
         </Panel>
@@ -316,19 +361,31 @@ function InvestissementsPage() {
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
             <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">IBKR</p>
-            <p className="font-financial mt-1 text-lg font-semibold">{formatMoney(ibkrKnownValue)}</p>
+            <p className="font-financial mt-1 text-lg font-semibold">
+              {formatMoney(ibkrKnownValue)}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">Reporting Flex uniquement.</p>
           </div>
           <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
             <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Binance</p>
-            <p className="font-financial mt-1 text-lg font-semibold">{formatMoney(binanceKnownValue)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Spot USER_DATA / Wallet en lecture seule.</p>
+            <p className="font-financial mt-1 text-lg font-semibold">
+              {formatMoney(binanceKnownValue)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Spot USER_DATA / Wallet en lecture seule.
+            </p>
           </div>
           <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
             <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Qualite</p>
-            <p className="mt-1 text-lg font-semibold">{qualityWarningCount === 0 ? 'OK' : `${qualityWarningCount} alerte${qualityWarningCount !== 1 ? 's' : ''}`}</p>
+            <p className="mt-1 text-lg font-semibold">
+              {qualityWarningCount === 0
+                ? 'OK'
+                : `${qualityWarningCount} alerte${qualityWarningCount !== 1 ? 's' : ''}`}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {externalBundle?.confidence ? `Confiance ${externalBundle.confidence}` : 'Bundle non genere'}
+              {externalBundle?.confidence
+                ? `Confiance ${externalBundle.confidence}`
+                : 'Bundle non genere'}
             </p>
           </div>
         </div>
@@ -443,14 +500,21 @@ function InvestissementsPage() {
                         <p className="font-financial font-medium">
                           {value === null
                             ? '-'
-                            : formatMoney(value, position.valueCurrency ?? position.currency ?? 'EUR')}
+                            : formatMoney(
+                                value,
+                                position.valueCurrency ?? position.currency ?? 'EUR'
+                              )}
                         </p>
                         <p className="text-xs text-muted-foreground">{position.valueSource}</p>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <p
                           className={`font-financial ${
-                            pnl === null ? 'text-muted-foreground' : pnl >= 0 ? 'text-positive' : 'text-negative'
+                            pnl === null
+                              ? 'text-muted-foreground'
+                              : pnl >= 0
+                                ? 'text-positive'
+                                : 'text-negative'
                           }`}
                         >
                           {pnl === null ? '-' : formatMoney(pnl, position.valueCurrency ?? 'EUR')}
@@ -458,8 +522,12 @@ function InvestissementsPage() {
                       </td>
                       <td className="py-3 pl-4">
                         <div className="flex flex-wrap gap-1.5">
-                          {position.costBasis === null && <Badge variant="warning">cout inconnu</Badge>}
-                          {position.valueSource === 'unknown' && <Badge variant="warning">valeur inconnue</Badge>}
+                          {position.costBasis === null && (
+                            <Badge variant="warning">cout inconnu</Badge>
+                          )}
+                          {position.valueSource === 'unknown' && (
+                            <Badge variant="warning">valeur inconnue</Badge>
+                          )}
                           {position.degradedReasons.map(reason => (
                             <Badge key={reason} variant="outline">
                               {reason}
@@ -467,7 +535,9 @@ function InvestissementsPage() {
                           ))}
                           {position.degradedReasons.length === 0 &&
                             position.costBasis !== null &&
-                            position.valueSource !== 'unknown' && <Badge variant="positive">OK</Badge>}
+                            position.valueSource !== 'unknown' && (
+                              <Badge variant="positive">OK</Badge>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -480,9 +550,70 @@ function InvestissementsPage() {
 
         {externalBundle && (
           <div className="mt-4 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
-            <p>Provider coverage: {externalBundle.providerCoverage.map(item => `${providerLabel(item.provider)} ${item.status}`).join(' · ')}</p>
+            <p>
+              Provider coverage:{' '}
+              {externalBundle.providerCoverage
+                .map(item => `${providerLabel(item.provider)} ${item.status}`)
+                .join(' · ')}
+            </p>
             <p>Valeurs inconnues: {externalBundle.unknownValuePositionCount}</p>
             <p>Hypotheses: {externalBundle.assumptions.slice(0, 2).join(' · ') || '-'}</p>
+          </div>
+        )}
+      </Panel>
+
+      <Panel
+        title="Comptes d'investissement Powens"
+        description="PEA, CTO ou comptes titres exposes par Powens au niveau compte. Les lignes de titres detaillees restent separees des providers IBKR/Binance."
+        icon={<span aria-hidden="true">△</span>}
+        tone="positive"
+      >
+        {summaryQuery.isPending ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {Array.from(
+              { length: 2 },
+              (_, index) => `powens-investment-asset-skeleton-${index + 1}`
+            ).map(key => (
+              <div key={key} className="h-24 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        ) : powensInvestmentAssets.length === 0 ? (
+          <PersonalEmptyState
+            title="Aucun compte investissement Powens"
+            description="Les comptes PEA/CTO apparaissent ici apres une sync Powens quand le provider expose un compte d'investissement."
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {powensInvestmentAssets.map(asset => (
+              <div
+                key={asset.assetId}
+                className="rounded-lg border border-border/50 bg-surface-1 p-4 transition-colors hover:bg-surface-2"
+                style={{ transitionDuration: 'var(--duration-fast)' }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{asset.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {asset.providerInstitutionName ?? 'Powens'} · {asset.currency}
+                    </p>
+                  </div>
+                  <Badge variant="positive">Powens</Badge>
+                </div>
+                <div className="mt-4 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Valorisation
+                    </p>
+                    <p className="font-financial mt-1 text-lg font-semibold">
+                      {formatMoney(asset.valuation, asset.currency)}
+                    </p>
+                  </div>
+                  <p className="max-w-[180px] text-right text-xs text-muted-foreground">
+                    {asset.valuationAsOf ? formatDateTime(asset.valuationAsOf) : 'Date inconnue'}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </Panel>
@@ -502,7 +633,10 @@ function InvestissementsPage() {
           ) : (
             <div className="space-y-2">
               {externalTrades.slice(0, 6).map(trade => (
-                <div key={trade.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-3 py-2.5">
+                <div
+                  key={trade.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-3 py-2.5"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{trade.symbol ?? 'Instrument inconnu'}</p>
                     <p className="text-xs text-muted-foreground">
@@ -510,11 +644,21 @@ function InvestissementsPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <Badge variant={trade.side === 'buy' ? 'positive' : trade.side === 'sell' ? 'destructive' : 'outline'}>
+                    <Badge
+                      variant={
+                        trade.side === 'buy'
+                          ? 'positive'
+                          : trade.side === 'sell'
+                            ? 'destructive'
+                            : 'outline'
+                      }
+                    >
                       {trade.side}
                     </Badge>
                     <p className="font-financial mt-1 text-xs text-muted-foreground">
-                      {trade.netAmount === null ? formatQuantity(trade.quantity) : formatMoney(trade.netAmount, trade.currency ?? 'EUR')}
+                      {trade.netAmount === null
+                        ? formatQuantity(trade.quantity)
+                        : formatMoney(trade.netAmount, trade.currency ?? 'EUR')}
                     </p>
                   </div>
                 </div>
@@ -523,7 +667,12 @@ function InvestissementsPage() {
           )}
         </Panel>
 
-        <Panel title="Flux cash" description="Entrées et sorties de cash liées aux providers externes." icon={<span aria-hidden="true">⇄</span>} tone="positive">
+        <Panel
+          title="Flux cash"
+          description="Entrées et sorties de cash liées aux providers externes."
+          icon={<span aria-hidden="true">⇄</span>}
+          tone="positive"
+        >
           {externalCashFlows.length === 0 ? (
             <PersonalEmptyState
               title="Aucun flux cash en cache"
@@ -532,7 +681,10 @@ function InvestissementsPage() {
           ) : (
             <div className="space-y-2">
               {externalCashFlows.slice(0, 6).map(flow => (
-                <div key={flow.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-3 py-2.5">
+                <div
+                  key={flow.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-3 py-2.5"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{flow.type}</p>
                     <p className="text-xs text-muted-foreground">
@@ -543,7 +695,9 @@ function InvestissementsPage() {
                     <p className="font-financial text-sm font-medium">
                       {flow.amount === null ? '-' : formatQuantity(flow.amount)}
                     </p>
-                    <p className="text-xs text-muted-foreground">{flow.currency ?? flow.asset ?? '-'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {flow.currency ?? flow.asset ?? '-'}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -553,91 +707,148 @@ function InvestissementsPage() {
       </div>
 
       {/* Positions */}
-      <Panel title="Positions internes" description="Positions déjà présentes dans le résumé patrimonial." icon={<span aria-hidden="true">△</span>} tone="brand">
-          {summaryQuery.isPending ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }, (_, index) => `investments-position-skeleton-${index + 1}`).map(key => (
-                <div key={key} className="h-16 animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : positions.length === 0 ? (
-            <PersonalEmptyState
-              title="Aucune position active"
-              description="Tes positions apparaîtront ici quand elles seront présentes dans les données du cockpit."
-            />
-          ) : (
-            <div className="space-y-3">
-              {positions.map(position => {
-                const value = position.currentValue ?? position.lastKnownValue ?? 0
-                const cost = position.costBasis ?? 0
-                const pnl = cost > 0 ? value - cost : null
+      <Panel
+        title="Positions internes"
+        description="Positions déjà présentes dans le résumé patrimonial."
+        icon={<span aria-hidden="true">△</span>}
+        tone="brand"
+      >
+        {summaryQuery.isPending ? (
+          <div className="space-y-3">
+            {Array.from(
+              { length: 3 },
+              (_, index) => `investments-position-skeleton-${index + 1}`
+            ).map(key => (
+              <div key={key} className="h-16 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        ) : positions.length === 0 ? (
+          <PersonalEmptyState
+            title="Aucune position active"
+            description="Tes positions apparaîtront ici quand elles seront présentes dans les données du cockpit."
+          />
+        ) : (
+          <div className="space-y-3">
+            {positions.map(position => {
+              const value = position.currentValue ?? position.lastKnownValue ?? 0
+              const cost = position.costBasis ?? 0
+              const pnl = cost > 0 ? value - cost : null
 
-                return (
-                  <div
-                    key={position.positionId}
-                    className="rounded-lg border border-border/50 bg-surface-1 p-4 transition-colors hover:bg-surface-2"
-                    style={{ transitionDuration: 'var(--duration-fast)' }}
-                  >
-                    {/* Desktop: row layout */}
-                    <div className="hidden sm:flex sm:items-center sm:justify-between sm:gap-4">
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm">{position.name}</p>
-                        <p className="text-xs text-muted-foreground">{position.assetName ?? position.accountName ?? 'Position'} · {position.positionKey}</p>
-                      </div>
-                      <div className="flex items-center gap-6 shrink-0">
-                        <div className="text-right">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Quantité</p>
-                          <p className="font-financial text-sm font-medium">{formatQuantity(position.quantity)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Coût</p>
-                          <p className="font-financial text-sm">{position.costBasis === null ? '-' : formatMoney(position.costBasis, position.currency)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Valeur</p>
-                          <p className="font-financial text-sm font-semibold">{formatMoney(value, position.currency)}</p>
-                          {pnl !== null && (
-                            <p className={`font-financial text-xs ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}>{pnl >= 0 ? '+' : ''}{formatMoney(pnl, position.currency)}</p>
-                          )}
-                        </div>
-                      </div>
+              return (
+                <div
+                  key={position.positionId}
+                  className="rounded-lg border border-border/50 bg-surface-1 p-4 transition-colors hover:bg-surface-2"
+                  style={{ transitionDuration: 'var(--duration-fast)' }}
+                >
+                  {/* Desktop: row layout */}
+                  <div className="hidden sm:flex sm:items-center sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{position.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {position.assetName ?? position.accountName ?? 'Position'} ·{' '}
+                        {position.positionKey}
+                      </p>
                     </div>
-                    {/* Mobile: stacked layout */}
-                    <div className="sm:hidden space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm">{position.name}</p>
-                          <p className="text-xs text-muted-foreground">{position.assetName ?? 'Position'}</p>
-                        </div>
-                        <p className="font-financial text-base font-bold shrink-0">{formatMoney(value, position.currency)}</p>
+                    <div className="flex items-center gap-6 shrink-0">
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Quantité
+                        </p>
+                        <p className="font-financial text-sm font-medium">
+                          {formatQuantity(position.quantity)}
+                        </p>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="rounded-lg bg-surface-0 py-1.5">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Qté</p>
-                          <p className="font-financial text-xs font-medium">{formatQuantity(position.quantity)}</p>
-                        </div>
-                        <div className="rounded-lg bg-surface-0 py-1.5">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Coût</p>
-                          <p className="font-financial text-xs">{position.costBasis === null ? '-' : formatMoney(position.costBasis, position.currency)}</p>
-                        </div>
-                        <div className="rounded-lg bg-surface-0 py-1.5">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">P&L</p>
-                          <p className={`font-financial text-xs font-medium ${pnl !== null && pnl >= 0 ? 'text-positive' : 'text-negative'}`}>{pnl !== null ? `${pnl >= 0 ? '+' : ''}${formatMoney(pnl, position.currency)}` : '-'}</p>
-                        </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Coût
+                        </p>
+                        <p className="font-financial text-sm">
+                          {position.costBasis === null
+                            ? '-'
+                            : formatMoney(position.costBasis, position.currency)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Valeur
+                        </p>
+                        <p className="font-financial text-sm font-semibold">
+                          {formatMoney(value, position.currency)}
+                        </p>
+                        {pnl !== null && (
+                          <p
+                            className={`font-financial text-xs ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}
+                          >
+                            {pnl >= 0 ? '+' : ''}
+                            {formatMoney(pnl, position.currency)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  {/* Mobile: stacked layout */}
+                  <div className="sm:hidden space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">{position.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {position.assetName ?? 'Position'}
+                        </p>
+                      </div>
+                      <p className="font-financial text-base font-bold shrink-0">
+                        {formatMoney(value, position.currency)}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-surface-0 py-1.5">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Qté
+                        </p>
+                        <p className="font-financial text-xs font-medium">
+                          {formatQuantity(position.quantity)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-surface-0 py-1.5">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Coût
+                        </p>
+                        <p className="font-financial text-xs">
+                          {position.costBasis === null
+                            ? '-'
+                            : formatMoney(position.costBasis, position.currency)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-surface-0 py-1.5">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          P&L
+                        </p>
+                        <p
+                          className={`font-financial text-xs font-medium ${pnl !== null && pnl >= 0 ? 'text-positive' : 'text-negative'}`}
+                        >
+                          {pnl !== null
+                            ? `${pnl >= 0 ? '+' : ''}${formatMoney(pnl, position.currency)}`
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </Panel>
 
       {explainabilityModel.enabled && (
-        <Panel title="Pourquoi ce benchmark diffère" icon={<span aria-hidden="true">◉</span>} tone="violet">
+        <Panel
+          title="Pourquoi ce benchmark diffère"
+          icon={<span aria-hidden="true">◉</span>}
+          tone="violet"
+        >
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Résumé: lecture heuristique non-conseil. Les benchmarks bruts restent affichés même en fallback.
+              Résumé: lecture heuristique non-conseil. Les benchmarks bruts restent affichés même en
+              fallback.
             </p>
             <div className="rounded-lg border border-border/50 bg-surface-1 p-3 text-xs text-muted-foreground">
               <p className="font-mono uppercase tracking-[0.16em]">Trace</p>
@@ -652,7 +863,10 @@ function InvestissementsPage() {
               {explainabilityModel.insights.map(insight => {
                 const expanded = expandedInsightId === insight.id
                 return (
-                  <div key={insight.id} className="rounded-lg border border-border/60 bg-surface-1/70 p-3">
+                  <div
+                    key={insight.id}
+                    className="rounded-lg border border-border/60 bg-surface-1/70 p-3"
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold">{insight.title}</p>
@@ -684,9 +898,7 @@ function InvestissementsPage() {
                         {insight.fallbackReason && (
                           <p className="text-warning">Fallback: {insight.fallbackReason}</p>
                         )}
-                        <p className="font-mono">
-                          Règles: {insight.ruleHits.join(', ')}
-                        </p>
+                        <p className="font-mono">Règles: {insight.ruleHits.join(', ')}</p>
                       </div>
                     )}
                   </div>
@@ -695,8 +907,8 @@ function InvestissementsPage() {
             </div>
             {explainabilityModel.generationFailed && (
               <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-                Génération narrative indisponible ({explainabilityModel.failureReason}). Les benchmarks de base
-                restent visibles.
+                Génération narrative indisponible ({explainabilityModel.failureReason}). Les
+                benchmarks de base restent visibles.
               </p>
             )}
           </div>
@@ -710,26 +922,46 @@ function InvestissementsPage() {
             icon: <span aria-hidden="true">⟳</span>,
             label: 'Rafraîchir',
             tone: 'brand',
-            onClick: () => pushToast({ title: 'Rafraîchissement', description: 'Données revalidées.', tone: 'info' }),
+            onClick: () =>
+              pushToast({
+                title: 'Rafraîchissement',
+                description: 'Données revalidées.',
+                tone: 'info',
+              }),
           },
           {
             icon: <span aria-hidden="true">↧</span>,
             label: 'Exporter',
             tone: 'violet',
             disabled: positions.length === 0,
-            onClick: () => pushToast({ title: 'Export CSV', description: 'Fonctionnalité bientôt disponible.', tone: 'info' }),
+            onClick: () =>
+              pushToast({
+                title: 'Export CSV',
+                description: 'Fonctionnalité bientôt disponible.',
+                tone: 'info',
+              }),
           },
           {
             icon: <span aria-hidden="true">▣</span>,
             label: 'Nouvelle position',
             tone: 'positive',
-            onClick: () => pushToast({ title: 'Création manuelle', description: 'Allez sur Patrimoine pour ajouter un actif.', tone: 'info' }),
+            onClick: () =>
+              pushToast({
+                title: 'Création manuelle',
+                description: 'Allez sur Patrimoine pour ajouter un actif.',
+                tone: 'info',
+              }),
           },
           {
             icon: <span aria-hidden="true">✕</span>,
             label: 'Réinitialiser',
             tone: 'negative',
-            onClick: () => pushToast({ title: 'Réinitialisation', description: 'Filtres remis à zéro.', tone: 'info' }),
+            onClick: () =>
+              pushToast({
+                title: 'Réinitialisation',
+                description: 'Filtres remis à zéro.',
+                tone: 'info',
+              }),
           },
         ]}
         className="mt-4"

@@ -14,7 +14,7 @@ Finance-OS ne doit pas montrer tout ce qu'il sait au même niveau. Le cockpit qu
 | `/` | Vue d'ensemble / Cockpit | Entrée quotidienne: KPIs, tendance patrimoine, dépenses, connexions, objectifs, résumé IA digéré | `dashboardSummary`, `financialGoals`, `powensStatus`, `dashboardAdvisor` |
 | `/depenses` | Dépenses & revenus | Transactions, revenus, budgets, projection fin de mois | `dashboardTransactions`, `dashboardSummary` |
 | `/patrimoine` | Patrimoine | Actifs, historique patrimoine, soldes par connexion, investissements externes résumés | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions` |
-| `/investissements` | Investissements | Positions et portefeuille lisible; détails provider en contexte | `dashboardSummary`, `externalInvestments*` |
+| `/investissements` | Investissements | Positions, comptes d'investissement Powens valorises au niveau compte, et portefeuille lisible; details provider en contexte | `dashboardSummary`, `externalInvestments*` |
 | `/fiscalite` | Fiscalité | Dossier fiscal personnel préparatoire: comptes à vérifier, événements potentiellement concernés, données manquantes et exports de revue | `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions`, `externalInvestmentsTrades`, `externalInvestmentsCashFlows` |
 | `/objectifs` | Objectifs | Objectifs financiers personnels et progression | `financialGoals` |
 

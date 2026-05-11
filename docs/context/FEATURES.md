@@ -201,6 +201,7 @@ Chaque transaction expose sa chaine de resolution ("Why this category?" expandab
 - Dates de valorisation et derniere sync
 - Positions ouvertes/fermees
 - Affichage en tableau avec colonnes : nom, actif, quantite, cout base, valeur, dates
+- Les comptes d'investissement Powens sans lignes de titres detaillees (ex: PEA/CTO Trade Republic) restent affiches dans `/investissements` comme actifs valorises au niveau compte, pour eviter de les masquer en attendant des positions provider plus fines.
 
 ---
 
