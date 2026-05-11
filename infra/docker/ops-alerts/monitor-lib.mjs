@@ -118,6 +118,36 @@ export const formatPercent = value => {
   return `${value.toFixed(1)}%`
 }
 
+const DISCORD_COLORS = {
+  critical: 0xed4245,
+  warning: 0xfee75c,
+  info: 0x57f287,
+  resolved: 0x57f287,
+}
+
+const SEVERITY_EMOJI = {
+  critical: '🚨',
+  warning: '⚠️',
+  info: 'ℹ️',
+}
+
+const truncate = (value, max) => {
+  if (typeof value !== 'string') {
+    return value
+  }
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+}
+
+const formatFieldValue = value => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+  if (typeof value === 'object') {
+    return truncate(JSON.stringify(value), 1024)
+  }
+  return truncate(String(value), 1024)
+}
+
 export const buildAlertPayload = ({
   status,
   family,
@@ -127,15 +157,34 @@ export const buildAlertPayload = ({
   source = 'finance-os',
   timestamp,
 }) => {
-  const payload = {
-    source,
-    status,
-    family,
-    severity,
-    summary,
-    details,
-    timestamp,
+  const isResolved = status === 'resolved'
+  const color = isResolved
+    ? DISCORD_COLORS.resolved
+    : (DISCORD_COLORS[severity] ?? DISCORD_COLORS.info)
+  const emoji = isResolved ? '✅' : (SEVERITY_EMOJI[severity] ?? 'ℹ️')
+
+  const fields = [
+    { name: 'Severity', value: severity, inline: true },
+    { name: 'Family', value: family, inline: true },
+  ]
+
+  for (const [name, raw] of Object.entries(details ?? {})) {
+    if (fields.length >= 25) break
+    const value = formatFieldValue(raw)
+    if (value === null) continue
+    fields.push({ name: truncate(name, 256), value, inline: true })
   }
 
-  return payload
+  return {
+    embeds: [
+      {
+        title: truncate(`${emoji} [${status.toUpperCase()}] ${family}`, 256),
+        description: truncate(summary, 4096),
+        color,
+        timestamp,
+        fields,
+        footer: { text: source },
+      },
+    ],
+  }
 }

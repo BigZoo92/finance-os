@@ -103,7 +103,7 @@ test('env parsers preserve sane fallbacks', () => {
   assert.equal(parsePositiveNumberEnv('nope', 7), 7)
 })
 
-test('buildAlertPayload keeps the normalized webhook contract stable', () => {
+test('buildAlertPayload produces a Discord-compatible embed for a triggered alert', () => {
   const payload = buildAlertPayload({
     status: 'triggered',
     family: 'worker_stalled',
@@ -113,13 +113,29 @@ test('buildAlertPayload keeps the normalized webhook contract stable', () => {
     timestamp: '2026-03-23T00:00:00.000Z',
   })
 
-  assert.deepEqual(payload, {
-    source: 'finance-os',
-    status: 'triggered',
+  assert.equal(payload.embeds.length, 1)
+  const embed = payload.embeds[0]
+  assert.match(embed.title, /\[TRIGGERED\] worker_stalled/)
+  assert.equal(embed.description, 'worker stale')
+  assert.equal(embed.color, 0xed4245)
+  assert.equal(embed.timestamp, '2026-03-23T00:00:00.000Z')
+  assert.equal(embed.footer.text, 'finance-os')
+  const severityField = embed.fields.find(f => f.name === 'Severity')
+  assert.equal(severityField.value, 'critical')
+  const staleField = embed.fields.find(f => f.name === 'staleAfterMs')
+  assert.equal(staleField.value, '120000')
+})
+
+test('buildAlertPayload uses the resolved color when status is resolved', () => {
+  const payload = buildAlertPayload({
+    status: 'resolved',
     family: 'worker_stalled',
     severity: 'critical',
-    summary: 'worker stale',
-    details: { staleAfterMs: 120_000 },
-    timestamp: '2026-03-23T00:00:00.000Z',
+    summary: 'worker back online',
+    details: {},
+    timestamp: '2026-03-23T00:01:00.000Z',
   })
+
+  assert.equal(payload.embeds[0].color, 0x57f287)
+  assert.match(payload.embeds[0].title, /\[RESOLVED\]/)
 })
