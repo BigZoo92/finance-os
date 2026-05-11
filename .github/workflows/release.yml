@@ -193,6 +193,53 @@ jobs:
           cache-from: type=gha,scope=release-knowledge-service
           cache-to: type=gha,mode=max,scope=release-knowledge-service
 
+  build_and_push_quant_service:
+    name: Build and publish quant-service image
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ${{ needs.prepare.outputs.image_base }}-quant-service
+      RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+      SHA_TAG: ${{ needs.prepare.outputs.sha_tag }}
+      PUSH_IMAGES: ${{ needs.prepare.outputs.push_images }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: env.PUSH_IMAGES == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Docker metadata (quant-service)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.RELEASE_TAG }}
+            type=raw,value=${{ env.SHA_TAG }}
+
+      - name: Build and push quant-service
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/quant-service
+          file: apps/quant-service/Dockerfile
+          push: ${{ env.PUSH_IMAGES == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-quant-service
+          cache-to: type=gha,mode=max,scope=release-quant-service
+
   sync_dokploy:
     name: Sync Dokploy compose and env
     runs-on: ubuntu-latest
@@ -200,6 +247,7 @@ jobs:
       - prepare
       - build_and_push
       - build_and_push_knowledge_service
+      - build_and_push_quant_service
     if: needs.prepare.outputs.trigger_deploy == 'true'
     environment:
       name: production
