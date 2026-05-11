@@ -369,9 +369,7 @@ def _detect_ema20_horizontal_level(
     ]
 
 
-def _detect_ema200_one_touch(
-    df: pd.DataFrame, *, ema_touch_tol_pct: float
-) -> list[Detection]:
+def _detect_ema200_one_touch(df: pd.DataFrame, *, ema_touch_tol_pct: float) -> list[Detection]:
     if len(df) < 220:
         return []
     close = df["close"]
@@ -547,9 +545,7 @@ def _detect_parabolic_sar_rci(df: pd.DataFrame) -> list[Detection]:
     ]
 
 
-def _detect_volume_profile_zones(
-    df: pd.DataFrame, *, bins: int
-) -> list[Detection]:
+def _detect_volume_profile_zones(df: pd.DataFrame, *, bins: int) -> list[Detection]:
     if "volume" not in df.columns or len(df) < 30:
         return []
     if not _has_meaningful_volume(df):
@@ -567,9 +563,7 @@ def _detect_volume_profile_zones(
 
     edges = np.linspace(px_min, px_max, bins + 1)
     bin_volumes = np.zeros(bins)
-    bin_index = np.clip(
-        np.searchsorted(edges, typical.to_numpy(), side="right") - 1, 0, bins - 1
-    )
+    bin_index = np.clip(np.searchsorted(edges, typical.to_numpy(), side="right") - 1, 0, bins - 1)
     for idx, vol in zip(bin_index, volume.to_numpy()):
         bin_volumes[idx] += vol
     if bin_volumes.sum() <= 0:
@@ -670,9 +664,9 @@ def _atr14(df: pd.DataFrame) -> pd.Series:
     low = df["low"]
     close = df["close"]
     prev_close = close.shift(1)
-    tr = pd.concat(
-        [high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1
-    ).max(axis=1)
+    tr = pd.concat([high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1).max(
+        axis=1
+    )
     return tr.ewm(alpha=1 / 14, min_periods=14).mean()
 
 
@@ -1076,9 +1070,7 @@ def detect_patterns(
             f"Only {len(df)} usable candles — at least {min_candles} are recommended for stable detection."
         )
     if not has_volume:
-        warnings.append(
-            "No usable volume column — Volume Profile will be skipped if requested."
-        )
+        warnings.append("No usable volume column — Volume Profile will be skipped if requested.")
 
     requested_keys = list(requested) if requested else list(ALL_PATTERN_KEYS)
 
@@ -1113,9 +1105,7 @@ def detect_patterns(
     if has_volume and "volume_profile_zones" in requested_keys and len(df) >= 30:
         detections_models.extend(_detect_volume_profile_zones(df, bins=bins))
     elif "volume_profile_zones" in requested_keys and not has_volume:
-        warnings.append(
-            "Volume Profile requested but skipped: no usable volume data."
-        )
+        warnings.append("Volume Profile requested but skipped: no usable volume data.")
 
     fingerprint_payload = {
         "timeframe": timeframe,
@@ -1129,9 +1119,7 @@ def detect_patterns(
     serialised: list[dict[str, Any]] = []
     for det in detections_models:
         # Defensive: never let any text leak execution wording.
-        forbidden = _scan_text_banlist(
-            det.evidence + det.invalidation_hints + det.limitations
-        )
+        forbidden = _scan_text_banlist(det.evidence + det.invalidation_hints + det.limitations)
         if forbidden:
             # Replace problematic strings with a structured neutral fallback.
             # The fallback text MUST itself be clean — both the engine self-scan

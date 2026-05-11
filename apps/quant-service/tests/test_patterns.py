@@ -585,9 +585,7 @@ def test_change_of_character_requires_two_opposing_breaks():
 
 
 def test_order_block_candidate_carries_candidate_limitation():
-    out = _detect(
-        _trend_with_swings_fixture("bullish"), requested=["order_block_candidate"]
-    )
+    out = _detect(_trend_with_swings_fixture("bullish"), requested=["order_block_candidate"])
     detections = [d for d in out["detections"] if d["patternType"] == "order_block_candidate"]
     if detections:
         det = detections[0]
@@ -601,7 +599,8 @@ def test_smc_too_few_candles_yields_no_detections_and_warning():
     out = _detect(short_fixture, requested=["fair_value_gap", "liquidity_sweep"])
     assert out["dataQuality"]["sufficient"] is False
     assert all(
-        d["patternType"] not in (
+        d["patternType"]
+        not in (
             "fair_value_gap",
             "liquidity_sweep",
             "break_of_structure",
