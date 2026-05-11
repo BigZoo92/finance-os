@@ -1,0 +1,53 @@
+name: GHCR cleanup
+
+# Purges old GHCR container image versions to keep the package registry
+# from growing unbounded. Each release publishes 5 images × 2 tags each
+# (release tag + sha tag), so the registry grows ~10 versions per release.
+# We keep the N most recent versions of each image. Untagged dangling
+# manifests are also pruned.
+
+on:
+  schedule:
+    - cron: "0 4 * * 0" # every Sunday at 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: Number of recent versions to retain per image
+        required: false
+        default: "20"
+        type: string
+      dry_run:
+        description: Dry run (do not actually delete)
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  cleanup:
+    name: Prune old container versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - finance-os-web
+          - finance-os-api
+          - finance-os-worker
+          - finance-os-knowledge-service
+          - finance-os-quant-service
+    steps:
+      - name: Delete old versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.package }}
+          package-type: container
+          min-versions-to-keep: ${{ github.event.inputs.keep || '20' }}
+          delete-only-untagged-versions: "false"
+          dry-run: ${{ github.event.inputs.dry_run == 'true' }}

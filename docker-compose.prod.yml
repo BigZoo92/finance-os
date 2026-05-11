@@ -1,10 +1,19 @@
 name: finance-os-prod
 
+# Cap container log files so a noisy service can't fill the host disk.
+# Each service: max 3 rotated files of 10 MB = 30 MB per container.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   web:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
+    logging: *default-logging
     init: true
     read_only: true
     tmpfs:
@@ -58,6 +67,7 @@ services:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
+    logging: *default-logging
     init: true
     read_only: true
     tmpfs:
@@ -156,6 +166,7 @@ services:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
+    logging: *default-logging
     init: true
     read_only: true
     tmpfs:
@@ -213,6 +224,7 @@ services:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
+    logging: *default-logging
     init: true
     read_only: true
     tmpfs:
@@ -262,6 +274,7 @@ services:
     profiles:
       - hermes-agent
     restart: unless-stopped
+    logging: *default-logging
     init: true
     read_only: true
     tmpfs:
@@ -293,6 +306,7 @@ services:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-knowledge-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
+    logging: *default-logging
     init: true
     expose:
       - "8011"
@@ -365,6 +379,7 @@ services:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-quant-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
+    logging: *default-logging
     init: true
     expose:
       - "8012"
@@ -396,6 +411,7 @@ services:
   neo4j:
     image: neo4j:5-community
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NEO4J_AUTH: "${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-change-me}"
       NEO4J_dbms_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
@@ -425,6 +441,7 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.12.6
     restart: unless-stopped
+    logging: *default-logging
     expose:
       - "6333"
       - "6334"
@@ -443,6 +460,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-finance_os}
       POSTGRES_USER: ${POSTGRES_USER:-finance_os}
@@ -464,6 +482,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *default-logging
     command:
       [
         "redis-server",
