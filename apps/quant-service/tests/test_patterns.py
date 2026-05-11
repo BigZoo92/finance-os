@@ -13,10 +13,9 @@ expected to fire (or NOT fire) under that scenario. Hard guarantees verified:
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
-
-import pytest
 
 from finance_os_quant.engines.patterns import (
     ALL_PATTERN_KEYS,
@@ -141,9 +140,6 @@ def _volume_profile_fixture(n: int = 220, *, with_volume: bool = True) -> list[d
             candle["volume"] = volume
         candles.append(candle)
     return candles
-
-
-import re
 
 
 def _scan_for_execution_terms(payload: dict[str, Any]) -> list[str]:
@@ -455,7 +451,6 @@ def _liquidity_sweep_low_fixture() -> list[dict[str, Any]]:
     """Build a clear swing low at ~i=40, then a wick that pierces below it
     and closes back above it at ~i=60."""
     candles: list[dict[str, Any]] = []
-    price = 100.0
     swing_idx = 40
     sweep_idx = 60
     swing_low_value = 95.0
@@ -476,13 +471,11 @@ def _liquidity_sweep_low_fixture() -> list[dict[str, Any]]:
         candles.append(
             {"timestamp": _ts(i), "open": o, "high": h, "low": low, "close": c, "volume": 1000}
         )
-        price = c
     return candles
 
 
 def _liquidity_sweep_high_fixture() -> list[dict[str, Any]]:
     candles: list[dict[str, Any]] = []
-    price = 100.0
     swing_idx = 40
     sweep_idx = 60
     swing_high_value = 105.0
@@ -503,7 +496,6 @@ def _liquidity_sweep_high_fixture() -> list[dict[str, Any]]:
         candles.append(
             {"timestamp": _ts(i), "open": o, "high": h, "low": low, "close": c, "volume": 1000}
         )
-        price = c
     return candles
 
 
