@@ -39,7 +39,7 @@ const sampleRecommendation: DeterministicRecommendation = {
   type: 'rebalance',
   title: 'Cash drag',
   description: 'Cash drag detected',
-  category: 'opportunity',
+  category: 'opportunistic_idea',
   whyNow: 'Cash level above target',
   evidence: ['cashAllocationPct=26', 'targetCash=12'],
   assumptions: [],

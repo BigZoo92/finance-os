@@ -5,12 +5,11 @@
 // auth, flag-off behavior, and the sentinel sweep over the response shape.
 
 import { describe, expect, it } from 'bun:test'
-import { buildAdvisorV2Preview } from './build-committee-preview'
+import { buildAdvisorV2Preview, type AdvisorV2PreviewInputs } from './build-committee-preview'
 import {
   ADVISOR_V2_COMMITTEE_ROLES,
   ADVISOR_V2_FORBIDDEN_ROLES,
   ADVISOR_V2_INVARIANTS,
-  type AdvisorV2PreviewInputs,
 } from './committee-types'
 
 const FIXED_NOW = new Date('2026-05-10T12:00:00.000Z')

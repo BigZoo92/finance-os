@@ -113,11 +113,11 @@ describe('GET /dashboard/data-quality', () => {
   })
 
   it('returns admin shape when caller is admin and use-case is wired', async () => {
-    let receivedMode: 'demo' | 'admin' | null = null
+    const received: { mode: 'demo' | 'admin' | null } = { mode: null }
     const useCase: NonNullable<DashboardRouteRuntime['useCases']['getDataQuality']> = async ({
       mode,
     }) => {
-      receivedMode = mode
+      received.mode = mode
       return {
         generatedAt: '2026-05-09T12:00:00.000Z',
         mode: 'admin',
@@ -152,17 +152,17 @@ describe('GET /dashboard/data-quality', () => {
     expect(response.status).toBe(200)
     const payload = (await response.json()) as DataQualityResponse
     expect(payload.mode).toBe('admin')
-    expect(receivedMode).toBe('admin')
+    expect(received.mode).toBe('admin')
     expect(payload.dimensions.length).toBe(1)
     expectNoSensitiveLeakage(JSON.stringify(payload))
   })
 
   it('treats valid internal token as admin even without admin auth mode', async () => {
-    let receivedMode: 'demo' | 'admin' | null = null
+    const received: { mode: 'demo' | 'admin' | null } = { mode: null }
     const useCase: NonNullable<DashboardRouteRuntime['useCases']['getDataQuality']> = async ({
       mode,
     }) => {
-      receivedMode = mode
+      received.mode = mode
       return {
         generatedAt: '2026-05-09T12:00:00.000Z',
         mode: 'admin',
@@ -187,7 +187,7 @@ describe('GET /dashboard/data-quality', () => {
     })
     const response = await app.handle(new Request('http://finance-os.local/data-quality'))
     expect(response.status).toBe(200)
-    expect(receivedMode).toBe('admin')
+    expect(received.mode).toBe('admin')
   })
 
   it('returns 503 when the data-quality use case is not wired', async () => {

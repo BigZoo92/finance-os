@@ -79,7 +79,11 @@ const buildTrendsRuntime = ({
   return {
     repositories: {} as unknown as DashboardRouteRuntime['repositories'],
     useCases: {
-      getAdvisorEvalsTrends: async input => {
+      getAdvisorEvalsTrends: async (input: {
+        mode: 'demo' | 'admin'
+        requestId: string
+        windowDays?: number | null
+      }) => {
         callsRef.count += 1
         callsRef.lastInput = {
           mode: input.mode,

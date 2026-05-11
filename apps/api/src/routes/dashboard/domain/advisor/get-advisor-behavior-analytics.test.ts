@@ -18,7 +18,6 @@ const NOW = new Date('2026-05-09T09:00:00.000Z')
 const buildDecision = (
   overrides: Partial<BehaviorAnalyticsDecision> & { id: number }
 ): BehaviorAnalyticsDecision => ({
-  id: overrides.id,
   decision: 'accepted',
   reasonCode: 'accepted',
   decidedAt: '2026-05-01T08:00:00.000Z',

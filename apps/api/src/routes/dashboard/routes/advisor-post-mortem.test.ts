@@ -25,9 +25,9 @@ interface PostMortemCalls {
   provider: number
   knowledge: number
   graph: number
-  lastListLimit?: number
-  lastGetByIdInput?: number
-  lastRunTriggerSource?: string
+  lastListLimit?: number | undefined
+  lastGetByIdInput?: number | undefined
+  lastRunTriggerSource?: string | undefined
 }
 
 type RunStubKind =
@@ -309,7 +309,7 @@ describe('createAdvisorRoute · post-mortem', () => {
     // The use-case throws when `mode === 'demo'`. The route MUST NOT forward 'demo' to the
     // use-case when an internal-token is presented; it elevates to 'admin'. This test would
     // have surfaced as a 500 in PR4-fix-1 — PR7 makes it a clean 200.
-    let observedMode: 'admin' | 'demo' | null = null
+    const observed: { mode: 'admin' | 'demo' | null } = { mode: null }
     const runtime = createPostMortemRuntime({
       runStub: { kind: 'completed' },
     })
@@ -317,7 +317,7 @@ describe('createAdvisorRoute · post-mortem', () => {
     ;(runtime.useCases as { runAdvisorPostMortem?: unknown }).runAdvisorPostMortem = async (
       input: { mode: 'admin' | 'demo' }
     ) => {
-      observedMode = input.mode
+      observed.mode = input.mode
       return {
         status: 'completed',
         feature: 'post_mortem',
@@ -347,7 +347,7 @@ describe('createAdvisorRoute · post-mortem', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(observedMode).toBe('admin')
+    expect(observed.mode).toBe('admin')
   })
 
   it('POST /advisor/post-mortem/run is forbidden in demo mode and never invokes the use-case', async () => {

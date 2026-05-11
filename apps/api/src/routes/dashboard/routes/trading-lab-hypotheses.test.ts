@@ -175,9 +175,7 @@ const DEMO_HYPOTHESES = [
   },
 ] as const
 
-const buildHypothesisRoutes = (
-  hypotheses: ReturnType<typeof createHypothesisUseCases>
-): Elysia => {
+const buildHypothesisRoutes = (hypotheses: ReturnType<typeof createHypothesisUseCases>) => {
   // Mirrors the demoOrReal pattern used by the real trading-lab route block. We re-implement
   // it inline here to keep the test free of upstream DB imports.
   return (

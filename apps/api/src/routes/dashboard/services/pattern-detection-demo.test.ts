@@ -68,7 +68,7 @@ describe('buildDemoPatternDetectionResponse', () => {
     if (!fvg) throw new Error('expected FVG detection')
     expect(fvg.patternType).toBe('fair_value_gap')
     expect(fvg.direction).toBe('bullish')
-    expect(['low', 'medium']).toContain(fvg.confidence) // SMC cap
+    expect(['low', 'medium']).toContain(fvg.confidence as string) // SMC cap
     const metrics = fvg.metrics as { gapLow: number; gapHigh: number; mitigated: boolean }
     expect(metrics.gapHigh).toBeGreaterThan(metrics.gapLow)
     expect(metrics.mitigated).toBe(false)
@@ -110,7 +110,7 @@ describe('buildDemoPatternDetectionResponse', () => {
     const out = buildDemoPatternDetectionResponse(baseBody)
     for (const det of out.detections) {
       expect(typeof det.id).toBe('string')
-      expect(['low', 'medium', 'high']).toContain(det.confidence)
+      expect(['low', 'medium', 'high']).toContain(det.confidence as string)
       expect(Array.isArray(det.evidence)).toBe(true)
       expect((det.evidence as unknown[]).length).toBeGreaterThan(0)
       expect(Array.isArray(det.invalidationHints)).toBe(true)
