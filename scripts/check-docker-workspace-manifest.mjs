@@ -16,6 +16,8 @@ const workspacePackagePaths = [
   'packages/finance-engine',
   'packages/powens',
   'packages/prelude',
+  'packages/provider-contract',
+  'packages/provider-runtime',
   'packages/redis',
   'packages/ui',
 ]

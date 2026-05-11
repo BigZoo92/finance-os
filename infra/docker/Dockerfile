@@ -26,6 +26,8 @@ COPY packages/external-investments/package.json packages/external-investments/pa
 COPY packages/finance-engine/package.json packages/finance-engine/package.json
 COPY packages/powens/package.json packages/powens/package.json
 COPY packages/prelude/package.json packages/prelude/package.json
+COPY packages/provider-contract/package.json packages/provider-contract/package.json
+COPY packages/provider-runtime/package.json packages/provider-runtime/package.json
 COPY packages/redis/package.json packages/redis/package.json
 COPY packages/ui/package.json packages/ui/package.json
 
@@ -65,6 +67,8 @@ COPY packages/external-investments packages/external-investments
 COPY packages/finance-engine packages/finance-engine
 COPY packages/powens packages/powens
 COPY packages/prelude packages/prelude
+COPY packages/provider-contract packages/provider-contract
+COPY packages/provider-runtime packages/provider-runtime
 COPY packages/redis packages/redis
 COPY infra/docker infra/docker
 
@@ -92,6 +96,8 @@ COPY --from=bundle-api --chown=app:app /app/packages/external-investments ./pack
 COPY --from=bundle-api --chown=app:app /app/packages/finance-engine ./packages/finance-engine
 COPY --from=bundle-api --chown=app:app /app/packages/powens ./packages/powens
 COPY --from=bundle-api --chown=app:app /app/packages/prelude ./packages/prelude
+COPY --from=bundle-api --chown=app:app /app/packages/provider-contract ./packages/provider-contract
+COPY --from=bundle-api --chown=app:app /app/packages/provider-runtime ./packages/provider-runtime
 COPY --from=bundle-api --chown=app:app /app/packages/redis ./packages/redis
 COPY --from=bundle-api --chown=app:app /app/infra/docker ./infra/docker
 RUN chmod +x ./infra/docker/entrypoints/api-entrypoint.sh
