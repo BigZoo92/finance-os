@@ -6,8 +6,7 @@ services:
     pull_policy: always
     restart: unless-stopped
     init: true
-    # TODO:: mettre à true quand le debug sera fini CODEX NE MODIFIE PAS CETTE LIGNE
-    # read_only: true
+    read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=64m
     cap_drop:
@@ -273,7 +272,7 @@ services:
       [
         "sh",
         "-lc",
-        "if [ -z \"$API_SERVER_KEY\" ]; then echo 'hermes-agent requires HERMES_AGENT_API_KEY' >&2; exit 1; fi; exec hermes api-server --host \"$API_SERVER_HOST\" --port \"$API_SERVER_PORT\" --api-key \"$API_SERVER_KEY\"",
+        'if [ -z "$API_SERVER_KEY" ]; then echo ''hermes-agent requires HERMES_AGENT_API_KEY'' >&2; exit 1; fi; exec hermes api-server --host "$API_SERVER_HOST" --port "$API_SERVER_PORT" --api-key "$API_SERVER_KEY"',
       ]
     depends_on:
       api:
@@ -343,7 +342,11 @@ services:
     volumes:
       - knowledge_graph_data:/data/knowledge-graph
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8011/health', timeout=3).read()\""]
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8011/health'', timeout=3).read()"',
+        ]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -368,7 +371,11 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 20
