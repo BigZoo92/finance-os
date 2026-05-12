@@ -179,6 +179,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       REDIS_URL: ${REDIS_URL:-}
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://finance-os-api:3001}
+      PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
       WORKER_HEARTBEAT_MS: ${WORKER_HEARTBEAT_MS:-30000}
       WORKER_HEALTHCHECK_FILE: /var/run/finance-os/worker-heartbeat
       WORKER_HEALTHCHECK_MAX_AGE_MS: ${WORKER_HEALTHCHECK_MAX_AGE_MS:-120000}
@@ -195,6 +196,46 @@ services:
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
+      # --- Scheduler & advisor feature flags --------------------------------
+      # Listed explicitly so Dokploy values reach the container env. Variables
+      # that are missing here are NEVER propagated by docker compose, even if
+      # Dokploy sets them in the UI, which silently leaves the worker on the
+      # zod schema defaults (mostly `false`) and produces logs like:
+      #   "worker post-mortem scheduler disabled
+      #    reason AI_POST_MORTEM_AUTO_RUN_ENABLED=false".
+      # Defaults below mirror the env package fallbacks so behaviour is
+      # unchanged when Dokploy is silent.
+      EXTERNAL_INTEGRATIONS_SAFE_MODE: ${EXTERNAL_INTEGRATIONS_SAFE_MODE:-false}
+      AI_POST_MORTEM_AUTO_RUN_ENABLED: ${AI_POST_MORTEM_AUTO_RUN_ENABLED:-false}
+      AI_POST_MORTEM_ENABLED: ${AI_POST_MORTEM_ENABLED:-false}
+      AI_POST_MORTEM_CRON: ${AI_POST_MORTEM_CRON:-0 7 * * *}
+      AI_POST_MORTEM_TIMEZONE: ${AI_POST_MORTEM_TIMEZONE:-Europe/Paris}
+      AI_DAILY_AUTO_RUN_ENABLED: ${AI_DAILY_AUTO_RUN_ENABLED:-false}
+      AI_DAILY_INTERVAL_MS: ${AI_DAILY_INTERVAL_MS:-900000}
+      DAILY_INTELLIGENCE_ENABLED: ${DAILY_INTELLIGENCE_ENABLED:-false}
+      DAILY_INTELLIGENCE_CRON: ${DAILY_INTELLIGENCE_CRON:-0 9 * * 1-5}
+      DAILY_INTELLIGENCE_TIMEZONE: ${DAILY_INTELLIGENCE_TIMEZONE:-Europe/Paris}
+      NEWS_AUTO_INGEST_ENABLED: ${NEWS_AUTO_INGEST_ENABLED:-true}
+      NEWS_FETCH_INTERVAL_MS: ${NEWS_FETCH_INTERVAL_MS:-14400000}
+      MARKET_DATA_AUTO_REFRESH_ENABLED: ${MARKET_DATA_AUTO_REFRESH_ENABLED:-false}
+      MARKET_DATA_REFRESH_INTERVAL_MS: ${MARKET_DATA_REFRESH_INTERVAL_MS:-21600000}
+      MARKET_DATA_REFRESH_COOLDOWN_SECONDS: ${MARKET_DATA_REFRESH_COOLDOWN_SECONDS:-900}
+      SIGNALS_SOCIAL_POLLING_ENABLED: ${SIGNALS_SOCIAL_POLLING_ENABLED:-false}
+      SIGNALS_SOCIAL_POLLING_INTERVAL_MS: ${SIGNALS_SOCIAL_POLLING_INTERVAL_MS:-3600000}
+      ATTENTION_SYSTEM_ENABLED: ${ATTENTION_SYSTEM_ENABLED:-true}
+      ATTENTION_REBUILD_AUTO_ENABLED: ${ATTENTION_REBUILD_AUTO_ENABLED:-false}
+      ATTENTION_REBUILD_INTERVAL_MS: ${ATTENTION_REBUILD_INTERVAL_MS:-600000}
+      AI_ADVISOR_ENABLED: ${AI_ADVISOR_ENABLED:-true}
+      AI_ADVISOR_FORCE_LOCAL_ONLY: ${AI_ADVISOR_FORCE_LOCAL_ONLY:-false}
+      AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED: ${AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED:-true}
+      ADVISOR_X_SIGNALS_MODE: ${ADVISOR_X_SIGNALS_MODE:-shadow}
+      # Visibility-only: these flags are consumed by the API, not the worker
+      # zod schema. Propagating them here keeps `docker exec ... env` parity
+      # with Dokploy so ops can diff intent vs container state in one place.
+      ADVISOR_GRAPH_INGEST_ENABLED: ${ADVISOR_GRAPH_INGEST_ENABLED:-true}
+      TRADING_LAB_GRAPH_INGEST_ENABLED: ${TRADING_LAB_GRAPH_INGEST_ENABLED:-true}
+      NEWS_PROVIDER_X_TWITTER_ENABLED: ${NEWS_PROVIDER_X_TWITTER_ENABLED:-false}
+      NEWS_PROVIDER_X_TWITTER_QUERY: ${NEWS_PROVIDER_X_TWITTER_QUERY:-}
     depends_on:
       postgres:
         condition: service_healthy

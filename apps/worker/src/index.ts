@@ -69,6 +69,7 @@ import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
 import { detectSyncIntegrityIssues } from './sync-integrity-checks'
 import { detectTransactionGaps } from './transaction-gap-detection'
 import { createExternalInvestmentsSyncWorker } from './external-investments-sync'
+import { buildWorkerFeatureFlagsAudit } from './feature-flags-audit'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -1659,6 +1660,11 @@ const start = async () => {
     healthcheckFile: WORKER_HEALTHCHECK_FILE,
     externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
     autoSchedulerEnabled: env.WORKER_AUTO_SYNC_ENABLED,
+  })
+  logWorkerEvent({
+    level: 'info',
+    msg: 'worker feature flags audit',
+    featureFlags: buildWorkerFeatureFlagsAudit(env),
   })
   await updateHeartbeatFile()
 
