@@ -56,6 +56,7 @@ Providers actuellement cables dans `apps/api/src/routes/dashboard/runtime.ts` :
   - branche dans le runtime mais **desactive par defaut**
   - la foundation actuelle se limite a la recherche recente (`/2/tweets/search/recent`) avec query configurable
   - tant que `NEWS_PROVIDER_X_TWITTER_ENABLED=false` ou que le bearer token est absent, le provider n'ingere aucun item
+  - le polling recurrent demande aussi `SIGNALS_SOCIAL_POLLING_ENABLED=true` sur l'API et le Worker: l'API rend les jobs sociaux visibles, le Worker appelle l'ingestion via `API_INTERNAL_URL`
   - API officielle pay-per-use uniquement, pas de scraping
 - `bluesky`
   - provider Bluesky/ATProto ajoute en Prompt 4

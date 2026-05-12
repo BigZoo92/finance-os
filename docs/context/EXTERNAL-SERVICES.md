@@ -128,14 +128,16 @@ Endpoints utilises:
 
 | Methode | Endpoint | Usage |
 |---|---|---|
-| `GET` | `FlexStatementService.SendRequest` | Genere une requete de rapport pour un Flex Query ID configure |
-| `GET` | `FlexStatementService.GetStatement` | Recupere le statement XML via reference code |
+| `GET` | `/AccountManagement/FlexWebService/SendRequest` | Genere une requete de rapport pour un Flex Query ID configure |
+| `GET` | `/AccountManagement/FlexWebService/GetStatement` | Recupere le statement XML via reference code |
 
 Regles:
 
 - reporting uniquement, pas de Client Portal trading
 - User-Agent explicite
 - XML parse avec attributs conserves
+- le client conserve la compatibilite legacy `/Universal/servlet/FlexStatementService.*` si cette base URL est configuree explicitement
+- `GetStatement` retente les reponses temporaires de generation en cours avant de marquer le sync degrade
 - erreurs provider normalisees en codes safe
 
 ### Binance Spot / Wallet read-only
@@ -160,6 +162,8 @@ Endpoints allowlist:
 | `GET` | `/sapi/v1/capital/deposit/hisrec` | Historique depots |
 | `GET` | `/sapi/v1/capital/withdraw/history` | Historique retraits lu comme fait historique |
 | `GET` | `/sapi/v1/capital/config/getall` | Metadata coins/reseaux |
+
+`/api/v3/exchangeInfo` et `/api/v3/time` sont appeles en public unsigned; les endpoints USER_DATA restent signes cote worker.
 
 Interdits explicitement:
 
@@ -447,6 +451,7 @@ Le domaine marches suit le meme principe que news:
 
 - Les comptes a surveiller sont persistes dans `signal_source` (PostgreSQL)
 - Deux groupes: Finance et IA/Tech
+- Le polling recurrent s'active avec `SIGNALS_SOCIAL_POLLING_ENABLED=true` sur l'API et le Worker. L'API expose les jobs sociaux dans `/ops/refresh`, le Worker declenche `POST /dashboard/news/ingest`.
 - Chaque signal passe par la normalisation, le scoring et la deduplication existants
 - Les signaux sociaux ne sont jamais la base unique d'un conseil financier
 - L'injection dans le Knowledge Graph cree des noeuds `SocialSignal`

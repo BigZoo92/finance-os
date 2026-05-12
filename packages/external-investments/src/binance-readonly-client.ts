@@ -126,6 +126,55 @@ export const createBinanceReadonlyClient = ({
   now = () => Date.now(),
   fetchImpl = fetch,
 }: BinanceReadonlyClientConfig) => {
+  const publicGet = async <TResponse>(path: string, params: BinanceRequestParams = {}) => {
+    assertBinanceReadonlyEndpoint({ method: 'GET', path })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    const queryString = toQueryString(params)
+    const url = `${baseUrl.replace(/\/+$/, '')}${path}${queryString ? `?${queryString}` : ''}`
+
+    try {
+      const response = await fetchImpl(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const retryable = response.status === 418 || response.status === 429 || response.status >= 500
+        throw new ExternalInvestmentProviderError({
+          provider: 'binance',
+          code:
+            response.status === 401 || response.status === 403
+              ? 'PROVIDER_CREDENTIALS_INVALID'
+              : response.status === 418 || response.status === 429
+                ? 'PROVIDER_RATE_LIMITED'
+                : 'PROVIDER_SCHEMA_CHANGED',
+          message: `Binance read-only endpoint failed with HTTP ${response.status}.`,
+          retryable,
+          statusCode: response.status,
+        })
+      }
+
+      return (await response.json()) as TResponse
+    } catch (error) {
+      if (error instanceof ExternalInvestmentProviderError) {
+        throw error
+      }
+      throw new ExternalInvestmentProviderError({
+        provider: 'binance',
+        code: error instanceof Error && error.name === 'AbortError' ? 'PROVIDER_TIMEOUT' : 'PROVIDER_SCHEMA_CHANGED',
+        message: error instanceof Error ? error.message : String(error),
+        retryable: true,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
   const signedGet = async <TResponse>(path: string, params: BinanceRequestParams = {}) => {
     assertBinanceReadonlyEndpoint({ method: 'GET', path })
 
@@ -193,7 +242,7 @@ export const createBinanceReadonlyClient = ({
       signedGet<BinanceCashFlow[]>('/sapi/v1/capital/withdraw/history', params),
     getAllCoinsInfo: () => signedGet<BinanceCoinInfo[]>('/sapi/v1/capital/config/getall'),
     getExchangeInfo: (params: { symbol?: string; symbols?: string } = {}) =>
-      signedGet<Record<string, unknown>>('/api/v3/exchangeInfo', params),
-    getServerTime: () => signedGet<{ serverTime: number }>('/api/v3/time'),
+      publicGet<Record<string, unknown>>('/api/v3/exchangeInfo', params),
+    getServerTime: () => publicGet<{ serverTime: number }>('/api/v3/time'),
   }
 }

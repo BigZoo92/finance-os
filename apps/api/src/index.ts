@@ -314,6 +314,7 @@ const registerAppRoutes = (app: Elysia) => {
         newsProviderXTwitterEnabled: env.NEWS_PROVIDER_X_TWITTER_ENABLED,
         newsProviderXTwitterQuery: env.NEWS_PROVIDER_X_TWITTER_QUERY,
         newsProviderXTwitterBearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN,
+        signalsSocialPollingEnabled: env.SIGNALS_SOCIAL_POLLING_ENABLED,
         marketDataEnabled: env.MARKET_DATA_ENABLED,
         marketDataRefreshEnabled: env.MARKET_DATA_REFRESH_ENABLED,
         marketDataForceFixtureFallback: env.MARKET_DATA_FORCE_FIXTURE_FALLBACK,

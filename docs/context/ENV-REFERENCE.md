@@ -150,7 +150,7 @@ Ces variables sont des reglages applicatifs serveur. Les credentials IBKR/Binanc
 | `EXTERNAL_INVESTMENTS_SYNC_COOLDOWN_SECONDS` | `300` | Dokploy, Local | API | Cooldown des syncs manuelles IBKR/Binance |
 | `EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES` | `1440` | Dokploy, Local | API, Worker | Seuil de fraicheur pour health, UI et Advisor bundle |
 | `IBKR_FLEX_ENABLED` | `true` | Dokploy, Local | API, Worker | Active le provider IBKR Flex Web Service |
-| `IBKR_FLEX_BASE_URL` | `https://ndcdyn.interactivebrokers.com` | Dokploy, Local | API, Worker | Base URL Flex par defaut; surcharge possible par credential admin |
+| `IBKR_FLEX_BASE_URL` | `https://ndcdyn.interactivebrokers.com` | Dokploy, Local | API, Worker | Base URL Flex par defaut; le client ajoute `/AccountManagement/FlexWebService`; surcharge possible par credential admin |
 | `IBKR_FLEX_USER_AGENT` | `Finance-OS External Investments/1.0` | Dokploy, Local | API, Worker | User-Agent requis pour les appels Flex |
 | `IBKR_FLEX_TIMEOUT_MS` | `30000` | Dokploy, Local | Worker | Timeout des appels Flex |
 | `BINANCE_SPOT_ENABLED` | `true` | Dokploy, Local | API, Worker | Active le provider Binance Spot/Wallet read-only |
@@ -275,7 +275,10 @@ Notes:
 Notes:
 
 - Le polling social est desactive par defaut. Il necessite au moins un provider social configure (X ou Bluesky).
-- L'import manuel est toujours disponible en mode admin, meme sans provider social.
+- `SIGNALS_SOCIAL_POLLING_ENABLED` doit etre defini sur l'API et sur le Worker: l'API expose l'etat des jobs ops, le Worker lance le scheduler recurrent.
+- `NEWS_PROVIDER_X_TWITTER_*` est lu par l'API uniquement; le Worker declenche `POST /dashboard/news/ingest` via `API_INTERNAL_URL`.
+- Si `PRIVATE_ACCESS_TOKEN` protege les appels internes, la meme valeur doit etre disponible cote API et Worker pour que le scheduler social puisse appeler l'ingestion.
+- `SIGNALS_MANUAL_IMPORT_ENABLED` ne lance aucun polling; il ne controle que l'import manuel admin.
 
 ---
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import {
   assertBinanceReadonlyEndpoint,
+  createBinanceReadonlyClient,
   signBinanceUserDataParams,
 } from './binance-readonly-client'
 import {
@@ -8,7 +9,7 @@ import {
   encryptExternalInvestmentCredential,
   maskExternalInvestmentCredential,
 } from './credentials'
-import { parseIbkrFlexXml } from './ibkr-flex-client'
+import { createIbkrFlexClient, parseIbkrFlexXml } from './ibkr-flex-client'
 import { normalizeBinanceSnapshot, normalizeIbkrFlexStatement } from './normalizer'
 import { buildExternalInvestmentContextBundle } from './context-bundle'
 
@@ -48,6 +49,26 @@ describe('Binance read-only client guards', () => {
         path: '/sapi/v1/capital/withdraw/apply',
       })
     ).toThrow(/non-allowlisted/)
+  })
+
+  it('fetches public Binance metadata without signing the query string', async () => {
+    const urls: string[] = []
+    const client = createBinanceReadonlyClient({
+      apiKey: 'binance-key',
+      apiSecret: 'binance-secret',
+      recvWindowMs: 5000,
+      timeoutMs: 1000,
+      fetchImpl: async input => {
+        urls.push(String(input))
+        return Response.json({ symbols: [] })
+      },
+    })
+
+    await client.getExchangeInfo({ symbols: '["BTCEUR"]' })
+
+    expect(urls[0]).toContain('/api/v3/exchangeInfo?symbols=%5B%22BTCEUR%22%5D')
+    expect(urls[0]).not.toContain('signature=')
+    expect(urls[0]).not.toContain('timestamp=')
   })
 })
 
@@ -125,6 +146,127 @@ describe('IBKR Flex XML parsing', () => {
       `)
     ).toThrow(/IBKR Flex error/)
   })
+
+  it('uses the current AccountManagement Flex Web Service endpoints by default', async () => {
+    const urls: string[] = []
+    const fetchImpl: typeof fetch = async input => {
+      urls.push(String(input))
+      if (urls.length === 1) {
+        return new Response(`
+          <FlexStatementResponse>
+            <Status>Success</Status>
+            <ReferenceCode>REF123</ReferenceCode>
+          </FlexStatementResponse>
+        `)
+      }
+
+      return new Response(`
+        <FlexQueryResponse>
+          <FlexStatements>
+            <FlexStatement accountId="U123">
+              <OpenPositions />
+            </FlexStatement>
+          </FlexStatements>
+        </FlexQueryResponse>
+      `)
+    }
+
+    const client = createIbkrFlexClient({
+      token: 'token',
+      userAgent: 'finance-os-test',
+      timeoutMs: 1000,
+      fetchImpl,
+    })
+
+    await client.runQuery('800969')
+
+    expect(urls[0]).toContain(
+      'https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/SendRequest'
+    )
+    expect(urls[0]).toContain('q=800969')
+    expect(urls[1]).toContain(
+      'https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService/GetStatement'
+    )
+    expect(urls[1]).toContain('q=REF123')
+  })
+
+  it('retries GetStatement while IBKR is still generating the report', async () => {
+    const urls: string[] = []
+    const fetchImpl: typeof fetch = async input => {
+      urls.push(String(input))
+      if (urls.length === 1) {
+        return new Response(`
+          <FlexStatementResponse>
+            <Status>Success</Status>
+            <ReferenceCode>REF123</ReferenceCode>
+          </FlexStatementResponse>
+        `)
+      }
+
+      if (urls.length === 2) {
+        return new Response(`
+          <FlexStatementResponse>
+            <Status>Fail</Status>
+            <ErrorCode>1019</ErrorCode>
+            <ErrorMessage>Statement generation in progress. Please try again shortly.</ErrorMessage>
+          </FlexStatementResponse>
+        `)
+      }
+
+      return new Response(`
+        <FlexQueryResponse>
+          <FlexStatements>
+            <FlexStatement accountId="U123" />
+          </FlexStatements>
+        </FlexQueryResponse>
+      `)
+    }
+
+    const client = createIbkrFlexClient({
+      token: 'token',
+      userAgent: 'finance-os-test',
+      timeoutMs: 1000,
+      statementMaxAttempts: 2,
+      statementRetryDelayMs: 0,
+      fetchImpl,
+    })
+
+    const statement = await client.runQuery('800969')
+
+    expect(statement).toEqual({ FlexStatement: { accountId: 'U123' } })
+    expect(urls).toHaveLength(3)
+    expect(urls[1]).toContain('/GetStatement')
+    expect(urls[2]).toContain('/GetStatement')
+  })
+
+  it('preserves legacy Universal servlet endpoint compatibility', async () => {
+    const urls: string[] = []
+    const fetchImpl: typeof fetch = async input => {
+      urls.push(String(input))
+      return new Response(
+        urls.length === 1
+          ? '<FlexStatementResponse><ReferenceCode>REF123</ReferenceCode></FlexStatementResponse>'
+          : '<FlexQueryResponse><FlexStatements><FlexStatement accountId="U123" /></FlexStatements></FlexQueryResponse>'
+      )
+    }
+
+    const client = createIbkrFlexClient({
+      token: 'token',
+      baseUrl: 'https://gdcdyn.interactivebrokers.com/Universal/servlet',
+      userAgent: 'finance-os-test',
+      timeoutMs: 1000,
+      fetchImpl,
+    })
+
+    await client.runQuery('800969')
+
+    expect(urls[0]).toContain(
+      'https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest'
+    )
+    expect(urls[1]).toContain(
+      'https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.GetStatement'
+    )
+  })
 })
 
 describe('provider normalization', () => {
@@ -137,6 +279,7 @@ describe('provider normalization', () => {
         accountType: 'SPOT',
         balances: [
           { asset: 'BTC', free: '0.1', locked: '0.0' },
+          { asset: 'EUR', free: '125.5', locked: '0' },
           { asset: 'USDT', free: '500', locked: '0' },
           { asset: 'ETH', free: '0', locked: '0' },
         ],
@@ -175,9 +318,15 @@ describe('provider normalization', () => {
       coins: [{ coin: 'BTC', name: 'Bitcoin' }],
     })
 
-    expect(snapshot.positions).toHaveLength(2)
+    expect(snapshot.positions).toHaveLength(3)
     expect(snapshot.positions.find(position => position.symbol === 'BTC')?.valueSource).toBe(
       'unknown'
+    )
+    expect(snapshot.positions.find(position => position.symbol === 'EUR')?.normalizedValue).toBe(
+      '125.5'
+    )
+    expect(snapshot.positions.find(position => position.symbol === 'EUR')?.costBasis).toBe(
+      '125.5'
     )
     expect(snapshot.positions.find(position => position.symbol === 'USDT')?.assetClass).toBe(
       'stablecoin'
@@ -211,9 +360,9 @@ describe('provider normalization', () => {
               assetCategory: 'ETF',
               currency: 'EUR',
               position: '3',
-              marketValue: '1200',
+              positionValue: '1200',
               costBasisMoney: '1000',
-              fifoPnlUnrealized: '200',
+              unrealizedPL: '200',
             },
           },
           Trades: {
@@ -249,6 +398,7 @@ describe('provider normalization', () => {
     expect(snapshot.accounts[0]?.accountExternalId).toBe('U123')
     expect(snapshot.positions[0]?.assetClass).toBe('etf')
     expect(snapshot.positions[0]?.normalizedValue).toBe('1200')
+    expect(snapshot.positions[0]?.unrealizedPnl).toBe('200')
     expect(snapshot.trades[0]?.side).toBe('buy')
     expect(snapshot.cashFlows[0]?.type).toBe('dividend')
   })
@@ -306,6 +456,27 @@ describe('investment context bundle', () => {
           connectionId: 'binance:spot',
           accountExternalId: 'binance:spot',
           accountAlias: 'Binance',
+          positionKey: 'binance-eur',
+          name: 'EUR',
+          symbol: 'EUR',
+          assetClass: 'cash',
+          currency: 'EUR',
+          quantity: 125.5,
+          value: 125.5,
+          valueCurrency: 'EUR',
+          valueSource: 'provider_reported',
+          valueAsOf: GENERATED_AT,
+          costBasis: 125.5,
+          costBasisSource: 'provider',
+          unrealizedPnl: null,
+          degradedReasons: [],
+          assumptions: ['EUR cash balance is valued at its nominal amount.'],
+        },
+        {
+          provider: 'binance',
+          connectionId: 'binance:spot',
+          accountExternalId: 'binance:spot',
+          accountAlias: 'Binance',
           positionKey: 'binance-btc',
           name: 'Bitcoin',
           symbol: 'BTC',
@@ -327,10 +498,12 @@ describe('investment context bundle', () => {
       recentCashFlows: [{ provider: 'binance', type: 'deposit' }],
     })
 
-    expect(bundle.totalKnownValue).toBe(1200)
+    expect(bundle.totalKnownValue).toBe(1325.5)
     expect(bundle.unknownValuePositionCount).toBe(1)
     expect(bundle.missingMarketDataWarnings).toContain('binance:BTC')
+    expect(bundle.missingMarketDataWarnings).not.toContain('binance:EUR')
     expect(bundle.unknownCostBasisWarnings).toContain('binance:BTC')
+    expect(bundle.unknownCostBasisWarnings).not.toContain('binance:EUR')
     expect(bundle.riskFlags).toContain('unknown_external_investment_value')
     expect(bundle.confidence).toBe('medium')
   })

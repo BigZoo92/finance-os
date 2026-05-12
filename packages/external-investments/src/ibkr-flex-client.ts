@@ -1,7 +1,11 @@
 import { XMLParser } from 'fast-xml-parser'
 import { ExternalInvestmentProviderError } from './errors'
 
-const DEFAULT_IBKR_FLEX_BASE_URL = 'https://gdcdyn.interactivebrokers.com/Universal/servlet'
+const DEFAULT_IBKR_FLEX_BASE_URL = 'https://ndcdyn.interactivebrokers.com'
+const CURRENT_IBKR_FLEX_PATH = '/AccountManagement/FlexWebService'
+const LEGACY_IBKR_FLEX_PATH = '/Universal/servlet'
+const DEFAULT_GET_STATEMENT_MAX_ATTEMPTS = 4
+const DEFAULT_GET_STATEMENT_RETRY_DELAY_MS = 5_000
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -13,6 +17,19 @@ const parser = new XMLParser({
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const toIbkrProviderErrorCode = (errorCode: string, errorMessage: string | null) => {
+  const signature = `${errorCode} ${errorMessage ?? ''}`
+  if (/invalid|token|query|inactive|ip restriction/i.test(signature)) {
+    return 'PROVIDER_CREDENTIALS_INVALID'
+  }
+  if (/temporar|try|progress|later|not ready|incomplete|heavy load/i.test(signature)) {
+    return 'PROVIDER_PARTIAL_DATA'
+  }
+  return 'PROVIDER_SCHEMA_CHANGED'
+}
 
 const findNestedString = (value: unknown, keys: string[]): string | null => {
   const queue: unknown[] = [value]
@@ -53,11 +70,11 @@ export const parseIbkrFlexXml = (xml: string): IbkrFlexParsedResponse => {
   if (errorCode && errorCode !== '0') {
     throw new ExternalInvestmentProviderError({
       provider: 'ibkr',
-      code: /invalid|token|query/i.test(`${errorCode} ${errorMessage ?? ''}`)
-        ? 'PROVIDER_CREDENTIALS_INVALID'
-        : 'PROVIDER_SCHEMA_CHANGED',
+      code: toIbkrProviderErrorCode(errorCode, errorMessage),
       message: `IBKR Flex error ${errorCode}: ${errorMessage ?? 'Provider error'}`,
-      retryable: /temporar|try|progress|later/i.test(errorMessage ?? ''),
+      retryable: /temporar|try|progress|later|not ready|incomplete|heavy load/i.test(
+        errorMessage ?? ''
+      ),
     })
   }
 
@@ -84,7 +101,26 @@ export type IbkrFlexClientConfig = {
   baseUrl?: string
   userAgent: string
   timeoutMs: number
+  statementMaxAttempts?: number
+  statementRetryDelayMs?: number
   fetchImpl?: typeof fetch
+}
+
+type IbkrFlexEndpoint = 'SendRequest' | 'GetStatement'
+
+const resolveIbkrEndpointPath = (baseUrl: string, endpoint: IbkrFlexEndpoint) => {
+  const url = new URL(baseUrl)
+  const normalizedPath = url.pathname.replace(/\/+$/, '')
+
+  if (normalizedPath.endsWith(LEGACY_IBKR_FLEX_PATH)) {
+    return `${normalizedPath}/FlexStatementService.${endpoint}`
+  }
+
+  if (normalizedPath.endsWith(CURRENT_IBKR_FLEX_PATH)) {
+    return `${normalizedPath}/${endpoint}`
+  }
+
+  return `${normalizedPath === '/' ? '' : normalizedPath}${CURRENT_IBKR_FLEX_PATH}/${endpoint}`
 }
 
 const buildIbkrUrl = ({
@@ -93,14 +129,17 @@ const buildIbkrUrl = ({
   params,
 }: {
   baseUrl: string
-  endpoint: string
+  endpoint: IbkrFlexEndpoint
   params: Record<string, string>
 }) => {
-  const url = new URL(`${baseUrl.replace(/\/+$/, '')}/${endpoint}`)
+  const parsedBaseUrl = new URL(baseUrl)
+  parsedBaseUrl.pathname = resolveIbkrEndpointPath(baseUrl, endpoint)
+  parsedBaseUrl.search = ''
+  parsedBaseUrl.hash = ''
   for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value)
+    parsedBaseUrl.searchParams.set(key, value)
   }
-  return url
+  return parsedBaseUrl
 }
 
 export const createIbkrFlexClient = ({
@@ -108,6 +147,8 @@ export const createIbkrFlexClient = ({
   baseUrl = DEFAULT_IBKR_FLEX_BASE_URL,
   userAgent,
   timeoutMs,
+  statementMaxAttempts = DEFAULT_GET_STATEMENT_MAX_ATTEMPTS,
+  statementRetryDelayMs = DEFAULT_GET_STATEMENT_RETRY_DELAY_MS,
   fetchImpl = fetch,
 }: IbkrFlexClientConfig) => {
   if (!userAgent.trim()) {
@@ -162,7 +203,7 @@ export const createIbkrFlexClient = ({
     const xml = await fetchXml(
       buildIbkrUrl({
         baseUrl,
-        endpoint: 'FlexStatementService.SendRequest',
+        endpoint: 'SendRequest',
         params: {
           t: token,
           q: queryId,
@@ -182,27 +223,47 @@ export const createIbkrFlexClient = ({
   }
 
   const getStatement = async (referenceCode: string) => {
-    const xml = await fetchXml(
-      buildIbkrUrl({
-        baseUrl,
-        endpoint: 'FlexStatementService.GetStatement',
-        params: {
-          t: token,
-          q: referenceCode,
-          v: '3',
-        },
-      })
-    )
-    const parsed = parseIbkrFlexXml(xml)
-    if (parsed.kind !== 'statement') {
-      throw new ExternalInvestmentProviderError({
-        provider: 'ibkr',
-        code: 'PROVIDER_SCHEMA_CHANGED',
-        message: 'IBKR Flex GetStatement returned another reference code.',
-        retryable: true,
-      })
+    for (let attempt = 1; attempt <= statementMaxAttempts; attempt += 1) {
+      try {
+        const xml = await fetchXml(
+          buildIbkrUrl({
+            baseUrl,
+            endpoint: 'GetStatement',
+            params: {
+              t: token,
+              q: referenceCode,
+              v: '3',
+            },
+          })
+        )
+        const parsed = parseIbkrFlexXml(xml)
+        if (parsed.kind !== 'statement') {
+          throw new ExternalInvestmentProviderError({
+            provider: 'ibkr',
+            code: 'PROVIDER_PARTIAL_DATA',
+            message: 'IBKR Flex GetStatement returned another reference code.',
+            retryable: true,
+          })
+        }
+        return parsed.statement
+      } catch (error) {
+        if (
+          error instanceof ExternalInvestmentProviderError &&
+          error.retryable &&
+          attempt < statementMaxAttempts
+        ) {
+          await sleep(statementRetryDelayMs)
+          continue
+        }
+        throw error
+      }
     }
-    return parsed.statement
+    throw new ExternalInvestmentProviderError({
+      provider: 'ibkr',
+      code: 'PROVIDER_PARTIAL_DATA',
+      message: 'IBKR Flex GetStatement did not complete before retry budget was exhausted.',
+      retryable: true,
+    })
   }
 
   return {

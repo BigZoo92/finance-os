@@ -44,6 +44,16 @@ const numberValue = (value: unknown): number | null => {
   return null
 }
 
+const firstStringValue = (record: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const value = stringValue(record[key])
+    if (value !== null) {
+      return value
+    }
+  }
+  return null
+}
+
 const positiveDecimalString = (left: string | null, right: string | null = null) => {
   const sum = (numberValue(left) ?? 0) + (numberValue(right) ?? 0)
   return sum > 0 ? sum.toFixed(12).replace(/0+$/, '').replace(/\.$/, '') : null
@@ -157,6 +167,7 @@ export const normalizeBinanceSnapshot = ({
     const asset = balance.asset.toUpperCase()
     const instrumentKey = `binance:asset:${asset}`
     const assetClass = classifyBinanceAsset(asset)
+    const nativeEurCashValue = assetClass === 'cash' && asset === 'EUR' ? quantity : null
     const coin = coinByAsset.get(asset)
     const rawImportKey = `binance:position:${asset}`
     rawImports.push(
@@ -205,21 +216,23 @@ export const normalizeBinanceSnapshot = ({
       freeQuantity: balance.free,
       lockedQuantity: balance.locked,
       currency: asset,
-      providerValue: null,
-      normalizedValue: null,
-      valueCurrency: null,
-      valueSource: 'unknown',
+      providerValue: nativeEurCashValue,
+      normalizedValue: nativeEurCashValue,
+      valueCurrency: nativeEurCashValue ? 'EUR' : null,
+      valueSource: nativeEurCashValue ? 'provider_reported' : 'unknown',
       valueAsOf: generatedAt,
-      costBasis: null,
-      costBasisCurrency: null,
+      costBasis: nativeEurCashValue,
+      costBasisCurrency: nativeEurCashValue ? 'EUR' : null,
       realizedPnl: null,
       unrealizedPnl: null,
       metadata: {
         free: balance.free,
         locked: balance.locked,
       },
-      assumptions: ['Binance Spot balances do not include EUR valuation in USER_DATA account info.'],
-      degradedReasons: ['VALUATION_PARTIAL', 'unknown_cost_basis'],
+      assumptions: nativeEurCashValue
+        ? ['EUR cash balance is valued at its nominal amount.']
+        : ['Binance Spot balances do not include EUR valuation in USER_DATA account info.'],
+      degradedReasons: nativeEurCashValue ? [] : ['VALUATION_PARTIAL', 'unknown_cost_basis'],
       sourceConfidence: 'high',
       rawImportKey,
     })
@@ -426,8 +439,14 @@ export const normalizeIbkrFlexStatement = ({
     const instrumentKey = `ibkr:${conid ?? isin ?? symbol ?? digestKey([accountExternalId, stringValue(row.description)])}`
     const assetClass = classifyIbkrAsset(stringValue(row.assetCategory), symbol)
     const name = stringValue(row.description) ?? symbol ?? instrumentKey
-    const providerValue = stringValue(row.marketValue)
-    const costBasis = stringValue(row.costBasisMoney) ?? stringValue(row.costBasis)
+    const providerValue = firstStringValue(row, ['marketValue', 'positionValue', 'value'])
+    const costBasis = firstStringValue(row, ['costBasisMoney', 'costBasis'])
+    const unrealizedPnl = firstStringValue(row, [
+      'fifoPnlUnrealized',
+      'unrealizedPnl',
+      'unrealizedPL',
+      'unrealized',
+    ])
     rawImports.push(
       rawImport({
         provider: 'ibkr',
@@ -484,12 +503,14 @@ export const normalizeIbkrFlexStatement = ({
       costBasis,
       costBasisCurrency: stringValue(row.currency),
       realizedPnl: null,
-      unrealizedPnl: stringValue(row.fifoPnlUnrealized) ?? stringValue(row.unrealizedPnl),
+      unrealizedPnl,
       metadata: {
         reportDate: stringValue(row.reportDate),
         assetCategory: stringValue(row.assetCategory),
       },
-      assumptions: providerValue ? [] : ['IBKR Flex position did not include marketValue.'],
+      assumptions: providerValue
+        ? []
+        : ['IBKR Flex position did not include marketValue or positionValue.'],
       degradedReasons: [
         ...(providerValue ? [] : ['VALUATION_PARTIAL']),
         ...(costBasis ? [] : ['unknown_cost_basis']),

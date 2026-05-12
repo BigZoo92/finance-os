@@ -21,6 +21,7 @@ import { createSummaryRoute } from './routes/summary'
 import { createTradingLabRoute } from './routes/trading-lab'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
+import { createDashboardOpsRefreshConfig } from './ops-refresh-config'
 import { createDashboardRouteRuntime } from './runtime'
 import type { ApiDb, RedisClient } from './types'
 
@@ -62,6 +63,7 @@ export const createDashboardRoutes = ({
   newsProviderXTwitterEnabled,
   newsProviderXTwitterQuery,
   newsProviderXTwitterBearerToken,
+  signalsSocialPollingEnabled,
   marketDataEnabled,
   marketDataRefreshEnabled,
   marketDataForceFixtureFallback,
@@ -156,6 +158,7 @@ export const createDashboardRoutes = ({
   newsProviderXTwitterEnabled: boolean
   newsProviderXTwitterQuery: string
   newsProviderXTwitterBearerToken: string | undefined
+  signalsSocialPollingEnabled: boolean
   marketDataEnabled: boolean
   marketDataRefreshEnabled: boolean
   marketDataForceFixtureFallback: boolean
@@ -378,15 +381,16 @@ export const createDashboardRoutes = ({
     .use(
       createOpsRefreshRoute({
         runtime,
-        config: {
+        config: createDashboardOpsRefreshConfig({
           externalInvestmentsEnabled,
           ibkrFlexEnabled,
           binanceSpotEnabled,
-          newsEnabled: liveNewsIngestionEnabled,
-          marketsEnabled: marketDataEnabled && marketDataRefreshEnabled,
-          advisorEnabled: aiAdvisorEnabled,
-          socialEnabled: false,
-        },
+          liveNewsIngestionEnabled,
+          marketDataEnabled,
+          marketDataRefreshEnabled,
+          aiAdvisorEnabled,
+          signalsSocialPollingEnabled,
+        }),
       })
     )
 }

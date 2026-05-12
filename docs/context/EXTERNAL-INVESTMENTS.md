@@ -80,13 +80,13 @@ Official docs used: <https://www.interactivebrokers.com/campus/ibkr-api-page/fle
 
 Finance-OS uses IBKR Flex Web Service as a reporting mechanism:
 
-1. `FlexStatementService.SendRequest` with token and configured Query ID.
+1. `/AccountManagement/FlexWebService/SendRequest` with token and configured Query ID.
 2. Retrieve the reference code.
-3. `FlexStatementService.GetStatement` with token and reference code.
+3. `/AccountManagement/FlexWebService/GetStatement` with token and reference code.
 4. Parse XML with attributes preserved.
 5. Normalize account information, open positions, trades, commissions, cash transactions, dividends, interest and fees when present.
 
-User-Agent is required by configuration. Flex provider errors are normalized into safe Finance-OS error codes. Temporary async/report-generation issues are retryable. No IBKR Client Portal or trading endpoint is used.
+User-Agent is required by configuration. The default `IBKR_FLEX_BASE_URL` is the IBKR host root (`https://ndcdyn.interactivebrokers.com`); the client appends the current Account Management Flex Web Service path and still preserves legacy `/Universal/servlet/FlexStatementService.*` compatibility for existing credential overrides. `GetStatement` retries bounded provider "report still generating" responses before failing. Flex open position valuation accepts both `marketValue` and `positionValue` attributes because Flex query exports can label the same field differently. Flex provider errors are normalized into safe Finance-OS error codes. Temporary async/report-generation issues are retryable. No IBKR Client Portal or trading endpoint is used.
 
 ## Binance Spot / Wallet
 
@@ -96,17 +96,20 @@ Official docs used:
 - Wallet deposit history: <https://developers.binance.com/docs/wallet/capital/deposite-history>
 - Wallet all coins information: <https://developers.binance.com/docs/wallet/capital/all-coins-info>
 
-Allowed signed `GET` endpoints:
+Allowed user-data signed `GET` endpoints:
 
 - `/api/v3/account`
 - `/api/v3/myTrades`
-- `/api/v3/exchangeInfo`
-- `/api/v3/time`
 - `/sapi/v1/capital/deposit/hisrec`
 - `/sapi/v1/capital/withdraw/history`
 - `/sapi/v1/capital/config/getall`
 
-The read-only client rejects non-GET methods and any endpoint outside the allowlist, including orders, withdraw apply, transfers, convert, margin, futures, staking and earn mutations. HMAC signing happens server-side in the worker. Logs and diagnostics never expose API keys, secrets, signatures, signed URLs, or sensitive query strings.
+Allowed public unsigned `GET` endpoints:
+
+- `/api/v3/exchangeInfo`
+- `/api/v3/time`
+
+The read-only client rejects non-GET methods and any endpoint outside the allowlist, including orders, withdraw apply, transfers, convert, margin, futures, staking and earn mutations. HMAC signing happens server-side in the worker only for user-data endpoints. Logs and diagnostics never expose API keys, secrets, signatures, signed URLs, or sensitive query strings.
 
 Withdraw history is stored only as historical read-only cash-flow facts; no withdrawal operation exists.
 
@@ -115,9 +118,10 @@ Withdraw history is stored only as historical read-only cash-flow facts; no with
 Valuation is deterministic and conservative:
 
 1. provider-reported value when present
-2. existing market cache when available through canonical storage
-3. manual value if already represented in Finance-OS canonical assets
-4. unknown valuation with `VALUATION_PARTIAL`
+2. deterministic native-currency cash value for Binance `EUR` balances
+3. existing market cache when available through canonical storage
+4. manual value if already represented in Finance-OS canonical assets
+5. unknown valuation with `VALUATION_PARTIAL`
 
 The feature does not add a paid market-data dependency and does not fetch market prices from UI reads. Crypto balances without reliable persisted value remain unknown.
 
@@ -204,6 +208,6 @@ Common error codes:
 - No official tax reporting; `/fiscalite` can reuse normalized facts only as a preparatory checklist and missing-data review.
 - Cost basis may be absent, especially for Binance balances.
 - Multi-currency totals are not guessed when FX is missing.
-- Binance trade backfill is conservative and symbol-scoped.
+- Binance trade backfill is conservative and pair-scoped: balances such as `BTC` are mapped to valid Spot pairs from `exchangeInfo` before `/api/v3/myTrades` is called.
 - IBKR Flex quality depends on the configured report fields.
 - No automatic investment execution exists.

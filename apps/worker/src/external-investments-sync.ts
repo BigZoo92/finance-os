@@ -4,6 +4,7 @@ import type { getWorkerEnv } from '@finance-os/env'
 import {
   type BinanceCashFlow,
   type BinanceCoinInfo,
+  type BinanceTrade,
   createBinanceReadonlyClient,
   createExternalInvestmentsRepository,
   createIbkrFlexClient,
@@ -26,6 +27,33 @@ type WorkerLog = (
 
 const EXTERNAL_INVESTMENT_LOCK_TTL_SECONDS = 15 * 60
 const EXTERNAL_INVESTMENT_LOCK_PREFIX = 'external-investments:lock:connection:'
+const BINANCE_TRADE_QUOTE_ASSETS = [
+  'EUR',
+  'USDT',
+  'USDC',
+  'FDUSD',
+  'BUSD',
+  'USD',
+  'BTC',
+  'ETH',
+  'BNB',
+]
+const BINANCE_CASH_OR_STABLE_ASSETS = new Set([
+  'EUR',
+  'USD',
+  'GBP',
+  'CHF',
+  'JPY',
+  'CAD',
+  'AUD',
+  'USDT',
+  'USDC',
+  'DAI',
+  'BUSD',
+  'TUSD',
+  'FDUSD',
+  'USDP',
+])
 
 const aggregateCounts = (
   left: Record<string, number>,
@@ -56,6 +84,48 @@ const providerFailureStatus = (error: unknown) => ({
   errorCode: toExternalInvestmentErrorCode(error),
   errorMessage: sanitizeError(error),
 })
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+
+const asString = (value: unknown) => (typeof value === 'string' && value.length > 0 ? value : null)
+
+const deriveBinanceTradeSymbols = ({
+  positionSymbols,
+  exchangeInfo,
+}: {
+  positionSymbols: string[]
+  exchangeInfo: Record<string, unknown>
+}) => {
+  const baseAssets = new Set(
+    positionSymbols
+      .map(symbol => symbol.toUpperCase())
+      .filter(symbol => !BINANCE_CASH_OR_STABLE_ASSETS.has(symbol))
+  )
+  const symbols = Array.isArray(exchangeInfo.symbols) ? exchangeInfo.symbols : []
+  const quoteRank = new Map(BINANCE_TRADE_QUOTE_ASSETS.map((asset, index) => [asset, index]))
+
+  return [
+    ...new Set(
+      symbols.flatMap(symbolValue => {
+        const symbol = asRecord(symbolValue)
+        const id = asString(symbol.symbol)
+        const baseAsset = asString(symbol.baseAsset)?.toUpperCase()
+        const quoteAsset = asString(symbol.quoteAsset)?.toUpperCase()
+        const status = asString(symbol.status)
+        if (!id || !baseAsset || !quoteAsset) return []
+        if (!baseAssets.has(baseAsset) || !quoteRank.has(quoteAsset)) return []
+        if (status && status !== 'TRADING') return []
+        if (symbol.isSpotTradingAllowed === false) return []
+        return [id]
+      })
+    ),
+  ].sort((left, right) => {
+    const leftQuote = BINANCE_TRADE_QUOTE_ASSETS.find(quote => left.endsWith(quote)) ?? ''
+    const rightQuote = BINANCE_TRADE_QUOTE_ASSETS.find(quote => right.endsWith(quote)) ?? ''
+    return (quoteRank.get(leftQuote) ?? 999) - (quoteRank.get(rightQuote) ?? 999) || left.localeCompare(right)
+  })
+}
 
 export const createExternalInvestmentsSyncWorker = ({
   db,
@@ -168,9 +238,28 @@ export const createExternalInvestmentsSyncWorker = ({
     client: ReturnType<typeof createBinanceReadonlyClient>
     requestId?: string
   }) => {
-    const symbols = await repository.getAvailableTradeSymbols('binance', connectionId)
-    const trades = []
+    const positionSymbols = await repository.getAvailableTradeSymbols('binance', connectionId)
+    const trades: BinanceTrade[] = []
     const degradedReasons: string[] = []
+    let symbols: string[] = []
+
+    try {
+      symbols = deriveBinanceTradeSymbols({
+        positionSymbols,
+        exchangeInfo: await client.getExchangeInfo(),
+      })
+    } catch (error) {
+      degradedReasons.push(toExternalInvestmentErrorCode(error))
+      log({
+        level: 'warn',
+        msg: 'external investments binance exchange info fetch failed',
+        provider: 'binance',
+        connectionId,
+        requestId: requestId ?? 'n/a',
+        errMessage: sanitizeError(error),
+      })
+      return { trades, degradedReasons }
+    }
 
     for (const symbol of symbols.slice(0, 50)) {
       try {
@@ -265,7 +354,7 @@ export const createExternalInvestmentsSyncWorker = ({
           tradesResult.trades.length === 0
             ? [
                 ...snapshot.warnings,
-                'Binance trade import only fetches symbols already known from previous normalized positions.',
+                'Binance trade import found no valid pair history; cost basis remains unknown without supported trade history.',
               ]
             : snapshot.warnings,
       },
