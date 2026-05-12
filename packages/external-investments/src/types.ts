@@ -201,6 +201,7 @@ export type ExternalInvestmentRawImportDraft = {
     | 'position'
     | 'trade'
     | 'cash_flow'
+    | 'cash_balance'
     | 'statement'
     | 'provider_health'
   externalObjectId: string

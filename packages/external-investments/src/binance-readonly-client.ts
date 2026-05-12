@@ -6,6 +6,10 @@ export const BINANCE_READONLY_ALLOWED_ENDPOINTS = new Set([
   '/api/v3/myTrades',
   '/api/v3/exchangeInfo',
   '/api/v3/time',
+  // Public unauthenticated price endpoints used by the crypto price resolver.
+  // No order/trade side effect — strictly market data.
+  '/api/v3/ticker/price',
+  '/api/v3/ticker/24hr',
   '/sapi/v1/capital/deposit/hisrec',
   '/sapi/v1/capital/withdraw/history',
   '/sapi/v1/capital/config/getall',
@@ -244,5 +248,7 @@ export const createBinanceReadonlyClient = ({
     getExchangeInfo: (params: { symbol?: string; symbols?: string } = {}) =>
       publicGet<Record<string, unknown>>('/api/v3/exchangeInfo', params),
     getServerTime: () => publicGet<{ serverTime: number }>('/api/v3/time'),
+    getTickerPrice: (params: { symbol: string }) =>
+      publicGet<{ symbol: string; price: string }>('/api/v3/ticker/price', params),
   }
 }

@@ -66,31 +66,160 @@ const PRECEDENCE: TransactionResolutionSource[] = [
 ]
 
 const MERCHANT_RULES: CategorizationRule[] = [
+  // ── Subscriptions / digital services ──────────────────────────────────────
   {
     id: 'merchant-streaming',
     priority: 120,
     when: {
       amountSign: 'expense',
-      merchantIncludes: ['spotify', 'netflix', 'apple.com/bill'],
+      merchantIncludes: [
+        'spotify',
+        'netflix',
+        'disney',
+        'prime video',
+        'apple.com/bill',
+        'apple music',
+        'youtube premium',
+        'deezer',
+        'canal',
+        'molotov',
+      ],
     },
-    assign: {
-      category: 'Abonnements',
-      subcategory: 'Streaming',
-    },
+    assign: { category: 'Abonnements', subcategory: 'Streaming' },
   },
+  {
+    id: 'merchant-cloud-tools',
+    priority: 121,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: [
+        'icloud',
+        'google one',
+        'dropbox',
+        'github',
+        'openai',
+        'anthropic',
+        'cursor',
+        'notion',
+        'figma',
+        'linear',
+      ],
+    },
+    assign: { category: 'Abonnements', subcategory: 'Logiciels' },
+  },
+  // ── Groceries ─────────────────────────────────────────────────────────────
   {
     id: 'merchant-groceries',
     priority: 110,
     when: {
       amountSign: 'expense',
-      merchantIncludes: ['carrefour', 'monoprix', 'auchan', 'lidl', 'leclerc'],
-      minAmount: 5,
+      merchantIncludes: [
+        'carrefour',
+        'monoprix',
+        'auchan',
+        'lidl',
+        'leclerc',
+        'super u',
+        'intermarche',
+        'casino',
+        'franprix',
+        'picard',
+        'biocoop',
+        'naturalia',
+        'g20',
+        'sumup', // FR: small merchants commonly use SumUp; surface under groceries with low priority so a more specific rule wins
+      ],
+      minAmount: 3,
     },
-    assign: {
-      category: 'Courses',
-      subcategory: 'Supermarche',
-    },
+    assign: { category: 'Courses', subcategory: 'Supermarche' },
   },
+  // ── Restaurants / sorties ─────────────────────────────────────────────────
+  {
+    id: 'merchant-restaurant',
+    priority: 115,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: [
+        'restaurant',
+        'crêperie',
+        'creperie',
+        'brasserie',
+        'bistrot',
+        'pizzeria',
+        'kebab',
+        'mcdonald',
+        'burger king',
+        'kfc',
+        'starbucks',
+        'paul',
+        'boulangerie',
+        'patisserie',
+        'gourmandise',
+        'gourmandises',
+        'deliveroo',
+        'uber eats',
+        'just eat',
+      ],
+    },
+    assign: { category: 'Restaurant', subcategory: 'Sorties' },
+  },
+  // ── Transport / mobility ──────────────────────────────────────────────────
+  {
+    id: 'merchant-mobility-shared',
+    priority: 116,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['lime', 'dott', 'tier', 'voi', 'cityscoot', 'velib', 'bicloo'],
+    },
+    assign: { category: 'Transport', subcategory: 'Mobilite partagee' },
+  },
+  {
+    id: 'merchant-mobility-rideshare',
+    priority: 117,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['uber', 'bolt', 'heetch', 'kapten', 'free now', 'blablacar', 'blablacab'],
+    },
+    assign: { category: 'Transport', subcategory: 'VTC' },
+  },
+  {
+    id: 'merchant-mobility-public',
+    priority: 118,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['sncf', 'ratp', 'navigo', 'flixbus', 'ouigo', 'tgv', 'eurostar', 'thalys'],
+    },
+    assign: { category: 'Transport', subcategory: 'Train et bus' },
+  },
+  {
+    id: 'merchant-fuel',
+    priority: 119,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['total', 'totalenergies', 'shell', 'bp', 'esso', 'station service'],
+    },
+    assign: { category: 'Transport', subcategory: 'Carburant' },
+  },
+  // ── Utilities / housing ───────────────────────────────────────────────────
+  {
+    id: 'merchant-utilities',
+    priority: 112,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['edf', 'engie', 'enedis', 'veolia', 'suez', 'eau de paris'],
+    },
+    assign: { category: 'Logement', subcategory: 'Energie et eau' },
+  },
+  {
+    id: 'merchant-telco',
+    priority: 113,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['free mobile', 'orange', 'sfr', 'bouygues', 'sosh', 'red by sfr', 'lyca'],
+    },
+    assign: { category: 'Abonnements', subcategory: 'Telecom' },
+  },
+  // ── Bank fees ─────────────────────────────────────────────────────────────
   {
     id: 'merchant-bank-fees-checking',
     priority: 130,
@@ -100,9 +229,35 @@ const MERCHANT_RULES: CategorizationRule[] = [
       labelIncludes: ['frais', 'commission', 'cotisation'],
       maxAmount: 60,
     },
-    assign: {
-      category: 'Frais bancaires',
+    assign: { category: 'Frais bancaires' },
+  },
+  // ── Health ────────────────────────────────────────────────────────────────
+  {
+    id: 'merchant-health',
+    priority: 114,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: ['doctolib', 'pharmacie', 'cpam', 'mutuelle', 'opticien', 'hopital'],
     },
+    assign: { category: 'Sante' },
+  },
+  // ── Shopping (broad) ──────────────────────────────────────────────────────
+  {
+    id: 'merchant-shopping-broad',
+    priority: 105,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: [
+        'amazon',
+        'fnac',
+        'darty',
+        'decathlon',
+        'leroy merlin',
+        'castorama',
+        'ikea',
+      ],
+    },
+    assign: { category: 'Achats divers' },
   },
 ]
 
@@ -114,22 +269,52 @@ const COUNTERPARTY_RULES: CategorizationRule[] = [
       amountSign: 'income',
       labelIncludes: ['salaire', 'payroll', 'paie'],
     },
-    assign: {
-      category: 'Revenus',
-      subcategory: 'Salaire',
-      incomeType: 'salary',
-    },
+    assign: { category: 'Revenus', subcategory: 'Salaire', incomeType: 'salary' },
   },
   {
-    id: 'counterparty-transport',
+    id: 'counterparty-transport-label',
     priority: 90,
     when: {
       amountSign: 'expense',
-      labelIncludes: ['sncf', 'ratp', 'uber', 'bolt'],
+      labelIncludes: ['sncf', 'ratp', 'uber', 'bolt', 'navigo', 'flixbus'],
     },
-    assign: {
-      category: 'Transport',
+    assign: { category: 'Transport' },
+  },
+  {
+    id: 'counterparty-transfer-internal',
+    priority: 80,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['virement vers', 'virement interne', 'transfer to'],
     },
+    assign: { category: 'Transfert interne' },
+  },
+  {
+    id: 'counterparty-refund',
+    priority: 85,
+    when: {
+      amountSign: 'income',
+      labelIncludes: ['remboursement', 'refund', 'avoir'],
+    },
+    assign: { category: 'Revenus', subcategory: 'Remboursement', incomeType: 'exceptional' },
+  },
+  {
+    id: 'counterparty-rent',
+    priority: 95,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['loyer', 'foncia', 'orpi', 'nexity', 'rent'],
+    },
+    assign: { category: 'Logement', subcategory: 'Loyer' },
+  },
+  {
+    id: 'counterparty-tax',
+    priority: 96,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['dgfip', 'impots', 'taxe', 'urssaf', 'tresor public'],
+    },
+    assign: { category: 'Impots et taxes' },
   },
 ]
 
@@ -147,7 +332,12 @@ const isUnknownCategory = (value: string | null) => !value || value === 'Unknown
 
 const matchesRule = (
   rule: CategorizationRule,
-  input: { normalizedLabel: string; normalizedAccount: string; normalizedMerchant: string; amount: number }
+  input: {
+    normalizedLabel: string
+    normalizedAccount: string
+    normalizedMerchant: string
+    amount: number
+  }
 ) => {
   const direction = amountDirection(input.amount)
 
@@ -164,7 +354,10 @@ const matchesRule = (
     return false
   }
 
-  if (rule.when.labelIncludes && !rule.when.labelIncludes.some(part => input.normalizedLabel.includes(normalizeText(part)))) {
+  if (
+    rule.when.labelIncludes &&
+    !rule.when.labelIncludes.some(part => input.normalizedLabel.includes(normalizeText(part)))
+  ) {
     return false
   }
 
@@ -175,7 +368,10 @@ const matchesRule = (
     return false
   }
 
-  if (rule.when.accountIncludes && !rule.when.accountIncludes.some(part => input.normalizedAccount.includes(normalizeText(part)))) {
+  if (
+    rule.when.accountIncludes &&
+    !rule.when.accountIncludes.some(part => input.normalizedAccount.includes(normalizeText(part)))
+  ) {
     return false
   }
 
@@ -183,12 +379,14 @@ const matchesRule = (
 }
 
 const selectBestRule = (matches: CategorizationRule[]) => {
-  return [...matches].sort((left, right) => {
-    if (left.priority !== right.priority) {
-      return right.priority - left.priority
-    }
-    return left.id.localeCompare(right.id)
-  })[0] ?? null
+  return (
+    [...matches].sort((left, right) => {
+      if (left.priority !== right.priority) {
+        return right.priority - left.priority
+      }
+      return left.id.localeCompare(right.id)
+    })[0] ?? null
+  )
 }
 
 const withTraceStep = (
@@ -210,7 +408,15 @@ export const applyTransactionAutoCategorization = (
   const trace: ResolutionTraceStep[] = []
 
   if (!isUnknownCategory(input.customCategory)) {
-    withTraceStep(trace, 'manual_override', true, 'custom_category_present', input.customCategory, input.customSubcategory, null)
+    withTraceStep(
+      trace,
+      'manual_override',
+      true,
+      'custom_category_present',
+      input.customCategory,
+      input.customSubcategory,
+      null
+    )
 
     return {
       category: input.customCategory,

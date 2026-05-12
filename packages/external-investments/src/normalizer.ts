@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto'
-import type { BinanceAccountInfo, BinanceCashFlow, BinanceCoinInfo, BinanceTrade } from './binance-readonly-client'
+import type {
+  BinanceAccountInfo,
+  BinanceCashFlow,
+  BinanceCoinInfo,
+  BinanceTrade,
+} from './binance-readonly-client'
 import type {
   ExternalInvestmentAssetClass,
   ExternalInvestmentCanonicalCashFlow,
@@ -76,7 +81,10 @@ const classifyBinanceAsset = (asset: string): ExternalInvestmentAssetClass => {
   return 'crypto'
 }
 
-const classifyIbkrAsset = (assetCategory: string | null, symbol: string | null): ExternalInvestmentAssetClass => {
+const classifyIbkrAsset = (
+  assetCategory: string | null,
+  symbol: string | null
+): ExternalInvestmentAssetClass => {
   const normalized = `${assetCategory ?? ''} ${symbol ?? ''}`.toLowerCase()
   if (/cash|forex|fx/.test(normalized)) return 'cash'
   if (/etf|exchange traded fund/.test(normalized)) return 'etf'
@@ -118,6 +126,111 @@ const getFlexStatementArray = (statement: Record<string, unknown>, key: string) 
   const singularKey = key.endsWith('s') ? key.slice(0, -1) : key
   const direct = asRecord(container)[singularKey]
   return asArray(direct ?? container)
+}
+
+/**
+ * Read child rows for a Flex Query section whose row tag does not follow the
+ * "Container -> Container-without-s" convention. Used for CashReport
+ * (rows tagged <CashReportCurrency>) and EquitySummaryInBase
+ * (<EquitySummaryByReportDateInBase>).
+ */
+const getFlexStatementChildren = (
+  statement: Record<string, unknown>,
+  containerKey: string,
+  rowKey: string
+) => {
+  const flexStatement = asArray(asRecord(statement).FlexStatement)[0] ?? asRecord(statement)
+  const container = asRecord(flexStatement)[containerKey]
+  if (!container) return []
+  const rows = asRecord(container)[rowKey]
+  if (rows !== undefined && rows !== null) {
+    return asArray(rows)
+  }
+  // Some XML emitters inline the row attributes directly on the container when
+  // there is only one entry. Fall back to treating the container itself as a
+  // single row in that case.
+  return asArray(container)
+}
+
+const positiveDecimal = (value: string | null) => {
+  if (value === null) return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return null
+  return value
+}
+
+type IbkrCashBalance = {
+  currency: string
+  endingCash: string | null
+  endingSettledCash: string | null
+  netCashBalance: string | null
+}
+
+type IbkrEquitySummary = {
+  reportDate: string | null
+  cash: string | null
+  cashLong: string | null
+  total: string | null
+}
+
+export const parseIbkrCashReport = (
+  statement: Record<string, unknown>
+): Map<string, IbkrCashBalance[]> => {
+  const rows = getFlexStatementChildren(statement, 'CashReport', 'CashReportCurrency')
+  const byAccount = new Map<string, IbkrCashBalance[]>()
+  for (const rowValue of rows) {
+    const row = asRecord(rowValue)
+    const accountId = stringValue(row.accountId)
+    const currency = stringValue(row.currency)
+    if (!accountId || !currency || currency.toUpperCase() === 'BASE_SUMMARY') {
+      // BASE_SUMMARY is an IBKR aggregate row that double-counts other currency
+      // entries — skip it to avoid inflating cash positions.
+      continue
+    }
+    const balance: IbkrCashBalance = {
+      currency: currency.toUpperCase(),
+      endingCash: firstStringValue(row, ['endingCash', 'EndingCash']),
+      endingSettledCash: firstStringValue(row, ['endingSettledCash', 'EndingSettledCash']),
+      netCashBalance: firstStringValue(row, [
+        'netCashBalance',
+        'NetCashBalance',
+        'endingCashSettled',
+      ]),
+    }
+    const list = byAccount.get(accountId) ?? []
+    list.push(balance)
+    byAccount.set(accountId, list)
+  }
+  return byAccount
+}
+
+export const parseIbkrEquitySummary = (
+  statement: Record<string, unknown>
+): Map<string, IbkrEquitySummary> => {
+  const rows = getFlexStatementChildren(
+    statement,
+    'EquitySummaryInBase',
+    'EquitySummaryByReportDateInBase'
+  )
+  // Pick the most recent reportDate per account.
+  const byAccount = new Map<string, IbkrEquitySummary>()
+  for (const rowValue of rows) {
+    const row = asRecord(rowValue)
+    const accountId = stringValue(row.accountId)
+    if (!accountId) continue
+    const reportDate = stringValue(row.reportDate)
+    const previous = byAccount.get(accountId)
+    if (previous && reportDate && previous.reportDate && reportDate <= previous.reportDate) {
+      continue
+    }
+    byAccount.set(accountId, {
+      reportDate,
+      cash: firstStringValue(row, ['cash', 'Cash']),
+      cashLong: firstStringValue(row, ['cashLong', 'CashLong']),
+      total: firstStringValue(row, ['total', 'Total']),
+    })
+  }
+  return byAccount
 }
 
 export const normalizeBinanceSnapshot = ({
@@ -291,8 +404,9 @@ export const normalizeBinanceSnapshot = ({
     const occurredAt =
       typeof flow.insertTime === 'number'
         ? new Date(flow.insertTime).toISOString()
-        : flow.completeTime ?? flow.applyTime ?? generatedAt
-    const externalObjectId = flow.id ?? flow.txId ?? digestKey([type, flow.coin, flow.amount, occurredAt])
+        : (flow.completeTime ?? flow.applyTime ?? generatedAt)
+    const externalObjectId =
+      flow.id ?? flow.txId ?? digestKey([type, flow.coin, flow.amount, occurredAt])
     rawImports.push(
       rawImport({
         provider: 'binance',
@@ -387,6 +501,8 @@ export const normalizeIbkrFlexStatement = ({
   const positionRows = getFlexStatementArray(statement, 'OpenPositions')
   const tradeRows = getFlexStatementArray(statement, 'Trades')
   const cashRows = getFlexStatementArray(statement, 'CashTransactions')
+  const cashReportByAccount = parseIbkrCashReport(statement)
+  const equitySummaryByAccount = parseIbkrEquitySummary(statement)
   const rawImports: ExternalInvestmentRawImportDraft[] = [
     rawImport({
       provider: 'ibkr',
@@ -400,6 +516,8 @@ export const normalizeIbkrFlexStatement = ({
         positionRowCount: positionRows.length,
         tradeRowCount: tradeRows.length,
         cashRowCount: cashRows.length,
+        cashReportAccountCount: cashReportByAccount.size,
+        equitySummaryAccountCount: equitySummaryByAccount.size,
       },
       providerObjectAt: generatedAt,
       importStatus: 'metadata_only',
@@ -408,24 +526,34 @@ export const normalizeIbkrFlexStatement = ({
   const fallbackAccountId =
     stringValue(asRecord(accountRows[0]).accountId) ??
     stringValue(asRecord(positionRows[0]).accountId) ??
+    [...cashReportByAccount.keys()][0] ??
+    [...equitySummaryByAccount.keys()][0] ??
     `ibkr:flex:${queryId}`
 
-  const accounts = (accountRows.length > 0 ? accountRows : [{ accountId: fallbackAccountId }]).map(rowValue => {
-    const row = asRecord(rowValue)
-    const accountExternalId = stringValue(row.accountId) ?? fallbackAccountId
-    return {
-      provider: 'ibkr' as const,
-      connectionId,
-      accountExternalId,
-      accountType: stringValue(row.accountType),
-      accountAlias,
-      baseCurrency: stringValue(row.currency) ?? stringValue(row.baseCurrency),
-      metadata: { queryId },
-      degradedReasons: [],
-      sourceConfidence: 'high' as const,
-      rawImportKey: `ibkr:account:${accountExternalId}`,
+  const accounts = (accountRows.length > 0 ? accountRows : [{ accountId: fallbackAccountId }]).map(
+    rowValue => {
+      const row = asRecord(rowValue)
+      const accountExternalId = stringValue(row.accountId) ?? fallbackAccountId
+      const cashBalances = cashReportByAccount.get(accountExternalId) ?? null
+      const equitySummary = equitySummaryByAccount.get(accountExternalId) ?? null
+      return {
+        provider: 'ibkr' as const,
+        connectionId,
+        accountExternalId,
+        accountType: stringValue(row.accountType),
+        accountAlias,
+        baseCurrency: stringValue(row.currency) ?? stringValue(row.baseCurrency),
+        metadata: {
+          queryId,
+          ...(cashBalances ? { cashBalances } : {}),
+          ...(equitySummary ? { equitySummary } : {}),
+        },
+        degradedReasons: [],
+        sourceConfidence: 'high' as const,
+        rawImportKey: `ibkr:account:${accountExternalId}`,
+      }
     }
-  })
+  )
 
   const instruments = new Map<string, ExternalInvestmentCanonicalInstrument>()
   const positions: ExternalInvestmentCanonicalPosition[] = []
@@ -523,7 +651,10 @@ export const normalizeIbkrFlexStatement = ({
   const trades: ExternalInvestmentCanonicalTrade[] = tradeRows.map(rowValue => {
     const row = asRecord(rowValue)
     const accountExternalId = stringValue(row.accountId) ?? fallbackAccountId
-    const tradeId = stringValue(row.tradeID) ?? stringValue(row.transactionID) ?? digestKey([accountExternalId, stringValue(row.dateTime), stringValue(row.symbol)])
+    const tradeId =
+      stringValue(row.tradeID) ??
+      stringValue(row.transactionID) ??
+      digestKey([accountExternalId, stringValue(row.dateTime), stringValue(row.symbol)])
     const symbol = stringValue(row.symbol)
     const conid = stringValue(row.conid) ?? stringValue(row.conId)
     const instrumentKey = `ibkr:${conid ?? symbol ?? tradeId}`
@@ -536,7 +667,11 @@ export const normalizeIbkrFlexStatement = ({
       tradeKey: `ibkr:${connectionId}:${tradeId}`,
       providerTradeId: tradeId,
       symbol,
-      side: /sell/i.test(stringValue(row.buySell) ?? '') ? 'sell' : /buy/i.test(stringValue(row.buySell) ?? '') ? 'buy' : 'unknown',
+      side: /sell/i.test(stringValue(row.buySell) ?? '')
+        ? 'sell'
+        : /buy/i.test(stringValue(row.buySell) ?? '')
+          ? 'buy'
+          : 'unknown',
       quantity: stringValue(row.quantity),
       price: stringValue(row.tradePrice),
       grossAmount: stringValue(row.tradeMoney),
@@ -554,17 +689,30 @@ export const normalizeIbkrFlexStatement = ({
   const cashFlows: ExternalInvestmentCanonicalCashFlow[] = cashRows.map(rowValue => {
     const row = asRecord(rowValue)
     const accountExternalId = stringValue(row.accountId) ?? fallbackAccountId
-    const cashFlowId = stringValue(row.transactionID) ?? digestKey([accountExternalId, stringValue(row.dateTime), stringValue(row.amount), stringValue(row.type)])
+    const cashFlowId =
+      stringValue(row.transactionID) ??
+      digestKey([
+        accountExternalId,
+        stringValue(row.dateTime),
+        stringValue(row.amount),
+        stringValue(row.type),
+      ])
     const typeLabel = (stringValue(row.type) ?? stringValue(row.description) ?? '').toLowerCase()
-    const type =
-      /dividend/.test(typeLabel) ? 'dividend' :
-        /interest/.test(typeLabel) ? 'interest' :
-          /tax/.test(typeLabel) ? 'tax' :
-            /fee|commission/.test(typeLabel) ? 'fee' :
-              /deposit/.test(typeLabel) ? 'deposit' :
-                /withdraw/.test(typeLabel) ? 'withdrawal' :
-                  /transfer/.test(typeLabel) ? 'transfer' :
-                    'unknown'
+    const type = /dividend/.test(typeLabel)
+      ? 'dividend'
+      : /interest/.test(typeLabel)
+        ? 'interest'
+        : /tax/.test(typeLabel)
+          ? 'tax'
+          : /fee|commission/.test(typeLabel)
+            ? 'fee'
+            : /deposit/.test(typeLabel)
+              ? 'deposit'
+              : /withdraw/.test(typeLabel)
+                ? 'withdrawal'
+                : /transfer/.test(typeLabel)
+                  ? 'transfer'
+                  : 'unknown'
     return {
       provider: 'ibkr',
       connectionId,
@@ -583,6 +731,97 @@ export const normalizeIbkrFlexStatement = ({
       rawImportKey: `ibkr:cash_flow:${cashFlowId}`,
     }
   })
+
+  // Synthesize cash positions from the CashReport section so that a fully
+  // cash-only account is still visible in the bundle (and therefore in the UI).
+  // We only emit a synthetic position when no IBKR OpenPosition already exists
+  // for the same account+currency, to avoid double-counting.
+  const existingCashCurrencyByAccount = new Map<string, Set<string>>()
+  for (const position of positions) {
+    if (position.assetClass === 'cash' && position.currency) {
+      const set = existingCashCurrencyByAccount.get(position.accountExternalId) ?? new Set()
+      set.add(position.currency.toUpperCase())
+      existingCashCurrencyByAccount.set(position.accountExternalId, set)
+    }
+  }
+  for (const [accountExternalId, balances] of cashReportByAccount.entries()) {
+    const existingCurrencies =
+      existingCashCurrencyByAccount.get(accountExternalId) ?? new Set<string>()
+    for (const balance of balances) {
+      const amount = positiveDecimal(balance.endingCash) ?? positiveDecimal(balance.netCashBalance)
+      if (!amount) continue
+      if (existingCurrencies.has(balance.currency)) continue
+      const instrumentKey = `ibkr:cash:${balance.currency}`
+      const rawImportKey = `ibkr:cash:${accountExternalId}:${balance.currency}`
+      rawImports.push(
+        rawImport({
+          provider: 'ibkr',
+          connectionId,
+          accountExternalId,
+          objectType: 'cash_balance',
+          externalObjectId: `${accountExternalId}:${balance.currency}`,
+          payload: {
+            accountId: accountExternalId,
+            currency: balance.currency,
+            endingCash: balance.endingCash,
+            endingSettledCash: balance.endingSettledCash,
+            netCashBalance: balance.netCashBalance,
+          },
+          providerObjectAt: generatedAt,
+        })
+      )
+      if (!instruments.has(instrumentKey)) {
+        instruments.set(instrumentKey, {
+          provider: 'ibkr',
+          connectionId,
+          instrumentKey,
+          symbol: balance.currency,
+          name: `${balance.currency} cash`,
+          currency: balance.currency,
+          assetClass: 'cash',
+          isin: null,
+          cusip: null,
+          conid: null,
+          binanceAsset: null,
+          binanceSymbol: null,
+          metadata: { synthetic: true, source: 'CashReport' },
+          sourceConfidence: 'high',
+          rawImportKey,
+        })
+      }
+      positions.push({
+        provider: 'ibkr',
+        connectionId,
+        accountExternalId,
+        instrumentKey,
+        positionKey: `ibkr:${accountExternalId}:cash:${balance.currency}`,
+        providerPositionId: `${accountExternalId}:cash:${balance.currency}`,
+        name: `${balance.currency} cash`,
+        symbol: balance.currency,
+        assetClass: 'cash',
+        quantity: amount,
+        freeQuantity: amount,
+        lockedQuantity: null,
+        currency: balance.currency,
+        providerValue: amount,
+        normalizedValue: amount,
+        valueCurrency: balance.currency,
+        valueSource: 'provider_reported',
+        valueAsOf: generatedAt,
+        costBasis: amount,
+        costBasisCurrency: balance.currency,
+        realizedPnl: null,
+        unrealizedPnl: null,
+        metadata: { synthetic: true, source: 'CashReport' },
+        sourceConfidence: 'high',
+        degradedReasons: [],
+        assumptions: [
+          `IBKR cash balance ${balance.currency} sourced from CashReport.endingCash; not a tradeable position.`,
+        ],
+        rawImportKey,
+      })
+    }
+  }
 
   return {
     provider: 'ibkr',

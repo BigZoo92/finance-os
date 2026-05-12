@@ -4,6 +4,7 @@ import {
   createBinanceReadonlyClient,
   signBinanceUserDataParams,
 } from './binance-readonly-client'
+import { buildExternalInvestmentContextBundle } from './context-bundle'
 import {
   decryptExternalInvestmentCredential,
   encryptExternalInvestmentCredential,
@@ -11,7 +12,6 @@ import {
 } from './credentials'
 import { createIbkrFlexClient, parseIbkrFlexXml } from './ibkr-flex-client'
 import { normalizeBinanceSnapshot, normalizeIbkrFlexStatement } from './normalizer'
-import { buildExternalInvestmentContextBundle } from './context-bundle'
 
 const ENCRYPTION_KEY = '12345678901234567890123456789012'
 const GENERATED_AT = '2026-05-01T08:00:00.000Z'
@@ -40,9 +40,9 @@ describe('Binance read-only client guards', () => {
     expect(() =>
       assertBinanceReadonlyEndpoint({ method: 'POST', path: '/api/v3/account' })
     ).toThrow(/non-read-only/)
-    expect(() =>
-      assertBinanceReadonlyEndpoint({ method: 'GET', path: '/api/v3/order' })
-    ).toThrow(/non-allowlisted/)
+    expect(() => assertBinanceReadonlyEndpoint({ method: 'GET', path: '/api/v3/order' })).toThrow(
+      /non-allowlisted/
+    )
     expect(() =>
       assertBinanceReadonlyEndpoint({
         method: 'GET',
@@ -325,9 +325,7 @@ describe('provider normalization', () => {
     expect(snapshot.positions.find(position => position.symbol === 'EUR')?.normalizedValue).toBe(
       '125.5'
     )
-    expect(snapshot.positions.find(position => position.symbol === 'EUR')?.costBasis).toBe(
-      '125.5'
-    )
+    expect(snapshot.positions.find(position => position.symbol === 'EUR')?.costBasis).toBe('125.5')
     expect(snapshot.positions.find(position => position.symbol === 'USDT')?.assetClass).toBe(
       'stablecoin'
     )
@@ -401,6 +399,148 @@ describe('provider normalization', () => {
     expect(snapshot.positions[0]?.unrealizedPnl).toBe('200')
     expect(snapshot.trades[0]?.side).toBe('buy')
     expect(snapshot.cashFlows[0]?.type).toBe('dividend')
+  })
+
+  it('surfaces an IBKR cash-only account via CashReport.endingCash as a synthetic position', () => {
+    const snapshot = normalizeIbkrFlexStatement({
+      connectionId: 'ibkr:flex',
+      generatedAt: GENERATED_AT,
+      accountAlias: 'IBKR Cash',
+      queryId: 'q-cash-only',
+      statement: {
+        FlexStatement: {
+          AccountInformation: {
+            AccountInformation: {
+              accountId: 'U999',
+              accountType: 'Individual',
+              currency: 'EUR',
+            },
+          },
+          // No OpenPositions / Trades / CashTransactions — purely cash account
+          CashReport: {
+            CashReportCurrency: [
+              {
+                accountId: 'U999',
+                currency: 'BASE_SUMMARY',
+                endingCash: '5000',
+                netCashBalance: '5000',
+              },
+              {
+                accountId: 'U999',
+                currency: 'EUR',
+                endingCash: '4000',
+                endingSettledCash: '4000',
+                netCashBalance: '4000',
+              },
+              {
+                accountId: 'U999',
+                currency: 'USD',
+                endingCash: '1000',
+                netCashBalance: '1000',
+              },
+            ],
+          },
+          EquitySummaryInBase: {
+            EquitySummaryByReportDateInBase: {
+              accountId: 'U999',
+              reportDate: '20260512',
+              cash: '5000',
+              total: '5000',
+            },
+          },
+        },
+      },
+    })
+
+    // Account is visible
+    expect(snapshot.accounts).toHaveLength(1)
+    expect(snapshot.accounts[0]?.accountExternalId).toBe('U999')
+
+    // BASE_SUMMARY is filtered (would otherwise double-count)
+    const cashPositions = snapshot.positions.filter(p => p.assetClass === 'cash')
+    expect(cashPositions.map(p => p.currency).sort()).toEqual(['EUR', 'USD'])
+    expect(cashPositions.find(p => p.currency === 'EUR')?.normalizedValue).toBe('4000')
+    expect(cashPositions.find(p => p.currency === 'USD')?.normalizedValue).toBe('1000')
+    expect(cashPositions.every(p => p.valueSource === 'provider_reported')).toBe(true)
+
+    // Account metadata carries the cash report + NAV
+    const metadata = snapshot.accounts[0]?.metadata as Record<string, unknown> | null
+    expect(metadata).toBeTruthy()
+    expect(metadata?.cashBalances).toBeDefined()
+    expect(metadata?.equitySummary).toBeDefined()
+
+    // Raw imports trace the cash balance entries
+    const cashRawImports = snapshot.rawImports.filter(r => r.objectType === 'cash_balance')
+    expect(cashRawImports).toHaveLength(2)
+
+    // No degraded reason (cash is fully valued)
+    expect(snapshot.degradedReasons).not.toContain('VALUATION_PARTIAL')
+  })
+
+  it('does not duplicate cash already present in OpenPositions', () => {
+    const snapshot = normalizeIbkrFlexStatement({
+      connectionId: 'ibkr:flex',
+      generatedAt: GENERATED_AT,
+      accountAlias: null,
+      queryId: 'q-mixed',
+      statement: {
+        FlexStatement: {
+          AccountInformation: { AccountInformation: { accountId: 'U777', currency: 'EUR' } },
+          OpenPositions: {
+            OpenPosition: {
+              accountId: 'U777',
+              symbol: 'EUR',
+              description: 'EUR cash',
+              assetCategory: 'CASH',
+              currency: 'EUR',
+              position: '2000',
+              positionValue: '2000',
+              costBasisMoney: '2000',
+            },
+          },
+          CashReport: {
+            CashReportCurrency: {
+              accountId: 'U777',
+              currency: 'EUR',
+              endingCash: '2000',
+            },
+          },
+        },
+      },
+    })
+
+    const eurPositions = snapshot.positions.filter(
+      p => p.currency === 'EUR' && p.assetClass === 'cash'
+    )
+    // Exactly one EUR cash position — no duplicate from CashReport
+    expect(eurPositions).toHaveLength(1)
+    expect(eurPositions[0]?.metadata).not.toMatchObject({ synthetic: true })
+  })
+
+  it('skips a CashReport currency with zero or negative endingCash', () => {
+    const snapshot = normalizeIbkrFlexStatement({
+      connectionId: 'ibkr:flex',
+      generatedAt: GENERATED_AT,
+      accountAlias: null,
+      queryId: 'q-zero-cash',
+      statement: {
+        FlexStatement: {
+          AccountInformation: { AccountInformation: { accountId: 'U000', currency: 'EUR' } },
+          CashReport: {
+            CashReportCurrency: [
+              { accountId: 'U000', currency: 'EUR', endingCash: '0' },
+              { accountId: 'U000', currency: 'CHF', endingCash: '-5' },
+              { accountId: 'U000', currency: 'GBP', endingCash: '12.34' },
+            ],
+          },
+        },
+      },
+    })
+
+    const cashCurrencies = snapshot.positions
+      .filter(p => p.assetClass === 'cash')
+      .map(p => p.currency)
+    expect(cashCurrencies).toEqual(['GBP'])
   })
 })
 

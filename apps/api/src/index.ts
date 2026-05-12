@@ -19,6 +19,7 @@ import {
 } from './auth/origin'
 import { createAuthRoutes } from './auth/routes'
 import { env } from './env'
+import { buildApiFeatureFlagsAudit, detectCriticalFeatureFlagWarnings } from './feature-flags-audit'
 import { isApiDebugEnabled, logApiEvent, toErrorLogFields } from './observability/logger'
 import { createDashboardRoutes } from './routes/dashboard/router'
 import { createDebugRoutes } from './routes/debug/router'
@@ -865,6 +866,20 @@ logApiEvent({
   port: env.API_PORT,
   externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
 })
+
+const apiFeatureFlagsAudit = buildApiFeatureFlagsAudit(env)
+logApiEvent({
+  level: 'info',
+  msg: 'api feature flags audit',
+  featureFlags: apiFeatureFlagsAudit,
+})
+for (const warning of detectCriticalFeatureFlagWarnings(apiFeatureFlagsAudit)) {
+  logApiEvent({
+    level: 'warn',
+    msg: 'api feature flags warning',
+    warning,
+  })
+}
 
 const shutdown = async (signal: string) => {
   logApiEvent({
