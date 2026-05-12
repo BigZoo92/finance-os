@@ -1,16 +1,21 @@
 import { randomUUID } from 'node:crypto'
-import type { createDbClient } from '@finance-os/db'
+import { type createDbClient, schema } from '@finance-os/db'
+import { eq, or } from 'drizzle-orm'
 import type { getWorkerEnv } from '@finance-os/env'
 import {
   type BinanceCashFlow,
   type BinanceCoinInfo,
   type BinanceTrade,
   createBinanceReadonlyClient,
+  createBinanceUsdEurFxFetcher,
   createExternalInvestmentsRepository,
   createIbkrFlexClient,
+  enrichBinanceValuations,
+  enrichMarketQuotedValuations,
   type ExternalInvestmentCredentialPayload,
   type ExternalInvestmentProvider,
   type ExternalInvestmentsJob,
+  type MarketQuoteLookup,
   normalizeBinanceSnapshot,
   normalizeIbkrFlexStatement,
   toExternalInvestmentErrorCode,
@@ -168,6 +173,47 @@ export const createExternalInvestmentsSyncWorker = ({
     )
   }
 
+  const marketQuoteLookup: MarketQuoteLookup = async ({ symbol, isin, conid }) => {
+    const conditions = [] as ReturnType<typeof eq>[]
+    if (symbol) {
+      conditions.push(eq(schema.marketQuoteSnapshot.symbol, symbol))
+      conditions.push(eq(schema.marketQuoteSnapshot.providerSymbol, symbol))
+    }
+    if (conid) {
+      conditions.push(eq(schema.marketQuoteSnapshot.instrumentId, `ibkr:${conid}`))
+    }
+    if (conditions.length === 0) return null
+    const rows = await db
+      .select({
+        symbol: schema.marketQuoteSnapshot.symbol,
+        providerSymbol: schema.marketQuoteSnapshot.providerSymbol,
+        price: schema.marketQuoteSnapshot.price,
+        currency: schema.marketQuoteSnapshot.currency,
+        quoteAsOf: schema.marketQuoteSnapshot.quoteAsOf,
+        sourceProvider: schema.marketQuoteSnapshot.sourceProvider,
+        isDelayed: schema.marketQuoteSnapshot.isDelayed,
+        marketState: schema.marketQuoteSnapshot.marketState,
+        freshnessMinutes: schema.marketQuoteSnapshot.freshnessMinutes,
+      })
+      .from(schema.marketQuoteSnapshot)
+      .where(or(...conditions))
+      .limit(1)
+    const row = rows[0]
+    if (!row) return null
+    return {
+      symbol: row.symbol,
+      providerSymbol: row.providerSymbol,
+      isin: isin ?? null,
+      price: row.price,
+      currency: row.currency,
+      quoteAsOf: row.quoteAsOf instanceof Date ? row.quoteAsOf.toISOString() : row.quoteAsOf,
+      sourceProvider: row.sourceProvider,
+      isDelayed: row.isDelayed,
+      marketState: row.marketState,
+      freshnessMinutes: row.freshnessMinutes,
+    }
+  }
+
   const syncIbkrConnection = async ({
     connection,
     payload,
@@ -191,13 +237,40 @@ export const createExternalInvestmentsSyncWorker = ({
     for (const queryId of payload.queryIds) {
       try {
         const statement = await client.runQuery(queryId)
-        const snapshot = normalizeIbkrFlexStatement({
+        let snapshot = normalizeIbkrFlexStatement({
           connectionId: String(connection.id),
           generatedAt,
           accountAlias: payload.accountAlias ?? null,
           queryId,
           statement,
         })
+
+        try {
+          const enriched = await enrichMarketQuotedValuations({
+            snapshot,
+            lookup: marketQuoteLookup,
+            staleAfterMinutes: env.EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES,
+          })
+          snapshot = enriched.snapshot
+          if (enriched.enrichedCount > 0 || enriched.missingCount > 0) {
+            log({
+              level: 'info',
+              msg: 'ibkr market-quote enrichment completed',
+              connectionId: connection.id,
+              enrichedCount: enriched.enrichedCount,
+              staleCount: enriched.staleCount,
+              missingCount: enriched.missingCount,
+            })
+          }
+        } catch (error) {
+          log({
+            level: 'warn',
+            msg: 'ibkr market-quote enrichment failed',
+            connectionId: connection.id,
+            errMessage: sanitizeError(error),
+          })
+        }
+
         const counts = await repository.upsertCanonicalSnapshot({
           connection,
           snapshot,
@@ -335,7 +408,7 @@ export const createExternalInvestmentsSyncWorker = ({
     })
     degradedReasons.push(...tradesResult.degradedReasons)
 
-    const snapshot = normalizeBinanceSnapshot({
+    const baseSnapshot = normalizeBinanceSnapshot({
       connectionId: String(connection.id),
       generatedAt,
       accountAlias: payload.accountAlias ?? null,
@@ -345,6 +418,43 @@ export const createExternalInvestmentsSyncWorker = ({
       withdrawals,
       coins,
     })
+
+    let snapshot = baseSnapshot
+    if (env.EXTERNAL_INVESTMENTS_BINANCE_VALUATION_ENABLED) {
+      const targetCurrency = env.EXTERNAL_INVESTMENTS_VALUATION_TARGET_CURRENCY
+      const fxFetcher = createBinanceUsdEurFxFetcher({
+        tickerFetcher: params => client.getTickerPrice(params),
+        now: () => new Date().toISOString(),
+        fallbackUsdEurRate: env.EXTERNAL_INVESTMENTS_BINANCE_VALUATION_USD_EUR_FALLBACK,
+      })
+      try {
+        const enriched = await enrichBinanceValuations({
+          snapshot: baseSnapshot,
+          targetCurrency,
+          now: () => new Date().toISOString(),
+          tickerFetcher: params => client.getTickerPrice(params),
+          fxFetcher,
+        })
+        snapshot = enriched.snapshot
+        log({
+          level: 'info',
+          msg: 'binance valuation enrichment completed',
+          connectionId: connection.id,
+          enrichedCount: enriched.enrichedCount,
+          failedCount: enriched.failedCount,
+          valuationSnapshotCount: enriched.valuationSnapshots.length,
+        })
+      } catch (error) {
+        degradedReasons.push('VALUATION_PARTIAL')
+        log({
+          level: 'warn',
+          msg: 'binance valuation enrichment failed',
+          connectionId: connection.id,
+          error: toSafeExternalInvestmentErrorMessage(error),
+        })
+      }
+    }
+
     const rowCounts = await repository.upsertCanonicalSnapshot({
       connection,
       snapshot: {

@@ -350,7 +350,6 @@ const buildAdvisorMemoryDimension = (
     case 'disabled':
       status = 'disabled_by_flag'
       break
-    case 'unknown':
     default:
       status = 'unknown'
   }

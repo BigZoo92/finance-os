@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia'
 import { getRequestMeta } from '../../../../auth/context'
 import { demoOrReal } from '../../../../auth/demo-mode'
+import { rejectInvalidCredentials } from '../../../../auth/guard'
 import { getExternalInvestmentsRuntime } from '../context'
 import { externalInvestmentListQuerySchema } from '../schemas'
 
@@ -8,6 +9,7 @@ export const createExternalInvestmentsSyncRunsRoute = () =>
   new Elysia().get(
     '/sync-runs',
     async context => {
+      rejectInvalidCredentials(context)
       const requestId = getRequestMeta(context).requestId
       const limit = context.query.limit ?? 40
 

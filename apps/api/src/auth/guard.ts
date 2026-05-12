@@ -5,6 +5,7 @@ import type { ApiEnv, InternalTokenSource } from './types'
 const ADMIN_REQUIRED_MESSAGE = 'Admin session required'
 const ADMIN_OR_INTERNAL_REQUIRED_MESSAGE = 'Admin session or internal token required'
 const INTERNAL_TOKEN_REQUIRED_MESSAGE = 'Internal token required'
+const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials'
 
 export const demoAccessDeniedResponse = {
   ok: false as const,
@@ -32,6 +33,19 @@ export class InternalTokenRequiredError extends Error {
     super(INTERNAL_TOKEN_REQUIRED_MESSAGE)
     this.name = 'InternalTokenRequiredError'
     this.requestId = requestId
+  }
+}
+
+export class InvalidCredentialsError extends Error {
+  readonly code = 'INVALID_CREDENTIALS' as const
+  readonly requestId: string
+  readonly tokenSource: InternalTokenSource
+
+  constructor(requestId: string, tokenSource: InternalTokenSource) {
+    super(INVALID_CREDENTIALS_MESSAGE)
+    this.name = 'InvalidCredentialsError'
+    this.requestId = requestId
+    this.tokenSource = tokenSource
   }
 }
 
@@ -110,6 +124,22 @@ export const isInternalTokenRequiredError = (
   error: unknown
 ): error is InternalTokenRequiredError => {
   return error instanceof InternalTokenRequiredError
+}
+
+export const isInvalidCredentialsError = (error: unknown): error is InvalidCredentialsError => {
+  return error instanceof InvalidCredentialsError
+}
+
+/**
+ * Reject when a credential was provided but failed validation. Lets unauthenticated
+ * demo browsers fall through (token never attempted), while preventing silent demo
+ * fallback for admin-sensitive diagnostics when a bad token is supplied.
+ */
+export const rejectInvalidCredentials = <TContext extends object>(context: TContext) => {
+  const internalAuth = getInternalAuth(context)
+  if (internalAuth.tokenSource !== null && internalAuth.hasValidToken === false) {
+    throw new InvalidCredentialsError(getRequestMeta(context).requestId, internalAuth.tokenSource)
+  }
 }
 
 export const requireAdminOrInternalToken = <TContext extends object>(context: TContext) => {

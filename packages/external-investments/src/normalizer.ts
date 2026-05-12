@@ -530,12 +530,42 @@ export const normalizeIbkrFlexStatement = ({
     [...equitySummaryByAccount.keys()][0] ??
     `ibkr:flex:${queryId}`
 
+  const STALE_REPORT_DATE_WARN_DAYS = 30
+  const generatedAtMs = Date.parse(generatedAt)
+  const isReportDateStale = (reportDate: string | null | undefined) => {
+    if (!reportDate || Number.isNaN(generatedAtMs)) return false
+    const reportMs = Date.parse(reportDate)
+    if (Number.isNaN(reportMs)) return false
+    return generatedAtMs - reportMs > STALE_REPORT_DATE_WARN_DAYS * 24 * 60 * 60 * 1000
+  }
+
+  const equitySummaryCashIsZeroOrEmpty = (summary: IbkrEquitySummary | null) => {
+    if (!summary) return true
+    const cash = summary.cash ?? summary.cashLong
+    if (!cash) return true
+    const parsed = Number(cash)
+    return !Number.isFinite(parsed) || parsed <= 0
+  }
+
   const accounts = (accountRows.length > 0 ? accountRows : [{ accountId: fallbackAccountId }]).map(
     rowValue => {
       const row = asRecord(rowValue)
       const accountExternalId = stringValue(row.accountId) ?? fallbackAccountId
       const cashBalances = cashReportByAccount.get(accountExternalId) ?? null
       const equitySummary = equitySummaryByAccount.get(accountExternalId) ?? null
+      const accountDegradedReasons: string[] = []
+      if (!cashBalances || cashBalances.length === 0) {
+        accountDegradedReasons.push('CASH_REPORT_MISSING')
+      }
+      if (
+        (!cashBalances || cashBalances.length === 0) &&
+        equitySummaryCashIsZeroOrEmpty(equitySummary)
+      ) {
+        accountDegradedReasons.push('PROVIDER_REPORTED_ZERO_CASH')
+      }
+      if (equitySummary && isReportDateStale(equitySummary.reportDate)) {
+        accountDegradedReasons.push('STALE_PROVIDER_REPORT_DATE')
+      }
       return {
         provider: 'ibkr' as const,
         connectionId,
@@ -547,8 +577,10 @@ export const normalizeIbkrFlexStatement = ({
           queryId,
           ...(cashBalances ? { cashBalances } : {}),
           ...(equitySummary ? { equitySummary } : {}),
+          cashReportPresent: Boolean(cashBalances && cashBalances.length > 0),
+          equitySummaryPresent: Boolean(equitySummary),
         },
-        degradedReasons: [],
+        degradedReasons: accountDegradedReasons,
         sourceConfidence: 'high' as const,
         rawImportKey: `ibkr:account:${accountExternalId}`,
       }
@@ -823,6 +855,92 @@ export const normalizeIbkrFlexStatement = ({
     }
   }
 
+  // Fallback: when CashReport is missing for an account but EquitySummary
+  // reports a positive cash amount, synthesise a base-currency cash position
+  // so the account isn't invisible in the dashboard. We tag it explicitly so
+  // it can be distinguished from a real CashReport-sourced cash row.
+  for (const account of accounts) {
+    if (
+      account.metadata &&
+      typeof account.metadata === 'object' &&
+      (account.metadata as Record<string, unknown>).cashReportPresent === true
+    ) {
+      continue
+    }
+    const equitySummary = equitySummaryByAccount.get(account.accountExternalId) ?? null
+    if (!equitySummary) continue
+    const cashStr = equitySummary.cash ?? equitySummary.cashLong
+    const cash = cashStr ? Number(cashStr) : null
+    if (!cash || !Number.isFinite(cash) || cash <= 0) continue
+    const currency = account.baseCurrency ?? 'USD'
+    const instrumentKey = `ibkr:cash:${currency}:equity-summary`
+    const rawImportKey = `ibkr:cash:${account.accountExternalId}:${currency}:equity-summary`
+    if (!instruments.has(instrumentKey)) {
+      instruments.set(instrumentKey, {
+        provider: 'ibkr',
+        connectionId,
+        instrumentKey,
+        symbol: currency,
+        name: `${currency} cash (EquitySummary fallback)`,
+        currency,
+        assetClass: 'cash',
+        isin: null,
+        cusip: null,
+        conid: null,
+        binanceAsset: null,
+        binanceSymbol: null,
+        metadata: { synthetic: true, source: 'EquitySummary' },
+        sourceConfidence: 'medium',
+        rawImportKey,
+      })
+    }
+    positions.push({
+      provider: 'ibkr',
+      connectionId,
+      accountExternalId: account.accountExternalId,
+      instrumentKey,
+      positionKey: `ibkr:${account.accountExternalId}:cash:${currency}:equity-summary`,
+      providerPositionId: `${account.accountExternalId}:cash:${currency}:equity-summary`,
+      name: `${currency} cash (EquitySummary fallback)`,
+      symbol: currency,
+      assetClass: 'cash',
+      quantity: cashStr ?? null,
+      freeQuantity: cashStr ?? null,
+      lockedQuantity: null,
+      currency,
+      providerValue: cashStr ?? null,
+      normalizedValue: cashStr ?? null,
+      valueCurrency: currency,
+      valueSource: 'provider_reported',
+      valueAsOf: generatedAt,
+      costBasis: cashStr ?? null,
+      costBasisCurrency: currency,
+      realizedPnl: null,
+      unrealizedPnl: null,
+      metadata: {
+        synthetic: true,
+        source: 'EquitySummary',
+        reportDate: equitySummary.reportDate,
+      },
+      sourceConfidence: 'medium',
+      degradedReasons: [],
+      assumptions: [
+        `IBKR cash balance ${currency} sourced from EquitySummary.cash because CashReport is empty.`,
+      ],
+      rawImportKey,
+    })
+  }
+
+  const overallDegradedReasons = new Set<string>()
+  if (positions.some(position => position.normalizedValue === null)) {
+    overallDegradedReasons.add('VALUATION_PARTIAL')
+  }
+  for (const account of accounts) {
+    for (const reason of account.degradedReasons) {
+      overallDegradedReasons.add(reason)
+    }
+  }
+
   return {
     provider: 'ibkr',
     connectionId,
@@ -833,9 +951,7 @@ export const normalizeIbkrFlexStatement = ({
     trades,
     cashFlows,
     rawImports,
-    degradedReasons: positions.some(position => position.normalizedValue === null)
-      ? ['VALUATION_PARTIAL']
-      : [],
+    degradedReasons: [...overallDegradedReasons],
     warnings: [],
   }
 }

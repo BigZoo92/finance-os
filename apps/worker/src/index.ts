@@ -45,6 +45,7 @@ import {
 import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
 import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
 import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
+import { startXDailySyncScheduler, triggerXDailySync } from './x-twitter-daily-sync-scheduler'
 import {
   startAttentionRebuildScheduler,
   triggerAttentionRebuild,
@@ -1582,6 +1583,24 @@ const startSocialScheduler = () => {
   })
 }
 
+let xDailySyncSchedulerTimer: { stop: () => void } | null = null
+const startXDailySyncSchedulerInstance = () => {
+  xDailySyncSchedulerTimer = startXDailySyncScheduler({
+    enabled: env.X_DAILY_PREVIOUS_DAY_SYNC_ENABLED,
+    cron: env.X_DAILY_PREVIOUS_DAY_CRON,
+    timezone: env.X_DAILY_PREVIOUS_DAY_TIMEZONE,
+    trigger: () =>
+      triggerXDailySync({
+        redisClient: redisClient.client,
+        apiInternalUrl: env.API_INTERNAL_URL,
+        log: logWorkerEvent,
+        ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
+        lockTtlSeconds: env.X_DAILY_PREVIOUS_DAY_LOCK_TTL_SECONDS,
+      }),
+    log: logWorkerEvent,
+  })
+}
+
 const consumeJobs = async () => {
   while (keepRunning) {
     try {
@@ -1695,6 +1714,7 @@ const start = async () => {
   startAdvisorPostMortemRunScheduler()
   startSocialScheduler()
   startAttentionScheduler()
+  startXDailySyncSchedulerInstance()
   await consumeJobs()
 }
 
@@ -1749,6 +1769,11 @@ const shutdown = async (signal: string) => {
   if (attentionSchedulerTimer) {
     clearInterval(attentionSchedulerTimer)
     attentionSchedulerTimer = null
+  }
+
+  if (xDailySyncSchedulerTimer) {
+    xDailySyncSchedulerTimer.stop()
+    xDailySyncSchedulerTimer = null
   }
 
   statusServer?.close()

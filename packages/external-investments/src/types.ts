@@ -20,6 +20,7 @@ export type ExternalInvestmentSourceConfidence = 'high' | 'medium' | 'low' | 'un
 export type ExternalInvestmentValueSource =
   | 'provider_reported'
   | 'market_cache'
+  | 'market_resolved'
   | 'manual'
   | 'unknown'
 

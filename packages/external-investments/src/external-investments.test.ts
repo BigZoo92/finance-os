@@ -517,6 +517,112 @@ describe('provider normalization', () => {
     expect(eurPositions[0]?.metadata).not.toMatchObject({ synthetic: true })
   })
 
+  it('flags accounts with CASH_REPORT_MISSING and PROVIDER_REPORTED_ZERO_CASH when no cash data is returned', () => {
+    const snapshot = normalizeIbkrFlexStatement({
+      connectionId: 'ibkr:flex',
+      generatedAt: GENERATED_AT,
+      accountAlias: 'IBKR U25659092',
+      queryId: '1505333',
+      statement: {
+        FlexStatement: {
+          AccountInformation: {
+            AccountInformation: {
+              accountId: 'U25659092',
+              accountType: 'Individual',
+              currency: 'EUR',
+            },
+          },
+          EquitySummaryInBase: {
+            EquitySummaryByReportDateInBase: {
+              accountId: 'U25659092',
+              reportDate: '2026-05-12',
+              cash: '0',
+              total: '0',
+            },
+          },
+        },
+      },
+    })
+
+    expect(snapshot.accounts).toHaveLength(1)
+    const account = snapshot.accounts[0]!
+    expect(account.degradedReasons).toContain('CASH_REPORT_MISSING')
+    expect(account.degradedReasons).toContain('PROVIDER_REPORTED_ZERO_CASH')
+    expect(account.degradedReasons).not.toContain('STALE_PROVIDER_REPORT_DATE')
+
+    const metadata = account.metadata as Record<string, unknown>
+    expect(metadata.cashReportPresent).toBe(false)
+    expect(metadata.equitySummaryPresent).toBe(true)
+
+    // Snapshot-level degraded reasons aggregate account-level diagnostics.
+    expect(snapshot.degradedReasons).toContain('CASH_REPORT_MISSING')
+    expect(snapshot.degradedReasons).toContain('PROVIDER_REPORTED_ZERO_CASH')
+
+    // Account remains visible with no synthetic fake cash.
+    expect(snapshot.positions.filter(p => p.assetClass === 'cash')).toHaveLength(0)
+  })
+
+  it('flags STALE_PROVIDER_REPORT_DATE when EquitySummary reportDate is older than 30 days', () => {
+    const snapshot = normalizeIbkrFlexStatement({
+      connectionId: 'ibkr:flex',
+      generatedAt: GENERATED_AT, // '2026-04-09T12:00:00.000Z'
+      accountAlias: 'IBKR Stale',
+      queryId: 'q-stale',
+      statement: {
+        FlexStatement: {
+          AccountInformation: { AccountInformation: { accountId: 'UST', currency: 'EUR' } },
+          EquitySummaryInBase: {
+            EquitySummaryByReportDateInBase: {
+              accountId: 'UST',
+              reportDate: '2025-05-12',
+              cash: '0',
+              total: '0',
+            },
+          },
+        },
+      },
+    })
+
+    const account = snapshot.accounts[0]!
+    expect(account.degradedReasons).toContain('STALE_PROVIDER_REPORT_DATE')
+  })
+
+  it('synthesises a cash position from EquitySummary when CashReport is empty but EquitySummary.cash > 0', () => {
+    const snapshot = normalizeIbkrFlexStatement({
+      connectionId: 'ibkr:flex',
+      generatedAt: GENERATED_AT,
+      accountAlias: 'IBKR EquitySummary fallback',
+      queryId: 'q-equity-only',
+      statement: {
+        FlexStatement: {
+          AccountInformation: {
+            AccountInformation: {
+              accountId: 'U_EQ',
+              accountType: 'Individual',
+              currency: 'EUR',
+            },
+          },
+          EquitySummaryInBase: {
+            EquitySummaryByReportDateInBase: {
+              accountId: 'U_EQ',
+              reportDate: '2026-04-09',
+              cash: '1250',
+              total: '1250',
+            },
+          },
+        },
+      },
+    })
+
+    const cashPositions = snapshot.positions.filter(p => p.assetClass === 'cash')
+    expect(cashPositions).toHaveLength(1)
+    expect(cashPositions[0]?.normalizedValue).toBe('1250')
+    expect(cashPositions[0]?.metadata).toMatchObject({ source: 'EquitySummary' })
+    const account = snapshot.accounts[0]!
+    expect(account.degradedReasons).toContain('CASH_REPORT_MISSING')
+    expect(account.degradedReasons).not.toContain('PROVIDER_REPORTED_ZERO_CASH')
+  })
+
   it('skips a CashReport currency with zero or negative endingCash', () => {
     const snapshot = normalizeIbkrFlexStatement({
       connectionId: 'ibkr:flex',

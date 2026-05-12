@@ -39,6 +39,15 @@ export const signalSource = pgTable(
     lastCursor: text('last_cursor'),
     lastError: text('last_error'),
     lastFetchedCount: integer('last_fetched_count'),
+    /** Provider-side user ID (e.g. X numeric user_id). Stored once after the first
+     *  by-username lookup so daily timeline fetches don't pay $0.01/run/user. */
+    externalId: text('external_id'),
+    /** Cached profile_image_url for UI display (avatar). 24h Redis cache also exists. */
+    profileImageUrl: text('profile_image_url'),
+    /** Last-known provider profile metadata (verified, public_metrics, description, banner). */
+    profileMetadata: jsonb('profile_metadata').$type<Record<string, unknown> | null>(),
+    /** When the cached profile was last refreshed from the provider. */
+    profileCachedAt: timestamp('profile_cached_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -146,5 +155,84 @@ export const signalItem = pgTable(
     index('signal_item_content_hash_idx').on(table.contentHash),
     index('signal_item_graph_ingest_status_idx').on(table.graphIngestStatus),
     index('signal_item_ingestion_run_id_idx').on(table.ingestionRunId),
+  ]
+)
+
+// ---------------------------------------------------------------------------
+// X / Twitter pay-per-use ledger
+// ---------------------------------------------------------------------------
+//
+// Each X API call (resource read) is billed. We persist one row per call so
+// the worker can refuse to launch a run that would blow the daily / monthly
+// cap (X_DAILY_BUDGET_USD / X_MONTHLY_BUDGET_USD). Aggregations are computed
+// at read time — no secondary counter table to drift out of sync.
+
+export const xTwitterUsageLedger = pgTable(
+  'x_twitter_usage_ledger',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    runId: text('run_id'),
+    /** Endpoint hit, e.g. 'users/by/username', 'users/:id/tweets' (no PII / no token). */
+    endpoint: text('endpoint').notNull(),
+    /** Billable counters (post reads, user reads) charged by X for this call. */
+    postReads: integer('post_reads').notNull().default(0),
+    userReads: integer('user_reads').notNull().default(0),
+    /** Estimated cost in USD (computed from postReads × $0.005 + userReads × $0.010). */
+    estimatedCostUsd: doublePrecision('estimated_cost_usd').notNull().default(0),
+    /** Actual cost USD if X has reported it (otherwise null). */
+    actualCostUsd: doublePrecision('actual_cost_usd'),
+    requestCount: integer('request_count').notNull().default(1),
+    statusCode: integer('status_code'),
+    /** Provider error code if any: TOKEN_INVALID, PAYMENT_REQUIRED, RATE_LIMITED, etc. */
+    errorCode: text('error_code'),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  table => [
+    index('x_twitter_usage_ledger_occurred_at_idx').on(table.occurredAt),
+    index('x_twitter_usage_ledger_run_id_idx').on(table.runId),
+    index('x_twitter_usage_ledger_error_code_idx').on(table.errorCode),
+  ]
+)
+
+// ---------------------------------------------------------------------------
+// Free Firehose manual import runs
+// ---------------------------------------------------------------------------
+//
+// Distinct from signal_ingestion_run: this table tracks the explicit, admin-
+// gated, manual massive import button. One row per run. Strictly free sources
+// (GDELT / HN / ECB / Fed / SEC / FRED). Never triggered by cron. Provider
+// breakdown lets the UI show per-source progress and errors.
+
+export const freeFirehoseRun = pgTable(
+  'free_firehose_run',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    runId: text('run_id').notNull(),
+    requestedBy: text('requested_by').notNull().default('admin'),
+    /** 'dry_run' | 'live'. dry_run never writes signal_item / news_article rows. */
+    mode: text('mode').notNull().$type<'dry_run' | 'live'>(),
+    status: text('status')
+      .notNull()
+      .default('running')
+      .$type<'running' | 'success' | 'partial' | 'failed' | 'cancelled' | 'skipped_quota'>(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    durationMs: integer('duration_ms'),
+    fetchedCount: integer('fetched_count').notNull().default(0),
+    insertedCount: integer('inserted_count').notNull().default(0),
+    dedupedCount: integer('deduped_count').notNull().default(0),
+    skippedCount: integer('skipped_count').notNull().default(0),
+    failedCount: integer('failed_count').notNull().default(0),
+    /** Per-provider counters: { gdelt: {fetched, inserted, errors}, hn: {...} }. */
+    providerBreakdown: jsonb('provider_breakdown').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    errorSummary: text('error_summary'),
+    requestId: text('request_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex('free_firehose_run_run_id_unique').on(table.runId),
+    index('free_firehose_run_started_at_idx').on(table.startedAt),
+    index('free_firehose_run_status_idx').on(table.status),
   ]
 )

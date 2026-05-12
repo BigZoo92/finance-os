@@ -31,9 +31,11 @@ import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
 import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
+import { Route as AppSignauxXTwitterRouteImport } from './routes/_app/signaux/x-twitter'
 import { Route as AppSignauxSourcesRouteImport } from './routes/_app/signaux/sources'
 import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
 import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
+import { Route as AppSignauxFreeFirehoseRouteImport } from './routes/_app/signaux/free-firehose'
 import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
 import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
 import { Route as AppIaChatRouteImport } from './routes/_app/ia/chat'
@@ -149,6 +151,11 @@ const AppIaIndexRoute = AppIaIndexRouteImport.update({
   path: '/ia/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSignauxXTwitterRoute = AppSignauxXTwitterRouteImport.update({
+  id: '/signaux/x-twitter',
+  path: '/signaux/x-twitter',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSignauxSourcesRoute = AppSignauxSourcesRouteImport.update({
   id: '/signaux/sources',
   path: '/signaux/sources',
@@ -162,6 +169,11 @@ const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
 const AppSignauxMarchesRoute = AppSignauxMarchesRouteImport.update({
   id: '/signaux/marches',
   path: '/signaux/marches',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSignauxFreeFirehoseRoute = AppSignauxFreeFirehoseRouteImport.update({
+  id: '/signaux/free-firehose',
+  path: '/signaux/free-firehose',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
@@ -213,9 +225,11 @@ export interface FileRoutesByFullPath {
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
+  '/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
+  '/signaux/x-twitter': typeof AppSignauxXTwitterRoute
   '/ia/': typeof AppIaIndexRoute
   '/signaux/': typeof AppSignauxIndexRoute
   '/ia/memoire/graph': typeof AppIaMemoireGraphRoute
@@ -244,9 +258,11 @@ export interface FileRoutesByTo {
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
+  '/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
   '/signaux/sources': typeof AppSignauxSourcesRoute
+  '/signaux/x-twitter': typeof AppSignauxXTwitterRoute
   '/ia': typeof AppIaIndexRoute
   '/signaux': typeof AppSignauxIndexRoute
   '/ia/memoire/graph': typeof AppIaMemoireGraphRoute
@@ -277,9 +293,11 @@ export interface FileRoutesById {
   '/_app/ia/chat': typeof AppIaChatRoute
   '/_app/ia/couts': typeof AppIaCoutsRoute
   '/_app/ia/trading-lab': typeof AppIaTradingLabRoute
+  '/_app/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/_app/signaux/marches': typeof AppSignauxMarchesRoute
   '/_app/signaux/social': typeof AppSignauxSocialRoute
   '/_app/signaux/sources': typeof AppSignauxSourcesRoute
+  '/_app/signaux/x-twitter': typeof AppSignauxXTwitterRoute
   '/_app/ia/': typeof AppIaIndexRoute
   '/_app/signaux/': typeof AppSignauxIndexRoute
   '/_app/ia/memoire/graph': typeof AppIaMemoireGraphRoute
@@ -310,9 +328,11 @@ export interface FileRouteTypes {
     | '/ia/chat'
     | '/ia/couts'
     | '/ia/trading-lab'
+    | '/signaux/free-firehose'
     | '/signaux/marches'
     | '/signaux/social'
     | '/signaux/sources'
+    | '/signaux/x-twitter'
     | '/ia/'
     | '/signaux/'
     | '/ia/memoire/graph'
@@ -341,9 +361,11 @@ export interface FileRouteTypes {
     | '/ia/chat'
     | '/ia/couts'
     | '/ia/trading-lab'
+    | '/signaux/free-firehose'
     | '/signaux/marches'
     | '/signaux/social'
     | '/signaux/sources'
+    | '/signaux/x-twitter'
     | '/ia'
     | '/signaux'
     | '/ia/memoire/graph'
@@ -373,9 +395,11 @@ export interface FileRouteTypes {
     | '/_app/ia/chat'
     | '/_app/ia/couts'
     | '/_app/ia/trading-lab'
+    | '/_app/signaux/free-firehose'
     | '/_app/signaux/marches'
     | '/_app/signaux/social'
     | '/_app/signaux/sources'
+    | '/_app/signaux/x-twitter'
     | '/_app/ia/'
     | '/_app/signaux/'
     | '/_app/ia/memoire/graph'
@@ -548,6 +572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/signaux/x-twitter': {
+      id: '/_app/signaux/x-twitter'
+      path: '/signaux/x-twitter'
+      fullPath: '/signaux/x-twitter'
+      preLoaderRoute: typeof AppSignauxXTwitterRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/signaux/sources': {
       id: '/_app/signaux/sources'
       path: '/signaux/sources'
@@ -567,6 +598,13 @@ declare module '@tanstack/react-router' {
       path: '/signaux/marches'
       fullPath: '/signaux/marches'
       preLoaderRoute: typeof AppSignauxMarchesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/free-firehose': {
+      id: '/_app/signaux/free-firehose'
+      path: '/signaux/free-firehose'
+      fullPath: '/signaux/free-firehose'
+      preLoaderRoute: typeof AppSignauxFreeFirehoseRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/ia/trading-lab': {
@@ -624,9 +662,11 @@ interface AppRouteChildren {
   AppIaChatRoute: typeof AppIaChatRoute
   AppIaCoutsRoute: typeof AppIaCoutsRoute
   AppIaTradingLabRoute: typeof AppIaTradingLabRoute
+  AppSignauxFreeFirehoseRoute: typeof AppSignauxFreeFirehoseRoute
   AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
   AppSignauxSocialRoute: typeof AppSignauxSocialRoute
   AppSignauxSourcesRoute: typeof AppSignauxSourcesRoute
+  AppSignauxXTwitterRoute: typeof AppSignauxXTwitterRoute
   AppIaIndexRoute: typeof AppIaIndexRoute
   AppSignauxIndexRoute: typeof AppSignauxIndexRoute
   AppIaMemoireGraphRoute: typeof AppIaMemoireGraphRoute
@@ -650,9 +690,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaChatRoute: AppIaChatRoute,
   AppIaCoutsRoute: AppIaCoutsRoute,
   AppIaTradingLabRoute: AppIaTradingLabRoute,
+  AppSignauxFreeFirehoseRoute: AppSignauxFreeFirehoseRoute,
   AppSignauxMarchesRoute: AppSignauxMarchesRoute,
   AppSignauxSocialRoute: AppSignauxSocialRoute,
   AppSignauxSourcesRoute: AppSignauxSourcesRoute,
+  AppSignauxXTwitterRoute: AppSignauxXTwitterRoute,
   AppIaIndexRoute: AppIaIndexRoute,
   AppSignauxIndexRoute: AppSignauxIndexRoute,
   AppIaMemoireGraphRoute: AppIaMemoireGraphRoute,
@@ -673,13 +715,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

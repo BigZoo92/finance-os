@@ -204,4 +204,100 @@ describe('applyTransactionAutoCategorization', () => {
     expect(result.category).toBe('Abonnements')
     expect(result.subcategory).toBe('Logiciels')
   })
+
+  // ── Broker transfers — must NOT be consumer spending ──────────────────────
+  it('classifies an outgoing IBKR transfer as Investissement / Transfert vers courtier', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'INST Virement avec Fortuneo vers IBKR DE 1234',
+      merchant: '',
+      amount: -500,
+    })
+    expect(result.category).toBe('Investissement')
+    expect(result.subcategory).toBe('Transfert vers courtier')
+    expect(result.resolutionSource).toBe('counterparty')
+    expect(result.resolutionRuleId).toBe('broker-transfer-ibkr')
+  })
+
+  it('classifies an outgoing Binance transfer as Investissement / Transfert vers exchange crypto', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'INST Virement avec Fortuneo vers Binance EU',
+      merchant: '',
+      amount: -200,
+    })
+    expect(result.category).toBe('Investissement')
+    expect(result.subcategory).toBe('Transfert vers exchange crypto')
+    expect(result.resolutionRuleId).toBe('broker-transfer-binance')
+  })
+
+  it('classifies an outgoing Trade Republic transfer as Investissement / Transfert vers courtier', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'INST Virement avec Fortuneo vers Trade Re 99',
+      merchant: '',
+      amount: -1000,
+    })
+    expect(result.category).toBe('Investissement')
+    expect(result.subcategory).toBe('Transfert vers courtier')
+    expect(result.resolutionRuleId).toBe('broker-transfer-trade-republic')
+  })
+
+  it('classifies a PEA buy order as Investissement / Ordre bourse', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'ORDRE ACHAT MSCI WORLD CW8',
+      merchant: '',
+      amount: -300,
+    })
+    expect(result.category).toBe('Investissement')
+    expect(result.subcategory).toBe('Ordre bourse')
+  })
+
+  // ── Other labels surfaced by the user ─────────────────────────────────────
+  it('classifies a Steam game purchase as Loisirs / Jeux video', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'STEAMGAMES.COM',
+      merchant: 'Steam',
+      amount: -29.99,
+    })
+    expect(result.category).toBe('Loisirs')
+    expect(result.subcategory).toBe('Jeux video')
+  })
+
+  it('classifies a Wero peer transfer under Transfert interne / Virement entre particuliers', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'Wero to JEAN DUPONT',
+      merchant: '',
+      amount: -30,
+    })
+    expect(result.category).toBe('Transfert interne')
+    expect(result.subcategory).toBe('Virement entre particuliers')
+  })
+
+  it('classifies a labeled doctor payment as Sante', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'PAIEMENT DR MARTIN',
+      merchant: '',
+      amount: -55,
+    })
+    expect(result.category).toBe('Sante')
+  })
+
+  it('does NOT overwrite a custom category when the label matches a broker rule', () => {
+    const result = applyTransactionAutoCategorization({
+      ...baseInput,
+      label: 'INST Virement avec Fortuneo vers IBKR DE 1234',
+      merchant: '',
+      amount: -500,
+      customCategory: 'Personnel',
+      customSubcategory: 'Test',
+      category: 'Personnel',
+    })
+    expect(result.category).toBe('Personnel')
+    expect(result.resolutionSource).toBe('manual_override')
+  })
 })

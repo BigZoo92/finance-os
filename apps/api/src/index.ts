@@ -10,6 +10,7 @@ import {
   isDemoModeForbiddenError,
   isInternalTokenRequiredError,
   isInternalTokenValid,
+  isInvalidCredentialsError,
   readInternalTokenFromRequest,
 } from './auth/guard'
 import {
@@ -315,6 +316,25 @@ const registerAppRoutes = (app: Elysia) => {
         newsProviderXTwitterEnabled: env.NEWS_PROVIDER_X_TWITTER_ENABLED,
         newsProviderXTwitterQuery: env.NEWS_PROVIDER_X_TWITTER_QUERY,
         newsProviderXTwitterBearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN,
+        xMaxUserReadsPerDay: env.X_MAX_USER_READS_PER_DAY,
+        xMaxPostReadsPerDay: env.X_MAX_POST_READS_PER_DAY,
+        xDailyBudgetUsd: env.X_DAILY_BUDGET_USD,
+        xMonthlyBudgetUsd: env.X_MONTHLY_BUDGET_USD,
+        xMaxTweetsPerAuthorPerDay: env.X_MAX_TWEETS_PER_AUTHOR_PER_DAY,
+        xMaxPagesPerUserPerDay: env.X_MAX_PAGES_PER_USER_PER_DAY,
+        xRequireManualConfirmationOverEstimateUsd:
+          env.X_REQUIRE_MANUAL_CONFIRMATION_OVER_ESTIMATE_USD,
+        xAdvisorRelevanceThreshold: env.X_ADVISOR_RELEVANCE_THRESHOLD,
+        xAdvisorMaxTweetsPerDay: env.X_ADVISOR_MAX_TWEETS_PER_DAY,
+        xDailyPreviousDaySyncEnabled: env.X_DAILY_PREVIOUS_DAY_SYNC_ENABLED,
+        xDailyPreviousDayTimezone: env.X_DAILY_PREVIOUS_DAY_TIMEZONE,
+        freeFirehoseEnabled: env.FREE_FIREHOSE_ENABLED,
+        freeFirehoseMaxRunsPerWeek: env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK,
+        freeFirehoseMaxGdeltRecords: env.FREE_FIREHOSE_MAX_GDELT_RECORDS,
+        freeFirehoseMaxHnRecords: env.FREE_FIREHOSE_MAX_HN_RECORDS,
+        freeFirehoseMaxSecFilings: env.FREE_FIREHOSE_MAX_SEC_FILINGS,
+        freeFirehoseMaxFredSeries: env.FREE_FIREHOSE_MAX_FRED_SERIES,
+        freeFirehoseMaxEcbSeries: env.FREE_FIREHOSE_MAX_ECB_SERIES,
         signalsSocialPollingEnabled: env.SIGNALS_SOCIAL_POLLING_ENABLED,
         marketDataEnabled: env.MARKET_DATA_ENABLED,
         marketDataRefreshEnabled: env.MARKET_DATA_REFRESH_ENABLED,
@@ -756,6 +776,10 @@ const app = new Elysia()
       responseCode = context.error.code
       message = context.error.message
     } else if (isInternalTokenRequiredError(context.error)) {
+      status = 401
+      responseCode = context.error.code
+      message = context.error.message
+    } else if (isInvalidCredentialsError(context.error)) {
       status = 401
       responseCode = context.error.code
       message = context.error.message

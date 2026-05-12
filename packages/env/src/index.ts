@@ -430,6 +430,20 @@ const externalInvestmentsShape = {
     .default('https://api.binance.com'),
   BINANCE_SPOT_RECV_WINDOW_MS: z.coerce.number().int().positive().default(5000),
   BINANCE_SPOT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  EXTERNAL_INVESTMENTS_VALUATION_TARGET_CURRENCY: z
+    .string()
+    .min(3)
+    .max(3)
+    .transform(value => value.toUpperCase())
+    .default('EUR'),
+  EXTERNAL_INVESTMENTS_BINANCE_VALUATION_ENABLED: z
+    .string()
+    .optional()
+    .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+  EXTERNAL_INVESTMENTS_BINANCE_VALUATION_USD_EUR_FALLBACK: z.coerce
+    .number()
+    .positive()
+    .default(0.92),
 } satisfies z.ZodRawShape
 
 const assertProductionApiEnv = (values: {
@@ -612,6 +626,55 @@ export const getApiEnv = () => {
         '(inflation OR rates OR guidance OR earnings OR sanctions OR cyber OR "artificial intelligence") lang:en -is:retweet'
       ),
     NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: z.string().min(1).optional(),
+    // ── X daily previous-day sync — pay-per-use, hard caps ────────────────
+    X_DAILY_PREVIOUS_DAY_SYNC_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    X_DAILY_PREVIOUS_DAY_CRON: z.string().default('0 7 * * *'),
+    X_DAILY_PREVIOUS_DAY_TIMEZONE: z.string().default('Europe/Paris'),
+    X_MONTHLY_BUDGET_USD: z.coerce.number().positive().default(20),
+    X_DAILY_BUDGET_USD: z.coerce.number().positive().default(0.6),
+    X_MAX_FOLLOWED_ACCOUNTS: z.coerce.number().int().positive().default(50),
+    X_MAX_POST_READS_PER_DAY: z.coerce.number().int().positive().default(115),
+    X_MAX_USER_READS_PER_DAY: z.coerce.number().int().positive().default(3),
+    X_MAX_PAGES_PER_USER_PER_DAY: z.coerce.number().int().positive().default(20),
+    X_MAX_TWEETS_PER_AUTHOR_PER_DAY: z.coerce.number().int().positive().default(3),
+    X_DISABLE_ON_PAYMENT_REQUIRED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    X_DISABLE_ON_BUDGET_EXCEEDED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    X_REQUIRE_MANUAL_CONFIRMATION_OVER_ESTIMATE_USD: z.coerce.number().positive().default(0.4),
+    X_ADVISOR_RELEVANCE_THRESHOLD: z.coerce.number().int().min(0).max(100).default(65),
+    X_ADVISOR_MAX_TWEETS_PER_DAY: z.coerce.number().int().positive().default(40),
+    X_ADVISOR_MAX_TWEETS_PER_AUTHOR_PER_DAY: z.coerce.number().int().positive().default(3),
+    // ── Free Firehose — admin-gated manual ingest of free sources only ───
+    FREE_FIREHOSE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    FREE_FIREHOSE_ADMIN_ONLY: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FREE_FIREHOSE_MAX_RUNS_PER_WEEK: z.coerce.number().int().positive().default(1),
+    FREE_FIREHOSE_REQUIRE_CONFIRMATION: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FREE_FIREHOSE_LLM_ENRICHMENT_DEFAULT: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    FREE_FIREHOSE_MAX_GDELT_RECORDS: z.coerce.number().int().positive().default(5000),
+    FREE_FIREHOSE_MAX_HN_RECORDS: z.coerce.number().int().positive().default(3000),
+    FREE_FIREHOSE_MAX_SEC_FILINGS: z.coerce.number().int().positive().default(1000),
+    FREE_FIREHOSE_MAX_FRED_SERIES: z.coerce.number().int().positive().default(200),
+    FREE_FIREHOSE_MAX_ECB_SERIES: z.coerce.number().int().positive().default(200),
     BLUESKY_ENABLED: z
       .string()
       .optional()
@@ -1044,6 +1107,16 @@ export const getWorkerEnv = () =>
     DAILY_INTELLIGENCE_CRON: z.string().default('0 9 * * 1-5'),
     DAILY_INTELLIGENCE_TIMEZONE: z.string().default('Europe/Paris'),
     DAILY_INTELLIGENCE_MARKET_OPEN_HOUR: z.coerce.number().int().min(0).max(23).default(9),
+    // X daily previous-day sync — worker scheduler flags only. The actual call
+    // and budget enforcement live in the API.
+    X_DAILY_PREVIOUS_DAY_SYNC_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    X_DAILY_PREVIOUS_DAY_CRON: z.string().default('0 7 * * *'),
+    X_DAILY_PREVIOUS_DAY_TIMEZONE: z.string().default('Europe/Paris'),
+    X_DAILY_PREVIOUS_DAY_TRIGGER_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+    X_DAILY_PREVIOUS_DAY_LOCK_TTL_SECONDS: z.coerce.number().int().positive().default(30 * 60),
     // PR7 — Advisor Post-Mortem worker scheduler. Off by default. The route + the LLM call
     // remain server-owned; the worker only sends an internal HTTP POST.
     AI_POST_MORTEM_AUTO_RUN_ENABLED: z

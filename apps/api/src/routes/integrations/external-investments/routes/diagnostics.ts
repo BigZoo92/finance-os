@@ -1,11 +1,13 @@
 import { Elysia } from 'elysia'
 import { getRequestMeta } from '../../../../auth/context'
 import { demoOrReal } from '../../../../auth/demo-mode'
+import { rejectInvalidCredentials } from '../../../../auth/guard'
 import { getExternalInvestmentsDiagnosticsMock } from '../../../../mocks/externalInvestments.mock'
 import { getExternalInvestmentsRuntime } from '../context'
 
 export const createExternalInvestmentsDiagnosticsRoute = () =>
   new Elysia().get('/diagnostics', async context => {
+    rejectInvalidCredentials(context)
     const requestId = getRequestMeta(context).requestId
 
     return demoOrReal({

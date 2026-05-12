@@ -19,6 +19,11 @@ import { createProvidersDiagnosticsRoute } from './routes/providers-diagnostics'
 import { createSignalSourcesRoute } from './routes/signal-sources'
 import { createSummaryRoute } from './routes/summary'
 import { createTradingLabRoute } from './routes/trading-lab'
+import { createFreeFirehoseAdminRoute } from './routes/free-firehose'
+import { createTransactionCategorizationBackfillRoute } from './routes/transaction-categorization-backfill'
+import { createXTwitterDailySyncRoute } from './routes/x-twitter-daily-sync-route'
+import { createXTwitterHealthRoute } from './routes/x-twitter-health'
+import { createXTwitterLookupRoute } from './routes/x-twitter-lookup'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createDashboardOpsRefreshConfig } from './ops-refresh-config'
@@ -63,6 +68,24 @@ export const createDashboardRoutes = ({
   newsProviderXTwitterEnabled,
   newsProviderXTwitterQuery,
   newsProviderXTwitterBearerToken,
+  xMaxUserReadsPerDay,
+  xMaxPostReadsPerDay,
+  xDailyBudgetUsd,
+  xMonthlyBudgetUsd,
+  xMaxTweetsPerAuthorPerDay,
+  xMaxPagesPerUserPerDay,
+  xRequireManualConfirmationOverEstimateUsd,
+  xAdvisorRelevanceThreshold,
+  xAdvisorMaxTweetsPerDay,
+  xDailyPreviousDaySyncEnabled,
+  xDailyPreviousDayTimezone,
+  freeFirehoseEnabled,
+  freeFirehoseMaxRunsPerWeek,
+  freeFirehoseMaxGdeltRecords,
+  freeFirehoseMaxHnRecords,
+  freeFirehoseMaxSecFilings,
+  freeFirehoseMaxFredSeries,
+  freeFirehoseMaxEcbSeries,
   signalsSocialPollingEnabled,
   marketDataEnabled,
   marketDataRefreshEnabled,
@@ -158,6 +181,24 @@ export const createDashboardRoutes = ({
   newsProviderXTwitterEnabled: boolean
   newsProviderXTwitterQuery: string
   newsProviderXTwitterBearerToken: string | undefined
+  xMaxUserReadsPerDay: number
+  xMaxPostReadsPerDay: number
+  xDailyBudgetUsd: number
+  xMonthlyBudgetUsd: number
+  xMaxTweetsPerAuthorPerDay: number
+  xMaxPagesPerUserPerDay: number
+  xRequireManualConfirmationOverEstimateUsd: number
+  xAdvisorRelevanceThreshold: number
+  xAdvisorMaxTweetsPerDay: number
+  xDailyPreviousDaySyncEnabled: boolean
+  xDailyPreviousDayTimezone: string
+  freeFirehoseEnabled: boolean
+  freeFirehoseMaxRunsPerWeek: number
+  freeFirehoseMaxGdeltRecords: number
+  freeFirehoseMaxHnRecords: number
+  freeFirehoseMaxSecFilings: number
+  freeFirehoseMaxFredSeries: number
+  freeFirehoseMaxEcbSeries: number
   signalsSocialPollingEnabled: boolean
   marketDataEnabled: boolean
   marketDataRefreshEnabled: boolean
@@ -353,6 +394,69 @@ export const createDashboardRoutes = ({
         .use(createExternalInvestmentsDashboardRoute())
         .use(createTransactionsRoute())
         .use(createTransactionClassificationRoute())
+        .use(createTransactionCategorizationBackfillRoute({ db }))
+        .use(
+          createXTwitterLookupRoute({
+            db,
+            redisClient,
+            env: {
+              NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: newsProviderXTwitterBearerToken,
+              X_MAX_USER_READS_PER_DAY: xMaxUserReadsPerDay,
+            },
+          })
+        )
+        .use(
+          createXTwitterDailySyncRoute({
+            db,
+            env: {
+              NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: newsProviderXTwitterBearerToken,
+              X_DAILY_BUDGET_USD: xDailyBudgetUsd,
+              X_MONTHLY_BUDGET_USD: xMonthlyBudgetUsd,
+              X_MAX_POST_READS_PER_DAY: xMaxPostReadsPerDay,
+              X_MAX_PAGES_PER_USER_PER_DAY: xMaxPagesPerUserPerDay,
+              X_MAX_TWEETS_PER_AUTHOR_PER_DAY: xMaxTweetsPerAuthorPerDay,
+              X_REQUIRE_MANUAL_CONFIRMATION_OVER_ESTIMATE_USD:
+                xRequireManualConfirmationOverEstimateUsd,
+              X_ADVISOR_RELEVANCE_THRESHOLD: xAdvisorRelevanceThreshold,
+              X_ADVISOR_MAX_TWEETS_PER_DAY: xAdvisorMaxTweetsPerDay,
+              X_DAILY_PREVIOUS_DAY_TIMEZONE: xDailyPreviousDayTimezone,
+            },
+          })
+        )
+        .use(
+          createXTwitterHealthRoute({
+            db,
+            env: {
+              NEWS_PROVIDER_X_TWITTER_ENABLED: newsProviderXTwitterEnabled,
+              NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: newsProviderXTwitterBearerToken,
+              X_DAILY_BUDGET_USD: xDailyBudgetUsd,
+              X_MONTHLY_BUDGET_USD: xMonthlyBudgetUsd,
+              X_DAILY_PREVIOUS_DAY_SYNC_ENABLED: xDailyPreviousDaySyncEnabled,
+            },
+          })
+        )
+        .use(
+          createFreeFirehoseAdminRoute({
+            db,
+            env: {
+              FREE_FIREHOSE_ENABLED: freeFirehoseEnabled,
+              FREE_FIREHOSE_MAX_RUNS_PER_WEEK: freeFirehoseMaxRunsPerWeek,
+              FREE_FIREHOSE_MAX_GDELT_RECORDS: freeFirehoseMaxGdeltRecords,
+              FREE_FIREHOSE_MAX_HN_RECORDS: freeFirehoseMaxHnRecords,
+              FREE_FIREHOSE_MAX_SEC_FILINGS: freeFirehoseMaxSecFilings,
+              FREE_FIREHOSE_MAX_FRED_SERIES: freeFirehoseMaxFredSeries,
+              FREE_FIREHOSE_MAX_ECB_SERIES: freeFirehoseMaxEcbSeries,
+              NEWS_PROVIDER_HN_QUERY: newsProviderHnQuery,
+              NEWS_PROVIDER_GDELT_QUERY: newsProviderGdeltQuery,
+              NEWS_PROVIDER_ECB_RSS_FEED_URLS: newsProviderEcbRssFeedUrls,
+              NEWS_PROVIDER_FED_FEED_URLS: newsProviderFedFeedUrls,
+              NEWS_PROVIDER_SEC_TICKERS: newsProviderSecTickers,
+              NEWS_PROVIDER_FRED_SERIES_IDS: newsProviderFredSeriesIds,
+              FRED_API_KEY: newsProviderFredApiKey,
+              SEC_USER_AGENT: newsProviderSecUserAgent,
+            },
+          })
+        )
         .use(createSignalSourcesRoute({ db }))
         .use(createProvidersDiagnosticsRoute())
         .use(createDataQualityRoute())

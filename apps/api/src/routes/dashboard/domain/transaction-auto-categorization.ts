@@ -259,9 +259,112 @@ const MERCHANT_RULES: CategorizationRule[] = [
     },
     assign: { category: 'Achats divers' },
   },
+  // ── Gaming / digital entertainment ───────────────────────────────────────
+  {
+    id: 'merchant-gaming',
+    priority: 122,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: [
+        'steam',
+        'steamgames',
+        'epicgames',
+        'epic games',
+        'gog.com',
+        'nintendo',
+        'playstation',
+        'xbox',
+        'ubisoft',
+        'ea.com',
+      ],
+    },
+    assign: { category: 'Loisirs', subcategory: 'Jeux video' },
+  },
+  // ── Bakery / café variants common in FR statements ───────────────────────
+  {
+    id: 'merchant-bakery-cafe-extra',
+    priority: 116,
+    when: {
+      amountSign: 'expense',
+      merchantIncludes: [
+        'la parisienne',
+        'aubrac corner',
+        'smoked meat',
+        'comptoir',
+        'croissanterie',
+        'paul boulanger',
+      ],
+    },
+    assign: { category: 'Restaurant', subcategory: 'Sorties' },
+  },
 ]
 
 const COUNTERPARTY_RULES: CategorizationRule[] = [
+  // ── Broker transfers (highest priority — NOT consumer spending) ───────────
+  // Outgoing transfers to investment brokers. These must NOT be aggregated as
+  // consumer spending; downstream aggregates filter on category=Investissement.
+  {
+    id: 'broker-transfer-ibkr',
+    priority: 140,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['ibkr', 'interactive brokers'],
+    },
+    assign: { category: 'Investissement', subcategory: 'Transfert vers courtier' },
+  },
+  {
+    id: 'broker-transfer-binance',
+    priority: 140,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['binance'],
+    },
+    assign: { category: 'Investissement', subcategory: 'Transfert vers exchange crypto' },
+  },
+  {
+    id: 'broker-transfer-trade-republic',
+    priority: 140,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['trade republic', 'trade re ', 'traderepublic'],
+    },
+    assign: { category: 'Investissement', subcategory: 'Transfert vers courtier' },
+  },
+  {
+    id: 'broker-transfer-other-courtiers',
+    priority: 140,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: [
+        'bourse direct',
+        'degiro',
+        'saxo',
+        'etoro',
+        'fortuneo bourse',
+        'boursorama bourse',
+      ],
+    },
+    assign: { category: 'Investissement', subcategory: 'Transfert vers courtier' },
+  },
+  {
+    id: 'broker-pea-order',
+    priority: 141,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['ordre achat', 'ordre vente', 'ordre bourse', 'msci world', 'cw8', 'pea'],
+    },
+    assign: { category: 'Investissement', subcategory: 'Ordre bourse' },
+  },
+  // ── Incoming broker transfers (cash returned from a broker) ──────────────
+  {
+    id: 'broker-transfer-incoming',
+    priority: 140,
+    when: {
+      amountSign: 'income',
+      labelIncludes: ['ibkr', 'binance', 'trade republic', 'traderepublic'],
+    },
+    assign: { category: 'Investissement', subcategory: 'Retour de courtier' },
+  },
   {
     id: 'counterparty-salary',
     priority: 100,
@@ -315,6 +418,25 @@ const COUNTERPARTY_RULES: CategorizationRule[] = [
       labelIncludes: ['dgfip', 'impots', 'taxe', 'urssaf', 'tresor public'],
     },
     assign: { category: 'Impots et taxes' },
+  },
+  // ── Health labels not caught by merchant rules ──────────────────────────
+  {
+    id: 'counterparty-doctor',
+    priority: 92,
+    when: {
+      amountSign: 'expense',
+      labelIncludes: ['docteur ', 'dr ', 'medecin', 'chirurgien', 'dentiste', 'kinesith'],
+    },
+    assign: { category: 'Sante' },
+  },
+  // ── Wero / instant peer transfers ────────────────────────────────────────
+  {
+    id: 'counterparty-wero-person',
+    priority: 88,
+    when: {
+      labelIncludes: ['wero'],
+    },
+    assign: { category: 'Transfert interne', subcategory: 'Virement entre particuliers' },
   },
 ]
 
