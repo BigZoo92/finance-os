@@ -200,15 +200,41 @@ export const createDashboardNewsUseCases = ({
     try {
       const result = await runLiveIngestion({ requestId })
       const signalCount = await repository.countNewsArticles()
-      const failedProviderCount = result.providerResults.filter(provider => provider.status === 'failed').length
+      const failedProviderCount = result.failedCount
       const finishedAt = Date.now()
+
+      // Map the news-group overallStatus to a cache-state error code so
+      // the manual-refresh step resolution + UI can render partial/empty
+      // outcomes distinctly from hard failures.
+      const cacheErrorCode =
+        result.overallStatus === 'partial_success'
+          ? 'PARTIAL_SUCCESS'
+          : result.overallStatus === 'success_empty'
+            ? 'SUCCESS_EMPTY'
+            : result.overallStatus === 'failed'
+              ? 'NEWS_PROVIDER_UNAVAILABLE'
+              : null
+      const cacheErrorMessage =
+        result.overallStatus === 'partial_success'
+          ? `${result.successCount}/${result.enabledProviderCount} providers succeeded. Cached signals remain usable.`
+          : result.overallStatus === 'success_empty'
+            ? 'All providers responded with zero items for this period.'
+            : result.overallStatus === 'failed'
+              ? 'All enabled news providers failed.'
+              : null
+
+      // `failed` overall is a hard error → record it AND throw so the
+      // orchestrator-level catch block treats it consistently with how the
+      // previous behavior surfaced NEWS_PROVIDER_UNAVAILABLE.
+      const isHardFailure = result.overallStatus === 'failed'
 
       await repository.upsertNewsCacheState({
         lastAttemptAt: new Date(),
-        lastSuccessAt: new Date(),
-        lastErrorCode: failedProviderCount > 0 ? 'PARTIAL_PROVIDER_FAILURE' : null,
-        lastErrorMessage:
-          failedProviderCount > 0 ? 'One or more providers failed. Cached signals remain usable.' : null,
+        ...(isHardFailure
+          ? { lastFailureAt: new Date() }
+          : { lastSuccessAt: new Date() }),
+        lastErrorCode: cacheErrorCode,
+        lastErrorMessage: cacheErrorMessage,
         lastRequestId: requestId,
         ingestionCountIncrement: 1,
         dedupeDropCountIncrement: result.dedupeDropCount,
@@ -217,12 +243,12 @@ export const createDashboardNewsUseCases = ({
         lastFetchedCount: result.fetchedCount,
         lastInsertedCount: result.insertedCount,
         lastMergedCount: result.mergedCount,
-        lastProviderCount: result.providerResults.filter(provider => provider.status !== 'skipped').length,
+        lastProviderCount: result.enabledProviderCount,
         lastSignalCount: signalCount,
       })
 
       logApiEvent({
-        level: failedProviderCount > 0 ? 'warn' : 'info',
+        level: isHardFailure ? 'error' : failedProviderCount > 0 ? 'warn' : 'info',
         msg: 'dashboard news ingested',
         requestId,
         fetched_count: result.fetchedCount,
@@ -230,8 +256,17 @@ export const createDashboardNewsUseCases = ({
         merged_count: result.mergedCount,
         dedupe_drop_count: result.dedupeDropCount,
         failed_provider_count: failedProviderCount,
+        success_count: result.successCount,
+        empty_count: result.emptyCount,
+        overall_status: result.overallStatus,
         ingest_latency_ms: finishedAt - startedAt,
       })
+
+      if (isHardFailure) {
+        throw Object.assign(new Error('NEWS_PROVIDER_UNAVAILABLE'), {
+          code: 'NEWS_PROVIDER_UNAVAILABLE',
+        })
+      }
 
       return {
         fetchedCount: result.fetchedCount,

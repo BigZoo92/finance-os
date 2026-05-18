@@ -1161,6 +1161,30 @@ export interface DashboardAdvisorRepository {
   getLatestManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
   listManualOperations: (limit: number) => Promise<DashboardAdvisorManualOperationResponse[]>
   getLatestActiveManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
+  /**
+   * Stale-run sweeper. SELECT every manual operation whose `status` is still
+   * `queued` or `running` past `staleAfterMs`, UPDATE them to `failed` with
+   * `errorCode='STALE_TIMED_OUT'`, and return the post-update snapshots so
+   * the caller can render the recovered operations.
+   *
+   * Idempotent: re-running on already-recovered rows is a no-op because the
+   * WHERE filters out non-running states.
+   */
+  recoverStaleManualOperations: (input: {
+    staleAfterMs: number
+  }) => Promise<{
+    recovered: DashboardAdvisorManualOperationResponse[]
+    skipped: DashboardAdvisorManualOperationResponse[]
+  }>
+  /**
+   * Cancel a specific manual operation by id. UPDATE to `failed` with
+   * `errorCode='CANCELLED'` when current status is `queued`/`running`; returns
+   * null if the operation is already in a terminal state (no-op, caller can
+   * treat as success).
+   */
+  cancelManualOperation: (input: {
+    operationId: string
+  }) => Promise<DashboardAdvisorManualOperationResponse | null>
   createDecisionJournalEntry: (input: {
     recommendationId?: number | null
     runId?: number | null
@@ -1366,6 +1390,33 @@ export interface DashboardUseCases {
     requestId: string
     limit: number
   }) => Promise<DashboardAdvisorManualOperationResponse[]>
+  /**
+   * Stale-run recovery hook. Implementations should find advisor manual
+   * operations whose `status` is still `running`/`queued` past
+   * `staleAfterMs`, mark them as `failed` with errorCode='STALE_TIMED_OUT'
+   * (or equivalent), and return the count + summaries.
+   *
+   * Wired into POST /ops/refresh/stale-runs/recover.
+   */
+  recoverStaleAdvisorManualOperations?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    staleAfterMs: number
+  }) => Promise<{
+    recovered: DashboardAdvisorManualOperationResponse[]
+    skipped: DashboardAdvisorManualOperationResponse[]
+  }>
+  /**
+   * Cancel a specific manual operation by id. Returns the operation in its
+   * post-cancel state (status='failed' with errorCode='CANCELLED').
+   *
+   * Wired into POST /ops/refresh/runs/:runId/cancel.
+   */
+  cancelAdvisorManualOperation?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    operationId: string
+  }) => Promise<DashboardAdvisorManualOperationResponse | null>
   runAdvisorManualRefreshAndAnalysis?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

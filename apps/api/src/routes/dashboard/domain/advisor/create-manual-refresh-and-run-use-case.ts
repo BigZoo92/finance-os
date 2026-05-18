@@ -433,8 +433,16 @@ const runNewsRefreshStep = async ({
   try {
     const result = await ingestNews({ requestId })
     const state = await repository.getNewsCacheState()
+    // Treat both the legacy 'PARTIAL_PROVIDER_FAILURE' code and the new
+    // taxonomy ('PARTIAL_SUCCESS', 'SUCCESS_EMPTY') as degraded outcomes —
+    // ingestion completed without raising, but the period yielded mixed or
+    // empty results so the brief downstream is degraded accordingly.
+    const degraded =
+      state?.lastErrorCode === 'PARTIAL_PROVIDER_FAILURE' ||
+      state?.lastErrorCode === 'PARTIAL_SUCCESS' ||
+      state?.lastErrorCode === 'SUCCESS_EMPTY'
     return {
-      status: state?.lastErrorCode === 'PARTIAL_PROVIDER_FAILURE' ? 'degraded' : 'completed',
+      status: degraded ? 'degraded' : 'completed',
       details: {
         ...result,
         lastSuccessAt: state?.lastSuccessAt?.toISOString() ?? null,

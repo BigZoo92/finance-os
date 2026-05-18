@@ -1,12 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { opsRefreshStatusQueryOptionsWithMode, opsRefreshQueryKeys } from '@/features/ops-refresh/query-options'
-import { runFullRefresh, runRefreshJob } from '@/features/ops-refresh/api'
-import type { RefreshJobDefinition } from '@/features/ops-refresh/types'
+import {
+  opsRefreshStatusQueryOptionsWithMode,
+  opsRefreshQueryKeys,
+} from '@/features/ops-refresh/query-options'
+import {
+  cancelRefreshRun,
+  recoverStaleRuns,
+  runFullRefresh,
+  runRefreshJob,
+} from '@/features/ops-refresh/api'
+import type { RefreshJobDefinition, RefreshJobStatus } from '@/features/ops-refresh/types'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { StatusDot } from '@/components/surfaces/status-dot'
 import { formatDateTime } from '@/lib/format'
@@ -24,17 +33,53 @@ export const Route = createFileRoute('/_app/orchestration')({
   component: OrchestrationPage,
 })
 
-const statusVariant = (status: string | null | undefined) => {
-  if (status === 'completed' || status === 'success') {
-    return 'positive' as const
+/**
+ * Status taxonomy (must match `RefreshJobStatus` from
+ * apps/api/src/routes/ops/refresh-registry.ts). Each status maps to:
+ *
+ *   - a `tone` (visual variant: positive / warning / destructive / outline / muted)
+ *   - a `label` (short human FR string for the badge)
+ *   - whether the row should expose a "Recover stale" affordance
+ */
+type StatusDescriptor = {
+  tone: 'positive' | 'warning' | 'destructive' | 'outline'
+  label: string
+}
+
+const STATUS_DESCRIPTORS: Record<string, StatusDescriptor> = {
+  success: { tone: 'positive', label: 'succès' },
+  completed: { tone: 'positive', label: 'succès' },
+  partial: { tone: 'warning', label: 'partiel' },
+  partial_success: { tone: 'warning', label: 'partiel' },
+  degraded: { tone: 'warning', label: 'dégradé' },
+  running: { tone: 'warning', label: 'en cours' },
+  queued: { tone: 'warning', label: 'en file' },
+  failed: { tone: 'destructive', label: 'échec' },
+  timed_out: { tone: 'destructive', label: 'timeout' },
+  cancelled: { tone: 'destructive', label: 'annulé' },
+  skipped: { tone: 'outline', label: 'ignoré' },
+  skipped_disabled: { tone: 'outline', label: 'désactivé' },
+  skipped_missing_config: { tone: 'warning', label: 'config manquante' },
+  skipped_budget: { tone: 'warning', label: 'budget épuisé' },
+  skipped_dependency_failed: { tone: 'outline', label: 'dép. échec' },
+}
+
+const describeStatus = (status: string | null | undefined): StatusDescriptor => {
+  if (!status) return { tone: 'outline', label: '—' }
+  return STATUS_DESCRIPTORS[status] ?? { tone: 'outline', label: status }
+}
+
+const badgeVariantFromTone = (tone: StatusDescriptor['tone']) => {
+  switch (tone) {
+    case 'positive':
+      return 'positive' as const
+    case 'warning':
+      return 'warning' as const
+    case 'destructive':
+      return 'destructive' as const
+    default:
+      return 'outline' as const
   }
-  if (status === 'degraded' || status === 'partial' || status === 'running' || status === 'queued') {
-    return 'warning' as const
-  }
-  if (status === 'failed') {
-    return 'destructive' as const
-  }
-  return 'outline' as const
 }
 
 const domainLabel: Record<RefreshJobDefinition['domain'], string> = {
@@ -42,7 +87,7 @@ const domainLabel: Record<RefreshJobDefinition['domain'], string> = {
   transactions: 'Transactions',
   investments: 'Investissements',
   news: 'News',
-  markets: 'Marches',
+  markets: 'Marchés',
   social: 'Social',
   advisor: 'Advisor',
 }
@@ -53,11 +98,13 @@ const stepKeyByJobId: Partial<Record<string, string>> = {
   'binance-crypto': 'binance_sync',
   'market-data': 'market_refresh',
   'advisor-context': 'advisor_run',
+  'news-finance': 'news_refresh',
+  'news-crypto': 'news_refresh',
 }
 
 const findLatestStepForJob = (
   latest: NonNullable<import('@/features/ops-refresh/types').RefreshStatusResponse['latestRun']> | null,
-  job: RefreshJobDefinition,
+  job: RefreshJobDefinition
 ) => {
   const expectedStepKey = stepKeyByJobId[job.id]
   return latest?.steps.find(item => {
@@ -66,6 +113,33 @@ const findLatestStepForJob = (
     }
     return job.domain === 'news' && item.stepKey === 'news_refresh'
   })
+}
+
+type StatusFilter = 'all' | 'failed' | 'running' | 'missing_config' | 'success'
+
+const matchesFilter = (
+  filter: StatusFilter,
+  job: RefreshJobDefinition,
+  stepStatus: string | undefined
+) => {
+  switch (filter) {
+    case 'all':
+      return true
+    case 'failed':
+      return (
+        stepStatus === 'failed' ||
+        stepStatus === 'timed_out' ||
+        stepStatus === 'cancelled'
+      )
+    case 'running':
+      return stepStatus === 'running' || stepStatus === 'queued'
+    case 'missing_config':
+      return !job.enabled || stepStatus === 'skipped_missing_config'
+    case 'success':
+      return stepStatus === 'success' || stepStatus === 'completed'
+    default:
+      return true
+  }
 }
 
 function OrchestrationPage() {
@@ -81,9 +155,13 @@ function OrchestrationPage() {
   const status = statusQuery.data
   const latest = status?.latestRun ?? null
   const jobs = status?.jobs ?? []
-  const completedSteps = latest?.steps.filter(step => step.status === 'completed').length ?? 0
+  const completedSteps =
+    latest?.steps.filter(step => step.status === 'completed').length ?? 0
   const degradedSteps =
     latest?.steps.filter(step => step.status === 'degraded' || step.status === 'failed').length ?? 0
+
+  const [filter, setFilter] = useState<StatusFilter>('all')
+  const [recoveryFeedback, setRecoveryFeedback] = useState<string | null>(null)
 
   const invalidate = () =>
     queryClient.invalidateQueries({
@@ -96,8 +174,33 @@ function OrchestrationPage() {
   })
 
   const jobMutation = useMutation({
-    mutationFn: runRefreshJob,
+    mutationFn: (jobId: string) => runRefreshJob(jobId),
     onSuccess: invalidate,
+  })
+
+  const recoverMutation = useMutation({
+    mutationFn: () => recoverStaleRuns(),
+    onSuccess: result => {
+      const warning = result.warning ? ` ${result.warning}` : ''
+      setRecoveryFeedback(
+        `${result.recoveredCount} run(s) marqué(s) en stale_timed_out, ${result.skippedCount} ignoré(s).${warning}`
+      )
+      invalidate()
+    },
+    onError: () => {
+      setRecoveryFeedback('Échec de la recovery (voir logs admin).')
+    },
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: (runId: string) => cancelRefreshRun(runId),
+    onSuccess: invalidate,
+  })
+
+  const isLatestActive = latest?.status === 'running' || latest?.status === 'queued'
+  const filteredJobs = jobs.filter(job => {
+    const step = findLatestStepForJob(latest, job)
+    return matchesFilter(filter, job, step?.status)
   })
 
   return (
@@ -108,22 +211,50 @@ function OrchestrationPage() {
         title="Orchestration"
         description="Relance quotidienne et manuelle des sources, enrichissements et contextes Advisor."
         actions={
-          <Button
-            type="button"
-            variant="aurora"
-            disabled={!isAdmin || fullMutation.isPending || latest?.status === 'running' || latest?.status === 'queued'}
-            onClick={() => fullMutation.mutate()}
-          >
-            Relancer l'analyse complete
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!isAdmin || recoverMutation.isPending}
+              onClick={() => recoverMutation.mutate()}
+            >
+              {recoverMutation.isPending ? 'Recovery…' : 'Recover stale runs'}
+            </Button>
+            {isLatestActive && latest?.operationId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!isAdmin || cancelMutation.isPending}
+                onClick={() => latest.operationId && cancelMutation.mutate(latest.operationId)}
+              >
+                Annuler run en cours
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="aurora"
+              disabled={!isAdmin || fullMutation.isPending || isLatestActive}
+              onClick={() => fullMutation.mutate()}
+            >
+              Relancer l'analyse complète
+            </Button>
+          </div>
         }
       />
 
       {!isAdmin && (
         <Card className="border-warning/30 bg-warning/5">
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Mode demo: lecture deterministe seulement. Aucun job reel, aucune DB et aucun provider ne sont appeles.
+            Mode demo: lecture déterministe seulement. Aucun job réel, aucune DB et aucun provider ne sont appelés.
           </CardContent>
+        </Card>
+      )}
+
+      {recoveryFeedback && (
+        <Card>
+          <CardContent className="p-3 text-sm text-muted-foreground">{recoveryFeedback}</CardContent>
         </Card>
       )}
 
@@ -136,31 +267,57 @@ function OrchestrationPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Debut</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Début</p>
             <p className="mt-2 text-sm">{formatDateTime(latest?.startedAt ?? null)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Etapes OK</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Étapes OK</p>
             <p className="mt-2 font-financial text-lg font-semibold">{completedSteps}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Degradees</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Dégradées</p>
             <p className="mt-2 font-financial text-lg font-semibold">{degradedSteps}</p>
           </CardContent>
         </Card>
       </section>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Jobs enregistres</CardTitle>
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <CardTitle className="text-base">Jobs enregistrés</CardTitle>
+          <div className="flex flex-wrap gap-1">
+            {(
+              [
+                ['all', 'tous'],
+                ['failed', 'échecs'],
+                ['running', 'en cours'],
+                ['missing_config', 'config manquante'],
+                ['success', 'succès'],
+              ] satisfies Array<[StatusFilter, string]>
+            ).map(([key, label]) => (
+              <Button
+                key={key}
+                type="button"
+                variant={filter === key ? 'aurora' : 'outline'}
+                size="sm"
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
-          {jobs.map(job => {
+          {filteredJobs.length === 0 && (
+            <p className="px-4 py-3 text-sm text-muted-foreground">Aucun job ne correspond au filtre.</p>
+          )}
+          {filteredJobs.map(job => {
             const step = findLatestStepForJob(latest, job)
+            const stepStatus = step?.status ?? (job.enabled ? 'idle' : 'skipped_disabled')
+            const descriptor = describeStatus(stepStatus)
             return (
               <div
                 key={job.id}
@@ -173,9 +330,14 @@ function OrchestrationPage() {
                     <Badge variant="outline" className="text-[11px]">
                       {domainLabel[job.domain]}
                     </Badge>
-                    <Badge variant={statusVariant(step?.status)} className="text-[11px]">
-                      {step?.status ?? (job.enabled ? 'idle' : 'disabled')}
+                    <Badge variant={badgeVariantFromTone(descriptor.tone)} className="text-[11px]">
+                      {descriptor.label}
                     </Badge>
+                    {step?.errorCode && (
+                      <span className="font-mono text-[10px] text-muted-foreground/75">
+                        {step.errorCode}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{job.description}</p>
                   {job.dependencies.length > 0 && (
@@ -189,10 +351,15 @@ function OrchestrationPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!isAdmin || !job.enabled || !job.manualTriggerAllowed || jobMutation.isPending}
+                  disabled={
+                    !isAdmin ||
+                    !job.enabled ||
+                    !job.manualTriggerAllowed ||
+                    jobMutation.isPending
+                  }
                   onClick={() => jobMutation.mutate(job.id)}
                 >
-                  Relancer
+                  {jobMutation.variables === job.id && jobMutation.isPending ? '…' : 'Relancer'}
                 </Button>
               </div>
             )
@@ -202,11 +369,31 @@ function OrchestrationPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Limites connues</CardTitle>
+          <CardTitle className="text-base">Légende des statuts</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Les jobs provider restent read-only et fail-soft; un echec marque le run comme degrade sans bloquer les autres etapes.</p>
-          <p>Les recommandations crypto exposent signaux, risques, exposition et concentration; elles ne declenchent jamais d'ordre ni promesse de rendement.</p>
+        <CardContent className="space-y-1 text-sm text-muted-foreground">
+          {(
+            [
+              ['success', 'Job terminé avec données utiles.'],
+              ['partial', 'Au moins un provider a échoué; les autres ont produit des données.'],
+              ['timed_out', 'Hard timeout — voir docs/ops/refresh-orchestrator.md.'],
+              ['skipped_disabled', 'Feature flag désactivé.'],
+              ['skipped_missing_config', 'Feature activée mais secret/URL manquant — voir /ops/env/diagnostics.'],
+              ['skipped_budget', 'Budget pay-per-use épuisé (X, AI Advisor…).'],
+              ['skipped_dependency_failed', 'Job amont a échoué; ce job a été ignoré.'],
+              ['cancelled', "Run annulé via l'UI ou un appel admin."],
+            ] satisfies Array<[RefreshJobStatus, string]>
+          ).map(([key, description]) => {
+            const descriptor = describeStatus(key)
+            return (
+              <div key={key} className="flex items-start gap-2">
+                <Badge variant={badgeVariantFromTone(descriptor.tone)} className="text-[10px]">
+                  {descriptor.label}
+                </Badge>
+                <span>{description}</span>
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
     </div>

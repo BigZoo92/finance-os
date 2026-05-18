@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { createOpsEnvDiagnosticsRoute } from '../ops/env-diagnostics'
 import { createOpsRefreshRoute } from '../ops/refresh'
 import type { FailsoftSource } from './domain/failsoft-policy'
 import { createDashboardRuntimePlugin } from './plugin'
@@ -497,4 +498,5 @@ export const createDashboardRoutes = ({
         }),
       })
     )
+    .use(createOpsEnvDiagnosticsRoute())
 }

@@ -1,6 +1,22 @@
 import type { DashboardAdvisorManualOperationResponse } from '@/features/dashboard-types'
 
-export type RefreshJobStatus = 'queued' | 'running' | 'success' | 'partial' | 'failed' | 'skipped'
+/**
+ * Mirrors `RefreshJobStatus` in apps/api/src/routes/ops/refresh-registry.ts.
+ * Keep both in sync when adding/removing variants.
+ */
+export type RefreshJobStatus =
+  | 'queued'
+  | 'running'
+  | 'success'
+  | 'partial'
+  | 'failed'
+  | 'timed_out'
+  | 'cancelled'
+  | 'skipped'
+  | 'skipped_disabled'
+  | 'skipped_missing_config'
+  | 'skipped_budget'
+  | 'skipped_dependency_failed'
 
 export type RefreshJobDefinition = {
   id: string

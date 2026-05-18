@@ -11,12 +11,46 @@ import type { DashboardNewsRepository } from '../types'
 
 const DUPLICATE_LOOKBACK_MS = 36 * 60 * 60 * 1000
 
+/**
+ * Outcome taxonomy for the news ingestion group:
+ *
+ *   - 'success'         : every enabled provider returned and inserted/merged
+ *                         at least one item OR returned 0 items cleanly.
+ *   - 'partial_success' : at least one enabled provider succeeded AND at
+ *                         least one failed. Run is degraded but useful data
+ *                         still landed.
+ *   - 'success_empty'   : every enabled provider returned 0 items (no error,
+ *                         genuinely empty period). Distinct from failed.
+ *   - 'failed'          : every enabled provider failed. Caller should
+ *                         consider this a hard error for the group.
+ *
+ * The previous behavior — throw `NEWS_PROVIDER_UNAVAILABLE` when no provider
+ * succeeded — masked partial-success runs and turned an "every provider
+ * empty" outcome into a 500. The status is now data, not an exception.
+ */
+export type LiveNewsIngestionOverallStatus =
+  | 'success'
+  | 'partial_success'
+  | 'success_empty'
+  | 'failed'
+
 export interface LiveNewsIngestionSummary {
   fetchedCount: number
   insertedCount: number
   mergedCount: number
   dedupeDropCount: number
   providerResults: NewsProviderRunResult[]
+  overallStatus: LiveNewsIngestionOverallStatus
+  /**
+   * Convenience counts derived from `providerResults`. The caller doesn't
+   * need to re-filter the array for the common "how many succeeded vs
+   * failed" question.
+   */
+  successCount: number
+  failedCount: number
+  emptyCount: number
+  skippedCount: number
+  enabledProviderCount: number
 }
 
 const buildPersistableSignal = async ({
@@ -225,9 +259,31 @@ export const createLiveNewsIngestionService = ({
       }
 
       const successCount = providerResults.filter(result => result.status === 'success').length
-      const enabledProviderCount = providerResults.filter(result => result.status !== 'skipped').length
-      if (enabledProviderCount > 0 && successCount === 0) {
-        throw new Error('NEWS_PROVIDER_UNAVAILABLE')
+      const failedCount = providerResults.filter(result => result.status === 'failed').length
+      const skippedCount = providerResults.filter(result => result.status === 'skipped').length
+      const enabledProviderCount = providerResults.length - skippedCount
+      // A success with 0 items is informative ("provider responded, no
+      // relevant news") but distinct from a hard empty group: count it.
+      const emptyCount = providerResults.filter(
+        r => r.status === 'success' && r.fetchedCount === 0
+      ).length
+
+      let overallStatus: LiveNewsIngestionOverallStatus
+      if (enabledProviderCount === 0) {
+        // Everything disabled — treat as empty rather than failed; the
+        // caller (registry) maps this to `skipped_disabled` upstream.
+        overallStatus = 'success_empty'
+      } else if (successCount === 0) {
+        // No provider returned anything cleanly — hard failure for the group.
+        overallStatus = 'failed'
+      } else if (failedCount > 0) {
+        // Some succeeded, some failed — degraded but useful.
+        overallStatus = 'partial_success'
+      } else if (emptyCount === successCount) {
+        // All succeeded but produced 0 items.
+        overallStatus = 'success_empty'
+      } else {
+        overallStatus = 'success'
       }
 
       return {
@@ -236,6 +292,12 @@ export const createLiveNewsIngestionService = ({
         mergedCount,
         dedupeDropCount,
         providerResults,
+        overallStatus,
+        successCount,
+        failedCount,
+        emptyCount,
+        skippedCount,
+        enabledProviderCount,
       }
     },
   }

@@ -40,6 +40,27 @@ export const toExternalInvestmentErrorCode = (error: unknown): ExternalInvestmen
   return 'NORMALIZATION_FAILED'
 }
 
+/**
+ * Classify whether an error code is a hard failure or a soft "no-activity"
+ * sentinel. Used by the orchestrator to map IBKR / Binance outcomes to
+ * refresh-job statuses (success / partial / skipped / failed).
+ *
+ *   - PROVIDER_NO_ACTIVITY     → success_empty (Last Business Day with no trades)
+ *   - PROVIDER_PARTIAL_DATA    → partial
+ *   - PROVIDER_STALE_DATA      → partial (data older than expected)
+ *   - PROVIDER_RATE_LIMITED    → partial (retry later)
+ *   - VALUATION_PARTIAL        → partial
+ *   - ADVISOR_BUNDLE_STALE     → partial
+ *   - any other                → failed (hard error)
+ */
+export const isSoftExternalInvestmentError = (code: ExternalInvestmentErrorCode): boolean =>
+  code === 'PROVIDER_NO_ACTIVITY' ||
+  code === 'PROVIDER_PARTIAL_DATA' ||
+  code === 'PROVIDER_STALE_DATA' ||
+  code === 'PROVIDER_RATE_LIMITED' ||
+  code === 'VALUATION_PARTIAL' ||
+  code === 'ADVISOR_BUNDLE_STALE'
+
 export const toSafeExternalInvestmentErrorMessage = (error: unknown) => {
   const raw = error instanceof Error ? error.message : String(error)
   return raw

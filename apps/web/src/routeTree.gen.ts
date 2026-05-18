@@ -21,6 +21,7 @@ import { Route as AppSanteRouteImport } from './routes/_app/sante'
 import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
 import { Route as AppParametresRouteImport } from './routes/_app/parametres'
 import { Route as AppOrchestrationRouteImport } from './routes/_app/orchestration'
+import { Route as AppOpsEnvDiagnosticsRouteImport } from './routes/_app/ops-env-diagnostics'
 import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
 import { Route as AppMemoireRouteImport } from './routes/_app/memoire'
 import { Route as AppMarchesRouteImport } from './routes/_app/marches'
@@ -99,6 +100,11 @@ const AppParametresRoute = AppParametresRouteImport.update({
 const AppOrchestrationRoute = AppOrchestrationRouteImport.update({
   id: '/orchestration',
   path: '/orchestration',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOpsEnvDiagnosticsRoute = AppOpsEnvDiagnosticsRouteImport.update({
+  id: '/ops-env-diagnostics',
+  path: '/ops-env-diagnostics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppObjectifsRoute = AppObjectifsRouteImport.update({
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/marches': typeof AppMarchesRoute
   '/memoire': typeof AppMemoireRoute
   '/objectifs': typeof AppObjectifsRoute
+  '/ops-env-diagnostics': typeof AppOpsEnvDiagnosticsRoute
   '/orchestration': typeof AppOrchestrationRoute
   '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/marches': typeof AppMarchesRoute
   '/memoire': typeof AppMemoireRoute
   '/objectifs': typeof AppObjectifsRoute
+  '/ops-env-diagnostics': typeof AppOpsEnvDiagnosticsRoute
   '/orchestration': typeof AppOrchestrationRoute
   '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/_app/marches': typeof AppMarchesRoute
   '/_app/memoire': typeof AppMemoireRoute
   '/_app/objectifs': typeof AppObjectifsRoute
+  '/_app/ops-env-diagnostics': typeof AppOpsEnvDiagnosticsRoute
   '/_app/orchestration': typeof AppOrchestrationRoute
   '/_app/parametres': typeof AppParametresRoute
   '/_app/patrimoine': typeof AppPatrimoineRoute
@@ -502,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrchestrationRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ops-env-diagnostics': {
+      id: '/_app/ops-env-diagnostics'
+      path: '/ops-env-diagnostics'
+      fullPath: '/ops-env-diagnostics'
+      preLoaderRoute: typeof AppOpsEnvDiagnosticsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/objectifs': {
       id: '/_app/objectifs'
       path: '/objectifs'
@@ -654,6 +670,7 @@ interface AppRouteChildren {
   AppMarchesRoute: typeof AppMarchesRoute
   AppMemoireRoute: typeof AppMemoireRoute
   AppObjectifsRoute: typeof AppObjectifsRoute
+  AppOpsEnvDiagnosticsRoute: typeof AppOpsEnvDiagnosticsRoute
   AppOrchestrationRoute: typeof AppOrchestrationRoute
   AppParametresRoute: typeof AppParametresRoute
   AppPatrimoineRoute: typeof AppPatrimoineRoute
@@ -682,6 +699,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMarchesRoute: AppMarchesRoute,
   AppMemoireRoute: AppMemoireRoute,
   AppObjectifsRoute: AppObjectifsRoute,
+  AppOpsEnvDiagnosticsRoute: AppOpsEnvDiagnosticsRoute,
   AppOrchestrationRoute: AppOrchestrationRoute,
   AppParametresRoute: AppParametresRoute,
   AppPatrimoineRoute: AppPatrimoineRoute,

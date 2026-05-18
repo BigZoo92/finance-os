@@ -1064,6 +1064,10 @@ export const createDashboardRouteRuntime = ({
           requestId,
           triggerSource,
         }),
+      recoverStaleAdvisorManualOperations: async ({ staleAfterMs }) =>
+        advisorRepository.recoverStaleManualOperations({ staleAfterMs }),
+      cancelAdvisorManualOperation: async ({ operationId }) =>
+        advisorRepository.cancelManualOperation({ operationId }),
       relabelAdvisorTransactions: advisor.relabelAdvisorTransactions,
       getAdvisorChat: advisor.getAdvisorChat,
       postAdvisorChat: advisor.postAdvisorChat,

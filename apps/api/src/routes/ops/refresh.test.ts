@@ -174,4 +174,183 @@ describe('createOpsRefreshRoute', () => {
     expect(payload.status).toBe('queued')
     expect(refreshCalls).toBe(1)
   })
+
+  it('POST /ops/refresh/stale-runs/recover calls the use case and returns the post-update payload', async () => {
+    let receivedStaleAfterMs: number | undefined
+    const fakeOperation = {
+      operationId: 'manual-op-stale',
+      requestId: 'req-recovered',
+      status: 'failed' as const,
+      currentStage: null,
+      statusMessage: null,
+      triggerSource: 'cron',
+      startedAt: '2026-05-03T00:00:00.000Z',
+      finishedAt: '2026-05-03T01:00:00.000Z',
+      durationMs: 3_600_000,
+      degraded: true,
+      errorCode: 'STALE_TIMED_OUT',
+      errorMessage: 'Run did not finalize within 30 minutes; marked stale.',
+      advisorRunId: null,
+      advisorRun: null,
+      steps: [],
+      outputDigest: null,
+    }
+    const app = createApp({
+      mode: 'admin',
+      runtime: createRuntime({
+        recoverStaleAdvisorManualOperations: async ({ staleAfterMs }) => {
+          receivedStaleAfterMs = staleAfterMs
+          return { recovered: [fakeOperation], skipped: [] }
+        },
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/stale-runs/recover', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ staleAfterMs: 600_000 }),
+      })
+    )
+    const payload = (await response.json()) as {
+      ok: boolean
+      recoveredCount: number
+      recovered: Array<{ operationId: string; errorCode: string }>
+    }
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(true)
+    expect(payload.recoveredCount).toBe(1)
+    expect(payload.recovered[0]?.errorCode).toBe('STALE_TIMED_OUT')
+    expect(receivedStaleAfterMs).toBe(600_000)
+  })
+
+  it('POST /ops/refresh/stale-runs/recover falls back to listing stale candidates when no use case is wired', async () => {
+    const stillRunning = {
+      operationId: 'manual-op-stuck',
+      requestId: 'req-stuck',
+      status: 'running' as const,
+      currentStage: null,
+      statusMessage: null,
+      triggerSource: 'cron',
+      startedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      finishedAt: null,
+      durationMs: null,
+      degraded: false,
+      errorCode: null,
+      errorMessage: null,
+      advisorRunId: null,
+      advisorRun: null,
+      steps: [],
+      outputDigest: null,
+    }
+    // Intentionally omit recoverStaleAdvisorManualOperations from overrides so
+    // the runtime hook is undefined and the route takes the fallback path.
+    const app = createApp({
+      mode: 'admin',
+      runtime: createRuntime({
+        listAdvisorManualOperations: async () => [stillRunning],
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/stale-runs/recover', {
+        method: 'POST',
+      })
+    )
+    const payload = (await response.json()) as {
+      ok: boolean
+      recoveredCount: number
+      skippedCount: number
+      warning?: string
+    }
+
+    expect(response.status).toBe(200)
+    expect(payload.recoveredCount).toBe(0)
+    expect(payload.skippedCount).toBe(1)
+    expect(payload.warning).toBeDefined()
+  })
+
+  it('POST /ops/refresh/runs/:runId/cancel calls the use case and returns the cancelled operation', async () => {
+    let receivedOperationId: string | undefined
+    const cancelledOperation = {
+      operationId: 'manual-op-cancel',
+      requestId: 'req-cancel',
+      status: 'failed' as const,
+      currentStage: null,
+      statusMessage: null,
+      triggerSource: 'manual',
+      startedAt: '2026-05-03T00:00:00.000Z',
+      finishedAt: '2026-05-03T00:05:00.000Z',
+      durationMs: 300_000,
+      degraded: true,
+      errorCode: 'CANCELLED',
+      errorMessage: 'Cancelled via /ops/refresh/runs/:runId/cancel.',
+      advisorRunId: null,
+      advisorRun: null,
+      steps: [],
+      outputDigest: null,
+    }
+    const app = createApp({
+      mode: 'admin',
+      runtime: createRuntime({
+        cancelAdvisorManualOperation: async ({ operationId }) => {
+          receivedOperationId = operationId
+          return cancelledOperation
+        },
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/runs/manual-op-cancel/cancel', {
+        method: 'POST',
+      })
+    )
+    const payload = (await response.json()) as {
+      ok: boolean
+      run: { operationId: string; errorCode: string }
+    }
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(true)
+    expect(payload.run.errorCode).toBe('CANCELLED')
+    expect(receivedOperationId).toBe('manual-op-cancel')
+  })
+
+  it('POST /ops/refresh/runs/:runId/cancel returns 404 when use case returns null (run absent)', async () => {
+    const app = createApp({
+      mode: 'admin',
+      runtime: createRuntime({
+        cancelAdvisorManualOperation: async () => null,
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/runs/missing-run/cancel', {
+        method: 'POST',
+      })
+    )
+    const payload = (await response.json()) as { ok: boolean; code: string }
+
+    expect(response.status).toBe(404)
+    expect(payload.code).toBe('REFRESH_RUN_NOT_FOUND')
+  })
+
+  it('demo mode blocks both stale-runs/recover and runs/:id/cancel', async () => {
+    const app = createApp({ mode: 'demo' })
+
+    const recoverResponse = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/stale-runs/recover', {
+        method: 'POST',
+      })
+    )
+    expect(recoverResponse.status).toBe(403)
+
+    const cancelResponse = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/runs/manual-op/cancel', {
+        method: 'POST',
+      })
+    )
+    expect(cancelResponse.status).toBe(403)
+  })
 })

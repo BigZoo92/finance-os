@@ -161,4 +161,121 @@ export const createOpsRefreshRoute = ({
         body: runBodySchema,
       }
     )
+    .post(
+      '/stale-runs/recover',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        const auth = getAuth(context)
+        if (auth.mode !== 'admin') {
+          context.set.status = 403
+          return {
+            ok: false,
+            code: 'DEMO_MODE_FORBIDDEN',
+            message: 'Admin session or internal token required.',
+            requestId,
+          }
+        }
+        requireAdminOrInternalToken(context)
+
+        const DEFAULT_STALE_AFTER_MS = 30 * 60 * 1000
+        const staleAfterMs = context.body?.staleAfterMs ?? DEFAULT_STALE_AFTER_MS
+
+        if (runtime.useCases.recoverStaleAdvisorManualOperations) {
+          const recovery = await runtime.useCases.recoverStaleAdvisorManualOperations({
+            mode: 'admin',
+            requestId,
+            staleAfterMs,
+          })
+          return {
+            ok: true,
+            requestId,
+            recoveredCount: recovery.recovered.length,
+            skippedCount: recovery.skipped.length,
+            recovered: recovery.recovered,
+            skipped: recovery.skipped,
+          }
+        }
+
+        // Fallback: when no recovery use case is registered, list current
+        // running ops + flag stale candidates so admins can see them.
+        const history = runtime.useCases.listAdvisorManualOperations
+          ? await runtime.useCases.listAdvisorManualOperations({
+              mode: 'admin',
+              requestId,
+              limit: 50,
+            })
+          : []
+        const now = Date.now()
+        const stale = history.filter(op => {
+          if (op.status !== 'running' && op.status !== 'queued') return false
+          const startedAt = new Date(op.startedAt).getTime()
+          return Number.isFinite(startedAt) && now - startedAt >= staleAfterMs
+        })
+
+        return {
+          ok: true,
+          requestId,
+          recoveredCount: 0,
+          skippedCount: stale.length,
+          recovered: [],
+          skipped: stale,
+          warning:
+            'recoverStaleAdvisorManualOperations use case is not wired; returning stale candidates only.',
+        }
+      },
+      {
+        body: t.Optional(
+          t.Object({
+            staleAfterMs: t.Optional(t.Integer({ minimum: 60_000 })),
+          })
+        ),
+      }
+    )
+    .post(
+      '/runs/:runId/cancel',
+      async context => {
+        const requestId = getRequestMeta(context).requestId
+        const auth = getAuth(context)
+        if (auth.mode !== 'admin') {
+          context.set.status = 403
+          return {
+            ok: false,
+            code: 'DEMO_MODE_FORBIDDEN',
+            message: 'Admin session or internal token required.',
+            requestId,
+          }
+        }
+        requireAdminOrInternalToken(context)
+
+        if (!runtime.useCases.cancelAdvisorManualOperation) {
+          context.set.status = 501
+          return {
+            ok: false,
+            code: 'REFRESH_CANCEL_NOT_IMPLEMENTED',
+            message:
+              'cancelAdvisorManualOperation use case is not wired in this runtime; cancellation must be performed via DB or stale-run recovery for now.',
+            requestId,
+          }
+        }
+
+        const cancelled = await runtime.useCases.cancelAdvisorManualOperation({
+          mode: 'admin',
+          requestId,
+          operationId: context.params.runId,
+        })
+        if (!cancelled) {
+          context.set.status = 404
+          return {
+            ok: false,
+            code: 'REFRESH_RUN_NOT_FOUND',
+            message: 'Refresh run not found.',
+            requestId,
+          }
+        }
+        return { ok: true, requestId, run: cancelled }
+      },
+      {
+        params: t.Object({ runId: t.String({ minLength: 1 }) }),
+      }
+    )
 }

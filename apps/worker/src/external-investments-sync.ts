@@ -15,6 +15,7 @@ import {
   type ExternalInvestmentCredentialPayload,
   type ExternalInvestmentProvider,
   type ExternalInvestmentsJob,
+  isSoftExternalInvestmentError,
   type MarketQuoteLookup,
   normalizeBinanceSnapshot,
   normalizeIbkrFlexStatement,
@@ -233,6 +234,14 @@ export const createExternalInvestmentsSyncWorker = ({
     let rowCounts: Record<string, number> = {}
     const degradedReasons: string[] = []
     let successCount = 0
+    /**
+     * Soft-success counter: a query that produced no usable data but also
+     * did NOT error (typically PROVIDER_NO_ACTIVITY on a Last-Business-Day
+     * query on a weekend/holiday). These should not trigger the "all queries
+     * failed" path below — the connection is healthy, there is just nothing
+     * to ingest.
+     */
+    let softSuccessCount = 0
 
     for (const queryId of payload.queryIds) {
       try {
@@ -279,20 +288,50 @@ export const createExternalInvestmentsSyncWorker = ({
         rowCounts = aggregateCounts(rowCounts, counts)
         successCount += 1
       } catch (error) {
-        degradedReasons.push(toExternalInvestmentErrorCode(error))
+        const code = toExternalInvestmentErrorCode(error)
+        const soft = isSoftExternalInvestmentError(code)
+        // PROVIDER_NO_ACTIVITY is the "happy empty" case: the connection is
+        // fine, there's just no data to ingest. We do NOT count it as a
+        // failure for the "all queries failed" gate below, and we surface
+        // it as a known degradedReason so the orchestrator can render
+        // success_empty in the UI.
+        if (code === 'PROVIDER_NO_ACTIVITY') {
+          softSuccessCount += 1
+          degradedReasons.push('PROVIDER_NO_ACTIVITY')
+          log({
+            level: 'info',
+            msg: 'ibkr flex query returned no activity (likely Last Business Day weekend/holiday)',
+            provider: 'ibkr',
+            connectionId: connection.id,
+            requestId: requestId ?? 'n/a',
+            queryIdMasked: `***${queryId.slice(-3)}`,
+          })
+          continue
+        }
+        // Other soft errors (PROVIDER_PARTIAL_DATA, PROVIDER_STALE_DATA,
+        // PROVIDER_RATE_LIMITED) get recorded as degraded reasons but still
+        // count as failures of this specific query — the connection might
+        // be intermittently broken.
+        degradedReasons.push(code)
         log({
-          level: 'warn',
+          level: soft ? 'warn' : 'warn',
           msg: 'external investments ibkr flex query failed',
           provider: 'ibkr',
           connectionId: connection.id,
           requestId: requestId ?? 'n/a',
           queryIdMasked: `***${queryId.slice(-3)}`,
+          errorCode: code,
+          soft,
           errMessage: sanitizeError(error),
         })
       }
     }
 
-    if (successCount === 0) {
+    // "All failed" gate: only fail the whole connection sync when no query
+    // produced data AND no query reported a clean no-activity outcome. A
+    // Last-Business-Day-only setup with no weekend trades hits the
+    // softSuccessCount path and should NOT be marked failed.
+    if (successCount === 0 && softSuccessCount === 0) {
       throw new Error(degradedReasons[0] ?? 'PROVIDER_SCHEMA_CHANGED')
     }
 

@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./diagnostics": "./src/diagnostics.ts"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

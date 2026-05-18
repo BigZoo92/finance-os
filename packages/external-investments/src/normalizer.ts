@@ -5,6 +5,7 @@ import type {
   BinanceCoinInfo,
   BinanceTrade,
 } from './binance-readonly-client'
+import { ExternalInvestmentProviderError } from './errors'
 import type {
   ExternalInvestmentAssetClass,
   ExternalInvestmentCanonicalCashFlow,
@@ -503,6 +504,32 @@ export const normalizeIbkrFlexStatement = ({
   const cashRows = getFlexStatementArray(statement, 'CashTransactions')
   const cashReportByAccount = parseIbkrCashReport(statement)
   const equitySummaryByAccount = parseIbkrEquitySummary(statement)
+
+  // "Last Business Day" queries on weekends, holidays, or simply quiet
+  // accounts return a structurally-valid statement with zero financial
+  // activity in every section. That is NOT a normalization failure —
+  // surface a soft `PROVIDER_NO_ACTIVITY` so the orchestrator routes it to
+  // `success_empty`/partial instead of opaque `NORMALIZATION_FAILED`.
+  //
+  // The check is conservative: any positions, trades, cash transactions,
+  // cash report rows, or equity summary entries count as "activity".
+  // Account information alone (AccountInformation block) does not — empty
+  // accounts with no holdings are still "no activity".
+  if (
+    positionRows.length === 0 &&
+    tradeRows.length === 0 &&
+    cashRows.length === 0 &&
+    cashReportByAccount.size === 0 &&
+    equitySummaryByAccount.size === 0
+  ) {
+    throw new ExternalInvestmentProviderError({
+      provider: 'ibkr',
+      code: 'PROVIDER_NO_ACTIVITY',
+      message:
+        'IBKR Flex statement contained no positions, trades, cash transactions, cash report or equity summary — typical of a Last-Business-Day query on a weekend/holiday or a fully inactive account.',
+      retryable: false,
+    })
+  }
   const rawImports: ExternalInvestmentRawImportDraft[] = [
     rawImport({
       provider: 'ibkr',

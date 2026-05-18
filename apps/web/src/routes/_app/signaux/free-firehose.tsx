@@ -12,6 +12,7 @@ import {
   type FreeFirehoseRunResponse,
 } from '@/features/free-firehose-api'
 import { formatCount } from '@/features/x-twitter-view-model'
+import { PreflightBanner } from '@/features/ops-env-diagnostics/preflight-banner'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 
@@ -55,6 +56,7 @@ function FreeFirehoseAdminPage() {
         </Panel>
       ) : (
         <>
+          <PreflightBanner flagKey="FREE_FIREHOSE_ENABLED" />
           <Panel title="Garde-fous">
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-300" data-testid="firehose-guards">
               <li>Jamais X / Twitter</li>

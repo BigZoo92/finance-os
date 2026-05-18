@@ -20,6 +20,7 @@ import {
   resolveBudgetTone,
   verificationStatusLabel,
 } from '@/features/x-twitter-view-model'
+import { PreflightBanner } from '@/features/ops-env-diagnostics/preflight-banner'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 
@@ -59,6 +60,7 @@ function XTwitterAdminPage() {
         </Panel>
       ) : (
         <>
+          <PreflightBanner flagKey="NEWS_PROVIDER_X_TWITTER_ENABLED" />
           <HealthPanel />
           <LookupPanel />
           <DailySyncPanel />

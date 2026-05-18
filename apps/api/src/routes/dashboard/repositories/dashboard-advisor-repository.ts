@@ -1348,6 +1348,95 @@ export const createDashboardAdvisorRepository = ({
       })
     },
 
+    async recoverStaleManualOperations({ staleAfterMs }) {
+      const cutoff = new Date(Date.now() - staleAfterMs)
+      // Two-phase: 1) read ids of candidates BEFORE the update so we can
+      // hydrate the post-recovery shape with full step/run details. The
+      // status_started_at_idx makes this scan trivially cheap. 2) UPDATE in
+      // a single statement (atomic), 3) re-read each operation by id.
+      const candidates = await db
+        .select({
+          id: schema.aiManualOperation.id,
+          status: schema.aiManualOperation.status,
+          startedAt: schema.aiManualOperation.startedAt,
+        })
+        .from(schema.aiManualOperation)
+        .where(
+          and(
+            inArray(schema.aiManualOperation.status, ['queued', 'running']),
+            sql`${schema.aiManualOperation.startedAt} < ${cutoff}`
+          )
+        )
+        .orderBy(desc(schema.aiManualOperation.startedAt), desc(schema.aiManualOperation.id))
+        .limit(50)
+
+      if (candidates.length === 0) {
+        return { recovered: [], skipped: [] }
+      }
+
+      const candidateIds = candidates.map(row => row.id)
+      await db
+        .update(schema.aiManualOperation)
+        .set({
+          status: 'failed',
+          errorCode: 'STALE_TIMED_OUT',
+          errorMessage: `Run did not finalize within ${Math.round(staleAfterMs / 60_000)} minutes; marked stale by recovery sweeper.`,
+          finishedAt: new Date(),
+          degraded: true,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(schema.aiManualOperation.id, candidateIds),
+            // Defensive: race-safe — only flip rows that are still active.
+            inArray(schema.aiManualOperation.status, ['queued', 'running'])
+          )
+        )
+
+      const hydrated = await Promise.all(
+        candidateIds.map(id =>
+          getManualOperationByPredicate({
+            db,
+            whereClause: eq(schema.aiManualOperation.id, id),
+          })
+        )
+      )
+      const recovered = hydrated.filter(
+        (op): op is NonNullable<typeof op> => op !== null && op.status === 'failed'
+      )
+      const skipped = hydrated.filter(
+        (op): op is NonNullable<typeof op> => op !== null && op.status !== 'failed'
+      )
+      return { recovered, skipped }
+    },
+
+    async cancelManualOperation({ operationId }) {
+      // Single atomic UPDATE … WHERE status IN (queued, running) so a
+      // concurrent finalize wins gracefully (the cancel becomes a no-op,
+      // we return the already-final operation).
+      await db
+        .update(schema.aiManualOperation)
+        .set({
+          status: 'failed',
+          errorCode: 'CANCELLED',
+          errorMessage: 'Cancelled via /ops/refresh/runs/:runId/cancel.',
+          finishedAt: new Date(),
+          degraded: true,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.aiManualOperation.id, operationId),
+            inArray(schema.aiManualOperation.status, ['queued', 'running'])
+          )
+        )
+
+      return getManualOperationByPredicate({
+        db,
+        whereClause: eq(schema.aiManualOperation.id, operationId),
+      })
+    },
+
     async listAssumptions(limit) {
       const latestRunRow = await getLatestDailyRunRow(db)
       if (!latestRunRow) {

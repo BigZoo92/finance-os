@@ -2,243 +2,42 @@
 /**
  * Compose ↔ env-schema parity guard.
  *
- * Purpose: prevent regressions where a feature flag or provider credential
- * exists in `packages/env/src/index.ts` (and is consumed by API/worker routes)
- * but is NOT propagated to the corresponding container via
- * `docker-compose.prod.yml`. That drift is silent — the container falls back
- * to zod defaults instead of the Dokploy value, and features stay disabled.
- *
- * Strategy: for each service (api, worker, web, ops-alerts) we maintain a
- * curated list of keys that MUST be present in the service `environment:`
- * block. The script parses the compose YAML manually (no yaml dep required)
- * and fails with a precise diff if any required key is missing.
+ * Source of truth: `packages/env/src/diagnostics.ts`. This script is a thin
+ * CI-facing wrapper that loads docker-compose.prod.yml, checks the
+ * `environment:` block of each service against the canonical required /
+ * forbidden lists, and fails with a precise diff on drift.
  *
  * Run:
  *   bun scripts/check-compose-env-parity.ts
- *
- * The corresponding bun test (`scripts/check-compose-env-parity.test.ts`)
- * runs this guard in CI to keep the property always true.
  */
 
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import {
+  API_REQUIRED_KEYS as DIAG_API_REQUIRED_KEYS,
+  FORBIDDEN_KEYS_BY_SERVICE as DIAG_FORBIDDEN_KEYS_BY_SERVICE,
+  OPS_ALERTS_REQUIRED_KEYS as DIAG_OPS_ALERTS_REQUIRED_KEYS,
+  WEB_REQUIRED_KEYS as DIAG_WEB_REQUIRED_KEYS,
+  WORKER_REQUIRED_KEYS as DIAG_WORKER_REQUIRED_KEYS,
+} from '../packages/env/src/diagnostics'
 
 const COMPOSE_PATH = resolve(import.meta.dir, '..', 'docker-compose.prod.yml')
 
 type ServiceName = 'api' | 'worker' | 'web' | 'ops-alerts'
 
 /**
- * Keys that the API runtime reads via `getApiEnv()` AND that are configured
- * via Dokploy (i.e. not hard-coded). Adding a new flag here means the compose
- * MUST also declare it under `api.environment:`.
+ * Re-export the canonical lists from the diagnostics module so the parity
+ * script and the runtime `/ops/env/diagnostics` endpoint share one truth.
  */
-export const API_REQUIRED_KEYS: readonly string[] = [
-  'EXTERNAL_INTEGRATIONS_SAFE_MODE',
-  'EXTERNAL_INVESTMENTS_ENABLED',
-  'EXTERNAL_INVESTMENTS_SAFE_MODE',
-  // Transactions categorization
-  'TRANSACTIONS_CATEGORIZATION_MIGRATION_ENABLED',
-  'TRANSACTIONS_CATEGORIZATION_ROLLOUT_PERCENT',
-  'TRANSACTIONS_CATEGORIZATION_SHADOW_LATENCY_BUDGET_MS',
-  'AI_RELABEL_ENABLED',
-  'ENRICHMENT_BULK_TRIAGE_ENABLED',
-  // Market data
-  'MARKET_DATA_ENABLED',
-  'MARKET_DATA_REFRESH_ENABLED',
-  'MARKET_DATA_EODHD_ENABLED',
-  'MARKET_DATA_TWELVEDATA_ENABLED',
-  'MARKET_DATA_FRED_ENABLED',
-  'MARKET_DATA_FORCE_FIXTURE_FALLBACK',
-  'MARKET_DATA_STALE_AFTER_MINUTES',
-  'MARKET_DATA_REFRESH_COOLDOWN_SECONDS',
-  'EODHD_API_KEY',
-  'TWELVEDATA_API_KEY',
-  'FRED_API_KEY',
-  // X / social
-  'NEWS_PROVIDER_X_TWITTER_ENABLED',
-  'NEWS_PROVIDER_X_TWITTER_QUERY',
-  'NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN',
-  'SIGNALS_SOCIAL_POLLING_ENABLED',
-  'SIGNALS_MANUAL_IMPORT_ENABLED',
-  'ADVISOR_X_SIGNALS_MODE',
-  // X daily previous-day sync — pay-per-use guarded
-  'X_DAILY_PREVIOUS_DAY_SYNC_ENABLED',
-  'X_DAILY_BUDGET_USD',
-  'X_MONTHLY_BUDGET_USD',
-  'X_MAX_POST_READS_PER_DAY',
-  'X_MAX_USER_READS_PER_DAY',
-  'X_MAX_TWEETS_PER_AUTHOR_PER_DAY',
-  'X_MAX_PAGES_PER_USER_PER_DAY',
-  'X_MAX_FOLLOWED_ACCOUNTS',
-  'X_REQUIRE_MANUAL_CONFIRMATION_OVER_ESTIMATE_USD',
-  'X_DISABLE_ON_BUDGET_EXCEEDED',
-  'X_DISABLE_ON_PAYMENT_REQUIRED',
-  'X_ADVISOR_MAX_TWEETS_PER_DAY',
-  'X_ADVISOR_MAX_TWEETS_PER_AUTHOR_PER_DAY',
-  'X_ADVISOR_RELEVANCE_THRESHOLD',
-  // Free Firehose — admin manual ingest
-  'FREE_FIREHOSE_ENABLED',
-  'FREE_FIREHOSE_MAX_RUNS_PER_WEEK',
-  'FREE_FIREHOSE_REQUIRE_CONFIRMATION',
-  'FREE_FIREHOSE_LLM_ENRICHMENT_DEFAULT',
-  'FREE_FIREHOSE_MAX_GDELT_RECORDS',
-  'FREE_FIREHOSE_MAX_HN_RECORDS',
-  'FREE_FIREHOSE_MAX_SEC_FILINGS',
-  'FREE_FIREHOSE_MAX_FRED_SERIES',
-  'FREE_FIREHOSE_MAX_ECB_SERIES',
-  // AI
-  'AI_ADVISOR_ENABLED',
-  'AI_ADVISOR_FORCE_LOCAL_ONLY',
-  'AI_POST_MORTEM_ENABLED',
-  'AI_CHAT_ENABLED',
-  'AI_CHALLENGER_ENABLED',
-  'AI_OPENAI_API_KEY',
-  'AI_OPENAI_CLASSIFIER_MODEL',
-  'AI_OPENAI_DAILY_MODEL',
-  'AI_OPENAI_DEEP_MODEL',
-  'AI_ANTHROPIC_API_KEY',
-  'AI_ANTHROPIC_CHALLENGER_MODEL',
-  'AI_BUDGET_DAILY_USD',
-  'AI_BUDGET_MONTHLY_USD',
-  // Knowledge service
-  'KNOWLEDGE_SERVICE_ENABLED',
-  'KNOWLEDGE_SERVICE_URL',
-  'KNOWLEDGE_SERVICE_TIMEOUT_MS',
-  'AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED',
-  'ADVISOR_GRAPH_INGEST_ENABLED',
-  // External investments providers
-  'IBKR_FLEX_ENABLED',
-  'IBKR_FLEX_BASE_URL',
-  'IBKR_FLEX_TIMEOUT_MS',
-  'BINANCE_SPOT_ENABLED',
-  'BINANCE_SPOT_BASE_URL',
-  'BINANCE_SPOT_TIMEOUT_MS',
-  // Failsoft
-  'FAILSOFT_POLICY_ENABLED',
-  'FAILSOFT_SOURCE_ORDER',
-  'FAILSOFT_NEWS_ENABLED',
-  'FAILSOFT_INSIGHTS_ENABLED',
-  // Attention
-  'ATTENTION_SYSTEM_ENABLED',
-]
-
-/**
- * Keys that the worker scheduler stack reads via `getWorkerEnv()`. The
- * worker triggers API routes for actual work — it doesn't need provider
- * keys (EODHD, TwelveData, FRED, OpenAI…) directly.
- */
-export const WORKER_REQUIRED_KEYS: readonly string[] = [
-  'EXTERNAL_INTEGRATIONS_SAFE_MODE',
-  'WORKER_AUTO_SYNC_ENABLED',
-  'AI_POST_MORTEM_AUTO_RUN_ENABLED',
-  'AI_POST_MORTEM_CRON',
-  'AI_POST_MORTEM_TIMEZONE',
-  'AI_DAILY_AUTO_RUN_ENABLED',
-  'AI_DAILY_INTERVAL_MS',
-  'DAILY_INTELLIGENCE_ENABLED',
-  'DAILY_INTELLIGENCE_CRON',
-  'DAILY_INTELLIGENCE_TIMEZONE',
-  'NEWS_AUTO_INGEST_ENABLED',
-  'NEWS_FETCH_INTERVAL_MS',
-  'MARKET_DATA_AUTO_REFRESH_ENABLED',
-  'MARKET_DATA_REFRESH_INTERVAL_MS',
-  'SIGNALS_SOCIAL_POLLING_ENABLED',
-  'SIGNALS_SOCIAL_POLLING_INTERVAL_MS',
-  'ATTENTION_SYSTEM_ENABLED',
-  'ATTENTION_REBUILD_AUTO_ENABLED',
-  'ATTENTION_REBUILD_INTERVAL_MS',
-  'AI_ADVISOR_ENABLED',
-  'AI_ADVISOR_FORCE_LOCAL_ONLY',
-  'AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED',
-  'ADVISOR_X_SIGNALS_MODE',
-  // External investments — Binance valuation (worker enrichment pipeline)
-  'EXTERNAL_INVESTMENTS_VALUATION_TARGET_CURRENCY',
-  'EXTERNAL_INVESTMENTS_BINANCE_VALUATION_ENABLED',
-  'EXTERNAL_INVESTMENTS_BINANCE_VALUATION_USD_EUR_FALLBACK',
-  'IBKR_FLEX_ENABLED',
-  'BINANCE_SPOT_ENABLED',
-  'BINANCE_SPOT_BASE_URL',
-  'BINANCE_SPOT_RECV_WINDOW_MS',
-  'BINANCE_SPOT_TIMEOUT_MS',
-  'IBKR_FLEX_BASE_URL',
-  'IBKR_FLEX_TIMEOUT_MS',
-  'IBKR_FLEX_USER_AGENT',
-  // X daily previous-day scheduler — worker triggers the API endpoint.
-  'X_DAILY_PREVIOUS_DAY_SYNC_ENABLED',
-  'X_DAILY_PREVIOUS_DAY_CRON',
-  'X_DAILY_PREVIOUS_DAY_TIMEZONE',
-  'X_DAILY_PREVIOUS_DAY_TRIGGER_TIMEOUT_MS',
-  'X_DAILY_PREVIOUS_DAY_LOCK_TTL_SECONDS',
-]
-
-/**
- * VITE_* flags the web container needs. Secrets MUST never appear here.
- */
-export const WEB_REQUIRED_KEYS: readonly string[] = [
-  'VITE_API_BASE_URL',
-  'VITE_APP_ORIGIN',
-  'VITE_APP_TITLE',
-  'VITE_AI_ADVISOR_ENABLED',
-  'VITE_AI_ADVISOR_ADMIN_ONLY',
-  'VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED',
-  'VITE_PWA_NOTIFICATIONS_ENABLED',
-  'VITE_PWA_CRITICAL_ENABLED',
-]
-
-/**
- * Ops-alerts monitor. Only ALERTS_* and minimal infra are needed; no provider
- * secrets, no AI keys.
- */
-export const OPS_ALERTS_REQUIRED_KEYS: readonly string[] = [
-  'ALERTS_ENABLED',
-  'ALERTS_POLL_INTERVAL_MS',
-  'ALERTS_HEALTHCHECK_URLS',
-  'ALERTS_WORKER_HEARTBEAT_FILE',
-  'ALERTS_WORKER_STALE_AFTER_MS',
-  'ALERTS_DISK_FREE_PERCENT_THRESHOLD',
-  'ALERTS_DISK_PATHS',
-]
-
-/**
- * Keys that MUST NOT appear in a given service env (defense against secret
- * leakage to the wrong container). Empty for now but kept as a hook.
- */
+export const API_REQUIRED_KEYS = DIAG_API_REQUIRED_KEYS
+export const WORKER_REQUIRED_KEYS = DIAG_WORKER_REQUIRED_KEYS
+export const WEB_REQUIRED_KEYS = DIAG_WEB_REQUIRED_KEYS
+export const OPS_ALERTS_REQUIRED_KEYS = DIAG_OPS_ALERTS_REQUIRED_KEYS
 export const FORBIDDEN_KEYS_BY_SERVICE: Record<ServiceName, readonly string[]> = {
-  api: [],
-  worker: [],
-  // The web container is publicly reachable; it must never see backend secrets.
-  web: [
-    'AI_OPENAI_API_KEY',
-    'AI_ANTHROPIC_API_KEY',
-    'NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN',
-    'EODHD_API_KEY',
-    'TWELVEDATA_API_KEY',
-    'FRED_API_KEY',
-    'ALPHA_VANTAGE_API_KEY',
-    'POWENS_CLIENT_SECRET',
-    'AUTH_SESSION_SECRET',
-    'APP_ENCRYPTION_KEY',
-    'AUTH_ADMIN_PASSWORD_HASH',
-    'AUTH_ADMIN_PASSWORD_HASH_B64',
-    'NEO4J_PASSWORD',
-    'KNOWLEDGE_NEO4J_PASSWORD',
-    'QDRANT_API_KEY',
-    'KNOWLEDGE_QDRANT_API_KEY',
-    'POSTGRES_PASSWORD',
-    'BLUESKY_APP_PASSWORD',
-    'PUSH_VAPID_PRIVATE_KEY',
-  ],
-  'ops-alerts': [
-    'AI_OPENAI_API_KEY',
-    'AI_ANTHROPIC_API_KEY',
-    'NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN',
-    'EODHD_API_KEY',
-    'TWELVEDATA_API_KEY',
-    'FRED_API_KEY',
-    'POWENS_CLIENT_SECRET',
-    'AUTH_SESSION_SECRET',
-    'APP_ENCRYPTION_KEY',
-  ],
+  api: DIAG_FORBIDDEN_KEYS_BY_SERVICE.api,
+  worker: DIAG_FORBIDDEN_KEYS_BY_SERVICE.worker,
+  web: DIAG_FORBIDDEN_KEYS_BY_SERVICE.web,
+  'ops-alerts': DIAG_FORBIDDEN_KEYS_BY_SERVICE['ops-alerts'],
 }
 
 const REQUIRED_BY_SERVICE: Record<ServiceName, readonly string[]> = {

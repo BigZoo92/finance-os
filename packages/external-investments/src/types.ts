@@ -36,6 +36,13 @@ export type ExternalInvestmentErrorCode =
   | 'NORMALIZATION_FAILED'
   | 'VALUATION_PARTIAL'
   | 'ADVISOR_BUNDLE_STALE'
+  /**
+   * Sentinel for "the flex query returned a well-formed but empty statement"
+   * (typical Last-Business-Day query on a weekend or market holiday). NOT a
+   * failure — the normalizer maps it to a `partial_success` / `success_empty`
+   * outcome at the orchestrator level so the run doesn't get marked `failed`.
+   */
+  | 'PROVIDER_NO_ACTIVITY'
 
 export type ExternalInvestmentCredentialKind = 'ibkr_flex' | 'binance_spot'
 

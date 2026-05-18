@@ -2,7 +2,52 @@ import type { ExternalInvestmentProvider } from '@finance-os/external-investment
 import type { DashboardAdvisorManualOperationResponse } from '../dashboard/advisor-contract'
 import type { DashboardRouteRuntime } from '../dashboard/types'
 
-export type RefreshJobStatus = 'queued' | 'running' | 'success' | 'partial' | 'failed' | 'skipped'
+/**
+ * Status taxonomy:
+ *
+ *   - queued: handed to the underlying queue/use-case, will run later.
+ *   - running: actively executing; should not stay here past the job's hard timeout.
+ *   - success: completed and produced the expected data.
+ *   - partial: completed but with at least one provider in degraded state.
+ *   - failed: errored out with an explicit error.
+ *   - timed_out: exceeded the job's hard timeout (AbortController fired).
+ *   - skipped: legacy generic skip; prefer the specific skip variants below.
+ *   - skipped_disabled: the feature flag for this job is off.
+ *   - skipped_missing_config: feature flag is on but a required secret is missing
+ *     (e.g. NEWS_PROVIDER_X_TWITTER_ENABLED=true without bearer token).
+ *   - skipped_budget: paid provider budget exhausted (e.g. X monthly cap reached).
+ *   - skipped_dependency_failed: a job listed in `dependencies` failed/timed_out.
+ *   - cancelled: explicitly cancelled via /ops/refresh/runs/:runId/cancel.
+ */
+export type RefreshJobStatus =
+  | 'queued'
+  | 'running'
+  | 'success'
+  | 'partial'
+  | 'failed'
+  | 'timed_out'
+  | 'cancelled'
+  | 'skipped'
+  | 'skipped_disabled'
+  | 'skipped_missing_config'
+  | 'skipped_budget'
+  | 'skipped_dependency_failed'
+
+export const FINAL_REFRESH_STATUSES: readonly RefreshJobStatus[] = [
+  'success',
+  'partial',
+  'failed',
+  'timed_out',
+  'cancelled',
+  'skipped',
+  'skipped_disabled',
+  'skipped_missing_config',
+  'skipped_budget',
+  'skipped_dependency_failed',
+]
+
+export const isFinalRefreshStatus = (status: RefreshJobStatus): boolean =>
+  FINAL_REFRESH_STATUSES.includes(status)
 export type RefreshTriggerSource =
   | 'cron'
   | 'manual-global'
@@ -88,6 +133,92 @@ const createResult = ({
   message,
   details: details ?? null,
 })
+
+class JobTimeoutError extends Error {
+  constructor(public readonly timeoutMs: number) {
+    super(`JOB_HARD_TIMEOUT_${timeoutMs}MS`)
+    this.name = 'JobTimeoutError'
+  }
+}
+
+/**
+ * Hard timeout wrapper. Any underlying use-case that respects AbortSignal
+ * (LLM clients, fetch, etc.) will be cancelled. If the inner promise refuses
+ * to cancel, we still mark the job timed_out and return — the dangling
+ * promise is logged-and-forgotten which is the right tradeoff vs. leaving
+ * the run in `running` forever.
+ */
+export const withHardTimeout = async <T>(
+  promise: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number
+): Promise<T> => {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(new JobTimeoutError(timeoutMs)), timeoutMs)
+  try {
+    return await promise(controller.signal)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Pure helper: given the runtime-evaluated feature requirements for a job,
+ * decide if it must be skipped before any side effect. Returns the skip
+ * status + a human reason, or null when the job is allowed to run.
+ *
+ * This is the load-bearing piece that makes "feature enabled but no secret"
+ * surface as `skipped_missing_config` instead of a confusing 500.
+ */
+export const evaluatePreflight = ({
+  job,
+  triggerSource,
+  missingConfig,
+  budgetExceeded,
+  failedDependencyId,
+}: {
+  job: { id: string; enabled: boolean; manualTriggerAllowed: boolean }
+  triggerSource: RefreshTriggerSource
+  missingConfig?: { missingEnvNames: string[]; reason: string } | null
+  budgetExceeded?: { reason: string } | null
+  failedDependencyId?: string | null
+}): { status: RefreshJobStatus; message: string; details: Record<string, unknown> } | null => {
+  if (!job.enabled) {
+    return {
+      status: 'skipped_disabled',
+      message: 'Job disabled by configuration.',
+      details: { reason: 'flag_disabled' },
+    }
+  }
+  if (!job.manualTriggerAllowed && triggerSource === 'manual-individual') {
+    return {
+      status: 'skipped',
+      message: 'Manual trigger is disabled for this job.',
+      details: { reason: 'manual_trigger_not_allowed' },
+    }
+  }
+  if (missingConfig && missingConfig.missingEnvNames.length > 0) {
+    return {
+      status: 'skipped_missing_config',
+      message: missingConfig.reason,
+      details: { missingEnvNames: missingConfig.missingEnvNames },
+    }
+  }
+  if (budgetExceeded) {
+    return {
+      status: 'skipped_budget',
+      message: budgetExceeded.reason,
+      details: { reason: 'budget_exceeded' },
+    }
+  }
+  if (failedDependencyId) {
+    return {
+      status: 'skipped_dependency_failed',
+      message: `Upstream dependency ${failedDependencyId} failed; skipping this job.`,
+      details: { failedDependencyId },
+    }
+  }
+  return null
+}
 
 export const createRefreshJobRegistry = ({
   runtime,
@@ -340,23 +471,15 @@ export const createRefreshJobRegistry = ({
     const job = requireJob(jobId)
     const startedAtMs = Date.now()
 
-    if (!job.enabled) {
+    const preflight = evaluatePreflight({ job, triggerSource })
+    if (preflight) {
       return createResult({
         jobId,
-        status: 'skipped',
+        status: preflight.status,
         requestId,
         startedAtMs,
-        message: 'Job disabled by configuration.',
-      })
-    }
-
-    if (!job.manualTriggerAllowed && triggerSource === 'manual-individual') {
-      return createResult({
-        jobId,
-        status: 'skipped',
-        requestId,
-        startedAtMs,
-        message: 'Manual trigger is disabled for this job.',
+        message: preflight.message,
+        details: preflight.details,
       })
     }
 
@@ -479,11 +602,22 @@ export const createRefreshJobRegistry = ({
             message: 'Advisor runtime unavailable.',
           })
         }
-        const result = await runtime.useCases.runAdvisorDaily({
+
+        // Hard-timeout race: if the advisor pipeline does not finish within
+        // `timeoutMs`, we surface `timed_out` to the caller while letting the
+        // underlying promise drain in the background (its catch handlers
+        // still write the final run status to the DB). This is what stops
+        // the user-visible "running forever" state.
+        const advisorPromise = runtime.useCases.runAdvisorDaily({
           mode: 'admin',
           requestId,
           triggerSource,
         })
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new JobTimeoutError(job.timeoutMs)), job.timeoutMs)
+        })
+        const result = await Promise.race([advisorPromise, timeoutPromise])
+
         return createResult({
           jobId,
           status: result.run.status === 'degraded' ? 'partial' : result.run.status === 'failed' ? 'failed' : 'success',
@@ -503,12 +637,27 @@ export const createRefreshJobRegistry = ({
         message: 'No runner is registered for this job yet.',
       })
     } catch (error) {
+      const isTimeout =
+        error instanceof JobTimeoutError ||
+        (error instanceof Error && /JOB_HARD_TIMEOUT/.test(error.message)) ||
+        // AbortController's default abort reason surfaces as DOMException AbortError
+        (typeof error === 'object' &&
+          error !== null &&
+          'name' in error &&
+          (error as { name?: string }).name === 'AbortError')
+
+      // Provider-partial-data is a soft degradation, not a hard failure; the
+      // call-site already wraps it in `partial`. Anything else with a hard
+      // timeout signature surfaces as `timed_out` so the UI can offer recovery.
       return createResult({
         jobId,
-        status: 'partial',
+        status: isTimeout ? 'timed_out' : 'partial',
         requestId,
         startedAtMs,
         message: toSafeErrorMessage(error),
+        ...(isTimeout
+          ? { details: { reason: 'hard_timeout', timeoutMs: job.timeoutMs } }
+          : {}),
       })
     }
   }
