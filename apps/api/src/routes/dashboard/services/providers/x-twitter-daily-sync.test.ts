@@ -281,7 +281,7 @@ describe('runPreviousDaySync', () => {
     expect(low.keptForAdvisor).toBe(false)
   })
 
-  it('aborts an author with PROVIDER_ERROR when X returns a non-200 page', async () => {
+  it('aborts an author with PROVIDER_ERROR and surfaces the upstream X errorCode + status', async () => {
     const fetcher: XTwitterTimelineFetcher = async () => ({
       tweets: [],
       meta: { nextToken: null, resultCount: 0 },
@@ -295,16 +295,59 @@ describe('runPreviousDaySync', () => {
       fetchTimeline: fetcher,
     })
     expect(outcome.perAuthor[0]?.abortReason).toBe('PROVIDER_ERROR')
+    expect(outcome.perAuthor[0]?.errorCode).toBe('RATE_LIMITED')
+    expect(outcome.perAuthor[0]?.errorStatusCode).toBe(429)
+    expect(outcome.perAuthor[0]?.errorMessage).toContain('rate limit')
+    // Top-level error must surface the same code, not a generic PROVIDER_ERROR.
+    expect(outcome.errorCode).toBe('RATE_LIMITED')
+    expect(outcome.errorMessage).toContain('429')
   })
 
-  it('marks an account UNRESOLVED with PROVIDER_ERROR when externalId is missing', async () => {
+  it('marks an account UNRESOLVED_HANDLE when externalId is missing and surfaces actionable error', async () => {
     const outcome = await runPreviousDaySync({
       accounts: [{ signalSourceId: 99, handle: 'lost', externalId: null, priority: 0 }],
       window,
       config: baseConfig,
       fetchTimeline: async () => okPage([]),
     })
-    expect(outcome.perAuthor[0]?.abortReason).toBe('PROVIDER_ERROR')
+    expect(outcome.perAuthor[0]?.abortReason).toBe('UNRESOLVED_HANDLE')
+    expect(outcome.perAuthor[0]?.errorCode).toBe('UNRESOLVED_HANDLE')
+    expect(outcome.perAuthor[0]?.errorMessage).toContain('lookup')
     expect(outcome.fetchedTweetCount).toBe(0)
+    expect(outcome.errorCode).toBe('UNRESOLVED_HANDLE')
+    expect(outcome.errorMessage).toContain('@lost')
+  })
+
+  it('does not fail the whole run when some authors succeed and others hit PROVIDER_ERROR', async () => {
+    let call = 0
+    const fetcher: XTwitterTimelineFetcher = async () => {
+      call += 1
+      if (call === 1) {
+        return okPage([tweet({ id: 't1' })], null)
+      }
+      return {
+        tweets: [],
+        meta: { nextToken: null, resultCount: 0 },
+        statusCode: 401,
+        errorCode: 'TOKEN_INVALID',
+      }
+    }
+    const outcome = await runPreviousDaySync({
+      accounts,
+      window,
+      config: baseConfig,
+      fetchTimeline: fetcher,
+    })
+    // First author fetched tweet → run is "success", not "failed", even though
+    // second author hit a provider error. The per-author detail still carries
+    // the upstream error info.
+    expect(outcome.status).toBe('success')
+    expect(outcome.fetchedTweetCount).toBe(1)
+    expect(outcome.perAuthor[1]?.errorCode).toBe('TOKEN_INVALID')
+    expect(outcome.perAuthor[1]?.errorStatusCode).toBe(401)
+    // Top-level run errorCode is null because at least one author succeeded
+    // (partial success). The per-author detail is the canonical source of
+    // truth for which handles failed and why.
+    expect(outcome.errorCode).toBeNull()
   })
 })

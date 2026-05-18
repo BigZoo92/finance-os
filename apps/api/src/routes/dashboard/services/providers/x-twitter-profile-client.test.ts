@@ -34,6 +34,102 @@ describe('cleanHandle', () => {
   })
 })
 
+describe('normalizeXHandle', () => {
+  const { normalizeXHandle } = __testing
+
+  it('strips a leading @ and lowercases', () => {
+    const r = normalizeXHandle('@ElonMusk')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
+  it('accepts a bare handle without @', () => {
+    const r = normalizeXHandle('unusual_whales')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('unusual_whales')
+  })
+
+  it('trims surrounding whitespace', () => {
+    const r = normalizeXHandle('  unusual_whales  ')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('unusual_whales')
+  })
+
+  it('extracts handle from https://x.com/<handle>', () => {
+    const r = normalizeXHandle('https://x.com/elonmusk')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
+  it('extracts handle from https://twitter.com/<handle>', () => {
+    const r = normalizeXHandle('https://twitter.com/elonmusk')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
+  it('extracts handle from URL with query params', () => {
+    const r = normalizeXHandle('https://x.com/elonmusk?lang=fr&utm=share')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
+  it('extracts handle from URL with trailing slash', () => {
+    const r = normalizeXHandle('https://x.com/elonmusk/')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
+  it('accepts www.x.com and mobile.twitter.com', () => {
+    const a = normalizeXHandle('https://www.x.com/foo')
+    const b = normalizeXHandle('https://mobile.twitter.com/foo')
+    expect(a.ok && a.handle).toBe('foo')
+    expect(b.ok && b.handle).toBe('foo')
+  })
+
+  it('extracts handle even when URL has a /status/ suffix (takes the first path segment)', () => {
+    const r = normalizeXHandle('https://x.com/elonmusk/status/1234567890')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
+  it('rejects URLs from unsupported hosts', () => {
+    const r = normalizeXHandle('https://bsky.app/profile/elonmusk')
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.code).toBe('INVALID_HANDLE')
+  })
+
+  it('rejects URLs pointing to /i/, /home, /explore', () => {
+    expect(normalizeXHandle('https://x.com/i/web/status/1').ok).toBe(false)
+    expect(normalizeXHandle('https://x.com/home').ok).toBe(false)
+    expect(normalizeXHandle('https://x.com/explore').ok).toBe(false)
+  })
+
+  it('rejects empty input', () => {
+    expect(normalizeXHandle('').ok).toBe(false)
+    expect(normalizeXHandle('   ').ok).toBe(false)
+  })
+
+  it('rejects handles with spaces', () => {
+    expect(normalizeXHandle('@elon musk').ok).toBe(false)
+  })
+
+  it('rejects handles longer than 15 chars', () => {
+    expect(normalizeXHandle('a'.repeat(16)).ok).toBe(false)
+  })
+
+  it('rejects handles with invalid characters', () => {
+    expect(normalizeXHandle('élon').ok).toBe(false)
+    expect(normalizeXHandle('elon-musk').ok).toBe(false)
+    expect(normalizeXHandle('elon.musk').ok).toBe(false)
+  })
+
+  it('rejects non-string input', () => {
+    expect(normalizeXHandle(null).ok).toBe(false)
+    expect(normalizeXHandle(undefined).ok).toBe(false)
+    expect(normalizeXHandle(42).ok).toBe(false)
+  })
+})
+
 describe('createXTwitterProfileClient.lookupHandle', () => {
   it('returns a fully-populated profile + cost on 200', async () => {
     const client = createXTwitterProfileClient({

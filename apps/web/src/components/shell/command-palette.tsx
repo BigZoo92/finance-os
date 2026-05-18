@@ -25,7 +25,8 @@ const KEYWORDS: Record<string, string> = {
   '/ia/couts': 'tokens couts budget modeles llm depenses ia usage admin expert',
   '/signaux': 'news actualites feed flux macro signal briefing donnees brutes expert',
   '/signaux/marches': 'macro watchlist regime taux inflation fred eodhd marches bourse expert',
-  '/signaux/social': 'social x bluesky comptes surveilles imports expert',
+  '/signaux/social':
+    'social intelligence x twitter bluesky comptes surveilles lookup handle sync j-1 previous day budget admin expert',
   '/signaux/sources': 'sources api fraicheur qualite donnees providers admin expert',
 }
 

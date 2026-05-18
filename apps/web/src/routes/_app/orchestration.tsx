@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
@@ -347,20 +347,19 @@ function OrchestrationPage() {
                   )}
                   {step?.errorMessage && <p className="mt-1 truncate text-xs text-negative">{step.errorMessage}</p>}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={
-                    !isAdmin ||
-                    !job.enabled ||
-                    !job.manualTriggerAllowed ||
-                    jobMutation.isPending
-                  }
-                  onClick={() => jobMutation.mutate(job.id)}
-                >
-                  {jobMutation.variables === job.id && jobMutation.isPending ? '…' : 'Relancer'}
-                </Button>
+                {job.manualTriggerAllowed ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!isAdmin || !job.enabled || jobMutation.isPending}
+                    onClick={() => jobMutation.mutate(job.id)}
+                  >
+                    {jobMutation.variables === job.id && jobMutation.isPending ? '…' : 'Relancer'}
+                  </Button>
+                ) : (
+                  <ManualTriggerHint domain={job.domain} />
+                )}
               </div>
             )
           })}
@@ -397,5 +396,37 @@ function OrchestrationPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+/**
+ * Replacement for the previously dead "Relancer" button on jobs whose
+ * `manualTriggerAllowed` flag is false (currently: `tweets-finance`,
+ * `tweets-ai`). The orchestrator never accepts a manual trigger for these
+ * because they are owned by the Social Intelligence cockpit — driving them
+ * from the orchestration page would bypass the budget guard and per-author
+ * cap logic. Point the admin at the right cockpit instead of showing a
+ * permanently grey button.
+ */
+function ManualTriggerHint({ domain }: { domain: string }) {
+  if (domain === 'social') {
+    return (
+      <Link
+        to="/signaux/social"
+        className="inline-flex items-center justify-center rounded-md border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+        data-testid="manual-trigger-redirect-social"
+        title="Lancer ce job depuis le cockpit Social Intelligence pour respecter budget et caps."
+      >
+        Gérer depuis Social Intelligence →
+      </Link>
+    )
+  }
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-md border border-border/40 px-3 py-1.5 text-[11px] text-muted-foreground/70"
+      title="Ce job ne supporte pas de relance manuelle (planifié uniquement)."
+    >
+      Cron uniquement
+    </span>
   )
 }

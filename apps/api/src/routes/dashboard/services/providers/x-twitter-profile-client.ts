@@ -57,8 +57,105 @@ export type XTwitterProfileOutcome =
 
 const USER_READ_COST_USD = 0.01
 
-const cleanHandle = (input: string) => input.trim().replace(/^@/, '').toLowerCase()
 const HANDLE_PATTERN = /^[a-z0-9_]{1,15}$/
+const SUPPORTED_X_HOSTS = new Set([
+  'x.com',
+  'twitter.com',
+  'mobile.twitter.com',
+  'm.twitter.com',
+])
+
+export type NormalizeXHandleResult =
+  | { ok: true; handle: string }
+  | { ok: false; code: 'INVALID_HANDLE'; reason: string }
+
+/**
+ * Normalize any user-supplied X / Twitter handle reference into a canonical
+ * lowercase username (1–15 chars of `[a-z0-9_]`).
+ *
+ * Accepted inputs:
+ *   - "@elonmusk", "elonmusk", "  ElonMusk  ", "elonmusk/"
+ *   - "https://x.com/elonmusk", "http://twitter.com/elonmusk"
+ *   - "https://x.com/elonmusk?lang=fr", "https://mobile.twitter.com/elonmusk/"
+ *
+ * Rejected with INVALID_HANDLE for everything else (URLs to unsupported
+ * hosts, empty strings, status URLs like /elonmusk/status/123, handles longer
+ * than 15 chars, handles containing invalid characters).
+ *
+ * Used by both the profile lookup route (admin manual lookup) and the
+ * social-accounts persistence path so a single normalization contract holds
+ * end-to-end.
+ */
+export const normalizeXHandle = (input: unknown): NormalizeXHandleResult => {
+  if (typeof input !== 'string') {
+    return { ok: false, code: 'INVALID_HANDLE', reason: 'Handle must be a string.' }
+  }
+
+  let raw = input.trim()
+  if (raw.length === 0) {
+    return { ok: false, code: 'INVALID_HANDLE', reason: 'Handle cannot be empty.' }
+  }
+
+  // URL form. Accept x.com and twitter.com variants only.
+  if (/^https?:\/\//i.test(raw)) {
+    let url: URL
+    try {
+      url = new URL(raw)
+    } catch {
+      return { ok: false, code: 'INVALID_HANDLE', reason: 'Invalid URL.' }
+    }
+    const host = url.hostname.toLowerCase().replace(/^www\./, '')
+    if (!SUPPORTED_X_HOSTS.has(host)) {
+      return {
+        ok: false,
+        code: 'INVALID_HANDLE',
+        reason: `Unsupported host "${host}". Only x.com and twitter.com URLs are accepted.`,
+      }
+    }
+    const segments = url.pathname.split('/').filter(Boolean)
+    if (segments.length === 0) {
+      return { ok: false, code: 'INVALID_HANDLE', reason: 'URL has no username path segment.' }
+    }
+    const candidate = segments[0]
+    if (
+      !candidate ||
+      candidate === 'i' ||
+      candidate === 'home' ||
+      candidate === 'explore' ||
+      candidate === 'search'
+    ) {
+      return { ok: false, code: 'INVALID_HANDLE', reason: 'URL does not point to a profile.' }
+    }
+    raw = candidate
+  }
+
+  // Strip a leading @, trailing slashes, and lowercase.
+  const handle = raw
+    .replace(/^@+/, '')
+    .replace(/\/+$/, '')
+    .trim()
+    .toLowerCase()
+
+  if (handle.length === 0) {
+    return { ok: false, code: 'INVALID_HANDLE', reason: 'Handle cannot be empty after trimming.' }
+  }
+
+  if (!HANDLE_PATTERN.test(handle)) {
+    return {
+      ok: false,
+      code: 'INVALID_HANDLE',
+      reason: 'Handle must be 1–15 characters of [a-z0-9_] (case-insensitive).',
+    }
+  }
+
+  return { ok: true, handle }
+}
+
+/** @deprecated Prefer {@link normalizeXHandle} — kept for backwards compat. */
+const cleanHandle = (input: string) => {
+  const result = normalizeXHandle(input)
+  return result.ok ? result.handle : input.trim().replace(/^@/, '').toLowerCase()
+}
 
 const mapStatusToCode = (status: number): XTwitterProfileOutcome extends infer T
   ? T extends { code: infer C }
@@ -140,17 +237,18 @@ export const createXTwitterProfileClient = ({
         estimatedCostUsd: 0,
       }
     }
-    const handle = cleanHandle(rawHandle)
-    if (!HANDLE_PATTERN.test(handle)) {
+    const normalized = normalizeXHandle(rawHandle)
+    if (!normalized.ok) {
       return {
         ok: false,
         code: 'INVALID_HANDLE',
-        message: 'Handle must be 1–15 chars of [a-z0-9_].',
+        message: normalized.reason,
         statusCode: null,
         userReads: 0,
         estimatedCostUsd: 0,
       }
     }
+    const handle = normalized.handle
     const url = `${baseUrl}/users/by/username/${handle}?user.fields=description,profile_image_url,profile_banner_url,verified,verified_type,protected,public_metrics,created_at`
 
     let response: { status: number; body: Record<string, unknown> }
@@ -201,4 +299,4 @@ export const createXTwitterProfileClient = ({
   },
 })
 
-export const __testing = { cleanHandle, profileFromResponse }
+export const __testing = { cleanHandle, profileFromResponse, normalizeXHandle }

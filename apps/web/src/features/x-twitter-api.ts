@@ -97,6 +97,9 @@ export type XDailySyncResponse = {
     pagesFetched: number
     aborted: boolean
     abortReason: string | null
+    errorCode?: string | null
+    errorStatusCode?: number | null
+    errorMessage?: string | null
   }>
   errorCode?: string | null
   errorMessage?: string | null

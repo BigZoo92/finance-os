@@ -473,6 +473,20 @@ const resolveUserMode = (context: object) => {
   return 'demo'
 }
 
+const isLikelyDatabaseError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false
+  const err = error as { name?: unknown; code?: unknown; message?: unknown }
+  if (typeof err.name === 'string') {
+    if (err.name === 'PostgresError') return true
+    if (err.name === 'DrizzleError') return true
+    if (err.name === 'NeonDbError') return true
+  }
+  // postgres-js sets a sqlstate code on the error (5-char string).
+  if (typeof err.code === 'string' && /^[0-9A-Z]{5}$/.test(err.code)) return true
+  if (typeof err.message === 'string' && err.message.startsWith('Failed query:')) return true
+  return false
+}
+
 const toValidationDetails = (error: unknown) => {
   if (!error || typeof error !== 'object') {
     return undefined
@@ -792,6 +806,15 @@ const app = new Elysia()
       status = 404
       responseCode = 'ROUTE_NOT_FOUND'
       message = 'Route not found'
+    } else if (isLikelyDatabaseError(context.error)) {
+      // Database errors carry raw SQL + params in `.message`. Never leak that
+      // to the client — log it server-side with a stable error code, return a
+      // generic JSON 500. (Free Firehose 500 prod bug: postgres-js threw
+      // "Failed query: ... params: <localized Date>" which was previously
+      // surfaced as text/plain.)
+      status = 500
+      responseCode = 'DATABASE_ERROR'
+      message = 'Database query failed'
     }
 
     const includeStack = status >= 500 || isApiDebugEnabled()

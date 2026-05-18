@@ -147,9 +147,9 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     to: '/signaux/social',
-    label: 'Social',
-    icon: '⊕',
-    description: 'Comptes surveillés et imports manuels',
+    label: 'Social Intelligence',
+    icon: '𝕏',
+    description: 'X / Twitter & Bluesky : santé, comptes suivis, lookup, sync J-1',
     group: 'expert',
   },
   {
@@ -157,14 +157,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Sources',
     icon: '⚡',
     description: 'Fraîcheur, provenance et qualité',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/signaux/x-twitter',
-    label: 'X / Twitter',
-    icon: '𝕏',
-    description: 'Signaux X, budget pay-per-use et runs manuels',
     group: 'expert',
     adminOnly: true,
   },

@@ -15,6 +15,7 @@ import { formatCount } from '@/features/x-twitter-view-model'
 import { PreflightBanner } from '@/features/ops-env-diagnostics/preflight-banner'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
+import { ApiRequestError } from '@/lib/api'
 
 export const Route = createFileRoute('/_app/signaux/free-firehose')({
   loader: async ({ context }) => {
@@ -80,9 +81,10 @@ function FreeFirehoseAdminPage() {
             </button>
 
             {estimateMutation.isError && (
-              <p className="mt-3 text-sm text-red-400" data-testid="firehose-estimate-error">
-                Erreur lors de l'estimation.
-              </p>
+              <ApiErrorDetails
+                error={estimateMutation.error}
+                testId="firehose-estimate-error"
+              />
             )}
 
             {estimate && !estimate.ok && (
@@ -209,6 +211,50 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
     <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
       <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
       <div className="mt-0.5 text-sm text-slate-100">{children}</div>
+    </div>
+  )
+}
+
+function ApiErrorDetails({ error, testId }: { error: unknown; testId: string }) {
+  const isApiErr = error instanceof ApiRequestError
+  const status = isApiErr ? error.status : 'unknown'
+  const code = isApiErr ? error.code : undefined
+  const requestId = isApiErr ? error.requestId : undefined
+  const message = error instanceof Error ? error.message : String(error)
+  const hint = isApiErr ? error.hint : undefined
+
+  return (
+    <div
+      className="mt-3 rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-200"
+      data-testid={testId}
+    >
+      <p className="font-semibold">Erreur lors de l'estimation</p>
+      <div className="mt-2 grid grid-cols-1 gap-1 text-xs text-red-300 sm:grid-cols-2">
+        {code && (
+          <p>
+            <span className="text-red-400/70">code</span>{' '}
+            <code className="ml-1 rounded bg-red-950/60 px-1">{code}</code>
+          </p>
+        )}
+        <p>
+          <span className="text-red-400/70">status</span>{' '}
+          <code className="ml-1 rounded bg-red-950/60 px-1">{String(status)}</code>
+        </p>
+        {requestId && (
+          <p className="sm:col-span-2">
+            <span className="text-red-400/70">requestId</span>{' '}
+            <code className="ml-1 rounded bg-red-950/60 px-1">{requestId}</code>
+          </p>
+        )}
+      </div>
+      <p className="mt-2 text-xs">{message}</p>
+      {hint && <p className="mt-1 text-xs text-red-400/80">Hint : {hint}</p>}
+      {code === 'FREE_FIREHOSE_ESTIMATE_FAILED' && (
+        <p className="mt-1 text-xs text-red-300">
+          Le calcul du quota hebdomadaire a échoué. Vérifie les logs API
+          (stage=weekly_quota) avec le requestId ci-dessus.
+        </p>
+      )}
     </div>
   )
 }

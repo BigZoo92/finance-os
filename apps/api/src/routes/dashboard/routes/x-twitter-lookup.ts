@@ -22,6 +22,7 @@ import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
 import type { ApiDb, RedisClient } from '../types'
 import {
   createXTwitterProfileClient,
+  normalizeXHandle,
   type XTwitterFetch,
   type XTwitterProfile,
 } from '../services/providers/x-twitter-profile-client'
@@ -95,7 +96,18 @@ export const createXTwitterLookupRoute = ({
         real: async () => {
           requireAdmin(context)
           const body = context.body as LookupBody
-          const handle = body.handle.trim().replace(/^@/, '').toLowerCase()
+          const normalized = normalizeXHandle(body.handle)
+          if (!normalized.ok) {
+            context.set.status = 400
+            return {
+              ok: false as const,
+              code: 'INVALID_HANDLE' as const,
+              message: normalized.reason,
+              verificationStatus: 'unverified_invalid_handle' as const,
+              requestId,
+            }
+          }
+          const handle = normalized.handle
           const forceRefresh = body.forceRefresh === true
           const persist = body.persist !== false
 

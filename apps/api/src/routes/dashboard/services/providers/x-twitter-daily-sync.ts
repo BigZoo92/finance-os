@@ -189,6 +189,40 @@ export type PreviousDayCapReason =
   | 'capped_by_page_limit'
   | 'capped_by_provider_error'
 
+export type PerAuthorOutcome = {
+  authorId: string
+  handle: string
+  fetchedCount: number
+  keptForAdvisorCount: number
+  pagesFetched: number
+  aborted: boolean
+  abortReason:
+    | 'PER_AUTHOR_CAP'
+    | 'GLOBAL_POST_CAP'
+    | 'PAGE_CAP'
+    | 'PROVIDER_ERROR'
+    | 'BUDGET_EXCEEDED'
+    | 'UNRESOLVED_HANDLE'
+    | null
+  /** Concrete provider error code propagated from the HTTP fetcher when
+   *  abortReason === 'PROVIDER_ERROR'. Lets the UI distinguish
+   *  TOKEN_INVALID / RATE_LIMITED / PAYMENT_REQUIRED / etc instead of an
+   *  opaque "PROVIDER_ERROR" string. */
+  errorCode:
+    | 'TOKEN_INVALID'
+    | 'PAYMENT_REQUIRED'
+    | 'FORBIDDEN'
+    | 'RATE_LIMITED'
+    | 'PROVIDER_UNAVAILABLE'
+    | 'NETWORK_ERROR'
+    | 'UNRESOLVED_HANDLE'
+    | null
+  /** Upstream X HTTP status when abortReason === 'PROVIDER_ERROR'. null when
+   *  the abort happened before any HTTP call (e.g. unresolved handle). */
+  errorStatusCode: number | null
+  errorMessage: string | null
+}
+
 export type PreviousDaySyncOutcome = {
   status:
     | 'success'
@@ -204,21 +238,7 @@ export type PreviousDaySyncOutcome = {
   actualCostUsd: number
   fetchedTweetCount: number
   keptForAdvisorCount: number
-  perAuthor: Array<{
-    authorId: string
-    handle: string
-    fetchedCount: number
-    keptForAdvisorCount: number
-    pagesFetched: number
-    aborted: boolean
-    abortReason:
-      | 'PER_AUTHOR_CAP'
-      | 'GLOBAL_POST_CAP'
-      | 'PAGE_CAP'
-      | 'PROVIDER_ERROR'
-      | 'BUDGET_EXCEEDED'
-      | null
-  }>
+  perAuthor: Array<PerAuthorOutcome>
   errorCode: string | null
   errorMessage: string | null
   window: PreviousDayWindow
@@ -262,8 +282,68 @@ const computeRunCapReason = (
   if (reasons.includes('PAGE_CAP')) return 'capped_by_page_limit'
   if (reasons.includes('PER_AUTHOR_CAP')) return 'capped_by_author_limit'
   if (reasons.includes('PROVIDER_ERROR')) return 'capped_by_provider_error'
+  if (reasons.includes('UNRESOLVED_HANDLE')) return 'capped_by_provider_error'
   if (reasons.includes('BUDGET_EXCEEDED')) return 'capped_by_budget'
   return 'complete'
+}
+
+const describeProviderError = (
+  errorCode: XTwitterTimelinePage['errorCode'],
+  statusCode: number
+): string => {
+  switch (errorCode) {
+    case 'TOKEN_INVALID':
+      return `X rejected the request with HTTP ${statusCode}: bearer token invalid or revoked. Rotate NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN.`
+    case 'PAYMENT_REQUIRED':
+      return `X returned HTTP ${statusCode}: payment / plan upgrade required to access this endpoint.`
+    case 'FORBIDDEN':
+      return `X returned HTTP ${statusCode}: account or plan forbidden from this endpoint.`
+    case 'RATE_LIMITED':
+      return `X returned HTTP ${statusCode}: rate limit exceeded. Wait for x-rate-limit-reset and retry.`
+    case 'PROVIDER_UNAVAILABLE':
+      return `X returned HTTP ${statusCode}: provider unavailable.`
+    case 'NETWORK_ERROR':
+      return 'Network error reaching X — DNS, TLS, or connect timeout.'
+    default:
+      return `Unknown provider error (status ${statusCode}).`
+  }
+}
+
+/**
+ * Aggregate the most actionable per-author error into a run-level errorCode
+ * + errorMessage so the API response carries enough context to debug a
+ * "failed but no logs" run without consulting the server logs.
+ */
+const aggregateRunError = (
+  perAuthor: PreviousDaySyncOutcome['perAuthor']
+): { errorCode: string | null; errorMessage: string | null } => {
+  const everyAuthorAborted = perAuthor.length > 0 && perAuthor.every(a => a.aborted)
+  if (!everyAuthorAborted) return { errorCode: null, errorMessage: null }
+
+  // Surface the most informative error: a real provider error trumps an
+  // unresolved-handle abort.
+  const withProviderError = perAuthor.find(a => a.abortReason === 'PROVIDER_ERROR' && a.errorCode)
+  if (withProviderError?.errorCode) {
+    return {
+      errorCode: withProviderError.errorCode,
+      errorMessage:
+        withProviderError.errorMessage ??
+        `X provider returned ${withProviderError.errorCode} for @${withProviderError.handle}.`,
+    }
+  }
+  const withUnresolved = perAuthor.find(a => a.abortReason === 'UNRESOLVED_HANDLE')
+  if (withUnresolved) {
+    const unresolvedHandles = perAuthor
+      .filter(a => a.abortReason === 'UNRESOLVED_HANDLE')
+      .map(a => `@${a.handle}`)
+      .slice(0, 5)
+      .join(', ')
+    return {
+      errorCode: 'UNRESOLVED_HANDLE',
+      errorMessage: `No resolved X user id for: ${unresolvedHandles}. Run a profile lookup first.`,
+    }
+  }
+  return { errorCode: null, errorMessage: null }
 }
 
 export const runPreviousDaySync = async ({
@@ -315,6 +395,9 @@ export const runPreviousDaySync = async ({
         pagesFetched: 0,
         aborted: false,
         abortReason: null,
+        errorCode: null,
+        errorStatusCode: null,
+        errorMessage: null,
       })),
       errorCode: null,
       errorMessage: budgetExceeded
@@ -344,6 +427,9 @@ export const runPreviousDaySync = async ({
         pagesFetched: 0,
         aborted: true,
         abortReason: 'BUDGET_EXCEEDED' as const,
+        errorCode: null,
+        errorStatusCode: null,
+        errorMessage: null,
       })),
       errorCode: requiresManual ? 'MANUAL_CONFIRMATION_REQUIRED' : 'BUDGET_EXCEEDED',
       errorMessage: requiresManual
@@ -370,7 +456,11 @@ export const runPreviousDaySync = async ({
         keptForAdvisorCount: 0,
         pagesFetched: 0,
         aborted: true,
-        abortReason: 'PROVIDER_ERROR',
+        abortReason: 'UNRESOLVED_HANDLE',
+        errorCode: 'UNRESOLVED_HANDLE',
+        errorStatusCode: null,
+        errorMessage:
+          'Handle has no resolved X user id. Run a profile lookup first to verify the account exists and to cache its X user id.',
       })
       continue
     }
@@ -383,6 +473,9 @@ export const runPreviousDaySync = async ({
         pagesFetched: 0,
         aborted: true,
         abortReason: 'GLOBAL_POST_CAP',
+        errorCode: null,
+        errorStatusCode: null,
+        errorMessage: null,
       })
       continue
     }
@@ -391,7 +484,10 @@ export const runPreviousDaySync = async ({
     let pages = 0
     let authorFetched = 0
     let authorKept = 0
-    let abortReason: PreviousDaySyncOutcome['perAuthor'][number]['abortReason'] = null
+    let abortReason: PerAuthorOutcome['abortReason'] = null
+    let lastProviderErrorCode: PerAuthorOutcome['errorCode'] = null
+    let lastProviderStatusCode: number | null = null
+    let lastProviderMessage: string | null = null
 
     while (true) {
       if (pages >= config.caps.maxPagesPerUserPerDay) {
@@ -424,6 +520,9 @@ export const runPreviousDaySync = async ({
 
       if (page.statusCode !== 200) {
         abortReason = 'PROVIDER_ERROR'
+        lastProviderErrorCode = page.errorCode
+        lastProviderStatusCode = page.statusCode || null
+        lastProviderMessage = describeProviderError(page.errorCode, page.statusCode)
         break
       }
 
@@ -464,12 +563,16 @@ export const runPreviousDaySync = async ({
       pagesFetched: pages,
       aborted: abortReason !== null,
       abortReason,
+      errorCode: lastProviderErrorCode,
+      errorStatusCode: lastProviderStatusCode,
+      errorMessage: lastProviderMessage,
     })
   }
 
   const actualCostUsd = totalPostReads * POST_READ_COST_USD
-  const everyAuthorAborted = perAuthor.every(a => a.aborted)
+  const everyAuthorAborted = perAuthor.length > 0 && perAuthor.every(a => a.aborted)
   const capReason = computeRunCapReason(perAuthor)
+  const aggregated = aggregateRunError(perAuthor)
 
   return {
     status: everyAuthorAborted && totalFetched === 0 ? 'failed' : 'success',
@@ -482,11 +585,11 @@ export const runPreviousDaySync = async ({
     fetchedTweetCount: totalFetched,
     keptForAdvisorCount: totalKeptForAdvisor,
     perAuthor,
-    errorCode: null,
-    errorMessage: null,
+    errorCode: aggregated.errorCode,
+    errorMessage: aggregated.errorMessage,
     window,
     tweets: scoredTweets,
   }
 }
 
-export const __testing = { computeRunCapReason }
+export const __testing = { computeRunCapReason, aggregateRunError, describeProviderError }

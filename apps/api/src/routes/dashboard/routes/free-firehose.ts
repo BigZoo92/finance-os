@@ -20,6 +20,7 @@ import { randomUUID } from 'node:crypto'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
+import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
 import type { ApiDb } from '../types'
 import {
   estimateFreeFirehoseVolume,
@@ -263,13 +264,18 @@ export const buildFreeFirehoseRunners = ({
 }
 
 const buildHistoryAdapter = ({ db }: { db: ApiDb }) => ({
+  // Use Postgres SQL `now() - make_interval(...)` so the windowDays value is
+  // bound as an integer parameter — never as a localized JS Date string. A
+  // previous version passed `new Date(...)` directly into the sql template,
+  // which Drizzle serialized via `Date.prototype.toString()` (locale-dependent,
+  // produces "Mon May 11 2026 23:42:39 GMT+0200 (Central European Summer Time)")
+  // and Postgres rejected with status 22008.
   countLastNDays: async (windowDays: number) => {
-    const startedAt = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
     const [row] = await db
       .select({ count: sql<number>`count(*)`.as('count') })
       .from(schema.freeFirehoseRun)
       .where(
-        sql`${schema.freeFirehoseRun.startedAt} >= ${startedAt} AND ${schema.freeFirehoseRun.mode} = 'live'`
+        sql`${schema.freeFirehoseRun.startedAt} >= now() - make_interval(days => ${windowDays}) AND ${schema.freeFirehoseRun.mode} = 'live'`
       )
     return Number(row?.count ?? 0)
   },
@@ -361,14 +367,35 @@ export const createFreeFirehoseAdminRoute = ({
             const estimate = estimateFreeFirehoseVolume(runners)
 
             // Weekly cap status: include for the UI confirmation step.
-            const startedAt = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-            const [weeklyRow] = await db
-              .select({ count: sql<number>`count(*)`.as('count') })
-              .from(schema.freeFirehoseRun)
-              .where(
-                sql`${schema.freeFirehoseRun.startedAt} >= ${startedAt} AND ${schema.freeFirehoseRun.mode} = 'live'`
-              )
-            const runsLastWeek = Number(weeklyRow?.count ?? 0)
+            // Compute the count via SQL `now() - interval '7 days'` to avoid
+            // sending a JS Date through the parameter binding (see history
+            // adapter comment above).
+            let runsLastWeek = 0
+            try {
+              const [weeklyRow] = await db
+                .select({ count: sql<number>`count(*)`.as('count') })
+                .from(schema.freeFirehoseRun)
+                .where(
+                  sql`${schema.freeFirehoseRun.startedAt} >= now() - interval '7 days' AND ${schema.freeFirehoseRun.mode} = 'live'`
+                )
+              runsLastWeek = Number(weeklyRow?.count ?? 0)
+            } catch (error) {
+              logApiEvent({
+                level: 'error',
+                msg: 'free_firehose_estimate_weekly_quota_failed',
+                requestId,
+                stage: 'weekly_quota',
+                providerCount: estimate.providers.length,
+                ...toErrorLogFields({ error, includeStack: false }),
+              })
+              context.set.status = 500
+              return {
+                ok: false as const,
+                code: 'FREE_FIREHOSE_ESTIMATE_FAILED' as const,
+                message: 'Unable to compute weekly quota for Free Firehose estimate.',
+                requestId,
+              }
+            }
             return {
               ok: true as const,
               requestId,
