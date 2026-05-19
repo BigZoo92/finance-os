@@ -21,6 +21,7 @@ import { randomUUID } from 'node:crypto'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
+import { logApiEvent } from '../../../observability/logger'
 import type { ApiDb } from '../types'
 import {
   computePreviousDayWindow,
@@ -30,6 +31,11 @@ import {
   type XTwitterFollowedAccount,
 } from '../services/providers/x-twitter-daily-sync'
 import { createXTwitterHttpTimelineFetcher } from '../services/providers/x-twitter-http-fetcher'
+import {
+  X_BATCH_MAX_USERNAMES,
+  createXTwitterProfileClient,
+  type XTwitterFetch,
+} from '../services/providers/x-twitter-profile-client'
 import {
   readXUsageSnapshot,
   writeXUsageLedger,
@@ -62,12 +68,17 @@ export type XDailySyncEnv = {
   X_DAILY_BUDGET_USD: number
   X_MONTHLY_BUDGET_USD: number
   X_MAX_POST_READS_PER_DAY: number
+  X_MAX_USER_READS_PER_DAY: number
   X_MAX_PAGES_PER_USER_PER_DAY: number
   X_MAX_TWEETS_PER_AUTHOR_PER_DAY: number
   X_REQUIRE_MANUAL_CONFIRMATION_OVER_ESTIMATE_USD: number
   X_ADVISOR_RELEVANCE_THRESHOLD: number
   X_ADVISOR_MAX_TWEETS_PER_DAY: number
   X_DAILY_PREVIOUS_DAY_TIMEZONE: string
+  /** When true (default), an admin manual run tries to batch-resolve any
+   *  followed account whose external_id is null before fetching tweets.
+   *  Cron / scheduled runs still skip auto-resolve to avoid surprise spend. */
+  X_AUTO_RESOLVE_HANDLES_ON_MANUAL_RUN?: boolean
 }
 
 const MAX_RESULTS_PER_PAGE = 100
@@ -96,6 +107,138 @@ export const fetchXFollowedAccounts = async (
     externalId: r.externalId,
     priority: r.priority,
   }))
+}
+
+/**
+ * Best-effort batch resolution of accounts whose `externalId` is null so the
+ * subsequent timeline pull can actually run. Persists the canonical handle +
+ * profile metadata on each resolved row. Never throws — any provider error
+ * is swallowed and the unresolved accounts simply stay unresolved, which the
+ * orchestrator then reports as `UNRESOLVED_HANDLE` per-author.
+ *
+ * Mirrors the budget discipline of the explicit resolve-all endpoint: if the
+ * daily user-read cap is already exhausted, skip the lookup entirely.
+ */
+const autoResolveMissingExternalIds = async ({
+  db,
+  accounts,
+  bearerToken,
+  fetcher,
+  requestId,
+  now,
+  userReadsToday,
+  maxUserReadsPerDay,
+}: {
+  db: ApiDb
+  accounts: XTwitterFollowedAccount[]
+  bearerToken: string
+  fetcher: XTwitterFetch
+  requestId: string | null
+  now: Date
+  userReadsToday: number
+  maxUserReadsPerDay: number
+}): Promise<{ accounts: XTwitterFollowedAccount[]; resolvedCount: number; failedCount: number }> => {
+  const missing = accounts.filter(a => a.externalId === null)
+  if (missing.length === 0 || !bearerToken) {
+    return { accounts, resolvedCount: 0, failedCount: 0 }
+  }
+  if (userReadsToday >= maxUserReadsPerDay) {
+    logApiEvent({
+      level: 'warn',
+      msg: 'x_twitter_auto_resolve_skipped_budget',
+      requestId,
+      stage: 'auto_resolve',
+      reason: 'daily_user_read_cap_reached',
+      missingCount: missing.length,
+    })
+    return { accounts, resolvedCount: 0, failedCount: 0 }
+  }
+
+  const client = createXTwitterProfileClient({ bearerToken, fetcher })
+  const enriched = new Map<number, XTwitterFollowedAccount>()
+  let resolvedCount = 0
+  let failedCount = 0
+  let providerErrorEncountered = false
+
+  for (let i = 0; i < missing.length; i += X_BATCH_MAX_USERNAMES) {
+    if (providerErrorEncountered) break
+    const chunk = missing.slice(i, i + X_BATCH_MAX_USERNAMES)
+    const handles = chunk.map(a => a.handle)
+    const outcome = await client.lookupHandlesBatch(handles)
+    if (outcome.providerError) {
+      providerErrorEncountered = true
+      logApiEvent({
+        level: 'warn',
+        msg: 'x_twitter_auto_resolve_provider_error',
+        requestId,
+        stage: 'auto_resolve',
+        providerErrorCode: outcome.providerError.code,
+        statusCode: outcome.providerError.statusCode,
+        rateLimitRemaining: outcome.rateLimit?.remaining ?? null,
+        rateLimitResetAt: outcome.rateLimit?.resetAt ?? null,
+      })
+    }
+
+    for (const item of outcome.items) {
+      const account = chunk.find(a => a.handle === item.handle)
+      if (!account) continue
+      if (!item.ok) {
+        failedCount += 1
+        continue
+      }
+      await db
+        .update(schema.signalSource)
+        .set({
+          handle: item.profile.username,
+          externalId: item.profile.id,
+          profileImageUrl: item.profile.profileImageUrl,
+          profileMetadata: {
+            username: item.profile.username,
+            name: item.profile.name,
+            description: item.profile.description,
+            profileBannerUrl: item.profile.profileBannerUrl,
+            verified: item.profile.verified,
+            verifiedType: item.profile.verifiedType,
+            protected: item.profile.protected,
+            publicMetrics: item.profile.publicMetrics,
+            createdAt: item.profile.createdAt,
+          },
+          profileCachedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(schema.signalSource.id, account.signalSourceId))
+
+      enriched.set(account.signalSourceId, {
+        ...account,
+        handle: item.profile.username,
+        externalId: item.profile.id,
+      })
+      resolvedCount += 1
+    }
+
+    await writeXUsageLedger(db, {
+      runId: null,
+      endpoint: 'users/by',
+      userReads: outcome.userReads,
+      estimatedCostUsd: outcome.estimatedCostUsd,
+      statusCode: outcome.providerError?.statusCode ?? 200,
+      errorCode: outcome.providerError?.code ?? null,
+    })
+  }
+
+  const merged = accounts.map(a => enriched.get(a.signalSourceId) ?? a)
+  if (resolvedCount > 0) {
+    logApiEvent({
+      level: 'info',
+      msg: 'x_twitter_auto_resolve_completed',
+      requestId,
+      stage: 'auto_resolve',
+      resolvedCount,
+      failedCount,
+      remainingUnresolved: merged.filter(a => a.externalId === null).length,
+    })
+  }
+  return { accounts: merged, resolvedCount, failedCount }
 }
 
 const persistTweetsAsSignalItems = async ({
@@ -180,16 +323,49 @@ const persistTweetsAsSignalItems = async ({
   return { insertedCount: inserted, dedupedCount: deduped }
 }
 
+/**
+ * Default profile-lookup fetcher used by the auto-resolve step. Mirrors the
+ * one in `x-twitter-lookup.ts` so the auto-resolve path doesn't depend on
+ * route-internal helpers.
+ */
+const defaultProfileFetcher: XTwitterFetch = async ({ url, bearerToken }) => {
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      'User-Agent': 'Finance-OS X Daily Sync Auto-Resolve/1.0',
+    },
+  })
+  const parsed = await response.json().catch(() => ({}))
+  const body: Record<string, unknown> =
+    parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
+  const rateLimit = {
+    limit: numericHeader(response.headers.get('x-rate-limit-limit')),
+    remaining: numericHeader(response.headers.get('x-rate-limit-remaining')),
+    resetAt: numericHeader(response.headers.get('x-rate-limit-reset')),
+  }
+  return { status: response.status, body, rateLimit }
+}
+
+const numericHeader = (value: string | null): number | null => {
+  if (value === null) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 export const createXTwitterDailySyncRoute = ({
   db,
   env,
   now = () => new Date(),
   fetchFollowedAccounts = (limit?: number) => fetchXFollowedAccounts(db, limit),
+  profileFetcher = defaultProfileFetcher,
 }: {
   db: ApiDb
   env: XDailySyncEnv
   now?: () => Date
   fetchFollowedAccounts?: (limit?: number) => Promise<XTwitterFollowedAccount[]>
+  /** Optional override for the profile-lookup HTTP fetcher (auto-resolve).
+   *  Tests inject a stub here; production uses the real fetch wrapper. */
+  profileFetcher?: XTwitterFetch
 }) =>
   new Elysia().post(
     '/signals/x-twitter/daily-previous-day-sync',
@@ -225,7 +401,7 @@ export const createXTwitterDailySyncRoute = ({
             now: now(),
             timezone: env.X_DAILY_PREVIOUS_DAY_TIMEZONE,
           })
-          const accounts = await fetchFollowedAccounts(body.limitAccounts)
+          const rawAccounts = await fetchFollowedAccounts(body.limitAccounts)
 
           // Compute the remaining budget right before the run.
           const usage = await readXUsageSnapshot(db, now())
@@ -233,6 +409,32 @@ export const createXTwitterDailySyncRoute = ({
             0,
             env.X_MONTHLY_BUDGET_USD - usage.estimatedCostThisMonth
           )
+
+          // Auto-resolve any handle that lost / never had its external_id.
+          // Skipped for dry-runs (we never spend on a dry-run) and when the
+          // admin explicitly disables it via env. This is the fix for the
+          // prod regression where a manual run returned 17 × UNRESOLVED_HANDLE
+          // because no one ever ran a per-handle lookup first.
+          const autoResolveEnabled =
+            (env.X_AUTO_RESOLVE_HANDLES_ON_MANUAL_RUN ?? true) && runMode !== 'dry_run'
+          let autoResolved = 0
+          let autoResolveFailed = 0
+          let accounts = rawAccounts
+          if (autoResolveEnabled) {
+            const result = await autoResolveMissingExternalIds({
+              db,
+              accounts: rawAccounts,
+              bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
+              fetcher: profileFetcher,
+              requestId,
+              now: now(),
+              userReadsToday: usage.userReadsToday,
+              maxUserReadsPerDay: env.X_MAX_USER_READS_PER_DAY,
+            })
+            accounts = result.accounts
+            autoResolved = result.resolvedCount
+            autoResolveFailed = result.failedCount
+          }
 
           const outcome = await runPreviousDaySync({
             accounts,
@@ -346,6 +548,11 @@ export const createXTwitterDailySyncRoute = ({
             perAuthor: outcome.perAuthor,
             errorCode: outcome.errorCode,
             errorMessage: outcome.errorMessage,
+            autoResolve: {
+              enabled: autoResolveEnabled,
+              resolvedCount: autoResolved,
+              failedCount: autoResolveFailed,
+            },
           }
         },
       })
@@ -355,4 +562,5 @@ export const createXTwitterDailySyncRoute = ({
 
 export const __testing = {
   persistTweetsAsSignalItems,
+  autoResolveMissingExternalIds,
 }

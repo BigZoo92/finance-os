@@ -18,6 +18,7 @@ import {
   type UpdateSignalSourceInput,
 } from '../repositories/dashboard-signal-sources-repository'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
+import { normalizeXHandle } from '../services/providers/x-twitter-profile-client'
 import { sendSignalsToKnowledgeGraph } from '../services/signal-graph-ingest'
 import type { ApiDb } from '../types'
 
@@ -186,6 +187,30 @@ const manualImportBodySchema = t.Object({
   ),
 })
 
+/**
+ * Canonicalize a CreateSignalSourceInput handle when the provider has a
+ * documented normalization. Today only X / Twitter is normalized (multiple-@
+ * prefixes, URL forms, mixed case). Other providers pass through untouched.
+ *
+ * Returns `{ value: <normalized input> }` on success or `{ error: string }`
+ * with the actionable validation message on failure — the route maps that to
+ * a 400 INVALID_HANDLE response.
+ */
+const canonicalizeSignalSourceInput = (
+  input: CreateSignalSourceInput
+): { value: CreateSignalSourceInput } | { error: string } => {
+  if (input.provider === 'x_twitter') {
+    const normalized = normalizeXHandle(input.handle)
+    if (!normalized.ok) return { error: normalized.reason }
+    return { value: { ...input, handle: normalized.handle } }
+  }
+  // Other providers: trim only. Bluesky/manual_import accept domain handles or
+  // arbitrary identifiers; aggressive normalization would break them.
+  const trimmed = input.handle.trim()
+  if (trimmed.length === 0) return { error: 'Handle cannot be empty.' }
+  return { value: { ...input, handle: trimmed } }
+}
+
 export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
   const repository = createDashboardSignalSourcesRepository({ db })
   const itemsRepo = createDashboardSignalItemsRepository({ db })
@@ -233,10 +258,23 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
             },
             real: async () => {
               requireAdmin(context)
+              const input = context.body as CreateSignalSourceInput
+              // Canonicalize the handle when the provider has a well-known
+              // normalization (currently x_twitter). Prevents historical
+              // pollution like "@@tom_doerr" being persisted because the
+              // user pasted from a copy/paste-prefixed string.
+              const canonicalInput = canonicalizeSignalSourceInput(input)
+              if ('error' in canonicalInput) {
+                context.set.status = 400
+                return {
+                  ok: false,
+                  code: 'INVALID_HANDLE',
+                  message: canonicalInput.error,
+                  requestId,
+                }
+              }
               try {
-                const source = await repository.createSource(
-                  context.body as CreateSignalSourceInput
-                )
+                const source = await repository.createSource(canonicalInput.value)
                 context.set.status = 201
                 return { ok: true, source }
               } catch (error) {

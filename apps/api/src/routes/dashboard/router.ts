@@ -414,6 +414,7 @@ export const createDashboardRoutes = ({
               X_DAILY_BUDGET_USD: xDailyBudgetUsd,
               X_MONTHLY_BUDGET_USD: xMonthlyBudgetUsd,
               X_MAX_POST_READS_PER_DAY: xMaxPostReadsPerDay,
+              X_MAX_USER_READS_PER_DAY: xMaxUserReadsPerDay,
               X_MAX_PAGES_PER_USER_PER_DAY: xMaxPagesPerUserPerDay,
               X_MAX_TWEETS_PER_AUTHOR_PER_DAY: xMaxTweetsPerAuthorPerDay,
               X_REQUIRE_MANUAL_CONFIRMATION_OVER_ESTIMATE_USD:

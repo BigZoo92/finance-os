@@ -312,10 +312,24 @@ describe('runPreviousDaySync', () => {
     })
     expect(outcome.perAuthor[0]?.abortReason).toBe('UNRESOLVED_HANDLE')
     expect(outcome.perAuthor[0]?.errorCode).toBe('UNRESOLVED_HANDLE')
-    expect(outcome.perAuthor[0]?.errorMessage).toContain('lookup')
+    expect(outcome.perAuthor[0]?.errorMessage).toContain('Vérifier tous les comptes')
     expect(outcome.fetchedTweetCount).toBe(0)
     expect(outcome.errorCode).toBe('UNRESOLVED_HANDLE')
     expect(outcome.errorMessage).toContain('@lost')
+  })
+
+  it('emits a single-@ display handle even when DB has polluted "@@tom_doerr"', async () => {
+    const outcome = await runPreviousDaySync({
+      accounts: [{ signalSourceId: 99, handle: '@@tom_doerr', externalId: null, priority: 0 }],
+      window,
+      config: baseConfig,
+      fetchTimeline: async () => okPage([]),
+    })
+    expect(outcome.perAuthor[0]?.handle).toBe('tom_doerr')
+    expect(outcome.perAuthor[0]?.authorId).toBe('unresolved:tom_doerr')
+    // The aggregated top-level message must use the cleaned handle.
+    expect(outcome.errorMessage).toContain('@tom_doerr')
+    expect(outcome.errorMessage).not.toContain('@@tom_doerr')
   })
 
   it('does not fail the whole run when some authors succeed and others hit PROVIDER_ERROR', async () => {

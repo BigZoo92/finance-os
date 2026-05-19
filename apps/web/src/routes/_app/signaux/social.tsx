@@ -20,10 +20,12 @@ import {
 import {
   fetchXHealth,
   lookupXHandle,
+  resolveAllXSources,
   runXDailyPreviousDaySync,
   type XDailySyncResponse,
   type XHealthResponse,
   type XProfileLookupResponse,
+  type XResolveAllResponse,
 } from '@/features/x-twitter-api'
 import {
   capReasonLabel,
@@ -79,6 +81,14 @@ function SignauxSocialPage() {
   const activeSources = activeTab === 'finance' ? financeSources : aiTechSources
 
   const counts = sourcesQuery.data?.counts ?? { finance: 0, ai_tech: 0 }
+  const xSources = sources.filter(s => s.provider === 'x_twitter')
+  const readiness = {
+    total: xSources.length,
+    verified: xSources.filter(s => s.verificationStatus === 'verified').length,
+    unresolved: xSources.filter(
+      s => s.verificationStatus === 'unresolved' || s.verificationStatus === undefined
+    ).length,
+  }
 
   return (
     <div className="space-y-6">
@@ -94,6 +104,9 @@ function SignauxSocialPage() {
 
       {/* X provider health (admin only) */}
       {isAdmin && <XHealthPanel />}
+
+      {/* X readiness banner — surfaces unresolved accounts with one-click batch resolve */}
+      {isAdmin && readiness.total > 0 && <XReadinessBanner readiness={readiness} />}
 
       {/* Tab switcher */}
       <div className="flex gap-2">
@@ -298,48 +311,149 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['signal-sources'] }),
   })
 
+  const refreshMutation = useMutation({
+    mutationFn: () =>
+      resolveAllXSources({ force: true, sourceIds: [source.id] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['signal-sources'] })
+      void queryClient.invalidateQueries({ queryKey: ['x-twitter', 'health'] })
+    },
+  })
+
+  const isX = source.provider === 'x_twitter'
+  const profile = source.profileMetadata ?? null
+  const avatar = source.profileImageUrl ?? null
+  const canonicalUsername = profile?.username ?? sanitizeHandleForDisplay(source.handle)
+  const verificationTone: 'ok' | 'warn' | 'idle' =
+    !isX
+      ? 'idle'
+      : source.verificationStatus === 'verified'
+        ? 'ok'
+        : 'warn'
+
   return (
     <Panel>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <StatusDot tone={source.enabled ? 'ok' : 'idle'} />
-            <span className="font-medium text-text-primary truncate">{source.displayName}</span>
-            <Badge variant="outline" className="text-xs shrink-0">
-              {providerLabel(source.provider)}
-            </Badge>
-          </div>
-          <p className="text-text-secondary text-sm mt-0.5">{source.handle}</p>
-          {source.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {source.tags.map(tag => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
+        <div className="flex min-w-0 flex-1 gap-3">
+          {avatar && (
+            <img
+              src={avatar}
+              alt={`avatar de ${canonicalUsername}`}
+              className="h-12 w-12 shrink-0 rounded-full border border-surface-3 object-cover"
+            />
           )}
-          <div className="flex gap-3 mt-1.5 text-text-tertiary text-xs">
-            {source.lastFetchedAt && (
-              <span>
-                Dernier fetch: {new Date(source.lastFetchedAt).toLocaleDateString('fr-FR')}{' '}
-                {new Date(source.lastFetchedAt).toLocaleTimeString('fr-FR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusDot tone={source.enabled ? 'ok' : 'idle'} />
+              <span className="truncate font-medium text-text-primary">
+                {profile?.name ?? source.displayName}
               </span>
+              <Badge variant="outline" className="text-xs shrink-0">
+                {providerLabel(source.provider)}
+              </Badge>
+              {isX && (
+                <Badge
+                  variant={verificationTone === 'ok' ? 'positive' : 'warning'}
+                  className="text-[10px]"
+                  data-testid={`source-verification-${source.id}`}
+                >
+                  {source.verificationStatus === 'verified'
+                    ? 'vérifié'
+                    : 'non résolu'}
+                </Badge>
+              )}
+              {profile?.verified && (
+                <Badge variant="positive" className="text-[10px]">
+                  X verified{profile.verifiedType ? ` (${profile.verifiedType})` : ''}
+                </Badge>
+              )}
+              {profile?.protected && (
+                <Badge variant="outline" className="text-[10px]">
+                  privé
+                </Badge>
+              )}
+            </div>
+            <p className="text-text-secondary text-sm mt-0.5">@{canonicalUsername}</p>
+            {profile?.description && (
+              <p className="mt-1 line-clamp-2 max-w-2xl text-xs text-text-secondary">
+                {profile.description}
+              </p>
             )}
-            {source.lastFetchedCount != null && (
-              <span>{source.lastFetchedCount} items</span>
+            {profile?.publicMetrics && (
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-text-tertiary">
+                {profile.publicMetrics.followersCount != null && (
+                  <span>
+                    Followers: <strong className="text-text-secondary">
+                      {profile.publicMetrics.followersCount.toLocaleString('fr-FR')}
+                    </strong>
+                  </span>
+                )}
+                {profile.publicMetrics.followingCount != null && (
+                  <span>
+                    Following: {profile.publicMetrics.followingCount.toLocaleString('fr-FR')}
+                  </span>
+                )}
+                {profile.publicMetrics.tweetCount != null && (
+                  <span>
+                    Tweets: {profile.publicMetrics.tweetCount.toLocaleString('fr-FR')}
+                  </span>
+                )}
+                {profile.publicMetrics.listedCount != null && (
+                  <span>
+                    Listed: {profile.publicMetrics.listedCount.toLocaleString('fr-FR')}
+                  </span>
+                )}
+              </div>
             )}
-            {source.lastError && (
-              <span className="text-negative">Erreur: {source.lastError}</span>
+            {source.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {source.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             )}
+            <div className="flex flex-wrap gap-3 mt-1.5 text-text-tertiary text-xs">
+              {source.lastFetchedAt && (
+                <span>
+                  Dernier fetch: {new Date(source.lastFetchedAt).toLocaleDateString('fr-FR')}{' '}
+                  {new Date(source.lastFetchedAt).toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              )}
+              {source.lastFetchedCount != null && <span>{source.lastFetchedCount} items</span>}
+              {source.profileCachedAt && (
+                <span>
+                  Profil vérifié: {new Date(source.profileCachedAt).toLocaleDateString('fr-FR')}
+                </span>
+              )}
+              {isX && source.externalId && (
+                <span className="font-mono text-[10px] opacity-70">id:{source.externalId}</span>
+              )}
+              {source.lastError && (
+                <span className="text-negative">Erreur: {source.lastError}</span>
+              )}
+            </div>
           </div>
         </div>
 
         {isAdmin && (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
+            {isX && (
+              <button
+                type="button"
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshMutation.isPending}
+                className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface-2 transition-colors disabled:opacity-50"
+                data-testid={`source-refresh-${source.id}`}
+                title="Re-fetch X profile + cache metadata"
+              >
+                {refreshMutation.isPending ? '…' : 'Rafraîchir'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => toggleMutation.mutate()}
@@ -365,6 +479,16 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
       </div>
     </Panel>
   )
+}
+
+/**
+ * Canonicalize a stored handle for display when no canonical profile metadata
+ * is available yet. Strips leading `@@`-style pollution and trailing slashes
+ * so the UI never shows `@@tom_doerr`. Once the source is resolved, the
+ * `profileMetadata.username` field replaces this fallback entirely.
+ */
+function sanitizeHandleForDisplay(raw: string): string {
+  return raw.trim().replace(/^@+/, '').replace(/\/+$/, '')
 }
 
 function AddSourceForm({
@@ -565,6 +689,130 @@ function AddSourceForm({
 }
 
 // ---------------------------------------------------------------------------
+// X readiness banner — drives the "Vérifier tous les comptes" batch action
+// ---------------------------------------------------------------------------
+
+function XReadinessBanner({
+  readiness,
+}: {
+  readiness: { total: number; verified: number; unresolved: number }
+}) {
+  const queryClient = useQueryClient()
+  const [result, setResult] = useState<XResolveAllResponse | null>(null)
+  const mutation = useMutation({
+    mutationFn: () => resolveAllXSources({}),
+    onSuccess: data => {
+      setResult(data)
+      void queryClient.invalidateQueries({ queryKey: ['signal-sources'] })
+      void queryClient.invalidateQueries({ queryKey: ['x-twitter', 'health'] })
+    },
+  })
+
+  const ready = readiness.unresolved === 0
+  return (
+    <Panel
+      title="Préparation X"
+      actions={
+        <button
+          type="button"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+          data-testid="x-resolve-all"
+        >
+          {mutation.isPending ? 'Vérification…' : 'Vérifier tous les comptes'}
+        </button>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        <div className="flex items-center gap-2">
+          <StatusDot tone={ready ? 'ok' : 'idle'} />
+          <span className="text-text-secondary">
+            {ready ? 'Tous les comptes X sont prêts' : 'Comptes X à vérifier'}
+          </span>
+        </div>
+        <Badge variant="outline" className="text-[11px]">
+          Total : {readiness.total}
+        </Badge>
+        <Badge variant={ready ? 'positive' : 'ghost'} className="text-[11px]">
+          Vérifiés : {readiness.verified}
+        </Badge>
+        <Badge
+          variant={readiness.unresolved === 0 ? 'ghost' : 'warning'}
+          className="text-[11px]"
+          data-testid="x-readiness-unresolved-count"
+        >
+          À résoudre : {readiness.unresolved}
+        </Badge>
+      </div>
+      <p className="mt-2 text-xs text-text-tertiary">
+        X facture chaque <code>users/by</code> par compte résolu ($0.01). Le batch utilise
+        l'endpoint groupé (jusqu'à 100 comptes par requête).
+      </p>
+
+      {mutation.isError && (
+        <p className="mt-2 text-xs text-negative">Erreur réseau lors du batch resolve.</p>
+      )}
+
+      {result && (
+        <div className="mt-3 rounded border border-surface-3 bg-surface-1/40 p-3 text-xs">
+          {result.summary && (
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="positive" className="text-[10px]">
+                résolus : {result.summary.resolved}
+              </Badge>
+              <Badge variant="outline" className="text-[10px]">
+                invalides : {result.summary.invalidHandle}
+              </Badge>
+              <Badge variant="outline" className="text-[10px]">
+                introuvables : {result.summary.notFound}
+              </Badge>
+              {result.summary.rateLimited > 0 && (
+                <Badge variant="warning" className="text-[10px]">
+                  rate-limited : {result.summary.rateLimited}
+                </Badge>
+              )}
+              {result.summary.forbidden > 0 && (
+                <Badge variant="warning" className="text-[10px]">
+                  interdits : {result.summary.forbidden}
+                </Badge>
+              )}
+              {result.summary.tokenInvalid > 0 && (
+                <Badge variant="destructive" className="text-[10px]">
+                  token invalide : {result.summary.tokenInvalid}
+                </Badge>
+              )}
+              {result.summary.providerError > 0 && (
+                <Badge variant="destructive" className="text-[10px]">
+                  erreurs provider : {result.summary.providerError}
+                </Badge>
+              )}
+            </div>
+          )}
+          {result.providerError && (
+            <p className="mt-2 text-negative">
+              Provider error : {result.providerError.code}
+              {result.providerError.statusCode
+                ? ` (HTTP ${result.providerError.statusCode})`
+                : ''}{' '}
+              — {result.providerError.message}
+            </p>
+          )}
+          {typeof result.estimatedCostUsd === 'number' && (
+            <p className="mt-1 text-text-tertiary">
+              Coût estimé : ${result.estimatedCostUsd.toFixed(2)} ({result.userReads} user reads)
+              {result.rateLimit?.remaining != null
+                ? ` · rate-limit restant : ${result.rateLimit.remaining}`
+                : ''}
+            </p>
+          )}
+        </div>
+      )}
+    </Panel>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // X provider health panel
 // ---------------------------------------------------------------------------
 
@@ -669,6 +917,14 @@ function DailySyncPanel() {
       runXDailyPreviousDaySync({ runMode, manualConfirm: true, dryRun: false }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['x-twitter', 'health'] })
+      void queryClient.invalidateQueries({ queryKey: ['signal-sources'] })
+    },
+  })
+  const resolveAllMutation = useMutation({
+    mutationFn: () => resolveAllXSources({}),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['signal-sources'] })
+      void queryClient.invalidateQueries({ queryKey: ['x-twitter', 'health'] })
     },
   })
   const runResult = runMutation.data as XDailySyncResponse | undefined
@@ -749,6 +1005,36 @@ function DailySyncPanel() {
             <p className="mt-2 text-xs text-negative">
               <span className="font-semibold">{runResult.errorCode}</span>
               {runResult.errorMessage ? ` — ${runResult.errorMessage}` : ''}
+            </p>
+          )}
+          {runResult.errorCode === 'UNRESOLVED_HANDLE' && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-amber-700/60 bg-amber-950/30 p-2 text-xs text-amber-200">
+              <span>
+                Certains comptes n'ont pas de X user id. Lance un batch resolve, puis relance le
+                sync.
+              </span>
+              <button
+                type="button"
+                onClick={() => resolveAllMutation.mutate()}
+                disabled={resolveAllMutation.isPending}
+                className="rounded bg-primary px-2 py-1 text-[11px] font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                data-testid="x-sync-cta-resolve"
+              >
+                {resolveAllMutation.isPending
+                  ? 'Vérification…'
+                  : 'Vérifier les comptes maintenant'}
+              </button>
+            </div>
+          )}
+          {runResult.autoResolve && (
+            <p className="mt-2 text-[11px] text-text-tertiary" data-testid="x-sync-autoresolve">
+              Auto-résolution :{' '}
+              {runResult.autoResolve.enabled
+                ? `${runResult.autoResolve.resolvedCount} résolu(s)` +
+                  (runResult.autoResolve.failedCount > 0
+                    ? `, ${runResult.autoResolve.failedCount} échec(s)`
+                    : '')
+                : 'désactivée'}
             </p>
           )}
           {runResult.perAuthor?.some(a => a.aborted) && (

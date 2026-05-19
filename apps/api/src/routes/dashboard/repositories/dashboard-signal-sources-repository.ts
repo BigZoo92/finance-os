@@ -5,6 +5,34 @@ import type { ApiDb } from '../types'
 export type SignalSourceGroup = 'finance' | 'ai_tech'
 export type SignalSourceAttentionPolicy = 'auto' | 'always' | 'never' | 'high_only'
 
+/**
+ * Verification status for an X / Twitter source, derived from the columns
+ * `externalId` (set after a successful by-username lookup) and
+ * `profileCachedAt` (touched on every profile refresh). Other providers
+ * always report `not_applicable`.
+ */
+export type SignalSourceVerificationStatus =
+  | 'verified'
+  | 'unresolved'
+  | 'not_applicable'
+
+export interface SignalSourceProfileMetadata {
+  username?: string | null
+  name?: string | null
+  description?: string | null
+  profileBannerUrl?: string | null
+  verified?: boolean | null
+  verifiedType?: string | null
+  protected?: boolean | null
+  publicMetrics?: {
+    followersCount?: number | null
+    followingCount?: number | null
+    tweetCount?: number | null
+    listedCount?: number | null
+  } | null
+  createdAt?: string | null
+}
+
 export interface SignalSourceRow {
   id: number
   provider: string
@@ -24,6 +52,17 @@ export interface SignalSourceRow {
   lastCursor: string | null
   lastError: string | null
   lastFetchedCount: number | null
+  /** Provider-side user id (X numeric `user_id`). null until a profile
+   *  lookup resolves it. The daily-sync pipeline needs this — without it,
+   *  the run reports UNRESOLVED_HANDLE. */
+  externalId: string | null
+  profileImageUrl: string | null
+  profileMetadata: SignalSourceProfileMetadata | null
+  profileCachedAt: string | null
+  /** Derived from `externalId` + `profileCachedAt`. Cheap for the UI to
+   *  consume so it can show a verification badge without re-deriving rules
+   *  on every render. */
+  verificationStatus: SignalSourceVerificationStatus
   createdAt: string
   updatedAt: string
 }
@@ -77,6 +116,13 @@ export interface SignalIngestionRunRow {
   createdAt: string
 }
 
+const deriveVerificationStatus = (
+  row: typeof schema.signalSource.$inferSelect
+): SignalSourceVerificationStatus => {
+  if (row.provider !== 'x_twitter') return 'not_applicable'
+  return row.externalId ? 'verified' : 'unresolved'
+}
+
 const toRow = (row: typeof schema.signalSource.$inferSelect): SignalSourceRow => ({
   id: row.id,
   provider: row.provider,
@@ -96,6 +142,11 @@ const toRow = (row: typeof schema.signalSource.$inferSelect): SignalSourceRow =>
   lastCursor: row.lastCursor,
   lastError: row.lastError,
   lastFetchedCount: row.lastFetchedCount,
+  externalId: row.externalId,
+  profileImageUrl: row.profileImageUrl,
+  profileMetadata: (row.profileMetadata as SignalSourceProfileMetadata | null) ?? null,
+  profileCachedAt: row.profileCachedAt?.toISOString() ?? null,
+  verificationStatus: deriveVerificationStatus(row),
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 })

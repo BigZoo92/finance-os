@@ -7,6 +7,28 @@ import { apiFetch } from '@/lib/api'
 export type SignalSourceGroup = 'finance' | 'ai_tech'
 export type SignalSourceAttentionPolicy = 'auto' | 'always' | 'never' | 'high_only'
 
+export type SignalSourceVerificationStatus =
+  | 'verified'
+  | 'unresolved'
+  | 'not_applicable'
+
+export interface SignalSourceProfileMetadata {
+  username?: string | null
+  name?: string | null
+  description?: string | null
+  profileBannerUrl?: string | null
+  verified?: boolean | null
+  verifiedType?: string | null
+  protected?: boolean | null
+  publicMetrics?: {
+    followersCount?: number | null
+    followingCount?: number | null
+    tweetCount?: number | null
+    listedCount?: number | null
+  } | null
+  createdAt?: string | null
+}
+
 export interface SignalSource {
   id: number
   provider: string
@@ -26,6 +48,11 @@ export interface SignalSource {
   lastCursor: string | null
   lastError: string | null
   lastFetchedCount: number | null
+  externalId?: string | null
+  profileImageUrl?: string | null
+  profileMetadata?: SignalSourceProfileMetadata | null
+  profileCachedAt?: string | null
+  verificationStatus?: SignalSourceVerificationStatus
   createdAt: string
   updatedAt: string
 }

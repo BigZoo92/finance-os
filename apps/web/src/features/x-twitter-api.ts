@@ -103,6 +103,11 @@ export type XDailySyncResponse = {
   }>
   errorCode?: string | null
   errorMessage?: string | null
+  autoResolve?: {
+    enabled: boolean
+    resolvedCount: number
+    failedCount: number
+  }
   code?: string
   message?: string
 }
@@ -119,6 +124,54 @@ export const lookupXHandle = (body: XProfileLookupBody) =>
 
 export const runXDailyPreviousDaySync = (body: XDailySyncBody) =>
   apiFetch<XDailySyncResponse>('/dashboard/signals/x-twitter/daily-previous-day-sync', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+export type XResolveAllItemStatus =
+  | 'resolved'
+  | 'already_resolved'
+  | 'invalid_handle'
+  | 'not_found'
+  | 'provider_error'
+  | 'rate_limited'
+  | 'forbidden'
+  | 'token_missing_or_invalid'
+  | 'budget_exceeded'
+
+export type XResolveAllResponse = {
+  ok: boolean
+  requestId: string
+  code?: string
+  message?: string
+  summary?: {
+    total: number
+    resolved: number
+    alreadyResolved: number
+    invalidHandle: number
+    notFound: number
+    providerError: number
+    tokenInvalid: number
+    rateLimited: number
+    forbidden: number
+  }
+  items?: Array<{
+    sourceId: number
+    handleBefore: string
+    handleAfter: string | null
+    externalId: string | null
+    status: XResolveAllItemStatus
+    errorMessage: string | null
+  }>
+  userReads?: number
+  estimatedCostUsd?: number
+  rateLimit?: { limit: number | null; remaining: number | null; resetAt: number | null } | null
+  providerError?: { code: string; message: string; statusCode: number | null } | null
+}
+
+export const resolveAllXSources = (body: { force?: boolean; sourceIds?: number[] } = {}) =>
+  apiFetch<XResolveAllResponse>('/dashboard/signals/sources/x-twitter/resolve-all', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

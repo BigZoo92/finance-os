@@ -335,16 +335,25 @@ const aggregateRunError = (
   if (withUnresolved) {
     const unresolvedHandles = perAuthor
       .filter(a => a.abortReason === 'UNRESOLVED_HANDLE')
-      .map(a => `@${a.handle}`)
+      .map(a => `@${formatDisplayHandle(a.handle)}`)
       .slice(0, 5)
       .join(', ')
     return {
       errorCode: 'UNRESOLVED_HANDLE',
-      errorMessage: `No resolved X user id for: ${unresolvedHandles}. Run a profile lookup first.`,
+      errorMessage: `No resolved X user id for: ${unresolvedHandles}. Run "Vérifier tous les comptes" in Social Intelligence to batch-resolve them.`,
     }
   }
   return { errorCode: null, errorMessage: null }
 }
+
+/**
+ * Canonical display form for a handle persisted in `signal_source.handle`.
+ * Historical pollution allowed values like `@tom_doerr` or `@@tom_doerr` to
+ * land in the column; this helper strips them so the user sees `tom_doerr`
+ * (and the caller prepends a single `@` at render time).
+ */
+const formatDisplayHandle = (raw: string): string =>
+  raw.trim().replace(/^@+/, '').replace(/\/+$/, '')
 
 export const runPreviousDaySync = async ({
   accounts,
@@ -388,8 +397,8 @@ export const runPreviousDaySync = async ({
       fetchedTweetCount: 0,
       keptForAdvisorCount: 0,
       perAuthor: accounts.map(a => ({
-        authorId: a.externalId ?? `unresolved:${a.handle}`,
-        handle: a.handle,
+        authorId: a.externalId ?? `unresolved:${formatDisplayHandle(a.handle)}`,
+        handle: formatDisplayHandle(a.handle),
         fetchedCount: 0,
         keptForAdvisorCount: 0,
         pagesFetched: 0,
@@ -420,8 +429,8 @@ export const runPreviousDaySync = async ({
       fetchedTweetCount: 0,
       keptForAdvisorCount: 0,
       perAuthor: accounts.map(a => ({
-        authorId: a.externalId ?? `unresolved:${a.handle}`,
-        handle: a.handle,
+        authorId: a.externalId ?? `unresolved:${formatDisplayHandle(a.handle)}`,
+        handle: formatDisplayHandle(a.handle),
         fetchedCount: 0,
         keptForAdvisorCount: 0,
         pagesFetched: 0,
@@ -449,9 +458,10 @@ export const runPreviousDaySync = async ({
 
   for (const account of accounts) {
     if (!account.externalId) {
+      const display = formatDisplayHandle(account.handle)
       perAuthor.push({
-        authorId: `unresolved:${account.handle}`,
-        handle: account.handle,
+        authorId: `unresolved:${display}`,
+        handle: display,
         fetchedCount: 0,
         keptForAdvisorCount: 0,
         pagesFetched: 0,
@@ -460,7 +470,7 @@ export const runPreviousDaySync = async ({
         errorCode: 'UNRESOLVED_HANDLE',
         errorStatusCode: null,
         errorMessage:
-          'Handle has no resolved X user id. Run a profile lookup first to verify the account exists and to cache its X user id.',
+          'Handle has no resolved X user id. Use "Vérifier tous les comptes" to batch-resolve all unresolved sources in one shot.',
       })
       continue
     }
@@ -557,7 +567,7 @@ export const runPreviousDaySync = async ({
 
     perAuthor.push({
       authorId: account.externalId,
-      handle: account.handle,
+      handle: formatDisplayHandle(account.handle),
       fetchedCount: authorFetched,
       keptForAdvisorCount: authorKept,
       pagesFetched: pages,

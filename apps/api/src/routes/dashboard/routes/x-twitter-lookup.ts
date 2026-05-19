@@ -14,15 +14,18 @@
  */
 
 import { schema } from '@finance-os/db'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
+import { logApiEvent } from '../../../observability/logger'
 import type { ApiDb, RedisClient } from '../types'
 import {
+  X_BATCH_MAX_USERNAMES,
   createXTwitterProfileClient,
   normalizeXHandle,
+  type XTwitterBatchLookupOutcome,
   type XTwitterFetch,
   type XTwitterProfile,
 } from '../services/providers/x-twitter-profile-client'
@@ -57,6 +60,58 @@ const defaultFetcher: XTwitterFetch = async ({ url, bearerToken }) => {
   const body: Record<string, unknown> =
     parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
   return { status: response.status, body }
+}
+
+/**
+ * Resolve a batch of X handles against the DB and the X `users/by` endpoint.
+ *
+ * For each source the caller passes (or every enabled X source when none are
+ * specified), we:
+ *   1. Normalize the persisted handle (handles past pollution like `@@foo`).
+ *   2. If `force=true` OR `externalId` is missing, batch-lookup via X.
+ *   3. Persist `externalId`, `handle` (canonical), `profileImageUrl`,
+ *      `profileMetadata`, `profileCachedAt` on each resolved source.
+ *
+ * Returns a per-source summary so the UI can show resolved / already_resolved
+ * / invalid / not_found / provider_error counts in one shot.
+ */
+export type ResolveAllSummaryItem = {
+  sourceId: number
+  handleBefore: string
+  handleAfter: string | null
+  externalId: string | null
+  status:
+    | 'resolved'
+    | 'already_resolved'
+    | 'invalid_handle'
+    | 'not_found'
+    | 'provider_error'
+    | 'rate_limited'
+    | 'forbidden'
+    | 'token_missing_or_invalid'
+    | 'budget_exceeded'
+  errorMessage: string | null
+}
+
+const mapBatchItemToStatus = (
+  itemCode: 'NOT_FOUND' | 'INVALID_HANDLE' | 'TOKEN_MISSING' | 'TOKEN_INVALID' | 'PAYMENT_REQUIRED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'PROVIDER_UNAVAILABLE' | 'NETWORK_ERROR'
+): ResolveAllSummaryItem['status'] => {
+  switch (itemCode) {
+    case 'NOT_FOUND':
+      return 'not_found'
+    case 'INVALID_HANDLE':
+      return 'invalid_handle'
+    case 'TOKEN_MISSING':
+    case 'TOKEN_INVALID':
+      return 'token_missing_or_invalid'
+    case 'PAYMENT_REQUIRED':
+    case 'FORBIDDEN':
+      return 'forbidden'
+    case 'RATE_LIMITED':
+      return 'rate_limited'
+    default:
+      return 'provider_error'
+  }
 }
 
 export const createXTwitterLookupRoute = ({
@@ -232,6 +287,264 @@ export const createXTwitterLookupRoute = ({
     },
     { body: lookupBodySchema }
   )
+  .post(
+    '/signals/sources/x-twitter/resolve-all',
+    async context => {
+      rejectInvalidCredentials(context)
+      const requestId = getRequestMeta(context).requestId
+      context.set.headers['cache-control'] = 'no-store'
+
+      return demoOrReal({
+        context,
+        demo: () => {
+          context.set.status = 403
+          return {
+            ok: false as const,
+            code: 'DEMO_MODE_FORBIDDEN' as const,
+            message: 'Admin session required',
+            requestId,
+          }
+        },
+        real: async () => {
+          requireAdmin(context)
+          const body = (context.body ?? {}) as { force?: boolean; sourceIds?: number[] }
+          const force = body.force === true
+          const filterIds =
+            Array.isArray(body.sourceIds) && body.sourceIds.length > 0
+              ? body.sourceIds.filter(id => Number.isInteger(id) && id > 0)
+              : null
+
+          // 1. Read candidate rows. Default = enabled X sources with no
+          //    externalId. force=true relaxes to all enabled X sources.
+          const baseConditions = [eq(schema.signalSource.provider, 'x_twitter')]
+          if (!force) baseConditions.push(isNull(schema.signalSource.externalId))
+          baseConditions.push(eq(schema.signalSource.enabled, true))
+          const allRows = await db
+            .select({
+              id: schema.signalSource.id,
+              handle: schema.signalSource.handle,
+              externalId: schema.signalSource.externalId,
+            })
+            .from(schema.signalSource)
+            .where(and(...baseConditions))
+
+          const rows = filterIds
+            ? allRows.filter(r => filterIds.includes(r.id))
+            : allRows
+
+          if (rows.length === 0) {
+            return {
+              ok: true as const,
+              requestId,
+              summary: {
+                total: 0,
+                resolved: 0,
+                alreadyResolved: 0,
+                invalidHandle: 0,
+                notFound: 0,
+                providerError: 0,
+                tokenInvalid: 0,
+                rateLimited: 0,
+                forbidden: 0,
+              },
+              items: [] as ResolveAllSummaryItem[],
+              userReads: 0,
+              estimatedCostUsd: 0,
+              rateLimit: null,
+              providerError: null,
+            }
+          }
+
+          // 2. Budget gate. Worst-case = rows.length user reads — refuse if
+          //    we don't have headroom under the daily cap.
+          const usage = await readXUsageSnapshot(db, now())
+          const headroom = env.X_MAX_USER_READS_PER_DAY - usage.userReadsToday
+          if (headroom <= 0) {
+            context.set.status = 429
+            return {
+              ok: false as const,
+              code: 'BUDGET_EXCEEDED' as const,
+              message: `Daily user-read cap reached (${usage.userReadsToday}/${env.X_MAX_USER_READS_PER_DAY}).`,
+              requestId,
+            }
+          }
+
+          // 3. Normalize all handles first. Invalid rows are reported with
+          //    the original `handle` so the admin can fix them in the UI.
+          type Candidate = {
+            sourceId: number
+            originalHandle: string
+            canonical: string | null
+            invalidReason: string | null
+          }
+          const candidates: Candidate[] = rows.map(r => {
+            const normalized = normalizeXHandle(r.handle)
+            return normalized.ok
+              ? { sourceId: r.id, originalHandle: r.handle, canonical: normalized.handle, invalidReason: null }
+              : {
+                  sourceId: r.id,
+                  originalHandle: r.handle,
+                  canonical: null,
+                  invalidReason: normalized.reason,
+                }
+          })
+
+          const items: ResolveAllSummaryItem[] = []
+          for (const c of candidates) {
+            if (c.canonical === null) {
+              items.push({
+                sourceId: c.sourceId,
+                handleBefore: c.originalHandle,
+                handleAfter: null,
+                externalId: null,
+                status: 'invalid_handle',
+                errorMessage: c.invalidReason,
+              })
+            }
+          }
+
+          const toLookup = candidates.filter(c => c.canonical !== null)
+          // 4. Chunk to X_BATCH_MAX_USERNAMES. Track the aggregated rate
+          //    limit + provider error so the UI can show one banner.
+          let userReadsTotal = 0
+          let estimatedCostUsdTotal = 0
+          let lastRateLimit: XTwitterBatchLookupOutcome['rateLimit'] = null
+          let providerError: XTwitterBatchLookupOutcome['providerError'] = null
+          const client = createXTwitterProfileClient({
+            bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
+            fetcher,
+          })
+          for (let i = 0; i < toLookup.length; i += X_BATCH_MAX_USERNAMES) {
+            // Stop chunking early if the previous chunk already produced a
+            // batch-wide provider error — repeating the same 401/429 just
+            // burns the rate-limit window.
+            if (providerError !== null) break
+            const chunk = toLookup.slice(i, i + X_BATCH_MAX_USERNAMES)
+            const handles = chunk.map(c => c.canonical as string)
+            const outcome = await client.lookupHandlesBatch(handles)
+            userReadsTotal += outcome.userReads
+            estimatedCostUsdTotal += outcome.estimatedCostUsd
+            if (outcome.rateLimit) lastRateLimit = outcome.rateLimit
+            if (outcome.providerError) providerError = outcome.providerError
+
+            // 5. Persist + emit per-item summary
+            for (const item of outcome.items) {
+              const candidate = chunk.find(c => c.canonical === item.canonicalHandle) ??
+                chunk.find(c => c.originalHandle === item.handle)
+              const sourceId = candidate?.sourceId ?? rows.find(r => r.handle === item.handle)?.id
+              if (sourceId === undefined) continue
+              const handleBefore = candidate?.originalHandle ?? item.handle
+
+              if (item.ok) {
+                await persistProfileOnSignalSourceById({
+                  db,
+                  sourceId,
+                  canonicalHandle: item.profile.username,
+                  profile: item.profile,
+                  now: now(),
+                })
+                // Cache 24h so subsequent /lookup-handle hits skip the
+                // network call.
+                await redisClient.set(
+                  cacheKey(item.profile.username),
+                  JSON.stringify(item.profile),
+                  { EX: 24 * 60 * 60 }
+                )
+                items.push({
+                  sourceId,
+                  handleBefore,
+                  handleAfter: item.profile.username,
+                  externalId: item.profile.id,
+                  status: 'resolved',
+                  errorMessage: null,
+                })
+              } else {
+                items.push({
+                  sourceId,
+                  handleBefore,
+                  handleAfter: item.canonicalHandle,
+                  externalId: null,
+                  status: mapBatchItemToStatus(item.code),
+                  errorMessage: item.message,
+                })
+              }
+            }
+
+            // Single ledger row per batch HTTP call.
+            await writeXUsageLedger(db, {
+              runId: null,
+              endpoint: 'users/by',
+              userReads: outcome.userReads,
+              estimatedCostUsd: outcome.estimatedCostUsd,
+              statusCode: outcome.providerError?.statusCode ?? 200,
+              errorCode: outcome.providerError?.code ?? null,
+            })
+          }
+
+          // 6. Mark sources that were already resolved (force=false skipped
+          //    them entirely from the candidate set, so this branch only
+          //    matters when force=true and the row was already resolved
+          //    but a subsequent X call surfaced an error — handled inline
+          //    above). For the default flow, candidates with non-null
+          //    externalId would have been filtered out by the where clause
+          //    so we don't need a special "already_resolved" case here.
+
+          logApiEvent({
+            level: providerError ? 'warn' : 'info',
+            msg: 'x_twitter_resolve_all',
+            requestId,
+            stage: 'resolve_all',
+            totalRows: rows.length,
+            resolved: items.filter(i => i.status === 'resolved').length,
+            invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
+            notFound: items.filter(i => i.status === 'not_found').length,
+            providerErrorCount: items.filter(
+              i =>
+                i.status === 'provider_error' ||
+                i.status === 'rate_limited' ||
+                i.status === 'forbidden' ||
+                i.status === 'token_missing_or_invalid'
+            ).length,
+            userReadsTotal,
+            estimatedCostUsdTotal,
+            providerErrorCode: providerError?.code ?? null,
+          })
+
+          const summary = {
+            total: rows.length,
+            resolved: items.filter(i => i.status === 'resolved').length,
+            alreadyResolved: 0,
+            invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
+            notFound: items.filter(i => i.status === 'not_found').length,
+            providerError: items.filter(i => i.status === 'provider_error').length,
+            tokenInvalid: items.filter(i => i.status === 'token_missing_or_invalid')
+              .length,
+            rateLimited: items.filter(i => i.status === 'rate_limited').length,
+            forbidden: items.filter(i => i.status === 'forbidden').length,
+          }
+
+          return {
+            ok: true as const,
+            requestId,
+            summary,
+            items,
+            userReads: userReadsTotal,
+            estimatedCostUsd: estimatedCostUsdTotal,
+            rateLimit: lastRateLimit,
+            providerError,
+          }
+        },
+      })
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          force: t.Optional(t.Boolean()),
+          sourceIds: t.Optional(t.Array(t.Integer())),
+        })
+      ),
+    }
+  )
 
 const mapVerificationStatus = (
   code: string
@@ -261,6 +574,48 @@ const mapVerificationStatus = (
     default:
       return 'unverified_provider_error'
   }
+}
+
+/**
+ * Same as {@link persistProfileOnSignalSource} but addresses the row by id
+ * AND rewrites the stored `handle` column to the X-canonical form. Used by
+ * the batch resolve-all flow to fix historical handle pollution (e.g.
+ * `@@tom_doerr`) in the same write that caches the profile.
+ */
+const persistProfileOnSignalSourceById = async ({
+  db,
+  sourceId,
+  canonicalHandle,
+  profile,
+  now,
+}: {
+  db: ApiDb
+  sourceId: number
+  canonicalHandle: string
+  profile: XTwitterProfile
+  now: Date
+}): Promise<void> => {
+  await db
+    .update(schema.signalSource)
+    .set({
+      handle: canonicalHandle,
+      externalId: profile.id,
+      profileImageUrl: profile.profileImageUrl,
+      profileMetadata: {
+        username: profile.username,
+        name: profile.name,
+        description: profile.description,
+        profileBannerUrl: profile.profileBannerUrl,
+        verified: profile.verified,
+        verifiedType: profile.verifiedType,
+        protected: profile.protected,
+        publicMetrics: profile.publicMetrics,
+        createdAt: profile.createdAt,
+      },
+      profileCachedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(schema.signalSource.id, sourceId))
 }
 
 const persistProfileOnSignalSource = async ({

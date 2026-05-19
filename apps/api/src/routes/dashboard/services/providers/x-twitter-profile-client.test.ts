@@ -43,6 +43,18 @@ describe('normalizeXHandle', () => {
     if (r.ok) expect(r.handle).toBe('elonmusk')
   })
 
+  it('strips a doubled @@ prefix (prod-regression case: "@@tom_doerr")', () => {
+    const r = normalizeXHandle('@@tom_doerr')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('tom_doerr')
+  })
+
+  it('strips three or more leading @ prefixes defensively', () => {
+    const r = normalizeXHandle('@@@elonmusk')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.handle).toBe('elonmusk')
+  })
+
   it('accepts a bare handle without @', () => {
     const r = normalizeXHandle('unusual_whales')
     expect(r.ok).toBe(true)
@@ -237,5 +249,147 @@ describe('createXTwitterProfileClient.lookupHandle', () => {
     if (outcome.ok) throw new Error('unreachable')
     expect(outcome.code).toBe('NETWORK_ERROR')
     expect(outcome.estimatedCostUsd).toBe(0)
+  })
+})
+
+describe('createXTwitterProfileClient.lookupHandlesBatch', () => {
+  const profileFor = (id: string, username: string, name: string) => ({
+    id,
+    username,
+    name,
+    description: `${name}'s bio`,
+    profile_image_url: `https://x.com/${username}/avatar.jpg`,
+    profile_banner_url: null,
+    verified: false,
+    verified_type: null,
+    protected: false,
+    public_metrics: {
+      followers_count: 1000,
+      following_count: 100,
+      tweet_count: 500,
+      listed_count: 5,
+    },
+    created_at: '2020-01-01T00:00:00Z',
+  })
+
+  it('hits the batch endpoint once for multiple handles and emits one item per requester', async () => {
+    let calls = 0
+    let capturedUrl = ''
+    const client = createXTwitterProfileClient({
+      bearerToken: 'tok',
+      fetcher: async ({ url }) => {
+        calls += 1
+        capturedUrl = url
+        return {
+          status: 200,
+          body: {
+            data: [
+              profileFor('1', 'alice', 'Alice'),
+              profileFor('2', 'bob', 'Bob'),
+              profileFor('3', 'carol', 'Carol'),
+            ],
+          },
+        }
+      },
+    })
+    const outcome = await client.lookupHandlesBatch(['@Alice', 'bob', 'https://x.com/carol'])
+    expect(calls).toBe(1)
+    expect(capturedUrl).toContain('/users/by?usernames=alice,bob,carol')
+    expect(outcome.items).toHaveLength(3)
+    const alice = outcome.items.find(i => i.handle === '@Alice')
+    expect(alice?.ok).toBe(true)
+    if (alice?.ok) {
+      expect(alice.canonicalHandle).toBe('alice')
+      expect(alice.profile.id).toBe('1')
+    }
+    expect(outcome.userReads).toBe(3)
+    expect(outcome.estimatedCostUsd).toBeCloseTo(0.03, 5)
+    expect(outcome.providerError).toBeNull()
+  })
+
+  it('rejects invalid handles client-side without spending budget', async () => {
+    let calls = 0
+    const client = createXTwitterProfileClient({
+      bearerToken: 'tok',
+      fetcher: async () => {
+        calls += 1
+        return { status: 200, body: { data: [profileFor('1', 'alice', 'Alice')] } }
+      },
+    })
+    const outcome = await client.lookupHandlesBatch(['@alice', 'invalid handle', ''])
+    expect(calls).toBe(1) // only the valid one was sent
+    const invalidItems = outcome.items.filter(i => !i.ok && i.code === 'INVALID_HANDLE')
+    expect(invalidItems).toHaveLength(2)
+    expect(outcome.userReads).toBe(1)
+  })
+
+  it('returns NOT_FOUND for handles that the X errors[] array reports unknown', async () => {
+    const client = createXTwitterProfileClient({
+      bearerToken: 'tok',
+      fetcher: async () => ({
+        status: 200,
+        body: {
+          data: [profileFor('1', 'alice', 'Alice')],
+          errors: [{ value: 'bob', detail: 'User has been suspended', title: 'Forbidden' }],
+        },
+      }),
+    })
+    const outcome = await client.lookupHandlesBatch(['alice', 'bob'])
+    const bob = outcome.items.find(i => i.handle === 'bob')
+    expect(bob?.ok).toBe(false)
+    if (bob && !bob.ok) expect(bob.code).toBe('NOT_FOUND')
+    expect(outcome.userReads).toBe(1) // only alice billed
+  })
+
+  it('maps 401 to TOKEN_INVALID batch-wide without billing user reads', async () => {
+    const client = createXTwitterProfileClient({
+      bearerToken: 'tok',
+      fetcher: async () => ({ status: 401, body: {} }),
+    })
+    const outcome = await client.lookupHandlesBatch(['alice', 'bob'])
+    expect(outcome.providerError?.code).toBe('TOKEN_INVALID')
+    expect(outcome.userReads).toBe(0)
+    for (const item of outcome.items) {
+      expect(item.ok).toBe(false)
+      if (!item.ok) expect(item.code).toBe('TOKEN_INVALID')
+    }
+  })
+
+  it('returns TOKEN_MISSING immediately when no bearer is configured', async () => {
+    let calls = 0
+    const client = createXTwitterProfileClient({
+      bearerToken: '',
+      fetcher: async () => {
+        calls += 1
+        return { status: 200, body: {} }
+      },
+    })
+    const outcome = await client.lookupHandlesBatch(['alice'])
+    expect(calls).toBe(0)
+    expect(outcome.providerError?.code).toBe('TOKEN_MISSING')
+    expect(outcome.userReads).toBe(0)
+  })
+
+  it('surfaces rate-limit headers when the fetcher returns them', async () => {
+    const client = createXTwitterProfileClient({
+      bearerToken: 'tok',
+      fetcher: async () => ({
+        status: 200,
+        body: { data: [profileFor('1', 'alice', 'Alice')] },
+        rateLimit: { limit: 300, remaining: 142, resetAt: 1717000000 },
+      }),
+    })
+    const outcome = await client.lookupHandlesBatch(['alice'])
+    expect(outcome.rateLimit?.remaining).toBe(142)
+    expect(outcome.rateLimit?.limit).toBe(300)
+  })
+
+  it('throws synchronously when caller passes more than 100 usernames', async () => {
+    const client = createXTwitterProfileClient({
+      bearerToken: 'tok',
+      fetcher: async () => ({ status: 200, body: { data: [] } }),
+    })
+    const tooMany = Array.from({ length: 101 }, (_, i) => `user${i}`)
+    await expect(client.lookupHandlesBatch(tooMany)).rejects.toThrow(/100 usernames per call/)
   })
 })
