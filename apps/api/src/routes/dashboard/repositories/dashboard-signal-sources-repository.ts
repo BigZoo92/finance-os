@@ -81,6 +81,10 @@ export interface CreateSignalSourceInput {
   excludePatterns?: string[]
   minRelevanceScore?: number
   requiresAttentionPolicy?: SignalSourceAttentionPolicy
+  externalId?: string
+  profileImageUrl?: string | null
+  profileMetadata?: Record<string, unknown> | null
+  profileCachedAt?: Date
 }
 
 export interface UpdateSignalSourceInput {
@@ -218,9 +222,56 @@ export const createDashboardSignalSourcesRepository = ({ db }: { db: ApiDb }) =>
     if (input.minRelevanceScore !== undefined) values.minRelevanceScore = input.minRelevanceScore
     if (input.requiresAttentionPolicy !== undefined)
       values.requiresAttentionPolicy = input.requiresAttentionPolicy
+    if (input.externalId !== undefined) values.externalId = input.externalId
+    if (input.profileImageUrl !== undefined) values.profileImageUrl = input.profileImageUrl
+    if (input.profileMetadata !== undefined) values.profileMetadata = input.profileMetadata
+    if (input.profileCachedAt !== undefined) values.profileCachedAt = input.profileCachedAt
 
     const rows = await db.insert(schema.signalSource).values(values).returning()
     return toRow(expectReturnedRow(rows, 'create signal source'))
+  },
+
+  async listSourcesByProvider(provider: string): Promise<SignalSourceRow[]> {
+    const rows = await db
+      .select()
+      .from(schema.signalSource)
+      .where(eq(schema.signalSource.provider, provider))
+      .orderBy(desc(schema.signalSource.priority), schema.signalSource.displayName)
+    return rows.map(toRow)
+  },
+
+  async updateSourceFromCanonicalCreate(
+    id: number,
+    input: CreateSignalSourceInput
+  ): Promise<SignalSourceRow | null> {
+    const updates: typeof schema.signalSource.$inferInsert = {
+      provider: input.provider,
+      handle: input.handle,
+      displayName: input.displayName,
+      group: input.group,
+      enabled: input.enabled ?? true,
+      language: input.language ?? 'en',
+      updatedAt: new Date(),
+    }
+    if (input.url !== undefined) updates.url = input.url
+    if (input.priority !== undefined) updates.priority = input.priority
+    if (input.tags !== undefined) updates.tags = input.tags
+    if (input.includePatterns !== undefined) updates.includePatterns = input.includePatterns
+    if (input.excludePatterns !== undefined) updates.excludePatterns = input.excludePatterns
+    if (input.minRelevanceScore !== undefined) updates.minRelevanceScore = input.minRelevanceScore
+    if (input.requiresAttentionPolicy !== undefined)
+      updates.requiresAttentionPolicy = input.requiresAttentionPolicy
+    if (input.externalId !== undefined) updates.externalId = input.externalId
+    if (input.profileImageUrl !== undefined) updates.profileImageUrl = input.profileImageUrl
+    if (input.profileMetadata !== undefined) updates.profileMetadata = input.profileMetadata
+    if (input.profileCachedAt !== undefined) updates.profileCachedAt = input.profileCachedAt
+
+    const [row] = await db
+      .update(schema.signalSource)
+      .set(updates)
+      .where(eq(schema.signalSource.id, id))
+      .returning()
+    return row ? toRow(row) : null
   },
 
   async updateSource(id: number, input: UpdateSignalSourceInput): Promise<SignalSourceRow | null> {

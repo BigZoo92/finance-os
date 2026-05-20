@@ -80,11 +80,20 @@ interface SignalSourcesResponse {
   ok: boolean
   items: SignalSource[]
   counts: { finance: number; ai_tech: number }
+  dedupedSourcesCount?: number
+  dedupedSources?: Array<{
+    duplicateId: number
+    keptId: number
+    rawHandle: string
+    canonicalHandle: string
+    reason: string
+  }>
 }
 
 interface SignalSourceMutationResponse {
   ok: boolean
   source?: SignalSource
+  action?: 'created' | 'updated_existing'
   code?: string
   message?: string
 }
@@ -166,6 +175,9 @@ export const createSignalSource = (input: {
   excludePatterns?: string[]
   minRelevanceScore?: number
   requiresAttentionPolicy?: SignalSourceAttentionPolicy
+  externalId?: string
+  profileImageUrl?: string | null
+  profileMetadata?: SignalSourceProfileMetadata | null
 }) =>
   apiFetch<SignalSourceMutationResponse>('/dashboard/signals/sources', {
     method: 'POST',

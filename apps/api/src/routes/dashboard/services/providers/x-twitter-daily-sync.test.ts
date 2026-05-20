@@ -198,6 +198,69 @@ describe('runPreviousDaySync', () => {
     expect(outcome.estimatedCostUsd).toBeGreaterThan(0)
   })
 
+  it('deduplicates equivalent historical URL and canonical handle before dry-run estimation', async () => {
+    const outcome = await runPreviousDaySync({
+      accounts: [
+        {
+          signalSourceId: 1,
+          handle: 'https://x.com/aleabitoreddit',
+          externalId: null,
+          priority: 0,
+        },
+        {
+          signalSourceId: 2,
+          handle: 'aleabitoreddit',
+          externalId: '1940360837547565056',
+          priority: 0,
+        },
+      ],
+      window,
+      config: { ...baseConfig, runMode: 'dry_run' as const },
+      fetchTimeline: async () => okPage([]),
+    })
+
+    expect(outcome.perAuthor).toHaveLength(1)
+    expect(outcome.perAuthor[0]?.authorId).toBe('1940360837547565056')
+    expect(outcome.perAuthor[0]?.handle).toBe('aleabitoreddit')
+    expect(outcome.dedupedSourcesCount).toBe(1)
+    expect(outcome.dedupedSources[0]).toMatchObject({
+      duplicateId: 1,
+      keptId: 2,
+      canonicalHandle: 'aleabitoreddit',
+    })
+  })
+
+  it('uses the resolved duplicate for sync when an unresolved historical source exists', async () => {
+    const seenUserIds: string[] = []
+    const outcome = await runPreviousDaySync({
+      accounts: [
+        {
+          signalSourceId: 1,
+          handle: 'https://x.com/aleabitoreddit',
+          externalId: null,
+          priority: 0,
+        },
+        {
+          signalSourceId: 2,
+          handle: 'aleabitoreddit',
+          externalId: '1940360837547565056',
+          priority: 0,
+        },
+      ],
+      window,
+      config: baseConfig,
+      fetchTimeline: async ({ userId }) => {
+        seenUserIds.push(userId)
+        return okPage([tweet({ id: 'alea-1', authorId: userId })])
+      },
+    })
+
+    expect(seenUserIds).toEqual(['1940360837547565056'])
+    expect(outcome.perAuthor).toHaveLength(1)
+    expect(outcome.perAuthor[0]?.abortReason).toBeNull()
+    expect(outcome.dedupedSourcesCount).toBe(1)
+  })
+
   it('allowBudgetOverride lets a manual_full run proceed despite budget exceeded', async () => {
     const fetcher: XTwitterTimelineFetcher = async () =>
       okPage([tweet({ id: 't1' }), tweet({ id: 't2' })], null)
@@ -235,7 +298,7 @@ describe('runPreviousDaySync', () => {
       config: baseConfig,
       fetchTimeline: fetcher,
     })
-    expect(outcome.status).toBe('success')
+    expect(outcome.status).toBe('partial')
     expect(outcome.fetchedTweetCount).toBe(3)
     expect(callCount).toBe(2)
     expect(outcome.perAuthor[0]?.fetchedCount).toBe(3)
@@ -275,10 +338,10 @@ describe('runPreviousDaySync', () => {
       config: baseConfig,
       fetchTimeline: fetcher,
     })
-    const high = outcome.tweets.find(t => t.id === 'h')!
-    const low = outcome.tweets.find(t => t.id === 'l')!
-    expect(high.keptForAdvisor).toBe(true)
-    expect(low.keptForAdvisor).toBe(false)
+    const high = outcome.tweets.find(t => t.id === 'h')
+    const low = outcome.tweets.find(t => t.id === 'l')
+    expect(high?.keptForAdvisor).toBe(true)
+    expect(low?.keptForAdvisor).toBe(false)
   })
 
   it('aborts an author with PROVIDER_ERROR and surfaces the upstream X errorCode + status', async () => {
@@ -355,7 +418,7 @@ describe('runPreviousDaySync', () => {
     // First author fetched tweet → run is "success", not "failed", even though
     // second author hit a provider error. The per-author detail still carries
     // the upstream error info.
-    expect(outcome.status).toBe('success')
+    expect(outcome.status).toBe('partial')
     expect(outcome.fetchedTweetCount).toBe(1)
     expect(outcome.perAuthor[1]?.errorCode).toBe('TOKEN_INVALID')
     expect(outcome.perAuthor[1]?.errorStatusCode).toBe(401)

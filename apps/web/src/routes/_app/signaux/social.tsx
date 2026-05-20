@@ -34,6 +34,10 @@ import {
   resolveBudgetTone,
   verificationStatusLabel,
 } from '@/features/x-twitter-view-model'
+import {
+  dedupeSignalSourcesForDisplay,
+  normalizeXHandleForUi,
+} from '@/features/x-twitter-social-dedupe'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { StatusDot } from '@/components/surfaces/status-dot'
@@ -75,12 +79,17 @@ function SignauxSocialPage() {
   const healthQuery = useQuery(signalHealthQueryOptions())
   const queryClient = useQueryClient()
 
-  const sources = sourcesQuery.data?.items ?? []
+  const sourceDedupe = dedupeSignalSourcesForDisplay(sourcesQuery.data?.items ?? [])
+  const sources = sourceDedupe.sources
+  const duplicateSources = [
+    ...(sourcesQuery.data?.dedupedSources ?? []),
+    ...sourceDedupe.duplicates,
+  ]
   const financeSources = sources.filter(s => s.group === 'finance')
   const aiTechSources = sources.filter(s => s.group === 'ai_tech')
   const activeSources = activeTab === 'finance' ? financeSources : aiTechSources
 
-  const counts = sourcesQuery.data?.counts ?? { finance: 0, ai_tech: 0 }
+  const counts = { finance: financeSources.length, ai_tech: aiTechSources.length }
   const xSources = sources.filter(s => s.provider === 'x_twitter')
   const readiness = {
     total: xSources.length,
@@ -106,7 +115,9 @@ function SignauxSocialPage() {
       {isAdmin && <XHealthPanel />}
 
       {/* X readiness banner — surfaces unresolved accounts with one-click batch resolve */}
-      {isAdmin && readiness.total > 0 && <XReadinessBanner readiness={readiness} />}
+      {isAdmin && readiness.total > 0 && (
+        <XReadinessBanner readiness={readiness} duplicateCount={duplicateSources.length} />
+      )}
 
       {/* Tab switcher */}
       <div className="flex gap-2">
@@ -488,7 +499,7 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
  * `profileMetadata.username` field replaces this fallback entirely.
  */
 function sanitizeHandleForDisplay(raw: string): string {
-  return raw.trim().replace(/^@+/, '').replace(/\/+$/, '')
+  return normalizeXHandleForUi(raw)
 }
 
 function AddSourceForm({
@@ -505,6 +516,7 @@ function AddSourceForm({
   const [group, setGroup] = useState<SignalSourceGroup>(defaultGroup)
   const [tags, setTags] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   const lookupMutation = useMutation({
     mutationFn: () =>
@@ -532,10 +544,37 @@ function AddSourceForm({
           .split(',')
           .map(t => t.trim())
           .filter(Boolean),
+        ...(lookupProfile
+          ? {
+              externalId: lookupProfile.id,
+              profileImageUrl: lookupProfile.profileImageUrl,
+              profileMetadata: {
+                username: lookupProfile.username,
+                name: lookupProfile.name,
+                description: lookupProfile.description,
+                profileBannerUrl: lookupProfile.profileBannerUrl,
+                verified: lookupProfile.verified,
+                verifiedType: lookupProfile.verifiedType,
+                protected: lookupProfile.protected,
+                publicMetrics: lookupProfile.publicMetrics,
+                createdAt: lookupProfile.createdAt,
+              },
+            }
+          : {}),
       }),
     onSuccess: data => {
       if (data.ok) {
-        onCreated()
+        setSuccess(
+          data.action === 'updated_existing'
+            ? 'Compte deja present, profil mis a jour'
+            : 'Compte ajoute'
+        )
+        if (data.action === 'updated_existing') {
+          void queryClient.invalidateQueries({ queryKey: ['signal-sources'] })
+          void queryClient.invalidateQueries({ queryKey: ['x-twitter', 'health'] })
+        } else {
+          onCreated()
+        }
       } else {
         setError(data.message ?? 'Erreur inconnue')
       }
@@ -676,6 +715,7 @@ function AddSourceForm({
       )}
 
       {error && <p className="text-negative text-xs mt-2">{error}</p>}
+      {success && <p className="text-positive text-xs mt-2">{success}</p>}
       <button
         type="button"
         onClick={() => mutation.mutate()}
@@ -694,8 +734,10 @@ function AddSourceForm({
 
 function XReadinessBanner({
   readiness,
+  duplicateCount,
 }: {
   readiness: { total: number; verified: number; unresolved: number }
+  duplicateCount: number
 }) {
   const queryClient = useQueryClient()
   const [result, setResult] = useState<XResolveAllResponse | null>(null)
@@ -744,6 +786,12 @@ function XReadinessBanner({
         >
           À résoudre : {readiness.unresolved}
         </Badge>
+        {duplicateCount > 0 && (
+          <Badge variant="warning" className="text-[11px]" data-testid="x-duplicate-count">
+            {duplicateCount} doublon{duplicateCount > 1 ? 's' : ''} historique
+            {duplicateCount > 1 ? 's' : ''} detecte{duplicateCount > 1 ? 's' : ''}
+          </Badge>
+        )}
       </div>
       <p className="mt-2 text-xs text-text-tertiary">
         X facture chaque <code>users/by</code> par compte résolu ($0.01). Le batch utilise
@@ -983,6 +1031,14 @@ function DailySyncPanel() {
           {dryRun.errorMessage && (
             <p className="mt-2 text-xs text-amber-400">{dryRun.errorMessage}</p>
           )}
+          {(dryRun.dedupedSourcesCount ?? 0) > 0 && (
+            <p className="mt-2 text-xs text-warning">
+              {dryRun.dedupedSourcesCount} doublon
+              {dryRun.dedupedSourcesCount === 1 ? '' : 's'} historique
+              {dryRun.dedupedSourcesCount === 1 ? '' : 's'} ignore
+              {dryRun.dedupedSourcesCount === 1 ? '' : 's'} pour cette estimation.
+            </p>
+          )}
         </div>
       )}
 
@@ -1005,6 +1061,14 @@ function DailySyncPanel() {
             <p className="mt-2 text-xs text-negative">
               <span className="font-semibold">{runResult.errorCode}</span>
               {runResult.errorMessage ? ` — ${runResult.errorMessage}` : ''}
+            </p>
+          )}
+          {(runResult.dedupedSourcesCount ?? 0) > 0 && (
+            <p className="mt-2 text-xs text-warning">
+              {runResult.dedupedSourcesCount} doublon
+              {runResult.dedupedSourcesCount === 1 ? '' : 's'} historique
+              {runResult.dedupedSourcesCount === 1 ? '' : 's'} ignore
+              {runResult.dedupedSourcesCount === 1 ? '' : 's'} avant fetch.
             </p>
           )}
           {runResult.errorCode === 'UNRESOLVED_HANDLE' && (

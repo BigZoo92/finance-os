@@ -17,6 +17,12 @@
  * default) but converted to UTC bounds before calling X.
  */
 
+import { normalizeXHandle } from './x-twitter-profile-client'
+import {
+  dedupeXSignalSources,
+  type XDedupedSourceReport,
+} from './x-twitter-signal-source-dedupe'
+
 export type XTwitterTimelineFetcher = (input: {
   userId: string
   startTime: string
@@ -62,6 +68,30 @@ export type XTwitterFollowedAccount = {
   handle: string
   externalId: string | null
   priority: number
+}
+
+export const dedupeXFollowedAccounts = (
+  accounts: XTwitterFollowedAccount[]
+): {
+  accounts: XTwitterFollowedAccount[]
+  dedupedSourcesCount: number
+  dedupedSources: XDedupedSourceReport[]
+} => {
+  const result = dedupeXSignalSources(
+    accounts.map(account => ({
+      id: account.signalSourceId,
+      handle: account.handle,
+      externalId: account.externalId,
+      enabled: true,
+      priority: account.priority,
+      account,
+    }))
+  )
+  return {
+    accounts: result.sources.map(source => source.account),
+    dedupedSourcesCount: result.dedupedSourcesCount,
+    dedupedSources: result.dedupedSources,
+  }
 }
 
 const POST_READ_COST_USD = 0.005
@@ -239,6 +269,8 @@ export type PreviousDaySyncOutcome = {
   fetchedTweetCount: number
   keptForAdvisorCount: number
   perAuthor: Array<PerAuthorOutcome>
+  dedupedSourcesCount: number
+  dedupedSources: XDedupedSourceReport[]
   errorCode: string | null
   errorMessage: string | null
   window: PreviousDayWindow
@@ -352,8 +384,10 @@ const aggregateRunError = (
  * land in the column; this helper strips them so the user sees `tom_doerr`
  * (and the caller prepends a single `@` at render time).
  */
-const formatDisplayHandle = (raw: string): string =>
-  raw.trim().replace(/^@+/, '').replace(/\/+$/, '')
+const formatDisplayHandle = (raw: string): string => {
+  const normalized = normalizeXHandle(raw)
+  return normalized.ok ? normalized.handle : raw.trim().replace(/^@+/, '').replace(/\/+$/, '')
+}
 
 export const runPreviousDaySync = async ({
   accounts,
@@ -368,8 +402,10 @@ export const runPreviousDaySync = async ({
   fetchTimeline: XTwitterTimelineFetcher
   scoreTweet?: (tweet: XTwitterTimelineTweet) => number
 }): Promise<PreviousDaySyncOutcome & { tweets: Array<XTwitterTimelineTweet & { score: number; keptForAdvisor: boolean; sourceHandle: string }> }> => {
+  const deduped = dedupeXFollowedAccounts(accounts)
+  const activeAccounts = deduped.accounts
   const estimate = estimatePreviousDaySyncCost({
-    accounts,
+    accounts: activeAccounts,
     maxPostReadsPerDay: config.caps.maxPostReadsPerDay,
     maxPagesPerUserPerDay: config.caps.maxPagesPerUserPerDay,
     maxResultsPerPage: config.caps.maxResultsPerPage,
@@ -396,7 +432,7 @@ export const runPreviousDaySync = async ({
       actualCostUsd: 0,
       fetchedTweetCount: 0,
       keptForAdvisorCount: 0,
-      perAuthor: accounts.map(a => ({
+      perAuthor: activeAccounts.map(a => ({
         authorId: a.externalId ?? `unresolved:${formatDisplayHandle(a.handle)}`,
         handle: formatDisplayHandle(a.handle),
         fetchedCount: 0,
@@ -408,6 +444,8 @@ export const runPreviousDaySync = async ({
         errorStatusCode: null,
         errorMessage: null,
       })),
+      dedupedSourcesCount: deduped.dedupedSourcesCount,
+      dedupedSources: deduped.dedupedSources,
       errorCode: null,
       errorMessage: budgetExceeded
         ? `Dry-run: estimate $${estimate.estimatedCostUsd.toFixed(2)} would exceed budget caps.`
@@ -428,7 +466,7 @@ export const runPreviousDaySync = async ({
       actualCostUsd: 0,
       fetchedTweetCount: 0,
       keptForAdvisorCount: 0,
-      perAuthor: accounts.map(a => ({
+      perAuthor: activeAccounts.map(a => ({
         authorId: a.externalId ?? `unresolved:${formatDisplayHandle(a.handle)}`,
         handle: formatDisplayHandle(a.handle),
         fetchedCount: 0,
@@ -440,6 +478,8 @@ export const runPreviousDaySync = async ({
         errorStatusCode: null,
         errorMessage: null,
       })),
+      dedupedSourcesCount: deduped.dedupedSourcesCount,
+      dedupedSources: deduped.dedupedSources,
       errorCode: requiresManual ? 'MANUAL_CONFIRMATION_REQUIRED' : 'BUDGET_EXCEEDED',
       errorMessage: requiresManual
         ? `Estimated cost $${estimate.estimatedCostUsd.toFixed(2)} exceeds manual-confirmation threshold ($${config.budget.requireManualConfirmationOverUsd.toFixed(2)}); require explicit approval.`
@@ -456,7 +496,7 @@ export const runPreviousDaySync = async ({
   const seenTweetIds = new Set<string>()
   const scoredTweets: Array<XTwitterTimelineTweet & { score: number; keptForAdvisor: boolean; sourceHandle: string }> = []
 
-  for (const account of accounts) {
+  for (const account of activeAccounts) {
     if (!account.externalId) {
       const display = formatDisplayHandle(account.handle)
       perAuthor.push({
@@ -585,7 +625,12 @@ export const runPreviousDaySync = async ({
   const aggregated = aggregateRunError(perAuthor)
 
   return {
-    status: everyAuthorAborted && totalFetched === 0 ? 'failed' : 'success',
+    status:
+      everyAuthorAborted && totalFetched === 0
+        ? 'failed'
+        : perAuthor.some(a => a.aborted)
+          ? 'partial'
+          : 'success',
     runMode: config.runMode,
     capReason,
     estimatedPostReads: estimate.estimatedPostReads,
@@ -595,6 +640,8 @@ export const runPreviousDaySync = async ({
     fetchedTweetCount: totalFetched,
     keptForAdvisorCount: totalKeptForAdvisor,
     perAuthor,
+    dedupedSourcesCount: deduped.dedupedSourcesCount,
+    dedupedSources: deduped.dedupedSources,
     errorCode: aggregated.errorCode,
     errorMessage: aggregated.errorMessage,
     window,
@@ -602,4 +649,9 @@ export const runPreviousDaySync = async ({
   }
 }
 
-export const __testing = { computeRunCapReason, aggregateRunError, describeProviderError }
+export const __testing = {
+  computeRunCapReason,
+  aggregateRunError,
+  describeProviderError,
+  dedupeXFollowedAccounts,
+}

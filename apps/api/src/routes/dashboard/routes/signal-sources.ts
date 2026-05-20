@@ -14,11 +14,13 @@ import { createDashboardSignalItemsRepository } from '../repositories/dashboard-
 import {
   type CreateSignalSourceInput,
   createDashboardSignalSourcesRepository,
+  type SignalSourceRow,
   type SignalSourceGroup,
   type UpdateSignalSourceInput,
 } from '../repositories/dashboard-signal-sources-repository'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
 import { normalizeXHandle } from '../services/providers/x-twitter-profile-client'
+import { dedupeXSignalSources } from '../services/providers/x-twitter-signal-source-dedupe'
 import { sendSignalsToKnowledgeGraph } from '../services/signal-graph-ingest'
 import type { ApiDb } from '../types'
 
@@ -156,6 +158,9 @@ const signalSourceBodySchema = t.Object({
   requiresAttentionPolicy: t.Optional(
     t.Union([t.Literal('auto'), t.Literal('always'), t.Literal('never'), t.Literal('high_only')])
   ),
+  externalId: t.Optional(t.String()),
+  profileImageUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  profileMetadata: t.Optional(t.Any()),
 })
 
 const signalSourceUpdateBodySchema = t.Object({
@@ -231,11 +236,24 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
             return { ok: true, items, counts: { finance: 2, ai_tech: 2 } }
           },
           real: async () => {
-            const [items, counts] = await Promise.all([
-              repository.listSources(groupParam),
-              repository.countSourcesByGroup(),
-            ])
-            return { ok: true, items, counts }
+            const rawItems = await repository.listSources(groupParam)
+            const xItems = rawItems.filter(item => item.provider === 'x_twitter')
+            const nonXItems = rawItems.filter(item => item.provider !== 'x_twitter')
+            const dedupedX = dedupeXSignalSources(xItems)
+            const items = [...dedupedX.sources, ...nonXItems].sort(
+              (a, b) => b.priority - a.priority || a.displayName.localeCompare(b.displayName)
+            )
+            const counts = {
+              finance: items.filter(item => item.group === 'finance').length,
+              ai_tech: items.filter(item => item.group === 'ai_tech').length,
+            }
+            return {
+              ok: true,
+              items,
+              counts,
+              dedupedSourcesCount: dedupedX.dedupedSourcesCount,
+              dedupedSources: dedupedX.dedupedSources,
+            }
           },
         })
       })
@@ -274,9 +292,51 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                 }
               }
               try {
-                const source = await repository.createSource(canonicalInput.value)
+                let sourceAction: 'created' | 'updated_existing' = 'created'
+                let source: SignalSourceRow | null = null
+                const sourceInput: CreateSignalSourceInput = { ...canonicalInput.value }
+                if (
+                  sourceInput.provider === 'x_twitter' &&
+                  (sourceInput.profileMetadata !== undefined ||
+                    sourceInput.profileImageUrl !== undefined ||
+                    sourceInput.externalId !== undefined)
+                ) {
+                  sourceInput.profileCachedAt = new Date()
+                }
+                if (canonicalInput.value.provider === 'x_twitter') {
+                  const providerSources = await repository.listSourcesByProvider('x_twitter')
+                  const matchingSources = providerSources.filter(source => {
+                    const normalized = normalizeXHandle(source.handle)
+                    return (
+                      normalized.ok &&
+                      normalized.handle === canonicalInput.value.handle
+                    )
+                  })
+                  const existing =
+                    matchingSources.length > 0
+                      ? dedupeXSignalSources(matchingSources).sources[0]
+                      : null
+                  if (existing) {
+                    const updateInput: CreateSignalSourceInput = {
+                      ...sourceInput,
+                      enabled: true,
+                    }
+                    source = await repository.updateSourceFromCanonicalCreate(existing.id, updateInput)
+                    sourceAction = 'updated_existing'
+                  }
+                }
+                source ??= await repository.createSource(sourceInput)
                 context.set.status = 201
-                return { ok: true, source }
+                if (sourceAction === 'updated_existing') context.set.status = 200
+                if (sourceAction === 'updated_existing') {
+                  return {
+                    ok: true,
+                    source,
+                    action: sourceAction,
+                    message: 'Compte deja present, profil mis a jour',
+                  }
+                }
+                return { ok: true, source, action: sourceAction }
               } catch (error) {
                 const isDuplicate = error instanceof Error && error.message.includes('unique')
                 if (isDuplicate) {

@@ -14,7 +14,7 @@
  */
 
 import { schema } from '@finance-os/db'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
@@ -29,6 +29,10 @@ import {
   type XTwitterFetch,
   type XTwitterProfile,
 } from '../services/providers/x-twitter-profile-client'
+import {
+  dedupeXSignalSources,
+  mergeTags,
+} from '../services/providers/x-twitter-signal-source-dedupe'
 import {
   readXUsageSnapshot,
   writeXUsageLedger,
@@ -83,6 +87,9 @@ export type ResolveAllSummaryItem = {
   status:
     | 'resolved'
     | 'already_resolved'
+    | 'merged_duplicate'
+    | 'disabled_duplicate'
+    | 'deleted_duplicate'
     | 'invalid_handle'
     | 'not_found'
     | 'provider_error'
@@ -314,44 +321,95 @@ export const createXTwitterLookupRoute = ({
               ? body.sourceIds.filter(id => Number.isInteger(id) && id > 0)
               : null
 
-          // 1. Read candidate rows. Default = enabled X sources with no
-          //    externalId. force=true relaxes to all enabled X sources.
+          // 1. Read X rows, canonicalize before any lookup, and disable
+          //    historical duplicates so unresolved URL-shaped rows cannot
+          //    poison dry-run/sync after a canonical row exists.
           const baseConditions = [eq(schema.signalSource.provider, 'x_twitter')]
-          if (!force) baseConditions.push(isNull(schema.signalSource.externalId))
-          baseConditions.push(eq(schema.signalSource.enabled, true))
           const allRows = await db
             .select({
               id: schema.signalSource.id,
               handle: schema.signalSource.handle,
               externalId: schema.signalSource.externalId,
+              enabled: schema.signalSource.enabled,
+              priority: schema.signalSource.priority,
+              tags: schema.signalSource.tags,
+              profileImageUrl: schema.signalSource.profileImageUrl,
+              profileMetadata: schema.signalSource.profileMetadata,
+              profileCachedAt: schema.signalSource.profileCachedAt,
+              createdAt: schema.signalSource.createdAt,
+              updatedAt: schema.signalSource.updatedAt,
             })
             .from(schema.signalSource)
             .where(and(...baseConditions))
 
-          const rows = filterIds
+          const scopedRows = filterIds
             ? allRows.filter(r => filterIds.includes(r.id))
             : allRows
+          const deduped = dedupeXSignalSources(scopedRows)
+          const duplicateItems: ResolveAllSummaryItem[] = []
+          for (const duplicate of deduped.dedupedSources) {
+            const duplicateRow = scopedRows.find(row => row.id === duplicate.duplicateId)
+            const keptRow = scopedRows.find(row => row.id === duplicate.keptId)
+            if (!duplicateRow || !keptRow) continue
+
+            await db
+              .update(schema.signalSource)
+              .set({
+                tags: mergeTags([keptRow, duplicateRow]),
+                enabled: keptRow.enabled || duplicateRow.enabled,
+                updatedAt: now(),
+              })
+              .where(eq(schema.signalSource.id, keptRow.id))
+            await db
+              .update(schema.signalSource)
+              .set({
+                enabled: false,
+                lastError: `disabled_duplicate:${duplicate.canonicalHandle}:kept:${duplicate.keptId}`,
+                updatedAt: now(),
+              })
+              .where(eq(schema.signalSource.id, duplicate.duplicateId))
+
+            duplicateItems.push({
+              sourceId: duplicate.duplicateId,
+              handleBefore: duplicate.rawHandle,
+              handleAfter: duplicate.canonicalHandle,
+              externalId: keptRow.externalId,
+              status: 'disabled_duplicate',
+              errorMessage: duplicate.reason,
+            })
+          }
+
+          const rows = deduped.sources.filter(
+            row => row.enabled && (force || row.externalId === null)
+          )
 
           if (rows.length === 0) {
+            const summary = {
+              total: scopedRows.length,
+              resolved: 0,
+              alreadyResolved: 0,
+              invalidHandle: 0,
+              notFound: 0,
+              providerError: 0,
+              tokenInvalid: 0,
+              rateLimited: 0,
+              forbidden: 0,
+              mergedDuplicate: 0,
+              disabledDuplicate: duplicateItems.length,
+              deletedDuplicate: 0,
+              dedupedSourcesCount: deduped.dedupedSourcesCount,
+            }
             return {
               ok: true as const,
               requestId,
-              summary: {
-                total: 0,
-                resolved: 0,
-                alreadyResolved: 0,
-                invalidHandle: 0,
-                notFound: 0,
-                providerError: 0,
-                tokenInvalid: 0,
-                rateLimited: 0,
-                forbidden: 0,
-              },
-              items: [] as ResolveAllSummaryItem[],
+              summary,
+              items: duplicateItems,
               userReads: 0,
               estimatedCostUsd: 0,
               rateLimit: null,
               providerError: null,
+              dedupedSourcesCount: deduped.dedupedSourcesCount,
+              dedupedSources: deduped.dedupedSources,
             }
           }
 
@@ -389,7 +447,7 @@ export const createXTwitterLookupRoute = ({
                 }
           })
 
-          const items: ResolveAllSummaryItem[] = []
+          const items: ResolveAllSummaryItem[] = [...duplicateItems]
           for (const c of candidates) {
             if (c.canonical === null) {
               items.push({
@@ -511,7 +569,7 @@ export const createXTwitterLookupRoute = ({
           })
 
           const summary = {
-            total: rows.length,
+            total: scopedRows.length,
             resolved: items.filter(i => i.status === 'resolved').length,
             alreadyResolved: 0,
             invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
@@ -521,6 +579,10 @@ export const createXTwitterLookupRoute = ({
               .length,
             rateLimited: items.filter(i => i.status === 'rate_limited').length,
             forbidden: items.filter(i => i.status === 'forbidden').length,
+            mergedDuplicate: items.filter(i => i.status === 'merged_duplicate').length,
+            disabledDuplicate: items.filter(i => i.status === 'disabled_duplicate').length,
+            deletedDuplicate: items.filter(i => i.status === 'deleted_duplicate').length,
+            dedupedSourcesCount: deduped.dedupedSourcesCount,
           }
 
           return {
@@ -532,6 +594,8 @@ export const createXTwitterLookupRoute = ({
             estimatedCostUsd: estimatedCostUsdTotal,
             rateLimit: lastRateLimit,
             providerError,
+            dedupedSourcesCount: deduped.dedupedSourcesCount,
+            dedupedSources: deduped.dedupedSources,
           }
         },
       })
@@ -632,28 +696,37 @@ const persistProfileOnSignalSource = async ({
   // Match by case-insensitive handle on the X provider rows. We don't INSERT
   // a row from a lookup — the admin must explicitly add the source via the
   // existing signal_source admin flow. Lookup only enriches existing rows.
-  const result = await db
-    .update(schema.signalSource)
-    .set({
-      externalId: profile.id,
-      profileImageUrl: profile.profileImageUrl,
-      profileMetadata: {
-        username: profile.username,
-        name: profile.name,
-        description: profile.description,
-        profileBannerUrl: profile.profileBannerUrl,
-        verified: profile.verified,
-        verifiedType: profile.verifiedType,
-        protected: profile.protected,
-        publicMetrics: profile.publicMetrics,
-        createdAt: profile.createdAt,
-      },
-      profileCachedAt: now,
-      updatedAt: now,
+  const rows = await db
+    .select({
+      id: schema.signalSource.id,
+      handle: schema.signalSource.handle,
+      externalId: schema.signalSource.externalId,
+      enabled: schema.signalSource.enabled,
+      priority: schema.signalSource.priority,
+      profileImageUrl: schema.signalSource.profileImageUrl,
+      profileMetadata: schema.signalSource.profileMetadata,
+      profileCachedAt: schema.signalSource.profileCachedAt,
+      createdAt: schema.signalSource.createdAt,
+      updatedAt: schema.signalSource.updatedAt,
     })
-    .where(eq(schema.signalSource.handle, handle))
-    .returning({ id: schema.signalSource.id })
-  return result.length > 0
+    .from(schema.signalSource)
+    .where(eq(schema.signalSource.provider, 'x_twitter'))
+
+  const matching = rows.filter(row => {
+    const normalized = normalizeXHandle(row.handle)
+    return normalized.ok && normalized.handle === handle
+  })
+  const [target] = dedupeXSignalSources(matching).sources
+  if (!target) return false
+
+  await persistProfileOnSignalSourceById({
+    db,
+    sourceId: target.id,
+    canonicalHandle: profile.username,
+    profile,
+    now,
+  })
+  return true
 }
 
 export const __testing = {

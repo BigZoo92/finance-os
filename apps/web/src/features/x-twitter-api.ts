@@ -101,6 +101,14 @@ export type XDailySyncResponse = {
     errorStatusCode?: number | null
     errorMessage?: string | null
   }>
+  dedupedSourcesCount?: number
+  dedupedSources?: Array<{
+    duplicateId: number
+    keptId: number
+    rawHandle: string
+    canonicalHandle: string
+    reason: string
+  }>
   errorCode?: string | null
   errorMessage?: string | null
   autoResolve?: {
@@ -132,6 +140,9 @@ export const runXDailyPreviousDaySync = (body: XDailySyncBody) =>
 export type XResolveAllItemStatus =
   | 'resolved'
   | 'already_resolved'
+  | 'merged_duplicate'
+  | 'disabled_duplicate'
+  | 'deleted_duplicate'
   | 'invalid_handle'
   | 'not_found'
   | 'provider_error'
@@ -155,7 +166,19 @@ export type XResolveAllResponse = {
     tokenInvalid: number
     rateLimited: number
     forbidden: number
+    mergedDuplicate?: number
+    disabledDuplicate?: number
+    deletedDuplicate?: number
+    dedupedSourcesCount?: number
   }
+  dedupedSourcesCount?: number
+  dedupedSources?: Array<{
+    duplicateId: number
+    keptId: number
+    rawHandle: string
+    canonicalHandle: string
+    reason: string
+  }>
   items?: Array<{
     sourceId: number
     handleBefore: string

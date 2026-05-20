@@ -25,6 +25,7 @@ import { logApiEvent } from '../../../observability/logger'
 import type { ApiDb } from '../types'
 import {
   computePreviousDayWindow,
+  dedupeXFollowedAccounts,
   type PreviousDayRunMode,
   type PreviousDaySyncOutcome,
   runPreviousDaySync,
@@ -99,14 +100,15 @@ export const fetchXFollowedAccounts = async (
       and(eq(schema.signalSource.provider, 'x_twitter'), eq(schema.signalSource.enabled, true))
     )
     .orderBy(sql`${schema.signalSource.priority} desc`)
-    .limit(limitOverride ?? 50)
+    .limit(limitOverride ? Math.min(limitOverride * 4, 200) : 200)
 
-  return rows.map(r => ({
+  const accounts = rows.map(r => ({
     signalSourceId: r.id,
     handle: r.handle,
     externalId: r.externalId,
     priority: r.priority,
   }))
+  return dedupeXFollowedAccounts(accounts).accounts.slice(0, limitOverride ?? 50)
 }
 
 /**
@@ -138,6 +140,8 @@ const autoResolveMissingExternalIds = async ({
   userReadsToday: number
   maxUserReadsPerDay: number
 }): Promise<{ accounts: XTwitterFollowedAccount[]; resolvedCount: number; failedCount: number }> => {
+  const deduped = dedupeXFollowedAccounts(accounts)
+  accounts = deduped.accounts
   const missing = accounts.filter(a => a.externalId === null)
   if (missing.length === 0 || !bearerToken) {
     return { accounts, resolvedCount: 0, failedCount: 0 }
@@ -402,6 +406,7 @@ export const createXTwitterDailySyncRoute = ({
             timezone: env.X_DAILY_PREVIOUS_DAY_TIMEZONE,
           })
           const rawAccounts = await fetchFollowedAccounts(body.limitAccounts)
+          const accountDedupe = dedupeXFollowedAccounts(rawAccounts)
 
           // Compute the remaining budget right before the run.
           const usage = await readXUsageSnapshot(db, now())
@@ -419,11 +424,11 @@ export const createXTwitterDailySyncRoute = ({
             (env.X_AUTO_RESOLVE_HANDLES_ON_MANUAL_RUN ?? true) && runMode !== 'dry_run'
           let autoResolved = 0
           let autoResolveFailed = 0
-          let accounts = rawAccounts
+          let accounts = accountDedupe.accounts
           if (autoResolveEnabled) {
             const result = await autoResolveMissingExternalIds({
               db,
-              accounts: rawAccounts,
+              accounts,
               bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
               fetcher: profileFetcher,
               requestId,
@@ -546,6 +551,8 @@ export const createXTwitterDailySyncRoute = ({
             signalItemCounts,
             ingestionRunId,
             perAuthor: outcome.perAuthor,
+            dedupedSourcesCount: accountDedupe.dedupedSourcesCount,
+            dedupedSources: accountDedupe.dedupedSources,
             errorCode: outcome.errorCode,
             errorMessage: outcome.errorMessage,
             autoResolve: {

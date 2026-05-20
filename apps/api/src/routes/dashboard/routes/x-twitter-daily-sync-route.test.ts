@@ -191,6 +191,44 @@ describe('autoResolveMissingExternalIds', () => {
     expect(updates[0]?.set.handle).toBe('alice')
   })
 
+  it('deduplicates unresolved historical rows before auto-resolve when a resolved source exists', async () => {
+    const { db, updates, ledgerWrites } = makeAutoResolveDb()
+    let calls = 0
+    const fetcher: XTwitterFetch = async () => {
+      calls += 1
+      return { status: 200, body: { data: [] } }
+    }
+    const result = await autoResolveMissingExternalIds({
+      db,
+      accounts: [
+        {
+          signalSourceId: 1,
+          handle: 'https://x.com/aleabitoreddit',
+          externalId: null,
+          priority: 0,
+        },
+        {
+          signalSourceId: 2,
+          handle: 'aleabitoreddit',
+          externalId: '1940360837547565056',
+          priority: 0,
+        },
+      ],
+      bearerToken: 'tok',
+      fetcher,
+      requestId: 'req-dedupe',
+      now: new Date('2026-05-20T10:00:00Z'),
+      userReadsToday: 0,
+      maxUserReadsPerDay: 30,
+    })
+
+    expect(calls).toBe(0)
+    expect(result.accounts).toHaveLength(1)
+    expect(result.accounts[0]?.signalSourceId).toBe(2)
+    expect(updates).toHaveLength(0)
+    expect(ledgerWrites).toHaveLength(0)
+  })
+
   it('skips when the user-read cap is exhausted, surfacing nothing to the orchestrator', async () => {
     const { db, updates } = makeAutoResolveDb()
     let calls = 0
