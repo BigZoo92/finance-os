@@ -86,6 +86,8 @@ services:
     # through `web:3000`, which proxies them to this container.
     expose:
       - "3001"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -350,6 +352,8 @@ services:
       - /tmp:rw,nosuid,nodev,size=128m
     cap_drop:
       - ALL
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
