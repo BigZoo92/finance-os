@@ -11,6 +11,7 @@ import type {
   DashboardAdvisorRecommendationsResponse,
   DashboardAdvisorRunDailyResponse,
 } from '../advisor-contract'
+import { buildAdvisorKnowledgeAnswer } from '../domain/advisor/knowledge-pack'
 import { createDashboardRuntimePlugin } from '../plugin'
 import type { DashboardRouteRuntime } from '../types'
 import { createAdvisorRoute } from './advisor'
@@ -289,81 +290,14 @@ const createDashboardRuntime = (
       mode,
       requestId,
       question,
-    }): Promise<DashboardAdvisorKnowledgeAnswerResponse> => ({
-      mode,
-      source: mode === 'demo' ? 'demo_fixture' : 'retrieval',
-      requestId,
-      generatedAt: '2026-04-14T08:00:03.000Z',
-      status: 'answered',
-      question,
-      answer: {
-        headline: 'Diversification: repere pedagogique',
-        summary: 'Diversifier reduit le risque specifique.',
-        keyPoints: ['Evite la concentration', 'Ne supprime pas le risque global'],
-        nextStep: 'Cartographier les expositions principales.',
-        guardrail: 'Contenu educatif uniquement.',
-      },
-      confidenceScore: 0.82,
-      confidenceLabel: 'high',
-      lowConfidence: false,
-      fallbackReason: null,
-      retrievalEnabled: true,
-      retrieval: {
-        intent: 'definition',
-        matchedTopicIds: ['diversification'],
-        hitCount: 1,
-        guardrailTriggered: false,
-        stageLatenciesMs: {
-          queryParse: 2,
-          retrieval: 3,
-          answerAssembly: 4,
-          total: 9,
-        },
-        stages: [
-          {
-            stage: 'query_parse',
-            status: 'completed',
-            detail: 'Question normalisee.',
-          },
-          {
-            stage: 'retrieval',
-            status: 'completed',
-            detail: '1 sujet trouve.',
-          },
-          {
-            stage: 'answer_assembly',
-            status: 'completed',
-            detail: 'Reponse assemblee.',
-          },
-          {
-            stage: 'fallback',
-            status: 'skipped',
-            detail: 'Aucun fallback.',
-          },
-        ],
-      },
-      citations: [
-        {
-          citationId: 'diversification-role',
-          topicId: 'diversification',
-          topicTitle: 'Diversification',
-          sectionTitle: 'Role',
-          label: 'Diversification · Role',
-          excerpt: 'Diversifier reduit la dependance a un seul scenario.',
-        },
-      ],
-      suggestedTopics: [
-        {
-          topicId: 'diversification',
-          title: 'Diversification',
-          summary: 'Evite la concentration sur un seul scenario.',
-          difficulty: 'beginner',
-          estimatedReadMinutes: 5,
-          tags: ['portfolio', 'risk'],
-          relatedQuestions: ['Pourquoi diversifier un portefeuille ?'],
-        },
-      ],
-    }),
+    }): Promise<DashboardAdvisorKnowledgeAnswerResponse> =>
+      buildAdvisorKnowledgeAnswer({
+        mode,
+        requestId,
+        question,
+        retrievalEnabled: true,
+        browseOnlyReason: null,
+      }),
     getLatestAdvisorManualOperation: async () => sampleManualOperation,
     getAdvisorManualOperationById: async () => sampleManualOperation,
     runAdvisorManualRefreshAndAnalysis:

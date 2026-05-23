@@ -229,7 +229,7 @@ export const evaluatePreflight = ({
 }): { status: RefreshJobStatus; message: string; details: Record<string, unknown> } | null => {
   if (!job.enabled) {
     return {
-      status: 'disabled',
+      status: 'skipped_disabled',
       message: 'Job disabled by configuration.',
       details: { reason: 'flag_disabled' },
     }
@@ -808,6 +808,7 @@ export const createRefreshJobRegistry = ({
       'skipped_budget',
       'skipped_dependency_failed',
       'disabled',
+      'skipped_disabled',
     ])
 
     for (const job of plan) {
@@ -858,7 +859,9 @@ export const createRefreshJobRegistry = ({
     const failedJobs = results
       .filter(item => item.status === 'failed' || item.status === 'timed_out')
       .map(item => item.jobId)
-    const disabledJobs = results.filter(item => item.status === 'disabled').map(item => item.jobId)
+    const disabledJobs = results
+      .filter(item => item.status === 'disabled' || item.status === 'skipped_disabled')
+      .map(item => item.jobId)
     const degraded = results.some(item =>
       ['partial', 'skipped_dependency_failed', 'skipped_missing_config', 'skipped_budget'].includes(
         item.status

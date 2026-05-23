@@ -465,7 +465,11 @@ export const resolveMarketData = async ({
         attempted,
       }
     }
-    attempted.push({ source: 'caller', reason: 'not_provided' })
+    // In auto mode, missing callerData is not a real attempt — just skip silently
+    // so `attempted` only reflects actual cache/provider failures.
+    if (input.callerData && input.callerData.length > 0) {
+      attempted.push({ source: 'caller', reason: 'no_valid_bars' })
+    }
   }
 
   // Forced fixture
