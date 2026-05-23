@@ -1,6 +1,8 @@
 import { Elysia } from 'elysia'
 import { createOpsEnvDiagnosticsRoute } from '../ops/env-diagnostics'
+import { createOpsKnowledgeEnrichmentStatusRoute } from '../ops/knowledge-enrichment-status'
 import { createOpsRefreshRoute } from '../ops/refresh'
+import { createOpsSchedulerRoute } from '../ops/scheduler'
 import type { FailsoftSource } from './domain/failsoft-policy'
 import { createDashboardRuntimePlugin } from './plugin'
 import { createAdvisorRoute } from './routes/advisor'
@@ -88,6 +90,13 @@ export const createDashboardRoutes = ({
   freeFirehoseMaxFredSeries,
   freeFirehoseMaxEcbSeries,
   signalsSocialPollingEnabled,
+  dailyIntelligenceEnabled,
+  dailyIntelligenceCron,
+  dailyIntelligenceNightCron,
+  dailyIntelligenceMorningCron,
+  dailyIntelligenceTimezone,
+  dailyIntelligenceDryRunDefault,
+  dailyIntelligenceManualTriggerEnabled,
   marketDataEnabled,
   marketDataRefreshEnabled,
   marketDataForceFixtureFallback,
@@ -201,6 +210,13 @@ export const createDashboardRoutes = ({
   freeFirehoseMaxFredSeries: number
   freeFirehoseMaxEcbSeries: number
   signalsSocialPollingEnabled: boolean
+  dailyIntelligenceEnabled: boolean
+  dailyIntelligenceCron: string
+  dailyIntelligenceNightCron: string
+  dailyIntelligenceMorningCron: string
+  dailyIntelligenceTimezone: string
+  dailyIntelligenceDryRunDefault: boolean
+  dailyIntelligenceManualTriggerEnabled: boolean
   marketDataEnabled: boolean
   marketDataRefreshEnabled: boolean
   marketDataForceFixtureFallback: boolean
@@ -497,6 +513,28 @@ export const createDashboardRoutes = ({
           aiAdvisorEnabled,
           signalsSocialPollingEnabled,
         }),
+      })
+    )
+    .use(
+      createOpsSchedulerRoute({
+        config: {
+          dailyIntelligenceEnabled,
+          dailyIntelligenceTimezone,
+          dailyIntelligenceNightCron,
+          dailyIntelligenceMorningCron,
+          dailyIntelligenceLegacyCron: dailyIntelligenceCron,
+          dailyIntelligenceDryRunDefault,
+          dailyIntelligenceManualTriggerEnabled,
+          marketDataAutoRefreshEnabled: marketDataRefreshEnabled,
+          signalsSocialPollingEnabled,
+        },
+      })
+    )
+    .use(
+      createOpsKnowledgeEnrichmentStatusRoute({
+        db,
+        knowledgeServiceEnabled,
+        advisorGraphIngestEnabled,
       })
     )
     .use(createOpsEnvDiagnosticsRoute())

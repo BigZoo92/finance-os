@@ -10,7 +10,8 @@
  *   2. Sources marked `paid` are silently filtered out. X / Twitter is
  *      excluded by ID — not provider name — so renaming can't leak it in.
  *   3. A weekly cap (`maxRunsPerWeek`) is enforced before any provider call:
- *      if exceeded, the run is short-circuited as `skipped_quota`.
+ *      if exceeded, the run is short-circuited as `skipped_quota` unless the
+ *      admin route passes an explicit, audited override.
  *   4. Dry-run mode never invokes the writer — providers run, but the orchestrator
  *      reports counters without persisting anything.
  *   5. LLM enrichment is opt-in (default off). The button itself never spends
@@ -51,6 +52,7 @@ export type FreeFirehoseRunHistory = {
   createRunRecord: (input: {
     runId: string
     mode: 'dry_run' | 'live'
+    quotaOverride?: FreeFirehoseQuotaOverride | null
   }) => Promise<void>
   finishRunRecord: (input: {
     runId: string
@@ -83,6 +85,19 @@ export type FreeFirehoseRunOutcome = {
   durationMs: number
   estimatedMaxRecords: number
   errorSummary: string | null
+  quota: {
+    maxRunsPerWeek: number
+    runsLastWeek: number | null
+    exceeded: boolean
+    overrideUsed: boolean
+    overrideReason: string | null
+  }
+}
+
+export type FreeFirehoseQuotaOverride = {
+  requested: boolean
+  confirmedRisk: boolean
+  reason: string | null
 }
 
 const filterAllowedProviders = (providers: FreeFirehoseProviderRunner[]) =>
@@ -106,6 +121,7 @@ export const runFreeFirehose = async ({
   history,
   maxRunsPerWeek,
   now = () => new Date(),
+  quotaOverride = null,
 }: {
   runId: string
   mode: 'dry_run' | 'live'
@@ -113,15 +129,21 @@ export const runFreeFirehose = async ({
   history: FreeFirehoseRunHistory
   maxRunsPerWeek: number
   now?: () => Date
+  quotaOverride?: FreeFirehoseQuotaOverride | null
 }): Promise<FreeFirehoseRunOutcome> => {
   const startedAtMs = now().getTime()
   const allowedProviders = filterAllowedProviders(providers)
   const estimate = estimateFreeFirehoseVolume(allowedProviders)
 
+  let runsLastWeek: number | null = null
+
   // Weekly cap check: only enforce in live mode. Dry-run is free.
   if (mode === 'live') {
-    const runsLastWeek = await history.countLastNDays(7)
-    if (runsLastWeek >= maxRunsPerWeek) {
+    runsLastWeek = await history.countLastNDays(7)
+    const capExceeded = runsLastWeek >= maxRunsPerWeek
+    const overrideUsed =
+      capExceeded && quotaOverride?.requested === true && quotaOverride.confirmedRisk === true
+    if (capExceeded && !overrideUsed) {
       return {
         runId,
         mode,
@@ -131,11 +153,18 @@ export const runFreeFirehose = async ({
         durationMs: now().getTime() - startedAtMs,
         estimatedMaxRecords: estimate.maxRecords,
         errorSummary: `Weekly cap reached (${runsLastWeek}/${maxRunsPerWeek} runs in the last 7 days).`,
+        quota: {
+          maxRunsPerWeek,
+          runsLastWeek,
+          exceeded: true,
+          overrideUsed: false,
+          overrideReason: null,
+        },
       }
     }
   }
 
-  await history.createRunRecord({ runId, mode })
+  await history.createRunRecord({ runId, mode, quotaOverride })
 
   const providerBreakdown: Record<string, FreeFirehoseProviderRunResult> = {}
   const counts = { fetched: 0, inserted: 0, deduped: 0, skipped: 0, failed: 0 }
@@ -169,11 +198,7 @@ export const runFreeFirehose = async ({
   }
 
   const status: FreeFirehoseRunOutcome['status'] =
-    !anySuccess && anyFailed
-      ? 'failed'
-      : anyFailed
-        ? 'partial'
-        : 'success'
+    !anySuccess && anyFailed ? 'failed' : anyFailed ? 'partial' : 'success'
   const durationMs = now().getTime() - startedAtMs
   const errorSummary = errorCodes.length > 0 ? errorCodes.slice(0, 20).join(',') : null
 
@@ -195,6 +220,18 @@ export const runFreeFirehose = async ({
     durationMs,
     estimatedMaxRecords: estimate.maxRecords,
     errorSummary,
+    quota: {
+      maxRunsPerWeek,
+      runsLastWeek,
+      exceeded: runsLastWeek !== null ? runsLastWeek >= maxRunsPerWeek : false,
+      overrideUsed:
+        mode === 'live' &&
+        runsLastWeek !== null &&
+        runsLastWeek >= maxRunsPerWeek &&
+        quotaOverride?.requested === true &&
+        quotaOverride.confirmedRisk === true,
+      overrideReason: quotaOverride?.reason ?? null,
+    },
   }
 }
 

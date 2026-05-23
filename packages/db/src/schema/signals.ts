@@ -28,8 +28,14 @@ export const signalSource = pgTable(
     priority: integer('priority').notNull().default(50),
     tags: jsonb('tags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     language: text('language').notNull().default('en'),
-    includePatterns: jsonb('include_patterns').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    excludePatterns: jsonb('exclude_patterns').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    includePatterns: jsonb('include_patterns')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    excludePatterns: jsonb('exclude_patterns')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     minRelevanceScore: integer('min_relevance_score').notNull().default(0),
     requiresAttentionPolicy: text('requires_attention_policy')
       .notNull()
@@ -131,7 +137,10 @@ export const signalItem = pgTable(
     sentiment: doublePrecision('sentiment'),
     dedupeKey: text('dedupe_key').notNull(),
     contentHash: text('content_hash').notNull(),
-    provenance: jsonb('provenance').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    provenance: jsonb('provenance')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     rawPayloadRedacted: jsonb('raw_payload_redacted').$type<Record<string, unknown> | null>(),
     graphIngestStatus: text('graph_ingest_status')
       .notNull()
@@ -225,8 +234,15 @@ export const freeFirehoseRun = pgTable(
     skippedCount: integer('skipped_count').notNull().default(0),
     failedCount: integer('failed_count').notNull().default(0),
     /** Per-provider counters: { gdelt: {fetched, inserted, errors}, hn: {...} }. */
-    providerBreakdown: jsonb('provider_breakdown').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    providerBreakdown: jsonb('provider_breakdown')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     errorSummary: text('error_summary'),
+    overrideRequested: boolean('override_requested').notNull().default(false),
+    overrideConfirmedRisk: boolean('override_confirmed_risk').notNull().default(false),
+    overrideUsed: boolean('override_used').notNull().default(false),
+    overrideReason: text('override_reason'),
     requestId: text('request_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },

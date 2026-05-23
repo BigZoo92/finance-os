@@ -44,6 +44,8 @@ const getDemoStatus = (): RefreshStatusResponse => ({
   ...getDemoJobs(),
   latestRun: null,
   history: [],
+  latestTopologicalRun: null,
+  topologicalHistory: [],
 })
 
 export const opsRefreshJobsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode | undefined }) =>

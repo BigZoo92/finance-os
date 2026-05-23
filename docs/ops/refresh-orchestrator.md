@@ -10,6 +10,8 @@ A refresh job result carries a `RefreshJobStatus`:
 
 | Status                          | Meaning                                                                |
 | --- | --- |
+| `pending`                       | Dry-run only: job would be scheduled.                                  |
+| `disabled`                      | Job disabled by configuration.                                         |
 | `queued`                        | Handed to underlying queue; non-final.                                 |
 | `running`                       | Actively executing; non-final. Should not stay here past `timeoutMs`.  |
 | `success`                       | Completed and produced expected data.                                  |
@@ -40,6 +42,22 @@ returns true for every status except `queued`/`running`. Any job stuck in
 | POST   | `/ops/refresh/stale-runs/recover`          | Sweep stale runs → mark `timed_out`. Body: `{ staleAfterMs?: number }`. |
 | POST   | `/ops/refresh/runs/:runId/cancel`          | Cancel an in-flight run (admin). |
 | GET    | `/ops/env/diagnostics`                     | Per-service env health (no secrets returned). |
+| GET    | `/ops/scheduler/status`                    | Daily Intelligence crons, next runs, scheduler flags. |
+| GET    | `/ops/knowledge/enrichment/status`         | Advisor memory/KG write visibility. |
+
+`POST /ops/refresh/all` now executes the `refresh-registry` daily plan in
+topological order. Body:
+
+```json
+{
+  "trigger": "manual | scheduled | internal",
+  "runKind": "night | morning | manual | dry_run",
+  "dryRun": false
+}
+```
+
+`dryRun: true` returns the ordered plan and disabled/pending jobs without
+calling providers, queues, DB-writing use cases, or LLMs.
 
 ## Hard timeout & stale recovery
 

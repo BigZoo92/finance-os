@@ -6,7 +6,9 @@ The architectural invariant: **the worker triggers API routes; it does not
 call providers directly.** Provider secrets (EODHD, Twelve Data, FRED,
 OpenAI, Anthropic, X bearer, IBKR Flex token, Binance API key) live on the
 API container only. The worker carries scheduler config (crons, intervals,
-lock TTLs) and a base URL to reach the API via `API_INTERNAL_URL`.
+lock TTLs) and a base URL to reach the API via `API_INTERNAL_URL`. The API
+also receives Daily Intelligence scheduler envs so `/ops/scheduler/status`
+can report configured next runs without exposing worker internals.
 
 This document is the operator-facing contract. The machine-readable truth
 lives in [`packages/env/src/diagnostics.ts`](../../packages/env/src/diagnostics.ts).
@@ -49,8 +51,10 @@ lengths.
 
 The **worker** receives only:
 
-- Scheduler flags & timing: `DAILY_INTELLIGENCE_CRON`,
-  `DAILY_INTELLIGENCE_TIMEZONE`, `X_DAILY_PREVIOUS_DAY_CRON`,
+- Scheduler flags & timing: `DAILY_INTELLIGENCE_NIGHT_CRON`,
+  `DAILY_INTELLIGENCE_MORNING_CRON`, legacy `DAILY_INTELLIGENCE_CRON`,
+  `DAILY_INTELLIGENCE_TIMEZONE`, `DAILY_INTELLIGENCE_LOCK_TTL_SECONDS`,
+  `DAILY_INTELLIGENCE_DRY_RUN_DEFAULT`, `X_DAILY_PREVIOUS_DAY_CRON`,
   `AI_POST_MORTEM_CRON`, `NEWS_FETCH_INTERVAL_MS`, etc.
 - `API_INTERNAL_URL` + `PRIVATE_ACCESS_TOKEN`.
 - Database / Redis URLs.

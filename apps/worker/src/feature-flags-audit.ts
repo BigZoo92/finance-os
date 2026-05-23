@@ -16,7 +16,11 @@ export type WorkerFeatureFlagsAudit = {
   aiPostMortemTimezone: string
   dailyIntelligenceEnabled: boolean
   dailyIntelligenceCron: string
+  dailyIntelligenceNightCron: string
+  dailyIntelligenceMorningCron: string
   dailyIntelligenceTimezone: string
+  dailyIntelligenceDryRunDefault: boolean
+  dailyIntelligenceManualTriggerEnabled: boolean
   // News & social
   newsAutoIngestEnabled: boolean
   newsFetchIntervalMs: number
@@ -71,7 +75,11 @@ export const buildWorkerFeatureFlagsAudit = (
   aiPostMortemTimezone: env.AI_POST_MORTEM_TIMEZONE,
   dailyIntelligenceEnabled: env.DAILY_INTELLIGENCE_ENABLED,
   dailyIntelligenceCron: env.DAILY_INTELLIGENCE_CRON,
+  dailyIntelligenceNightCron: env.DAILY_INTELLIGENCE_NIGHT_CRON,
+  dailyIntelligenceMorningCron: env.DAILY_INTELLIGENCE_MORNING_CRON,
   dailyIntelligenceTimezone: env.DAILY_INTELLIGENCE_TIMEZONE,
+  dailyIntelligenceDryRunDefault: env.DAILY_INTELLIGENCE_DRY_RUN_DEFAULT,
+  dailyIntelligenceManualTriggerEnabled: env.DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED,
   newsAutoIngestEnabled: env.NEWS_AUTO_INGEST_ENABLED,
   newsFetchIntervalMs: env.NEWS_FETCH_INTERVAL_MS,
   signalsSocialPollingEnabled: env.SIGNALS_SOCIAL_POLLING_ENABLED,

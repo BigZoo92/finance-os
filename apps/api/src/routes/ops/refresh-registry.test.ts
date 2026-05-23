@@ -26,7 +26,9 @@ const createRuntime = (
         latestRun: null,
       }),
       triggerExternalInvestmentProviderSync: async () => undefined,
-      generateExternalInvestmentContextBundle: async () => ({ generatedAt: '2026-05-03T00:00:00.000Z' }),
+      generateExternalInvestmentContextBundle: async () => ({
+        generatedAt: '2026-05-03T00:00:00.000Z',
+      }),
       ingestNews: async () => ({ inserted: 1, updated: 0, skipped: 0 }),
       getNewsContextBundle: async () => ({
         generatedAt: '2026-05-03T00:00:00.000Z',
@@ -125,6 +127,65 @@ describe('createRefreshJobRegistry', () => {
     expect(result.details).toMatchObject({
       cryptoSignalCount: 1,
     })
+  })
+
+  it('runs the daily plan topologically instead of delegating to the legacy manual mission', async () => {
+    const calls: string[] = []
+    const registry = createRefreshJobRegistry({
+      runtime: createRuntime({
+        runAdvisorManualRefreshAndAnalysis: async () => {
+          throw new Error('legacy manual mission must not be called')
+        },
+        requestTransactionsBackgroundRefresh: async () => {
+          calls.push('powens')
+          return true
+        },
+        runDerivedRecompute: async () => {
+          calls.push('transactions-categorization')
+          return {
+            featureEnabled: true,
+            state: 'completed',
+            currentSnapshot: null,
+            latestRun: null,
+          }
+        },
+      }),
+      config: enabledConfig,
+    })
+
+    const result = await registry.runAll({
+      requestId: 'req-refresh-test',
+      triggerSource: 'cron',
+      runKind: 'night',
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.jobs.map(job => job.jobId)).toContain('advisor-context')
+    expect(calls.indexOf('powens')).toBeLessThan(calls.indexOf('transactions-categorization'))
+  })
+
+  it('returns a dry-run plan without executing jobs', async () => {
+    let powensCalls = 0
+    const registry = createRefreshJobRegistry({
+      runtime: createRuntime({
+        requestTransactionsBackgroundRefresh: async () => {
+          powensCalls += 1
+          return true
+        },
+      }),
+      config: enabledConfig,
+    })
+
+    const result = await registry.runAll({
+      requestId: 'req-refresh-dry',
+      triggerSource: 'cron',
+      runKind: 'dry_run',
+      dryRun: true,
+    })
+
+    expect(result.status).toBe('planned')
+    expect(result.jobs.find(job => job.jobId === 'powens')?.status).toBe('pending')
+    expect(powensCalls).toBe(0)
   })
 
   it('does not read admin status sources in demo mode', async () => {

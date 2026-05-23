@@ -48,6 +48,8 @@ type StatusDescriptor = {
 
 const STATUS_DESCRIPTORS: Record<string, StatusDescriptor> = {
   success: { tone: 'positive', label: 'succès' },
+  pending: { tone: 'outline', label: 'planifié' },
+  disabled: { tone: 'outline', label: 'désactivé' },
   completed: { tone: 'positive', label: 'succès' },
   partial: { tone: 'warning', label: 'partiel' },
   partial_success: { tone: 'warning', label: 'partiel' },
@@ -103,7 +105,9 @@ const stepKeyByJobId: Partial<Record<string, string>> = {
 }
 
 const findLatestStepForJob = (
-  latest: NonNullable<import('@/features/ops-refresh/types').RefreshStatusResponse['latestRun']> | null,
+  latest: NonNullable<
+    import('@/features/ops-refresh/types').RefreshStatusResponse['latestRun']
+  > | null,
   job: RefreshJobDefinition
 ) => {
   const expectedStepKey = stepKeyByJobId[job.id]
@@ -126,11 +130,7 @@ const matchesFilter = (
     case 'all':
       return true
     case 'failed':
-      return (
-        stepStatus === 'failed' ||
-        stepStatus === 'timed_out' ||
-        stepStatus === 'cancelled'
-      )
+      return stepStatus === 'failed' || stepStatus === 'timed_out' || stepStatus === 'cancelled'
     case 'running':
       return stepStatus === 'running' || stepStatus === 'queued'
     case 'missing_config':
@@ -150,13 +150,16 @@ function OrchestrationPage() {
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
   const isAdmin = authViewState === 'admin'
-  const authMode: AuthMode | undefined = isAdmin ? 'admin' : authViewState === 'demo' ? 'demo' : undefined
+  const authMode: AuthMode | undefined = isAdmin
+    ? 'admin'
+    : authViewState === 'demo'
+      ? 'demo'
+      : undefined
   const statusQuery = useQuery(opsRefreshStatusQueryOptionsWithMode({ mode: authMode }))
   const status = statusQuery.data
   const latest = status?.latestRun ?? null
   const jobs = status?.jobs ?? []
-  const completedSteps =
-    latest?.steps.filter(step => step.status === 'completed').length ?? 0
+  const completedSteps = latest?.steps.filter(step => step.status === 'completed').length ?? 0
   const degradedSteps =
     latest?.steps.filter(step => step.status === 'degraded' || step.status === 'failed').length ?? 0
 
@@ -247,14 +250,17 @@ function OrchestrationPage() {
       {!isAdmin && (
         <Card className="border-warning/30 bg-warning/5">
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Mode demo: lecture déterministe seulement. Aucun job réel, aucune DB et aucun provider ne sont appelés.
+            Mode demo: lecture déterministe seulement. Aucun job réel, aucune DB et aucun provider
+            ne sont appelés.
           </CardContent>
         </Card>
       )}
 
       {recoveryFeedback && (
         <Card>
-          <CardContent className="p-3 text-sm text-muted-foreground">{recoveryFeedback}</CardContent>
+          <CardContent className="p-3 text-sm text-muted-foreground">
+            {recoveryFeedback}
+          </CardContent>
         </Card>
       )}
 
@@ -312,7 +318,9 @@ function OrchestrationPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {filteredJobs.length === 0 && (
-            <p className="px-4 py-3 text-sm text-muted-foreground">Aucun job ne correspond au filtre.</p>
+            <p className="px-4 py-3 text-sm text-muted-foreground">
+              Aucun job ne correspond au filtre.
+            </p>
           )}
           {filteredJobs.map(job => {
             const step = findLatestStepForJob(latest, job)
@@ -345,7 +353,9 @@ function OrchestrationPage() {
                       deps: {job.dependencies.join(', ')}
                     </p>
                   )}
-                  {step?.errorMessage && <p className="mt-1 truncate text-xs text-negative">{step.errorMessage}</p>}
+                  {step?.errorMessage && (
+                    <p className="mt-1 truncate text-xs text-negative">{step.errorMessage}</p>
+                  )}
                 </div>
                 {job.manualTriggerAllowed ? (
                   <Button
@@ -377,7 +387,10 @@ function OrchestrationPage() {
               ['partial', 'Au moins un provider a échoué; les autres ont produit des données.'],
               ['timed_out', 'Hard timeout — voir docs/ops/refresh-orchestrator.md.'],
               ['skipped_disabled', 'Feature flag désactivé.'],
-              ['skipped_missing_config', 'Feature activée mais secret/URL manquant — voir /ops/env/diagnostics.'],
+              [
+                'skipped_missing_config',
+                'Feature activée mais secret/URL manquant — voir /ops/env/diagnostics.',
+              ],
               ['skipped_budget', 'Budget pay-per-use épuisé (X, AI Advisor…).'],
               ['skipped_dependency_failed', 'Job amont a échoué; ce job a été ignoré.'],
               ['cancelled', "Run annulé via l'UI ou un appel admin."],

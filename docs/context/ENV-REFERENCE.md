@@ -179,11 +179,17 @@ Notes:
 | `MARKET_DATA_AUTO_REFRESH_ENABLED` | `false` | Dokploy | Worker | Activer le scheduler de refresh marches |
 | `MARKET_DATA_REFRESH_INTERVAL_MS` | `21600000` | Dokploy | Worker | Intervalle du scheduler marches (6h par defaut) |
 | `DAILY_INTELLIGENCE_ENABLED` | `false` | Dokploy, Local | Worker | Active le scheduler Daily Intelligence Run |
-| `DAILY_INTELLIGENCE_CRON` | `0 9 * * 1-5` | Dokploy, Local | Worker | Heure cible du run global. Le worker applique minute/heure et garde en plus lundi-vendredi |
-| `DAILY_INTELLIGENCE_TIMEZONE` | `Europe/Paris` | Dokploy, Local | Worker | Timezone du run global |
-| `DAILY_INTELLIGENCE_MARKET_OPEN_HOUR` | `9` | Dokploy, Local | Worker | Heure locale de repli si le champ heure du cron est absent ou wildcard |
+| `DAILY_INTELLIGENCE_CRON` | `0 9 * * 1-5` | Dokploy, Local | API, Worker | Legacy fallback. Conserver pour compatibilite, preferer les crons nuit/matin |
+| `DAILY_INTELLIGENCE_NIGHT_CRON` | `15 23 * * *` | Dokploy, Local | API, Worker | Run nuit/post-market ingestion + apprentissage |
+| `DAILY_INTELLIGENCE_MORNING_CRON` | `30 7 * * *` | Dokploy, Local | API, Worker | Run matin/pre-open brief + recommandations |
+| `DAILY_INTELLIGENCE_TIMEZONE` | `Europe/Paris` | Dokploy, Local | API, Worker | Timezone des deux runs |
+| `DAILY_INTELLIGENCE_MARKET_OPEN_HOUR` | `9` | Dokploy, Local | Worker | Heure locale de repli legacy si le champ heure du cron est absent ou wildcard |
+| `DAILY_INTELLIGENCE_LOCK_TTL_SECONDS` | `1800` | Dokploy, Local | API, Worker | TTL des locks Redis `daily-intelligence:run:lock:<runKind>` |
+| `DAILY_INTELLIGENCE_MAX_DURATION_SECONDS` | `3600` | Dokploy, Local | API, Worker | Budget duree cible du run global; expose pour status/ops |
+| `DAILY_INTELLIGENCE_DRY_RUN_DEFAULT` | `false` | Dokploy, Local | API, Worker | Si `true`, le worker declenche `/ops/refresh/all` en dry-run |
+| `DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED` | `true` | Dokploy, Local | API, Worker | Autorise les triggers admin manuels |
 
-Daily Intelligence appelle `POST API_INTERNAL_URL/ops/refresh/all` avec `PRIVATE_ACCESS_TOKEN` en `x-internal-token`. Le lock Redis `daily-intelligence:run:lock` evite les doubles executions entre instances worker.
+Daily Intelligence appelle `POST API_INTERNAL_URL/ops/refresh/all` avec `PRIVATE_ACCESS_TOKEN` en `x-internal-token`. Le body contient `runKind: "night" | "morning"` et optionnellement `dryRun`. Les locks Redis `daily-intelligence:run:lock:<runKind>` evitent les doubles executions entre instances worker.
 
 ---
 

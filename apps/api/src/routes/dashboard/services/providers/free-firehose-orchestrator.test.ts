@@ -29,12 +29,15 @@ const stubHistory = (countLastWeek = 0): FreeFirehoseRunHistory & { calls: strin
   }
 }
 
-const provider = (id: string, maxRecords = 100, result = okResult()): FreeFirehoseProviderRunner =>
-  ({
-    id: id as never,
-    maxRecords,
-    run: async () => result,
-  })
+const provider = (
+  id: string,
+  maxRecords = 100,
+  result = okResult()
+): FreeFirehoseProviderRunner => ({
+  id: id as never,
+  maxRecords,
+  run: async () => result,
+})
 
 describe('forbidden providers', () => {
   it('excludes X / Twitter and paid providers by ID', () => {
@@ -49,7 +52,15 @@ describe('forbidden providers', () => {
   })
 
   it('FORBIDDEN_PROVIDER_IDS contains x_twitter, twitter, bluesky, openai, anthropic and paid feeds', () => {
-    for (const id of ['x_twitter', 'twitter', 'bluesky', 'openai', 'anthropic', 'eodhd', 'twelvedata']) {
+    for (const id of [
+      'x_twitter',
+      'twitter',
+      'bluesky',
+      'openai',
+      'anthropic',
+      'eodhd',
+      'twelvedata',
+    ]) {
       expect(__testing.FORBIDDEN_PROVIDER_IDS.has(id)).toBe(true)
     }
   })
@@ -123,7 +134,39 @@ describe('runFreeFirehose weekly quota', () => {
     })
     expect(outcome.status).toBe('skipped_quota')
     expect(outcome.errorSummary ?? '').toContain('Weekly cap')
+    expect(outcome.quota.overrideUsed).toBe(false)
     expect(providerInvoked).toBe(false)
+  })
+
+  it('allows an explicit admin quota override in live mode', async () => {
+    let providerInvoked = false
+    const outcome = await runFreeFirehose({
+      runId: 'r-override',
+      mode: 'live',
+      providers: [
+        {
+          id: 'gdelt' as never,
+          maxRecords: 100,
+          run: async () => {
+            providerInvoked = true
+            return okResult()
+          },
+        },
+      ],
+      history: stubHistory(2),
+      maxRunsPerWeek: 1,
+      quotaOverride: {
+        requested: true,
+        confirmedRisk: true,
+        reason: 'admin backfill after provider outage',
+      },
+    })
+
+    expect(outcome.status).toBe('success')
+    expect(outcome.quota.exceeded).toBe(true)
+    expect(outcome.quota.overrideUsed).toBe(true)
+    expect(outcome.quota.overrideReason).toBe('admin backfill after provider outage')
+    expect(providerInvoked).toBe(true)
   })
 })
 
@@ -133,8 +176,20 @@ describe('runFreeFirehose live mode', () => {
       runId: 'r-live',
       mode: 'live',
       providers: [
-        provider('gdelt', 5000, { fetchedCount: 5000, insertedCount: 4900, dedupedCount: 50, failedCount: 0, errorCodes: [] }),
-        provider('hn', 3000, { fetchedCount: 3000, insertedCount: 2950, dedupedCount: 20, failedCount: 0, errorCodes: [] }),
+        provider('gdelt', 5000, {
+          fetchedCount: 5000,
+          insertedCount: 4900,
+          dedupedCount: 50,
+          failedCount: 0,
+          errorCodes: [],
+        }),
+        provider('hn', 3000, {
+          fetchedCount: 3000,
+          insertedCount: 2950,
+          dedupedCount: 20,
+          failedCount: 0,
+          errorCodes: [],
+        }),
       ] as FreeFirehoseProviderRunner[],
       history: stubHistory(0),
       maxRunsPerWeek: 1,
@@ -151,7 +206,13 @@ describe('runFreeFirehose live mode', () => {
       mode: 'live',
       providers: [
         provider('gdelt', 5000, okResult()),
-        provider('hn', 3000, { fetchedCount: 0, insertedCount: 0, dedupedCount: 0, failedCount: 3, errorCodes: ['HN_500' as string] }),
+        provider('hn', 3000, {
+          fetchedCount: 0,
+          insertedCount: 0,
+          dedupedCount: 0,
+          failedCount: 3,
+          errorCodes: ['HN_500' as string],
+        }),
       ] as FreeFirehoseProviderRunner[],
       history: stubHistory(0),
       maxRunsPerWeek: 1,

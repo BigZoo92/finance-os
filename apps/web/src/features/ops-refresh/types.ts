@@ -5,6 +5,8 @@ import type { DashboardAdvisorManualOperationResponse } from '@/features/dashboa
  * Keep both in sync when adding/removing variants.
  */
 export type RefreshJobStatus =
+  | 'pending'
+  | 'disabled'
   | 'queued'
   | 'running'
   | 'success'
@@ -46,6 +48,8 @@ export type RefreshStatusResponse = {
   jobs: RefreshJobDefinition[]
   latestRun: DashboardAdvisorManualOperationResponse | null
   history: DashboardAdvisorManualOperationResponse[]
+  latestTopologicalRun: RefreshRunExecutionResponse | null
+  topologicalHistory: RefreshRunExecutionResponse[]
 }
 
 export type RefreshJobRunResponse = {
@@ -56,6 +60,29 @@ export type RefreshJobRunResponse = {
   startedAt: string
   finishedAt: string
   durationMs: number
+  recordsRead: number | null
+  recordsWritten: number | null
+  errorCode: string | null
+  errorMessage: string | null
+  retryCount: number
   message: string | null
   details: Record<string, unknown> | null
+}
+
+export type RefreshRunExecutionResponse = {
+  ok: boolean
+  requestId: string
+  runId: string
+  runKind: 'night' | 'morning' | 'manual' | 'dry_run'
+  triggerSource: 'cron' | 'manual-global' | 'manual-individual' | 'internal'
+  dryRun: boolean
+  status: 'planned' | 'success' | 'partial' | 'failed'
+  startedAt: string
+  finishedAt: string
+  durationMs: number
+  jobs: RefreshJobRunResponse[]
+  failedJobs: string[]
+  disabledJobs: string[]
+  operation: DashboardAdvisorManualOperationResponse | null
+  warning: string | null
 }

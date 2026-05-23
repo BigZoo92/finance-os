@@ -10,11 +10,20 @@ const jobParamsSchema = t.Object({
 
 const runBodySchema = t.Optional(
   t.Object({
-    trigger: t.Optional(t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('internal')])),
+    trigger: t.Optional(
+      t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('internal')])
+    ),
+    runKind: t.Optional(
+      t.Union([t.Literal('night'), t.Literal('morning'), t.Literal('manual'), t.Literal('dry_run')])
+    ),
+    dryRun: t.Optional(t.Boolean()),
   })
 )
 
-const toTriggerSource = (trigger: string | undefined, fallback: 'manual-global' | 'manual-individual') => {
+const toTriggerSource = (
+  trigger: string | undefined,
+  fallback: 'manual-global' | 'manual-individual'
+) => {
   if (trigger === 'scheduled') {
     return 'cron' as const
   }
@@ -24,7 +33,10 @@ const toTriggerSource = (trigger: string | undefined, fallback: 'manual-global' 
   return fallback
 }
 
-const demoResponse = (requestId: string, registry: ReturnType<typeof createRefreshJobRegistry>) => ({
+const demoResponse = (
+  requestId: string,
+  registry: ReturnType<typeof createRefreshJobRegistry>
+) => ({
   requestId,
   mode: 'demo' as const,
   jobs: registry.getJobs(),
@@ -131,6 +143,11 @@ export const createOpsRefreshRoute = ({
         return registry.runAll({
           requestId,
           triggerSource: toTriggerSource(context.body?.trigger, 'manual-global'),
+          runKind: context.body?.dryRun
+            ? 'dry_run'
+            : (context.body?.runKind ??
+              (context.body?.trigger === 'scheduled' ? 'morning' : 'manual')),
+          dryRun: context.body?.dryRun === true,
         })
       },
       { body: runBodySchema }

@@ -16,7 +16,13 @@
  * secrets live on the API side only — see EXECUTING_SERVICE_BY_FEATURE.
  */
 
-export type ServiceName = 'api' | 'worker' | 'web' | 'knowledge-service' | 'quant-service' | 'ops-alerts'
+export type ServiceName =
+  | 'api'
+  | 'worker'
+  | 'web'
+  | 'knowledge-service'
+  | 'quant-service'
+  | 'ops-alerts'
 
 /**
  * The service that ACTUALLY performs the provider call when a feature is
@@ -92,8 +98,7 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     enabledWhen: truthy,
     requiredSecrets: ['NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN'],
     optionalSecrets: ['NEWS_PROVIDER_X_TWITTER_QUERY'],
-    description:
-      'X/Twitter ingestion needs a bearer token to call the recent-search endpoint.',
+    description: 'X/Twitter ingestion needs a bearer token to call the recent-search endpoint.',
   },
   {
     feature: 'X daily previous-day sync (pay-per-use)',
@@ -149,8 +154,7 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     enabledWhen: truthy,
     requiredSecrets: [],
     optionalSecrets: ['NEWS_SCRAPER_USER_AGENT'],
-    description:
-      'Custom UA recommended to avoid throttling on outbound article metadata fetches.',
+    description: 'Custom UA recommended to avoid throttling on outbound article metadata fetches.',
   },
   {
     feature: 'AI Advisor (LLM-backed)',
@@ -198,10 +202,7 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     flagKey: 'IBKR_FLEX_ENABLED',
     enabledWhen: truthy,
     requiredSecrets: ['IBKR_FLEX_TOKEN', 'IBKR_FLEX_QUERY_ID_DAILY'],
-    optionalSecrets: [
-      'IBKR_FLEX_QUERY_ID_BACKFILL_MONTH',
-      'IBKR_FLEX_QUERY_ID_BACKFILL_YEAR',
-    ],
+    optionalSecrets: ['IBKR_FLEX_QUERY_ID_BACKFILL_MONTH', 'IBKR_FLEX_QUERY_ID_BACKFILL_YEAR'],
     description:
       'IBKR Flex needs the auth token and at least the daily Last-Business-Day query id. Backfill query ids are optional but required for manual backfill UI.',
   },
@@ -216,7 +217,12 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     feature: 'Powens banking connector',
     flagKey: 'POWENS_CLIENT_ID',
     enabledWhen: raw => Boolean(raw && raw.trim().length > 0),
-    requiredSecrets: ['POWENS_CLIENT_ID', 'POWENS_CLIENT_SECRET', 'POWENS_DOMAIN', 'APP_ENCRYPTION_KEY'],
+    requiredSecrets: [
+      'POWENS_CLIENT_ID',
+      'POWENS_CLIENT_SECRET',
+      'POWENS_DOMAIN',
+      'APP_ENCRYPTION_KEY',
+    ],
     description:
       'Powens requires client_id / client_secret / domain to mint webview URLs and APP_ENCRYPTION_KEY to encrypt user tokens at rest.',
   },
@@ -284,9 +290,7 @@ export const evaluateFeatureRequirements = (
   const issues: EnvIssue[] = []
 
   for (const req of FEATURE_REQUIREMENTS) {
-    const enabled = req.enabledWhen
-      ? req.enabledWhen(env[req.flagKey])
-      : truthy(env[req.flagKey])
+    const enabled = req.enabledWhen ? req.enabledWhen(env[req.flagKey]) : truthy(env[req.flagKey])
     if (!enabled) continue
 
     const featureKey = req.flagKey.replace(/_ENABLED$/, '')
@@ -450,6 +454,15 @@ export const API_REQUIRED_KEYS: readonly string[] = [
   'SIGNALS_SOCIAL_POLLING_ENABLED',
   'SIGNALS_MANUAL_IMPORT_ENABLED',
   'ADVISOR_X_SIGNALS_MODE',
+  'DAILY_INTELLIGENCE_ENABLED',
+  'DAILY_INTELLIGENCE_CRON',
+  'DAILY_INTELLIGENCE_NIGHT_CRON',
+  'DAILY_INTELLIGENCE_MORNING_CRON',
+  'DAILY_INTELLIGENCE_TIMEZONE',
+  'DAILY_INTELLIGENCE_LOCK_TTL_SECONDS',
+  'DAILY_INTELLIGENCE_MAX_DURATION_SECONDS',
+  'DAILY_INTELLIGENCE_DRY_RUN_DEFAULT',
+  'DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED',
   // X daily previous-day sync — pay-per-use guarded
   'X_DAILY_PREVIOUS_DAY_SYNC_ENABLED',
   'X_DAILY_BUDGET_USD',
@@ -521,7 +534,13 @@ export const WORKER_REQUIRED_KEYS: readonly string[] = [
   'AI_DAILY_INTERVAL_MS',
   'DAILY_INTELLIGENCE_ENABLED',
   'DAILY_INTELLIGENCE_CRON',
+  'DAILY_INTELLIGENCE_NIGHT_CRON',
+  'DAILY_INTELLIGENCE_MORNING_CRON',
   'DAILY_INTELLIGENCE_TIMEZONE',
+  'DAILY_INTELLIGENCE_LOCK_TTL_SECONDS',
+  'DAILY_INTELLIGENCE_MAX_DURATION_SECONDS',
+  'DAILY_INTELLIGENCE_DRY_RUN_DEFAULT',
+  'DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED',
   'NEWS_AUTO_INGEST_ENABLED',
   'NEWS_FETCH_INTERVAL_MS',
   'MARKET_DATA_AUTO_REFRESH_ENABLED',
@@ -630,9 +649,7 @@ export const diagnoseServiceEnv = (
     const owner = EXECUTING_SERVICE_BY_FEATURE[featureKey] ?? 'api'
     return owner === service
   }).map(req => {
-    const enabled = req.enabledWhen
-      ? req.enabledWhen(env[req.flagKey])
-      : truthy(env[req.flagKey])
+    const enabled = req.enabledWhen ? req.enabledWhen(env[req.flagKey]) : truthy(env[req.flagKey])
 
     const missingRequiredSecrets = req.requiredSecrets.filter(secret => {
       const value = env[secret]

@@ -390,7 +390,8 @@ graph TB
             POST /dashboard/advisor/run-daily
             (optionnel)"]
             DailyIntel["setInterval
-            DAILY_INTELLIGENCE_CRON
+            DAILY_INTELLIGENCE_NIGHT_CRON
+            DAILY_INTELLIGENCE_MORNING_CRON
             POST /ops/refresh/all
             lock Redis
             (optionnel)"]
@@ -429,7 +430,7 @@ Posture recommandee actuelle:
 
 - la mission complete advisor est lancee manuellement depuis l'API/web
 - les schedulers Powens/news/markets/advisor restent prets pour plus tard, mais desactives par env dans la configuration recommandee
-- `DAILY_INTELLIGENCE_ENABLED=true` active une orchestration globale admin/internal a 09:00 Europe/Paris du lundi au vendredi par defaut
+- `DAILY_INTELLIGENCE_ENABLED=true` active deux orchestrations admin/internal via `/ops/refresh/all`: nuit/post-market (`DAILY_INTELLIGENCE_NIGHT_CRON`, defaut 23:15 Europe/Paris) et matin/pre-open (`DAILY_INTELLIGENCE_MORNING_CRON`, defaut 07:30 Europe/Paris)
 
 ### Types de jobs
 

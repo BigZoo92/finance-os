@@ -43,6 +43,37 @@ const createRuntime = (
         },
       }),
       requestTransactionsBackgroundRefresh: async () => true,
+      runDerivedRecompute: async () => ({
+        featureEnabled: true,
+        state: 'completed',
+        currentSnapshot: null,
+        latestRun: null,
+      }),
+      triggerExternalInvestmentProviderSync: async () => undefined,
+      generateExternalInvestmentContextBundle: async () => ({
+        generatedAt: '2026-05-03T00:00:00.000Z',
+      }),
+      ingestNews: async () => ({ inserted: 1, updated: 0, skipped: 0 }),
+      getNewsContextBundle: async () => ({
+        generatedAt: '2026-05-03T00:00:00.000Z',
+        range: '7d',
+        topSignals: [],
+        stale: false,
+        degraded: false,
+      }),
+      refreshMarkets: async () => ({
+        providerResults: [],
+        quoteCount: 1,
+        macroObservationCount: 1,
+        signalCount: 1,
+      }),
+      runAdvisorDaily: async () => ({
+        run: {
+          id: 'advisor-run-1',
+          status: 'completed',
+          fallbackReason: null,
+        },
+      }),
       ...overrides,
     },
   }) as unknown as DashboardRouteRuntime
@@ -80,7 +111,11 @@ describe('createOpsRefreshRoute', () => {
     })
 
     const response = await app.handle(new Request('http://finance-os.local/ops/refresh/status'))
-    const payload = (await response.json()) as { mode: string; latestRun: unknown; jobs: Array<{ id: string }> }
+    const payload = (await response.json()) as {
+      mode: string
+      latestRun: unknown
+      jobs: Array<{ id: string }>
+    }
 
     expect(response.status).toBe(200)
     expect(payload.mode).toBe('demo')
@@ -103,35 +138,22 @@ describe('createOpsRefreshRoute', () => {
     expect(payload.requestId).toBe('req-ops-test')
   })
 
-  it('triggers the unified orchestrator in admin mode', async () => {
-    const triggerSources: string[] = []
+  it('executes the topological refresh plan in admin mode', async () => {
+    const calls: string[] = []
     const app = createApp({
       mode: 'admin',
       runtime: createRuntime({
-        runAdvisorManualRefreshAndAnalysis: async input => {
-          triggerSources.push(input.triggerSource)
+        requestTransactionsBackgroundRefresh: async () => {
+          calls.push('powens')
+          return true
+        },
+        runDerivedRecompute: async () => {
+          calls.push('transactions-categorization')
           return {
-            ok: true,
-            requestId: input.requestId,
-            alreadyRunning: false,
-            operation: {
-              operationId: 'manual-op-1',
-              status: 'queued',
-              triggerSource: input.triggerSource,
-              requestId: input.requestId,
-              currentStage: null,
-              statusMessage: null,
-              startedAt: '2026-05-03T00:00:00.000Z',
-              finishedAt: null,
-              durationMs: null,
-              degraded: false,
-              errorCode: null,
-              errorMessage: null,
-              advisorRunId: null,
-              advisorRun: null,
-              steps: [],
-              outputDigest: null,
-            },
+            featureEnabled: true,
+            state: 'completed',
+            currentSnapshot: null,
+            latestRun: null,
           }
         },
       }),
@@ -142,12 +164,49 @@ describe('createOpsRefreshRoute', () => {
         method: 'POST',
       })
     )
-    const payload = (await response.json()) as { ok: boolean; operation: { operationId: string } }
+    const payload = (await response.json()) as {
+      ok: boolean
+      status: string
+      jobs: Array<{ jobId: string; status: string }>
+    }
 
     expect(response.status).toBe(200)
     expect(payload.ok).toBe(true)
-    expect(payload.operation.operationId).toBe('manual-op-1')
-    expect(triggerSources).toEqual(['manual-global'])
+    expect(payload.status).toBe('success')
+    expect(payload.jobs.map(job => job.jobId)).toContain('powens')
+    expect(calls.indexOf('powens')).toBeLessThan(calls.indexOf('transactions-categorization'))
+  })
+
+  it('supports a dry-run plan without executing jobs', async () => {
+    let refreshCalls = 0
+    const app = createApp({
+      mode: 'admin',
+      runtime: createRuntime({
+        requestTransactionsBackgroundRefresh: async () => {
+          refreshCalls += 1
+          return true
+        },
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/all', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ trigger: 'scheduled', runKind: 'night', dryRun: true }),
+      })
+    )
+    const payload = (await response.json()) as {
+      status: string
+      dryRun: boolean
+      jobs: Array<{ jobId: string; status: string }>
+    }
+
+    expect(response.status).toBe(200)
+    expect(payload.status).toBe('planned')
+    expect(payload.dryRun).toBe(true)
+    expect(payload.jobs.find(job => job.jobId === 'powens')?.status).toBe('pending')
+    expect(refreshCalls).toBe(0)
   })
 
   it('triggers an individual job in admin mode', async () => {

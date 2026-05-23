@@ -148,7 +148,9 @@ const wrapNewsProvider = ({
     let deduped = 0
     for (const raw of items) {
       try {
-        await db.insert(schema.signalItem).values(adaptNewsItemToSignalItem(raw, runId, ingestionRunId))
+        await db
+          .insert(schema.signalItem)
+          .values(adaptNewsItemToSignalItem(raw, runId, ingestionRunId))
         inserted += 1
       } catch {
         deduped += 1
@@ -279,12 +281,25 @@ const buildHistoryAdapter = ({ db }: { db: ApiDb }) => ({
       )
     return Number(row?.count ?? 0)
   },
-  createRunRecord: async (input: { runId: string; mode: 'dry_run' | 'live' }) => {
+  createRunRecord: async (input: {
+    runId: string
+    mode: 'dry_run' | 'live'
+    quotaOverride?: {
+      requested: boolean
+      confirmedRisk: boolean
+      reason: string | null
+    } | null
+  }) => {
     await db.insert(schema.freeFirehoseRun).values({
       runId: input.runId,
       requestedBy: 'admin',
       mode: input.mode,
       status: 'running',
+      overrideRequested: input.quotaOverride?.requested === true,
+      overrideReason: input.quotaOverride?.reason ?? null,
+      overrideConfirmedRisk: input.quotaOverride?.confirmedRisk === true,
+      overrideUsed:
+        input.quotaOverride?.requested === true && input.quotaOverride.confirmedRisk === true,
     })
   },
   finishRunRecord: async (input: {
@@ -316,9 +331,18 @@ const buildHistoryAdapter = ({ db }: { db: ApiDb }) => ({
 const runBodySchema = t.Object({
   dryRun: t.Optional(t.Boolean()),
   confirmation: t.Optional(t.Boolean()),
+  overrideRequested: t.Optional(t.Boolean()),
+  overrideReason: t.Optional(t.String({ maxLength: 500 })),
+  confirmedRisk: t.Optional(t.Boolean()),
 })
 
-type RunBody = { dryRun?: boolean; confirmation?: boolean }
+type RunBody = {
+  dryRun?: boolean
+  confirmation?: boolean
+  overrideRequested?: boolean
+  overrideReason?: string
+  confirmedRisk?: boolean
+}
 
 export const createFreeFirehoseAdminRoute = ({
   db,
@@ -405,6 +429,15 @@ export const createFreeFirehoseAdminRoute = ({
               runsLastWeek,
               wouldBeBlockedByCap: runsLastWeek >= env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK,
               requiresConfirmation: true,
+              adminOverrideAllowed: true,
+              estimatedCostUsd: 0,
+              budgetRemainingUsd: null,
+              warnings:
+                runsLastWeek >= env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK
+                  ? [
+                      'Weekly free-firehose cap is exceeded. Live admin override requires confirmation, confirmedRisk, and an audit reason is recommended.',
+                    ]
+                  : [],
               llmEnrichmentEnabled: false,
             }
           },
@@ -452,6 +485,15 @@ export const createFreeFirehoseAdminRoute = ({
                 requestId,
               }
             }
+            if (mode === 'live' && body.overrideRequested === true && body.confirmedRisk !== true) {
+              context.set.status = 412
+              return {
+                ok: false as const,
+                code: 'OVERRIDE_RISK_CONFIRMATION_REQUIRED' as const,
+                message: 'Free Firehose quota override requires explicit `confirmedRisk: true`.',
+                requestId,
+              }
+            }
 
             const runId = `firehose-${randomUUID()}`
             const startedAt = new Date()
@@ -478,7 +520,27 @@ export const createFreeFirehoseAdminRoute = ({
               history,
               maxRunsPerWeek: env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK,
               now,
+              quotaOverride:
+                mode === 'live' && body.overrideRequested === true
+                  ? {
+                      requested: true,
+                      confirmedRisk: body.confirmedRisk === true,
+                      reason: body.overrideReason?.trim() || null,
+                    }
+                  : null,
             })
+
+            if (outcome.quota.overrideUsed) {
+              logApiEvent({
+                level: 'warn',
+                msg: 'free_firehose_quota_override_used',
+                requestId,
+                runId,
+                runsLastWeek: outcome.quota.runsLastWeek,
+                weeklyCap: outcome.quota.maxRunsPerWeek,
+                overrideReason: outcome.quota.overrideReason,
+              })
+            }
 
             if (ingestionRunId !== null) {
               await db
@@ -513,6 +575,15 @@ export const createFreeFirehoseAdminRoute = ({
               providerBreakdown: outcome.providerBreakdown,
               durationMs: outcome.durationMs,
               estimatedMaxRecords: outcome.estimatedMaxRecords,
+              estimatedCostUsd: 0,
+              budgetRemainingUsd: null,
+              quota: outcome.quota,
+              warnings:
+                outcome.status === 'skipped_quota'
+                  ? [outcome.errorSummary ?? 'Weekly cap reached.']
+                  : outcome.quota.overrideUsed
+                    ? ['Weekly cap was exceeded and explicitly overridden by admin.']
+                    : [],
               errorSummary: outcome.errorSummary,
               ingestionRunId,
             }

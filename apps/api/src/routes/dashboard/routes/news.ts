@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { requireAdminOrInternalToken } from '../../../auth/guard'
+import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
 import { selectDashboardNewsDataset } from '../domain/dashboard-dataset-selector'
 import {
@@ -9,18 +10,9 @@ import {
   dashboardNewsQuerySchema,
 } from '../schemas'
 
-const toSafeNewsIngestionError = ({
-  error,
-  requestId,
-}: {
-  error: unknown
-  requestId: string
-}) => {
+const toSafeNewsIngestionError = ({ error, requestId }: { error: unknown; requestId: string }) => {
   const errorCode =
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    typeof error.code === 'string'
+    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
       ? error.code
       : error instanceof Error
         ? error.message
@@ -144,6 +136,7 @@ export const createNewsRoute = () =>
       '/news/ingest',
       async context => {
         const requestMeta = getRequestMeta(context)
+        const trigger = context.body?.trigger ?? 'manual'
 
         try {
           requireAdminOrInternalToken(context)
@@ -169,10 +162,19 @@ export const createNewsRoute = () =>
         }
 
         try {
+          logApiEvent({
+            level: 'info',
+            msg: 'dashboard_news_ingest_requested',
+            requestId: requestMeta.requestId,
+            trigger,
+            source: trigger === 'social_poll' ? 'social_scheduler' : 'news_ingest',
+          })
           const result = await dashboard.useCases.ingestNews({ requestId: requestMeta.requestId })
           return {
             ok: true,
             requestId: requestMeta.requestId,
+            trigger,
+            source: trigger === 'social_poll' ? 'social_scheduler' : 'news_ingest',
             ...result,
           }
         } catch (error) {

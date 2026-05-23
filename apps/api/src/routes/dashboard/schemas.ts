@@ -51,7 +51,9 @@ export const dashboardNewsQuerySchema = t.Object({
 })
 
 export const dashboardNewsIngestBodySchema = t.Object({
-  trigger: t.Optional(t.Union([t.Literal('manual'), t.Literal('scheduled')])),
+  trigger: t.Optional(
+    t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('social_poll')])
+  ),
 })
 
 export const dashboardNewsContextQuerySchema = t.Object({
@@ -294,9 +296,7 @@ export const dashboardAdvisorDecisionOutcomeCreateBodySchema = t.Object({
   deltaMetrics: t.Optional(
     t.Union([t.Record(t.String({ minLength: 1, maxLength: 80 }), t.Any()), t.Null()])
   ),
-  learningTags: t.Optional(
-    t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 32 })
-  ),
+  learningTags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 32 })),
   freeNote: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
 })
 

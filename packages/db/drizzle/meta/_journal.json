@@ -232,6 +232,13 @@
       "when": 1778800000000,
       "tag": "0032_x_twitter_ledger_and_free_firehose",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1779510000000,
+      "tag": "0033_daily_intelligence_foundation",
+      "breakpoints": true
     }
   ]
 }

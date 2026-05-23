@@ -544,6 +544,11 @@ Retour:
 - `mergedCount`
 - `dedupeDropCount`
 
+Body:
+
+- `trigger: "manual" | "scheduled" | "social_poll"`
+- `social_poll` est le contrat explicite du worker social scheduler. Il reutilise le pipeline news live existant, mais la reponse et les logs conservent `source: "social_scheduler"` pour diagnostiquer les runs sociaux sans les confondre avec le scheduler news general.
+
 En cas d'echec:
 
 - `503`

@@ -38,10 +38,7 @@ import {
   startDailyIntelligenceScheduler,
   triggerDailyIntelligenceRun,
 } from './daily-intelligence-scheduler'
-import {
-  startPostMortemScheduler,
-  triggerAdvisorPostMortemRun,
-} from './post-mortem-scheduler'
+import { startPostMortemScheduler, triggerAdvisorPostMortemRun } from './post-mortem-scheduler'
 import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
 import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
 import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
@@ -1491,13 +1488,19 @@ const startDailyIntelligenceRunScheduler = () => {
     externalIntegrationsSafeMode: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
     enabled: env.DAILY_INTELLIGENCE_ENABLED,
     cron: env.DAILY_INTELLIGENCE_CRON,
+    nightCron: env.DAILY_INTELLIGENCE_NIGHT_CRON,
+    morningCron: env.DAILY_INTELLIGENCE_MORNING_CRON,
     timezone: env.DAILY_INTELLIGENCE_TIMEZONE,
     marketOpenHour: env.DAILY_INTELLIGENCE_MARKET_OPEN_HOUR,
-    trigger: () =>
+    dryRunDefault: env.DAILY_INTELLIGENCE_DRY_RUN_DEFAULT,
+    trigger: ({ runKind, dryRun }) =>
       triggerDailyIntelligenceRun({
         redisClient: redisClient.client,
         apiInternalUrl: env.API_INTERNAL_URL,
         log: logWorkerEvent,
+        runKind,
+        dryRun,
+        lockTtlSeconds: env.DAILY_INTELLIGENCE_LOCK_TTL_SECONDS,
         ...(env.PRIVATE_ACCESS_TOKEN ? { privateAccessToken: env.PRIVATE_ACCESS_TOKEN } : {}),
       }),
     log: event =>
@@ -1624,9 +1627,7 @@ const consumeJobs = async () => {
           msg: 'worker processing external investments job',
           jobType: job.type,
           requestId: job.requestId ?? 'n/a',
-          ...(job.type === 'externalInvestments.syncProvider'
-            ? { provider: job.provider }
-            : {}),
+          ...(job.type === 'externalInvestments.syncProvider' ? { provider: job.provider } : {}),
           ...(job.type === 'externalInvestments.syncConnection'
             ? { provider: job.provider, connectionId: job.connectionId }
             : {}),

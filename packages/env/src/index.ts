@@ -694,6 +694,32 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    DAILY_INTELLIGENCE_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    DAILY_INTELLIGENCE_CRON: z.string().default('0 9 * * 1-5'),
+    DAILY_INTELLIGENCE_NIGHT_CRON: z.string().default('15 23 * * *'),
+    DAILY_INTELLIGENCE_MORNING_CRON: z.string().default('30 7 * * *'),
+    DAILY_INTELLIGENCE_TIMEZONE: z.string().default('Europe/Paris'),
+    DAILY_INTELLIGENCE_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30 * 60),
+    DAILY_INTELLIGENCE_MAX_DURATION_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60 * 60),
+    DAILY_INTELLIGENCE_DRY_RUN_DEFAULT: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     FRED_API_KEY: z.string().min(1).optional(),
     MARKET_DATA_ENABLED: z
       .string()
@@ -1105,8 +1131,28 @@ export const getWorkerEnv = () =>
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     DAILY_INTELLIGENCE_CRON: z.string().default('0 9 * * 1-5'),
+    DAILY_INTELLIGENCE_NIGHT_CRON: z.string().default('15 23 * * *'),
+    DAILY_INTELLIGENCE_MORNING_CRON: z.string().default('30 7 * * *'),
     DAILY_INTELLIGENCE_TIMEZONE: z.string().default('Europe/Paris'),
     DAILY_INTELLIGENCE_MARKET_OPEN_HOUR: z.coerce.number().int().min(0).max(23).default(9),
+    DAILY_INTELLIGENCE_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30 * 60),
+    DAILY_INTELLIGENCE_MAX_DURATION_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60 * 60),
+    DAILY_INTELLIGENCE_DRY_RUN_DEFAULT: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? false : toBooleanEnv(value))),
+    DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     // X daily previous-day sync — worker scheduler flags only. The actual call
     // and budget enforcement live in the API.
     X_DAILY_PREVIOUS_DAY_SYNC_ENABLED: z
@@ -1116,7 +1162,11 @@ export const getWorkerEnv = () =>
     X_DAILY_PREVIOUS_DAY_CRON: z.string().default('0 7 * * *'),
     X_DAILY_PREVIOUS_DAY_TIMEZONE: z.string().default('Europe/Paris'),
     X_DAILY_PREVIOUS_DAY_TRIGGER_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
-    X_DAILY_PREVIOUS_DAY_LOCK_TTL_SECONDS: z.coerce.number().int().positive().default(30 * 60),
+    X_DAILY_PREVIOUS_DAY_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(30 * 60),
     // PR7 — Advisor Post-Mortem worker scheduler. Off by default. The route + the LLM call
     // remain server-owned; the worker only sends an internal HTTP POST.
     AI_POST_MORTEM_AUTO_RUN_ENABLED: z
@@ -1125,11 +1175,7 @@ export const getWorkerEnv = () =>
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     AI_POST_MORTEM_CRON: z.string().default('0 7 * * *'),
     AI_POST_MORTEM_TIMEZONE: z.string().default('Europe/Paris'),
-    AI_POST_MORTEM_TRIGGER_TIMEOUT_MS: z.coerce
-      .number()
-      .int()
-      .positive()
-      .default(30_000),
+    AI_POST_MORTEM_TRIGGER_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     AI_POST_MORTEM_LOCK_TTL_SECONDS: z.coerce
       .number()
       .int()

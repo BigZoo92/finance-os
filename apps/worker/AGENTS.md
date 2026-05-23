@@ -24,6 +24,8 @@ Scope: `apps/worker/**`
 - Keep the worker's localhost-only `GET /health` and `GET /version` contract aligned with the shared system contract used by api and web.
 - Keep the optional market refresh scheduler (`src/market-refresh-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/markets/refresh` over `API_INTERNAL_URL`, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or raw provider payloads.
 - Keep the optional advisor daily scheduler (`src/advisor-daily-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/advisor/run-daily` over `API_INTERNAL_URL`, must use the internal token path when configured, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or prompt payloads. The current recommended posture keeps this scheduler disabled by env and relies on the admin manual mission.
+- Keep the Daily Intelligence scheduler (`src/daily-intelligence-scheduler.ts`) as the single worker entrypoint for the global `/ops/refresh/all` orchestration. It owns the night/morning cron decision and Redis trigger lock only; job orchestration, provider calls, DB writes, dry-run, and run status remain API-owned.
+- Keep the social signal scheduler contract aligned with `POST /dashboard/news/ingest`: `trigger: "social_poll"` is intentional and must remain accepted by the API. Social scheduler failures must stay isolated from other worker schedulers.
 
 ## Verify
 

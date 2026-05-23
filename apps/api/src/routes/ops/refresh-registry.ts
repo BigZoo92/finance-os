@@ -1,4 +1,6 @@
 import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
+import { randomUUID } from 'node:crypto'
+import { logApiEvent } from '../../observability/logger'
 import type { DashboardAdvisorManualOperationResponse } from '../dashboard/advisor-contract'
 import type { DashboardRouteRuntime } from '../dashboard/types'
 
@@ -20,6 +22,8 @@ import type { DashboardRouteRuntime } from '../dashboard/types'
  *   - cancelled: explicitly cancelled via /ops/refresh/runs/:runId/cancel.
  */
 export type RefreshJobStatus =
+  | 'pending'
+  | 'disabled'
   | 'queued'
   | 'running'
   | 'success'
@@ -36,6 +40,7 @@ export type RefreshJobStatus =
 export const FINAL_REFRESH_STATUSES: readonly RefreshJobStatus[] = [
   'success',
   'partial',
+  'disabled',
   'failed',
   'timed_out',
   'cancelled',
@@ -48,11 +53,9 @@ export const FINAL_REFRESH_STATUSES: readonly RefreshJobStatus[] = [
 
 export const isFinalRefreshStatus = (status: RefreshJobStatus): boolean =>
   FINAL_REFRESH_STATUSES.includes(status)
-export type RefreshTriggerSource =
-  | 'cron'
-  | 'manual-global'
-  | 'manual-individual'
-  | 'internal'
+export type RefreshTriggerSource = 'cron' | 'manual-global' | 'manual-individual' | 'internal'
+
+export type RefreshRunKind = 'night' | 'morning' | 'manual' | 'dry_run'
 
 export type RefreshJobDomain =
   | 'banking'
@@ -87,8 +90,31 @@ export type RefreshJobRunResult = {
   startedAt: string
   finishedAt: string
   durationMs: number
+  recordsRead: number | null
+  recordsWritten: number | null
+  errorCode: string | null
+  errorMessage: string | null
+  retryCount: number
   message: string | null
   details: Record<string, unknown> | null
+}
+
+export type RefreshRunExecutionResponse = {
+  ok: boolean
+  requestId: string
+  runId: string
+  runKind: RefreshRunKind
+  triggerSource: RefreshTriggerSource
+  dryRun: boolean
+  status: 'planned' | 'success' | 'partial' | 'failed'
+  startedAt: string
+  finishedAt: string
+  durationMs: number
+  jobs: RefreshJobRunResult[]
+  failedJobs: string[]
+  disabledJobs: string[]
+  operation: DashboardAdvisorManualOperationResponse | null
+  warning: string | null
 }
 
 export type RefreshStatus = {
@@ -97,13 +123,17 @@ export type RefreshStatus = {
   jobs: RefreshJobDefinition[]
   latestRun: DashboardAdvisorManualOperationResponse | null
   history: DashboardAdvisorManualOperationResponse[]
+  latestTopologicalRun: RefreshRunExecutionResponse | null
+  topologicalHistory: RefreshRunExecutionResponse[]
 }
 
 const nowIso = () => new Date().toISOString()
 
 const toSafeErrorMessage = (error: unknown) => {
   const raw = error instanceof Error ? error.message : String(error)
-  return raw.replace(/(token|secret|password|api[_-]?key|code)=([^&\s]+)/gi, '$1=[redacted]').slice(0, 500)
+  return raw
+    .replace(/(token|secret|password|api[_-]?key|code)=([^&\s]+)/gi, '$1=[redacted]')
+    .slice(0, 500)
 }
 
 const createResult = ({
@@ -114,6 +144,11 @@ const createResult = ({
   message,
   details,
   runId = null,
+  recordsRead = null,
+  recordsWritten = null,
+  errorCode = null,
+  errorMessage = null,
+  retryCount = 0,
 }: {
   jobId: string
   status: RefreshJobStatus
@@ -122,6 +157,11 @@ const createResult = ({
   message: string | null
   details?: Record<string, unknown>
   runId?: string | null
+  recordsRead?: number | null
+  recordsWritten?: number | null
+  errorCode?: string | null
+  errorMessage?: string | null
+  retryCount?: number
 }): RefreshJobRunResult => ({
   jobId,
   status,
@@ -130,6 +170,11 @@ const createResult = ({
   startedAt: new Date(startedAtMs).toISOString(),
   finishedAt: nowIso(),
   durationMs: Date.now() - startedAtMs,
+  recordsRead,
+  recordsWritten,
+  errorCode,
+  errorMessage,
+  retryCount,
   message,
   details: details ?? null,
 })
@@ -184,7 +229,7 @@ export const evaluatePreflight = ({
 }): { status: RefreshJobStatus; message: string; details: Record<string, unknown> } | null => {
   if (!job.enabled) {
     return {
-      status: 'skipped_disabled',
+      status: 'disabled',
       message: 'Job disabled by configuration.',
       details: { reason: 'flag_disabled' },
     }
@@ -235,6 +280,7 @@ export const createRefreshJobRegistry = ({
     socialEnabled: boolean
   }
 }) => {
+  const topologicalHistory: RefreshRunExecutionResponse[] = []
   const jobs: RefreshJobDefinition[] = [
     {
       id: 'powens',
@@ -361,7 +407,12 @@ export const createRefreshJobRegistry = ({
       label: 'AI advisor context & conseil',
       description: 'Construit le contexte compact puis lance le daily brief Advisor.',
       domain: 'advisor',
-      dependencies: ['transactions-categorization', 'news-finance', 'market-data', 'external-investments'],
+      dependencies: [
+        'transactions-categorization',
+        'news-finance',
+        'market-data',
+        'external-investments',
+      ],
       enabled: config.advisorEnabled,
       manualTriggerAllowed: true,
       scheduleGroup: 'daily-intelligence',
@@ -372,11 +423,7 @@ export const createRefreshJobRegistry = ({
 
   const getJobs = () => jobs
 
-  const getExecutionPlan = ({
-    includeDisabled = false,
-  }: {
-    includeDisabled?: boolean
-  } = {}) => {
+  const getExecutionPlan = ({ includeDisabled = false }: { includeDisabled?: boolean } = {}) => {
     const byId = new Map(jobs.map(job => [job.id, job]))
     const visited = new Set<string>()
     const visiting = new Set<string>()
@@ -463,15 +510,17 @@ export const createRefreshJobRegistry = ({
     jobId,
     requestId,
     triggerSource,
+    failedDependencyId = null,
   }: {
     jobId: string
     requestId: string
     triggerSource: RefreshTriggerSource
+    failedDependencyId?: string | null
   }): Promise<RefreshJobRunResult> => {
     const job = requireJob(jobId)
     const startedAtMs = Date.now()
 
-    const preflight = evaluatePreflight({ job, triggerSource })
+    const preflight = evaluatePreflight({ job, triggerSource, failedDependencyId })
     if (preflight) {
       return createResult({
         jobId,
@@ -498,11 +547,17 @@ export const createRefreshJobRegistry = ({
       if (jobId === 'transactions-categorization') {
         const status = await runtime.useCases.runDerivedRecompute({
           requestId,
-          triggerSource: triggerSource === 'internal' || triggerSource === 'cron' ? 'internal' : 'admin',
+          triggerSource:
+            triggerSource === 'internal' || triggerSource === 'cron' ? 'internal' : 'admin',
         })
         return createResult({
           jobId,
-          status: status.state === 'failed' ? 'failed' : status.state === 'running' ? 'running' : 'success',
+          status:
+            status.state === 'failed'
+              ? 'failed'
+              : status.state === 'running'
+                ? 'running'
+                : 'success',
           requestId,
           startedAtMs,
           message: `Derived recompute ${status.state}.`,
@@ -526,13 +581,17 @@ export const createRefreshJobRegistry = ({
         const bundle = runtime.useCases.generateExternalInvestmentContextBundle
           ? await runtime.useCases.generateExternalInvestmentContextBundle({ requestId })
           : null
-        const partial = [ibkr, binance].some(item => item.status === 'partial' || item.status === 'failed')
+        const partial = [ibkr, binance].some(
+          item => item.status === 'partial' || item.status === 'failed'
+        )
         return createResult({
           jobId,
           status: partial ? 'partial' : 'queued',
           requestId,
           startedAtMs,
-          message: partial ? 'External investment sync queued with degradation.' : 'External investment sync queued.',
+          message: partial
+            ? 'External investment sync queued with degradation.'
+            : 'External investment sync queued.',
           details: { providers: [ibkr, binance], bundleGenerated: Boolean(bundle) },
         })
       }
@@ -580,7 +639,9 @@ export const createRefreshJobRegistry = ({
         const result = await runtime.useCases.refreshMarkets({ requestId })
         return createResult({
           jobId,
-          status: result.providerResults.some(item => item.status === 'failed') ? 'partial' : 'success',
+          status: result.providerResults.some(item => item.status === 'failed')
+            ? 'partial'
+            : 'success',
           requestId,
           startedAtMs,
           message: 'Market data refreshed.',
@@ -620,7 +681,12 @@ export const createRefreshJobRegistry = ({
 
         return createResult({
           jobId,
-          status: result.run.status === 'degraded' ? 'partial' : result.run.status === 'failed' ? 'failed' : 'success',
+          status:
+            result.run.status === 'degraded'
+              ? 'partial'
+              : result.run.status === 'failed'
+                ? 'failed'
+                : 'success',
           requestId,
           startedAtMs,
           runId: String(result.run.id),
@@ -655,9 +721,9 @@ export const createRefreshJobRegistry = ({
         requestId,
         startedAtMs,
         message: toSafeErrorMessage(error),
-        ...(isTimeout
-          ? { details: { reason: 'hard_timeout', timeoutMs: job.timeoutMs } }
-          : {}),
+        errorCode: isTimeout ? 'JOB_HARD_TIMEOUT' : 'JOB_PARTIAL_FAILURE',
+        errorMessage: toSafeErrorMessage(error),
+        ...(isTimeout ? { details: { reason: 'hard_timeout', timeoutMs: job.timeoutMs } } : {}),
       })
     }
   }
@@ -665,19 +731,178 @@ export const createRefreshJobRegistry = ({
   const runAll = async ({
     requestId,
     triggerSource,
+    runKind,
+    dryRun = false,
   }: {
     requestId: string
     triggerSource: RefreshTriggerSource
+    runKind: RefreshRunKind
+    dryRun?: boolean
   }) => {
-    if (!runtime.useCases.runAdvisorManualRefreshAndAnalysis) {
-      throw new Error('REFRESH_ORCHESTRATOR_UNAVAILABLE')
+    const runId = `refresh-${randomUUID()}`
+    const startedAtMs = Date.now()
+    const startedAt = new Date(startedAtMs).toISOString()
+    const plan = getExecutionPlan({ includeDisabled: true })
+    const results: RefreshJobRunResult[] = []
+
+    logApiEvent({
+      level: 'info',
+      msg: 'ops_refresh_topological_run_started',
+      requestId,
+      runId,
+      runKind,
+      triggerSource,
+      dryRun,
+      jobCount: plan.length,
+    })
+
+    if (dryRun) {
+      for (const job of plan) {
+        results.push(
+          createResult({
+            jobId: job.id,
+            status: job.enabled ? 'pending' : 'disabled',
+            requestId,
+            startedAtMs,
+            message: job.enabled
+              ? 'Dry-run only: job would be scheduled.'
+              : 'Dry-run only: job is disabled by configuration.',
+            details: {
+              dependencies: job.dependencies,
+              scheduleGroup: job.scheduleGroup,
+              timeoutMs: job.timeoutMs,
+            },
+            runId,
+          })
+        )
+      }
+      const finishedAt = nowIso()
+      const response: RefreshRunExecutionResponse = {
+        ok: true,
+        requestId,
+        runId,
+        runKind: 'dry_run',
+        triggerSource,
+        dryRun: true,
+        status: 'planned',
+        startedAt,
+        finishedAt,
+        durationMs: Date.now() - startedAtMs,
+        jobs: results,
+        failedJobs: [],
+        disabledJobs: results.filter(item => item.status === 'disabled').map(item => item.jobId),
+        operation: null,
+        warning: null,
+      }
+      topologicalHistory.unshift(response)
+      topologicalHistory.splice(10)
+      return response
     }
 
-    return runtime.useCases.runAdvisorManualRefreshAndAnalysis({
-      mode: 'admin',
+    const resultByJobId = new Map<string, RefreshJobRunResult>()
+    const blockingStatuses = new Set<RefreshJobStatus>([
+      'failed',
+      'timed_out',
+      'cancelled',
+      'skipped_missing_config',
+      'skipped_budget',
+      'skipped_dependency_failed',
+      'disabled',
+    ])
+
+    for (const job of plan) {
+      const failedDependencyId =
+        job.dependencies.find(dependencyId => {
+          const dependencyResult = resultByJobId.get(dependencyId)
+          return dependencyResult ? blockingStatuses.has(dependencyResult.status) : false
+        }) ?? null
+
+      logApiEvent({
+        level: 'info',
+        msg: 'ops_refresh_job_started',
+        requestId,
+        runId,
+        jobId: job.id,
+        runKind,
+        phase: 'execute',
+        failedDependencyId,
+      })
+      const result = await runJob({
+        jobId: job.id,
+        requestId,
+        triggerSource,
+        failedDependencyId,
+      })
+      results.push(result)
+      resultByJobId.set(job.id, result)
+      logApiEvent({
+        level:
+          result.status === 'failed' ||
+          result.status === 'timed_out' ||
+          result.status === 'skipped_dependency_failed'
+            ? 'error'
+            : result.status === 'partial' || result.status === 'disabled'
+              ? 'warn'
+              : 'info',
+        msg: 'ops_refresh_job_finished',
+        requestId,
+        runId,
+        jobId: job.id,
+        runKind,
+        phase: 'execute',
+        status: result.status,
+        durationMs: result.durationMs,
+      })
+    }
+
+    const failedJobs = results
+      .filter(item => item.status === 'failed' || item.status === 'timed_out')
+      .map(item => item.jobId)
+    const disabledJobs = results.filter(item => item.status === 'disabled').map(item => item.jobId)
+    const degraded = results.some(item =>
+      ['partial', 'skipped_dependency_failed', 'skipped_missing_config', 'skipped_budget'].includes(
+        item.status
+      )
+    )
+    const finishedAt = nowIso()
+    const response: RefreshRunExecutionResponse = {
+      ok: failedJobs.length === 0,
       requestId,
+      runId,
+      runKind,
       triggerSource,
+      dryRun: false,
+      status:
+        failedJobs.length > 0
+          ? 'failed'
+          : degraded || disabledJobs.length > 0
+            ? 'partial'
+            : 'success',
+      startedAt,
+      finishedAt,
+      durationMs: Date.now() - startedAtMs,
+      jobs: results,
+      failedJobs,
+      disabledJobs,
+      operation: null,
+      warning:
+        'Topological run executed through refresh-registry. Legacy manual Advisor operation history remains exposed separately as latestRun/history.',
+    }
+    topologicalHistory.unshift(response)
+    topologicalHistory.splice(10)
+    logApiEvent({
+      level:
+        response.status === 'failed' ? 'error' : response.status === 'partial' ? 'warn' : 'info',
+      msg: 'ops_refresh_topological_run_finished',
+      requestId,
+      runId,
+      runKind,
+      status: response.status,
+      durationMs: response.durationMs,
+      failedJobs,
+      disabledJobs,
     })
+    return response
   }
 
   const getStatus = async ({
@@ -694,6 +919,8 @@ export const createRefreshJobRegistry = ({
         jobs,
         latestRun: null,
         history: [],
+        latestTopologicalRun: null,
+        topologicalHistory: [],
       }
     }
 
@@ -712,6 +939,8 @@ export const createRefreshJobRegistry = ({
       jobs,
       latestRun,
       history: history.length > 0 ? history : latestRun ? [latestRun] : [],
+      latestTopologicalRun: topologicalHistory[0] ?? null,
+      topologicalHistory,
     }
   }
 
