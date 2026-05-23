@@ -19,11 +19,26 @@ DAILY_INTELLIGENCE_MANUAL_TRIGGER_ENABLED=true
 
 Keep `DAILY_INTELLIGENCE_ENABLED=false` until the deployment has:
 
-1. applied migration `0033_daily_intelligence_foundation.sql`;
+1. applied migrations `0033_daily_intelligence_foundation.sql` and `0034_investment_strategy_brain.sql`;
 2. passed `GET /ops/scheduler/status`;
-3. passed `POST /ops/refresh/all` with `{"trigger":"scheduled","runKind":"night","dryRun":true}`;
+3. passed `POST /ops/refresh/all` with `{"trigger":"scheduled","runKind":"night","dryRun":true}` and verified `investment-learning-review` then `investment-action-plan`;
 4. passed `POST /dashboard/news/ingest` with `{"trigger":"social_poll"}`.
+5. passed `POST /dashboard/advisor/investment-plan/generate` with `{"trigger":"internal","dryRun":true}` using an admin session or `x-internal-token`.
 
 Only then set `DAILY_INTELLIGENCE_ENABLED=true` on the worker.
 
 Never paste provider secrets into worker-only scheduler variables.
+
+## Investment Strategy Brain
+
+No new Dokploy env variable is required for the Investment Strategy Brain in this pass.
+
+It reuses:
+
+- `AI_ADVISOR_ENABLED`
+- `DAILY_INTELLIGENCE_ENABLED`
+- `KNOWLEDGE_SERVICE_ENABLED`
+- `ADVISOR_GRAPH_INGEST_ENABLED`
+- existing market-data and external-investment provider envs
+
+The graph write path remains fail-soft. Keep `ADVISOR_GRAPH_INGEST_ENABLED=false` unless the knowledge service is ready and you explicitly want advisory memory events written to the graph.

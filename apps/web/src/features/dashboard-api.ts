@@ -19,6 +19,12 @@ import type {
   DashboardAdvisorSignalsResponse,
   DashboardAdvisorSpendAnalyticsResponse,
   DashboardDerivedRecomputeActionError,
+  DashboardInvestmentHypothesesResponse,
+  DashboardInvestmentLessonsResponse,
+  DashboardInvestmentPlanResponse,
+  DashboardInvestmentScorecardResponse,
+  DashboardInvestmentStatusResponse,
+  DashboardInvestmentStrategyResponse,
   DashboardManualAssetResponse,
   DashboardManualAssetsResponse,
   DashboardNewsResponse,
@@ -899,6 +905,49 @@ export const fetchDashboardAdvisorBehaviorAnalytics = async (windowDays?: number
       ? `/dashboard/advisor/behavior-analytics?windowDays=${windowDays}`
       : '/dashboard/advisor/behavior-analytics'
   return apiFetch<DashboardAdvisorBehaviorAnalyticsResponse>(path)
+}
+
+export const fetchDashboardInvestmentStrategy = async () => {
+  return apiFetch<DashboardInvestmentStrategyResponse>('/dashboard/advisor/investment-strategy')
+}
+
+export const fetchDashboardInvestmentPlanLatest = async () => {
+  return apiFetch<DashboardInvestmentPlanResponse>('/dashboard/advisor/investment-plan/latest')
+}
+
+export const fetchDashboardInvestmentStatus = async () => {
+  return apiFetch<DashboardInvestmentStatusResponse>('/dashboard/advisor/investment-status')
+}
+
+export const fetchDashboardInvestmentHypotheses = async () => {
+  return apiFetch<DashboardInvestmentHypothesesResponse>(
+    '/dashboard/advisor/investment-hypotheses'
+  )
+}
+
+export const fetchDashboardInvestmentScorecard = async () => {
+  return apiFetch<DashboardInvestmentScorecardResponse>(
+    '/dashboard/advisor/investment-learning/scorecard'
+  )
+}
+
+export const fetchDashboardInvestmentLessons = async () => {
+  return apiFetch<DashboardInvestmentLessonsResponse>(
+    '/dashboard/advisor/investment-learning/lessons'
+  )
+}
+
+export const postDashboardInvestmentPlanGenerate = async (dryRun = false) => {
+  return apiFetch<DashboardInvestmentPlanResponse>('/dashboard/advisor/investment-plan/generate', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      trigger: 'manual',
+      dryRun,
+    }),
+  })
 }
 
 export const getDemoDashboardAdvisorBehaviorAnalytics = (

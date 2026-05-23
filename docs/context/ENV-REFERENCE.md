@@ -1,6 +1,6 @@
 # Finance-OS -- Variables d'environnement & Feature Flags
 
-> **Derniere mise a jour** : 2026-05-03
+> **Derniere mise a jour** : 2026-05-23
 > **Maintenu par** : agents (Claude, Codex) + humain
 > Documenter ici toute nouvelle variable ajoutee.
 
@@ -362,6 +362,7 @@ Notes:
 | `AI_ADVISOR_ENABLED` | `true` | Dokploy, `.env` | API, Worker | Non | Active le sous-systeme advisor |
 | `AI_ADVISOR_ADMIN_ONLY` | `false` | Dokploy, `.env` | API | Non | Restreint les surfaces advisor aux sessions admin. Mettre `true` pour le mode manuel admin-only recommande |
 | `AI_ADVISOR_FORCE_LOCAL_ONLY` | `false` | Dokploy, `.env` | API, Worker | Non | Coupe les appels LLM et force le chemin deterministe |
+| Investment Strategy Brain | -- | -- | API, Web, Worker | Non | Aucun nouveau flag dedie dans cette passe. Le moteur utilise `AI_ADVISOR_ENABLED`, `DAILY_INTELLIGENCE_ENABLED`, `KNOWLEDGE_SERVICE_ENABLED` et `ADVISOR_GRAPH_INGEST_ENABLED`. Les routes admin/internal ont `dryRun`; les garanties no-auto-trade sont code/data, pas un flag. |
 | `ADVISOR_X_SIGNALS_MODE` | `shadow` | Dokploy, `.env` | API, Worker | Non | Kill-switch des signaux X advisor: `off` desactive, `shadow` score+log sans injection prompt, `enforced` autorise inclusion bornee |
 | `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED` | `true` | Dokploy, `.env` | API, Worker | Non | Kill-switch du Q&A educatif: quand `false`, `/dashboard/advisor/knowledge-answer` reste browse-only et `/dashboard/advisor/knowledge-topics` reste disponible |
 | `KNOWLEDGE_SERVICE_ENABLED` | `false` | Dokploy, `.env` | API | Non | Autorise `apps/api` a appeler le service interne GraphRAG. Demo/UI gardent des fixtures si `false` |

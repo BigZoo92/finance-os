@@ -232,6 +232,43 @@ export const dashboardAdvisorRunBodySchema = t.Object({
   ),
 })
 
+export const dashboardInvestmentStrategyBodySchema = t.Object({
+  description: t.Optional(t.String({ minLength: 1, maxLength: 2000 })),
+  horizonYears: t.Optional(t.Numeric({ minimum: 1, maximum: 80 })),
+  riskProfile: t.Optional(
+    t.Union([
+      t.Literal('conservative'),
+      t.Literal('balanced'),
+      t.Literal('growth'),
+      t.Literal('aggressive'),
+      t.Literal('custom'),
+    ])
+  ),
+  monthlyContributionTarget: t.Optional(
+    t.Union([t.Numeric({ minimum: 0, maximum: 1000000 }), t.Null()])
+  ),
+  rebalanceThresholdPct: t.Optional(t.Numeric({ minimum: 1, maximum: 50 })),
+})
+
+export const dashboardInvestmentActionPlanGenerateBodySchema = t.Object({
+  trigger: t.Optional(
+    t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('internal')])
+  ),
+  dryRun: t.Optional(t.Boolean()),
+})
+
+export const dashboardInvestmentHypothesesReviewBodySchema = t.Object({
+  trigger: t.Optional(
+    t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('internal')])
+  ),
+  dryRun: t.Optional(t.Boolean()),
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200 })),
+})
+
+export const dashboardInvestmentLessonParamsSchema = t.Object({
+  lessonId: t.Numeric({ minimum: 1 }),
+})
+
 export const dashboardAdvisorPostMortemParamsSchema = t.Object({
   postMortemId: t.Numeric({ minimum: 1 }),
 })

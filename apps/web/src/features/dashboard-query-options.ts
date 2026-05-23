@@ -15,6 +15,12 @@ import {
   fetchDashboardAdvisorRuns,
   fetchDashboardAdvisorSignals,
   fetchDashboardAdvisorSpend,
+  fetchDashboardInvestmentHypotheses,
+  fetchDashboardInvestmentLessons,
+  fetchDashboardInvestmentPlanLatest,
+  fetchDashboardInvestmentScorecard,
+  fetchDashboardInvestmentStatus,
+  fetchDashboardInvestmentStrategy,
   fetchDashboardManualAssets,
   fetchTradingLabHypotheses,
   fetchTradingLabStrategyScorecard,
@@ -136,6 +142,12 @@ export const dashboardQueryKeys = {
     windowDays !== undefined
       ? ([...dashboardQueryKeys.all, 'advisor-behavior-analytics', windowDays] as const)
       : ([...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const),
+  investmentStrategy: () => [...dashboardQueryKeys.all, 'investment-strategy'] as const,
+  investmentPlanLatest: () => [...dashboardQueryKeys.all, 'investment-plan-latest'] as const,
+  investmentStatus: () => [...dashboardQueryKeys.all, 'investment-status'] as const,
+  investmentHypotheses: () => [...dashboardQueryKeys.all, 'investment-hypotheses'] as const,
+  investmentScorecard: () => [...dashboardQueryKeys.all, 'investment-scorecard'] as const,
+  investmentLessons: () => [...dashboardQueryKeys.all, 'investment-lessons'] as const,
   manualAssets: () => [...dashboardQueryKeys.all, 'manual-assets'] as const,
   // PR5 — Learning Loop surface query keys.
   advisorJournal: (params?: {
@@ -536,6 +548,78 @@ export const dashboardAdvisorBehaviorAnalyticsQueryOptionsWithMode = ({
     enabled: mode !== undefined && learningLoopEnabled,
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
     retry: 1,
+  })
+
+export const dashboardInvestmentStrategyQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.investmentStrategy(),
+    queryFn: fetchDashboardInvestmentStrategy,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+export const dashboardInvestmentPlanLatestQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.investmentPlanLatest(),
+    queryFn: fetchDashboardInvestmentPlanLatest,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
+  })
+
+export const dashboardInvestmentStatusQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.investmentStatus(),
+    queryFn: fetchDashboardInvestmentStatus,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
+  })
+
+export const dashboardInvestmentHypothesesQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.investmentHypotheses(),
+    queryFn: fetchDashboardInvestmentHypotheses,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+export const dashboardInvestmentScorecardQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.investmentScorecard(),
+    queryFn: fetchDashboardInvestmentScorecard,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+export const dashboardInvestmentLessonsQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.investmentLessons(),
+    queryFn: fetchDashboardInvestmentLessons,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
 export const dashboardManualAssetsQueryOptionsWithMode = ({

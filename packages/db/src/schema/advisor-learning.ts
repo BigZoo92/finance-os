@@ -224,13 +224,22 @@ export const advisorMemoryEvent = pgTable(
     eventType: text('event_type')
       .notNull()
       .$type<
+        | 'action_plan_created'
+        | 'recommendation_created'
         | 'hypothesis_created'
+        | 'hypothesis_review_due'
+        | 'outcome_success'
+        | 'outcome_failure'
+        | 'outcome_mixed'
         | 'hypothesis_reviewed'
         | 'hypothesis_success'
         | 'hypothesis_failure'
         | 'post_mortem_created'
+        | 'strategy_lesson_candidate_created'
         | 'strategy_lesson_learned'
         | 'data_quality_issue_detected'
+        | 'provider_stale_detected'
+        | 'risk_limit_triggered'
         | 'pricing_issue_detected'
       >(),
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),

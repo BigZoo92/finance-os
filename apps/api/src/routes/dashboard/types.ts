@@ -9,6 +9,11 @@ import type {
 } from './domain/advisor/v2/committee-types'
 import type { AdvisorReplayResponse } from './domain/advisor/replay/replay-types'
 import type { AdvisorFineTuningReadinessResponse } from './domain/advisor/fine-tuning/fine-tuning-types'
+import type {
+  GenerateActionPlanInput,
+  InvestmentStrategyUpdateInput,
+  ReviewDueInput,
+} from './domain/advisor/investment-strategy-use-cases'
 import type { DataQualityResponse } from './domain/data-quality/data-quality-types'
 import type {
   DashboardAdvisorAssumptionsResponse,
@@ -1469,6 +1474,47 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource?: string
   }) => Promise<DashboardAdvisorPostMortemRunResponse>
+  getInvestmentStrategy?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  updateInvestmentStrategy?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    input: InvestmentStrategyUpdateInput
+  }) => Promise<unknown>
+  generateInvestmentPlan?: (input: GenerateActionPlanInput) => Promise<unknown>
+  latestInvestmentPlan?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  listInvestmentHypotheses?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  listDueInvestmentHypotheses?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  reviewDueInvestmentHypotheses?: (input: ReviewDueInput) => Promise<unknown>
+  getInvestmentLearningScorecard?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  listInvestmentStrategyLessons?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  updateInvestmentStrategyLessonStatus?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    lessonId: number
+    status: 'approved' | 'rejected'
+  }) => Promise<unknown>
+  getInvestmentStatus?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
   listAdvisorDecisionJournal?: (input: {
     mode: 'demo' | 'admin'
     requestId: string

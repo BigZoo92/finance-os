@@ -852,6 +852,319 @@ export type DashboardAdvisorSignalsResponse = {
   }
 }
 
+export type InvestmentBucketKey = 'core' | 'growth' | 'asymmetric'
+export type InvestmentRiskLevel = 'low' | 'medium' | 'high' | 'very_high'
+export type InvestmentAccountType = 'pea' | 'brokerage' | 'crypto' | 'cash' | 'unknown'
+export type InvestmentAction =
+  | 'buy'
+  | 'hold'
+  | 'watch'
+  | 'avoid'
+  | 'rebalance'
+  | 'contribute_cash'
+  | 'insufficient_data'
+
+export type DashboardInvestmentStrategyProfile = {
+  id: number
+  name: string
+  version: string
+  status: 'active' | 'draft' | 'archived'
+  description: string
+  riskProfile: 'conservative' | 'balanced' | 'growth' | 'aggressive' | 'custom'
+  horizonYears: number
+  baseCurrency: string
+  monthlyContributionTarget: number | null
+  rebalanceThresholdPct: number
+  reviewFrequency: string
+  noAutoTrade: boolean
+  humanValidationRequired: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardInvestmentStrategyBucket = {
+  id: number
+  strategyId: number
+  bucketKey: InvestmentBucketKey
+  targetPct: number
+  minPct: number
+  maxPct: number
+  riskLevel: InvestmentRiskLevel
+  description: string
+  defaultHorizon: string
+  rules: Record<string, unknown>
+}
+
+export type DashboardInvestmentAccountPolicy = {
+  id: number
+  strategyId: number
+  accountId: string | null
+  provider: string
+  accountType: InvestmentAccountType
+  label: string
+  allowedBuckets: InvestmentBucketKey[]
+  preferredBucket: InvestmentBucketKey | null
+  maxAllocationPct: number
+  maxSingleAssetPct: number
+  minOrderAmount: number | null
+  tradingCurrency: string
+  taxWrapper: string | null
+  eligibilityRules: Record<string, unknown>
+  restrictedAssets: string[]
+  humanReadablePolicy: string
+  noAutoTrade: boolean
+  humanValidationRequired: boolean
+}
+
+export type DashboardInvestmentCandidate = {
+  id: number
+  symbol: string
+  name: string
+  assetClass: string
+  bucket: InvestmentBucketKey
+  accountTypesAllowed: InvestmentAccountType[]
+  providerSymbols: Record<string, string>
+  isin: string | null
+  exchange: string | null
+  currency: string
+  eligibilityStatus: 'approved' | 'candidate_needs_review' | 'rejected' | 'unknown'
+  peaEligibilityStatus: 'eligible' | 'ineligible' | 'unknown' | 'not_applicable'
+  riskLevel: InvestmentRiskLevel
+  liquidityScore: number | null
+  notes: string | null
+  source: string
+}
+
+export type DashboardInvestmentPriceFreshness = {
+  provider: string | null
+  sourceType: string | null
+  marketTimestamp: string | null
+  fetchedAt: string | null
+  delaySeconds: number | null
+  ageSeconds: number | null
+  isStale: boolean
+  confidence: number
+  currency: string | null
+  price: number | null
+  staleReason: string | null
+  providerHealth: string | null
+  fallbackReason: string | null
+}
+
+export type DashboardInvestmentPlanItem = {
+  id?: number
+  accountPolicyId?: number | null
+  accountLabel: string
+  accountType: InvestmentAccountType
+  bucket: InvestmentBucketKey
+  symbol: string | null
+  assetName: string | null
+  action: InvestmentAction
+  amountValue: number | string | null
+  amountCurrency: string
+  targetWeightPct: number | null
+  currentWeightPct: number | null
+  confidence: number
+  riskLevel: InvestmentRiskLevel
+  horizon: string
+  thesis: string
+  argumentsFor?: string[]
+  argumentsAgainst?: string[]
+  argumentsForJson?: string[]
+  argumentsAgainstJson?: string[]
+  invalidationCriteria?: string[]
+  invalidationCriteriaJson?: string[]
+  priceSnapshotId: number | null
+  valuationSnapshotId?: number | null
+  dataFreshness?: DashboardInvestmentPriceFreshness
+  dataFreshnessJson?: DashboardInvestmentPriceFreshness | Record<string, unknown>
+  humanValidationRequired: boolean
+  noAutoTrade: boolean
+  createsHypothesis: boolean
+  createdHypothesisId?: number | null
+  createdAt?: string
+  score?: number
+}
+
+export type DashboardInvestmentDrift = {
+  bucket: InvestmentBucketKey
+  targetPct: number
+  actualPct: number
+  driftPct: number
+  severity: 'ok' | 'watch' | 'alert' | 'hard_limit'
+  recommendedContribution: number | null
+  recommendedAction: string
+}
+
+export type DashboardInvestmentDataQuality = {
+  status: 'ready' | 'degraded' | 'insufficient_data'
+  confidence: number
+  unknownValue: number
+  unknownPositionCount: number
+  stalePositionCount: number
+  missingPriceSymbols: string[]
+  stalePriceSymbols: string[]
+  providerWarnings: string[]
+  fxWarnings: string[]
+  graphWarnings: string[]
+}
+
+export type DashboardInvestmentAllocation = {
+  id?: number
+  strategyId: number
+  snapshotAt: string
+  baseCurrency: string
+  totalValue: number
+  coreValue: number
+  growthValue: number
+  asymmetricValue: number
+  cashValue: number
+  unknownValue: number
+  corePct: number
+  growthPct: number
+  asymmetricPct: number
+  drift: DashboardInvestmentDrift[]
+  dataQuality: DashboardInvestmentDataQuality
+}
+
+export type DashboardInvestmentActionPlan = {
+  id: number | null
+  strategyId: number
+  generatedAt: string
+  status: 'active' | 'draft' | 'superseded' | 'archived'
+  summary: string
+  globalRisk: InvestmentRiskLevel
+  globalConfidence: number
+  dataQualityStatus: DashboardInvestmentDataQuality['status']
+  noAutoTrade: boolean
+  humanValidationRequired: boolean
+  topAction?: DashboardInvestmentPlanItem | null
+  topActionId?: number | null
+  items: DashboardInvestmentPlanItem[]
+  allocation?: DashboardInvestmentAllocation
+  contribution?: Array<{
+    bucket: InvestmentBucketKey
+    amount: number
+    currency: string
+    reason: string
+  }>
+  warnings?: string[]
+}
+
+export type DashboardInvestmentStrategyResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db' | 'default_unpersisted'
+  strategy: DashboardInvestmentStrategyProfile
+  buckets: DashboardInvestmentStrategyBucket[]
+  accountPolicies: DashboardInvestmentAccountPolicy[]
+  candidateUniverse: {
+    total: number
+    approved: number
+    needsReview: number
+    candidates: DashboardInvestmentCandidate[]
+  }
+  validation: {
+    valid: boolean
+    total: number
+    missing: InvestmentBucketKey[]
+    errors: string[]
+  }
+  safety: {
+    noAutoTrade: boolean
+    humanValidationRequired: boolean
+    constraints: string[]
+  }
+}
+
+export type DashboardInvestmentPlanResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db' | 'dry_run' | 'empty'
+  strategy: DashboardInvestmentStrategyProfile | null
+  buckets: DashboardInvestmentStrategyBucket[]
+  accountPolicies: DashboardInvestmentAccountPolicy[]
+  plan: DashboardInvestmentActionPlan | null
+  hypotheses?: Array<Record<string, unknown>>
+  calibration?: DashboardInvestmentScorecard | null
+  warnings?: string[]
+}
+
+export type DashboardInvestmentHypothesesResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db'
+  items: Array<Record<string, unknown>>
+}
+
+export type DashboardInvestmentScorecard = {
+  strategyId: number
+  generatedAt: string
+  horizon: string
+  sampleSize: number
+  hitRate: number
+  brierScore: number | null
+  averageConfidence: number
+  calibrationBuckets: Array<{
+    range: string
+    sampleSize: number
+    averageConfidence: number
+    hitRate: number
+  }>
+  byBucket: Record<string, unknown>
+  byAccount: Record<string, unknown>
+  byAssetClass: Record<string, unknown>
+  notes: string | null
+}
+
+export type DashboardInvestmentScorecardResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db' | 'empty'
+  scorecard: DashboardInvestmentScorecard | null
+}
+
+export type DashboardInvestmentLessonsResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db'
+  items: Array<{
+    id: number
+    strategyId: number
+    sourceHypothesisId: number | null
+    sourcePostMortemId: number | null
+    lessonType: string
+    title: string
+    description: string
+    confidenceImpact: number
+    ruleCandidateJson: Record<string, unknown>
+    status: 'candidate' | 'approved' | 'rejected' | 'archived'
+    requiresHumanReview: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+}
+
+export type DashboardInvestmentStatusResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db'
+  enabled: boolean
+  healthy: boolean
+  latestActionPlan: unknown
+  latestAllocationSnapshot: unknown
+  learning: unknown
+  memory: {
+    memoryEventsCreated: number
+    graphWritesAttempted: number
+    graphWritesSucceeded: number
+    graphWritesFailed: number
+    lastGraphError: string | null
+  }
+  staleProviders: string[]
+  failedJobs: string[]
+}
+
 export type DashboardAdvisorEvalsResponse = {
   cases: DashboardAdvisorEvalCaseResponse[]
   latestRun: DashboardAdvisorEvalRunResponse | null

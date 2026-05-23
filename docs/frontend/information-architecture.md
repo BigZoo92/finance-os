@@ -45,6 +45,7 @@ Comportement données:
 | Route | Page | Rôle | Données principales |
 |---|---|---|---|
 | `/ia` | Vue IA | Hub Advisor: synthèse, recommandations, hypothèses, questions utiles et journal de décisions non persistant | `dashboardAdvisor*`, `dashboardAdvisorRecommendations`, `dashboardAdvisorAssumptions` |
+| `/ia/strategie-investissement` | Plan d'action investissement | Page centrale du Research Copilot: action recommandee maintenant, recommandations PEA/IBKR/Binance, allocation 60/30/10, hypotheses, scorecard IA, qualite des donnees | `dashboardInvestmentStrategy`, `dashboardInvestmentPlanLatest`, `dashboardInvestmentStatus`, `dashboardInvestmentHypotheses`, `dashboardInvestmentScorecard`, `dashboardInvestmentLessons` |
 | `/ia/chat` | Chat | Questions directes à l'Advisor sur dépenses, patrimoine et investissements, avec garde-fous de décision | `dashboardAdvisorChat`, `dashboardAdvisorKnowledgeTopics`, `dashboardAdvisor` |
 | `/ia/memoire` | Mémoire | Inspection de la mémoire dérivée, provenance, confiance et contexte utilisé par l'Advisor | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
 | `/ia/memoire/graph` | Carte mémoire 3D | Visualisation force-directed 3D de la mémoire Advisor: concepts, signaux, recommandations, contradictions, sources. Strictement enrichissement, pas une base de vérité. | `knowledgeStats`, `knowledgeSchema`, `knowledgeQuery`, `knowledgeContextBundle` |
@@ -53,13 +54,14 @@ Le Trading Lab et les coûts IA ne sont pas des surfaces Advisor quotidiennes. I
 
 #### Structure Advisor User-Facing
 
-L'Advisor IA est organisé autour de cinq zones lisibles:
+L'Advisor IA est organisé autour de six zones lisibles:
 
 1. **Synthèse**: ce que l'Advisor voit, ce qui change, ce qui est sain et ce qui demande attention.
 2. **Conseils & recommandations**: chaque recommandation expose pourquoi maintenant, données utilisées, hypothèses, risques/limites, confiance et prochaine question à poser.
-3. **Questions à poser**: starters contextualisés pour clarifier les décisions sans transformer le chat en bouton d'exécution.
-4. **Hypothèses & limites**: données manquantes, fraîcheur, budget IA et signaux faibles qui réduisent la confiance.
-5. **Journal de décisions**: surface préparatoire non persistante. Elle ne prétend pas sauvegarder tant qu'un modèle dédié n'existe pas.
+3. **Plan d'action investissement**: surface account-aware qui montre une action principale, PEA/IBKR/Binance, allocation 60/30/10, prix/fraicheur, hypotheses et fiabilite IA. Elle reste advisory-only: validation humaine obligatoire, aucun auto-trading.
+4. **Questions à poser**: starters contextualisés pour clarifier les décisions sans transformer le chat en bouton d'exécution.
+5. **Hypothèses & limites**: données manquantes, fraîcheur, budget IA et signaux faibles qui réduisent la confiance.
+6. **Journal de décisions**: surface préparatoire non persistante. Elle ne prétend pas sauvegarder tant qu'un modèle dédié n'existe pas.
 
 Bornes explicites:
 
@@ -113,7 +115,7 @@ Bornes explicites:
 La sidebar affiche trois espaces avec une courte description:
 
 1. Cockpit personnel: argent personnel, dépenses, patrimoine, investissements, objectifs.
-2. Advisor IA: vue IA, chat, mémoire.
+2. Advisor IA: vue IA, plan d'action investissement, chat, mémoire.
 3. Intelligence & Admin: signaux bruts, marchés, social, sources, Trading Lab, coûts IA, intégrations, santé, paramètres.
 
 Les items `adminOnly` sont masqués en navigation hors session admin, mais les routes conservent leur propre comportement de dégradation ou de garde-fou.
@@ -126,10 +128,11 @@ La bottom nav reste volontairement courte: Vue d'ensemble, Dépenses & revenus, 
 
 1. `/` - comprendre ce qui compte aujourd'hui.
 2. `/depenses` - contrôler les flux.
-3. `/ia` ou `/ia/chat` - lire un conseil ou poser une question.
-4. `/patrimoine` et `/investissements` - vérifier le stock patrimonial.
-5. `/fiscalite` - préparer les comptes, mouvements et justificatifs à vérifier avant déclaration.
-6. `/objectifs` - suivre la progression.
+3. `/ia/strategie-investissement` - voir quoi faire maintenant par compte, sans execution automatique.
+4. `/ia` ou `/ia/chat` - lire un conseil ou poser une question.
+5. `/patrimoine` et `/investissements` - vérifier le stock patrimonial.
+6. `/fiscalite` - préparer les comptes, mouvements et justificatifs à vérifier avant déclaration.
+7. `/objectifs` - suivre la progression.
 
 Les surfaces Intelligence & Admin se consultent pour auditer, diagnostiquer ou rechercher. Elles alimentent l'Advisor, mais ne sont pas une routine obligatoire.
 

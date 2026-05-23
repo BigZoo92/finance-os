@@ -239,6 +239,13 @@
       "when": 1779510000000,
       "tag": "0033_daily_intelligence_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1779568000000,
+      "tag": "0034_investment_strategy_brain",
+      "breakpoints": true
     }
   ]
 }

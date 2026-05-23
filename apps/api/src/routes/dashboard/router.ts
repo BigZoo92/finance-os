@@ -15,6 +15,7 @@ import { createDataQualityRoute } from './routes/data-quality'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
 import { createExternalInvestmentsDashboardRoute } from './routes/external-investments'
 import { createGoalsRoute } from './routes/goals'
+import { createInvestmentStrategyRoute } from './routes/investment-strategy'
 import { createManualAssetsRoute } from './routes/manual-assets'
 import { createMarketsRoute } from './routes/markets'
 import { createNewsRoute } from './routes/news'
@@ -391,6 +392,7 @@ export const createDashboardRoutes = ({
             relabelEnabled: aiRelabelEnabled,
           })
         )
+        .use(createInvestmentStrategyRoute({ advisorEnabled: aiAdvisorEnabled }))
         .use(
           createAdvisorKnowledgeRoute({
             advisorEnabled: aiAdvisorEnabled,

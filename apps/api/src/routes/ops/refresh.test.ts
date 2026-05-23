@@ -67,6 +67,16 @@ const createRuntime = (
         macroObservationCount: 1,
         signalCount: 1,
       }),
+      reviewDueInvestmentHypotheses: async () => ({
+        reviewedCount: 0,
+        dueCount: 0,
+        calibration: null,
+      }),
+      generateInvestmentPlan: async () => ({
+        plan: { items: [], warnings: [] },
+        warnings: [],
+        hypotheses: [],
+      }),
       runAdvisorDaily: async () => ({
         run: {
           id: 'advisor-run-1',
@@ -180,6 +190,22 @@ describe('createOpsRefreshRoute', () => {
             latestRun: null,
           }
         },
+        reviewDueInvestmentHypotheses: async () => {
+          calls.push('investment-learning-review')
+          return {
+            reviewedCount: 1,
+            dueCount: 1,
+            calibration: null,
+          }
+        },
+        generateInvestmentPlan: async () => {
+          calls.push('investment-action-plan')
+          return {
+            plan: { items: [{}], warnings: [] },
+            warnings: [],
+            hypotheses: [{}],
+          }
+        },
       }),
     })
 
@@ -199,6 +225,11 @@ describe('createOpsRefreshRoute', () => {
     expect(payload.status).toBe('success')
     expect(payload.jobs.map(job => job.jobId)).toContain('powens')
     expect(calls.indexOf('powens')).toBeLessThan(calls.indexOf('transactions-categorization'))
+    expect(calls).toContain('investment-learning-review')
+    expect(calls).toContain('investment-action-plan')
+    expect(calls.indexOf('investment-learning-review')).toBeLessThan(
+      calls.indexOf('investment-action-plan')
+    )
   })
 
   it('supports a dry-run plan without executing jobs', async () => {
@@ -230,6 +261,12 @@ describe('createOpsRefreshRoute', () => {
     expect(payload.status).toBe('planned')
     expect(payload.dryRun).toBe(true)
     expect(payload.jobs.find(job => job.jobId === 'powens')?.status).toBe('pending')
+    expect(payload.jobs.find(job => job.jobId === 'investment-learning-review')?.status).toBe(
+      'pending'
+    )
+    expect(payload.jobs.find(job => job.jobId === 'investment-action-plan')?.status).toBe(
+      'pending'
+    )
     expect(refreshCalls).toBe(0)
   })
 

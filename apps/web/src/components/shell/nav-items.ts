@@ -109,6 +109,13 @@ export const NAV_ITEMS: NavItem[] = [
     mobilePriority: 4,
   },
   {
+    to: '/ia/strategie-investissement',
+    label: "Plan d'action investissement",
+    icon: 'â–³',
+    description: 'Strategie 60/30/10, comptes et recommandations tracees',
+    group: 'ia',
+  },
+  {
     to: '/ia/chat',
     label: 'Chat',
     icon: '▱',

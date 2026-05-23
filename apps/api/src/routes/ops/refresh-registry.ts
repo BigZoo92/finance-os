@@ -403,6 +403,30 @@ export const createRefreshJobRegistry = ({
       retryPolicy: { maxAttempts: 1, backoffMs: 0 },
     },
     {
+      id: 'investment-learning-review',
+      label: 'Investment learning review',
+      description: 'Revoit les hypotheses dues, score les outcomes et cree les lecons candidates.',
+      domain: 'advisor',
+      dependencies: ['market-data', 'external-investments'],
+      enabled: config.advisorEnabled,
+      manualTriggerAllowed: true,
+      scheduleGroup: 'daily-intelligence',
+      timeoutMs: 90_000,
+      retryPolicy: { maxAttempts: 1, backoffMs: 0 },
+    },
+    {
+      id: 'investment-action-plan',
+      label: 'Plan action investissement',
+      description: 'Genere le plan investissement account-aware et enrichit le contexte Advisor.',
+      domain: 'advisor',
+      dependencies: ['investment-learning-review', 'market-data', 'external-investments'],
+      enabled: config.advisorEnabled,
+      manualTriggerAllowed: true,
+      scheduleGroup: 'daily-intelligence',
+      timeoutMs: 90_000,
+      retryPolicy: { maxAttempts: 1, backoffMs: 0 },
+    },
+    {
       id: 'advisor-context',
       label: 'AI advisor context & conseil',
       description: 'Construit le contexte compact puis lance le daily brief Advisor.',
@@ -412,6 +436,7 @@ export const createRefreshJobRegistry = ({
         'news-finance',
         'market-data',
         'external-investments',
+        'investment-action-plan',
       ],
       enabled: config.advisorEnabled,
       manualTriggerAllowed: true,
@@ -649,6 +674,80 @@ export const createRefreshJobRegistry = ({
             quoteCount: result.quoteCount,
             macroObservationCount: result.macroObservationCount,
             signalCount: result.signalCount,
+          },
+        })
+      }
+
+      if (jobId === 'investment-learning-review') {
+        if (!runtime.useCases.reviewDueInvestmentHypotheses) {
+          return createResult({
+            jobId,
+            status: 'skipped',
+            requestId,
+            startedAtMs,
+            message: 'Investment learning runtime unavailable.',
+          })
+        }
+        const result = (await runtime.useCases.reviewDueInvestmentHypotheses({
+          mode: 'admin',
+          requestId,
+          triggerSource,
+        })) as {
+          reviewedCount?: number
+          dueCount?: number
+          calibration?: unknown
+        }
+        return createResult({
+          jobId,
+          status: 'success',
+          requestId,
+          startedAtMs,
+          recordsRead: result.dueCount ?? null,
+          recordsWritten: result.reviewedCount ?? null,
+          message: 'Investment hypotheses reviewed.',
+          details: {
+            dueCount: result.dueCount ?? null,
+            reviewedCount: result.reviewedCount ?? null,
+            calibration: result.calibration ?? null,
+          },
+        })
+      }
+
+      if (jobId === 'investment-action-plan') {
+        if (!runtime.useCases.generateInvestmentPlan) {
+          return createResult({
+            jobId,
+            status: 'skipped',
+            requestId,
+            startedAtMs,
+            message: 'Investment action plan runtime unavailable.',
+          })
+        }
+        const result = (await runtime.useCases.generateInvestmentPlan({
+          mode: 'admin',
+          requestId,
+          triggerSource,
+        })) as {
+          plan?: {
+            items?: unknown[]
+            warnings?: unknown[]
+          }
+          warnings?: unknown[]
+          hypotheses?: unknown[]
+        }
+        const warnings = result.warnings ?? result.plan?.warnings ?? []
+        return createResult({
+          jobId,
+          status: Array.isArray(warnings) && warnings.length > 0 ? 'partial' : 'success',
+          requestId,
+          startedAtMs,
+          recordsRead: result.plan?.items?.length ?? null,
+          recordsWritten: result.hypotheses?.length ?? null,
+          message: 'Investment action plan generated.',
+          details: {
+            itemCount: result.plan?.items?.length ?? null,
+            hypothesisCount: result.hypotheses?.length ?? null,
+            warnings,
           },
         })
       }

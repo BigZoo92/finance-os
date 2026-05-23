@@ -19,6 +19,8 @@ const KEYWORDS: Record<string, string> = {
   '/orchestration': 'refresh daily intelligence cron jobs ops orchestration sync admin',
   '/parametres': 'settings notifications export config admin',
   '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils vue ia',
+  '/ia/strategie-investissement':
+    'investissement strategie allocation 60 30 10 pea ibkr binance plan action advisor',
   '/ia/chat': 'chat conversation question reponse advisor dialogue',
   '/ia/memoire': 'graphe connaissances graphrag memoire knowledge neo4j qdrant',
   '/ia/trading-lab': 'trading lab papier paper backtest recherche strategies expert',

@@ -38,6 +38,7 @@ import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/soci
 import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
 import { Route as AppSignauxFreeFirehoseRouteImport } from './routes/_app/signaux/free-firehose'
 import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
+import { Route as AppIaStrategieInvestissementRouteImport } from './routes/_app/ia/strategie-investissement'
 import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
 import { Route as AppIaChatRouteImport } from './routes/_app/ia/chat'
 import { Route as AppIaMemoireIndexRouteImport } from './routes/_app/ia/memoire/index'
@@ -187,6 +188,12 @@ const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
   path: '/ia/trading-lab',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIaStrategieInvestissementRoute =
+  AppIaStrategieInvestissementRouteImport.update({
+    id: '/ia/strategie-investissement',
+    path: '/ia/strategie-investissement',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppIaCoutsRoute = AppIaCoutsRouteImport.update({
   id: '/ia/couts',
   path: '/ia/couts',
@@ -231,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/powens/callback': typeof PowensCallbackRoute
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
+  '/ia/strategie-investissement': typeof AppIaStrategieInvestissementRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
   '/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
@@ -265,6 +273,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
+  '/ia/strategie-investissement': typeof AppIaStrategieInvestissementRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
   '/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
@@ -301,6 +310,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/ia/chat': typeof AppIaChatRoute
   '/_app/ia/couts': typeof AppIaCoutsRoute
+  '/_app/ia/strategie-investissement': typeof AppIaStrategieInvestissementRoute
   '/_app/ia/trading-lab': typeof AppIaTradingLabRoute
   '/_app/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/_app/signaux/marches': typeof AppSignauxMarchesRoute
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/marches'
     | '/memoire'
     | '/objectifs'
+    | '/ops-env-diagnostics'
     | '/orchestration'
     | '/parametres'
     | '/patrimoine'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/powens/callback'
     | '/ia/chat'
     | '/ia/couts'
+    | '/ia/strategie-investissement'
     | '/ia/trading-lab'
     | '/signaux/free-firehose'
     | '/signaux/marches'
@@ -361,6 +373,7 @@ export interface FileRouteTypes {
     | '/marches'
     | '/memoire'
     | '/objectifs'
+    | '/ops-env-diagnostics'
     | '/orchestration'
     | '/parametres'
     | '/patrimoine'
@@ -369,6 +382,7 @@ export interface FileRouteTypes {
     | '/'
     | '/ia/chat'
     | '/ia/couts'
+    | '/ia/strategie-investissement'
     | '/ia/trading-lab'
     | '/signaux/free-firehose'
     | '/signaux/marches'
@@ -395,6 +409,7 @@ export interface FileRouteTypes {
     | '/_app/marches'
     | '/_app/memoire'
     | '/_app/objectifs'
+    | '/_app/ops-env-diagnostics'
     | '/_app/orchestration'
     | '/_app/parametres'
     | '/_app/patrimoine'
@@ -403,6 +418,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/ia/chat'
     | '/_app/ia/couts'
+    | '/_app/ia/strategie-investissement'
     | '/_app/ia/trading-lab'
     | '/_app/signaux/free-firehose'
     | '/_app/signaux/marches'
@@ -630,6 +646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaTradingLabRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ia/strategie-investissement': {
+      id: '/_app/ia/strategie-investissement'
+      path: '/ia/strategie-investissement'
+      fullPath: '/ia/strategie-investissement'
+      preLoaderRoute: typeof AppIaStrategieInvestissementRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/ia/couts': {
       id: '/_app/ia/couts'
       path: '/ia/couts'
@@ -678,6 +701,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppIaChatRoute: typeof AppIaChatRoute
   AppIaCoutsRoute: typeof AppIaCoutsRoute
+  AppIaStrategieInvestissementRoute: typeof AppIaStrategieInvestissementRoute
   AppIaTradingLabRoute: typeof AppIaTradingLabRoute
   AppSignauxFreeFirehoseRoute: typeof AppSignauxFreeFirehoseRoute
   AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
@@ -707,6 +731,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppIaChatRoute: AppIaChatRoute,
   AppIaCoutsRoute: AppIaCoutsRoute,
+  AppIaStrategieInvestissementRoute: AppIaStrategieInvestissementRoute,
   AppIaTradingLabRoute: AppIaTradingLabRoute,
   AppSignauxFreeFirehoseRoute: AppSignauxFreeFirehoseRoute,
   AppSignauxMarchesRoute: AppSignauxMarchesRoute,
@@ -733,3 +758,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

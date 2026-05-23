@@ -19,6 +19,7 @@ import { createDecisionJournalUseCases } from './domain/advisor/create-decision-
 import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
 import { createAdvisorBehaviorAnalyticsUseCase } from './domain/advisor/get-advisor-behavior-analytics'
 import { createAdvisorEvalTrendsUseCase } from './domain/advisor/get-advisor-eval-trends'
+import { createInvestmentStrategyUseCases } from './domain/advisor/investment-strategy-use-cases'
 import { createFineTuningReadinessUseCase } from './domain/advisor/fine-tuning/create-fine-tuning-readiness-use-case'
 import { createPostMortemUseCases } from './domain/advisor/post-mortem/create-post-mortem-use-cases'
 import { createAdvisorReplayUseCase } from './domain/advisor/replay/create-replay-use-case'
@@ -48,6 +49,7 @@ import { createDashboardDerivedRecomputeRepository } from './repositories/dashbo
 import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
 import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
+import { createInvestmentStrategyRepository } from './repositories/investment-strategy-repository'
 import {
   sendDecisionPointToKnowledgeGraph,
   sendPostMortemToKnowledgeGraph,
@@ -247,6 +249,7 @@ export const createDashboardRouteRuntime = ({
   const newsRepository = createDashboardNewsRepository({ db })
   const marketsRepository = createDashboardMarketsRepository({ db })
   const advisorRepository = createDashboardAdvisorRepository({ db })
+  const investmentStrategyRepository = createInvestmentStrategyRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
   const powensJobs = createPowensJobQueueRepository(redisClient)
   const powensConnections = createPowensConnectionRepository(db, redisClient)
@@ -254,6 +257,17 @@ export const createDashboardRouteRuntime = ({
   const externalInvestments = createExternalInvestmentsRepository({
     db,
     staleAfterMinutes: externalInvestmentsStaleAfterMinutes,
+  })
+  const investmentStrategy = createInvestmentStrategyUseCases({
+    repository: investmentStrategyRepository,
+    listExternalPositions: () => externalInvestments.listPositions(),
+    listPowensInvestmentPositions: () => readModel.listInvestmentPositions(),
+    knowledgeConfig: {
+      enabled: knowledgeConfig.enabled,
+      url: knowledgeConfig.url,
+      timeoutMs: knowledgeConfig.timeoutMs,
+    },
+    advisorGraphIngestEnabled,
   })
 
   // Macro Prompt 4 — closures that produce browser-safe local snapshots for the
@@ -1081,6 +1095,17 @@ export const createDashboardRouteRuntime = ({
       listAdvisorPostMortems: advisorPostMortem.listPostMortems,
       getAdvisorPostMortemById: advisorPostMortem.getPostMortemById,
       runAdvisorPostMortem: advisorPostMortem.runPostMortem,
+      getInvestmentStrategy: investmentStrategy.getInvestmentStrategy,
+      updateInvestmentStrategy: investmentStrategy.updateInvestmentStrategy,
+      generateInvestmentPlan: investmentStrategy.generateInvestmentPlan,
+      latestInvestmentPlan: investmentStrategy.latestInvestmentPlan,
+      listInvestmentHypotheses: investmentStrategy.listHypotheses,
+      listDueInvestmentHypotheses: investmentStrategy.listHypotheses,
+      reviewDueInvestmentHypotheses: investmentStrategy.reviewDueHypotheses,
+      getInvestmentLearningScorecard: investmentStrategy.getScorecard,
+      listInvestmentStrategyLessons: investmentStrategy.listLessons,
+      updateInvestmentStrategyLessonStatus: investmentStrategy.updateLessonStatus,
+      getInvestmentStatus: investmentStrategy.getStatus,
       getDataQuality,
       getAdvisorV2Capabilities: advisorV2.getCapabilities,
       buildAdvisorV2Preview: advisorV2.buildPreview,

@@ -53,6 +53,16 @@ const createRuntime = (
         macroObservationCount: 1,
         signalCount: 1,
       }),
+      reviewDueInvestmentHypotheses: async () => ({
+        reviewedCount: 0,
+        dueCount: 0,
+        calibration: null,
+      }),
+      generateInvestmentPlan: async () => ({
+        plan: { items: [], warnings: [] },
+        warnings: [],
+        hypotheses: [],
+      }),
       runAdvisorDaily: async () => ({
         run: {
           id: 'advisor-run-1',
@@ -75,16 +85,27 @@ describe('createRefreshJobRegistry', () => {
     expect(jobs.map(job => job.id)).toContain('powens')
     expect(jobs.map(job => job.id)).toContain('binance-crypto')
     expect(jobs.map(job => job.id)).toContain('news-crypto')
+    expect(jobs.map(job => job.id)).toContain('investment-learning-review')
+    expect(jobs.map(job => job.id)).toContain('investment-action-plan')
     expect(jobs.find(job => job.id === 'advisor-context')?.dependencies).toEqual([
       'transactions-categorization',
       'news-finance',
       'market-data',
       'external-investments',
+      'investment-action-plan',
     ])
 
     const plan = registry.getExecutionPlan().map(job => job.id)
     expect(plan.indexOf('powens')).toBeLessThan(plan.indexOf('transactions-categorization'))
     expect(plan.indexOf('news-finance')).toBeLessThan(plan.indexOf('news-crypto'))
+    expect(plan.indexOf('market-data')).toBeLessThan(plan.indexOf('investment-learning-review'))
+    expect(plan.indexOf('external-investments')).toBeLessThan(
+      plan.indexOf('investment-learning-review')
+    )
+    expect(plan.indexOf('investment-learning-review')).toBeLessThan(
+      plan.indexOf('investment-action-plan')
+    )
+    expect(plan.indexOf('investment-action-plan')).toBeLessThan(plan.indexOf('advisor-context'))
     expect(plan.indexOf('external-investments')).toBeLessThan(plan.indexOf('advisor-context'))
   })
 
@@ -149,6 +170,22 @@ describe('createRefreshJobRegistry', () => {
             latestRun: null,
           }
         },
+        reviewDueInvestmentHypotheses: async () => {
+          calls.push('investment-learning-review')
+          return {
+            reviewedCount: 1,
+            dueCount: 1,
+            calibration: null,
+          }
+        },
+        generateInvestmentPlan: async () => {
+          calls.push('investment-action-plan')
+          return {
+            plan: { items: [{}], warnings: [] },
+            warnings: [],
+            hypotheses: [{}],
+          }
+        },
       }),
       config: enabledConfig,
     })
@@ -162,6 +199,11 @@ describe('createRefreshJobRegistry', () => {
     expect(result.ok).toBe(true)
     expect(result.jobs.map(job => job.jobId)).toContain('advisor-context')
     expect(calls.indexOf('powens')).toBeLessThan(calls.indexOf('transactions-categorization'))
+    expect(calls).toContain('investment-learning-review')
+    expect(calls).toContain('investment-action-plan')
+    expect(calls.indexOf('investment-learning-review')).toBeLessThan(
+      calls.indexOf('investment-action-plan')
+    )
   })
 
   it('returns a dry-run plan without executing jobs', async () => {
@@ -185,6 +227,12 @@ describe('createRefreshJobRegistry', () => {
 
     expect(result.status).toBe('planned')
     expect(result.jobs.find(job => job.jobId === 'powens')?.status).toBe('pending')
+    expect(result.jobs.find(job => job.jobId === 'investment-learning-review')?.status).toBe(
+      'pending'
+    )
+    expect(result.jobs.find(job => job.jobId === 'investment-action-plan')?.status).toBe(
+      'pending'
+    )
     expect(powensCalls).toBe(0)
   })
 

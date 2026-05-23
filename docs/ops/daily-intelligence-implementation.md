@@ -34,6 +34,12 @@ Last updated: 2026-05-23
   - prediction outcomes;
   - market post-mortems;
   - Advisor memory events.
+- Investment Strategy Brain:
+  - default `bigzoo_growth_60_30_10_v1` strategy seeding;
+  - 60 / 30 / 10 bucket policy and account policies for PEA Trade Republic, IBKR, and Binance;
+  - `investment-learning-review` job for due hypotheses, outcomes, post-mortems, lessons, and calibration;
+  - `investment-action-plan` job for allocation, drift, account-aware plan, recommendations, hypotheses, memory events, and Advisor context enrichment;
+  - `advisor-context` now depends on the investment action plan.
 
 ## Important Env
 
@@ -53,17 +59,19 @@ Production must set `DAILY_INTELLIGENCE_ENABLED=true` on the worker when ready. 
 ## Recommended Deployment Check
 
 1. Apply DB migration `0033_daily_intelligence_foundation.sql`.
-2. Deploy API and worker with the new envs present.
-3. Run `/ops/scheduler/status`.
-4. Run `/ops/refresh/all` with `dryRun: true`.
-5. Trigger `/dashboard/news/ingest` with `social_poll`.
-6. Enable `DAILY_INTELLIGENCE_ENABLED=true` only after dry-run and social trigger are clean.
+2. Apply DB migration `0034_investment_strategy_brain.sql`.
+3. Deploy API and worker with the new envs present.
+4. Run `/ops/scheduler/status`.
+5. Run `/ops/refresh/all` with `dryRun: true`; verify `investment-learning-review` and `investment-action-plan` appear in order.
+6. Trigger `/dashboard/news/ingest` with `social_poll`.
+7. Trigger `/dashboard/advisor/investment-plan/generate` with `dryRun: true`.
+8. Enable `DAILY_INTELLIGENCE_ENABLED=true` only after dry-run, social trigger, and investment-plan dry-run are clean.
 
 ## Next Pass
 
 - Persist topological runs in DB instead of process memory.
 - Wire market providers into `asset_price_snapshot`.
-- Generate account-scoped Advisor investment recommendations.
-- Create hypotheses from accepted recommendations.
-- Score outcomes on J+1/J+7/J+30.
-- Write memory events into knowledge-service with run counters.
+- Persist topological refresh runs in DB instead of process memory.
+- Add admin UI for approving/rejecting asset-universe candidates.
+- Add admin UI for approving/rejecting strategy lessons.
+- Expand benchmark selection for hypothesis scoring.
