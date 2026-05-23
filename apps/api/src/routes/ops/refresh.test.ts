@@ -81,16 +81,18 @@ const createRuntime = (
 const createApp = ({
   mode,
   runtime,
+  internalToken = false,
 }: {
   mode: 'admin' | 'demo'
   runtime?: DashboardRouteRuntime
+  internalToken?: boolean
 }) =>
   new Elysia()
     .derive(() => ({
       auth: { mode } as const,
       internalAuth: {
-        hasValidToken: false,
-        tokenSource: null,
+        hasValidToken: internalToken,
+        tokenSource: internalToken ? ('x-internal-token' as const) : null,
       } as const,
       requestMeta: {
         requestId: 'req-ops-test',
@@ -136,6 +138,28 @@ describe('createOpsRefreshRoute', () => {
     expect(response.status).toBe(403)
     expect(payload.code).toBe('DEMO_MODE_FORBIDDEN')
     expect(payload.requestId).toBe('req-ops-test')
+  })
+
+  it('accepts POST /ops/refresh/all when only a valid internal token is supplied (worker → API path)', async () => {
+    const app = createApp({ mode: 'demo', internalToken: true })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/all', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ trigger: 'scheduled', runKind: 'night', dryRun: true }),
+      })
+    )
+    const payload = (await response.json()) as {
+      ok: boolean
+      status: string
+      dryRun: boolean
+    }
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(true)
+    expect(payload.status).toBe('planned')
+    expect(payload.dryRun).toBe(true)
   })
 
   it('executes the topological refresh plan in admin mode', async () => {

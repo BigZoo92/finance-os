@@ -129,8 +129,9 @@ export const createOpsRefreshRoute = ({
       '/all',
       async context => {
         const requestId = getRequestMeta(context).requestId
-        const auth = getAuth(context)
-        if (auth.mode !== 'admin') {
+        try {
+          requireAdminOrInternalToken(context)
+        } catch {
           context.set.status = 403
           return {
             ok: false,
@@ -139,7 +140,6 @@ export const createOpsRefreshRoute = ({
             requestId,
           }
         }
-        requireAdminOrInternalToken(context)
         return registry.runAll({
           requestId,
           triggerSource: toTriggerSource(context.body?.trigger, 'manual-global'),
