@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/gitnexus/gitnexus-guide/SKILL.md
+     Hash:   sha256:40b047beeb9a7c5d
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: gitnexus-guide
 description: "Use when the user asks about GitNexus itself — available tools, how to query the knowledge graph, MCP resources, graph schema, or workflow reference. Examples: \"What GitNexus tools are available?\", \"How do I use GitNexus?\""

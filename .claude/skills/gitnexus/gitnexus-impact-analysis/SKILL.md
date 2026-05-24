@@ -1,3 +1,8 @@
+<!-- GENERATED — DO NOT EDIT
+     Source: .agentic/source/skills/gitnexus/gitnexus-impact-analysis/SKILL.md
+     Hash:   sha256:a4d6e8003c4a822c
+     Sync:   pnpm agent:skills:sync -->
+
 ---
 name: gitnexus-impact-analysis
 description: "Use when the user wants to know what will break if they change something, or needs safety analysis before editing code. Examples: \"Is it safe to change X?\", \"What depends on this?\", \"What will break?\""
