@@ -1,6 +1,6 @@
 # Investment Strategy Brain
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 Finance-OS now has an account-aware Investment Research Copilot. It is a research and decision-support surface only: it never places orders, never exposes an execution button, and marks every recommendation with `humanValidationRequired=true` and `noAutoTrade=true`.
 
@@ -12,7 +12,7 @@ Target buckets:
 
 | Bucket | Target | Role | Default stance |
 |---|---:|---|---|
-| `core` | 60% | Long-term base, diversified, liquid, lower-to-medium risk | Prefer PEA when eligibility is known and approved |
+| `core` | 60% | Long-term base, diversified, liquid, lower-to-medium risk | Prefer PEA when eligibility is known and price is fresh |
 | `growth` | 30% | Higher expected growth, controlled concentration | PEA or IBKR depending on eligibility/data quality |
 | `asymmetric` | 10% | High-risk/high-upside exposure, mostly crypto | Binance/IBKR only, capped at 10% global |
 
@@ -29,7 +29,7 @@ Reference sources used for the policy model:
 
 | Account | Type | Allowed buckets | Hard guards |
 |---|---|---|---|
-| PEA Trade Republic | `pea` | `core`, `growth` | No crypto. Unknown PEA eligibility blocks buys. Candidate assets must be manually approved. |
+| PEA Trade Republic | `pea` | `core`, `growth` | No crypto. Unknown or negative PEA eligibility blocks buys. |
 | IBKR | `brokerage` | `core`, `growth`, limited `asymmetric` | No margin/leverage by default. Currency and concentration risk reduce confidence. |
 | Binance | `crypto` | `asymmetric` | Crypto max 10% global. No futures, no margin, no staking/earn mutation, no high-frequency trading. |
 
@@ -66,16 +66,21 @@ Reference sources:
 - IBKR Campus, [Flex Web Service](https://www.interactivebrokers.com/campus/ibkr-api-page/flex-web-service/)
 - Twelve Data, [API documentation](https://twelvedata.com/docs)
 
-## Candidate Universe
+## Candidate Universe And Watchlist
 
-The default universe is intentionally seeded as `candidate_needs_review`, not approved. This prevents fake strong-buy output on unverified instruments.
+`approved` is no longer required for recommendation. It remains metadata/history. The actual gate is:
+
+`priceable + eligible for target account + fresh price + provider confidence + risk-policy-compliant + strategy-fit`.
+
+The default universe may still contain `candidate_needs_review`; that status does not block by
+itself. It forces the Advisor to explain uncertainty and sizing, while price, eligibility, and risk
+policy decide actionability.
 
 Valid statuses:
 
-- `approved`: may be considered for buy if price, account, concentration, and confidence checks pass.
-- `candidate_needs_review`: may produce watch/configuration tasks, not buy.
-- `rejected`: should produce avoid/watch only.
-- `unknown`: insufficient data.
+- `approved`, `candidate_needs_review`, `approved_by_default_policy`,
+  `candidate_auto_suggested`, `watch_only`, `unknown`: metadata; not automatic blockers.
+- `rejected`: blocked unless explicitly re-added/reclassified.
 
 PEA-specific eligibility statuses:
 
@@ -85,6 +90,23 @@ PEA-specific eligibility statuses:
 - `not_applicable`
 
 Unknown PEA eligibility blocks buys.
+
+User watchlist rows live in `user_asset_interest`. Adding an asset means "watch/analyze/compare",
+not "buy". `userInterestLevel` gives a ranking boost, but does not override risk, stale price,
+PEA eligibility, account compatibility, or the Binance/asymmetric 10% cap.
+
+Output categories:
+
+- Action principale;
+- Actions par compte;
+- Idees audacieuses;
+- Watchlist utilisateur;
+- A eviter;
+- Donnees a resoudre.
+
+Audacious ideas may include less-known stocks, thematic ETFs, emerging-sector names, or crypto
+outside majors. They remain separate from the main action, carry explicit risk/confidence/freshness,
+and default to watch/research unless all gates pass with prudent sizing.
 
 ## Allocation And Contributions
 

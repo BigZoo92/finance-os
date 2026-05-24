@@ -23,9 +23,38 @@ export type AccountStrategyType = 'pea' | 'brokerage' | 'crypto' | 'cash' | 'unk
 export type AssetUniverseEligibilityStatus =
   | 'approved'
   | 'candidate_needs_review'
+  | 'approved_by_default_policy'
+  | 'candidate_auto_suggested'
   | 'rejected'
+  | 'watch_only'
   | 'unknown'
 export type PeaEligibilityStatus = 'eligible' | 'ineligible' | 'unknown' | 'not_applicable'
+export type AssetPriceabilityStatus = 'priceable' | 'stale' | 'missing' | 'unsupported'
+export type AssetRecommendabilityStatus =
+  | 'recommendable'
+  | 'watch_only'
+  | 'blocked_missing_price'
+  | 'blocked_stale_price'
+  | 'blocked_ineligible_account'
+  | 'blocked_unknown_pea_eligibility'
+  | 'blocked_risk_policy'
+  | 'blocked_strategy_cap'
+  | 'rejected_by_user'
+export type UserAssetInterestLevel = 'none' | 'watching' | 'interested' | 'high_interest'
+export type UserAssetIntent = 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
+export type AssetRecommendationTier =
+  | 'core_candidate'
+  | 'growth_candidate'
+  | 'asymmetric_candidate'
+  | 'speculative_watch'
+  | 'user_watchlist'
+  | 'avoid'
+export type AssetRecommendationMode =
+  | 'action_now'
+  | 'prepare_contribution'
+  | 'watch'
+  | 'research_more'
+  | 'avoid'
 export type AdvisorActionPlanStatus = 'draft' | 'active' | 'superseded' | 'archived'
 export type AdvisorActionPlanItemAction =
   | 'buy'
@@ -181,6 +210,43 @@ export const assetUniverseCandidate = pgTable(
     index('asset_universe_candidate_bucket_idx').on(table.bucket),
     index('asset_universe_candidate_eligibility_idx').on(table.eligibilityStatus),
     index('asset_universe_candidate_pea_eligibility_idx').on(table.peaEligibilityStatus),
+  ]
+)
+
+export const userAssetInterest = pgTable(
+  'user_asset_interest',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    normalizedSymbol: text('normalized_symbol').notNull(),
+    symbol: text('symbol').notNull(),
+    name: text('name').notNull(),
+    assetClass: text('asset_class').notNull(),
+    providerSymbolsJson: jsonb('provider_symbols_json')
+      .$type<Record<string, string>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    iconUrl: text('icon_url'),
+    logoUrl: text('logo_url'),
+    isin: text('isin'),
+    exchange: text('exchange'),
+    currency: text('currency').notNull().default('EUR'),
+    userInterestLevel: text('user_interest_level')
+      .notNull()
+      .$type<UserAssetInterestLevel>()
+      .default('watching'),
+    userIntent: text('user_intent').notNull().$type<UserAssetIntent>().default('watch'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  table => [
+    uniqueIndex('user_asset_interest_symbol_asset_class_unique').on(
+      table.normalizedSymbol,
+      table.assetClass
+    ),
+    index('user_asset_interest_symbol_idx').on(table.normalizedSymbol),
+    index('user_asset_interest_intent_idx').on(table.userIntent),
+    index('user_asset_interest_level_idx').on(table.userInterestLevel),
   ]
 )
 

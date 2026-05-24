@@ -1,6 +1,7 @@
 import { Badge, Button } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
@@ -8,8 +9,15 @@ import { StatusDot } from '@/components/surfaces/status-dot'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { postDashboardInvestmentPlanGenerate } from '@/features/dashboard-api'
 import {
+  deleteDashboardAdvisorAssetWatchlist,
+  patchDashboardAdvisorAssetWatchlist,
+  postDashboardAdvisorAssetWatchlist,
+  postDashboardInvestmentPlanGenerate,
+} from '@/features/dashboard-api'
+import {
+  dashboardAdvisorAssetsSearchQueryOptionsWithMode,
+  dashboardAdvisorAssetWatchlistQueryOptionsWithMode,
   dashboardInvestmentHypothesesQueryOptionsWithMode,
   dashboardInvestmentLessonsQueryOptionsWithMode,
   dashboardInvestmentPlanLatestQueryOptionsWithMode,
@@ -22,14 +30,20 @@ import type {
   DashboardInvestmentAccountPolicy,
   DashboardInvestmentActionableStep,
   DashboardInvestmentActionPlan,
+  DashboardAdvisorAssetSearchResult,
+  DashboardAdvisorAssetWatchlistItem,
   DashboardInvestmentPlanItem,
   DashboardInvestmentPriceFreshness,
   InvestmentBucketKey,
+  InvestmentUserIntent,
 } from '@/features/dashboard-types'
 import {
   actionableStepsForPlan,
   activeGraphStatusForPlan,
+  avoidItemsForPlan,
   buildInvestmentAccountSections,
+  creativeIdeasForPlan,
+  dataGapItemsForPlan,
   formatInvestmentConfidence,
   formatInvestmentPct,
   INVESTMENT_ACTION_LABEL,
@@ -41,7 +55,10 @@ import {
   investmentFreshnessOf,
   investmentListFor,
   normalizeInvestmentWarning,
+  priceabilityLabel,
+  recommendabilityLabel,
   toInvestmentNumber,
+  userWatchlistItemsForPlan,
 } from '@/features/investment-strategy-view-model'
 import { formatDateTime, formatMoney, toErrorMessage } from '@/lib/format'
 
@@ -55,6 +72,9 @@ export const Route = createFileRoute('/_app/ia/strategie-investissement')({
     await Promise.all([
       context.queryClient.ensureQueryData(
         dashboardInvestmentStrategyQueryOptionsWithMode({ mode })
+      ),
+      context.queryClient.ensureQueryData(
+        dashboardAdvisorAssetWatchlistQueryOptionsWithMode({ mode })
       ),
       context.queryClient.ensureQueryData(
         dashboardInvestmentPlanLatestQueryOptionsWithMode({ mode })
@@ -83,8 +103,17 @@ function InvestmentStrategyPage() {
   const isAdmin = authViewState === 'admin'
   const mode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
   const modeOpts = mode ? { mode } : {}
+  const [assetSearch, setAssetSearch] = useState('nvidia')
+  const deferredAssetSearch = useDeferredValue(assetSearch.trim())
 
   const strategyQuery = useQuery(dashboardInvestmentStrategyQueryOptionsWithMode(modeOpts))
+  const watchlistQuery = useQuery(dashboardAdvisorAssetWatchlistQueryOptionsWithMode(modeOpts))
+  const assetSearchQuery = useQuery(
+    dashboardAdvisorAssetsSearchQueryOptionsWithMode({
+      ...modeOpts,
+      query: deferredAssetSearch,
+    })
+  )
   const planQuery = useQuery(dashboardInvestmentPlanLatestQueryOptionsWithMode(modeOpts))
   const statusQuery = useQuery(dashboardInvestmentStatusQueryOptionsWithMode(modeOpts))
   const hypothesesQuery = useQuery(dashboardInvestmentHypothesesQueryOptionsWithMode(modeOpts))
@@ -100,6 +129,67 @@ function InvestmentStrategyPage() {
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentHypotheses() }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentScorecard() }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentLessons() }),
+      ])
+    },
+  })
+
+  const addWatchlistMutation = useMutation({
+    mutationFn: (input: {
+      asset: DashboardAdvisorAssetSearchResult
+      intent: InvestmentUserIntent
+      level: 'watching' | 'interested' | 'high_interest'
+    }) =>
+      postDashboardAdvisorAssetWatchlist({
+        symbol: input.asset.symbol,
+        name: input.asset.name,
+        assetClass: input.asset.assetClass,
+        providerSymbols: input.asset.providerSymbols,
+        iconUrl: input.asset.iconUrl,
+        logoUrl: input.asset.logoUrl,
+        isin: input.asset.isin,
+        exchange: input.asset.exchange,
+        currency: input.asset.currency,
+        userIntent: input.intent,
+        userInterestLevel: input.level,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorAssetWatchlist() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentStrategy() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentPlanLatest() }),
+      ])
+    },
+  })
+
+  const updateWatchlistMutation = useMutation({
+    mutationFn: (input: {
+      item: DashboardAdvisorAssetWatchlistItem
+      intent: InvestmentUserIntent
+      level: 'watching' | 'interested' | 'high_interest'
+    }) =>
+      patchDashboardAdvisorAssetWatchlist({
+        id: input.item.id,
+        input: {
+          userIntent: input.intent,
+          userInterestLevel: input.level,
+        },
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorAssetWatchlist() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentStrategy() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentPlanLatest() }),
+      ])
+    },
+  })
+
+  const removeWatchlistMutation = useMutation({
+    mutationFn: (id: number) => deleteDashboardAdvisorAssetWatchlist(id),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorAssetWatchlist() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentStrategy() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.investmentPlanLatest() }),
       ])
     },
   })
@@ -126,12 +216,24 @@ function InvestmentStrategyPage() {
     hypothesesQuery.error,
     scorecardQuery.error,
     lessonsQuery.error,
+    watchlistQuery.error,
   ].find(Boolean)
 
   const accountItems = buildInvestmentAccountSections({
     plan,
     policies: strategy?.accountPolicies ?? [],
   })
+  const creativeIdeas = creativeIdeasForPlan(plan)
+  const userWatchlistItems = userWatchlistItemsForPlan(plan)
+  const avoidItems = avoidItemsForPlan(plan)
+  const dataGapItems = dataGapItemsForPlan(plan)
+  const watchedBySymbol = useMemo(() => {
+    const map = new Map<string, DashboardAdvisorAssetWatchlistItem>()
+    for (const item of watchlistQuery.data?.items ?? []) {
+      map.set(item.normalizedSymbol, item)
+    }
+    return map
+  }, [watchlistQuery.data?.items])
 
   return (
     <div className="space-y-8">
@@ -182,8 +284,8 @@ function InvestmentStrategyPage() {
                 : 'Ordre possible sous validation humaine.'}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Les achats restent bloques si prix, eligibility, univers candidat ou cap de poche ne
-              sont pas satisfaits. Les apports restent planifiables sans ordre.
+              Les achats restent bloques si prix, eligibility, compatibilite compte ou cap de poche
+              ne sont pas satisfaits. Les apports restent planifiables sans ordre.
             </p>
           </div>
           <ActionableStepList steps={actionableSteps} loading={loading} />
@@ -300,6 +402,59 @@ function InvestmentStrategyPage() {
         </div>
       </section>
 
+      <AssetUniversePanel
+        query={assetSearch}
+        onQueryChange={setAssetSearch}
+        results={assetSearchQuery.data?.items ?? []}
+        watchedBySymbol={watchedBySymbol}
+        watchlist={watchlistQuery.data?.items ?? []}
+        isAdmin={isAdmin}
+        isPending={
+          addWatchlistMutation.isPending ||
+          updateWatchlistMutation.isPending ||
+          removeWatchlistMutation.isPending
+        }
+        onAdd={(asset, intent, level) => addWatchlistMutation.mutate({ asset, intent, level })}
+        onUpdate={(item, intent, level) =>
+          updateWatchlistMutation.mutate({ item, intent, level })
+        }
+        onRemove={id => removeWatchlistMutation.mutate(id)}
+      />
+
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
+        <PlanItemCollection
+          title="Idees audacieuses"
+          description="Speculatif et separe du plan principal. Petite taille seulement si les caps restent OK."
+          empty="Aucune idee speculative exploitable dans le plan courant."
+          items={creativeIdeas}
+          tone="violet"
+        />
+        <PlanItemCollection
+          title="Watchlist utilisateur"
+          description="Ces actifs sont surveilles, pas forces en haut du ranking."
+          empty="Aucun actif utilisateur dans le plan courant."
+          items={userWatchlistItems}
+          tone="brand"
+        />
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <PlanItemCollection
+          title="A eviter"
+          description="Actifs exclus ou incompatibles avec le compte, le prix ou la politique de risque."
+          empty="Aucun actif explicitement classe a eviter."
+          items={avoidItems}
+          tone="warning"
+        />
+        <PlanItemCollection
+          title="Donnees a resoudre"
+          description="Prix, eligibility PEA ou source provider qui bloquent encore une action maintenant."
+          empty="Aucune donnee bloquante supplementaire."
+          items={dataGapItems}
+          tone="plain"
+        />
+      </section>
+
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <Panel
           title="Strategie 60 / 30 / 10"
@@ -391,9 +546,357 @@ function EmptyPlan({ loading }: { loading: boolean }) {
         {loading ? 'Chargement du plan...' : 'Aucun plan actif'}
       </p>
       <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-        Sans univers approuve, prix frais et contraintes satisfaites, Finance-OS affiche
-        insuffisant_data ou watch plutot qu'un faux achat.
+        Sans prix frais, compte compatible et contraintes satisfaites, Finance-OS affiche watch ou
+        insufficient_data plutot qu'un faux achat.
       </p>
+    </div>
+  )
+}
+
+function AssetUniversePanel({
+  query,
+  onQueryChange,
+  results,
+  watchedBySymbol,
+  watchlist,
+  isAdmin,
+  isPending,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  query: string
+  onQueryChange: (value: string) => void
+  results: DashboardAdvisorAssetSearchResult[]
+  watchedBySymbol: Map<string, DashboardAdvisorAssetWatchlistItem>
+  watchlist: DashboardAdvisorAssetWatchlistItem[]
+  isAdmin: boolean
+  isPending: boolean
+  onAdd: (
+    asset: DashboardAdvisorAssetSearchResult,
+    intent: InvestmentUserIntent,
+    level: 'watching' | 'interested' | 'high_interest'
+  ) => void
+  onUpdate: (
+    item: DashboardAdvisorAssetWatchlistItem,
+    intent: InvestmentUserIntent,
+    level: 'watching' | 'interested' | 'high_interest'
+  ) => void
+  onRemove: (id: number) => void
+}) {
+  const groups = useMemo(() => {
+    const entries = new Map<string, DashboardAdvisorAssetSearchResult[]>()
+    for (const item of results) {
+      const label =
+        item.assetClass.includes('crypto')
+          ? 'Crypto'
+          : item.assetClass.includes('etf') || item.assetClass.includes('fund')
+            ? 'ETF / fonds'
+            : item.assetClass.includes('index')
+              ? 'Indices'
+              : 'Actions'
+      entries.set(label, [...(entries.get(label) ?? []), item])
+    }
+    return [...entries.entries()]
+  }, [results])
+
+  return (
+    <Panel
+      title="Univers & Watchlist"
+      description="Recherche locale enrichie par l'univers connu, les prix disponibles et les actifs suivis."
+      tone="brand"
+      icon={<StatusDot tone="brand" size={8} />}
+    >
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3">
+            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Ajouter un actif a surveiller
+            </label>
+            <input
+              value={query}
+              onChange={event => onQueryChange(event.target.value)}
+              placeholder="nvidia, bitcoin, msci world, amundi pea, air liquide"
+              className="mt-2 h-11 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/25"
+            />
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Cet actif sera surveille par l IA, mais ne sera pas forcement recommande. L Advisor le
+              comparera aux autres opportunites selon le risque, la strategie et les donnees
+              disponibles.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {groups.length > 0 ? (
+              groups.map(([label, items]) => (
+                <div key={label} className="space-y-2">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {label}
+                  </p>
+                  <div className="grid gap-2">
+                    {items.map(asset => {
+                      const watched = watchedBySymbol.get(asset.symbol) ?? null
+                      return (
+                        <AssetSearchRow
+                          key={`${asset.symbol}-${asset.assetClass}`}
+                          asset={asset}
+                          watched={watched}
+                          isAdmin={isAdmin}
+                          isPending={isPending}
+                          onAdd={onAdd}
+                          onUpdate={onUpdate}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="rounded-lg border border-dashed border-border/50 bg-surface-1/40 px-3 py-5 text-sm text-muted-foreground">
+                Tape un nom, ticker ou ISIN pour voir les actifs connus localement.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              Watchlist active
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Un signal d interet change le ranking, sans annuler les penalites de risque.
+            </p>
+          </div>
+          {watchlist.length > 0 ? (
+            <div className="grid gap-2">
+              {watchlist.map(item => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <AssetIdentity symbol={item.symbol} name={item.name} assetClass={item.assetClass} />
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => onRemove(item.id)}
+                      disabled={!isAdmin || isPending}
+                    >
+                      Retirer
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <Badge variant="outline">{item.userIntent}</Badge>
+                    <Badge variant="outline">{item.userInterestLevel}</Badge>
+                    <Badge variant="outline">{item.currency}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-border/50 bg-surface-1/40 px-3 py-5 text-sm text-muted-foreground">
+              Aucun actif suivi. Ajoute une idee pour que l Advisor la surveille dans les prochains
+              plans.
+            </p>
+          )}
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+function AssetSearchRow({
+  asset,
+  watched,
+  isAdmin,
+  isPending,
+  onAdd,
+  onUpdate,
+}: {
+  asset: DashboardAdvisorAssetSearchResult
+  watched: DashboardAdvisorAssetWatchlistItem | null
+  isAdmin: boolean
+  isPending: boolean
+  onAdd: (
+    asset: DashboardAdvisorAssetSearchResult,
+    intent: InvestmentUserIntent,
+    level: 'watching' | 'interested' | 'high_interest'
+  ) => void
+  onUpdate: (
+    item: DashboardAdvisorAssetWatchlistItem,
+    intent: InvestmentUserIntent,
+    level: 'watching' | 'interested' | 'high_interest'
+  ) => void
+}) {
+  const updateOrAdd = (intent: InvestmentUserIntent, level: 'watching' | 'interested' | 'high_interest') => {
+    if (watched) {
+      onUpdate(watched, intent, level)
+      return
+    }
+    onAdd(asset, intent, level)
+  }
+  return (
+    <div className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <AssetIdentity symbol={asset.symbol} name={asset.name} assetClass={asset.assetClass} />
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant={asset.priceability === 'priceable' ? 'positive' : 'warning'}>
+            {priceabilityLabel(asset.priceability)}
+          </Badge>
+          <Badge variant="outline">{INVESTMENT_BUCKET_LABEL[asset.suggestedBucket]}</Badge>
+          <Badge variant="outline">risque {INVESTMENT_RISK_LABEL[asset.riskLevel]}</Badge>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+        <QualityRow label="PEA" value={asset.eligibilityByAccount.pea} />
+        <QualityRow label="IBKR" value={asset.eligibilityByAccount.brokerage} />
+        <QualityRow label="Binance" value={asset.eligibilityByAccount.crypto} />
+        <QualityRow
+          label="Prix"
+          value={
+            asset.lastPrice === null
+              ? 'non relie'
+              : formatMoney(asset.lastPrice, asset.lastPriceCurrency ?? asset.currency)
+          }
+        />
+      </div>
+      {asset.warnings.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {asset.warnings.slice(0, 3).map(warning => (
+            <Badge key={warning} variant="warning">
+              {normalizeInvestmentWarning(warning)}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="xs"
+          variant={watched ? 'secondary' : 'outline'}
+          disabled={!isAdmin || isPending}
+          onClick={() => updateOrAdd('watch', 'watching')}
+        >
+          Surveiller
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          disabled={!isAdmin || isPending}
+          onClick={() => updateOrAdd('analyze', 'high_interest')}
+        >
+          Interet eleve
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          disabled={!isAdmin || isPending}
+          onClick={() => updateOrAdd('compare', 'interested')}
+        >
+          Comparer
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          disabled={!isAdmin || isPending}
+          onClick={() => updateOrAdd('exclude', 'watching')}
+        >
+          Exclure
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function AssetIdentity({
+  symbol,
+  name,
+  assetClass,
+}: {
+  symbol: string
+  name: string
+  assetClass: string
+}) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background font-mono text-xs font-semibold">
+        {symbol.slice(0, 3)}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{name}</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+          {symbol} · {assetClass}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function PlanItemCollection({
+  title,
+  description,
+  empty,
+  items,
+  tone,
+}: {
+  title: string
+  description: string
+  empty: string
+  items: DashboardInvestmentPlanItem[]
+  tone: 'brand' | 'violet' | 'warning' | 'plain'
+}) {
+  return (
+    <Panel
+      title={title}
+      description={description}
+      tone={tone}
+      icon={<StatusDot tone={tone === 'warning' ? 'warn' : tone === 'plain' ? 'idle' : 'brand'} size={8} />}
+    >
+      {items.length > 0 ? (
+        <div className="grid gap-3">
+          {items.slice(0, 5).map(item => (
+            <CompactPlanItem key={`${title}-${item.accountLabel}-${item.symbol}`} item={item} />
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-dashed border-border/50 bg-surface-1/40 px-3 py-5 text-sm text-muted-foreground">
+          {empty}
+        </p>
+      )}
+    </Panel>
+  )
+}
+
+function CompactPlanItem({ item }: { item: DashboardInvestmentPlanItem }) {
+  const freshness = investmentFreshnessOf(item)
+  const amount = toInvestmentNumber(item.amountValue)
+  return (
+    <div className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <AssetIdentity
+          symbol={item.symbol ?? item.bucket}
+          name={item.assetName ?? item.symbol ?? INVESTMENT_BUCKET_LABEL[item.bucket]}
+          assetClass={item.recommendationTier ?? item.bucket}
+        />
+        <Badge variant={investmentActionVariant(item.action)}>
+          {INVESTMENT_ACTION_LABEL[item.action] ?? item.action}
+        </Badge>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.thesis}</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Badge variant="outline">{recommendabilityLabel(item.recommendabilityStatus)}</Badge>
+        <Badge variant="outline">{item.recommendationMode ?? 'watch'}</Badge>
+        <Badge variant="outline">risque {INVESTMENT_RISK_LABEL[item.riskLevel]}</Badge>
+        <FreshnessBadge freshness={freshness} />
+        {amount !== null ? (
+          <Badge variant="warning">{formatMoney(amount, item.amountCurrency)}</Badge>
+        ) : null}
+      </div>
     </div>
   )
 }

@@ -1,8 +1,3 @@
-<!-- GENERATED — DO NOT EDIT
-     Source: .agentic/source/skills/gitnexus/gitnexus-debugging/SKILL.md
-     Hash:   sha256:4a1e82aa835c52e3
-     Sync:   pnpm agent:skills:sync -->
-
 ---
 name: gitnexus-debugging
 description: "Use when the user is debugging a bug, tracing an error, or asking why something fails. Examples: \"Why is X failing?\", \"Where does this error come from?\", \"Trace this bug\""

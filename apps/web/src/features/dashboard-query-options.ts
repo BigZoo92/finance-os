@@ -11,6 +11,8 @@ import {
   fetchDashboardAdvisorKnowledgeTopics,
   fetchDashboardAdvisorLatestManualOperation,
   fetchDashboardAdvisorManualOperationById,
+  fetchDashboardAdvisorAssetsSearch,
+  fetchDashboardAdvisorAssetWatchlist,
   fetchDashboardAdvisorRecommendations,
   fetchDashboardAdvisorRuns,
   fetchDashboardAdvisorSignals,
@@ -148,6 +150,9 @@ export const dashboardQueryKeys = {
   investmentHypotheses: () => [...dashboardQueryKeys.all, 'investment-hypotheses'] as const,
   investmentScorecard: () => [...dashboardQueryKeys.all, 'investment-scorecard'] as const,
   investmentLessons: () => [...dashboardQueryKeys.all, 'investment-lessons'] as const,
+  advisorAssetsSearch: (query: string) =>
+    [...dashboardQueryKeys.all, 'advisor-assets-search', query] as const,
+  advisorAssetWatchlist: () => [...dashboardQueryKeys.all, 'advisor-asset-watchlist'] as const,
   manualAssets: () => [...dashboardQueryKeys.all, 'manual-assets'] as const,
   // PR5 — Learning Loop surface query keys.
   advisorJournal: (params?: {
@@ -560,6 +565,32 @@ export const dashboardInvestmentStrategyQueryOptionsWithMode = ({
     queryFn: fetchDashboardInvestmentStrategy,
     enabled: mode !== undefined,
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
+  })
+
+export const dashboardAdvisorAssetsSearchQueryOptionsWithMode = ({
+  mode,
+  query,
+}: {
+  mode?: AuthMode
+  query: string
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorAssetsSearch(query),
+    queryFn: () => fetchDashboardAdvisorAssetsSearch(query),
+    enabled: mode !== undefined && query.trim().length > 0,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 20_000,
+  })
+
+export const dashboardAdvisorAssetWatchlistQueryOptionsWithMode = ({
+  mode,
+}: {
+  mode?: AuthMode
+}) =>
+  queryOptions({
+    queryKey: dashboardQueryKeys.advisorAssetWatchlist(),
+    queryFn: fetchDashboardAdvisorAssetWatchlist,
+    enabled: mode !== undefined,
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
 export const dashboardInvestmentPlanLatestQueryOptionsWithMode = ({

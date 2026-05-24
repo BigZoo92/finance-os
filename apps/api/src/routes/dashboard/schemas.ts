@@ -257,6 +257,64 @@ export const dashboardInvestmentActionPlanGenerateBodySchema = t.Object({
   dryRun: t.Optional(t.Boolean()),
 })
 
+export const dashboardInvestmentAssetSearchQuerySchema = t.Object({
+  q: t.String({ minLength: 0, maxLength: 120 }),
+})
+
+export const dashboardInvestmentAssetParamsSchema = t.Object({
+  assetId: t.String({ minLength: 1, maxLength: 160 }),
+})
+
+export const dashboardInvestmentWatchlistParamsSchema = t.Object({
+  id: t.Numeric({ minimum: 1 }),
+})
+
+const dashboardInvestmentUserInterestLevelSchema = t.Union([
+  t.Literal('none'),
+  t.Literal('watching'),
+  t.Literal('interested'),
+  t.Literal('high_interest'),
+])
+
+const dashboardInvestmentUserIntentSchema = t.Union([
+  t.Literal('watch'),
+  t.Literal('analyze'),
+  t.Literal('compare'),
+  t.Literal('consider_buy'),
+  t.Literal('exclude'),
+])
+
+export const dashboardInvestmentWatchlistBodySchema = t.Object({
+  symbol: t.String({ minLength: 1, maxLength: 40 }),
+  name: t.String({ minLength: 1, maxLength: 240 }),
+  assetClass: t.String({ minLength: 1, maxLength: 80 }),
+  providerSymbols: t.Optional(t.Record(t.String({ minLength: 1, maxLength: 80 }), t.String())),
+  iconUrl: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+  logoUrl: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+  isin: t.Optional(t.Union([t.String({ maxLength: 24 }), t.Null()])),
+  exchange: t.Optional(t.Union([t.String({ maxLength: 120 }), t.Null()])),
+  currency: t.String({ minLength: 3, maxLength: 10 }),
+  userInterestLevel: t.Optional(dashboardInvestmentUserInterestLevelSchema),
+  userIntent: t.Optional(dashboardInvestmentUserIntentSchema),
+  note: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+})
+
+export const dashboardInvestmentWatchlistPatchBodySchema = t.Partial(
+  t.Object({
+    name: t.String({ minLength: 1, maxLength: 240 }),
+    assetClass: t.String({ minLength: 1, maxLength: 80 }),
+    providerSymbols: t.Record(t.String({ minLength: 1, maxLength: 80 }), t.String()),
+    iconUrl: t.Union([t.String({ maxLength: 1000 }), t.Null()]),
+    logoUrl: t.Union([t.String({ maxLength: 1000 }), t.Null()]),
+    isin: t.Union([t.String({ maxLength: 24 }), t.Null()]),
+    exchange: t.Union([t.String({ maxLength: 120 }), t.Null()]),
+    currency: t.String({ minLength: 3, maxLength: 10 }),
+    userInterestLevel: dashboardInvestmentUserInterestLevelSchema,
+    userIntent: dashboardInvestmentUserIntentSchema,
+    note: t.Union([t.String({ maxLength: 1000 }), t.Null()]),
+  })
+)
+
 export const dashboardInvestmentHypothesesReviewBodySchema = t.Object({
   trigger: t.Optional(
     t.Union([t.Literal('manual'), t.Literal('scheduled'), t.Literal('internal')])

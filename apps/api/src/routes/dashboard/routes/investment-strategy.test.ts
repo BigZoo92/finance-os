@@ -138,6 +138,67 @@ describe('createInvestmentStrategyRoute', () => {
     expect(payload.plan.noAutoTrade).toBe(true)
   })
 
+  it('GET /advisor/assets/search forwards the query without requiring admin mode', async () => {
+    const received: { mode: 'demo' | 'admin' | null; query: string | null } = {
+      mode: null,
+      query: null,
+    }
+    const app = buildApp({
+      mode: 'demo',
+      useCases: {
+        searchAdvisorAssets: async input => {
+          received.mode = input.mode
+          received.query = input.query
+          return {
+            requestId: input.requestId,
+            mode: input.mode,
+            source: 'demo_fixture',
+            query: input.query,
+            items: [{ symbol: 'BTC', name: 'Bitcoin', priceability: 'priceable' }],
+          }
+        },
+      },
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/assets/search?q=bitcoin')
+    )
+    const payload = (await response.json()) as { items: Array<{ symbol: string }> }
+
+    expect(response.status).toBe(200)
+    expect(received).toEqual({ mode: 'demo', query: 'bitcoin' })
+    expect(payload.items[0]?.symbol).toBe('BTC')
+  })
+
+  it('POST /advisor/assets/watchlist blocks demo writes before adding assets', async () => {
+    let called = false
+    const app = buildApp({
+      mode: 'demo',
+      useCases: {
+        addAdvisorAssetToWatchlist: async () => {
+          called = true
+          return {}
+        },
+      },
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/advisor/assets/watchlist', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          symbol: 'NVDA',
+          name: 'NVIDIA',
+          assetClass: 'stock',
+          currency: 'USD',
+        }),
+      })
+    )
+
+    expect(response.status).toBe(403)
+    expect(called).toBe(false)
+  })
+
   it('GET /advisor/investment-plan/latest returns 503 when runtime is not wired', async () => {
     const app = buildApp({ mode: 'admin', useCases: {} })
     const response = await app.handle(

@@ -174,7 +174,7 @@ Knowledge graph over the full codebase (`gitnexus@1.4.10`, devDep). Available as
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **finance-os** (5024 symbols, 12504 relationships, 295 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **finance-os** (7562 symbols, 17986 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

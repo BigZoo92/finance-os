@@ -7,12 +7,17 @@ import {
   actionableStepsForPlan,
   activeGraphStatusForPlan,
   buildInvestmentAccountSections,
+  creativeIdeasForPlan,
+  dataGapItemsForPlan,
   formatInvestmentConfidence,
   investmentFreshnessBadgeLabel,
   investmentFreshnessBadgeTone,
   investmentFreshnessOf,
   investmentListFor,
   normalizeInvestmentWarning,
+  priceabilityLabel,
+  recommendabilityLabel,
+  userWatchlistItemsForPlan,
 } from './investment-strategy-view-model'
 
 const planItem = (overrides: Partial<DashboardInvestmentPlanItem> = {}) =>
@@ -190,5 +195,33 @@ describe('investment strategy view model', () => {
     expect(normalizeInvestmentWarning('knowledge_service_status_500')).toBe(
       'Memoire graph indisponible, non bloquant'
     )
+  })
+
+  it('groups creative ideas, user watchlist and data gaps without requiring approved', () => {
+    const plan = {
+      items: [
+        planItem({
+          recommendationTier: 'speculative_watch',
+          recommendabilityStatus: 'blocked_strategy_cap',
+          userInterestLevel: 'high_interest',
+          userIntent: 'consider_buy',
+          symbol: 'BTC',
+        }),
+        planItem({
+          id: 2,
+          recommendationTier: 'user_watchlist',
+          recommendabilityStatus: 'blocked_missing_price',
+          userInterestLevel: 'watching',
+          userIntent: 'watch',
+          symbol: 'OBSCURE',
+        }),
+      ],
+    } as DashboardInvestmentActionPlan
+
+    expect(creativeIdeasForPlan(plan).map(item => item.symbol)).toContain('BTC')
+    expect(userWatchlistItemsForPlan(plan).map(item => item.symbol)).toEqual(['BTC', 'OBSCURE'])
+    expect(dataGapItemsForPlan(plan).map(item => item.symbol)).toEqual(['OBSCURE'])
+    expect(priceabilityLabel('priceable')).toBe('prix exploitable')
+    expect(recommendabilityLabel('blocked_strategy_cap')).toContain('cap')
   })
 })

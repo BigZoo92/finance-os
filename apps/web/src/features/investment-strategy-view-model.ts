@@ -97,7 +97,7 @@ export const normalizeInvestmentWarning = (code: string) => {
   if (code.startsWith('missing_price:')) {
     return `Prix non relie au candidat (${code.slice('missing_price:'.length)}), achat bloque`
   }
-  if (code === 'candidate_needs_review') return 'Actif a approuver avant achat'
+  if (code === 'candidate_needs_review') return 'Actif candidat: prix et eligibility restent les gates'
   if (code === 'knowledge_ingest_permission_denied_storage') {
     return 'Memoire graph non inscriptible, verifier volume/permissions'
   }
@@ -106,6 +106,61 @@ export const normalizeInvestmentWarning = (code: string) => {
   }
   return code
 }
+
+export const priceabilityLabel = (value: string | null | undefined) => {
+  if (value === 'priceable') return 'prix exploitable'
+  if (value === 'stale') return 'prix stale'
+  if (value === 'missing') return 'prix manquant'
+  if (value === 'unsupported') return 'prix non supporte'
+  return 'prix inconnu'
+}
+
+export const recommendabilityLabel = (value: string | null | undefined) => {
+  if (value === 'recommendable') return 'recommendable'
+  if (value === 'watch_only') return 'watch only'
+  if (value === 'blocked_missing_price') return 'bloque: prix manquant'
+  if (value === 'blocked_stale_price') return 'bloque: prix stale'
+  if (value === 'blocked_ineligible_account') return 'bloque: compte incompatible'
+  if (value === 'blocked_unknown_pea_eligibility') return 'bloque: PEA inconnu'
+  if (value === 'blocked_risk_policy') return 'bloque: politique risque'
+  if (value === 'blocked_strategy_cap') return 'bloque: cap strategie'
+  if (value === 'rejected_by_user') return 'exclu'
+  return 'non qualifie'
+}
+
+export const creativeIdeasForPlan = (
+  plan: DashboardInvestmentActionPlan | null | undefined
+): DashboardInvestmentPlanItem[] =>
+  (plan?.items ?? []).filter(
+    item =>
+      item.recommendationTier === 'speculative_watch' ||
+      item.recommendationTier === 'asymmetric_candidate' ||
+      (item.recommendationTier === 'user_watchlist' && item.riskLevel === 'very_high')
+  )
+
+export const userWatchlistItemsForPlan = (
+  plan: DashboardInvestmentActionPlan | null | undefined
+): DashboardInvestmentPlanItem[] =>
+  (plan?.items ?? []).filter(
+    item => item.recommendationTier === 'user_watchlist' || item.userInterestLevel !== 'none'
+  )
+
+export const avoidItemsForPlan = (
+  plan: DashboardInvestmentActionPlan | null | undefined
+): DashboardInvestmentPlanItem[] =>
+  (plan?.items ?? []).filter(
+    item => item.action === 'avoid' || item.recommendabilityStatus === 'rejected_by_user'
+  )
+
+export const dataGapItemsForPlan = (
+  plan: DashboardInvestmentActionPlan | null | undefined
+): DashboardInvestmentPlanItem[] =>
+  (plan?.items ?? []).filter(
+    item =>
+      item.recommendabilityStatus === 'blocked_missing_price' ||
+      item.recommendabilityStatus === 'blocked_stale_price' ||
+      item.recommendabilityStatus === 'blocked_unknown_pea_eligibility'
+  )
 
 export const activeGraphStatusForPlan = ({
   plan,

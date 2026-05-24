@@ -60,6 +60,10 @@ const candidate = (input: Partial<AssetCandidateDto> & Pick<AssetCandidateDto, '
   liquidityScore: input.liquidityScore ?? 0.8,
   notes: input.notes ?? null,
   source: input.source ?? 'test',
+  userInterestLevel: input.userInterestLevel ?? 'none',
+  userIntent: input.userIntent ?? 'analyze',
+  iconUrl: input.iconUrl ?? null,
+  logoUrl: input.logoUrl ?? null,
 })
 
 const freshPrice = (symbol: string, overrides: Record<string, unknown> = {}) =>
@@ -208,7 +212,7 @@ describe('investment strategy engine', () => {
     expect(core?.recommendedAction.toLowerCase()).not.toContain('vendre')
   })
 
-  it('computes allocation drift from holdings and chooses a safe non-buy top action when universe is not approved', () => {
+  it('does not require approved when a candidate is priceable and account-eligible', () => {
     const plan = buildActionPlanDraft({
       bundle: bundle([
         candidate({
@@ -244,8 +248,12 @@ describe('investment strategy engine', () => {
       now,
     })
     expect(plan.items.every(item => item.noAutoTrade && item.humanValidationRequired)).toBe(true)
-    expect(plan.items.some(item => item.action === 'buy')).toBe(false)
-    expect(plan.items[plan.topActionIndex]?.action).not.toBe('buy')
+    expect(plan.items.some(item => item.symbol === 'CORE_REVIEW' && item.action === 'buy')).toBe(
+      true
+    )
+    expect(
+      plan.items.find(item => item.symbol === 'CORE_REVIEW')?.recommendabilityStatus
+    ).toBe('recommendable')
   })
 
   it('keeps no-buy guardrails while producing concrete contribution and setup steps', () => {
@@ -306,10 +314,58 @@ describe('investment strategy engine', () => {
         expect.objectContaining({ type: 'allocate_contribution', bucket: 'core', amountValue: 200 }),
         expect.objectContaining({ type: 'allocate_contribution', bucket: 'growth', amountValue: 100 }),
         expect.objectContaining({ type: 'do_not_reinforce_overweight_bucket', bucket: 'asymmetric' }),
-        expect.objectContaining({ type: 'approve_asset_candidate' }),
+        expect.objectContaining({ type: 'resolve_asset_eligibility' }),
         expect.objectContaining({ type: 'connect_price_source' }),
       ])
     )
+  })
+
+  it('keeps rejected or excluded assets blocked', () => {
+    const plan = buildActionPlanDraft({
+      bundle: bundle([
+        candidate({
+          symbol: 'NOPE',
+          eligibilityStatus: 'rejected',
+          providerSymbols: { trade_republic: 'NOPE' },
+        }),
+      ]),
+      allocation: allocation(),
+      latestPrices: { NOPE: freshPrice('NOPE') },
+      now,
+    })
+    const rejected = plan.items.find(item => item.symbol === 'NOPE')
+    expect(rejected?.action).toBe('avoid')
+    expect(rejected?.recommendabilityStatus).toBe('rejected_by_user')
+  })
+
+  it('lets user interest boost ranking without forcing the top recommendation', () => {
+    const plan = buildActionPlanDraft({
+      bundle: bundle([
+        candidate({
+          symbol: 'CORE_OK',
+          providerSymbols: { trade_republic: 'CORE_OK' },
+        }),
+        candidate({
+          symbol: 'BTC',
+          assetClass: 'crypto',
+          bucket: 'asymmetric',
+          accountTypesAllowed: ['crypto'],
+          peaEligibilityStatus: 'not_applicable',
+          riskLevel: 'very_high',
+          providerSymbols: { binance: 'BTCEUR' },
+          userInterestLevel: 'high_interest',
+          userIntent: 'consider_buy',
+          source: 'user_watchlist',
+        }),
+      ]),
+      allocation: allocation(12),
+      latestPrices: { CORE_OK: freshPrice('CORE_OK'), BTCEUR: freshPrice('BTCEUR') },
+      now,
+    })
+    const btc = plan.items.find(item => item.symbol === 'BTC')
+    expect(btc?.recommendabilityStatus).toBe('blocked_strategy_cap')
+    expect(btc?.action).not.toBe('buy')
+    expect(plan.items[plan.topActionIndex]?.symbol).not.toBe('BTC')
   })
 
   it('creates reviewable hypotheses from actionable plan items', () => {

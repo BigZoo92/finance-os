@@ -19,6 +19,7 @@ import {
   defaultAccountPolicies,
   defaultBuckets,
   defaultCandidateUniverse,
+  normalizeAssetSymbol,
   getReliablePriceForRecommendation,
   type HoldingInput,
   type InvestmentActionableStep,
@@ -48,6 +49,44 @@ export type GenerateActionPlanInput = {
   triggerSource: string
   dryRun?: boolean
 }
+
+export type AssetSearchInput = {
+  mode: Mode
+  requestId: string
+  query: string
+}
+
+export type WatchlistAssetInput = {
+  symbol: string
+  name: string
+  assetClass: string
+  providerSymbols?: Record<string, string>
+  iconUrl?: string | null
+  logoUrl?: string | null
+  isin?: string | null
+  exchange?: string | null
+  currency: string
+  userInterestLevel?: 'none' | 'watching' | 'interested' | 'high_interest'
+  userIntent?: 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
+  note?: string | null
+}
+
+export type WatchlistAssetPatchInput = Partial<
+  Pick<
+    WatchlistAssetInput,
+    | 'name'
+    | 'assetClass'
+    | 'providerSymbols'
+    | 'iconUrl'
+    | 'logoUrl'
+    | 'isin'
+    | 'exchange'
+    | 'currency'
+    | 'userInterestLevel'
+    | 'userIntent'
+    | 'note'
+  >
+>
 
 export type ReviewDueInput = {
   mode: Mode
@@ -269,7 +308,10 @@ const mapCandidateRow = (row: {
   eligibilityStatus:
     row.eligibilityStatus === 'approved' ||
     row.eligibilityStatus === 'candidate_needs_review' ||
+    row.eligibilityStatus === 'approved_by_default_policy' ||
+    row.eligibilityStatus === 'candidate_auto_suggested' ||
     row.eligibilityStatus === 'rejected' ||
+    row.eligibilityStatus === 'watch_only' ||
     row.eligibilityStatus === 'unknown'
       ? row.eligibilityStatus
       : 'unknown',
@@ -290,6 +332,10 @@ const mapCandidateRow = (row: {
   liquidityScore: row.liquidityScore,
   notes: row.notes,
   source: row.source,
+  userInterestLevel: 'none',
+  userIntent: 'analyze',
+  iconUrl: null,
+  logoUrl: null,
 })
 
 const createDemoStrategyBundle = (): StrategyBundle => {
@@ -332,14 +378,14 @@ const createDemoHoldings = (): HoldingInput[] => [
     accountLabel: 'PEA Trade Republic',
     accountType: 'pea',
     symbol: 'CORE_ETF_REVIEW',
-    name: 'ETF Core a approuver',
+    name: 'ETF Core a analyser',
     assetClass: 'etf',
     value: 6000,
     currency: 'EUR',
     valueAsOf: '2026-05-23T07:00:00.000Z',
     quantity: 10,
     degradedReasons: ['demo_fixture'],
-    assumptions: ['Mode demo: instrument non approuve, aucun achat possible.'],
+    assumptions: ['Mode demo: instrument sans prix frais ni eligibility PEA confirmee.'],
   },
   {
     provider: 'ibkr',
@@ -354,7 +400,7 @@ const createDemoHoldings = (): HoldingInput[] => [
     valueAsOf: '2026-05-23T07:00:00.000Z',
     quantity: 5,
     degradedReasons: ['demo_fixture'],
-    assumptions: ['Mode demo: candidate non approuve.'],
+    assumptions: ['Mode demo: candidate analysee sans prix frais.'],
   },
   {
     provider: 'binance',
@@ -369,7 +415,7 @@ const createDemoHoldings = (): HoldingInput[] => [
     valueAsOf: '2026-05-23T07:00:00.000Z',
     quantity: 0.01,
     degradedReasons: ['demo_fixture'],
-    assumptions: ['Mode demo: crypto sous cap mais candidate non approuvee.'],
+    assumptions: ['Mode demo: crypto analysee, cap de risque et prix frais restent prioritaires.'],
   },
 ]
 
@@ -420,7 +466,7 @@ const demoPlan = (requestId: string) => {
       byAssetClass: {},
       notes: 'Mode demo: aucun historique reel.',
     },
-    warnings: ['demo_fixture', 'candidate_universe_needs_manual_approval'],
+    warnings: ['demo_fixture', 'priceable_and_eligible_required'],
   }
 }
 
@@ -529,6 +575,194 @@ const priceRowToContract = (row: {
   isMarketOpen: row.isMarketOpen,
   confidence: row.confidence,
 })
+
+type AssetSearchResultDto = {
+  id: string
+  symbol: string
+  name: string
+  assetClass: string
+  isin: string | null
+  exchange: string | null
+  currency: string
+  iconUrl: string | null
+  logoUrl: string | null
+  providerSymbols: Record<string, string>
+  priceability: 'priceable' | 'stale' | 'missing' | 'unsupported'
+  eligibilityByAccount: Record<
+    'pea' | 'brokerage' | 'crypto',
+    'eligible' | 'ineligible' | 'unknown' | 'not_applicable'
+  >
+  suggestedBucket: 'core' | 'growth' | 'asymmetric'
+  riskLevel: 'low' | 'medium' | 'high' | 'very_high'
+  lastPrice: number | null
+  lastPriceCurrency: string | null
+  lastPriceAt: string | null
+  priceSource: string | null
+  isAlreadyWatched: boolean
+  userInterestLevel: 'none' | 'watching' | 'interested' | 'high_interest'
+  userIntent: 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
+  warnings: string[]
+}
+
+type CuratedAsset = Omit<
+  AssetSearchResultDto,
+  | 'id'
+  | 'priceability'
+  | 'lastPrice'
+  | 'lastPriceCurrency'
+  | 'lastPriceAt'
+  | 'priceSource'
+  | 'isAlreadyWatched'
+  | 'userInterestLevel'
+  | 'userIntent'
+  | 'warnings'
+>
+
+const CURATED_ASSET_UNIVERSE: CuratedAsset[] = [
+  {
+    symbol: 'NVDA',
+    name: 'NVIDIA',
+    assetClass: 'stock',
+    isin: 'US67066G1040',
+    exchange: 'NASDAQ',
+    currency: 'USD',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { ibkr: 'NVDA' },
+    eligibilityByAccount: { pea: 'ineligible', brokerage: 'eligible', crypto: 'not_applicable' },
+    suggestedBucket: 'growth',
+    riskLevel: 'high',
+  },
+  {
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    assetClass: 'crypto',
+    isin: null,
+    exchange: 'binance_spot',
+    currency: 'EUR',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { binance: 'BTCEUR' },
+    eligibilityByAccount: { pea: 'not_applicable', brokerage: 'not_applicable', crypto: 'eligible' },
+    suggestedBucket: 'asymmetric',
+    riskLevel: 'very_high',
+  },
+  {
+    symbol: 'ETH',
+    name: 'Ethereum',
+    assetClass: 'crypto',
+    isin: null,
+    exchange: 'binance_spot',
+    currency: 'EUR',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { binance: 'ETHEUR' },
+    eligibilityByAccount: { pea: 'not_applicable', brokerage: 'not_applicable', crypto: 'eligible' },
+    suggestedBucket: 'asymmetric',
+    riskLevel: 'very_high',
+  },
+  {
+    symbol: 'SOL',
+    name: 'Solana',
+    assetClass: 'crypto',
+    isin: null,
+    exchange: 'binance_spot',
+    currency: 'EUR',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { binance: 'SOLEUR' },
+    eligibilityByAccount: { pea: 'not_applicable', brokerage: 'not_applicable', crypto: 'eligible' },
+    suggestedBucket: 'asymmetric',
+    riskLevel: 'very_high',
+  },
+  {
+    symbol: 'CW8',
+    name: 'Amundi MSCI World PEA',
+    assetClass: 'etf',
+    isin: 'LU1681043599',
+    exchange: 'Euronext Paris',
+    currency: 'EUR',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { trade_republic: 'CW8', ibkr: 'CW8' },
+    eligibilityByAccount: { pea: 'eligible', brokerage: 'eligible', crypto: 'not_applicable' },
+    suggestedBucket: 'core',
+    riskLevel: 'medium',
+  },
+  {
+    symbol: 'AI',
+    name: 'Air Liquide',
+    assetClass: 'stock',
+    isin: 'FR0000120073',
+    exchange: 'Euronext Paris',
+    currency: 'EUR',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { trade_republic: 'AI', ibkr: 'AI' },
+    eligibilityByAccount: { pea: 'eligible', brokerage: 'eligible', crypto: 'not_applicable' },
+    suggestedBucket: 'growth',
+    riskLevel: 'medium',
+  },
+  {
+    symbol: 'SMH',
+    name: 'VanEck Semiconductor ETF',
+    assetClass: 'etf',
+    isin: 'US92189F6768',
+    exchange: 'NASDAQ',
+    currency: 'USD',
+    iconUrl: null,
+    logoUrl: null,
+    providerSymbols: { ibkr: 'SMH' },
+    eligibilityByAccount: { pea: 'ineligible', brokerage: 'eligible', crypto: 'not_applicable' },
+    suggestedBucket: 'growth',
+    riskLevel: 'high',
+  },
+]
+
+const inferBucketForAsset = (assetClass: string): 'core' | 'growth' | 'asymmetric' => {
+  const normalized = assetClass.toLowerCase()
+  if (normalized.includes('crypto')) return 'asymmetric'
+  if (normalized.includes('etf') || normalized.includes('fund')) return 'core'
+  return 'growth'
+}
+
+const inferRiskForAsset = (assetClass: string): 'low' | 'medium' | 'high' | 'very_high' => {
+  const normalized = assetClass.toLowerCase()
+  if (normalized.includes('crypto')) return 'very_high'
+  if (normalized.includes('stock') || normalized.includes('equity')) return 'high'
+  return 'medium'
+}
+
+const accountEligibilityForAsset = (
+  asset: Pick<CuratedAsset, 'assetClass' | 'eligibilityByAccount'>
+) => asset.eligibilityByAccount
+
+const priceabilityFromPrice = (
+  price: ReturnType<typeof priceRowToContract> | null,
+  now = new Date()
+): {
+  priceability: AssetSearchResultDto['priceability']
+  lastPrice: number | null
+  lastPriceCurrency: string | null
+  lastPriceAt: string | null
+  priceSource: string | null
+  warnings: string[]
+} => {
+  const reliable = getReliablePriceForRecommendation({ snapshot: price, now })
+  return {
+    priceability:
+      reliable.status === 'fresh'
+        ? 'priceable'
+        : reliable.status === 'missing'
+          ? 'missing'
+          : 'stale',
+    lastPrice: reliable.freshness.price,
+    lastPriceCurrency: reliable.freshness.currency,
+    lastPriceAt: reliable.freshness.fetchedAt ?? reliable.freshness.marketTimestamp,
+    priceSource: reliable.freshness.provider,
+    warnings: reliable.warnings,
+  }
+}
 
 const accountScope = (label: string): 'PEA' | 'IBKR' | 'Binance' | 'global' => {
   const lower = label.toLowerCase()
@@ -767,14 +1001,119 @@ export const createInvestmentStrategyUseCases = ({
   knowledgeConfig,
   advisorGraphIngestEnabled,
 }: InvestmentStrategyUseCaseDeps) => {
+  const candidateFromInterestRow = (row: {
+    id: number
+    symbol: string
+    name: string
+    assetClass: string
+    providerSymbolsJson: Record<string, string>
+    iconUrl: string | null
+    logoUrl: string | null
+    isin: string | null
+    exchange: string | null
+    currency: string
+    userInterestLevel: string
+    userIntent: string
+    note: string | null
+  }): AssetCandidateDto => {
+    const curated = CURATED_ASSET_UNIVERSE.find(
+      item => normalizeAssetSymbol(item.symbol) === normalizeAssetSymbol(row.symbol)
+    )
+    const assetClass = row.assetClass || curated?.assetClass || 'stock'
+    const bucket = curated?.suggestedBucket ?? inferBucketForAsset(assetClass)
+    const accountTypesAllowed =
+      assetClass.toLowerCase().includes('crypto') || bucket === 'asymmetric'
+        ? (['crypto'] as const)
+        : (['pea', 'brokerage'] as const)
+    const providerSymbols = {
+      ...(curated?.providerSymbols ?? {}),
+      ...toJsonRecord(row.providerSymbolsJson),
+    } as Record<string, string>
+    const userIntent =
+      row.userIntent === 'watch' ||
+      row.userIntent === 'analyze' ||
+      row.userIntent === 'compare' ||
+      row.userIntent === 'consider_buy' ||
+      row.userIntent === 'exclude'
+        ? row.userIntent
+        : 'watch'
+    const userInterestLevel =
+      row.userInterestLevel === 'none' ||
+      row.userInterestLevel === 'watching' ||
+      row.userInterestLevel === 'interested' ||
+      row.userInterestLevel === 'high_interest'
+        ? row.userInterestLevel
+        : 'watching'
+    return {
+      id: -row.id,
+      symbol: normalizeAssetSymbol(row.symbol),
+      name: row.name,
+      assetClass,
+      bucket,
+      accountTypesAllowed: [...accountTypesAllowed],
+      providerSymbols,
+      isin: row.isin ?? curated?.isin ?? null,
+      exchange: row.exchange ?? curated?.exchange ?? null,
+      currency: row.currency || curated?.currency || 'EUR',
+      eligibilityStatus: userIntent === 'exclude' ? 'rejected' : 'candidate_auto_suggested',
+      peaEligibilityStatus:
+        curated?.eligibilityByAccount.pea === 'eligible'
+          ? 'eligible'
+          : curated?.eligibilityByAccount.pea === 'ineligible'
+            ? 'ineligible'
+            : assetClass.toLowerCase().includes('crypto')
+              ? 'not_applicable'
+              : 'unknown',
+      riskLevel: curated?.riskLevel ?? inferRiskForAsset(assetClass),
+      liquidityScore: curated ? 0.78 : userInterestLevel === 'high_interest' ? 0.55 : 0.45,
+      notes:
+        row.note ??
+        'Ajoute par l utilisateur: signal d interet, pas priorite automatique de recommandation.',
+      source: 'user_watchlist',
+      userInterestLevel,
+      userIntent,
+      iconUrl: row.iconUrl,
+      logoUrl: row.logoUrl,
+    }
+  }
+
+  const mergeUserInterestCandidates = async (candidates: AssetCandidateDto[]) => {
+    const interests = await repository.listUserAssetInterests()
+    if (interests.length === 0) return candidates
+    const byKey = new Map<string, AssetCandidateDto>()
+    for (const candidate of candidates) {
+      byKey.set(`${normalizeAssetSymbol(candidate.symbol)}:${candidate.bucket}`, candidate)
+    }
+    for (const row of interests) {
+      const candidate = candidateFromInterestRow(row)
+      const key = `${normalizeAssetSymbol(candidate.symbol)}:${candidate.bucket}`
+      const existing = byKey.get(key)
+      if (existing) {
+        byKey.set(key, {
+          ...existing,
+          userInterestLevel: candidate.userInterestLevel,
+          userIntent: candidate.userIntent,
+          notes: candidate.notes ?? existing.notes,
+          source: existing.source === 'default_seed_needs_review' ? 'user_watchlist' : existing.source,
+          iconUrl: candidate.iconUrl,
+          logoUrl: candidate.logoUrl,
+        })
+      } else {
+        byKey.set(key, candidate)
+      }
+    }
+    return [...byKey.values()]
+  }
+
   const bundleFromRows = async (strategyId: number): Promise<StrategyBundle | null> => {
     const rows = await repository.getStrategyBundle(strategyId)
     if (!rows.strategy) return null
+    const candidates = await mergeUserInterestCandidates(rows.candidates.map(mapCandidateRow))
     return {
       strategy: mapStrategyRow(rows.strategy),
       buckets: rows.buckets.map(mapBucketRow),
       accountPolicies: rows.accountPolicies.map(mapPolicyRow),
-      candidates: rows.candidates.map(mapCandidateRow),
+      candidates,
     }
   }
 
@@ -886,6 +1225,12 @@ export const createInvestmentStrategyUseCases = ({
         needsReview: resolved.candidates.filter(
           item => item.eligibilityStatus === 'candidate_needs_review'
         ).length,
+        userWatched: resolved.candidates.filter(item => item.source === 'user_watchlist').length,
+        excluded: resolved.candidates.filter(
+          item => item.eligibilityStatus === 'rejected' || item.userIntent === 'exclude'
+        ).length,
+        recommendableRule:
+          'priceable + eligible for target account + fresh price + risk-policy-compliant',
         candidates: resolved.candidates,
       },
       validation: validateStrategy(resolved.buckets),
@@ -894,6 +1239,7 @@ export const createInvestmentStrategyUseCases = ({
         humanValidationRequired: true,
         buyRequiresFreshPrice: true,
         buyRequiresKnownEligibility: true,
+        approvedRequired: false,
       },
     }
   }
@@ -1289,7 +1635,11 @@ export const createInvestmentStrategyUseCases = ({
     ])
     const prices: Record<string, ReturnType<typeof priceRowToContract> | null> = {}
     for (const row of priceRows) {
-      prices[row.symbol] = priceRowToContract(row)
+      const price = priceRowToContract(row)
+      prices[row.symbol] = price
+      prices[normalizeAssetSymbol(row.symbol)] = price
+      if (row.instrumentId) prices[normalizeAssetSymbol(row.instrumentId)] = price
+      if (row.assetId) prices[normalizeAssetSymbol(row.assetId)] = price
     }
     const health: Record<string, string | null> = {}
     for (const row of healthRows) {
@@ -1301,6 +1651,266 @@ export const createInvestmentStrategyUseCases = ({
       latestPrices: prices,
       providerHealthByProvider: health,
     })
+  }
+
+  const assetsForSearch = async (mode: Mode) => {
+    const bundle = mode === 'demo' ? createDemoStrategyBundle() : await seedDefaultStrategyIfMissing()
+    const interests = mode === 'demo' ? [] : await repository.listUserAssetInterests()
+    const interestSymbols = new Map(
+      interests.map(row => [`${normalizeAssetSymbol(row.symbol)}:${row.assetClass}`, row])
+    )
+    const rows = new Map<string, CuratedAsset | AssetCandidateDto>()
+    for (const curated of CURATED_ASSET_UNIVERSE) {
+      rows.set(`${normalizeAssetSymbol(curated.symbol)}:${curated.assetClass}`, curated)
+    }
+    for (const candidate of bundle.candidates) {
+      rows.set(`${normalizeAssetSymbol(candidate.symbol)}:${candidate.assetClass}`, candidate)
+    }
+    return { rows: [...rows.values()], interests, interestSymbols }
+  }
+
+  const searchResultFromAsset = ({
+    asset,
+    price,
+    watched,
+    now,
+  }: {
+    asset: CuratedAsset | AssetCandidateDto
+    price: ReturnType<typeof priceRowToContract> | null
+    watched: Map<string, Awaited<ReturnType<InvestmentStrategyRepository['listUserAssetInterests']>>[number]>
+    now: Date
+  }): AssetSearchResultDto => {
+    const isCandidate = 'bucket' in asset
+    const key = `${normalizeAssetSymbol(asset.symbol)}:${asset.assetClass}`
+    const interest = watched.get(key) ?? null
+    const priceState = priceabilityFromPrice(price, now)
+    const eligibilityByAccount: AssetSearchResultDto['eligibilityByAccount'] = isCandidate
+      ? {
+          pea:
+            asset.peaEligibilityStatus === 'eligible'
+              ? 'eligible'
+              : asset.peaEligibilityStatus === 'ineligible'
+                ? 'ineligible'
+                : asset.peaEligibilityStatus === 'not_applicable'
+                  ? 'not_applicable'
+                  : 'unknown',
+          brokerage: asset.accountTypesAllowed.includes('brokerage') ? 'eligible' : 'ineligible',
+          crypto: asset.accountTypesAllowed.includes('crypto') ? 'eligible' : 'not_applicable',
+        }
+      : asset.eligibilityByAccount
+    const warnings = [
+      ...priceState.warnings,
+      ...(eligibilityByAccount.pea === 'unknown'
+        ? ['Eligibilite PEA inconnue: pas d achat PEA.']
+        : []),
+      ...(isCandidate && asset.eligibilityStatus === 'rejected'
+        ? ['Actif rejete/exclu: recommandation bloquee.']
+        : []),
+    ]
+    return {
+      id: interest ? `watchlist:${interest.id}` : `asset:${normalizeAssetSymbol(asset.symbol)}`,
+      symbol: normalizeAssetSymbol(asset.symbol),
+      name: asset.name,
+      assetClass: asset.assetClass,
+      isin: asset.isin,
+      exchange: asset.exchange,
+      currency: asset.currency,
+      iconUrl: isCandidate ? asset.iconUrl : asset.iconUrl,
+      logoUrl: isCandidate ? asset.logoUrl : asset.logoUrl,
+      providerSymbols: asset.providerSymbols,
+      priceability: priceState.priceability,
+      eligibilityByAccount,
+      suggestedBucket: isCandidate ? asset.bucket : asset.suggestedBucket,
+      riskLevel: isCandidate ? asset.riskLevel : asset.riskLevel,
+      lastPrice: priceState.lastPrice,
+      lastPriceCurrency: priceState.lastPriceCurrency,
+      lastPriceAt: priceState.lastPriceAt,
+      priceSource: priceState.priceSource,
+      isAlreadyWatched: Boolean(interest),
+      userInterestLevel:
+        interest?.userInterestLevel === 'none' ||
+        interest?.userInterestLevel === 'watching' ||
+        interest?.userInterestLevel === 'interested' ||
+        interest?.userInterestLevel === 'high_interest'
+          ? interest.userInterestLevel
+          : isCandidate
+            ? asset.userInterestLevel
+            : 'none',
+      userIntent:
+        interest?.userIntent === 'watch' ||
+        interest?.userIntent === 'analyze' ||
+        interest?.userIntent === 'compare' ||
+        interest?.userIntent === 'consider_buy' ||
+        interest?.userIntent === 'exclude'
+          ? interest.userIntent
+          : isCandidate
+            ? asset.userIntent
+            : 'watch',
+      warnings,
+    }
+  }
+
+  const searchAssets = async ({ mode, requestId, query }: AssetSearchInput) => {
+    const normalizedQuery = query.trim().toLowerCase()
+    const now = new Date()
+    const { rows, interests } = await assetsForSearch(mode)
+    const watched = new Map(
+      interests.map(row => [`${normalizeAssetSymbol(row.symbol)}:${row.assetClass}`, row])
+    )
+    const filtered = rows
+      .filter(asset => {
+        if (normalizedQuery.length === 0) return true
+        const haystack = [
+          asset.symbol,
+          asset.name,
+          asset.assetClass,
+          asset.exchange ?? '',
+          asset.isin ?? '',
+          ...Object.values(asset.providerSymbols),
+        ]
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(normalizedQuery)
+      })
+      .slice(0, 24)
+    const symbols = [
+      ...filtered.map(asset => asset.symbol),
+      ...filtered.flatMap(asset => Object.values(asset.providerSymbols)),
+    ]
+    const priceRows =
+      mode === 'demo' ? [] : await repository.latestPricesForSymbols(symbols.map(normalizeAssetSymbol))
+    const prices = new Map<string, ReturnType<typeof priceRowToContract>>()
+    for (const row of priceRows) {
+      const price = priceRowToContract(row)
+      prices.set(normalizeAssetSymbol(row.symbol), price)
+      if (row.instrumentId) prices.set(normalizeAssetSymbol(row.instrumentId), price)
+      if (row.assetId) prices.set(normalizeAssetSymbol(row.assetId), price)
+    }
+    const items = filtered.map(asset => {
+      const priceSymbol =
+        Object.values(asset.providerSymbols).find(symbol => prices.has(normalizeAssetSymbol(symbol))) ??
+        asset.symbol
+      return searchResultFromAsset({
+        asset,
+        price: prices.get(normalizeAssetSymbol(priceSymbol)) ?? null,
+        watched,
+        now,
+      })
+    })
+    return {
+      requestId,
+      mode,
+      source: mode === 'demo' ? 'demo_fixture' : 'db',
+      query,
+      items,
+    }
+  }
+
+  const listAssetWatchlist = async ({ mode, requestId }: { mode: Mode; requestId: string }) => {
+    if (mode === 'demo') {
+      return { requestId, mode, source: 'demo_fixture' as const, items: [] }
+    }
+    const rows = await repository.listUserAssetInterests()
+    return { requestId, mode, source: 'db' as const, items: rows }
+  }
+
+  const getAssetDetails = async ({
+    mode,
+    requestId,
+    assetId,
+  }: {
+    mode: Mode
+    requestId: string
+    assetId: string
+  }) => {
+    const symbol = normalizeAssetSymbol(assetId.replace(/^watchlist:/, '').replace(/^asset:/, ''))
+    const result = await searchAssets({ mode, requestId, query: symbol })
+    const item =
+      result.items.find(candidate => normalizeAssetSymbol(candidate.symbol) === symbol) ??
+      result.items[0] ??
+      null
+    return {
+      requestId,
+      mode,
+      source: result.source,
+      item,
+    }
+  }
+
+  const addAssetToWatchlist = async ({
+    mode,
+    requestId,
+    input,
+  }: {
+    mode: Mode
+    requestId: string
+    input: WatchlistAssetInput
+  }) => {
+    if (mode !== 'admin') throw new Error('DEMO_MODE_FORBIDDEN')
+    const now = new Date()
+    const row = await repository.upsertUserAssetInterest({
+      normalizedSymbol: normalizeAssetSymbol(input.symbol),
+      symbol: normalizeAssetSymbol(input.symbol),
+      name: input.name,
+      assetClass: input.assetClass,
+      providerSymbolsJson: input.providerSymbols ?? {},
+      iconUrl: input.iconUrl ?? null,
+      logoUrl: input.logoUrl ?? null,
+      isin: input.isin ?? null,
+      exchange: input.exchange ?? null,
+      currency: input.currency,
+      userInterestLevel: input.userInterestLevel ?? 'watching',
+      userIntent: input.userIntent ?? 'watch',
+      note: input.note ?? null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    return { requestId, mode, ok: Boolean(row), item: row }
+  }
+
+  const updateAssetWatchlist = async ({
+    mode,
+    requestId,
+    watchlistId,
+    input,
+  }: {
+    mode: Mode
+    requestId: string
+    watchlistId: number
+    input: WatchlistAssetPatchInput
+  }) => {
+    if (mode !== 'admin') throw new Error('DEMO_MODE_FORBIDDEN')
+    const row = await repository.updateUserAssetInterest(watchlistId, {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.assetClass !== undefined ? { assetClass: input.assetClass } : {}),
+      ...(input.providerSymbols !== undefined ? { providerSymbolsJson: input.providerSymbols } : {}),
+      ...(input.iconUrl !== undefined ? { iconUrl: input.iconUrl } : {}),
+      ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+      ...(input.isin !== undefined ? { isin: input.isin } : {}),
+      ...(input.exchange !== undefined ? { exchange: input.exchange } : {}),
+      ...(input.currency !== undefined ? { currency: input.currency } : {}),
+      ...(input.userInterestLevel !== undefined
+        ? { userInterestLevel: input.userInterestLevel }
+        : {}),
+      ...(input.userIntent !== undefined ? { userIntent: input.userIntent } : {}),
+      ...(input.note !== undefined ? { note: input.note } : {}),
+      updatedAt: new Date(),
+    })
+    return { requestId, mode, ok: Boolean(row), item: row }
+  }
+
+  const removeAssetFromWatchlist = async ({
+    mode,
+    requestId,
+    watchlistId,
+  }: {
+    mode: Mode
+    requestId: string
+    watchlistId: number
+  }) => {
+    if (mode !== 'admin') throw new Error('DEMO_MODE_FORBIDDEN')
+    const deleted = await repository.deleteUserAssetInterest(watchlistId)
+    return { requestId, mode, ok: deleted, watchlistId }
   }
 
   const generateInvestmentPlan = async (input: GenerateActionPlanInput) => {
@@ -1408,6 +2018,35 @@ export const createInvestmentStrategyUseCases = ({
           priceSnapshotId: item.priceSnapshotId,
           valuationSnapshotId: item.valuationSnapshotId,
           dataFreshness,
+          priceability: dataFreshness.price === null ? 'missing' : dataFreshness.isStale ? 'stale' : 'priceable',
+          recommendabilityStatus:
+            item.action === 'buy'
+              ? 'recommendable'
+              : dataFreshness.price === null
+                ? 'blocked_missing_price'
+                : dataFreshness.isStale
+                  ? 'blocked_stale_price'
+                  : 'watch_only',
+          recommendationTier:
+            item.action === 'avoid'
+              ? 'avoid'
+              : item.accountLabel === 'Watchlist utilisateur'
+                ? 'user_watchlist'
+                : item.bucket === 'core'
+                  ? 'core_candidate'
+                  : item.bucket === 'growth'
+                    ? 'growth_candidate'
+                    : 'asymmetric_candidate',
+          recommendationMode:
+            item.action === 'buy'
+              ? 'action_now'
+              : item.action === 'avoid'
+                ? 'avoid'
+                : item.accountLabel === 'Watchlist utilisateur'
+                  ? 'watch'
+                  : 'research_more',
+          userInterestLevel: item.accountLabel === 'Watchlist utilisateur' ? 'watching' : 'none',
+          userIntent: item.accountLabel === 'Watchlist utilisateur' ? 'watch' : 'analyze',
           recommendedTradeAmount: item.action === 'buy' ? amountValue : null,
           recommendedContributionAmount:
             contribution.find(candidate => candidate.bucket === item.bucket)?.amount ?? null,
@@ -1750,6 +2389,12 @@ export const createInvestmentStrategyUseCases = ({
     seedDefaultStrategyIfMissing,
     getInvestmentStrategy,
     updateInvestmentStrategy,
+    searchAssets,
+    getAssetDetails,
+    listAssetWatchlist,
+    addAssetToWatchlist,
+    updateAssetWatchlist,
+    removeAssetFromWatchlist,
     generateInvestmentPlan,
     latestInvestmentPlan,
     listHypotheses,

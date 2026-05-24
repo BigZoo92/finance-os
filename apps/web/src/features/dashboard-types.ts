@@ -855,6 +855,32 @@ export type DashboardAdvisorSignalsResponse = {
 export type InvestmentBucketKey = 'core' | 'growth' | 'asymmetric'
 export type InvestmentRiskLevel = 'low' | 'medium' | 'high' | 'very_high'
 export type InvestmentAccountType = 'pea' | 'brokerage' | 'crypto' | 'cash' | 'unknown'
+export type InvestmentPriceability = 'priceable' | 'stale' | 'missing' | 'unsupported'
+export type InvestmentRecommendabilityStatus =
+  | 'recommendable'
+  | 'watch_only'
+  | 'blocked_missing_price'
+  | 'blocked_stale_price'
+  | 'blocked_ineligible_account'
+  | 'blocked_unknown_pea_eligibility'
+  | 'blocked_risk_policy'
+  | 'blocked_strategy_cap'
+  | 'rejected_by_user'
+export type InvestmentUserInterestLevel = 'none' | 'watching' | 'interested' | 'high_interest'
+export type InvestmentUserIntent = 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
+export type InvestmentRecommendationTier =
+  | 'core_candidate'
+  | 'growth_candidate'
+  | 'asymmetric_candidate'
+  | 'speculative_watch'
+  | 'user_watchlist'
+  | 'avoid'
+export type InvestmentRecommendationMode =
+  | 'action_now'
+  | 'prepare_contribution'
+  | 'watch'
+  | 'research_more'
+  | 'avoid'
 export type InvestmentAction =
   | 'buy'
   | 'hold'
@@ -927,12 +953,23 @@ export type DashboardInvestmentCandidate = {
   isin: string | null
   exchange: string | null
   currency: string
-  eligibilityStatus: 'approved' | 'candidate_needs_review' | 'rejected' | 'unknown'
+  eligibilityStatus:
+    | 'approved'
+    | 'candidate_needs_review'
+    | 'approved_by_default_policy'
+    | 'candidate_auto_suggested'
+    | 'rejected'
+    | 'watch_only'
+    | 'unknown'
   peaEligibilityStatus: 'eligible' | 'ineligible' | 'unknown' | 'not_applicable'
   riskLevel: InvestmentRiskLevel
   liquidityScore: number | null
   notes: string | null
   source: string
+  userInterestLevel: InvestmentUserInterestLevel
+  userIntent: InvestmentUserIntent
+  iconUrl: string | null
+  logoUrl: string | null
 }
 
 export type DashboardInvestmentPriceFreshness = {
@@ -978,6 +1015,12 @@ export type DashboardInvestmentPlanItem = {
   valuationSnapshotId?: number | null
   dataFreshness?: DashboardInvestmentPriceFreshness
   dataFreshnessJson?: DashboardInvestmentPriceFreshness | Record<string, unknown>
+  priceability?: InvestmentPriceability
+  recommendabilityStatus?: InvestmentRecommendabilityStatus
+  recommendationTier?: InvestmentRecommendationTier
+  recommendationMode?: InvestmentRecommendationMode
+  userInterestLevel?: InvestmentUserInterestLevel
+  userIntent?: InvestmentUserIntent
   recommendedTradeAmount?: number | null
   recommendedContributionAmount?: number | null
   setupActionRequired?: string | null
@@ -1061,8 +1104,9 @@ export type DashboardInvestmentActionableStep = {
   type:
     | 'no_trade_today'
     | 'allocate_contribution'
-    | 'approve_asset_candidate'
     | 'connect_price_source'
+    | 'resolve_asset_eligibility'
+    | 'review_user_watchlist'
     | 'do_not_reinforce_overweight_bucket'
   priority: 'high' | 'medium' | 'low'
   accountLabel?: string
@@ -1101,6 +1145,9 @@ export type DashboardInvestmentStrategyResponse = {
     total: number
     approved: number
     needsReview: number
+    userWatched?: number
+    excluded?: number
+    recommendableRule?: string
     candidates: DashboardInvestmentCandidate[]
   }
   validation: {
@@ -1112,8 +1159,101 @@ export type DashboardInvestmentStrategyResponse = {
   safety: {
     noAutoTrade: boolean
     humanValidationRequired: boolean
+    approvedRequired?: boolean
     constraints: string[]
   }
+}
+
+export type DashboardAdvisorAssetSearchResult = {
+  id: string
+  symbol: string
+  name: string
+  assetClass: string
+  isin: string | null
+  exchange: string | null
+  currency: string
+  iconUrl: string | null
+  logoUrl: string | null
+  providerSymbols: Record<string, string>
+  priceability: InvestmentPriceability
+  eligibilityByAccount: Record<
+    'pea' | 'brokerage' | 'crypto',
+    'eligible' | 'ineligible' | 'unknown' | 'not_applicable'
+  >
+  suggestedBucket: InvestmentBucketKey
+  riskLevel: InvestmentRiskLevel
+  lastPrice: number | null
+  lastPriceCurrency: string | null
+  lastPriceAt: string | null
+  priceSource: string | null
+  isAlreadyWatched: boolean
+  userInterestLevel: InvestmentUserInterestLevel
+  userIntent: InvestmentUserIntent
+  warnings: string[]
+}
+
+export type DashboardAdvisorAssetSearchResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db'
+  query: string
+  items: DashboardAdvisorAssetSearchResult[]
+}
+
+export type DashboardAdvisorAssetDetailsResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db'
+  item: DashboardAdvisorAssetSearchResult | null
+}
+
+export type DashboardAdvisorAssetWatchlistItem = {
+  id: number
+  normalizedSymbol: string
+  symbol: string
+  name: string
+  assetClass: string
+  providerSymbolsJson: Record<string, string>
+  iconUrl: string | null
+  logoUrl: string | null
+  isin: string | null
+  exchange: string | null
+  currency: string
+  userInterestLevel: InvestmentUserInterestLevel
+  userIntent: InvestmentUserIntent
+  note: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardAdvisorAssetWatchlistResponse = {
+  requestId: string
+  mode: 'demo' | 'admin'
+  source: 'demo_fixture' | 'db'
+  items: DashboardAdvisorAssetWatchlistItem[]
+}
+
+export type DashboardAdvisorAssetWatchlistMutationResponse = {
+  requestId: string
+  mode: 'admin'
+  ok: boolean
+  item?: DashboardAdvisorAssetWatchlistItem | null
+  watchlistId?: number
+}
+
+export type DashboardAdvisorAssetWatchlistInput = {
+  symbol: string
+  name: string
+  assetClass: string
+  providerSymbols?: Record<string, string>
+  iconUrl?: string | null
+  logoUrl?: string | null
+  isin?: string | null
+  exchange?: string | null
+  currency: string
+  userInterestLevel?: InvestmentUserInterestLevel
+  userIntent?: InvestmentUserIntent
+  note?: string | null
 }
 
 export type DashboardInvestmentPlanResponse = {

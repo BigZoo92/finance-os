@@ -93,6 +93,63 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     return rows
   }
 
+  const listUserAssetInterests = async () => {
+    return db
+      .select()
+      .from(schema.userAssetInterest)
+      .orderBy(desc(schema.userAssetInterest.updatedAt), schema.userAssetInterest.symbol)
+  }
+
+  const upsertUserAssetInterest = async (
+    input: typeof schema.userAssetInterest.$inferInsert
+  ) => {
+    const [row] = await db
+      .insert(schema.userAssetInterest)
+      .values(input)
+      .onConflictDoUpdate({
+        target: [
+          schema.userAssetInterest.normalizedSymbol,
+          schema.userAssetInterest.assetClass,
+        ],
+        set: {
+          symbol: input.symbol,
+          name: input.name,
+          providerSymbolsJson: input.providerSymbolsJson ?? {},
+          iconUrl: input.iconUrl ?? null,
+          logoUrl: input.logoUrl ?? null,
+          isin: input.isin ?? null,
+          exchange: input.exchange ?? null,
+          currency: input.currency ?? 'EUR',
+          userInterestLevel: input.userInterestLevel ?? 'watching',
+          userIntent: input.userIntent ?? 'watch',
+          note: input.note ?? null,
+          updatedAt: input.updatedAt ?? new Date(),
+        },
+      })
+      .returning()
+    return row ?? null
+  }
+
+  const updateUserAssetInterest = async (
+    id: number,
+    input: Partial<typeof schema.userAssetInterest.$inferInsert>
+  ) => {
+    const [row] = await db
+      .update(schema.userAssetInterest)
+      .set(input)
+      .where(eq(schema.userAssetInterest.id, id))
+      .returning()
+    return row ?? null
+  }
+
+  const deleteUserAssetInterest = async (id: number) => {
+    const [row] = await db
+      .delete(schema.userAssetInterest)
+      .where(eq(schema.userAssetInterest.id, id))
+      .returning({ id: schema.userAssetInterest.id })
+    return Boolean(row)
+  }
+
   const updateStrategyProfile = async (
     strategyId: number,
     input: Partial<typeof schema.investmentStrategyProfile.$inferInsert>
@@ -473,6 +530,10 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     insertBuckets,
     insertAccountPolicies,
     upsertCandidates,
+    listUserAssetInterests,
+    upsertUserAssetInterest,
+    updateUserAssetInterest,
+    deleteUserAssetInterest,
     updateStrategyProfile,
     latestPricesForSymbols,
     latestProviderHealth,

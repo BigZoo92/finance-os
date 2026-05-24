@@ -2,6 +2,11 @@ import { apiFetch, apiRequest, ApiRequestError } from '@/lib/api'
 import { getDemoDashboardNews, getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorAssetDetailsResponse,
+  DashboardAdvisorAssetSearchResponse,
+  DashboardAdvisorAssetWatchlistInput,
+  DashboardAdvisorAssetWatchlistMutationResponse,
+  DashboardAdvisorAssetWatchlistResponse,
   DashboardAdvisorKnowledgeAnswerResponse,
   DashboardAdvisorKnowledgeTopicResponse,
   DashboardAdvisorKnowledgeTopicsResponse,
@@ -909,6 +914,59 @@ export const fetchDashboardAdvisorBehaviorAnalytics = async (windowDays?: number
 
 export const fetchDashboardInvestmentStrategy = async () => {
   return apiFetch<DashboardInvestmentStrategyResponse>('/dashboard/advisor/investment-strategy')
+}
+
+export const fetchDashboardAdvisorAssetsSearch = async (query: string) => {
+  const search = toSearchParams({ q: query })
+  return apiFetch<DashboardAdvisorAssetSearchResponse>(
+    `/dashboard/advisor/assets/search?${search}`
+  )
+}
+
+export const fetchDashboardAdvisorAssetDetails = async (assetId: string) => {
+  return apiFetch<DashboardAdvisorAssetDetailsResponse>(
+    `/dashboard/advisor/assets/${encodeURIComponent(assetId)}`
+  )
+}
+
+export const fetchDashboardAdvisorAssetWatchlist = async () => {
+  return apiFetch<DashboardAdvisorAssetWatchlistResponse>('/dashboard/advisor/assets/watchlist')
+}
+
+export const postDashboardAdvisorAssetWatchlist = async (
+  input: DashboardAdvisorAssetWatchlistInput
+) => {
+  return apiFetch<DashboardAdvisorAssetWatchlistMutationResponse>(
+    '/dashboard/advisor/assets/watchlist',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }
+  )
+}
+
+export const patchDashboardAdvisorAssetWatchlist = async (params: {
+  id: number
+  input: Partial<Omit<DashboardAdvisorAssetWatchlistInput, 'symbol'>>
+}) => {
+  return apiFetch<DashboardAdvisorAssetWatchlistMutationResponse>(
+    `/dashboard/advisor/assets/watchlist/${params.id}`,
+    {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(params.input),
+    }
+  )
+}
+
+export const deleteDashboardAdvisorAssetWatchlist = async (id: number) => {
+  return apiFetch<DashboardAdvisorAssetWatchlistMutationResponse>(
+    `/dashboard/advisor/assets/watchlist/${id}`,
+    {
+      method: 'DELETE',
+    }
+  )
 }
 
 export const fetchDashboardInvestmentPlanLatest = async () => {

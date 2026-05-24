@@ -13,6 +13,8 @@ It generates a persisted action plan with:
 - one highlighted top action;
 - a "what to do now" action list even when no buy is safe;
 - account-scoped items for PEA Trade Republic, IBKR, and Binance;
+- a user watchlist / asset-interest layer;
+- separate "Idees audacieuses" and watchlist items that do not override the main action;
 - separate trade amounts and contribution amounts;
 - bucket impact against 60 / 30 / 10;
 - price source, timestamp, staleness, confidence, and provider health;
@@ -31,10 +33,16 @@ Read endpoints follow dashboard auth mode and keep demo deterministic:
 - `GET /dashboard/advisor/investment-learning/scorecard`
 - `GET /dashboard/advisor/investment-learning/lessons`
 - `GET /dashboard/advisor/investment-status`
+- `GET /dashboard/advisor/assets/search?q=`
+- `GET /dashboard/advisor/assets/:assetId`
+- `GET /dashboard/advisor/assets/watchlist`
 
 Admin or valid internal token is required for mutations:
 
 - `PUT /dashboard/advisor/investment-strategy`
+- `POST /dashboard/advisor/assets/watchlist`
+- `PATCH /dashboard/advisor/assets/watchlist/:id`
+- `DELETE /dashboard/advisor/assets/watchlist/:id`
 - `POST /dashboard/advisor/investment-plan/generate`
 - `POST /dashboard/advisor/investment-hypotheses/review-due`
 - `POST /dashboard/advisor/investment-learning/lessons/:lessonId/approve`
@@ -89,10 +97,39 @@ Check:
 Common degraded states:
 
 - no active strategy: seed did not run or DB migration missing;
-- no approved candidates: expected on first run; approve assets later before buys can appear;
+- no priceable candidate: add/provider-map an asset or wait for a fresh snapshot;
 - stale/missing price: buys are blocked by design;
 - PEA unknown eligibility: PEA buy is blocked by design;
 - graph write failure: non-blocking; Postgres memory event is canonical.
+
+## Asset Universe Model
+
+`approved` is no longer a recommendation gate. It remains historical metadata only.
+
+An asset can enter recommendations when all of these are true:
+
+- price is available, fresh enough, and confidence is acceptable;
+- the target account can hold the asset;
+- PEA eligibility is known and positive for PEA buys;
+- risk policy and strategy caps pass;
+- the item explains risk, uncertainty, sizing, price source, and freshness.
+
+Statuses such as `approved`, `candidate_needs_review`, `approved_by_default_policy`,
+`candidate_auto_suggested`, and `watch_only` can remain in the universe. They do not block by
+themselves. `rejected` or user intent `exclude` blocks recommendation.
+
+Calculated model fields:
+
+- `priceability`: `priceable`, `stale`, `missing`, `unsupported`;
+- `eligibilityByAccount`: `eligible`, `ineligible`, `unknown`, `not_applicable`;
+- `recommendabilityStatus`: `recommendable`, price/account/PEA/risk/cap blockers, or `rejected_by_user`;
+- `userInterestLevel`: `none`, `watching`, `interested`, `high_interest`;
+- `userIntent`: `watch`, `analyze`, `compare`, `consider_buy`, `exclude`;
+- `recommendationTier`: core/growth/asymmetric/speculative/user-watchlist/avoid;
+- `recommendationMode`: `action_now`, `prepare_contribution`, `watch`, `research_more`, `avoid`.
+
+User-added assets are interest signals, not instructions. A high-interest asset gets a ranking
+boost, but risk, concentration, price, account compatibility, and PEA eligibility still dominate.
 
 ## Actionability When No Buy Is Safe
 
@@ -102,7 +139,7 @@ The plan separates:
 
 - `recommendedTradeAmount`: actual order amount. It stays `null` unless all buy guardrails pass.
 - `recommendedContributionAmount`: amount to reserve/orient toward an underweight bucket, even when the current candidate is not buyable.
-- `actionableSteps`: explicit next steps such as no trade today, reserve Core/Growth contribution, do not reinforce an overweight bucket, approve a candidate, or connect a price source.
+- `actionableSteps`: explicit next steps such as no trade today, reserve Core/Growth contribution, do not reinforce an overweight bucket, resolve PEA eligibility, or connect a price source.
 
 For the current 60 / 30 / 10 setup, a degraded but useful plan may say:
 
@@ -110,10 +147,36 @@ For the current 60 / 30 / 10 setup, a degraded but useful plan may say:
 - reserve/orient 200 EUR toward Core;
 - reserve/orient 100 EUR toward Growth;
 - do not reinforce Binance when Asymmetric is above the 10% cap;
-- approve or replace `CORE_ETF_REVIEW` and `GROWTH_REVIEW`;
+- resolve PEA eligibility for `CORE_ETF_REVIEW` and `GROWTH_REVIEW`;
 - connect provider symbols/prices before any buy can become eligible.
 
-This preserves the guardrails: no auto-trading, no buy with missing/stale prices, no buy with `candidate_needs_review`, no PEA buy with unknown eligibility.
+This preserves the guardrails: no auto-trading, no buy with missing/stale prices, no buy on an
+incompatible account, no PEA buy with unknown/negative eligibility, and no Binance/asymmetric
+reinforcement above the 10% global cap.
+
+## Asset Search And Watchlist
+
+The strategy UI exposes an "Univers & Watchlist" section. Search is local-first and enriches
+known assets from:
+
+- seeded asset universe candidates;
+- user watchlist rows in `user_asset_interest`;
+- curated free metadata for common user searches such as NVIDIA, Bitcoin, MSCI World PEA, Amundi PEA, Air Liquide;
+- persisted `asset_price_snapshot` rows when available.
+
+No paid provider or mandatory env var is required. Missing logos use ticker badges. The UI copy
+states that adding an asset means "surveille/analyse", not "achete".
+
+## BTC / BTCEUR Price Wiring
+
+BTC identity must normalize to the Binance Spot provider symbol `BTCEUR`. The action-plan builder
+looks up both candidate symbols and provider symbols, and aliases fetched snapshots by symbol,
+uppercase symbol, instrument id, and asset id. If `BTCEUR` has a fresh snapshot, the BTC candidate
+uses that price and `priceSnapshotId`. If it is absent, the blocker must say:
+
+- `Aucun snapshot de prix pour BTCEUR: achat interdit.`
+
+It must not collapse this case to a vague missing-price message.
 
 ## Graph Ingest Status
 
@@ -178,7 +241,7 @@ Approved lessons are context signals for future recommendations. They do not mut
 
 ## Production Validation
 
-1. Apply migration `0034_investment_strategy_brain.sql`.
+1. Apply migrations through `0035_user_asset_interest.sql`.
 2. Run `POST /ops/refresh/all` with `dryRun:true`.
 3. Run `GET /dashboard/advisor/investment-strategy`; confirm strategy `bigzoo_growth_60_30_10_v1`.
 4. Run `POST /dashboard/advisor/investment-plan/generate` with `dryRun:true`; confirm no writes.
@@ -205,20 +268,23 @@ Then generate a non-dry-run plan and confirm `/knowledge/ingest/advisor` returns
 ## Safety Guarantees
 
 - No broker order route was added.
+- No buy/sell/execute endpoint or button was added.
 - No Binance futures/margin/withdrawal/transfer/convert/staking mutation was added.
 - IBKR remains Flex/reporting-read-only.
 - Missing/stale/low-confidence price blocks buys.
 - Unknown PEA eligibility blocks buys.
-- Unknown candidate universe blocks buys.
+- Incompatible account eligibility blocks buys.
+- `approved` is not required for recommendation.
+- User watchlist interest does not force a recommendation.
 - Demo mode stays deterministic and write-free.
 
-## Future Pass: Asset Approval And Price Wiring
+## Future Pass: Metadata Coverage
 
-Next work should make the Asset Universe Approval flow explicit:
+Next work should improve metadata coverage without changing execution safety:
 
-- approve/replace `CORE_ETF_REVIEW` and `GROWTH_REVIEW`;
 - record PEA eligibility for Core/Growth candidates;
 - map provider symbols to price snapshots;
-- verify BTC/Binance candidate identity uses the same `BTCEUR` price source as holdings valuation when a fresh snapshot exists.
+- expand free/local metadata for obscure assets and thematic ETFs;
+- keep BTC/Binance candidate identity on `BTCEUR` when a fresh snapshot exists.
 
 This remains read-only research/planning. It must not add order, buy, sell, execute, withdrawal, transfer, margin, futures, staking, or hidden execution paths.

@@ -10,9 +10,12 @@ import type {
 import type { AdvisorReplayResponse } from './domain/advisor/replay/replay-types'
 import type { AdvisorFineTuningReadinessResponse } from './domain/advisor/fine-tuning/fine-tuning-types'
 import type {
+  AssetSearchInput,
   GenerateActionPlanInput,
   InvestmentStrategyUpdateInput,
   ReviewDueInput,
+  WatchlistAssetInput,
+  WatchlistAssetPatchInput,
 } from './domain/advisor/investment-strategy-use-cases'
 import type { DataQualityResponse } from './domain/data-quality/data-quality-types'
 import type {
@@ -1482,6 +1485,32 @@ export interface DashboardUseCases {
     mode: 'demo' | 'admin'
     requestId: string
     input: InvestmentStrategyUpdateInput
+  }) => Promise<unknown>
+  searchAdvisorAssets?: (input: AssetSearchInput) => Promise<unknown>
+  getAdvisorAssetDetails?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    assetId: string
+  }) => Promise<unknown>
+  listAdvisorAssetWatchlist?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+  }) => Promise<unknown>
+  addAdvisorAssetToWatchlist?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    input: WatchlistAssetInput
+  }) => Promise<unknown>
+  updateAdvisorAssetWatchlist?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    watchlistId: number
+    input: WatchlistAssetPatchInput
+  }) => Promise<unknown>
+  removeAdvisorAssetFromWatchlist?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    watchlistId: number
   }) => Promise<unknown>
   generateInvestmentPlan?: (input: GenerateActionPlanInput) => Promise<unknown>
   latestInvestmentPlan?: (input: {

@@ -4,9 +4,14 @@ import { requireAdminOrInternalToken } from '../../../auth/guard'
 import { getDashboardRuntime } from '../context'
 import {
   dashboardInvestmentActionPlanGenerateBodySchema,
+  dashboardInvestmentAssetParamsSchema,
+  dashboardInvestmentAssetSearchQuerySchema,
   dashboardInvestmentHypothesesReviewBodySchema,
   dashboardInvestmentLessonParamsSchema,
   dashboardInvestmentStrategyBodySchema,
+  dashboardInvestmentWatchlistBodySchema,
+  dashboardInvestmentWatchlistParamsSchema,
+  dashboardInvestmentWatchlistPatchBodySchema,
 } from '../schemas'
 
 const routeError = ({
@@ -122,6 +127,138 @@ export const createInvestmentStrategyRoute = ({
         })
       },
       { body: dashboardInvestmentStrategyBodySchema }
+    )
+    .get(
+      '/advisor/assets/search',
+      async context => {
+        const enabledError = ensureEnabled({ context, advisorEnabled })
+        if (enabledError) return enabledError
+
+        const runtime = getDashboardRuntime(context)
+        const useCase = getUseCase(context, runtime.useCases.searchAdvisorAssets, 'Asset search')
+        if (typeof useCase !== 'function') return useCase
+
+        return useCase({
+          mode: readMode(context),
+          requestId: getRequestMeta(context).requestId,
+          query: context.query.q ?? '',
+        })
+      },
+      { query: dashboardInvestmentAssetSearchQuerySchema }
+    )
+    .get('/advisor/assets/watchlist', async context => {
+      const enabledError = ensureEnabled({ context, advisorEnabled })
+      if (enabledError) return enabledError
+
+      const runtime = getDashboardRuntime(context)
+      const useCase = getUseCase(
+        context,
+        runtime.useCases.listAdvisorAssetWatchlist,
+        'Asset watchlist'
+      )
+      if (typeof useCase !== 'function') return useCase
+
+      return useCase({
+        mode: readMode(context),
+        requestId: getRequestMeta(context).requestId,
+      })
+    })
+    .post(
+      '/advisor/assets/watchlist',
+      async context => {
+        const enabledError = ensureEnabled({ context, advisorEnabled })
+        if (enabledError) return enabledError
+
+        const authError = ensureMutationAccess(context)
+        if (authError) return authError
+
+        const runtime = getDashboardRuntime(context)
+        const useCase = getUseCase(
+          context,
+          runtime.useCases.addAdvisorAssetToWatchlist,
+          'Asset watchlist add'
+        )
+        if (typeof useCase !== 'function') return useCase
+
+        return useCase({
+          mode: 'admin',
+          requestId: getRequestMeta(context).requestId,
+          input: context.body,
+        })
+      },
+      { body: dashboardInvestmentWatchlistBodySchema }
+    )
+    .patch(
+      '/advisor/assets/watchlist/:id',
+      async context => {
+        const enabledError = ensureEnabled({ context, advisorEnabled })
+        if (enabledError) return enabledError
+
+        const authError = ensureMutationAccess(context)
+        if (authError) return authError
+
+        const runtime = getDashboardRuntime(context)
+        const useCase = getUseCase(
+          context,
+          runtime.useCases.updateAdvisorAssetWatchlist,
+          'Asset watchlist update'
+        )
+        if (typeof useCase !== 'function') return useCase
+
+        return useCase({
+          mode: 'admin',
+          requestId: getRequestMeta(context).requestId,
+          watchlistId: context.params.id,
+          input: context.body,
+        })
+      },
+      {
+        params: dashboardInvestmentWatchlistParamsSchema,
+        body: dashboardInvestmentWatchlistPatchBodySchema,
+      }
+    )
+    .delete(
+      '/advisor/assets/watchlist/:id',
+      async context => {
+        const enabledError = ensureEnabled({ context, advisorEnabled })
+        if (enabledError) return enabledError
+
+        const authError = ensureMutationAccess(context)
+        if (authError) return authError
+
+        const runtime = getDashboardRuntime(context)
+        const useCase = getUseCase(
+          context,
+          runtime.useCases.removeAdvisorAssetFromWatchlist,
+          'Asset watchlist remove'
+        )
+        if (typeof useCase !== 'function') return useCase
+
+        return useCase({
+          mode: 'admin',
+          requestId: getRequestMeta(context).requestId,
+          watchlistId: context.params.id,
+        })
+      },
+      { params: dashboardInvestmentWatchlistParamsSchema }
+    )
+    .get(
+      '/advisor/assets/:assetId',
+      async context => {
+        const enabledError = ensureEnabled({ context, advisorEnabled })
+        if (enabledError) return enabledError
+
+        const runtime = getDashboardRuntime(context)
+        const useCase = getUseCase(context, runtime.useCases.getAdvisorAssetDetails, 'Asset details')
+        if (typeof useCase !== 'function') return useCase
+
+        return useCase({
+          mode: readMode(context),
+          requestId: getRequestMeta(context).requestId,
+          assetId: context.params.assetId,
+        })
+      },
+      { params: dashboardInvestmentAssetParamsSchema }
     )
     .get('/advisor/investment-plan', async context => {
       const enabledError = ensureEnabled({ context, advisorEnabled })

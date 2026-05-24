@@ -1,11 +1,17 @@
 import type {
   AccountStrategyType,
+  AssetPriceabilityStatus,
+  AssetRecommendationMode,
+  AssetRecommendationTier,
+  AssetRecommendabilityStatus,
   AdvisorActionPlanItemAction,
   AssetUniverseEligibilityStatus,
   InvestmentBucketKey,
   InvestmentRiskLevel,
   InvestmentRiskProfile,
   PeaEligibilityStatus,
+  UserAssetInterestLevel,
+  UserAssetIntent,
 } from '@finance-os/db/schema'
 import type { PriceSnapshotContract } from '../../services/valuation-foundation'
 import { resolvePriceStaleness } from '../../services/valuation-foundation'
@@ -83,6 +89,10 @@ export type AssetCandidateDto = {
   liquidityScore: number | null
   notes: string | null
   source: string
+  userInterestLevel: UserAssetInterestLevel
+  userIntent: UserAssetIntent
+  iconUrl: string | null
+  logoUrl: string | null
 }
 
 export type StrategyBundle = {
@@ -188,8 +198,9 @@ export type InvestmentActionableStep = {
   type:
     | 'no_trade_today'
     | 'allocate_contribution'
-    | 'approve_asset_candidate'
     | 'connect_price_source'
+    | 'resolve_asset_eligibility'
+    | 'review_user_watchlist'
     | 'do_not_reinforce_overweight_bucket'
   priority: 'high' | 'medium' | 'low'
   accountLabel?: string
@@ -230,6 +241,12 @@ export type ActionPlanItemDraft = {
   priceSnapshotId: number | null
   valuationSnapshotId: number | null
   dataFreshness: PriceFreshness
+  priceability: AssetPriceabilityStatus
+  recommendabilityStatus: AssetRecommendabilityStatus
+  recommendationTier: AssetRecommendationTier
+  recommendationMode: AssetRecommendationMode
+  userInterestLevel: UserAssetInterestLevel
+  userIntent: UserAssetIntent
   recommendedTradeAmount: number | null
   recommendedContributionAmount: number | null
   setupActionRequired: string | null
@@ -368,6 +385,22 @@ export const toNumberOrNull = (value: unknown): number | null => {
   return null
 }
 
+export const normalizeAssetSymbol = (value: string) => value.trim().toUpperCase()
+
+export const defaultUserInterestLevelForSource = (source: string): UserAssetInterestLevel =>
+  source === 'user_watchlist' ? 'watching' : 'none'
+
+export const defaultUserIntentForSource = (source: string): UserAssetIntent =>
+  source === 'user_watchlist' ? 'watch' : 'analyze'
+
+const userInterestBoost = (level: UserAssetInterestLevel, intent: UserAssetIntent) => {
+  const levelBoost =
+    level === 'high_interest' ? 10 : level === 'interested' ? 6 : level === 'watching' ? 3 : 0
+  const intentBoost =
+    intent === 'consider_buy' ? 5 : intent === 'compare' ? 3 : intent === 'analyze' ? 2 : 0
+  return levelBoost + intentBoost
+}
+
 export const defaultBuckets = (strategyId: number): Omit<StrategyBucketDto, 'id'>[] => [
   {
     strategyId,
@@ -503,7 +536,7 @@ export const defaultAccountPolicies = (strategyId: number): Omit<AccountPolicyDt
 export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
   {
     symbol: 'CORE_ETF_REVIEW',
-    name: 'ETF Core diversifie a approuver',
+    name: 'ETF Core diversifie a analyser',
     assetClass: 'etf',
     bucket: 'core',
     accountTypesAllowed: ['pea', 'brokerage'],
@@ -516,12 +549,16 @@ export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
     riskLevel: 'medium',
     liquidityScore: null,
     notes:
-      'Placeholder de revue: ne devient achetable qu apres approbation manuelle et eligibility PEA verifiee.',
+      'Placeholder de revue: ne devient achetable que si prix, eligibility et politique de risque sont satisfaits.',
     source: 'default_seed_needs_review',
+    userInterestLevel: 'none',
+    userIntent: 'analyze',
+    iconUrl: null,
+    logoUrl: null,
   },
   {
     symbol: 'GROWTH_REVIEW',
-    name: 'Actif Growth de qualite a approuver',
+    name: 'Actif Growth de qualite a analyser',
     assetClass: 'equity_or_etf',
     bucket: 'growth',
     accountTypesAllowed: ['pea', 'brokerage'],
@@ -534,8 +571,12 @@ export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
     riskLevel: 'medium',
     liquidityScore: null,
     notes:
-      'Candidate non achetable tant que la these, la concentration et la source de prix ne sont pas validees.',
+      'Candidate a analyser: la these, la concentration et la source de prix doivent rester explicites.',
     source: 'default_seed_needs_review',
+    userInterestLevel: 'none',
+    userIntent: 'analyze',
+    iconUrl: null,
+    logoUrl: null,
   },
   {
     symbol: 'BTC',
@@ -552,8 +593,12 @@ export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
     riskLevel: 'very_high',
     liquidityScore: 0.8,
     notes:
-      'Major crypto candidate. Buy bloque tant que non approuve, prix non frais ou poche crypto proche du cap.',
+      'Major crypto candidate. Buy bloque si prix non frais ou poche crypto proche du cap.',
     source: 'default_seed_needs_review',
+    userInterestLevel: 'none',
+    userIntent: 'analyze',
+    iconUrl: null,
+    logoUrl: null,
   },
   {
     symbol: 'ETH',
@@ -570,8 +615,12 @@ export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
     riskLevel: 'very_high',
     liquidityScore: 0.75,
     notes:
-      'Major crypto candidate. Buy bloque tant que non approuve, prix non frais ou poche crypto proche du cap.',
+      'Major crypto candidate. Buy bloque si prix non frais ou poche crypto proche du cap.',
     source: 'default_seed_needs_review',
+    userInterestLevel: 'none',
+    userIntent: 'analyze',
+    iconUrl: null,
+    logoUrl: null,
   },
 ]
 
@@ -923,11 +972,15 @@ export const enforceRiskPolicy = ({
   }
   if (!candidate) {
     allowed = false
-    reasons.push('Aucun actif approuve dans cet univers pour cette poche.')
+    reasons.push('Aucun actif compatible et eligible dans cet univers pour cette poche.')
   } else {
-    if (candidate.eligibilityStatus !== 'approved') {
+    if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude') {
       allowed = false
-      reasons.push(`Actif ${candidate.symbol} non approuve (${candidate.eligibilityStatus}).`)
+      reasons.push(`Actif ${candidate.symbol} exclu ou rejete par l utilisateur.`)
+    }
+    if (!candidate.accountTypesAllowed.includes(policy.accountType)) {
+      allowed = false
+      reasons.push(`Actif ${candidate.symbol} incompatible avec ${policy.label}.`)
     }
     if (policy.accountType === 'pea' && candidate.peaEligibilityStatus !== 'eligible') {
       allowed = false
@@ -958,11 +1011,348 @@ export const enforceRiskPolicy = ({
   }
   return {
     allowed,
-    action: allowed ? 'buy' : candidate ? 'watch' : 'insufficient_data',
+    action:
+      allowed
+        ? 'buy'
+        : candidate?.eligibilityStatus === 'rejected' || candidate?.userIntent === 'exclude'
+          ? 'avoid'
+          : candidate
+            ? 'watch'
+            : 'insufficient_data',
     confidenceAdjustment,
     reasons,
   }
 }
+
+export const priceabilityFromReliablePrice = (
+  price: ReliablePriceResult
+): AssetPriceabilityStatus => {
+  if (price.status === 'fresh') return 'priceable'
+  if (price.status === 'stale' || price.status === 'low_confidence') return 'stale'
+  return 'missing'
+}
+
+export const recommendabilityFromDecision = ({
+  candidate,
+  policy,
+  price,
+  risk,
+}: {
+  candidate: AssetCandidateDto | null
+  policy: AccountPolicyDto
+  price: ReliablePriceResult
+  risk: RiskDecision
+}): AssetRecommendabilityStatus => {
+  if (!candidate) return 'blocked_ineligible_account'
+  if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude') {
+    return 'rejected_by_user'
+  }
+  if (price.status === 'missing') return 'blocked_missing_price'
+  if (price.status === 'stale' || price.status === 'low_confidence') return 'blocked_stale_price'
+  if (!candidate.accountTypesAllowed.includes(policy.accountType)) return 'blocked_ineligible_account'
+  if (policy.accountType === 'pea' && candidate.peaEligibilityStatus === 'unknown') {
+    return 'blocked_unknown_pea_eligibility'
+  }
+  if (policy.accountType === 'pea' && candidate.peaEligibilityStatus !== 'eligible') {
+    return 'blocked_ineligible_account'
+  }
+  if (risk.reasons.some(reason => reason.includes('cap global de 10%'))) {
+    return 'blocked_strategy_cap'
+  }
+  if (!risk.allowed) return 'blocked_risk_policy'
+  if (candidate.eligibilityStatus === 'watch_only') return 'watch_only'
+  return 'recommendable'
+}
+
+const recommendationTierForCandidate = (
+  candidate: AssetCandidateDto | null,
+  bucket: InvestmentBucketKey
+): AssetRecommendationTier => {
+  if (!candidate) {
+    if (bucket === 'core') return 'core_candidate'
+    if (bucket === 'growth') return 'growth_candidate'
+    return 'speculative_watch'
+  }
+  if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude') return 'avoid'
+  if (candidate.source === 'user_watchlist') return 'user_watchlist'
+  if (candidate.riskLevel === 'very_high' && bucket === 'asymmetric') return 'speculative_watch'
+  if (bucket === 'core') return 'core_candidate'
+  if (bucket === 'growth') return 'growth_candidate'
+  return 'asymmetric_candidate'
+}
+
+const recommendationModeForAction = ({
+  action,
+  recommendabilityStatus,
+  candidate,
+}: {
+  action: AdvisorActionPlanItemAction
+  recommendabilityStatus: AssetRecommendabilityStatus
+  candidate: AssetCandidateDto | null
+}): AssetRecommendationMode => {
+  if (recommendabilityStatus === 'rejected_by_user') return 'avoid'
+  if (action === 'buy') return 'action_now'
+  if (action === 'avoid') return 'avoid'
+  if (!candidate || recommendabilityStatus.startsWith('blocked_')) return 'research_more'
+  if (candidate.userIntent === 'consider_buy') return 'prepare_contribution'
+  return 'watch'
+}
+
+const scorePlanItem = ({
+  action,
+  confidence,
+  blockedReasons,
+  candidate,
+  priceability,
+  allocationNeed,
+  recommendabilityStatus,
+}: {
+  action: AdvisorActionPlanItemAction
+  confidence: number
+  blockedReasons: string[]
+  candidate: AssetCandidateDto | null
+  priceability: AssetPriceabilityStatus
+  allocationNeed: number
+  recommendabilityStatus: AssetRecommendabilityStatus
+}) => {
+  const strategyFit = candidate ? 12 : 0
+  const dataQuality = confidence * 20
+  const priceFreshness = priceability === 'priceable' ? 12 : priceability === 'stale' ? -8 : -14
+  const interest = candidate ? userInterestBoost(candidate.userInterestLevel, candidate.userIntent) : 0
+  const opportunityScore =
+    candidate?.riskLevel === 'very_high' ? 5 : candidate?.riskLevel === 'high' ? 7 : 9
+  const diversificationBenefit =
+    candidate?.bucket === 'core' ? 8 : candidate?.bucket === 'growth' ? 6 : 3
+  const concentrationPenalty =
+    recommendabilityStatus === 'blocked_strategy_cap' ? 18 : candidate?.riskLevel === 'very_high' ? 8 : 0
+  const riskPenalty =
+    candidate?.riskLevel === 'very_high' ? 10 : candidate?.riskLevel === 'high' ? 6 : 2
+  const uncertaintyPenalty = blockedReasons.length * 5
+  return round(
+    (action === 'buy' ? 30 : action === 'watch' ? 18 : action === 'contribute_cash' ? 20 : 8) +
+      strategyFit +
+      allocationNeed +
+      dataQuality +
+      priceFreshness +
+      interest +
+      diversificationBenefit +
+      opportunityScore -
+      concentrationPenalty -
+      riskPenalty -
+      uncertaintyPenalty,
+    2
+  )
+}
+
+const selectPolicyForCandidate = ({
+  candidate,
+  policies,
+}: {
+  candidate: AssetCandidateDto
+  policies: AccountPolicyDto[]
+}) =>
+  policies
+    .filter(
+      policy =>
+        candidate.accountTypesAllowed.includes(policy.accountType) &&
+        policy.allowedBuckets.includes(candidate.bucket) &&
+        candidate.eligibilityStatus !== 'rejected' &&
+        candidate.userIntent !== 'exclude'
+    )
+    .sort((left, right) => {
+      const leftProviderFit = candidate.providerSymbols[left.provider] ? 1 : 0
+      const rightProviderFit = candidate.providerSymbols[right.provider] ? 1 : 0
+      const leftPeaFit =
+        left.accountType === 'pea' && candidate.peaEligibilityStatus !== 'eligible' ? -1 : 0
+      const rightPeaFit =
+        right.accountType === 'pea' && candidate.peaEligibilityStatus !== 'eligible' ? -1 : 0
+      return rightProviderFit + rightPeaFit - (leftProviderFit + leftPeaFit)
+    })[0] ?? null
+
+const buildCreativeIdeaItems = ({
+  bundle,
+  allocation,
+  latestPrices,
+  providerHealthByProvider,
+  now,
+  selectedSymbols,
+}: {
+  bundle: StrategyBundle
+  allocation: AllocationSnapshotDto
+  latestPrices: Record<string, (PriceSnapshotContract & { id?: number | null }) | null>
+  providerHealthByProvider: Record<string, string | null>
+  now: Date
+  selectedSymbols: Set<string>
+}): ActionPlanItemDraft[] =>
+  bundle.candidates
+    .filter(candidate => {
+      const symbol = normalizeAssetSymbol(candidate.symbol)
+      if (selectedSymbols.has(symbol)) return false
+      if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude') return true
+      return (
+        candidate.source === 'user_watchlist' ||
+        candidate.riskLevel === 'very_high' ||
+        candidate.bucket === 'asymmetric'
+      )
+    })
+    .map((candidate): ActionPlanItemDraft => {
+      const policy = selectPolicyForCandidate({ candidate, policies: bundle.accountPolicies })
+      const targetBucket = candidate.bucket
+      const priceSymbol =
+        policy ? (candidate.providerSymbols[policy.provider] ?? candidate.symbol) : candidate.symbol
+      const price = getReliablePriceForRecommendation({
+        snapshot: latestPrices[priceSymbol] ?? latestPrices[candidate.symbol] ?? null,
+        providerHealth: policy ? (providerHealthByProvider[policy.provider] ?? null) : null,
+        now,
+      })
+      const proposedAmount =
+        policy?.minOrderAmount !== null && policy?.minOrderAmount !== undefined
+          ? policy.minOrderAmount
+          : null
+      const risk = policy
+        ? enforceRiskPolicy({
+            policy,
+            candidate,
+            allocation,
+            price,
+            bucket: targetBucket,
+            proposedAmount,
+          })
+        : ({
+            allowed: false,
+            action:
+              candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude'
+                ? 'avoid'
+                : 'watch',
+            confidenceAdjustment: -0.2,
+            reasons: ['Aucun compte compatible pour cet actif.'],
+          } satisfies RiskDecision)
+      const priceability = priceabilityFromReliablePrice(price)
+      const recommendabilityStatus =
+        candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude'
+          ? 'rejected_by_user'
+          : policy
+            ? recommendabilityFromDecision({ candidate, policy, price, risk })
+            : 'blocked_ineligible_account'
+      const baseConfidence = Math.min(
+        0.82,
+        Math.max(
+          0.18,
+          allocation.dataQuality.confidence * 0.74 +
+            userInterestBoost(candidate.userInterestLevel, candidate.userIntent) / 100
+        )
+      )
+      const confidence = round(
+        Math.max(0, Math.min(1, baseConfidence + risk.confidenceAdjustment)),
+        2
+      )
+      const action: AdvisorActionPlanItemAction =
+        recommendabilityStatus === 'rejected_by_user'
+          ? 'avoid'
+          : risk.allowed &&
+              confidence >= MIN_BUY_CONFIDENCE &&
+              candidate.userIntent === 'consider_buy' &&
+              candidate.bucket !== 'core'
+            ? 'buy'
+            : risk.action === 'insufficient_data'
+              ? 'watch'
+              : risk.action
+      const priceBlockingReason =
+        price.status === 'missing' && priceSymbol
+          ? `Aucun snapshot de prix pour ${priceSymbol}: achat interdit.`
+          : null
+      const blockedReasons = [
+        ...risk.reasons.map(reason =>
+          priceBlockingReason && reason === 'Prix manquant: achat interdit.'
+            ? priceBlockingReason
+            : reason
+        ),
+        ...(confidence < MIN_BUY_CONFIDENCE && action === 'buy'
+          ? ['Confiance sous le seuil minimal: achat interdit.']
+          : []),
+      ]
+      const targetWeightPct =
+        bundle.buckets.find(bucket => bucket.bucketKey === targetBucket)?.targetPct ?? null
+      const currentWeightPct =
+        targetBucket === 'core'
+          ? allocation.corePct
+          : targetBucket === 'growth'
+            ? allocation.growthPct
+            : allocation.asymmetricPct
+      const allocationNeed =
+        targetWeightPct === null ? 0 : Math.max(0, targetWeightPct - currentWeightPct) / 3
+      return {
+        accountPolicyId: policy?.id ?? null,
+        accountLabel: policy?.label ?? 'Watchlist utilisateur',
+        accountType: policy?.accountType ?? 'unknown',
+        bucket: targetBucket,
+        symbol: candidate.symbol,
+        assetName: candidate.name,
+        action,
+        amountValue: action === 'buy' ? proposedAmount : null,
+        amountCurrency: policy?.tradingCurrency ?? candidate.currency,
+        targetWeightPct,
+        currentWeightPct,
+        confidence,
+        riskLevel: candidate.riskLevel,
+        horizon:
+          bundle.buckets.find(bucket => bucket.bucketKey === targetBucket)?.defaultHorizon ??
+          '30d_to_long_term',
+        thesis:
+          action === 'buy'
+            ? `Idee audacieuse actionnable uniquement en petite taille sur ${policy?.label ?? 'compte compatible'}; validation humaine obligatoire.`
+            : `Surveiller ${candidate.name}: signal d interet, mais l Advisor ne force pas la recommandation.`,
+        argumentsFor: [
+          candidate.source === 'user_watchlist'
+            ? 'Ajoute par l utilisateur: signal d interet, pas obligation d achat.'
+            : 'Idee audacieuse conservee dans la watchlist creative.',
+          `Poche suggeree: ${targetBucket}.`,
+        ],
+        argumentsAgainst:
+          blockedReasons.length > 0
+            ? blockedReasons
+            : [
+                'Risque, concentration et timing incertains; sizing prudent obligatoire.',
+                'These speculative: ne doit pas ecraser la recommandation principale.',
+              ],
+        invalidationCriteria: [
+          'Prix stale/manquant ou confidence provider degradee.',
+          'Concentration de poche ou cap strategy depasse.',
+          'These invalidee par liquidite, volatilite, news contraire ou donnees insuffisantes.',
+        ],
+        priceSnapshotId: price.priceSnapshotId,
+        valuationSnapshotId: null,
+        dataFreshness: price.freshness,
+        priceability,
+        recommendabilityStatus,
+        recommendationTier: recommendationTierForCandidate(candidate, targetBucket),
+        recommendationMode: recommendationModeForAction({
+          action,
+          recommendabilityStatus,
+          candidate,
+        }),
+        userInterestLevel: candidate.userInterestLevel,
+        userIntent: candidate.userIntent,
+        recommendedTradeAmount: action === 'buy' ? proposedAmount : null,
+        recommendedContributionAmount: null,
+        setupActionRequired: action === 'buy' ? null : (blockedReasons[0] ?? null),
+        blockingReasons: blockedReasons,
+        humanValidationRequired: true,
+        noAutoTrade: true,
+        createsHypothesis: candidate.userIntent !== 'exclude',
+        score: scorePlanItem({
+          action,
+          confidence,
+          blockedReasons,
+          candidate,
+          priceability,
+          allocationNeed,
+          recommendabilityStatus,
+        }),
+      }
+    })
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 6)
 
 export const selectCandidateForPolicy = ({
   candidates,
@@ -973,25 +1363,25 @@ export const selectCandidateForPolicy = ({
   policy: AccountPolicyDto
   bucket: InvestmentBucketKey
 }) => {
-  const eligible = candidates.filter(
+  const compatible = candidates.filter(
     candidate =>
       candidate.bucket === bucket &&
       candidate.accountTypesAllowed.includes(policy.accountType) &&
-      candidate.eligibilityStatus === 'approved' &&
-      (policy.accountType !== 'pea' || candidate.peaEligibilityStatus === 'eligible')
+      candidate.eligibilityStatus !== 'rejected' &&
+      candidate.userIntent !== 'exclude'
+  )
+  const rank = (candidate: AssetCandidateDto) =>
+    (candidate.liquidityScore ?? 0) * 10 +
+    userInterestBoost(candidate.userInterestLevel, candidate.userIntent) -
+    (candidate.riskLevel === 'very_high' ? 2 : candidate.riskLevel === 'high' ? 1 : 0)
+  const eligible = compatible.filter(
+    candidate =>
+      policy.accountType !== 'pea' || candidate.peaEligibilityStatus === 'eligible'
   )
   if (eligible.length > 0) {
-    return (
-      eligible.sort((left, right) => (right.liquidityScore ?? 0) - (left.liquidityScore ?? 0))[0] ??
-      null
-    )
+    return eligible.sort((left, right) => rank(right) - rank(left))[0] ?? null
   }
-  return (
-    candidates.find(
-      candidate =>
-        candidate.bucket === bucket && candidate.accountTypesAllowed.includes(policy.accountType)
-    ) ?? null
-  )
+  return compatible.sort((left, right) => rank(right) - rank(left))[0] ?? null
 }
 
 export const buildInvestmentActionableSteps = ({
@@ -1015,7 +1405,7 @@ export const buildInvestmentActionableSteps = ({
       priority: 'high',
       message: "Ne passe aucun ordre aujourd'hui.",
       reason:
-        'Les garde-fous restent actifs: prix, eligibility, univers candidat ou surexposition bloquent les achats.',
+        'Les garde-fous restent actifs: prix, eligibility, compatibilite compte ou surexposition bloquent les achats.',
       blockingReasons: [...new Set(items.flatMap(item => item.blockingReasons))].slice(0, 8),
     })
   }
@@ -1064,20 +1454,9 @@ export const buildInvestmentActionableSteps = ({
 
   for (const item of items) {
     const reasons = item.blockingReasons
-    if (reasons.some(reason => reason.includes('candidate_needs_review'))) {
-      pushUnique({
-        type: 'approve_asset_candidate',
-        priority: 'high',
-        accountLabel: item.accountLabel,
-        bucket: item.bucket,
-        message: `Approuver ou remplacer ${item.symbol ?? item.bucket} avant achat.`,
-        reason: 'Actif candidat a valider manuellement avant toute recommandation achetable.',
-        blockingReasons: reasons,
-      })
-    }
     if (reasons.some(reason => reason.includes('Eligibility PEA inconnue'))) {
       pushUnique({
-        type: 'approve_asset_candidate',
+        type: 'resolve_asset_eligibility',
         priority: 'high',
         accountLabel: item.accountLabel,
         bucket: item.bucket,
@@ -1118,7 +1497,7 @@ export const buildActionPlanDraft = ({
   now?: Date
 }): ActionPlanDraft => {
   const contribution = allocateContribution({ strategy: bundle.strategy, allocation })
-  const items: ActionPlanItemDraft[] = bundle.accountPolicies.map(policy => {
+  const policyItems: ActionPlanItemDraft[] = bundle.accountPolicies.map(policy => {
     const targetBucket = policy.preferredBucket ?? policy.allowedBuckets[0] ?? 'core'
     const contributionForBucket =
       contribution.find(item => item.bucket === targetBucket) ??
@@ -1146,12 +1525,29 @@ export const buildActionPlanDraft = ({
       bucket: targetBucket,
       proposedAmount: amount,
     })
+    const targetWeightPct =
+      bundle.buckets.find(bucket => bucket.bucketKey === targetBucket)?.targetPct ?? null
+    const currentWeightPct =
+      targetBucket === 'core'
+        ? allocation.corePct
+        : targetBucket === 'growth'
+          ? allocation.growthPct
+          : allocation.asymmetricPct
+    const allocationNeed =
+      targetWeightPct === null ? 0 : Math.max(0, targetWeightPct - currentWeightPct) / 2
+    const priceability = priceabilityFromReliablePrice(price)
+    const recommendabilityStatus = recommendabilityFromDecision({
+      candidate,
+      policy,
+      price,
+      risk,
+    })
     const baseConfidence = Math.min(
       0.88,
       Math.max(
         0.18,
-        allocation.dataQuality.confidence *
-          (candidate?.eligibilityStatus === 'approved' ? 0.95 : 0.62)
+        allocation.dataQuality.confidence * 0.86 +
+          (candidate ? userInterestBoost(candidate.userInterestLevel, candidate.userIntent) / 100 : 0)
       )
     )
     const confidence = round(
@@ -1159,7 +1555,13 @@ export const buildActionPlanDraft = ({
       2
     )
     const action =
-      confidence < MIN_BUY_CONFIDENCE && risk.allowed ? 'watch' : risk.allowed ? 'buy' : risk.action
+      recommendabilityStatus === 'rejected_by_user'
+        ? 'avoid'
+        : confidence < MIN_BUY_CONFIDENCE && risk.allowed
+          ? 'watch'
+          : risk.allowed
+            ? 'buy'
+            : risk.action
     const priceBlockingReason =
       price.status === 'missing' && priceSymbol
         ? `Aucun snapshot de prix pour ${priceSymbol}: achat interdit.`
@@ -1186,13 +1588,8 @@ export const buildActionPlanDraft = ({
       amountValue: action === 'buy' ? amount : null,
       amountCurrency: policy.tradingCurrency,
       targetWeightPct:
-        bundle.buckets.find(bucket => bucket.bucketKey === targetBucket)?.targetPct ?? null,
-      currentWeightPct:
-        targetBucket === 'core'
-          ? allocation.corePct
-          : targetBucket === 'growth'
-            ? allocation.growthPct
-            : allocation.asymmetricPct,
+        targetWeightPct,
+      currentWeightPct,
       confidence,
       riskLevel: candidate?.riskLevel ?? (targetBucket === 'asymmetric' ? 'very_high' : 'medium'),
       horizon:
@@ -1222,6 +1619,16 @@ export const buildActionPlanDraft = ({
       priceSnapshotId: price.priceSnapshotId,
       valuationSnapshotId: null,
       dataFreshness: price.freshness,
+      priceability,
+      recommendabilityStatus,
+      recommendationTier: recommendationTierForCandidate(candidate, targetBucket),
+      recommendationMode: recommendationModeForAction({
+        action,
+        recommendabilityStatus,
+        candidate,
+      }),
+      userInterestLevel: candidate?.userInterestLevel ?? 'none',
+      userIntent: candidate?.userIntent ?? 'analyze',
       recommendedTradeAmount: action === 'buy' ? amount : null,
       recommendedContributionAmount: amount,
       setupActionRequired: action === 'buy' ? null : (blockedReasons[0] ?? null),
@@ -1229,12 +1636,29 @@ export const buildActionPlanDraft = ({
       humanValidationRequired: true,
       noAutoTrade: true,
       createsHypothesis: canCreateHypothesis && candidate !== null,
-      score:
-        (action === 'buy' ? 30 : action === 'watch' ? 18 : action === 'contribute_cash' ? 20 : 8) +
-        confidence * 40 -
-        blockedReasons.length * 6,
+      score: scorePlanItem({
+        action,
+        confidence,
+        blockedReasons,
+        candidate,
+        priceability,
+        allocationNeed,
+        recommendabilityStatus,
+      }),
     }
   })
+  const selectedSymbols = new Set(
+    policyItems.map(item => (item.symbol ? normalizeAssetSymbol(item.symbol) : '')).filter(Boolean)
+  )
+  const creativeItems = buildCreativeIdeaItems({
+    bundle,
+    allocation,
+    latestPrices,
+    providerHealthByProvider,
+    now,
+    selectedSymbols,
+  })
+  const items = [...policyItems, ...creativeItems]
 
   const sorted = items
     .map((item, index) => ({ item, index }))
@@ -1244,7 +1668,7 @@ export const buildActionPlanDraft = ({
   const summary =
     buyCount > 0
       ? `${buyCount} action(s) achetables sous validation humaine; aucun ordre automatique.`
-      : 'Aucun achat force: donnees, eligibility ou univers approuve insuffisants. Priorite a la configuration et aux apports prudents.'
+      : 'Aucun achat force: donnees, eligibility, prix ou politique de risque insuffisants. Priorite a la configuration et aux apports prudents.'
   const globalConfidence = round(
     items.length > 0 ? items.reduce((sum, item) => sum + item.confidence, 0) / items.length : 0,
     2

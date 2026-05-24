@@ -246,6 +246,13 @@
       "when": 1779568000000,
       "tag": "0034_investment_strategy_brain",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1779648000000,
+      "tag": "0035_user_asset_interest",
+      "breakpoints": true
     }
   ]
 }
