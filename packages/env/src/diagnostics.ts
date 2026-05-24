@@ -53,7 +53,8 @@ export const EXECUTING_SERVICE_BY_FEATURE: Record<string, ServiceName> = {
   AI_CHALLENGER: 'api',
   AI_RELABEL: 'api',
   // External investments providers (IBKR Flex / Binance Spot) — read-only,
-  // executed by the API.
+  // executed by the API. Credentials live in DB (admin /integrations,
+  // encrypted with APP_ENCRYPTION_KEY); env flag only gates the runtime path.
   IBKR_FLEX: 'api',
   BINANCE_SPOT: 'api',
   // Free Firehose orchestrator — API-side.
@@ -201,17 +202,24 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     feature: 'IBKR Flex read-only',
     flagKey: 'IBKR_FLEX_ENABLED',
     enabledWhen: truthy,
-    requiredSecrets: ['IBKR_FLEX_TOKEN', 'IBKR_FLEX_QUERY_ID_DAILY'],
-    optionalSecrets: ['IBKR_FLEX_QUERY_ID_BACKFILL_MONTH', 'IBKR_FLEX_QUERY_ID_BACKFILL_YEAR'],
+    // IBKR Flex credentials (token + query ids) are NOT env vars. They are
+    // configured per-account in admin via /integrations and stored encrypted
+    // in DB with APP_ENCRYPTION_KEY. See docs/context/ENV-REFERENCE.md §8.bis.
+    // The env flag only gates whether the runtime path is enabled.
+    requiredSecrets: [],
     description:
-      'IBKR Flex needs the auth token and at least the daily Last-Business-Day query id. Backfill query ids are optional but required for manual backfill UI.',
+      'IBKR Flex runtime path. Credentials (token, query ids) are admin-managed in DB via /integrations, encrypted with APP_ENCRYPTION_KEY — never env vars.',
   },
   {
     feature: 'Binance Spot read-only',
     flagKey: 'BINANCE_SPOT_ENABLED',
     enabledWhen: truthy,
-    requiredSecrets: ['BINANCE_SPOT_API_KEY', 'BINANCE_SPOT_API_SECRET'],
-    description: 'Binance Spot read-only requires API key + secret.',
+    // Binance Spot credentials are NOT env vars. They are configured per-account
+    // in admin via /integrations and stored encrypted in DB with APP_ENCRYPTION_KEY.
+    // See docs/context/ENV-REFERENCE.md §8.bis.
+    requiredSecrets: [],
+    description:
+      'Binance Spot read-only runtime path. API key + secret are admin-managed in DB via /integrations, encrypted with APP_ENCRYPTION_KEY — never env vars.',
   },
   {
     feature: 'Powens banking connector',

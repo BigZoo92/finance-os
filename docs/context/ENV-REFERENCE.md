@@ -163,6 +163,7 @@ Notes:
 - `APP_ENCRYPTION_KEY` est obligatoire pour chiffrer/dechiffrer les credentials.
 - `EXTERNAL_INTEGRATIONS_SAFE_MODE` reste le kill-switch global; `EXTERNAL_INVESTMENTS_SAFE_MODE` est le kill-switch specifique IBKR/Binance.
 - Aucune permission trading, withdrawal, transfer, convert, margin/futures ou staking/earn mutation n'est acceptee.
+- Les noms historiques `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_ID_DAILY`, `IBKR_FLEX_QUERY_ID_BACKFILL_MONTH`, `IBKR_FLEX_QUERY_ID_BACKFILL_YEAR`, `BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET` ne sont PAS des variables d'environnement et ne doivent jamais etre definis sur aucun service. Ils vivent en DB chiffree via `/integrations`. `env:check` les refuse explicitement comme leaks de secrets cote web/knowledge/quant.
 
 ---
 
