@@ -610,10 +610,14 @@ function AssetUniversePanel({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
         <div className="space-y-4">
           <div className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3">
-            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <label
+              htmlFor="advisor-asset-search-input"
+              className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+            >
               Ajouter un actif a surveiller
             </label>
             <input
+              id="advisor-asset-search-input"
               value={query}
               onChange={event => onQueryChange(event.target.value)}
               placeholder="nvidia, bitcoin, msci world, amundi pea, air liquide"

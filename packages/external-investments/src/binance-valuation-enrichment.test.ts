@@ -127,7 +127,9 @@ describe('enrichBinanceValuations', () => {
 
     expect(result.enrichedCount).toBe(1)
     expect(result.failedCount).toBe(0)
-    const btcPos = result.snapshot.positions.find(p => p.symbol === 'BTC')!
+    const btcPos = result.snapshot.positions.find(p => p.symbol === 'BTC')
+    expect(btcPos).toBeDefined()
+    if (!btcPos) throw new Error('Expected BTC position')
     expect(btcPos.normalizedValue).toBe('30000')
     expect(btcPos.valueCurrency).toBe('EUR')
     expect(btcPos.valueSource).toBe('market_resolved')
@@ -156,7 +158,9 @@ describe('enrichBinanceValuations', () => {
     })
 
     expect(result.enrichedCount).toBe(1)
-    const btcPos = result.snapshot.positions.find(p => p.symbol === 'BTC')!
+    const btcPos = result.snapshot.positions.find(p => p.symbol === 'BTC')
+    expect(btcPos).toBeDefined()
+    if (!btcPos) throw new Error('Expected BTC position')
     expect(btcPos.normalizedValue).toBe('59800')
     expect(btcPos.valueSource).toBe('market_resolved')
   })
@@ -173,7 +177,9 @@ describe('enrichBinanceValuations', () => {
 
     expect(result.enrichedCount).toBe(0)
     expect(result.failedCount).toBe(1)
-    const zzz = result.snapshot.positions[0]!
+    const zzz = result.snapshot.positions[0]
+    expect(zzz).toBeDefined()
+    if (!zzz) throw new Error('Expected one position')
     expect(zzz.normalizedValue).toBeNull()
     expect(zzz.degradedReasons).toContain('BINANCE_PRICE_NO_STABLE_PAIR')
     expect(result.snapshot.degradedReasons).toContain('VALUATION_PARTIAL')
@@ -212,7 +218,9 @@ describe('enrichBinanceValuations', () => {
       fxFetcher: async () => null,
     })
     expect(result.enrichedCount).toBe(1)
-    const btc = result.snapshot.positions.find(p => p.symbol === 'BTC')!
+    const btc = result.snapshot.positions.find(p => p.symbol === 'BTC')
+    expect(btc).toBeDefined()
+    if (!btc) throw new Error('Expected BTC position')
     expect(btc.normalizedValue).not.toBeNull()
     expect(btc.valueCurrency).toBe('EUR')
     expect(btc.valueSource).toBe('market_resolved')
@@ -221,7 +229,9 @@ describe('enrichBinanceValuations', () => {
     expect(result.snapshot.degradedReasons).not.toContain('VALUATION_PARTIAL')
     expect(result.snapshot.accounts[0]?.degradedReasons).not.toContain('VALUATION_PARTIAL')
     // EUR cash stays provider_reported, not overwritten
-    const eur = result.snapshot.positions.find(p => p.symbol === 'EUR')!
+    const eur = result.snapshot.positions.find(p => p.symbol === 'EUR')
+    expect(eur).toBeDefined()
+    if (!eur) throw new Error('Expected EUR position')
     expect(eur.valueSource).toBe('provider_reported')
     expect(eur.normalizedValue).toBe('4')
     // Valuation snapshots produced for the BTC position only

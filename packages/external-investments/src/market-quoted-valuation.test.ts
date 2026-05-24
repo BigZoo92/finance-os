@@ -79,7 +79,9 @@ describe('enrichMarketQuotedValuations', () => {
     expect(result.enrichedCount).toBe(1)
     expect(result.staleCount).toBe(0)
     expect(result.missingCount).toBe(0)
-    const pos = result.snapshot.positions[0]!
+    const pos = result.snapshot.positions[0]
+    expect(pos).toBeDefined()
+    if (!pos) throw new Error('Expected one position')
     expect(pos.normalizedValue).toBe('5000')
     expect(pos.valueCurrency).toBe('EUR')
     expect(pos.valueSource).toBe('market_cache')
@@ -101,7 +103,9 @@ describe('enrichMarketQuotedValuations', () => {
 
     expect(result.enrichedCount).toBe(1)
     expect(result.staleCount).toBe(1)
-    const pos = result.snapshot.positions[0]!
+    const pos = result.snapshot.positions[0]
+    expect(pos).toBeDefined()
+    if (!pos) throw new Error('Expected one position')
     expect(pos.normalizedValue).toBe('5000')
     expect(pos.degradedReasons).toContain('STALE_QUOTE')
   })
@@ -116,7 +120,9 @@ describe('enrichMarketQuotedValuations', () => {
 
     expect(result.enrichedCount).toBe(0)
     expect(result.missingCount).toBe(1)
-    const pos = result.snapshot.positions[0]!
+    const pos = result.snapshot.positions[0]
+    expect(pos).toBeDefined()
+    if (!pos) throw new Error('Expected one position')
     expect(pos.normalizedValue).toBeNull()
     expect(pos.degradedReasons).toContain('MARKET_QUOTE_MISSING')
     expect(result.snapshot.degradedReasons).toContain('VALUATION_PARTIAL')

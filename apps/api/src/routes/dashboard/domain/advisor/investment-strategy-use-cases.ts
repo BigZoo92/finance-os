@@ -733,10 +733,6 @@ const inferRiskForAsset = (assetClass: string): 'low' | 'medium' | 'high' | 'ver
   return 'medium'
 }
 
-const accountEligibilityForAsset = (
-  asset: Pick<CuratedAsset, 'assetClass' | 'eligibilityByAccount'>
-) => asset.eligibilityByAccount
-
 const priceabilityFromPrice = (
   price: ReturnType<typeof priceRowToContract> | null,
   now = new Date()

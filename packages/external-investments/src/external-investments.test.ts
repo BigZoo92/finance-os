@@ -545,7 +545,9 @@ describe('provider normalization', () => {
     })
 
     expect(snapshot.accounts).toHaveLength(1)
-    const account = snapshot.accounts[0]!
+    const account = snapshot.accounts[0]
+    expect(account).toBeDefined()
+    if (!account) throw new Error('Expected one account')
     expect(account.degradedReasons).toContain('CASH_REPORT_MISSING')
     expect(account.degradedReasons).toContain('PROVIDER_REPORTED_ZERO_CASH')
     expect(account.degradedReasons).not.toContain('STALE_PROVIDER_REPORT_DATE')
@@ -583,7 +585,9 @@ describe('provider normalization', () => {
       },
     })
 
-    const account = snapshot.accounts[0]!
+    const account = snapshot.accounts[0]
+    expect(account).toBeDefined()
+    if (!account) throw new Error('Expected one account')
     expect(account.degradedReasons).toContain('STALE_PROVIDER_REPORT_DATE')
   })
 
@@ -618,7 +622,9 @@ describe('provider normalization', () => {
     expect(cashPositions).toHaveLength(1)
     expect(cashPositions[0]?.normalizedValue).toBe('1250')
     expect(cashPositions[0]?.metadata).toMatchObject({ source: 'EquitySummary' })
-    const account = snapshot.accounts[0]!
+    const account = snapshot.accounts[0]
+    expect(account).toBeDefined()
+    if (!account) throw new Error('Expected one account')
     expect(account.degradedReasons).toContain('CASH_REPORT_MISSING')
     expect(account.degradedReasons).not.toContain('PROVIDER_REPORTED_ZERO_CASH')
   })

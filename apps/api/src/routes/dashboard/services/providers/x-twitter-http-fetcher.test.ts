@@ -70,7 +70,9 @@ describe('createXTwitterHttpTimelineFetcher', () => {
     expect(page.tweets[0]?.id).toBe('111')
     expect(page.meta.nextToken).toBe('NEXT')
 
-    const call = fetchStub.calls[0]!
+    const call = fetchStub.calls[0]
+    expect(call).toBeDefined()
+    if (!call) throw new Error('Expected at least one fetch call')
     expect(call.url).toContain('/2/users/A1/tweets')
     expect(call.url).toContain('start_time=2026-05-10T22')
     expect(call.url).toContain('max_results=5')
