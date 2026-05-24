@@ -165,3 +165,40 @@ def test_http_endpoints_rebuild_query_stats(tmp_path, monkeypatch):
         stats = client.get("/knowledge/stats")
         assert stats.status_code == 200
         assert stats.json()["entityCount"] >= 50
+
+
+def test_advisor_ingest_permission_error_is_categorized(tmp_path, monkeypatch):
+    from finance_os_knowledge.store import KnowledgeGraphStore
+
+    monkeypatch.setenv("KNOWLEDGE_GRAPH_STORAGE_PATH", str(tmp_path))
+    monkeypatch.setenv("KNOWLEDGE_GRAPH_REBUILD_ON_START", "false")
+
+    def raise_permission_error(self, request, *, request_id):
+        raise PermissionError("permission denied")
+
+    monkeypatch.setattr(KnowledgeGraphStore, "ingest", raise_permission_error)
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/knowledge/ingest/advisor",
+            json={
+                "mode": "admin",
+                "source": "test",
+                "recommendations": [
+                    {
+                        "id": "r1",
+                        "title": "test",
+                        "summary": "test",
+                        "category": "investment_memory",
+                        "confidence": 0.6,
+                    }
+                ],
+            },
+        )
+
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["code"] == "knowledge_ingest_permission_denied_storage"
+    assert payload["message"] == "storage path not writable by application user"
+    assert payload["diagnostics"]["storagePath"] == str(tmp_path)

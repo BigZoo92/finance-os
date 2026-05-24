@@ -61,7 +61,9 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
       )
   }
 
-  const insertBuckets = async (inputs: Array<typeof schema.investmentStrategyBucket.$inferInsert>) => {
+  const insertBuckets = async (
+    inputs: Array<typeof schema.investmentStrategyBucket.$inferInsert>
+  ) => {
     if (inputs.length === 0) return []
     return db.insert(schema.investmentStrategyBucket).values(inputs).returning()
   }
@@ -73,7 +75,9 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     return db.insert(schema.accountStrategyPolicy).values(inputs).returning()
   }
 
-  const upsertCandidates = async (inputs: Array<typeof schema.assetUniverseCandidate.$inferInsert>) => {
+  const upsertCandidates = async (
+    inputs: Array<typeof schema.assetUniverseCandidate.$inferInsert>
+  ) => {
     if (inputs.length === 0) return []
     const rows = []
     for (const input of inputs) {
@@ -143,7 +147,9 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     return row
   }
 
-  const insertDriftSnapshots = async (inputs: Array<typeof schema.strategyDriftSnapshot.$inferInsert>) => {
+  const insertDriftSnapshots = async (
+    inputs: Array<typeof schema.strategyDriftSnapshot.$inferInsert>
+  ) => {
     if (inputs.length === 0) return []
     return db.insert(schema.strategyDriftSnapshot).values(inputs).returning()
   }
@@ -166,7 +172,9 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     return row
   }
 
-  const insertActionPlanItems = async (inputs: Array<typeof schema.advisorActionPlanItem.$inferInsert>) => {
+  const insertActionPlanItems = async (
+    inputs: Array<typeof schema.advisorActionPlanItem.$inferInsert>
+  ) => {
     if (inputs.length === 0) return []
     return db.insert(schema.advisorActionPlanItem).values(inputs).returning()
   }
@@ -395,6 +403,26 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     return { rows, latestFailure: latestFailure ?? null }
   }
 
+  const memoryEventStatsForPlan = async (planId: number) => {
+    const planIdText = String(planId)
+    const planFilter = sql`${schema.advisorMemoryEvent.payload}->>'planId' = ${planIdText}`
+    const rows = await db
+      .select({
+        status: schema.advisorMemoryEvent.graphWriteStatus,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(schema.advisorMemoryEvent)
+      .where(planFilter)
+      .groupBy(schema.advisorMemoryEvent.graphWriteStatus)
+    const [latestFailure] = await db
+      .select()
+      .from(schema.advisorMemoryEvent)
+      .where(and(eq(schema.advisorMemoryEvent.graphWriteStatus, 'failed'), planFilter))
+      .orderBy(desc(schema.advisorMemoryEvent.updatedAt))
+      .limit(1)
+    return { rows, latestFailure: latestFailure ?? null }
+  }
+
   const getLatestContextBundleRow = async () => {
     const [row] = await db
       .select()
@@ -473,6 +501,7 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
     insertMemoryEvent,
     updateMemoryEventGraphStatus,
     memoryEventStats,
+    memoryEventStatsForPlan,
     getLatestContextBundleRow,
     upsertContextBundle,
   }

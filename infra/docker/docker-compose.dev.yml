@@ -78,6 +78,23 @@ services:
       retries: 20
       start_period: 10s
 
+  knowledge-service-storage-init:
+    build:
+      context: ../../apps/knowledge-service
+      dockerfile: Dockerfile
+    container_name: finance-os-knowledge-storage-init
+    user: "0:0"
+    command:
+      [
+        "sh",
+        "-lc",
+        "mkdir -p /data/knowledge-graph && chown -R app:app /data/knowledge-graph && chmod -R u+rwX,g+rwX /data/knowledge-graph && stat -c 'knowledge graph storage owner=%u:%g mode=%a path=%n' /data/knowledge-graph",
+      ]
+    volumes:
+      - knowledge_graph_data:/data/knowledge-graph
+    security_opt:
+      - no-new-privileges:true
+
   knowledge-service:
     build:
       context: ../../apps/knowledge-service
@@ -123,6 +140,8 @@ services:
     volumes:
       - knowledge_graph_data:/data/knowledge-graph
     depends_on:
+      knowledge-service-storage-init:
+        condition: service_completed_successfully
       neo4j:
         condition: service_healthy
       qdrant:

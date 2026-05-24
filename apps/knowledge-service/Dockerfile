@@ -7,7 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN addgroup --system app && adduser --system --ingroup app app
+RUN addgroup --system app && adduser --system --ingroup app app \
+    && mkdir -p /data/knowledge-graph \
+    && chown -R app:app /data/knowledge-graph \
+    && chmod -R u+rwX,g+rwX /data/knowledge-graph
 
 COPY pyproject.toml ./
 COPY src ./src

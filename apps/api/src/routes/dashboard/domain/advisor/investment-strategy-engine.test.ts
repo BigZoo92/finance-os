@@ -9,6 +9,7 @@ import {
   createMemoryPayload,
   defaultAccountPolicies,
   defaultBuckets,
+  defaultCandidateUniverse,
   enforceRiskPolicy,
   getReliablePriceForRecommendation,
   scoreOutcome,
@@ -245,6 +246,70 @@ describe('investment strategy engine', () => {
     expect(plan.items.every(item => item.noAutoTrade && item.humanValidationRequired)).toBe(true)
     expect(plan.items.some(item => item.action === 'buy')).toBe(false)
     expect(plan.items[plan.topActionIndex]?.action).not.toBe('buy')
+  })
+
+  it('keeps no-buy guardrails while producing concrete contribution and setup steps', () => {
+    const plan = buildActionPlanDraft({
+      bundle: bundle(defaultCandidateUniverse().map((item, index) => ({ ...item, id: index + 1 }))),
+      allocation: {
+        ...allocation(54.13),
+        totalValue: 17.44,
+        coreValue: 0,
+        growthValue: 0,
+        asymmetricValue: 17.44,
+        corePct: 0,
+        growthPct: 0,
+        asymmetricPct: 54.13,
+        drift: [
+          {
+            bucket: 'core',
+            targetPct: 60,
+            actualPct: 0,
+            driftPct: -60,
+            severity: 'hard_limit',
+            recommendedContribution: 200,
+            recommendedAction: 'Allouer 200 EUR de nouvel apport vers core.',
+          },
+          {
+            bucket: 'growth',
+            targetPct: 30,
+            actualPct: 0,
+            driftPct: -30,
+            severity: 'hard_limit',
+            recommendedContribution: 100,
+            recommendedAction: 'Allouer 100 EUR de nouvel apport vers growth.',
+          },
+          {
+            bucket: 'asymmetric',
+            targetPct: 10,
+            actualPct: 54.13,
+            driftPct: 44.13,
+            severity: 'hard_limit',
+            recommendedContribution: null,
+            recommendedAction: 'Ne pas renforcer asymmetric.',
+          },
+        ],
+      },
+      latestPrices: {},
+      now,
+    })
+
+    expect(plan.items.every(item => item.action !== 'buy')).toBe(true)
+    expect(plan.items.every(item => item.noAutoTrade && item.humanValidationRequired)).toBe(true)
+    expect(plan.contribution).toEqual([
+      expect.objectContaining({ bucket: 'core', amount: 200 }),
+      expect.objectContaining({ bucket: 'growth', amount: 100 }),
+    ])
+    expect(plan.actionableSteps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'no_trade_today' }),
+        expect.objectContaining({ type: 'allocate_contribution', bucket: 'core', amountValue: 200 }),
+        expect.objectContaining({ type: 'allocate_contribution', bucket: 'growth', amountValue: 100 }),
+        expect.objectContaining({ type: 'do_not_reinforce_overweight_bucket', bucket: 'asymmetric' }),
+        expect.objectContaining({ type: 'approve_asset_candidate' }),
+        expect.objectContaining({ type: 'connect_price_source' }),
+      ])
+    )
   })
 
   it('creates reviewable hypotheses from actionable plan items', () => {

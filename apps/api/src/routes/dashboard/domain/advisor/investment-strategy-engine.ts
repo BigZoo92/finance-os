@@ -184,6 +184,23 @@ export type ContributionRecommendation = {
   reason: string
 }
 
+export type InvestmentActionableStep = {
+  type:
+    | 'no_trade_today'
+    | 'allocate_contribution'
+    | 'approve_asset_candidate'
+    | 'connect_price_source'
+    | 'do_not_reinforce_overweight_bucket'
+  priority: 'high' | 'medium' | 'low'
+  accountLabel?: string
+  bucket?: InvestmentBucketKey
+  amountValue?: number
+  amountCurrency?: string
+  message: string
+  reason: string
+  blockingReasons?: string[]
+}
+
 export type RiskDecision = {
   allowed: boolean
   action: AdvisorActionPlanItemAction
@@ -213,6 +230,10 @@ export type ActionPlanItemDraft = {
   priceSnapshotId: number | null
   valuationSnapshotId: number | null
   dataFreshness: PriceFreshness
+  recommendedTradeAmount: number | null
+  recommendedContributionAmount: number | null
+  setupActionRequired: string | null
+  blockingReasons: string[]
   humanValidationRequired: true
   noAutoTrade: true
   createsHypothesis: boolean
@@ -233,6 +254,7 @@ export type ActionPlanDraft = {
   items: ActionPlanItemDraft[]
   allocation: AllocationSnapshotDto
   contribution: ContributionRecommendation[]
+  actionableSteps: InvestmentActionableStep[]
   warnings: string[]
 }
 
@@ -580,9 +602,7 @@ export const classifyHoldingBucket = (
   if (assetClass === 'cash' || assetClass === 'stablecoin') return 'cash'
   if (assetClass === 'crypto') return 'asymmetric'
   const symbol = holding.symbol?.toUpperCase()
-  const candidate = symbol
-    ? candidates.find(item => item.symbol.toUpperCase() === symbol)
-    : null
+  const candidate = symbol ? candidates.find(item => item.symbol.toUpperCase() === symbol) : null
   if (candidate) return candidate.bucket
   if (assetClass === 'etf' || assetClass === 'fund' || assetClass === 'bond') return 'core'
   if (assetClass === 'equity' || assetClass === 'stock') return 'growth'
@@ -926,9 +946,15 @@ export const enforceRiskPolicy = ({
     allowed = false
     reasons.push('Poche crypto/asymmetric deja au cap global de 10%.')
   }
-  if (proposedAmount !== null && policy.minOrderAmount !== null && proposedAmount < policy.minOrderAmount) {
+  if (
+    proposedAmount !== null &&
+    policy.minOrderAmount !== null &&
+    proposedAmount < policy.minOrderAmount
+  ) {
     allowed = false
-    reasons.push(`Montant sous le minimum d ordre (${policy.minOrderAmount} ${policy.tradingCurrency}).`)
+    reasons.push(
+      `Montant sous le minimum d ordre (${policy.minOrderAmount} ${policy.tradingCurrency}).`
+    )
   }
   return {
     allowed,
@@ -955,7 +981,10 @@ export const selectCandidateForPolicy = ({
       (policy.accountType !== 'pea' || candidate.peaEligibilityStatus === 'eligible')
   )
   if (eligible.length > 0) {
-    return eligible.sort((left, right) => (right.liquidityScore ?? 0) - (left.liquidityScore ?? 0))[0] ?? null
+    return (
+      eligible.sort((left, right) => (right.liquidityScore ?? 0) - (left.liquidityScore ?? 0))[0] ??
+      null
+    )
   }
   return (
     candidates.find(
@@ -963,6 +992,116 @@ export const selectCandidateForPolicy = ({
         candidate.bucket === bucket && candidate.accountTypesAllowed.includes(policy.accountType)
     ) ?? null
   )
+}
+
+export const buildInvestmentActionableSteps = ({
+  items,
+  allocation,
+  contribution,
+  buckets,
+}: {
+  items: ActionPlanItemDraft[]
+  allocation: AllocationSnapshotDto
+  contribution: ContributionRecommendation[]
+  buckets: StrategyBucketDto[]
+}): InvestmentActionableStep[] => {
+  const steps: InvestmentActionableStep[] = []
+  const bucketLabel = (bucket: InvestmentBucketKey) =>
+    bucket === 'core' ? 'Core' : bucket === 'growth' ? 'Growth' : 'Asymmetric'
+  const buyItems = items.filter(item => item.action === 'buy')
+  if (buyItems.length === 0) {
+    steps.push({
+      type: 'no_trade_today',
+      priority: 'high',
+      message: "Ne passe aucun ordre aujourd'hui.",
+      reason:
+        'Les garde-fous restent actifs: prix, eligibility, univers candidat ou surexposition bloquent les achats.',
+      blockingReasons: [...new Set(items.flatMap(item => item.blockingReasons))].slice(0, 8),
+    })
+  }
+
+  for (const item of contribution) {
+    steps.push({
+      type: 'allocate_contribution',
+      priority: item.bucket === 'core' || item.bucket === 'growth' ? 'high' : 'medium',
+      bucket: item.bucket,
+      amountValue: item.amount,
+      amountCurrency: item.currency,
+      message: `Reserver/orienter ${item.amount} ${item.currency} vers ${bucketLabel(item.bucket)}.`,
+      reason: item.reason,
+    })
+  }
+
+  for (const bucket of buckets) {
+    const actualPct =
+      bucket.bucketKey === 'core'
+        ? allocation.corePct
+        : bucket.bucketKey === 'growth'
+          ? allocation.growthPct
+          : allocation.asymmetricPct
+    if (actualPct <= bucket.maxPct) continue
+    steps.push({
+      type: 'do_not_reinforce_overweight_bucket',
+      priority: bucket.bucketKey === 'asymmetric' ? 'high' : 'medium',
+      bucket: bucket.bucketKey,
+      message:
+        bucket.bucketKey === 'asymmetric'
+          ? `Ne renforce pas Binance: asymmetric est a ${round(actualPct, 1)}% vs cible ${bucket.targetPct}%.`
+          : `Ne renforce pas ${bucketLabel(bucket.bucketKey)}: poche au-dessus de sa limite.`,
+      reason: `La poche ${bucket.bucketKey} depasse sa limite de ${bucket.maxPct}%.`,
+    })
+  }
+
+  const pushUnique = (step: InvestmentActionableStep) => {
+    const key = `${step.type}:${step.accountLabel ?? ''}:${step.bucket ?? ''}:${step.message}`
+    const exists = steps.some(
+      existing =>
+        `${existing.type}:${existing.accountLabel ?? ''}:${existing.bucket ?? ''}:${existing.message}` ===
+        key
+    )
+    if (!exists) steps.push(step)
+  }
+
+  for (const item of items) {
+    const reasons = item.blockingReasons
+    if (reasons.some(reason => reason.includes('candidate_needs_review'))) {
+      pushUnique({
+        type: 'approve_asset_candidate',
+        priority: 'high',
+        accountLabel: item.accountLabel,
+        bucket: item.bucket,
+        message: `Approuver ou remplacer ${item.symbol ?? item.bucket} avant achat.`,
+        reason: 'Actif candidat a valider manuellement avant toute recommandation achetable.',
+        blockingReasons: reasons,
+      })
+    }
+    if (reasons.some(reason => reason.includes('Eligibility PEA inconnue'))) {
+      pushUnique({
+        type: 'approve_asset_candidate',
+        priority: 'high',
+        accountLabel: item.accountLabel,
+        bucket: item.bucket,
+        message: "Renseigner l'eligibilite PEA du candidat Core/Growth.",
+        reason: 'Un achat PEA reste interdit tant que l eligibility est inconnue.',
+        blockingReasons: reasons,
+      })
+    }
+    if (item.dataFreshness.staleReason === 'missing_price') {
+      pushUnique({
+        type: 'connect_price_source',
+        priority: 'high',
+        accountLabel: item.accountLabel,
+        bucket: item.bucket,
+        message: `Relier le symbole provider/prix pour ${item.symbol ?? item.bucket}.`,
+        reason:
+          item.blockingReasons.find(reason => reason.includes('snapshot de prix')) ??
+          'Prix non relie au candidat, achat bloque.',
+        blockingReasons: reasons,
+      })
+    }
+  }
+
+  return steps
 }
 
 export const buildActionPlanDraft = ({
@@ -992,7 +1131,9 @@ export const buildActionPlanDraft = ({
     })
     const priceSymbol = candidate?.providerSymbols[policy.provider] ?? candidate?.symbol ?? null
     const price = getReliablePriceForRecommendation({
-      snapshot: priceSymbol ? (latestPrices[priceSymbol] ?? latestPrices[candidate?.symbol ?? ''] ?? null) : null,
+      snapshot: priceSymbol
+        ? (latestPrices[priceSymbol] ?? latestPrices[candidate?.symbol ?? ''] ?? null)
+        : null,
       providerHealth: providerHealthByProvider[policy.provider] ?? null,
       now,
     })
@@ -1007,18 +1148,31 @@ export const buildActionPlanDraft = ({
     })
     const baseConfidence = Math.min(
       0.88,
-      Math.max(0.18, allocation.dataQuality.confidence * (candidate?.eligibilityStatus === 'approved' ? 0.95 : 0.62))
+      Math.max(
+        0.18,
+        allocation.dataQuality.confidence *
+          (candidate?.eligibilityStatus === 'approved' ? 0.95 : 0.62)
+      )
     )
-    const confidence = round(Math.max(0, Math.min(1, baseConfidence + risk.confidenceAdjustment)), 2)
+    const confidence = round(
+      Math.max(0, Math.min(1, baseConfidence + risk.confidenceAdjustment)),
+      2
+    )
     const action =
-      confidence < MIN_BUY_CONFIDENCE && risk.allowed
-        ? 'watch'
-        : risk.allowed
-          ? 'buy'
-          : risk.action
+      confidence < MIN_BUY_CONFIDENCE && risk.allowed ? 'watch' : risk.allowed ? 'buy' : risk.action
+    const priceBlockingReason =
+      price.status === 'missing' && priceSymbol
+        ? `Aucun snapshot de prix pour ${priceSymbol}: achat interdit.`
+        : null
     const blockedReasons = [
-      ...risk.reasons,
-      ...(confidence < MIN_BUY_CONFIDENCE ? ['Confiance sous le seuil minimal: achat interdit.'] : []),
+      ...risk.reasons.map(reason =>
+        priceBlockingReason && reason === 'Prix manquant: achat interdit.'
+          ? priceBlockingReason
+          : reason
+      ),
+      ...(confidence < MIN_BUY_CONFIDENCE
+        ? ['Confiance sous le seuil minimal: achat interdit.']
+        : []),
     ]
     const canCreateHypothesis = action === 'buy' || action === 'rebalance' || action === 'watch'
     return {
@@ -1068,6 +1222,10 @@ export const buildActionPlanDraft = ({
       priceSnapshotId: price.priceSnapshotId,
       valuationSnapshotId: null,
       dataFreshness: price.freshness,
+      recommendedTradeAmount: action === 'buy' ? amount : null,
+      recommendedContributionAmount: amount,
+      setupActionRequired: action === 'buy' ? null : (blockedReasons[0] ?? null),
+      blockingReasons: blockedReasons,
       humanValidationRequired: true,
       noAutoTrade: true,
       createsHypothesis: canCreateHypothesis && candidate !== null,
@@ -1091,6 +1249,12 @@ export const buildActionPlanDraft = ({
     items.length > 0 ? items.reduce((sum, item) => sum + item.confidence, 0) / items.length : 0,
     2
   )
+  const actionableSteps = buildInvestmentActionableSteps({
+    items,
+    allocation,
+    contribution,
+    buckets: bundle.buckets,
+  })
   return {
     strategyId: bundle.strategy.id,
     generatedAt: now.toISOString(),
@@ -1105,6 +1269,7 @@ export const buildActionPlanDraft = ({
     items,
     allocation,
     contribution,
+    actionableSteps,
     warnings: [
       ...allocation.dataQuality.providerWarnings,
       ...allocation.dataQuality.missingPriceSymbols.map(symbol => `missing_price:${symbol}`),
@@ -1166,7 +1331,11 @@ export const buildHypothesisDrafts = ({
     })
 
 export const scoreOutcome = (input: OutcomeReviewInput): OutcomeScore => {
-  if (input.priceStatus === 'missing' || input.reviewPrice === null || input.initialPrice === null) {
+  if (
+    input.priceStatus === 'missing' ||
+    input.reviewPrice === null ||
+    input.initialPrice === null
+  ) {
     return {
       outcomeId: input.outcomeId,
       hypothesisId: input.hypothesisId,
@@ -1318,9 +1487,7 @@ export const buildPostMortemFallback = ({
     hypothesisId,
     outcomeId,
     result,
-    whatWorked: successful
-      ? ['La direction realisee est coherente avec la these initiale.']
-      : [],
+    whatWorked: successful ? ['La direction realisee est coherente avec la these initiale.'] : [],
     whatFailed: successful
       ? []
       : ['La performance realisee ne valide pas clairement la these initiale.'],

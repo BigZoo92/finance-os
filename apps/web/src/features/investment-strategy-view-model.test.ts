@@ -4,12 +4,15 @@ import type {
   DashboardInvestmentPlanItem,
 } from './dashboard-types'
 import {
+  actionableStepsForPlan,
+  activeGraphStatusForPlan,
   buildInvestmentAccountSections,
   formatInvestmentConfidence,
   investmentFreshnessBadgeLabel,
   investmentFreshnessBadgeTone,
   investmentFreshnessOf,
   investmentListFor,
+  normalizeInvestmentWarning,
 } from './investment-strategy-view-model'
 
 const planItem = (overrides: Partial<DashboardInvestmentPlanItem> = {}) =>
@@ -129,5 +132,63 @@ describe('investment strategy view model', () => {
     expect(formatInvestmentConfidence(0.62)).toBe('62%')
     expect(formatInvestmentConfidence(72)).toBe('72%')
     expect(formatInvestmentConfidence(null)).toBe('-')
+  })
+
+  it('uses last-run graph status and treats older failures as resolved history', () => {
+    const graph = activeGraphStatusForPlan({
+      plan: {
+        graph: {
+          lastRun: {
+            attempted: 7,
+            succeeded: 7,
+            failed: 0,
+            pending: 0,
+            skipped: 0,
+            warnings: [],
+            lastError: null,
+          },
+          historical: {
+            attempted: 14,
+            succeeded: 7,
+            failed: 7,
+            pending: 0,
+            skipped: 0,
+            warnings: ['knowledge_service_status_500'],
+            lastError: 'knowledge_service_status_500',
+          },
+          resolvedHistoricalFailures: 7,
+        },
+        items: [],
+      } as never,
+      status: {
+        memory: {
+          graphWritesSucceeded: 7,
+          graphWritesFailed: 7,
+          lastGraphError: 'knowledge_service_status_500',
+        },
+      } as never,
+    })
+
+    expect(graph.lastRun.failed).toBe(0)
+    expect(graph.lastRun.warnings).toEqual([])
+    expect(graph.resolvedHistoricalFailures).toBe(7)
+  })
+
+  it('derives useful no-buy steps and normalizes technical warnings', () => {
+    const steps = actionableStepsForPlan({
+      items: [planItem()],
+      contribution: [{ bucket: 'core', amount: 200, currency: 'EUR', reason: 'underweight' }],
+    } as never)
+
+    expect(steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'no_trade_today' }),
+        expect.objectContaining({ type: 'allocate_contribution', amountValue: 200 }),
+      ])
+    )
+    expect(normalizeInvestmentWarning('missing_price:BTCEUR')).toContain('BTCEUR')
+    expect(normalizeInvestmentWarning('knowledge_service_status_500')).toBe(
+      'Memoire graph indisponible, non bloquant'
+    )
   })
 })

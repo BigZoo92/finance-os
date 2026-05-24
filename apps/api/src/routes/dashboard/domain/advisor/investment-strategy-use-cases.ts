@@ -1,28 +1,30 @@
 import type { PriceSourceType } from '@finance-os/db/schema'
 import type { InvestmentStrategyRepository } from '../../repositories/investment-strategy-repository'
-import type { InvestmentPositionRow } from '../../types'
 import type { PriceSnapshotContract } from '../../services/valuation-foundation'
+import type { InvestmentPositionRow } from '../../types'
 import {
-  DEFAULT_STRATEGY_NAME,
-  DEFAULT_STRATEGY_VERSION,
   type AccountPolicyDto,
   type ActionPlanDraft,
   type AllocationSnapshotDto,
   type AssetCandidateDto,
-  type HoldingInput,
-  type StrategyBucketDto,
-  type StrategyBundle,
-  type StrategyProfileDto,
   buildActionPlanDraft,
   buildCalibrationSnapshot,
   buildHypothesisDrafts,
+  buildInvestmentActionableSteps,
   buildPostMortemFallback,
   computePortfolioAllocation,
   createMemoryPayload,
+  DEFAULT_STRATEGY_NAME,
+  DEFAULT_STRATEGY_VERSION,
   defaultAccountPolicies,
   defaultBuckets,
   defaultCandidateUniverse,
   getReliablePriceForRecommendation,
+  type HoldingInput,
+  type InvestmentActionableStep,
+  type StrategyBucketDto,
+  type StrategyBundle,
+  type StrategyProfileDto,
   scoreOutcome,
   toNumberOrNull,
   validateStrategy,
@@ -312,8 +314,14 @@ const createDemoStrategyBundle = (): StrategyBundle => {
   return {
     strategy,
     buckets: defaultBuckets(0).map((bucket, index) => ({ ...bucket, id: index + 1 })),
-    accountPolicies: defaultAccountPolicies(0).map((policy, index) => ({ ...policy, id: index + 1 })),
-    candidates: defaultCandidateUniverse().map((candidate, index) => ({ ...candidate, id: index + 1 })),
+    accountPolicies: defaultAccountPolicies(0).map((policy, index) => ({
+      ...policy,
+      id: index + 1,
+    })),
+    candidates: defaultCandidateUniverse().map((candidate, index) => ({
+      ...candidate,
+      id: index + 1,
+    })),
   }
 }
 
@@ -429,7 +437,11 @@ const mapExternalPosition = (row: ExternalPositionRow): HoldingInput => {
     name: String(row.name ?? row.symbol ?? 'Unknown external position'),
     assetClass,
     value: toNumberOrNull(row.normalizedValue ?? row.value),
-    currency: row.valueCurrency ? String(row.valueCurrency) : row.currency ? String(row.currency) : null,
+    currency: row.valueCurrency
+      ? String(row.valueCurrency)
+      : row.currency
+        ? String(row.currency)
+        : null,
     valueAsOf: typeof row.valueAsOf === 'string' ? row.valueAsOf : null,
     quantity: toNumberOrNull(row.quantity),
     ...(row.valueSource ? { valueSource: String(row.valueSource) } : {}),
@@ -447,8 +459,11 @@ const mapExternalPosition = (row: ExternalPositionRow): HoldingInput => {
   }
 }
 
-const inferPowensAccountType = (position: InvestmentPositionRow): 'pea' | 'brokerage' | 'unknown' => {
-  const text = `${position.provider ?? ''} ${position.accountName ?? ''} ${position.assetName ?? ''}`.toLowerCase()
+const inferPowensAccountType = (
+  position: InvestmentPositionRow
+): 'pea' | 'brokerage' | 'unknown' => {
+  const text =
+    `${position.provider ?? ''} ${position.accountName ?? ''} ${position.assetName ?? ''}`.toLowerCase()
   if (text.includes('pea') || text.includes('trade republic')) return 'pea'
   return position.provider ? 'brokerage' : 'unknown'
 }
@@ -540,7 +555,13 @@ const mapActionForRecommendation = (
 }
 
 const mapHorizon = (value: string): 'intraday' | '1d' | '7d' | '30d' | '90d' | 'long_term' => {
-  if (value === 'intraday' || value === '1d' || value === '7d' || value === '30d' || value === '90d') {
+  if (
+    value === 'intraday' ||
+    value === '1d' ||
+    value === '7d' ||
+    value === '30d' ||
+    value === '90d'
+  ) {
     return value
   }
   return 'long_term'
@@ -550,6 +571,194 @@ const safeError = (error: unknown) =>
   (error instanceof Error ? error.message : String(error))
     .replace(/(token|secret|password|api[_-]?key|code)=([^&\s]+)/gi, '$1=[redacted]')
     .slice(0, 300)
+
+const graphFailureReason = async (response: Response) => {
+  const fallback = `knowledge_service_status_${response.status}`
+  try {
+    const payload = (await response.json()) as { code?: unknown }
+    return typeof payload.code === 'string' && payload.code.trim() ? payload.code.trim() : fallback
+  } catch {
+    return fallback
+  }
+}
+
+type GraphMemoryStats = {
+  rows: Array<{ status: 'pending' | 'sent' | 'skipped' | 'failed'; count: number }>
+  latestFailure: { graphWriteError: string | null } | null
+}
+
+const graphStatusFromMemoryStats = ({
+  lastRun,
+  historical,
+}: {
+  lastRun: GraphMemoryStats
+  historical: GraphMemoryStats
+}) => {
+  const count = (stats: GraphMemoryStats, status: 'pending' | 'sent' | 'skipped' | 'failed') =>
+    stats.rows.find(row => row.status === status)?.count ?? 0
+  const toStatus = (stats: GraphMemoryStats) => {
+    const pending = count(stats, 'pending')
+    const skipped = count(stats, 'skipped')
+    const succeeded = count(stats, 'sent')
+    const failed = count(stats, 'failed')
+    const attempted = succeeded + failed
+    const warnings =
+      failed > 0 && stats.latestFailure?.graphWriteError
+        ? [stats.latestFailure.graphWriteError]
+        : []
+    return {
+      attempted,
+      succeeded,
+      failed,
+      pending,
+      skipped,
+      warnings,
+      lastError: stats.latestFailure?.graphWriteError ?? null,
+    }
+  }
+  const lastRunStatus = toStatus(lastRun)
+  const historicalStatus = toStatus(historical)
+  return {
+    lastRun: lastRunStatus,
+    historical: historicalStatus,
+    resolvedHistoricalFailures:
+      lastRunStatus.failed === 0 ? Math.max(0, historicalStatus.failed - lastRunStatus.failed) : 0,
+  }
+}
+
+const activeGraphWarnings = (graph: ReturnType<typeof graphStatusFromMemoryStats>) =>
+  graph.lastRun.failed > 0 ? graph.lastRun.warnings : []
+
+const dataQualityFromJson = (
+  value: Record<string, unknown>
+): AllocationSnapshotDto['dataQuality'] => ({
+  status:
+    value.status === 'ready' || value.status === 'degraded' || value.status === 'insufficient_data'
+      ? value.status
+      : 'degraded',
+  confidence: toNumberOrNull(value.confidence) ?? 0,
+  unknownValue: toNumberOrNull(value.unknownValue) ?? 0,
+  unknownPositionCount: toNumberOrNull(value.unknownPositionCount) ?? 0,
+  stalePositionCount: toNumberOrNull(value.stalePositionCount) ?? 0,
+  missingPriceSymbols: toStringArray(value.missingPriceSymbols),
+  stalePriceSymbols: toStringArray(value.stalePriceSymbols),
+  providerWarnings: toStringArray(value.providerWarnings),
+  fxWarnings: toStringArray(value.fxWarnings),
+  graphWarnings: toStringArray(value.graphWarnings),
+})
+
+const priceFreshnessFromJson = (
+  value: Record<string, unknown>
+): ActionPlanDraft['items'][number]['dataFreshness'] => ({
+  provider: typeof value.provider === 'string' ? value.provider : null,
+  sourceType: typeof value.sourceType === 'string' ? value.sourceType : null,
+  marketTimestamp: typeof value.marketTimestamp === 'string' ? value.marketTimestamp : null,
+  fetchedAt: typeof value.fetchedAt === 'string' ? value.fetchedAt : null,
+  delaySeconds: toNumberOrNull(value.delaySeconds),
+  ageSeconds: toNumberOrNull(value.ageSeconds),
+  isStale: value.isStale === true,
+  confidence: toNumberOrNull(value.confidence) ?? 0,
+  currency: typeof value.currency === 'string' ? value.currency : null,
+  price: toNumberOrNull(value.price),
+  staleReason: typeof value.staleReason === 'string' ? value.staleReason : null,
+  providerHealth: typeof value.providerHealth === 'string' ? value.providerHealth : null,
+  fallbackReason: typeof value.fallbackReason === 'string' ? value.fallbackReason : null,
+})
+
+const mapPersistedAllocation = (latest: {
+  snapshot: {
+    id: number
+    strategyId: number
+    snapshotAt: Date
+    baseCurrency: string
+    totalValue: string
+    coreValue: string
+    growthValue: string
+    asymmetricValue: string
+    cashValue: string
+    unknownValue: string
+    corePct: number
+    growthPct: number
+    asymmetricPct: number
+    dataQualityJson: Record<string, unknown>
+  }
+  drift: Array<{
+    bucket: 'core' | 'growth' | 'asymmetric'
+    targetPct: number
+    actualPct: number
+    driftPct: number
+    severity: 'ok' | 'watch' | 'alert' | 'hard_limit'
+    recommendedContribution: string | null
+    recommendedAction: string
+  }>
+}): AllocationSnapshotDto => ({
+  id: latest.snapshot.id,
+  strategyId: latest.snapshot.strategyId,
+  snapshotAt: latest.snapshot.snapshotAt.toISOString(),
+  baseCurrency: latest.snapshot.baseCurrency,
+  totalValue: toNumberOrNull(latest.snapshot.totalValue) ?? 0,
+  coreValue: toNumberOrNull(latest.snapshot.coreValue) ?? 0,
+  growthValue: toNumberOrNull(latest.snapshot.growthValue) ?? 0,
+  asymmetricValue: toNumberOrNull(latest.snapshot.asymmetricValue) ?? 0,
+  cashValue: toNumberOrNull(latest.snapshot.cashValue) ?? 0,
+  unknownValue: toNumberOrNull(latest.snapshot.unknownValue) ?? 0,
+  corePct: latest.snapshot.corePct,
+  growthPct: latest.snapshot.growthPct,
+  asymmetricPct: latest.snapshot.asymmetricPct,
+  drift: latest.drift.map(item => ({
+    bucket: item.bucket,
+    targetPct: item.targetPct,
+    actualPct: item.actualPct,
+    driftPct: item.driftPct,
+    severity: item.severity,
+    recommendedContribution: toNumberOrNull(item.recommendedContribution),
+    recommendedAction: item.recommendedAction,
+  })),
+  dataQuality: dataQualityFromJson(toJsonRecord(latest.snapshot.dataQualityJson)),
+  holdings: [],
+})
+
+const contributionFromAllocation = (
+  allocation: AllocationSnapshotDto
+): ActionPlanDraft['contribution'] =>
+  allocation.drift
+    .filter(item => item.recommendedContribution !== null && item.recommendedContribution > 0)
+    .map(item => ({
+      bucket: item.bucket,
+      amount: item.recommendedContribution ?? 0,
+      currency: allocation.baseCurrency,
+      reason: `Corrige une sous-ponderation de ${Math.abs(item.driftPct).toFixed(1)} points sans vendre.`,
+    }))
+
+const buildActionableStepsFromPersistedPlan = ({
+  items,
+  allocation,
+  contribution,
+}: {
+  items: ActionPlanDraft['items']
+  allocation: AllocationSnapshotDto
+  contribution: ActionPlanDraft['contribution']
+}): InvestmentActionableStep[] => {
+  const bucketMax = { core: 70, growth: 40, asymmetric: 10 } as const
+  const bucketTarget = { core: 60, growth: 30, asymmetric: 10 } as const
+  return buildInvestmentActionableSteps({
+    items,
+    allocation,
+    contribution,
+    buckets: (['core', 'growth', 'asymmetric'] as const).map((bucket, index) => ({
+      id: index,
+      strategyId: allocation.strategyId,
+      bucketKey: bucket,
+      targetPct: bucketTarget[bucket],
+      minPct: 0,
+      maxPct: bucketMax[bucket],
+      riskLevel: bucket === 'asymmetric' ? 'very_high' : 'medium',
+      description: '',
+      defaultHorizon: 'long_term',
+      rules: {},
+    })),
+  })
+}
 
 export const createInvestmentStrategyUseCases = ({
   repository,
@@ -623,8 +832,7 @@ export const createInvestmentStrategyUseCases = ({
         preferredBucket: policy.preferredBucket,
         maxAllocationPct: policy.maxAllocationPct,
         maxSingleAssetPct: policy.maxSingleAssetPct,
-        minOrderAmount:
-          policy.minOrderAmount === null ? null : policy.minOrderAmount.toFixed(2),
+        minOrderAmount: policy.minOrderAmount === null ? null : policy.minOrderAmount.toFixed(2),
         tradingCurrency: policy.tradingCurrency,
         taxWrapper: policy.taxWrapper,
         eligibilityRulesJson: policy.eligibilityRules,
@@ -791,9 +999,10 @@ export const createInvestmentStrategyUseCases = ({
         signal: controller.signal,
       })
       clearTimeout(timer)
+      const failureReason = response.ok ? null : await graphFailureReason(response)
       await repository.updateMemoryEventGraphStatus(row.id, {
         graphWriteStatus: response.ok ? 'sent' : 'failed',
-        graphWriteError: response.ok ? null : `knowledge_service_status_${response.status}`,
+        graphWriteError: failureReason,
         nodesWritten: response.ok ? 1 : 0,
       })
     } catch (error) {
@@ -898,9 +1107,7 @@ export const createInvestmentStrategyUseCases = ({
         driftPct: item.driftPct,
         severity: item.severity,
         recommendedContribution:
-          item.recommendedContribution === null
-            ? null
-            : item.recommendedContribution.toFixed(2),
+          item.recommendedContribution === null ? null : item.recommendedContribution.toFixed(2),
         recommendedAction: item.recommendedAction,
       }))
     )
@@ -1116,6 +1323,14 @@ export const createInvestmentStrategyUseCases = ({
     }
     const persisted = await persistActionPlan({ requestId: input.requestId, bundle, plan })
     const calibration = await getScorecard({ mode: 'admin', requestId: input.requestId })
+    const [lastRunGraph, historicalGraph] = await Promise.all([
+      repository.memoryEventStatsForPlan(persisted.planRow.id),
+      repository.memoryEventStats(),
+    ])
+    const graph = graphStatusFromMemoryStats({
+      lastRun: lastRunGraph,
+      historical: historicalGraph,
+    })
     await persistContextBundle({
       requestId: input.requestId,
       bundle,
@@ -1134,10 +1349,11 @@ export const createInvestmentStrategyUseCases = ({
         id: persisted.planRow.id,
         ...plan,
         topAction: plan.items[plan.topActionIndex] ?? null,
+        graph,
       },
       hypotheses: persisted.hypotheses,
       calibration: calibration.scorecard,
-      warnings: plan.warnings,
+      warnings: [...plan.warnings, ...activeGraphWarnings(graph)],
     }
   }
 
@@ -1157,7 +1373,62 @@ export const createInvestmentStrategyUseCases = ({
         warnings: ['no_active_action_plan'],
       }
     }
-    const topAction = latest.items.find(item => item.id === latest.plan.topActionId) ?? latest.items[0] ?? null
+    const [latestAllocation, lastRunGraph, historicalGraph] = await Promise.all([
+      repository.latestAllocationSnapshot(bundle.strategy.id),
+      repository.memoryEventStatsForPlan(latest.plan.id),
+      repository.memoryEventStats(),
+    ])
+    const allocation = latestAllocation ? mapPersistedAllocation(latestAllocation) : null
+    const contribution = allocation ? contributionFromAllocation(allocation) : []
+    const enrichedItems: Array<ActionPlanDraft['items'][number] & { id: number }> =
+      latest.items.map(item => {
+        const dataFreshness = priceFreshnessFromJson(toJsonRecord(item.dataFreshnessJson))
+        const amountValue = toNumberOrNull(item.amountValue)
+        const argumentsAgainst = toStringArray(item.argumentsAgainstJson)
+        return {
+          id: item.id,
+          accountPolicyId: item.accountPolicyId,
+          accountLabel: item.accountLabel,
+          accountType: item.accountType,
+          bucket: item.bucket,
+          symbol: item.symbol,
+          assetName: item.assetName,
+          action: item.action,
+          amountValue,
+          amountCurrency: item.amountCurrency,
+          targetWeightPct: item.targetWeightPct,
+          currentWeightPct: item.currentWeightPct,
+          confidence: item.confidence,
+          riskLevel: item.riskLevel,
+          horizon: item.horizon,
+          thesis: item.thesis,
+          argumentsFor: toStringArray(item.argumentsForJson),
+          argumentsAgainst,
+          invalidationCriteria: toStringArray(item.invalidationCriteriaJson),
+          priceSnapshotId: item.priceSnapshotId,
+          valuationSnapshotId: item.valuationSnapshotId,
+          dataFreshness,
+          recommendedTradeAmount: item.action === 'buy' ? amountValue : null,
+          recommendedContributionAmount:
+            contribution.find(candidate => candidate.bucket === item.bucket)?.amount ?? null,
+          setupActionRequired: item.action === 'buy' ? null : (argumentsAgainst[0] ?? null),
+          blockingReasons: argumentsAgainst,
+          humanValidationRequired: true,
+          noAutoTrade: true,
+          createsHypothesis: item.createsHypothesis,
+          score: 0,
+        }
+      })
+    const actionableSteps =
+      allocation === null
+        ? []
+        : buildActionableStepsFromPersistedPlan({ items: enrichedItems, allocation, contribution })
+    const graph = graphStatusFromMemoryStats({
+      lastRun: lastRunGraph,
+      historical: historicalGraph,
+    })
+    const topAction =
+      enrichedItems.find(item => item.id === latest.plan.topActionId) ?? enrichedItems[0] ?? null
     return {
       requestId,
       mode,
@@ -1178,9 +1449,13 @@ export const createInvestmentStrategyUseCases = ({
         humanValidationRequired: latest.plan.humanValidationRequired,
         topActionId: latest.plan.topActionId,
         topAction,
-        items: latest.items,
+        items: enrichedItems,
+        contribution,
+        actionableSteps,
+        graph,
+        ...(allocation ? { allocation } : {}),
       },
-      warnings: [],
+      warnings: activeGraphWarnings(graph),
     }
   }
 
@@ -1456,10 +1731,8 @@ export const createInvestmentStrategyUseCases = ({
       memory: {
         memoryEventsCreated: memory.rows.reduce((sum, row) => sum + row.count, 0),
         graphWritesAttempted,
-        graphWritesSucceeded:
-          memory.rows.find(row => row.status === 'sent')?.count ?? 0,
-        graphWritesFailed:
-          memory.rows.find(row => row.status === 'failed')?.count ?? 0,
+        graphWritesSucceeded: memory.rows.find(row => row.status === 'sent')?.count ?? 0,
+        graphWritesFailed: memory.rows.find(row => row.status === 'failed')?.count ?? 0,
         lastGraphError: memory.latestFailure?.graphWriteError ?? null,
       },
       staleProviders:

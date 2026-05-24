@@ -553,6 +553,23 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  knowledge-service-storage-init:
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-knowledge-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
+    restart: "no"
+    user: "0:0"
+    command:
+      [
+        "sh",
+        "-lc",
+        "mkdir -p /data/knowledge-graph && chown -R app:app /data/knowledge-graph && chmod -R u+rwX,g+rwX /data/knowledge-graph && stat -c 'knowledge graph storage owner=%u:%g mode=%a path=%n' /data/knowledge-graph",
+      ]
+    logging: *default-logging
+    volumes:
+      - knowledge_graph_data:/data/knowledge-graph
+    security_opt:
+      - no-new-privileges:true
+
   knowledge-service:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-knowledge-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
@@ -601,6 +618,8 @@ services:
       KNOWLEDGE_EMBEDDING_MODEL: ${KNOWLEDGE_EMBEDDING_MODEL:-local-hashing-v1}
       KNOWLEDGE_EMBEDDING_DIMENSIONS: ${KNOWLEDGE_EMBEDDING_DIMENSIONS:-256}
     depends_on:
+      knowledge-service-storage-init:
+        condition: service_completed_successfully
       neo4j:
         condition: service_healthy
       qdrant:

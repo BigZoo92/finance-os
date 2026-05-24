@@ -1,8 +1,11 @@
 import type {
   DashboardInvestmentAccountPolicy,
+  DashboardInvestmentActionableStep,
   DashboardInvestmentActionPlan,
+  DashboardInvestmentGraphStatus,
   DashboardInvestmentPlanItem,
   DashboardInvestmentPriceFreshness,
+  DashboardInvestmentStatusResponse,
   InvestmentBucketKey,
   InvestmentRiskLevel,
 } from './dashboard-types'
@@ -37,7 +40,7 @@ export const formatInvestmentPct = (value: number | null | undefined, digits = 1
 
 export const formatInvestmentConfidence = (value: number | null | undefined) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '-'
-  return `${Math.round((value <= 1 ? value * 100 : value))}%`
+  return `${Math.round(value <= 1 ? value * 100 : value)}%`
 }
 
 export const toInvestmentNumber = (value: string | number | null | undefined) => {
@@ -87,6 +90,82 @@ export const investmentListFor = (
   if (kind === 'for') return item.argumentsFor ?? item.argumentsForJson ?? []
   if (kind === 'against') return item.argumentsAgainst ?? item.argumentsAgainstJson ?? []
   return item.invalidationCriteria ?? item.invalidationCriteriaJson ?? []
+}
+
+export const normalizeInvestmentWarning = (code: string) => {
+  if (code === 'missing_price') return 'Prix non relie au candidat, achat bloque'
+  if (code.startsWith('missing_price:')) {
+    return `Prix non relie au candidat (${code.slice('missing_price:'.length)}), achat bloque`
+  }
+  if (code === 'candidate_needs_review') return 'Actif a approuver avant achat'
+  if (code === 'knowledge_ingest_permission_denied_storage') {
+    return 'Memoire graph non inscriptible, verifier volume/permissions'
+  }
+  if (code.startsWith('knowledge_service_status_')) {
+    return 'Memoire graph indisponible, non bloquant'
+  }
+  return code
+}
+
+export const activeGraphStatusForPlan = ({
+  plan,
+  status,
+}: {
+  plan: DashboardInvestmentActionPlan | null | undefined
+  status?: DashboardInvestmentStatusResponse | null
+}): DashboardInvestmentGraphStatus => {
+  if (plan?.graph) return plan.graph
+  const succeeded = status?.memory.graphWritesSucceeded ?? 0
+  const failed = status?.memory.graphWritesFailed ?? 0
+  return {
+    lastRun: {
+      attempted: succeeded + failed,
+      succeeded,
+      failed,
+      pending: 0,
+      skipped: 0,
+      warnings: failed > 0 && status?.memory.lastGraphError ? [status.memory.lastGraphError] : [],
+      lastError: status?.memory.lastGraphError ?? null,
+    },
+    historical: {
+      attempted: succeeded + failed,
+      succeeded,
+      failed,
+      pending: 0,
+      skipped: 0,
+      warnings: failed > 0 && status?.memory.lastGraphError ? [status.memory.lastGraphError] : [],
+      lastError: status?.memory.lastGraphError ?? null,
+    },
+    resolvedHistoricalFailures: 0,
+  }
+}
+
+export const actionableStepsForPlan = (
+  plan: DashboardInvestmentActionPlan | null | undefined
+): DashboardInvestmentActionableStep[] => {
+  if (plan?.actionableSteps && plan.actionableSteps.length > 0) return plan.actionableSteps
+  if (!plan) return []
+  const steps: DashboardInvestmentActionableStep[] = []
+  if (plan.items.every(item => item.action !== 'buy')) {
+    steps.push({
+      type: 'no_trade_today',
+      priority: 'high',
+      message: "Ne passe aucun ordre aujourd'hui.",
+      reason: 'Aucun achat ne satisfait les garde-fous du plan courant.',
+    })
+  }
+  for (const item of plan.contribution ?? []) {
+    steps.push({
+      type: 'allocate_contribution',
+      priority: item.bucket === 'core' || item.bucket === 'growth' ? 'high' : 'medium',
+      bucket: item.bucket,
+      amountValue: item.amount,
+      amountCurrency: item.currency,
+      message: `Reserver/orienter ${item.amount} ${item.currency} vers ${INVESTMENT_BUCKET_LABEL[item.bucket]}.`,
+      reason: item.reason,
+    })
+  }
+  return steps
 }
 
 export const buildInvestmentAccountSections = ({

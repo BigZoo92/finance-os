@@ -978,6 +978,10 @@ export type DashboardInvestmentPlanItem = {
   valuationSnapshotId?: number | null
   dataFreshness?: DashboardInvestmentPriceFreshness
   dataFreshnessJson?: DashboardInvestmentPriceFreshness | Record<string, unknown>
+  recommendedTradeAmount?: number | null
+  recommendedContributionAmount?: number | null
+  setupActionRequired?: string | null
+  blockingReasons?: string[]
   humanValidationRequired: boolean
   noAutoTrade: boolean
   createsHypothesis: boolean
@@ -1048,7 +1052,42 @@ export type DashboardInvestmentActionPlan = {
     currency: string
     reason: string
   }>
+  actionableSteps?: DashboardInvestmentActionableStep[]
+  graph?: DashboardInvestmentGraphStatus
   warnings?: string[]
+}
+
+export type DashboardInvestmentActionableStep = {
+  type:
+    | 'no_trade_today'
+    | 'allocate_contribution'
+    | 'approve_asset_candidate'
+    | 'connect_price_source'
+    | 'do_not_reinforce_overweight_bucket'
+  priority: 'high' | 'medium' | 'low'
+  accountLabel?: string
+  bucket?: InvestmentBucketKey
+  amountValue?: number
+  amountCurrency?: string
+  message: string
+  reason: string
+  blockingReasons?: string[]
+}
+
+export type DashboardInvestmentGraphWriteSummary = {
+  attempted: number
+  succeeded: number
+  failed: number
+  pending: number
+  skipped: number
+  warnings: string[]
+  lastError: string | null
+}
+
+export type DashboardInvestmentGraphStatus = {
+  lastRun: DashboardInvestmentGraphWriteSummary
+  historical: DashboardInvestmentGraphWriteSummary
+  resolvedHistoricalFailures: number
 }
 
 export type DashboardInvestmentStrategyResponse = {

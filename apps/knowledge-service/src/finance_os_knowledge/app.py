@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 import json
 import logging
+import os
 from typing import Any
 from uuid import uuid4
 
@@ -78,9 +79,43 @@ def _backend_health(store: Any) -> dict[str, Any] | None:
     return None
 
 
+def _storage_diagnostics(path: Any) -> dict[str, Any]:
+    storage_path = os.fspath(path)
+    try:
+        stat_result = os.stat(storage_path)
+        owner_uid: int | None = stat_result.st_uid
+        owner_gid: int | None = stat_result.st_gid
+    except FileNotFoundError:
+        owner_uid = None
+        owner_gid = None
+    return {
+        "storagePath": storage_path,
+        "uid": os.getuid() if hasattr(os, "getuid") else None,
+        "gid": os.getgid() if hasattr(os, "getgid") else None,
+        "writable": os.access(storage_path, os.W_OK),
+        "ownerUid": owner_uid,
+        "ownerGid": owner_gid,
+    }
+
+
+def _permission_denied_storage_error(request_id: str, path: Any) -> ORJSONResponse:
+    return ORJSONResponse(
+        {
+            "ok": False,
+            "code": "knowledge_ingest_permission_denied_storage",
+            "message": "storage path not writable by application user",
+            "requestId": request_id,
+            "diagnostics": _storage_diagnostics(path),
+        },
+        status_code=500,
+        headers={"x-request-id": request_id, "cache-control": "no-store"},
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    _log("info", "knowledge storage diagnostic", **_storage_diagnostics(settings.graph_storage_path))
     try:
         store = select_backend(settings)
     except RuntimeError as exc:
@@ -313,7 +348,16 @@ def create_app() -> FastAPI:
     async def ingest_advisor(request_body: AdvisorIngestRequest, request: Request):
         request_id = _request_id(request)
         ingest_request = build_advisor_ingest(request_body)
-        return store().ingest(ingest_request, request_id=request_id)
+        try:
+            return store().ingest(ingest_request, request_id=request_id)
+        except PermissionError:
+            _log(
+                "error",
+                "knowledge advisor ingest storage permission denied",
+                requestId=request_id,
+                **_storage_diagnostics(settings.graph_storage_path),
+            )
+            return _permission_denied_storage_error(request_id, settings.graph_storage_path)
 
     @app.post("/knowledge/ingest/social")
     async def ingest_social(request_body: SocialIngestRequest, request: Request):

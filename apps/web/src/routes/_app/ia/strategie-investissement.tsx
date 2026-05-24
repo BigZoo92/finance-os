@@ -1,12 +1,14 @@
 import { Badge, Button } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import { StatusDot } from '@/components/surfaces/status-dot'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import {
-  postDashboardInvestmentPlanGenerate,
-} from '@/features/dashboard-api'
+import { postDashboardInvestmentPlanGenerate } from '@/features/dashboard-api'
 import {
   dashboardInvestmentHypothesesQueryOptionsWithMode,
   dashboardInvestmentLessonsQueryOptionsWithMode,
@@ -18,30 +20,30 @@ import {
 } from '@/features/dashboard-query-options'
 import type {
   DashboardInvestmentAccountPolicy,
+  DashboardInvestmentActionableStep,
   DashboardInvestmentActionPlan,
   DashboardInvestmentPlanItem,
   DashboardInvestmentPriceFreshness,
   InvestmentBucketKey,
 } from '@/features/dashboard-types'
 import {
-  INVESTMENT_ACTION_LABEL,
-  INVESTMENT_BUCKET_LABEL,
-  INVESTMENT_RISK_LABEL,
+  actionableStepsForPlan,
+  activeGraphStatusForPlan,
   buildInvestmentAccountSections,
   formatInvestmentConfidence,
   formatInvestmentPct,
+  INVESTMENT_ACTION_LABEL,
+  INVESTMENT_BUCKET_LABEL,
+  INVESTMENT_RISK_LABEL,
   investmentActionVariant,
   investmentFreshnessBadgeLabel,
   investmentFreshnessBadgeTone,
   investmentFreshnessOf,
   investmentListFor,
+  normalizeInvestmentWarning,
   toInvestmentNumber,
 } from '@/features/investment-strategy-view-model'
 import { formatDateTime, formatMoney, toErrorMessage } from '@/lib/format'
-import { KpiTile } from '@/components/surfaces/kpi-tile'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { Panel } from '@/components/surfaces/panel'
-import { StatusDot } from '@/components/surfaces/status-dot'
 
 export const Route = createFileRoute('/_app/ia/strategie-investissement')({
   loader: async ({ context }) => {
@@ -51,7 +53,9 @@ export const Route = createFileRoute('/_app/ia/strategie-investissement')({
     if (!mode) return
 
     await Promise.all([
-      context.queryClient.ensureQueryData(dashboardInvestmentStrategyQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(
+        dashboardInvestmentStrategyQueryOptionsWithMode({ mode })
+      ),
       context.queryClient.ensureQueryData(
         dashboardInvestmentPlanLatestQueryOptionsWithMode({ mode })
       ),
@@ -105,10 +109,15 @@ function InvestmentStrategyPage() {
   const plan = planResponse?.plan ?? null
   const topAction = plan?.topAction ?? plan?.items[0] ?? null
   const allocation = plan?.allocation
+  const actionableSteps = actionableStepsForPlan(plan)
+  const graphStatus = activeGraphStatusForPlan({
+    plan,
+    ...(statusQuery.data ? { status: statusQuery.data } : {}),
+  })
+  const noBuyToday = Boolean(plan?.items.every(item => item.action !== 'buy'))
   const scorecard = scorecardQuery.data?.scorecard ?? planResponse?.calibration ?? null
   const lessons = lessonsQuery.data?.items ?? []
   const hypotheses = hypothesesQuery.data?.items ?? []
-  const status = statusQuery.data
   const loading = strategyQuery.isPending || planQuery.isPending
   const error = [
     strategyQuery.error,
@@ -150,10 +159,36 @@ function InvestmentStrategyPage() {
       />
 
       {error ? (
-        <Panel tone="warning" title="Surface degradee" icon={<StatusDot tone="warn" size={8} pulse />}>
+        <Panel
+          tone="warning"
+          title="Surface degradee"
+          icon={<StatusDot tone="warn" size={8} pulse />}
+        >
           <p className="text-sm text-muted-foreground">{toErrorMessage(error)}</p>
         </Panel>
       ) : null}
+
+      <Panel
+        title="Ce que tu dois faire maintenant"
+        description="Plan concret, meme quand aucun achat n'est autorise."
+        tone={noBuyToday ? 'warning' : 'positive'}
+        icon={<StatusDot tone={noBuyToday ? 'warn' : 'ok'} size={9} />}
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+          <div className="rounded-lg border border-border/50 bg-surface-1 px-4 py-4">
+            <p className="text-sm font-semibold">
+              {noBuyToday
+                ? "Ne passe aucun ordre aujourd'hui."
+                : 'Ordre possible sous validation humaine.'}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Les achats restent bloques si prix, eligibility, univers candidat ou cap de poche ne
+              sont pas satisfaits. Les apports restent planifiables sans ordre.
+            </p>
+          </div>
+          <ActionableStepList steps={actionableSteps} loading={loading} />
+        </div>
+      </Panel>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiTile
@@ -186,7 +221,9 @@ function InvestmentStrategyPage() {
           display={scorecard ? formatInvestmentConfidence(scorecard.hitRate) : '-'}
           tone="plain"
           loading={scorecardQuery.isPending}
-          hint={scorecard ? `${scorecard.sampleSize} predictions revues` : 'Pas encore assez de donnees'}
+          hint={
+            scorecard ? `${scorecard.sampleSize} predictions revues` : 'Pas encore assez de donnees'
+          }
         />
       </section>
 
@@ -224,12 +261,22 @@ function InvestmentStrategyPage() {
               value={allocation?.dataQuality.stalePriceSymbols.join(', ') || 'aucun'}
             />
             <QualityRow
-              label="Graph writes"
-              value={`${status?.memory.graphWritesSucceeded ?? 0} ok / ${status?.memory.graphWritesFailed ?? 0} fail`}
+              label="Memoire graph"
+              value={
+                graphStatus.lastRun.failed === 0
+                  ? `OK - ${graphStatus.lastRun.succeeded} evenements dernier run`
+                  : `Dernier run : ${graphStatus.lastRun.succeeded} ok / ${graphStatus.lastRun.failed} fail`
+              }
             />
-            {status?.memory.lastGraphError ? (
+            {graphStatus.resolvedHistoricalFailures > 0 ? (
+              <QualityRow
+                label="Historique"
+                value={`${graphStatus.resolvedHistoricalFailures} anciens echecs resolus`}
+              />
+            ) : null}
+            {graphStatus.lastRun.failed > 0 && graphStatus.lastRun.lastError ? (
               <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
-                {status.memory.lastGraphError}
+                {normalizeInvestmentWarning(graphStatus.lastRun.lastError)}
               </p>
             ) : null}
           </div>
@@ -273,18 +320,25 @@ function InvestmentStrategyPage() {
             <QualityRow label="Hypotheses ouvertes/due" value={String(hypotheses.length)} />
             <QualityRow
               label="Hit rate"
-              value={scorecard ? formatInvestmentConfidence(scorecard.hitRate) : 'insufficient_data'}
+              value={
+                scorecard ? formatInvestmentConfidence(scorecard.hitRate) : 'insufficient_data'
+              }
             />
             <QualityRow
               label="Brier score"
-              value={scorecard?.brierScore === null || scorecard?.brierScore === undefined
-                ? 'insufficient_data'
-                : scorecard.brierScore.toFixed(3)}
+              value={
+                scorecard?.brierScore === null || scorecard?.brierScore === undefined
+                  ? 'insufficient_data'
+                  : scorecard.brierScore.toFixed(3)
+              }
             />
           </div>
           <div className="mt-4 space-y-2">
             {lessons.slice(0, 3).map(lesson => (
-              <div key={lesson.id} className="rounded-lg border border-border/50 bg-surface-1 px-3 py-2">
+              <div
+                key={lesson.id}
+                className="rounded-lg border border-border/50 bg-surface-1 px-3 py-2"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium">{lesson.title}</p>
                   <Badge variant={lesson.status === 'approved' ? 'positive' : 'outline'}>
@@ -298,7 +352,8 @@ function InvestmentStrategyPage() {
             ))}
             {lessons.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border/50 bg-surface-1/40 px-3 py-4 text-sm text-muted-foreground">
-                Aucun apprentissage valide encore. Le systeme attend des outcomes revus avant de conclure.
+                Aucun apprentissage valide encore. Le systeme attend des outcomes revus avant de
+                conclure.
               </p>
             ) : null}
           </div>
@@ -309,9 +364,7 @@ function InvestmentStrategyPage() {
         <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
           <span className="text-muted-foreground/55">
             strategy<span className="mx-1 text-muted-foreground/25">:</span>
-            <span className="text-foreground/85">
-              {strategy?.strategy.name ?? 'unavailable'}
-            </span>
+            <span className="text-foreground/85">{strategy?.strategy.name ?? 'unavailable'}</span>
           </span>
           <span className="text-muted-foreground/55">
             generated<span className="mx-1 text-muted-foreground/25">:</span>
@@ -345,21 +398,81 @@ function EmptyPlan({ loading }: { loading: boolean }) {
   )
 }
 
+function ActionableStepList({
+  steps,
+  loading,
+}: {
+  steps: DashboardInvestmentActionableStep[]
+  loading: boolean
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-border/50 bg-surface-1 px-4 py-4 text-sm text-muted-foreground">
+        Chargement des actions...
+      </div>
+    )
+  }
+  if (steps.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border/50 bg-surface-1/40 px-4 py-4 text-sm text-muted-foreground">
+        Aucun geste actionnable tant que le plan n'est pas genere.
+      </div>
+    )
+  }
+  return (
+    <div className="grid gap-2">
+      {steps.map((step, index) => (
+        <div
+          key={`${step.type}-${step.bucket ?? 'global'}-${step.accountLabel ?? 'all'}-${index}`}
+          className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="text-sm font-semibold">{step.message}</p>
+            <Badge variant={step.priority === 'high' ? 'warning' : 'outline'}>
+              {step.priority}
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.reason}</p>
+          {step.blockingReasons && step.blockingReasons.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {step.blockingReasons.slice(0, 3).map(reason => (
+                <Badge key={reason} variant="outline">
+                  {normalizeInvestmentWarning(reason)}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function TopAction({ action }: { action: DashboardInvestmentPlanItem }) {
   const freshness = investmentFreshnessOf(action)
   const amount = toInvestmentNumber(action.amountValue)
+  const contributionAmount = toInvestmentNumber(action.recommendedContributionAmount)
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label="Compte" value={action.accountLabel} />
         <Metric label="Actif" value={action.assetName ?? action.symbol ?? 'non defini'} />
         <Metric
-          label="Montant"
-          value={amount === null ? '-' : formatMoney(amount, action.amountCurrency)}
+          label="Montant d'ordre"
+          value={amount === null ? 'aucun' : formatMoney(amount, action.amountCurrency)}
           financial
         />
-        <Metric label="Confiance" value={formatInvestmentConfidence(action.confidence)} />
+        <Metric
+          label="Apport a orienter"
+          value={
+            contributionAmount === null
+              ? 'non prioritaire'
+              : formatMoney(contributionAmount, action.amountCurrency)
+          }
+          financial
+        />
       </div>
+      <Metric label="Confiance" value={formatInvestmentConfidence(action.confidence)} />
       <p className="text-sm leading-relaxed text-muted-foreground">{action.thesis}</p>
       <div className="flex flex-wrap gap-2">
         <Badge variant="outline">{INVESTMENT_BUCKET_LABEL[action.bucket]}</Badge>
@@ -384,6 +497,7 @@ function AccountRecommendation({
 }) {
   const freshness = item ? investmentFreshnessOf(item) : null
   const amount = item ? toInvestmentNumber(item.amountValue) : null
+  const contributionAmount = item ? toInvestmentNumber(item.recommendedContributionAmount) : null
   return (
     <Panel
       title={label}
@@ -404,22 +518,44 @@ function AccountRecommendation({
             <QualityRow label="Poche" value={INVESTMENT_BUCKET_LABEL[item.bucket]} />
             <QualityRow label="Actif" value={item.assetName ?? item.symbol ?? 'non defini'} />
             <QualityRow
-              label="Montant"
-              value={amount === null ? '-' : formatMoney(amount, item.amountCurrency)}
+              label="Montant d'ordre"
+              value={amount === null ? 'aucun' : formatMoney(amount, item.amountCurrency)}
             />
-            <QualityRow label="Allocation" value={`${formatInvestmentPct(item.currentWeightPct)} -> ${formatInvestmentPct(item.targetWeightPct)}`} />
+            <QualityRow
+              label="Apport a orienter"
+              value={
+                contributionAmount === null
+                  ? 'non prioritaire'
+                  : formatMoney(contributionAmount, item.amountCurrency)
+              }
+            />
+            <QualityRow
+              label="Allocation"
+              value={`${formatInvestmentPct(item.currentWeightPct)} -> ${formatInvestmentPct(item.targetWeightPct)}`}
+            />
             <QualityRow label="Confiance" value={formatInvestmentConfidence(item.confidence)} />
             <QualityRow label="Risque" value={INVESTMENT_RISK_LABEL[item.riskLevel]} />
-            <QualityRow label="Prix" value={freshness?.price ? formatMoney(freshness.price, freshness.currency ?? 'EUR') : '-'} />
+            <QualityRow
+              label="Prix"
+              value={
+                freshness?.price
+                  ? formatMoney(freshness.price, freshness.currency ?? 'EUR')
+                  : 'prix non relie'
+              }
+            />
             <QualityRow label="Source" value={freshness?.provider ?? 'missing'} />
-            <QualityRow label="Fraicheur" value={freshness?.isStale ? 'stale' : freshness?.sourceType ?? 'missing'} />
+            <QualityRow
+              label="Fraicheur"
+              value={freshness?.isStale ? 'stale' : (freshness?.sourceType ?? 'missing')}
+            />
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">{item.thesis}</p>
           <EvidenceGrid item={item} />
         </div>
       ) : (
         <p className="rounded-lg border border-dashed border-border/50 bg-surface-1/40 px-3 py-6 text-sm text-muted-foreground">
-          Aucun item de plan pour ce compte. Genere un plan apres avoir configure les donnees et l'univers d'actifs.
+          Aucun item de plan pour ce compte. Genere un plan apres avoir configure les donnees et
+          l'univers d'actifs.
         </p>
       )}
     </Panel>
@@ -450,7 +586,10 @@ function StrategySplit({
         {buckets.map(bucket => {
           const drift = allocation?.drift.find(item => item.bucket === bucket.bucketKey)
           return (
-            <div key={bucket.bucketKey} className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3">
+            <div
+              key={bucket.bucketKey}
+              className="rounded-lg border border-border/50 bg-surface-1 px-3 py-3"
+            >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">{INVESTMENT_BUCKET_LABEL[bucket.bucketKey]}</p>
                 <Badge variant={drift?.severity === 'ok' ? 'positive' : 'warning'}>
@@ -459,7 +598,9 @@ function StrategySplit({
               </div>
               <p className="font-financial mt-2 text-lg font-semibold">
                 {formatInvestmentPct(actual[bucket.bucketKey])}
-                <span className="ml-1 text-xs text-muted-foreground">/ {formatInvestmentPct(bucket.targetPct)}</span>
+                <span className="ml-1 text-xs text-muted-foreground">
+                  / {formatInvestmentPct(bucket.targetPct)}
+                </span>
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 {drift?.recommendedAction ?? bucket.description}

@@ -1,6 +1,6 @@
 # Dokploy Deployment Notes
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## Daily Intelligence Env
 
@@ -41,4 +41,34 @@ It reuses:
 - `ADVISOR_GRAPH_INGEST_ENABLED`
 - existing market-data and external-investment provider envs
 
-The graph write path remains fail-soft. Keep `ADVISOR_GRAPH_INGEST_ENABLED=false` unless the knowledge service is ready and you explicitly want advisory memory events written to the graph.
+The graph write path remains fail-soft. `ADVISOR_GRAPH_INGEST_ENABLED=true` is supported when the knowledge service is ready and the storage volume is writable by the app user.
+
+### Knowledge graph storage volume
+
+Production sets:
+
+```dotenv
+KNOWLEDGE_GRAPH_STORAGE_PATH=/data/knowledge-graph
+```
+
+The knowledge-service runs as a non-root `app` user. The Compose stack includes a one-shot `knowledge-service-storage-init` service that mounts `knowledge_graph_data`, creates `/data/knowledge-graph`, and repairs ownership/mode with:
+
+```bash
+chown -R app:app /data/knowledge-graph
+chmod -R u+rwX,g+rwX /data/knowledge-graph
+```
+
+Do not replace this with `chmod 777`. If Dokploy recreates or restores the named volume as root-owned, the init step must complete before `knowledge-service` starts.
+
+Post-deploy check:
+
+```bash
+docker exec finance-os-app-bm30nn-knowledge-service-1 sh -lc '
+id
+touch /data/knowledge-graph/.write-test &&
+rm /data/knowledge-graph/.write-test &&
+echo OK
+'
+```
+
+If `/knowledge/ingest/advisor` returns `knowledge_ingest_permission_denied_storage`, inspect the storage diagnostic log and the `knowledge-service-storage-init` logs first.
