@@ -272,3 +272,14 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Agent Skill Stack
+
+This repository includes Codex-compatible skills under `.agents/skills`.
+
+Rules:
+- Prefer repo-specific instructions over generic community skills.
+- Use imported community skills only when they clearly match the task.
+- Before running helper scripts from imported skills, inspect the script first.
+- Do not overwrite `.codex/config.toml`, `.mcp.json`, deployment files, or CI files without explaining the diff.
+- For large refactors, use: plan → implement → test → review → summarize.
