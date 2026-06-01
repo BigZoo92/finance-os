@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from finance_os_knowledge.app import create_app
-from finance_os_knowledge.config import KnowledgeSettings
+from finance_os_knowledge.config import KnowledgeSettings, get_settings
 from finance_os_knowledge.models import (
     ContextBundleRequest,
     KnowledgeEntity,
@@ -12,6 +13,13 @@ from finance_os_knowledge.models import (
 )
 from finance_os_knowledge.seed import build_seed_ingest
 from finance_os_knowledge.store import KnowledgeGraphStore
+
+
+@pytest.fixture(autouse=True)
+def reset_settings_cache():
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def test_seed_contains_required_temporal_finance_memory_types():

@@ -115,7 +115,9 @@ def _permission_denied_storage_error(request_id: str, path: Any) -> ORJSONRespon
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    _log("info", "knowledge storage diagnostic", **_storage_diagnostics(settings.graph_storage_path))
+    _log(
+        "info", "knowledge storage diagnostic", **_storage_diagnostics(settings.graph_storage_path)
+    )
     try:
         store = select_backend(settings)
     except RuntimeError as exc:
