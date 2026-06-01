@@ -143,7 +143,9 @@ img, .image-container {
    =========================================== */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
+        /* biome-ignore lint/complexity/noImportantStyles: reduced-motion overrides must beat slide-level animation rules. */
         animation-duration: 0.01ms !important;
+        /* biome-ignore lint/complexity/noImportantStyles: reduced-motion overrides must beat slide-level transition rules. */
         transition-duration: 0.2s !important;
     }
 

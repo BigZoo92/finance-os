@@ -507,8 +507,10 @@ function extractRequireSources(content) {
   let m;
   const stripped = stripJsLikeComments(content);
   REQUIRE_LITERAL_RE.lastIndex = 0;
-  while ((m = REQUIRE_LITERAL_RE.exec(stripped)) !== null) {
+  m = REQUIRE_LITERAL_RE.exec(stripped);
+  while (m !== null) {
     sources.push(m[2]);
+    m = REQUIRE_LITERAL_RE.exec(stripped);
   }
   return sources;
 }
@@ -532,8 +534,10 @@ function extractKotlinSources(content) {
   const sources = [];
   let m;
   KOTLIN_IMPORT_RE.lastIndex = 0;
-  while ((m = KOTLIN_IMPORT_RE.exec(content)) !== null) {
+  m = KOTLIN_IMPORT_RE.exec(content);
+  while (m !== null) {
     sources.push(m[1]);
+    m = KOTLIN_IMPORT_RE.exec(content);
   }
   return sources;
 }
@@ -754,7 +758,7 @@ export function resolveGoImport(rawImport, file, ctx) {
   let remainder;
   if (src === moduleName) {
     remainder = '';
-  } else if (src.startsWith(moduleName + '/')) {
+  } else if (src.startsWith(`${moduleName}/`)) {
     remainder = src.slice(moduleName.length + 1);
   } else {
     // External package (stdlib, 3rd-party module, OR a different in-tree
@@ -914,11 +918,13 @@ function parseRubyImports(content) {
   let m;
   const stripped = stripRubyComments(content);
   RUBY_REQUIRE_RE.lastIndex = 0;
-  while ((m = RUBY_REQUIRE_RE.exec(stripped)) !== null) {
+  m = RUBY_REQUIRE_RE.exec(stripped);
+  while (m !== null) {
     out.push({
       kind: m[1] === 'require_relative' ? 'relative' : 'absolute',
       source: m[3],
     });
+    m = RUBY_REQUIRE_RE.exec(stripped);
   }
   return out;
 }
@@ -932,7 +938,7 @@ function parseRubyImports(content) {
 export function resolveRubyImport({ kind, source }, file, ctx) {
   if (!source) return [];
   const importerDir = dirOf(toPosix(file.path));
-  const withExt = source.endsWith('.rb') ? source : source + '.rb';
+  const withExt = source.endsWith('.rb') ? source : `${source}.rb`;
 
   if (kind === 'relative') {
     const base = resolveRelative(importerDir, withExt);
@@ -997,7 +1003,7 @@ function parseComposerAutoloadText(raw) {
     // Composer's fallback mapping (`"psr-4": {"": "src/"}`) and means
     // "any namespace resolves under this dir". Appending `\` would
     // convert it into a prefix that matches nothing.
-    const normalizedPrefix = prefix === '' || prefix.endsWith('\\') ? prefix : prefix + '\\';
+    const normalizedPrefix = prefix === '' || prefix.endsWith('\\') ? prefix : `${prefix}\\`;
     out.set(normalizedPrefix, normalized);
   }
   return out;
@@ -1243,10 +1249,12 @@ function extractRustModSources(content) {
   // a submodule that doesn't exist on disk.
   const stripped = stripJsLikeComments(content);
   RUST_MOD_RE.lastIndex = 0;
-  while ((m = RUST_MOD_RE.exec(stripped)) !== null) {
+  m = RUST_MOD_RE.exec(stripped);
+  while (m !== null) {
     // Synthesize as a `self::<name>` source so the regular Rust resolver
     // handles it (probes the importer's directory).
     sources.push(`self::${m[1]}`);
+    m = RUST_MOD_RE.exec(stripped);
   }
   return sources;
 }

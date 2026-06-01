@@ -14,10 +14,10 @@
  * - Mini portfolio for unregistered directories
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
-import { homedir } from 'os';
-import { spawnSync } from 'child_process';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { spawnSync } from 'node:child_process';
 
 const CK_HOME         = resolve(homedir(), '.claude', 'ck');
 const PROJECTS_FILE   = resolve(CK_HOME, 'projects.json');

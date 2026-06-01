@@ -8,8 +8,8 @@
  * exit 0: success  exit 1: error
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { resolve, basename } from 'path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, basename } from 'node:path';
 import { readProjects } from './shared.mjs';
 
 const cwd = process.env.PWD || process.cwd();

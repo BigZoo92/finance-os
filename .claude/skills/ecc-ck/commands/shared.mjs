@@ -5,11 +5,11 @@
  * No external dependencies. Node.js stdlib only.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { resolve } from 'path';
-import { homedir } from 'os';
-import { spawnSync } from 'child_process';
-import { randomBytes } from 'crypto';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ export function readJson(filePath) {
 export function writeJson(filePath, data) {
   const dir = resolve(filePath, '..');
   mkdirSync(dir, { recursive: true });
-  writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
 export function readProjects() {
@@ -90,7 +90,7 @@ export function resolveContext(arg, cwd) {
     .sort((a, b) => a.contextDir.localeCompare(b.contextDir));
 
   const asNumber = parseInt(arg, 10);
-  if (!isNaN(asNumber) && String(asNumber) === arg) {
+  if (!Number.isNaN(asNumber) && String(asNumber) === arg) {
     // Number-based lookup (1-indexed)
     const item = sorted[asNumber - 1];
     if (!item) return null;
@@ -101,7 +101,7 @@ export function resolveContext(arg, cwd) {
 
   // Name-based lookup: exact > prefix > substring (case-insensitive)
   const lower = arg.toLowerCase();
-  let match =
+  const match =
     sorted.find(e => e.name.toLowerCase() === lower) ||
     sorted.find(e => e.name.toLowerCase().startsWith(lower)) ||
     sorted.find(e => e.name.toLowerCase().includes(lower));
@@ -174,7 +174,7 @@ export function gitSummary(projectPath, sinceDate) {
 
   if (diff) {
     const filesMatch = diff.match(/(\d+) file/);
-    const files = filesMatch ? parseInt(filesMatch[1]) : '?';
+    const files = filesMatch ? parseInt(filesMatch[1], 10) : '?';
     return `${commits} commit${commits !== 1 ? 's' : ''}, ${files} file${files !== 1 ? 's' : ''} changed`;
   }
   return `${commits} commit${commits !== 1 ? 's' : ''}`;
@@ -220,21 +220,27 @@ export function renderContextMd(ctx) {
   lines.push(``);
   lines.push(`## Next Steps`);
   if (latest?.nextSteps?.length) {
-    latest.nextSteps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
+    latest.nextSteps.forEach((s, i) => {
+      lines.push(`${i + 1}. ${s}`);
+    });
   } else {
     lines.push(`_Not yet recorded._`);
   }
   lines.push(``);
   lines.push(`## Blockers`);
   if (latest?.blockers?.length) {
-    latest.blockers.forEach(b => lines.push(`- ${b}`));
+    latest.blockers.forEach(b => {
+      lines.push(`- ${b}`);
+    });
   } else {
     lines.push(`- None`);
   }
   lines.push(``);
   lines.push(`## Do Not Do`);
   if (ctx.constraints?.length) {
-    ctx.constraints.forEach(c => lines.push(`- ${c}`));
+    ctx.constraints.forEach(c => {
+      lines.push(`- ${c}`);
+    });
   } else {
     lines.push(`- None specified`);
   }
@@ -248,7 +254,9 @@ export function renderContextMd(ctx) {
   lines.push(`| Decision | Why | Date |`);
   lines.push(`|----------|-----|------|`);
   if (allDecisions.length) {
-    allDecisions.forEach(d => lines.push(`| ${d.what} | ${d.why || ''} | ${d.date || ''} |`));
+    allDecisions.forEach(d => {
+      lines.push(`| ${d.what} | ${d.why || ''} | ${d.date || ''} |`);
+    });
   } else {
     lines.push(`| _(none yet)_ | | |`);
   }
@@ -275,7 +283,7 @@ export function renderBriefingBox(ctx, _meta = {}) {
   const W = 57;
   const pad = (str, w) => {
     const s = String(str || '');
-    return s.length > w ? s.slice(0, w - 1) + '…' : s.padEnd(w);
+    return s.length > w ? `${s.slice(0, w - 1)}…` : s.padEnd(w);
   };
   const row = (label, value) => `│  ${label} → ${pad(value, W - label.length - 7)}│`;
 
@@ -298,12 +306,16 @@ export function renderBriefingBox(ctx, _meta = {}) {
   lines.push(`├${'─'.repeat(W)}┤`);
   lines.push(`│  WHERE I LEFT OFF${' '.repeat(W - 18)}│`);
   const leftOffLines = (latest.leftOff || '—').split('\n').filter(Boolean);
-  leftOffLines.forEach(l => lines.push(`│    • ${pad(l, W - 7)}│`));
+  leftOffLines.forEach(l => {
+    lines.push(`│    • ${pad(l, W - 7)}│`);
+  });
   lines.push(`├${'─'.repeat(W)}┤`);
   lines.push(`│  NEXT STEPS${' '.repeat(W - 12)}│`);
   const steps = latest.nextSteps || [];
   if (steps.length) {
-    steps.forEach((s, i) => lines.push(`│    ${i + 1}. ${pad(s, W - 8)}│`));
+    steps.forEach((s, i) => {
+      lines.push(`│    ${i + 1}. ${pad(s, W - 8)}│`);
+    });
   } else {
     lines.push(`│    —${' '.repeat(W - 5)}│`);
   }
@@ -330,13 +342,19 @@ export function renderInfoBlock(ctx) {
   lines.push(`GOAL     ${ctx.goal || '—'}`);
   lines.push(sep);
   lines.push(`WHERE I LEFT OFF`);
-  (latest.leftOff || '—').split('\n').filter(Boolean).forEach(l => lines.push(`  • ${l}`));
+  (latest.leftOff || '—').split('\n').filter(Boolean).forEach(l => {
+    lines.push(`  • ${l}`);
+  });
   lines.push(`NEXT STEPS`);
-  (latest.nextSteps || []).forEach((s, i) => lines.push(`  ${i + 1}. ${s}`));
+  (latest.nextSteps || []).forEach((s, i) => {
+    lines.push(`  ${i + 1}. ${s}`);
+  });
   if (!latest.nextSteps?.length) lines.push(`  —`);
   lines.push(`BLOCKERS`);
   if (latest.blockers?.length) {
-    latest.blockers.forEach(b => lines.push(`  • ${b}`));
+    latest.blockers.forEach(b => {
+      lines.push(`  • ${b}`);
+    });
   } else {
     lines.push(`  • None`);
   }

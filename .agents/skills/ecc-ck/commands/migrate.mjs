@@ -11,8 +11,8 @@
  * exit 0: success  exit 1: error
  */
 
-import { readFileSync, existsSync, renameSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, existsSync, renameSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { readProjects, writeProjects, saveContext, today, shortId, CONTEXTS_DIR } from './shared.mjs';
 
 const isDryRun = process.argv.includes('--dry-run');
@@ -42,7 +42,7 @@ function parseDecisionsTable(text) {
   const rows = [];
   for (const line of text.split('\n')) {
     if (!line.startsWith('|') || line.match(/^[|\s-]+$/)) continue;
-    const cols = line.split('|').map(c => c.trim()).filter((c, i) => i > 0 && i < 4);
+    const cols = line.split('|').map(c => c.trim()).filter((_c, i) => i > 0 && i < 4);
     if (cols.length >= 1 && !cols[0].startsWith('Decision') && !cols[0].startsWith('_')) {
       rows.push({ what: cols[0] || '', why: cols[1] || '', date: cols[2] || '' });
     }

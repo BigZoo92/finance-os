@@ -11,8 +11,8 @@
  * This script is the "do it" step — no confirmation prompt here.
  */
 
-import { rmSync } from 'fs';
-import { resolve } from 'path';
+import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { resolveContext, readProjects, writeProjects, CONTEXTS_DIR } from './shared.mjs';
 
 const arg = process.argv[2];

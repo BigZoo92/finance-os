@@ -16,8 +16,8 @@
  * exit 0: success  exit 1: error
  */
 
-import { readFileSync, mkdirSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   readProjects, writeProjects, loadContext, saveContext,
   today, shortId, gitSummary, nativeMemoryDir,
@@ -102,7 +102,7 @@ if (!projectEntry) {
 }
 
 const { contextDir } = projectEntry;
-let context = loadContext(contextDir);
+const context = loadContext(contextDir);
 
 if (!context) {
   console.log(`ck: context.json not found for '${contextDir}'. The install may be corrupted.`);

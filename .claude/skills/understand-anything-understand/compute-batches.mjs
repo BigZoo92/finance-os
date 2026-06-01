@@ -119,7 +119,9 @@ function buildNonCodeBatches(nonCodeFiles) {
     });
     if (cluster.length) {
       groups.push({ files: cluster.map(p => byPath.get(p)), mergeable: false });
-      cluster.forEach(p => consumed.add(p));
+      cluster.forEach(p => {
+        consumed.add(p);
+      });
     }
   }
 
@@ -129,7 +131,9 @@ function buildNonCodeBatches(nonCodeFiles) {
   ).filter(p => !consumed.has(p));
   if (ghWorkflows.length) {
     groups.push({ files: ghWorkflows.map(p => byPath.get(p)), mergeable: false });
-    ghWorkflows.forEach(p => consumed.add(p));
+    ghWorkflows.forEach(p => {
+      consumed.add(p);
+    });
   }
 
   // Group C: .gitlab-ci.yml + .circleci/*
@@ -139,7 +143,9 @@ function buildNonCodeBatches(nonCodeFiles) {
   );
   if (ciFiles.length) {
     groups.push({ files: ciFiles.map(p => byPath.get(p)), mergeable: false });
-    ciFiles.forEach(p => consumed.add(p));
+    ciFiles.forEach(p => {
+      consumed.add(p);
+    });
   }
 
   // Group D: SQL migrations per migrations/ or migration/ directory.
@@ -157,7 +163,9 @@ function buildNonCodeBatches(nonCodeFiles) {
       .sort();
     if (sqls.length) {
       groups.push({ files: sqls.map(p => byPath.get(p)), mergeable: false });
-      sqls.forEach(p => consumed.add(p));
+      sqls.forEach(p => {
+        consumed.add(p);
+      });
     }
   }
 

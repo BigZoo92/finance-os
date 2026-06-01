@@ -8,7 +8,7 @@
  * exit 0: success  exit 1: not found
  */
 
-import { existsSync } from 'fs';
+import { existsSync } from 'node:fs';
 import { resolveContext, renderBriefingBox } from './shared.mjs';
 
 const arg = process.argv[2];
