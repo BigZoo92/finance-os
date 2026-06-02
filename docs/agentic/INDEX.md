@@ -48,7 +48,7 @@ pnpm agent:telemetry:record   # Record agent task telemetry
 
 ---
 
-## Canonical Maps
+## Maps
 
 - [architecture-canonical.md](architecture-canonical.md): runtime entrypoints, boundaries
 - [contracts-canonical.md](contracts-canonical.md): HTTP contract guidance

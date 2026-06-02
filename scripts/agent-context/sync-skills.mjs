@@ -24,11 +24,13 @@ import {
 } from 'node:fs'
 import { join, relative, dirname, extname } from 'node:path'
 import { createHash } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 
-const ROOT = new URL('../../', import.meta.url).pathname.replace(/\/$/, '')
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const CANONICAL = join(ROOT, '.agentic/source/skills')
 const REFERENCES = join(ROOT, '.agentic/source/references')
 const MANIFEST_PATH = join(ROOT, '.agentic/manifests/skills-sync-manifest.json')
+const toManifestPath = value => value.split('\\').join('/')
 
 // Header injected at the top of every projected .md file
 function generatedHeader(sourceRel, hash) {
@@ -103,15 +105,30 @@ function sha256Buf(buf) {
   return createHash('sha256').update(buf).digest('hex')
 }
 
+function normalizeTextBuffer(buf) {
+  return Buffer.from(buf.toString('utf-8').replace(/\r\n?/g, '\n'), 'utf-8')
+}
+
+function isTextBuffer(buf) {
+  return !buf.includes(0)
+}
+
+function normalizeProjectedBuffer(buf) {
+  return isTextBuffer(buf) ? normalizeTextBuffer(buf) : buf
+}
+
 function walkFiles(dir, base = dir) {
   const results = []
   if (!existsSync(dir)) return results
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  const entries = readdirSync(dir, { withFileTypes: true })
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+
+  for (const entry of entries) {
     const abs = join(dir, entry.name)
     if (entry.isDirectory()) {
       results.push(...walkFiles(abs, base))
     } else {
-      results.push({ rel: relative(base, abs), abs })
+      results.push({ rel: toManifestPath(relative(base, abs)), abs })
     }
   }
   return results
@@ -119,7 +136,10 @@ function walkFiles(dir, base = dir) {
 
 function listCanonicalSkills() {
   const skills = []
-  for (const entry of readdirSync(CANONICAL, { withFileTypes: true })) {
+  const entries = readdirSync(CANONICAL, { withFileTypes: true })
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+
+  for (const entry of entries) {
     if (!entry.isDirectory()) continue
     const subdir = join(CANONICAL, entry.name)
     const hasSkill = existsSync(join(subdir, 'SKILL.md')) || existsSync(join(subdir, 'AGENTS.md'))
@@ -127,7 +147,10 @@ function listCanonicalSkills() {
       skills.push({ name: entry.name, relPath: entry.name, absPath: subdir })
     } else {
       // Nested: finance-os/X, gitnexus/X, generated/X, experimental/X
-      for (const nested of readdirSync(subdir, { withFileTypes: true })) {
+      const nestedEntries = readdirSync(subdir, { withFileTypes: true })
+        .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+
+      for (const nested of nestedEntries) {
         if (!nested.isDirectory()) continue
         const nestedDir = join(subdir, nested.name)
         const nestedHas = existsSync(join(nestedDir, 'SKILL.md')) || existsSync(join(nestedDir, 'AGENTS.md'))
@@ -166,20 +189,21 @@ function syncTarget(target, canonicalSkills) {
       const srcAbs = file.abs
       const srcRel = `${skill.relPath}/${file.rel}`
       const dstAbs = join(targetDir, file.rel)
-      const dstRel = relative(ROOT, dstAbs)
+      const dstRel = toManifestPath(relative(ROOT, dstAbs))
       const isMd = extname(file.rel) === '.md'
 
       // Read source, compute hash on raw source
       const srcBuf = readFileSync(srcAbs)
-      const srcHash = sha256Buf(srcBuf)
+      const srcOutputBuf = normalizeProjectedBuffer(srcBuf)
+      const srcHash = sha256Buf(srcOutputBuf)
 
       // For .md files: prepend generated header
       let outputBuf
       if (isMd) {
         const header = generatedHeader(srcRel, srcHash)
-        outputBuf = Buffer.from(`${header}\n\n${srcBuf.toString('utf-8')}`)
+        outputBuf = Buffer.from(`${header}\n\n${srcOutputBuf.toString('utf-8')}`, 'utf-8')
       } else {
-        outputBuf = srcBuf
+        outputBuf = srcOutputBuf
       }
       const outputHash = sha256Buf(outputBuf)
 
@@ -208,9 +232,10 @@ function syncTarget(target, canonicalSkills) {
         const refFiles = walkFiles(refDir)
         for (const file of refFiles) {
           const dstAbs = join(targetDir, 'references', file.rel)
-          const dstRel = relative(ROOT, dstAbs)
+          const dstRel = toManifestPath(relative(ROOT, dstAbs))
           const srcBuf = readFileSync(file.abs)
-          const outputHash = sha256Buf(srcBuf)
+          const outputBuf = normalizeProjectedBuffer(srcBuf)
+          const outputHash = sha256Buf(outputBuf)
 
           let needsCopy = true
           if (existsSync(dstAbs)) {
@@ -220,7 +245,7 @@ function syncTarget(target, canonicalSkills) {
           if (needsCopy) {
             actions.push({ src: `references/${refName}/${file.rel}`, dst: dstRel })
             mkdirSync(dirname(dstAbs), { recursive: true })
-            writeFileSync(dstAbs, srcBuf)
+            writeFileSync(dstAbs, outputBuf)
           }
         }
       }
@@ -245,8 +270,18 @@ function writeManifest(allHashes) {
     fileCount: Object.values(allHashes).reduce((s, h) => s + Object.keys(h).length, 0),
     hashes: allHashes,
   }
+  const previous = readManifest()
+  const comparablePrevious = previous && { ...previous, generatedAt: undefined }
+  const comparableManifest = { ...manifest, generatedAt: undefined }
+  if (
+    comparablePrevious &&
+    JSON.stringify(comparablePrevious) === JSON.stringify(comparableManifest)
+  ) {
+    return { manifest: previous, written: false }
+  }
+
   writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`)
-  return manifest
+  return { manifest, written: true }
 }
 
 function readManifest() {
@@ -279,9 +314,11 @@ if (command === 'sync') {
       : `  ${target.name}: ${fileCount} files, up to date`)
   }
 
-  const manifest = writeManifest(allHashes)
+  const { manifest, written } = writeManifest(allHashes)
   console.log(`\nManifest: ${manifest.fileCount} files across ${manifest.targets.length} targets`)
-  console.log(`Written to: ${relative(ROOT, MANIFEST_PATH)}`)
+  console.log(written
+    ? `Written to: ${relative(ROOT, MANIFEST_PATH)}`
+    : `Manifest up to date: ${relative(ROOT, MANIFEST_PATH)}`)
   console.log(totalCopied > 0 ? `\n${totalCopied} file(s) written.` : '\nAll targets up to date.')
 
 } else if (command === 'check') {

@@ -19,6 +19,10 @@ Scope: `infra/docker/**`
   - readonly mounts for heartbeat and disk probes stay aligned
   - `no-new-privileges` and current read-only/tmpfs hardening stay intact unless the task explicitly changes the security posture
   - the sidecar continues to reuse the existing API image instead of introducing a separate build surface
+- Keep production resource governance synchronized when editing `docker-compose.prod.yml`:
+  - service CPU/memory/PID profiles live in the root compose file as reusable `deploy.resources` anchors
+  - per-service Docker log rotation must stay bounded
+  - Redis `maxmemory`, Neo4j heap/pagecache, Postgres `shm_size`, and the VPS validation runbook must stay aligned
 
 ## Verify
 

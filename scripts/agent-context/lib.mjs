@@ -7,8 +7,10 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, relative, extname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const ROOT = new URL('../../', import.meta.url).pathname.replace(/\/$/, '')
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
+const toPortablePath = value => value.split('\\').join('/')
 
 // ---------------------------------------------------------------------------
 // Token estimation (deterministic, ~4 chars per token approximation)
@@ -159,7 +161,7 @@ function walkSkills(dir, relBase, skills) {
     const mainFile = existsSync(skillFile) ? skillFile : existsSync(agentsFile) ? agentsFile : null
 
     if (mainFile) {
-      const relPath = relative(ROOT, subdir)
+      const relPath = toPortablePath(relative(ROOT, subdir))
       const tokens = estimateFileTokens(mainFile)
       const { tier, domains } = classifySkill(relPath, entry.name)
 
@@ -173,7 +175,7 @@ function walkSkills(dir, relBase, skills) {
       skills.push({
         name: entry.name,
         path: relPath,
-        mainFile: relative(ROOT, mainFile),
+        mainFile: toPortablePath(relative(ROOT, mainFile)),
         tokens,
         refTokens,
         tier,

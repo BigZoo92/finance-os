@@ -218,7 +218,7 @@ graph LR
 | **CI** | GitHub Actions | local parity via `pnpm check:ci` (main suite + desktop seulement si le scope l'exige), with GitHub still running a dedicated `tauri-validate` job when desktop-relevant files changed |
 | **Build** | Docker multi-stage | 4 targets: build-web, web, api, worker |
 | **Registry** | GHCR | Images immutables, jamais `latest` |
-| **Deploy** | Dokploy | Docker Compose, source Raw (pas de rebuild) |
+| **Deploy** | Dokploy | Docker Compose, source Raw (pas de rebuild); `docker-compose.prod.yml` porte les limites CPU/memoire/PIDs, la rotation logs et le tuning datastore |
 | **Smoke** | `smoke-prod.mjs` | /health, /auth/me, /dashboard/summary, /powens/status |
 | **Rollback** | Tag precedent | Changer `APP_IMAGE_TAG` dans Dokploy |
 
@@ -255,6 +255,7 @@ graph TB
 **Reseau** : `finance_os_internal` (bridge Docker)
 **Volumes** : `postgres_data`, `redis_data`, `worker_run_v2`
 **Domaine** : single public domain pointe vers `web`, l'API est interne uniquement
+**Resource governance** : profils `deploy.resources` dans `docker-compose.prod.yml`; runbook VPS/swap/validation dans `docs/ops/VPS_RESOURCE_LIMITS_AND_SWAP.md`
 
 ---
 

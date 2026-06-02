@@ -1,15 +1,119 @@
 name: finance-os-prod
 
 # Cap container log files so a noisy service can't fill the host disk.
-# Each service: max 3 rotated files of 10 MB = 30 MB per container.
+# Each service: max 5 rotated files of 10 MB = 50 MB per container.
 x-logging: &default-logging
   driver: json-file
   options:
     max-size: "10m"
-    max-file: "3"
+    max-file: "5"
+
+# Resource governance profile for the current single-user VPS shape (~7.6 GiB RAM).
+# Dokploy receives this file as raw Docker Compose from the release workflow; verify
+# HostConfig after deployment because very old Compose/Docker engines can differ.
+x-resource-web: &resource-web
+  deploy:
+    resources:
+      limits:
+        cpus: "0.50"
+        memory: 256M
+        pids: 128
+      reservations:
+        memory: 64M
+
+x-resource-api: &resource-api
+  deploy:
+    resources:
+      limits:
+        cpus: "1.50"
+        memory: 1280M
+        pids: 256
+      reservations:
+        memory: 384M
+
+x-resource-worker: &resource-worker
+  deploy:
+    resources:
+      limits:
+        cpus: "1.25"
+        memory: 1024M
+        pids: 256
+      reservations:
+        memory: 256M
+
+x-resource-ops-alerts: &resource-ops-alerts
+  deploy:
+    resources:
+      limits:
+        cpus: "0.25"
+        memory: 256M
+        pids: 128
+      reservations:
+        memory: 64M
+
+x-resource-knowledge-service: &resource-knowledge-service
+  deploy:
+    resources:
+      limits:
+        cpus: "0.75"
+        memory: 512M
+        pids: 128
+      reservations:
+        memory: 128M
+
+x-resource-quant-service: &resource-quant-service
+  deploy:
+    resources:
+      limits:
+        cpus: "0.75"
+        memory: 512M
+        pids: 128
+      reservations:
+        memory: 128M
+
+x-resource-neo4j: &resource-neo4j
+  deploy:
+    resources:
+      limits:
+        cpus: "1.50"
+        memory: 2048M
+        pids: 256
+      reservations:
+        memory: 1024M
+
+x-resource-qdrant: &resource-qdrant
+  deploy:
+    resources:
+      limits:
+        cpus: "0.75"
+        memory: 768M
+        pids: 128
+      reservations:
+        memory: 256M
+
+x-resource-postgres: &resource-postgres
+  deploy:
+    resources:
+      limits:
+        cpus: "1.00"
+        memory: 1024M
+        pids: 256
+      reservations:
+        memory: 512M
+
+x-resource-redis: &resource-redis
+  deploy:
+    resources:
+      limits:
+        cpus: "0.50"
+        memory: 256M
+        pids: 128
+      reservations:
+        memory: 96M
 
 services:
   web:
+    <<: *resource-web
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-web:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
@@ -72,6 +176,7 @@ services:
       - no-new-privileges:true
 
   api:
+    <<: *resource-api
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
@@ -342,6 +447,7 @@ services:
       - no-new-privileges:true
 
   worker:
+    <<: *resource-worker
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-worker:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
@@ -472,6 +578,7 @@ services:
       - no-new-privileges:true
 
   ops-alerts:
+    <<: *resource-ops-alerts
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
@@ -571,6 +678,7 @@ services:
       - no-new-privileges:true
 
   knowledge-service:
+    <<: *resource-knowledge-service
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-knowledge-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
@@ -647,6 +755,7 @@ services:
       - no-new-privileges:true
 
   quant-service:
+    <<: *resource-quant-service
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-quant-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
     restart: unless-stopped
@@ -681,13 +790,14 @@ services:
       - no-new-privileges:true
 
   neo4j:
+    <<: *resource-neo4j
     image: neo4j:5-community
     restart: unless-stopped
     logging: *default-logging
     environment:
       NEO4J_AUTH: "${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-change-me}"
-      NEO4J_dbms_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
-      NEO4J_dbms_memory_heap_max__size: ${NEO4J_HEAP_MAX:-1G}
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX:-1024m}
       NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-512m}
     expose:
       - "7474"
@@ -711,6 +821,7 @@ services:
       - no-new-privileges:true
 
   qdrant:
+    <<: *resource-qdrant
     image: qdrant/qdrant:v1.12.6
     restart: unless-stopped
     logging: *default-logging
@@ -730,9 +841,21 @@ services:
       - no-new-privileges:true
 
   postgres:
+    <<: *resource-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     logging: *default-logging
+    shm_size: 256m
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_buffers=256MB",
+        "-c",
+        "effective_cache_size=768MB",
+        "-c",
+        "work_mem=4MB",
+      ]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-finance_os}
       POSTGRES_USER: ${POSTGRES_USER:-finance_os}
@@ -752,6 +875,7 @@ services:
       - no-new-privileges:true
 
   redis:
+    <<: *resource-redis
     image: redis:7-alpine
     restart: unless-stopped
     logging: *default-logging
@@ -765,6 +889,10 @@ services:
         "1000",
         "--loglevel",
         "warning",
+        "--maxmemory",
+        "192mb",
+        "--maxmemory-policy",
+        "noeviction",
       ]
     volumes:
       - redis_data:/data

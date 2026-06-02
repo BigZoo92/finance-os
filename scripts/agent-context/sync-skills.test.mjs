@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { execSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
-const ROOT = new URL('../../', import.meta.url).pathname.replace(/\/$/, '')
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const MANIFEST_PATH = join(ROOT, '.agentic/manifests/skills-sync-manifest.json')
 const CANONICAL = join(ROOT, '.agentic/source/skills')
 

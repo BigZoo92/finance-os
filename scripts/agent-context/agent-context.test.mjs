@@ -10,6 +10,7 @@ import {
   TASK_DOMAINS,
   CONTEXT_TIERS,
   detectDuplicates,
+  ROOT,
 } from './lib.mjs'
 
 describe('estimateTokens', () => {
@@ -214,7 +215,7 @@ describe('no VITE_ secrets in context packs', () => {
   it('context packs do not contain actual secret values', async () => {
     const { readdirSync, readFileSync } = await import('node:fs')
     const { join } = await import('node:path')
-    const packsDir = join(new URL('../../', import.meta.url).pathname, 'docs/agentic/context-packs')
+    const packsDir = join(ROOT, 'docs/agentic/context-packs')
 
     let files
     try {

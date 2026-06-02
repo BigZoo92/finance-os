@@ -34,6 +34,8 @@ Cette configuration suit un principe simple:
 - Dokploy ne depend pas d'un tag mutable comme `latest`
 - la production execute uniquement des images GHCR deja publiees
 - le tag deploye est stocke explicitement dans `APP_IMAGE_TAG`
+- les limites CPU/memoire/PIDs, la rotation des logs et le tuning datastore
+  vivent dans `docker-compose.prod.yml`
 
 Pour ce repo, la meilleure option est un service **Docker Compose** Dokploy avec images GHCR, pas un build Git provider cote serveur.
 
@@ -48,6 +50,26 @@ References officielles Dokploy utilisees pour cette strategie:
 - Docker Compose deployments
 - Docker tags / immutable images
 - API endpoints `compose.update`, `compose.one`, `compose.deploy`
+
+## Resource governance
+
+Le compose prod versionne est aussi la source de verite pour les garde-fous
+runtime:
+
+- `deploy.resources.limits` pour CPU, memoire et PIDs des services Finance-OS
+- `logging` par service avec rotation `json-file`
+- `redis-server --maxmemory 192mb --maxmemory-policy noeviction`
+- `neo4j` avec heap/pagecache bornees sous la limite container
+- `postgres` avec `shm_size` et reglages memoire conservateurs
+
+Dokploy recoit ce fichier via `compose.update` en mode `Raw`, puis deploye la
+version synchronisee. Apres un tag de release, verifier les `HostConfig`
+Docker sur le VPS avec le runbook:
+[docs/ops/VPS_RESOURCE_LIMITS_AND_SWAP.md](ops/VPS_RESOURCE_LIMITS_AND_SWAP.md).
+
+Si le moteur Docker/Compose du VPS n'applique pas `deploy.resources` hors Swarm,
+ne pas corriger a la main dans Dokploy comme solution durable. Modifier le
+compose versionne avec une strategie fallback documentee, puis redeployer un tag.
 
 ## Dokploy
 

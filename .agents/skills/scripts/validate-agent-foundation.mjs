@@ -148,6 +148,9 @@ const parseFrontmatter = text => {
   return data
 }
 
+const stripGeneratedHeader = text =>
+  text.replace(/^<!-- GENERATED[\s\S]*?-->\r?\n\r?\n/, '')
+
 const resolveLinkTarget = (filePath, target) => {
   if (
     target.startsWith('http://') ||
@@ -269,7 +272,7 @@ const validateSkills = () => {
       continue
     }
 
-    const text = readText(filePath)
+    const text = stripGeneratedHeader(readText(filePath))
     const frontmatter = parseFrontmatter(text)
     if (!frontmatter) {
       errors.push(`${filePath} is missing YAML frontmatter`)

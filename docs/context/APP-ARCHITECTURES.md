@@ -666,7 +666,7 @@ infra/
     Dockerfile                    # Multi-stage: build-web, web, api, worker
     docker-compose.dev.yml        # Dev: postgres + redis + knowledge-service + neo4j + qdrant
     healthchecks/                 # Scripts healthcheck containers
-docker-compose.prod.yml           # Prod: web + api + worker + knowledge-service + postgres + redis + neo4j + qdrant + ops-alerts
+docker-compose.prod.yml           # Prod runtime contract: services + resource limits + log rotation + datastore tuning
 docker-compose.prod.build.yml     # Build local, including knowledge-service
 docker-compose.prod.https.yml     # Caddy reverse proxy HTTPS
 ```

@@ -47,7 +47,7 @@ log "docker builder prune (BuildKit cache)"
 docker builder prune --all --force >/dev/null
 
 # Truncate large per-container json logs (defensive: compose now caps these
-# at 30 MB each, but pre-existing log files can still be huge).
+# at 50 MB each, but pre-existing log files can still be huge).
 log "truncating oversized container logs (>50 MB)"
 find /var/lib/docker/containers \
   -name "*-json.log" \
