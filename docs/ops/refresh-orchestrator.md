@@ -39,7 +39,7 @@ returns true for every status except `queued`/`running`. Any job stuck in
 | GET    | `/ops/refresh/runs/:runId`                 | Single run details (admin). |
 | POST   | `/ops/refresh/all`                         | Run full daily intelligence (admin). |
 | POST   | `/ops/refresh/jobs/:jobId/run`             | Run a single job (admin). |
-| POST   | `/ops/refresh/stale-runs/recover`          | Sweep stale runs → mark `timed_out`. Body: `{ staleAfterMs?: number }`. |
+| POST   | `/ops/refresh/stale-runs/recover`          | Sweep stale runs. Advisor manual operations are marked failed/timed out; background `free_firehose_run` and `signal_ingestion_run` rows are marked `failed_timeout`. Body: `{ staleAfterMs?: number }`. |
 | POST   | `/ops/refresh/runs/:runId/cancel`          | Cancel an in-flight run (admin). |
 | GET    | `/ops/env/diagnostics`                     | Per-service env health (no secrets returned). |
 | GET    | `/ops/scheduler/status`                    | Daily Intelligence crons, next runs, scheduler flags. |
@@ -70,9 +70,13 @@ user refreshes the page they see the actual outcome).
 
 If a run never finalizes (worker crash, network outage), call
 `POST /ops/refresh/stale-runs/recover` with a `staleAfterMs` (default
-1 800 000 = 30 min). The endpoint requires the runtime to expose
-`recoverStaleAdvisorManualOperations` — without it, it falls back to
-returning the list of stale candidates so an operator can act manually.
+1 800 000 = 30 min). The endpoint first calls any wired recovery hooks:
+`recoverStaleAdvisorManualOperations` for Advisor manual operations and
+`recoverStaleBackgroundRuns` for background `free_firehose_run` /
+`signal_ingestion_run` rows. Background rows are only recovered from
+`running` to `failed_timeout`; final states are left untouched. If no recovery
+hook is registered, the endpoint falls back to returning stale Advisor
+candidates so an operator can act manually.
 
 ## Preflight skip variants
 

@@ -367,6 +367,19 @@ export interface DashboardDerivedRecomputeStatusResponse {
   currentSnapshot: DashboardDerivedSnapshotResponse | null
 }
 
+export interface DashboardBackgroundRunRecoveryResponse {
+  table: 'free_firehose_run' | 'signal_ingestion_run'
+  id: string
+  requestId: string | null
+  previousStatus: string
+  status: 'failed_timeout'
+  startedAt: string
+  finishedAt: string
+  durationMs: number
+  errorCode: 'STALE_TIMED_OUT'
+  errorMessage: string
+}
+
 export interface DashboardSummaryResponse {
   range: DashboardRange
   totals: {
@@ -1413,6 +1426,14 @@ export interface DashboardUseCases {
   }) => Promise<{
     recovered: DashboardAdvisorManualOperationResponse[]
     skipped: DashboardAdvisorManualOperationResponse[]
+  }>
+  recoverStaleBackgroundRuns?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    staleAfterMs: number
+  }) => Promise<{
+    recovered: DashboardBackgroundRunRecoveryResponse[]
+    skipped: DashboardBackgroundRunRecoveryResponse[]
   }>
   /**
    * Cancel a specific manual operation by id. Returns the operation in its

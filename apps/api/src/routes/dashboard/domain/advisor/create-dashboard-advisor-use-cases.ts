@@ -61,11 +61,39 @@ import {
   mapSummaryToFinanceEngineInput,
 } from './map-summary-to-engine-input'
 import { runAdvisorEvals } from './run-advisor-evals'
+import { roundFiniteNumber, toFiniteNumberOrNull } from '../../utils/number-format'
 
 type StructuredClient = {
   runStructured: <TOutput>(
     request: StructuredCompletionRequest
   ) => Promise<StructuredCompletionResult<TOutput>>
+}
+
+export type AdvisorInvestmentContextHealth = {
+  degraded: boolean
+  insufficientForChallenger: boolean
+  confidence: ExternalInvestmentBundle['confidence'] | null
+  totalKnownValue: number | null
+  unknownValuePositionCount: number | null
+  warningCounts: {
+    unknownCostBasis: number
+    missingMarketData: number
+    staleData: number
+    riskFlags: number
+  }
+  degradedProviders: Array<{
+    provider: string
+    status: string
+    stale: boolean
+    degradedReasons: string[]
+  }>
+  missingFields: string[]
+}
+
+export type AdvisorChallengerViability = {
+  allowed: boolean
+  skipReasons: string[]
+  details: Record<string, unknown>
 }
 
 export interface DashboardAdvisorConfig {
@@ -98,6 +126,138 @@ export interface DashboardAdvisorConfig {
 }
 
 type SocialSignalMode = DashboardAdvisorConfig['xSignalsMode']
+
+export const inspectAdvisorInvestmentContext = (
+  bundle: ExternalInvestmentBundle | null | undefined
+): AdvisorInvestmentContextHealth | null => {
+  if (!bundle) {
+    return null
+  }
+
+  const missingFields: string[] = []
+  const totalKnownValue = toFiniteNumberOrNull(bundle.totalKnownValue)
+  const unknownValuePositionCount = toFiniteNumberOrNull(bundle.unknownValuePositionCount)
+  if (totalKnownValue === null) {
+    missingFields.push('totalKnownValue')
+  }
+  if (unknownValuePositionCount === null) {
+    missingFields.push('unknownValuePositionCount')
+  }
+
+  const degradedProviders = bundle.providerCoverage
+    .filter(
+      coverage =>
+        coverage.status === 'degraded' ||
+        coverage.status === 'failing' ||
+        coverage.stale ||
+        coverage.degradedReasons.length > 0
+    )
+    .map(coverage => ({
+      provider: coverage.provider,
+      status: coverage.status,
+      stale: coverage.stale,
+      degradedReasons: coverage.degradedReasons,
+    }))
+
+  const configuredProviders = bundle.providerCoverage.filter(coverage => coverage.configured)
+  const allConfiguredProvidersUnavailable =
+    configuredProviders.length > 0 &&
+    configuredProviders.every(
+      coverage => coverage.status === 'failing' || coverage.status === 'missing' || coverage.stale
+    )
+  const warningCounts = {
+    unknownCostBasis: bundle.unknownCostBasisWarnings.length,
+    missingMarketData: bundle.missingMarketDataWarnings.length,
+    staleData: bundle.staleDataWarnings.length,
+    riskFlags: bundle.riskFlags.length,
+  }
+  const degraded =
+    missingFields.length > 0 ||
+    degradedProviders.length > 0 ||
+    warningCounts.unknownCostBasis > 0 ||
+    warningCounts.missingMarketData > 0 ||
+    warningCounts.staleData > 0 ||
+    warningCounts.riskFlags > 0 ||
+    bundle.confidence === 'low'
+
+  return {
+    degraded,
+    insufficientForChallenger:
+      missingFields.length > 0 ||
+      bundle.confidence === 'low' ||
+      allConfiguredProvidersUnavailable ||
+      (configuredProviders.length > 0 && (totalKnownValue ?? 0) <= 0),
+    confidence: bundle.confidence,
+    totalKnownValue,
+    unknownValuePositionCount,
+    warningCounts,
+    degradedProviders,
+    missingFields,
+  }
+}
+
+export const evaluateAdvisorChallengerViability = ({
+  budgetState,
+  recommendationCount,
+  investmentHealth,
+}: {
+  budgetState: AiBudgetState
+  recommendationCount: number
+  investmentHealth: AdvisorInvestmentContextHealth | null
+}): AdvisorChallengerViability => {
+  const skipReasons: string[] = []
+  if (budgetState.blocked) {
+    skipReasons.push('budget_blocked')
+  }
+  if (!budgetState.challengerAllowed) {
+    skipReasons.push('challenger_budget_guard')
+  }
+  if (recommendationCount <= 0) {
+    skipReasons.push('no_recommendations')
+  }
+  if (investmentHealth?.insufficientForChallenger) {
+    skipReasons.push('investment_context_insufficient')
+  }
+
+  return {
+    allowed: skipReasons.length === 0,
+    skipReasons,
+    details: {
+      budgetBlocked: budgetState.blocked,
+      budgetChallengerAllowed: budgetState.challengerAllowed,
+      recommendationCount,
+      investmentContext: investmentHealth,
+    },
+  }
+}
+
+const normalizeRecommendationChallenge = (
+  challenge: RecommendationChallengeDraft,
+  recommendationKey: string
+):
+  | { ok: true; challenge: RecommendationChallengeDraft }
+  | { ok: false; reason: string; details: Record<string, unknown> } => {
+  const confidenceAdjustment = toFiniteNumberOrNull(challenge.confidenceAdjustment)
+  if (confidenceAdjustment === null) {
+    return {
+      ok: false,
+      reason: `challenger_invalid_numeric:${recommendationKey}:confidenceAdjustment`,
+      details: {
+        section: 'advisor.challenger',
+        recommendationKey,
+        field: 'confidenceAdjustment',
+      },
+    }
+  }
+
+  return {
+    ok: true,
+    challenge: {
+      ...challenge,
+      confidenceAdjustment: Math.max(-0.5, Math.min(0.2, confidenceAdjustment)),
+    },
+  }
+}
 
 const renderPrompt = (template: { userPromptTemplate: string }, context: Record<string, unknown>) =>
   template.userPromptTemplate.replace('{{context_json}}', JSON.stringify(context))
@@ -441,7 +601,7 @@ const applySocialSignalPolicy = ({
       account: {
         handle: candidate.item.signalKey,
         trustTier: candidate.trustTier,
-        accountWeight: Number(candidate.trust.toFixed(2)),
+        accountWeight: roundFiniteNumber({ value: candidate.trust, digits: 2 }),
       },
       affected: {
         entities: candidate.item.affectedEntities,
@@ -454,12 +614,12 @@ const applySocialSignalPolicy = ({
         sourceUrls: candidate.item.supportingUrls,
       },
       scoring: {
-        total: Number(candidate.total.toFixed(3)),
-        trust: Number(candidate.trust.toFixed(3)),
-        recency: Number(candidate.recency.toFixed(3)),
-        convergence: Number(candidate.convergence.toFixed(3)),
-        novelty: Number(candidate.novelty.toFixed(3)),
-        curation: Number(candidate.curation.toFixed(3)),
+        total: roundFiniteNumber({ value: candidate.total, digits: 3 }),
+        trust: roundFiniteNumber({ value: candidate.trust, digits: 3 }),
+        recency: roundFiniteNumber({ value: candidate.recency, digits: 3 }),
+        convergence: roundFiniteNumber({ value: candidate.convergence, digits: 3 }),
+        novelty: roundFiniteNumber({ value: candidate.novelty, digits: 3 }),
+        curation: roundFiniteNumber({ value: candidate.curation, digits: 3 }),
       },
       inclusionReason:
         mode === 'shadow'
@@ -495,12 +655,15 @@ const applySocialSignalPolicy = ({
   }
   const includedCount = Math.max(included.length, 1)
   const inclusionScoreBreakdown = {
-    total: Number((scoreTotals.total / includedCount).toFixed(3)),
-    trust: Number((scoreTotals.trust / includedCount).toFixed(3)),
-    recency: Number((scoreTotals.recency / includedCount).toFixed(3)),
-    convergence: Number((scoreTotals.convergence / includedCount).toFixed(3)),
-    novelty: Number((scoreTotals.novelty / includedCount).toFixed(3)),
-    curation: Number((scoreTotals.curation / includedCount).toFixed(3)),
+    total: roundFiniteNumber({ value: scoreTotals.total / includedCount, digits: 3 }),
+    trust: roundFiniteNumber({ value: scoreTotals.trust / includedCount, digits: 3 }),
+    recency: roundFiniteNumber({ value: scoreTotals.recency / includedCount, digits: 3 }),
+    convergence: roundFiniteNumber({
+      value: scoreTotals.convergence / includedCount,
+      digits: 3,
+    }),
+    novelty: roundFiniteNumber({ value: scoreTotals.novelty / includedCount, digits: 3 }),
+    curation: roundFiniteNumber({ value: scoreTotals.curation / includedCount, digits: 3 }),
   }
   const freshnessState: DashboardAdvisorSignalsResponse['socialSignals']['freshnessState'] =
     candidates.length === 0
@@ -768,30 +931,43 @@ export const createDashboardAdvisorUseCases = ({
   getTransactions,
   getKnowledgeContextBundle,
   config,
+  structuredClients,
 }: {
   repository: DashboardAdvisorRepository
   getSummary: DashboardUseCases['getSummary']
   getGoals: DashboardUseCases['getGoals']
   getNewsContextBundle?: DashboardUseCases['getNewsContextBundle']
-  getInvestmentContextBundle?: (input: { requestId: string }) => Promise<ExternalInvestmentBundle | null>
+  getInvestmentContextBundle?: (input: {
+    requestId: string
+  }) => Promise<ExternalInvestmentBundle | null>
   getTransactions: DashboardUseCases['getTransactions']
   getKnowledgeContextBundle?: AdvisorKnowledgeContextFetcher
   config: DashboardAdvisorConfig
+  structuredClients?: {
+    openAi?: StructuredClient | null
+    anthropic?: StructuredClient | null
+  }
 }) => {
-  const openAiClient: StructuredClient | null = config.openAi
-    ? createOpenAiResponsesClient({
-        apiKey: config.openAi.apiKey,
-        ...(config.openAi.baseUrl ? { baseUrl: config.openAi.baseUrl } : {}),
-        usdToEurRate: config.usdToEurRate,
-      })
-    : null
-  const anthropicClient: StructuredClient | null = config.anthropic
-    ? createAnthropicMessagesClient({
-        apiKey: config.anthropic.apiKey,
-        ...(config.anthropic.baseUrl ? { baseUrl: config.anthropic.baseUrl } : {}),
-        usdToEurRate: config.usdToEurRate,
-      })
-    : null
+  const openAiClient: StructuredClient | null =
+    structuredClients?.openAi !== undefined
+      ? structuredClients.openAi
+      : config.openAi
+        ? createOpenAiResponsesClient({
+            apiKey: config.openAi.apiKey,
+            ...(config.openAi.baseUrl ? { baseUrl: config.openAi.baseUrl } : {}),
+            usdToEurRate: config.usdToEurRate,
+          })
+        : null
+  const anthropicClient: StructuredClient | null =
+    structuredClients?.anthropic !== undefined
+      ? structuredClients.anthropic
+      : config.anthropic
+        ? createAnthropicMessagesClient({
+            apiKey: config.anthropic.apiKey,
+            ...(config.anthropic.baseUrl ? { baseUrl: config.anthropic.baseUrl } : {}),
+            usdToEurRate: config.usdToEurRate,
+          })
+        : null
 
   const resolveKnowledgeBundle = async ({
     requestId,
@@ -1027,6 +1203,12 @@ export const createDashboardAdvisorUseCases = ({
     const budgetState = spend.summary
     const startedAt = Date.now()
     const degradedReasons: string[] = []
+    const addDegradedReason = (reason: string) => {
+      if (!degradedReasons.includes(reason)) {
+        degradedReasons.push(reason)
+      }
+    }
+    const pipelineMetadata: Record<string, unknown> = {}
 
     const runId = await repository.createRun({
       runType,
@@ -1092,13 +1274,12 @@ export const createDashboardAdvisorUseCases = ({
       let transactionSuggestions = buildDeterministicTransactionSuggestions(
         transactionsResponse.items
       )
-      if (
-        investmentBundle &&
-        (investmentBundle.staleDataWarnings.length > 0 ||
-          investmentBundle.missingMarketDataWarnings.length > 0 ||
-          investmentBundle.unknownCostBasisWarnings.length > 0)
-      ) {
-        degradedReasons.push('investment_context_degraded')
+      const investmentHealth = inspectAdvisorInvestmentContext(investmentBundle)
+      if (investmentHealth) {
+        pipelineMetadata.investmentContext = investmentHealth
+      }
+      if (investmentHealth?.degraded) {
+        addDegradedReason('investment_context_degraded')
       }
 
       await repository.updateRunStep({
@@ -1134,7 +1315,7 @@ export const createDashboardAdvisorUseCases = ({
         advisorTask: 'daily-brief',
       })
       if (dailyKnowledge.degradedReason) {
-        degradedReasons.push(dailyKnowledge.degradedReason)
+        addDegradedReason(dailyKnowledge.degradedReason)
       }
 
       if (!config.forceLocalOnly && !budgetState.blocked && openAiClient) {
@@ -1190,20 +1371,36 @@ export const createDashboardAdvisorUseCases = ({
             model: config.openAi?.dailyModel ?? 'gpt-5.4-mini',
           }
         } else {
-          degradedReasons.push('daily_brief_llm_failed')
+          addDegradedReason('daily_brief_llm_failed')
         }
       } else if (!config.forceLocalOnly && !openAiClient) {
-        degradedReasons.push('openai_unavailable')
+        addDegradedReason('openai_unavailable')
       } else if (budgetState.blocked) {
-        degradedReasons.push('budget_blocked')
+        addDegradedReason('budget_blocked')
+      }
+
+      const challengerViability = evaluateAdvisorChallengerViability({
+        budgetState,
+        recommendationCount: recommendations.length,
+        investmentHealth,
+      })
+      pipelineMetadata.challenger = {
+        status: challengerViability.allowed ? 'eligible' : 'skipped',
+        skipReasons: challengerViability.skipReasons,
+        details: challengerViability.details,
       }
 
       if (
         !config.forceLocalOnly &&
         config.challengerEnabled &&
         anthropicClient &&
-        budgetState.challengerAllowed
+        challengerViability.allowed
       ) {
+        pipelineMetadata.challenger = {
+          status: 'running',
+          skipReasons: [],
+          details: challengerViability.details,
+        }
         for (const recommendation of recommendations.slice(0, 3)) {
           const challengeKnowledge = await resolveKnowledgeBundle({
             requestId,
@@ -1220,7 +1417,7 @@ export const createDashboardAdvisorUseCases = ({
             advisorTask: `challenger:${recommendation.category}`,
           })
           if (challengeKnowledge.degradedReason) {
-            degradedReasons.push(challengeKnowledge.degradedReason)
+            addDegradedReason(challengeKnowledge.degradedReason)
           }
           const challenge = await runStructuredStep<RecommendationChallengeDraft>({
             runId,
@@ -1250,25 +1447,43 @@ export const createDashboardAdvisorUseCases = ({
           })
 
           if (!challenge) {
-            degradedReasons.push(`challenger_failed:${recommendation.recommendationKey}`)
+            addDegradedReason(`challenger_failed:${recommendation.recommendationKey}`)
             continue
           }
 
-          recommendation.challengerStatus = challenge.status
+          const normalizedChallenge = normalizeRecommendationChallenge(
+            challenge,
+            recommendation.recommendationKey
+          )
+          if (!normalizedChallenge.ok) {
+            addDegradedReason(normalizedChallenge.reason)
+            pipelineMetadata.challenger = {
+              status: 'degraded',
+              skipReasons: [],
+              details: {
+                ...challengerViability.details,
+                invalidOutput: normalizedChallenge.details,
+              },
+            }
+            continue
+          }
+          const validChallenge = normalizedChallenge.challenge
+
+          recommendation.challengerStatus = validChallenge.status
           recommendation.challenge = {
             id: 0,
-            status: challenge.status,
-            summary: challenge.summary,
-            contradictions: challenge.contradictions,
-            missingSignals: challenge.missingSignals,
-            confidenceAdjustment: challenge.confidenceAdjustment,
+            status: validChallenge.status,
+            summary: validChallenge.summary,
+            contradictions: validChallenge.contradictions,
+            missingSignals: validChallenge.missingSignals,
+            confidenceAdjustment: validChallenge.confidenceAdjustment,
             provider: 'anthropic',
             model: config.anthropic?.challengerModel ?? 'claude-sonnet-4-6',
             createdAt: new Date().toISOString(),
           }
           recommendation.confidence = Math.max(
             0,
-            Math.min(1, recommendation.confidence + challenge.confidenceAdjustment)
+            Math.min(1, recommendation.confidence + validChallenge.confidenceAdjustment)
           )
           recommendation.llmModelsUsed = [
             ...new Set([
@@ -1277,8 +1492,22 @@ export const createDashboardAdvisorUseCases = ({
             ]),
           ]
         }
-      } else if (config.challengerEnabled && !budgetState.challengerAllowed) {
-        degradedReasons.push('challenger_budget_guard')
+        if ((pipelineMetadata.challenger as { status?: string }).status === 'running') {
+          pipelineMetadata.challenger = {
+            status: 'completed',
+            skipReasons: [],
+            details: challengerViability.details,
+          }
+        }
+      } else if (
+        !config.forceLocalOnly &&
+        config.challengerEnabled &&
+        anthropicClient &&
+        !challengerViability.allowed
+      ) {
+        for (const reason of challengerViability.skipReasons) {
+          addDegradedReason(reason)
+        }
       }
 
       const ambiguousSuggestions = transactionSuggestions.filter(item => item.confidence < 0.7)
@@ -1346,16 +1575,18 @@ export const createDashboardAdvisorUseCases = ({
             }
           })
         } else {
-          degradedReasons.push('transaction_relabel_llm_failed')
+          addDegradedReason('transaction_relabel_llm_failed')
         }
       }
+
+      const finalDegradedReasons = Array.from(new Set(degradedReasons))
 
       const evalRun = runAdvisorEvals({
         cases: DEFAULT_AI_EVAL_CASES,
         snapshot: preview.snapshot,
         recommendations: preview.deterministicRecommendations,
         budgetState,
-        degraded: degradedReasons.length > 0,
+        degraded: finalDegradedReasons.length > 0,
       })
 
       await repository.saveDailyArtifacts({
@@ -1458,17 +1689,21 @@ export const createDashboardAdvisorUseCases = ({
       const finishedAt = new Date()
       await repository.updateRun({
         runId,
-        status: degradedReasons.length > 0 || evalRun.failedCases > 0 ? 'degraded' : 'completed',
-        degraded: degradedReasons.length > 0 || evalRun.failedCases > 0,
+        status:
+          finalDegradedReasons.length > 0 || evalRun.failedCases > 0 ? 'degraded' : 'completed',
+        degraded: finalDegradedReasons.length > 0 || evalRun.failedCases > 0,
         finishedAt,
         durationMs: finishedAt.getTime() - startedAt,
-        fallbackReason: degradedReasons[0] ?? null,
+        fallbackReason: finalDegradedReasons[0] ?? null,
         outputDigest: {
           recommendationCount: recommendations.length,
           suggestionCount: transactionSuggestions.length,
-          degradedReasons,
+          degradedReasons: finalDegradedReasons,
+          challenger: pipelineMetadata.challenger ?? null,
+          investmentContext: pipelineMetadata.investmentContext ?? null,
         },
         budgetState: budgetState as unknown as Record<string, unknown>,
+        metadata: pipelineMetadata,
       })
 
       const run = (await repository.listRuns(20)).items.find(item => item.id === runId)
@@ -1493,6 +1728,7 @@ export const createDashboardAdvisorUseCases = ({
         errorMessage: error instanceof Error ? error.message : String(error),
         fallbackReason: degradedReasons[0] ?? 'pipeline_failure',
         budgetState: budgetState as unknown as Record<string, unknown>,
+        metadata: pipelineMetadata,
       })
 
       throw error

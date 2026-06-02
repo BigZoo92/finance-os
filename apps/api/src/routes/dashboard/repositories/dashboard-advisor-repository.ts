@@ -24,6 +24,7 @@ import type {
   DashboardAdvisorUsageSummaryResponse,
 } from '../advisor-contract'
 import type { ApiDb, DashboardAdvisorRepository } from '../types'
+import { formatNumberOrDefault } from '../utils/number-format'
 
 const toNumber = (value: unknown) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -38,7 +39,8 @@ const toNumber = (value: unknown) => {
   return 0
 }
 
-const toNumericString = (value: number, digits = 6) => value.toFixed(digits)
+const toNumericString = (value: unknown, digits = 6) =>
+  formatNumberOrDefault({ value, digits, fallback: 0 })
 
 const toIsoString = (value: Date | null | undefined) => value?.toISOString() ?? null
 

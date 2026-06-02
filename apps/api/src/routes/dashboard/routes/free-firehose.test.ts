@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { __testing } from './free-firehose'
 
-const { adaptNewsItemToSignalItem, buildHistoryAdapter } = __testing
+const { adaptNewsItemToSignalItem, buildHistoryAdapter, toSafeFreeFirehoseErrorMessage } =
+  __testing
 
 describe('adaptNewsItemToSignalItem', () => {
   it('maps a free news provider raw item to a signal_item insert payload', () => {
@@ -36,6 +37,17 @@ describe('adaptNewsItemToSignalItem', () => {
       sourceName: 'Example',
       runId: 'firehose-run-1',
     })
+  })
+})
+
+describe('toSafeFreeFirehoseErrorMessage', () => {
+  it('redacts provider secrets from error text', () => {
+    const message = toSafeFreeFirehoseErrorMessage(
+      new Error('fetch failed https://example.test/feed?api_key=secret-token&series=GDP')
+    )
+
+    expect(message).toContain('api_key=[REDACTED]')
+    expect(message).not.toContain('secret-token')
   })
 })
 

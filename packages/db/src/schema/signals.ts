@@ -83,7 +83,7 @@ export const signalIngestionRun = pgTable(
     status: text('status')
       .notNull()
       .default('running')
-      .$type<'running' | 'success' | 'partial' | 'failed'>(),
+      .$type<'running' | 'success' | 'partial' | 'failed' | 'failed_timeout'>(),
     fetchedCount: integer('fetched_count').notNull().default(0),
     insertedCount: integer('inserted_count').notNull().default(0),
     dedupedCount: integer('deduped_count').notNull().default(0),
@@ -224,7 +224,9 @@ export const freeFirehoseRun = pgTable(
     status: text('status')
       .notNull()
       .default('running')
-      .$type<'running' | 'success' | 'partial' | 'failed' | 'cancelled' | 'skipped_quota'>(),
+      .$type<
+        'running' | 'success' | 'partial' | 'failed' | 'failed_timeout' | 'cancelled' | 'skipped_quota'
+      >(),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     durationMs: integer('duration_ms'),

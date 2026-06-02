@@ -345,6 +345,49 @@ describe('createOpsRefreshRoute', () => {
     expect(receivedStaleAfterMs).toBe(600_000)
   })
 
+  it('POST /ops/refresh/stale-runs/recover also recovers background ingestion runs', async () => {
+    const recoveredBackgroundRun = {
+      table: 'free_firehose_run' as const,
+      id: 'firehose-1',
+      requestId: 'req-ops-test',
+      previousStatus: 'running',
+      status: 'failed_timeout' as const,
+      startedAt: '2026-05-03T00:00:00.000Z',
+      finishedAt: '2026-05-03T00:45:00.000Z',
+      durationMs: 2_700_000,
+      errorCode: 'STALE_TIMED_OUT' as const,
+      errorMessage: 'Run exceeded stale recovery threshold and was marked failed_timeout.',
+    }
+    const app = createApp({
+      mode: 'admin',
+      runtime: createRuntime({
+        recoverStaleBackgroundRuns: async () => ({
+          recovered: [recoveredBackgroundRun],
+          skipped: [],
+        }),
+      }),
+    })
+
+    const response = await app.handle(
+      new Request('http://finance-os.local/ops/refresh/stale-runs/recover', {
+        method: 'POST',
+      })
+    )
+    const payload = (await response.json()) as {
+      ok: boolean
+      recoveredCount: number
+      backgroundRecoveredCount: number
+      recovered: Array<{ table: string; errorCode: string }>
+    }
+
+    expect(response.status).toBe(200)
+    expect(payload.ok).toBe(true)
+    expect(payload.recoveredCount).toBe(1)
+    expect(payload.backgroundRecoveredCount).toBe(1)
+    expect(payload.recovered[0]?.table).toBe('free_firehose_run')
+    expect(payload.recovered[0]?.errorCode).toBe('STALE_TIMED_OUT')
+  })
+
   it('POST /ops/refresh/stale-runs/recover falls back to listing stale candidates when no use case is wired', async () => {
     const stillRunning = {
       operationId: 'manual-op-stuck',

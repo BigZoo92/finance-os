@@ -26,6 +26,7 @@ import {
   estimateFreeFirehoseVolume,
   type FreeFirehoseProviderId,
   type FreeFirehoseProviderRunner,
+  type FreeFirehoseRunOutcome,
   runFreeFirehose,
 } from '../services/providers/free-firehose-orchestrator'
 import { createGdeltNewsProvider } from '../services/providers/gdelt-news-provider'
@@ -344,6 +345,27 @@ type RunBody = {
   confirmedRisk?: boolean
 }
 
+const redactSensitiveErrorText = (value: string) =>
+  value
+    .replace(
+      /([?&](?:api[_-]?key|token|signature|secret|authorization)=)[^&\s]+/gi,
+      '$1[REDACTED]'
+    )
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [REDACTED]')
+
+const toSafeFreeFirehoseErrorMessage = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error)
+  return redactSensitiveErrorText(message).slice(0, 1000)
+}
+
+const emptyFreeFirehoseCounts = () => ({
+  fetched: 0,
+  inserted: 0,
+  deduped: 0,
+  skipped: 0,
+  failed: 1,
+})
+
 export const createFreeFirehoseAdminRoute = ({
   db,
   env,
@@ -513,22 +535,115 @@ export const createFreeFirehoseAdminRoute = ({
 
             const runners = buildFreeFirehoseRunners({ env, db, runId, ingestionRunId })
             const history = buildHistoryAdapter({ db })
-            const outcome = await runFreeFirehose({
-              runId,
-              mode,
-              providers: runners,
-              history,
-              maxRunsPerWeek: env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK,
-              now,
-              quotaOverride:
-                mode === 'live' && body.overrideRequested === true
-                  ? {
-                      requested: true,
-                      confirmedRisk: body.confirmedRisk === true,
-                      reason: body.overrideReason?.trim() || null,
-                    }
-                  : null,
-            })
+            const elapsedMs = () => Math.max(0, Date.now() - startedAt.getTime())
+            let outcome: FreeFirehoseRunOutcome | null = null
+            let runError: unknown = null
+            try {
+              outcome = await runFreeFirehose({
+                runId,
+                mode,
+                providers: runners,
+                history,
+                maxRunsPerWeek: env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK,
+                now,
+                quotaOverride:
+                  mode === 'live' && body.overrideRequested === true
+                    ? {
+                        requested: true,
+                        confirmedRisk: body.confirmedRisk === true,
+                        reason: body.overrideReason?.trim() || null,
+                      }
+                    : null,
+              })
+            } catch (error) {
+              runError = error
+              const errorSummary = toSafeFreeFirehoseErrorMessage(error)
+              try {
+                await history.finishRunRecord({
+                  runId,
+                  status: 'failed',
+                  durationMs: elapsedMs(),
+                  counts: emptyFreeFirehoseCounts(),
+                  providerBreakdown: {},
+                  errorSummary,
+                })
+              } catch (finishError) {
+                logApiEvent({
+                  level: 'error',
+                  msg: 'free_firehose_history_finalize_failed',
+                  requestId,
+                  runId,
+                  ...toErrorLogFields({ error: finishError, includeStack: false }),
+                })
+              }
+            } finally {
+              if (ingestionRunId !== null) {
+                const errorSummary =
+                  outcome?.errorSummary ??
+                  (runError ? toSafeFreeFirehoseErrorMessage(runError) : null)
+                try {
+                  await db
+                    .update(schema.signalIngestionRun)
+                    .set({
+                      finishedAt: new Date(),
+                      status:
+                        outcome?.status === 'success'
+                          ? 'success'
+                          : outcome?.status === 'partial'
+                            ? 'partial'
+                            : 'failed',
+                      fetchedCount: outcome?.counts.fetched ?? 0,
+                      insertedCount: outcome?.counts.inserted ?? 0,
+                      dedupedCount: outcome?.counts.deduped ?? 0,
+                      failedCount: outcome?.counts.failed ?? 1,
+                      errorSummary,
+                      durationMs: outcome?.durationMs ?? elapsedMs(),
+                    })
+                    .where(eq(schema.signalIngestionRun.id, ingestionRunId))
+                } catch (finishError) {
+                  logApiEvent({
+                    level: 'error',
+                    msg: 'free_firehose_signal_ingestion_finalize_failed',
+                    requestId,
+                    runId,
+                    ingestionRunId,
+                    ...toErrorLogFields({ error: finishError, includeStack: false }),
+                  })
+                }
+              }
+            }
+
+            if (!outcome) {
+              const errorSummary = runError
+                ? toSafeFreeFirehoseErrorMessage(runError)
+                : 'Free Firehose run failed before producing an outcome.'
+              context.set.status = 500
+              return {
+                ok: false as const,
+                code: 'FREE_FIREHOSE_RUN_FAILED' as const,
+                message: 'Free Firehose run failed before completion.',
+                requestId,
+                runId,
+                mode,
+                status: 'failed' as const,
+                counts: emptyFreeFirehoseCounts(),
+                providerBreakdown: {},
+                durationMs: elapsedMs(),
+                estimatedMaxRecords: estimateFreeFirehoseVolume(runners).maxRecords,
+                estimatedCostUsd: 0,
+                budgetRemainingUsd: null,
+                quota: {
+                  maxRunsPerWeek: env.FREE_FIREHOSE_MAX_RUNS_PER_WEEK,
+                  runsLastWeek: null,
+                  exceeded: false,
+                  overrideUsed: false,
+                  overrideReason: null,
+                },
+                warnings: [errorSummary],
+                errorSummary,
+                ingestionRunId,
+              }
+            }
 
             if (outcome.quota.overrideUsed) {
               logApiEvent({
@@ -540,27 +655,6 @@ export const createFreeFirehoseAdminRoute = ({
                 weeklyCap: outcome.quota.maxRunsPerWeek,
                 overrideReason: outcome.quota.overrideReason,
               })
-            }
-
-            if (ingestionRunId !== null) {
-              await db
-                .update(schema.signalIngestionRun)
-                .set({
-                  finishedAt: new Date(),
-                  status:
-                    outcome.status === 'success'
-                      ? 'success'
-                      : outcome.status === 'partial'
-                        ? 'partial'
-                        : 'failed',
-                  fetchedCount: outcome.counts.fetched,
-                  insertedCount: outcome.counts.inserted,
-                  dedupedCount: outcome.counts.deduped,
-                  failedCount: outcome.counts.failed,
-                  errorSummary: outcome.errorSummary,
-                  durationMs: outcome.durationMs,
-                })
-                .where(eq(schema.signalIngestionRun.id, ingestionRunId))
             }
 
             const httpStatus = outcome.status === 'skipped_quota' ? 429 : 200
@@ -593,4 +687,8 @@ export const createFreeFirehoseAdminRoute = ({
       { body: t.Optional(runBodySchema) }
     )
 
-export const __testing = { adaptNewsItemToSignalItem, buildHistoryAdapter }
+export const __testing = {
+  adaptNewsItemToSignalItem,
+  buildHistoryAdapter,
+  toSafeFreeFirehoseErrorMessage,
+}

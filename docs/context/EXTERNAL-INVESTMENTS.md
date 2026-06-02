@@ -1,6 +1,6 @@
 # External Investment Ingestion
 
-> Last updated: 2026-05-01
+> Last updated: 2026-06-02
 > Maintained by agents + human
 
 Finance-OS supports read-only ingestion for external investment providers. This feature is analytics-only: it stores reporting facts, normalizes them into canonical investment entities, and builds a compact Advisor context bundle. It is not trading infrastructure.
@@ -155,6 +155,8 @@ The manual `Tout rafraichir et analyser` mission now runs:
 IBKR failure does not block Binance. External investment failures do not block news, markets or Advisor; they mark the operation degraded with request IDs and safe reason codes.
 
 The Daily Intelligence Run reuses this same safe path through `/ops/refresh/all`. Individual refresh jobs are also exposed for `external-investments`, `ibkr`, and `binance-crypto`; they enqueue read-only syncs, regenerate the compact investment context bundle when available, and never expose provider credentials or raw signed payloads to the browser.
+
+Worker syncs are idempotent per `requestId + providerConnectionId`: a duplicate enqueue for the same provider connection in the same request is skipped before creating another `external_investment_sync_run`, records a provider-health skip with `reason: duplicate_in_request`, and keeps the original sync run as the source of truth.
 
 Crypto coverage is deliberately conservative: Binance Spot/Wallet data, persisted crypto valuation signals, market/news context, staleness warnings, concentration and diversification risks can reach the Advisor bundle, but no job can create orders, withdrawals, transfers, convert/margin/futures/staking paths, or direct buy/sell advice.
 

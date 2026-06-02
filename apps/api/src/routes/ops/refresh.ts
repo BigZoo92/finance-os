@@ -197,19 +197,41 @@ export const createOpsRefreshRoute = ({
         const DEFAULT_STALE_AFTER_MS = 30 * 60 * 1000
         const staleAfterMs = context.body?.staleAfterMs ?? DEFAULT_STALE_AFTER_MS
 
-        if (runtime.useCases.recoverStaleAdvisorManualOperations) {
-          const recovery = await runtime.useCases.recoverStaleAdvisorManualOperations({
-            mode: 'admin',
-            requestId,
-            staleAfterMs,
-          })
+        const manualRecovery = runtime.useCases.recoverStaleAdvisorManualOperations
+          ? await runtime.useCases.recoverStaleAdvisorManualOperations({
+              mode: 'admin',
+              requestId,
+              staleAfterMs,
+            })
+          : null
+        const backgroundRecovery = runtime.useCases.recoverStaleBackgroundRuns
+          ? await runtime.useCases.recoverStaleBackgroundRuns({
+              mode: 'admin',
+              requestId,
+              staleAfterMs,
+            })
+          : null
+
+        if (manualRecovery || backgroundRecovery) {
+          const recovered = [
+            ...(manualRecovery?.recovered ?? []),
+            ...(backgroundRecovery?.recovered ?? []),
+          ]
+          const skipped = [
+            ...(manualRecovery?.skipped ?? []),
+            ...(backgroundRecovery?.skipped ?? []),
+          ]
           return {
             ok: true,
             requestId,
-            recoveredCount: recovery.recovered.length,
-            skippedCount: recovery.skipped.length,
-            recovered: recovery.recovered,
-            skipped: recovery.skipped,
+            recoveredCount: recovered.length,
+            skippedCount: skipped.length,
+            manualRecoveredCount: manualRecovery?.recovered.length ?? 0,
+            manualSkippedCount: manualRecovery?.skipped.length ?? 0,
+            backgroundRecoveredCount: backgroundRecovery?.recovered.length ?? 0,
+            backgroundSkippedCount: backgroundRecovery?.skipped.length ?? 0,
+            recovered,
+            skipped,
           }
         }
 

@@ -431,6 +431,41 @@ export const createExternalInvestmentsRepository = ({
       })
     },
 
+    async findSyncRunForRequestConnection(input: {
+      requestId: string
+      providerConnectionId: string
+    }) {
+      const [row] = await db
+        .select()
+        .from(schema.externalInvestmentSyncRun)
+        .where(
+          and(
+            eq(schema.externalInvestmentSyncRun.requestId, input.requestId),
+            eq(schema.externalInvestmentSyncRun.providerConnectionId, input.providerConnectionId)
+          )
+        )
+        .orderBy(desc(schema.externalInvestmentSyncRun.startedAt))
+        .limit(1)
+
+      if (!row) {
+        return null
+      }
+
+      return {
+        id: row.id,
+        requestId: row.requestId,
+        provider: isProvider(row.provider) ? row.provider : 'ibkr',
+        providerConnectionId: row.providerConnectionId,
+        triggerSource: row.triggerSource,
+        status: row.status,
+        startedAt: row.startedAt.toISOString(),
+        finishedAt: toIso(row.finishedAt),
+        errorCode: row.errorCode,
+        errorMessage: row.errorMessage,
+        degradedReasons: row.degradedReasons,
+      }
+    },
+
     async finishSyncRun(input: {
       runId: string
       status: 'success' | 'degraded' | 'failed' | 'skipped'

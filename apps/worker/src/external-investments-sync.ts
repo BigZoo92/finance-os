@@ -33,6 +33,8 @@ type WorkerLog = (
 
 const EXTERNAL_INVESTMENT_LOCK_TTL_SECONDS = 15 * 60
 const EXTERNAL_INVESTMENT_LOCK_PREFIX = 'external-investments:lock:connection:'
+const EXTERNAL_INVESTMENT_REQUEST_LOCK_TTL_SECONDS = 6 * 60 * 60
+const EXTERNAL_INVESTMENT_REQUEST_LOCK_PREFIX = 'external-sync:'
 const BINANCE_TRADE_QUOTE_ASSETS = [
   'EUR',
   'USDT',
@@ -90,6 +92,35 @@ const providerFailureStatus = (error: unknown) => ({
   errorCode: toExternalInvestmentErrorCode(error),
   errorMessage: sanitizeError(error),
 })
+
+export const buildExternalInvestmentRequestSyncKey = ({
+  requestId,
+  providerConnectionId,
+}: {
+  requestId: string
+  providerConnectionId: string
+}) => `${EXTERNAL_INVESTMENT_REQUEST_LOCK_PREFIX}${requestId}:${providerConnectionId}`
+
+export const claimExternalInvestmentRequestSync = async ({
+  redisClient,
+  requestId,
+  providerConnectionId,
+}: {
+  redisClient: Pick<WorkerRedisClient, 'set'>
+  requestId: string
+  providerConnectionId: string
+}) => {
+  const acquired = await redisClient.set(
+    buildExternalInvestmentRequestSyncKey({ requestId, providerConnectionId }),
+    'claimed',
+    {
+      NX: true,
+      EX: EXTERNAL_INVESTMENT_REQUEST_LOCK_TTL_SECONDS,
+    }
+  )
+
+  return acquired === 'OK'
+}
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
@@ -528,6 +559,47 @@ export const createExternalInvestmentsSyncWorker = ({
     const runId = `external-investments-${randomUUID()}`
     const startedAt = new Date()
     const connection = record.connection
+
+    if (requestId) {
+      const claimed = await claimExternalInvestmentRequestSync({
+        redisClient,
+        requestId,
+        providerConnectionId: connection.providerConnectionId,
+      })
+      const existing = await repository.findSyncRunForRequestConnection({
+        requestId,
+        providerConnectionId: connection.providerConnectionId,
+      })
+
+      if (!claimed || existing) {
+        await repository.updateProviderHealth({
+          provider: connection.provider,
+          enabled: true,
+          status: 'idle',
+          requestId,
+          skipped: true,
+          metadata: {
+            reason: 'duplicate_in_request',
+            providerConnectionId: connection.providerConnectionId,
+            existingRunId: existing?.id ?? null,
+            existingStatus: existing?.status ?? null,
+            triggerSource,
+          },
+        })
+        log({
+          level: 'info',
+          msg: 'EXTERNAL_SYNC_SKIPPED_DUPLICATE_IN_REQUEST',
+          provider: connection.provider,
+          connectionId: connection.id,
+          providerConnectionId: connection.providerConnectionId,
+          requestId,
+          existingRunId: existing?.id ?? null,
+          existingStatus: existing?.status ?? null,
+          triggerSource,
+        })
+        return
+      }
+    }
 
     await repository.createSyncRun({
       runId,

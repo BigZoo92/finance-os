@@ -71,6 +71,7 @@ import { createInternalProviderRegistry } from './services/providers/internal-pr
 import { createSecEdgarNewsProvider } from './services/providers/sec-edgar-news-provider'
 import { createXTwitterNewsProvider } from './services/providers/x-twitter-news-provider'
 import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
+import { recoverStaleBackgroundRuns as recoverStaleBackgroundRunRecords } from '../ops/recover-stale-background-runs'
 
 export const createDashboardRouteRuntime = ({
   db,
@@ -1080,6 +1081,8 @@ export const createDashboardRouteRuntime = ({
         }),
       recoverStaleAdvisorManualOperations: async ({ staleAfterMs }) =>
         advisorRepository.recoverStaleManualOperations({ staleAfterMs }),
+      recoverStaleBackgroundRuns: async ({ staleAfterMs }) =>
+        recoverStaleBackgroundRunRecords({ db, staleAfterMs }),
       cancelAdvisorManualOperation: async ({ operationId }) =>
         advisorRepository.cancelManualOperation({ operationId }),
       relabelAdvisorTransactions: advisor.relabelAdvisorTransactions,
