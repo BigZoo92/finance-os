@@ -17,8 +17,11 @@ const runBodySchema = t.Optional(
       t.Union([t.Literal('night'), t.Literal('morning'), t.Literal('manual'), t.Literal('dry_run')])
     ),
     dryRun: t.Optional(t.Boolean()),
+    staleAfterMs: t.Optional(t.Integer({ minimum: 60_000 })),
   })
 )
+
+const DEFAULT_STALE_AFTER_MS = 30 * 60 * 1000
 
 const toTriggerSource = (
   trigger: string | undefined,
@@ -43,6 +46,29 @@ const demoResponse = (
   latestRun: null,
   history: [],
 })
+
+const recoverStaleRunsBeforeRefresh = async ({
+  runtime,
+  requestId,
+  staleAfterMs,
+}: {
+  runtime: DashboardRouteRuntime
+  requestId: string
+  staleAfterMs: number
+}) => {
+  await Promise.all([
+    runtime.useCases.recoverStaleAdvisorManualOperations?.({
+      mode: 'admin',
+      requestId,
+      staleAfterMs,
+    }),
+    runtime.useCases.recoverStaleBackgroundRuns?.({
+      mode: 'admin',
+      requestId,
+      staleAfterMs,
+    }),
+  ])
+}
 
 export const createOpsRefreshRoute = ({
   runtime,
@@ -140,6 +166,13 @@ export const createOpsRefreshRoute = ({
             requestId,
           }
         }
+        if (context.body?.dryRun !== true) {
+          await recoverStaleRunsBeforeRefresh({
+            runtime,
+            requestId,
+            staleAfterMs: context.body?.staleAfterMs ?? DEFAULT_STALE_AFTER_MS,
+          })
+        }
         return registry.runAll({
           requestId,
           triggerSource: toTriggerSource(context.body?.trigger, 'manual-global'),
@@ -167,6 +200,11 @@ export const createOpsRefreshRoute = ({
           }
         }
         requireAdminOrInternalToken(context)
+        await recoverStaleRunsBeforeRefresh({
+          runtime,
+          requestId,
+          staleAfterMs: context.body?.staleAfterMs ?? DEFAULT_STALE_AFTER_MS,
+        })
         return registry.runJob({
           jobId: context.params.jobId,
           requestId,
@@ -194,7 +232,6 @@ export const createOpsRefreshRoute = ({
         }
         requireAdminOrInternalToken(context)
 
-        const DEFAULT_STALE_AFTER_MS = 30 * 60 * 1000
         const staleAfterMs = context.body?.staleAfterMs ?? DEFAULT_STALE_AFTER_MS
 
         const manualRecovery = runtime.useCases.recoverStaleAdvisorManualOperations

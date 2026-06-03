@@ -218,6 +218,9 @@ export const evaluateAdvisorChallengerViability = ({
   if (investmentHealth?.insufficientForChallenger) {
     skipReasons.push('investment_context_insufficient')
   }
+  if (investmentHealth?.degraded) {
+    skipReasons.push('investment_context_degraded')
+  }
 
   return {
     allowed: skipReasons.length === 0,
@@ -1386,6 +1389,14 @@ export const createDashboardAdvisorUseCases = ({
       })
       pipelineMetadata.challenger = {
         status: challengerViability.allowed ? 'eligible' : 'skipped',
+        challengerSkipped: !challengerViability.allowed,
+        challengerSkipReason: challengerViability.allowed
+          ? null
+          : (challengerViability.skipReasons.includes('investment_context_degraded')
+              ? 'investment_context_degraded'
+              : (challengerViability.skipReasons.find(reason =>
+                  reason.startsWith('investment_context_')
+                ) ?? challengerViability.skipReasons[0] ?? 'unknown')),
         skipReasons: challengerViability.skipReasons,
         details: challengerViability.details,
       }
@@ -1398,6 +1409,8 @@ export const createDashboardAdvisorUseCases = ({
       ) {
         pipelineMetadata.challenger = {
           status: 'running',
+          challengerSkipped: false,
+          challengerSkipReason: null,
           skipReasons: [],
           details: challengerViability.details,
         }
@@ -1459,6 +1472,8 @@ export const createDashboardAdvisorUseCases = ({
             addDegradedReason(normalizedChallenge.reason)
             pipelineMetadata.challenger = {
               status: 'degraded',
+              challengerSkipped: false,
+              challengerSkipReason: null,
               skipReasons: [],
               details: {
                 ...challengerViability.details,
@@ -1495,6 +1510,8 @@ export const createDashboardAdvisorUseCases = ({
         if ((pipelineMetadata.challenger as { status?: string }).status === 'running') {
           pipelineMetadata.challenger = {
             status: 'completed',
+            challengerSkipped: false,
+            challengerSkipReason: null,
             skipReasons: [],
             details: challengerViability.details,
           }

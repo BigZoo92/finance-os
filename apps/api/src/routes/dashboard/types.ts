@@ -2,6 +2,7 @@ import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
 import type { createRedisClient } from '@finance-os/redis'
 import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
+import type { AiRunStatus } from '@finance-os/ai/run-status'
 import type { ProviderRegistry } from '@finance-os/provider-runtime'
 import type {
   AdvisorV2CapabilitiesResponse,
@@ -869,7 +870,7 @@ export interface DashboardMarketsRepository {
 export interface DashboardAdvisorRepository {
   createRun: (input: {
     runType: 'daily' | 'chat' | 'relabel' | 'eval'
-    status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+    status: AiRunStatus
     mode: 'demo' | 'admin'
     triggerSource: string
     requestId: string
@@ -881,7 +882,7 @@ export interface DashboardAdvisorRepository {
   }) => Promise<number>
   updateRun: (input: {
     runId: number
-    status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+    status: AiRunStatus
     degraded: boolean
     finishedAt?: Date | null
     durationMs?: number | null
@@ -1058,7 +1059,7 @@ export interface DashboardAdvisorRepository {
       model?: string | null
     }>
     evalRun?: {
-      status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+      status: AiRunStatus
       totalCases: number
       passedCases: number
       failedCases: number

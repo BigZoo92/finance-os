@@ -1,3 +1,5 @@
+import type { AiRunStatus } from '@finance-os/ai/run-status'
+
 export interface DashboardAdvisorUsageSummaryResponse {
   totalCalls: number
   totalInputTokens: number
@@ -20,7 +22,7 @@ export interface DashboardAdvisorBudgetStateResponse {
 export interface DashboardAdvisorRunSummaryResponse {
   id: number
   runType: 'daily' | 'chat' | 'relabel' | 'eval'
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+  status: AiRunStatus
   triggerSource: string
   requestId: string
   startedAt: string

@@ -52,7 +52,8 @@ topological order. Body:
 {
   "trigger": "manual | scheduled | internal",
   "runKind": "night | morning | manual | dry_run",
-  "dryRun": false
+  "dryRun": false,
+  "staleAfterMs": 1800000
 }
 ```
 
@@ -77,6 +78,11 @@ If a run never finalizes (worker crash, network outage), call
 `running` to `failed_timeout`; final states are left untouched. If no recovery
 hook is registered, the endpoint falls back to returning stale Advisor
 candidates so an operator can act manually.
+
+The same stale recovery hooks run automatically before non-dry-run
+`POST /ops/refresh/all` and `POST /ops/refresh/jobs/:jobId/run` executions.
+Pass `staleAfterMs` in the request body to override the default threshold.
+Dry-run requests never mutate stale rows.
 
 ## Preflight skip variants
 

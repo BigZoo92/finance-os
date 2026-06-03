@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Card, CardContent } from '@finance-os/ui/components'
+import { isAiRunActiveStatus } from '@finance-os/ai/run-status'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
@@ -224,7 +225,7 @@ function IaCoutsPage() {
                     variant={
                       run.status === 'failed'
                         ? 'destructive'
-                        : run.status === 'degraded' || run.status === 'running'
+                        : run.status === 'degraded' || isAiRunActiveStatus(run.status)
                           ? 'outline'
                           : 'secondary'
                     }

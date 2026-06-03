@@ -1,6 +1,7 @@
 import { schema } from '@finance-os/db'
 import { and, eq, lt } from 'drizzle-orm'
 import type { ApiDb, DashboardBackgroundRunRecoveryResponse } from '../dashboard/types'
+import { logApiEvent } from '../../observability/logger'
 
 export type BackgroundStaleRunRecovery = DashboardBackgroundRunRecoveryResponse
 
@@ -54,6 +55,10 @@ export const recoverStaleBackgroundRuns = async ({
 }): Promise<{ recovered: BackgroundStaleRunRecovery[]; skipped: BackgroundStaleRunRecovery[] }> => {
   const cutoff = new Date(now.getTime() - staleAfterMs)
   const recovered: BackgroundStaleRunRecovery[] = []
+  const recoveredByTable = {
+    free_firehose_run: 0,
+    signal_ingestion_run: 0,
+  }
 
   const freeFirehoseRows = await db
     .select()
@@ -63,6 +68,16 @@ export const recoverStaleBackgroundRuns = async ({
     )
 
   for (const row of freeFirehoseRows) {
+    if (
+      !shouldRecoverStaleRun({
+        status: row.status,
+        startedAt: row.startedAt,
+        now,
+        staleAfterMs,
+      })
+    ) {
+      continue
+    }
     const durationMs = now.getTime() - row.startedAt.getTime()
     await db
       .update(schema.freeFirehoseRun)
@@ -72,7 +87,8 @@ export const recoverStaleBackgroundRuns = async ({
         durationMs,
         errorSummary: 'STALE_TIMED_OUT: Free Firehose run exceeded stale recovery threshold.',
       })
-      .where(eq(schema.freeFirehoseRun.id, row.id))
+      .where(and(eq(schema.freeFirehoseRun.id, row.id), eq(schema.freeFirehoseRun.status, 'running')))
+    recoveredByTable.free_firehose_run += 1
     recovered.push(
       toRecovery({
         table: 'free_firehose_run',
@@ -93,6 +109,16 @@ export const recoverStaleBackgroundRuns = async ({
     )
 
   for (const row of signalRows) {
+    if (
+      !shouldRecoverStaleRun({
+        status: row.status,
+        startedAt: row.startedAt,
+        now,
+        staleAfterMs,
+      })
+    ) {
+      continue
+    }
     const durationMs = now.getTime() - row.startedAt.getTime()
     await db
       .update(schema.signalIngestionRun)
@@ -102,7 +128,10 @@ export const recoverStaleBackgroundRuns = async ({
         durationMs,
         errorSummary: 'STALE_TIMED_OUT: Signal ingestion run exceeded stale recovery threshold.',
       })
-      .where(eq(schema.signalIngestionRun.id, row.id))
+      .where(
+        and(eq(schema.signalIngestionRun.id, row.id), eq(schema.signalIngestionRun.status, 'running'))
+      )
+    recoveredByTable.signal_ingestion_run += 1
     recovered.push(
       toRecovery({
         table: 'signal_ingestion_run',
@@ -113,6 +142,16 @@ export const recoverStaleBackgroundRuns = async ({
         durationMs,
       })
     )
+  }
+
+  for (const [table, count] of Object.entries(recoveredByTable)) {
+    logApiEvent({
+      level: count > 0 ? 'warn' : 'info',
+      msg: 'staleRunsRecovered',
+      table,
+      count,
+      threshold: staleAfterMs,
+    })
   }
 
   return { recovered, skipped: [] }

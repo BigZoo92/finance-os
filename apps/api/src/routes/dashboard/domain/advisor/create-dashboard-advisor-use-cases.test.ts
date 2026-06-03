@@ -280,6 +280,8 @@ describe('createDashboardAdvisorUseCases', () => {
     const degradedReasons = finalUpdate?.outputDigest?.degradedReasons as string[]
     const challenger = finalUpdate?.metadata?.challenger as {
       status: string
+      challengerSkipped: boolean
+      challengerSkipReason: string | null
       skipReasons: string[]
     }
 
@@ -292,6 +294,9 @@ describe('createDashboardAdvisorUseCases', () => {
     expect(degradedReasons).toContain('investment_context_degraded')
     expect(degradedReasons).toContain('investment_context_insufficient')
     expect(challenger.status).toBe('skipped')
+    expect(challenger.challengerSkipped).toBe(true)
+    expect(challenger.challengerSkipReason).toBe('investment_context_degraded')
+    expect(challenger.skipReasons).toContain('investment_context_degraded')
     expect(challenger.skipReasons).toContain('investment_context_insufficient')
     expect(
       savedArtifacts[0]?.recommendations.every(item => item.challengerStatus === 'skipped')
@@ -309,6 +314,7 @@ describe('createDashboardAdvisorUseCases', () => {
     expect(investmentHealth?.degraded).toBe(true)
     expect(investmentHealth?.insufficientForChallenger).toBe(true)
     expect(viability.allowed).toBe(false)
+    expect(viability.skipReasons).toContain('investment_context_degraded')
     expect(viability.skipReasons).toContain('investment_context_insufficient')
   })
 })

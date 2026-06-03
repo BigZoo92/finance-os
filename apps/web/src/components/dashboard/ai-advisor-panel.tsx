@@ -10,6 +10,7 @@ import {
   Input,
   Separator,
 } from '@finance-os/ui/components'
+import { isAiRunActiveStatus } from '@finance-os/ai/run-status'
 import { MiniSparkline } from '@/components/ui/d3-sparkline'
 import type { AuthMode } from '@/features/auth-types'
 import type {
@@ -58,13 +59,13 @@ const recommendationRiskVariant = (riskLevel: 'low' | 'medium' | 'high') => {
 }
 
 const runStatusVariant = (
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+  status: DashboardAdvisorRunsResponse['items'][number]['status']
 ) => {
   if (status === 'failed') {
     return 'destructive' as const
   }
 
-  if (status === 'degraded' || status === 'running') {
+  if (status === 'degraded' || isAiRunActiveStatus(status)) {
     return 'outline' as const
   }
 
@@ -78,7 +79,7 @@ const operationStatusVariant = (
     return 'destructive' as const
   }
 
-  if (status === 'running' || status === 'degraded') {
+  if (status === 'degraded' || isAiRunActiveStatus(status)) {
     return 'outline' as const
   }
 

@@ -1,3 +1,5 @@
+import type { AiRunStatus } from '@finance-os/ai/run-status'
+
 export type DashboardRange = '7d' | '30d' | '90d'
 
 export type DashboardSummaryResponse = {
@@ -461,7 +463,7 @@ export type DashboardAdvisorBudgetStateResponse = {
 export type DashboardAdvisorRunSummaryResponse = {
   id: number
   runType: 'daily' | 'chat' | 'relabel' | 'eval'
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+  status: AiRunStatus
   triggerSource: string
   requestId: string
   startedAt: string

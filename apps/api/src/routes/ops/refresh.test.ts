@@ -174,9 +174,15 @@ describe('createOpsRefreshRoute', () => {
 
   it('executes the topological refresh plan in admin mode', async () => {
     const calls: string[] = []
+    let staleRecoveryCalls = 0
     const app = createApp({
       mode: 'admin',
       runtime: createRuntime({
+        recoverStaleBackgroundRuns: async ({ staleAfterMs }) => {
+          staleRecoveryCalls += 1
+          expect(staleAfterMs).toBe(600_000)
+          return { recovered: [], skipped: [] }
+        },
         requestTransactionsBackgroundRefresh: async () => {
           calls.push('powens')
           return true
@@ -212,6 +218,8 @@ describe('createOpsRefreshRoute', () => {
     const response = await app.handle(
       new Request('http://finance-os.local/ops/refresh/all', {
         method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ staleAfterMs: 600_000 }),
       })
     )
     const payload = (await response.json()) as {
@@ -221,6 +229,7 @@ describe('createOpsRefreshRoute', () => {
     }
 
     expect(response.status).toBe(200)
+    expect(staleRecoveryCalls).toBe(1)
     expect(payload.ok).toBe(true)
     expect(payload.status).toBe('success')
     expect(payload.jobs.map(job => job.jobId)).toContain('powens')
@@ -234,9 +243,14 @@ describe('createOpsRefreshRoute', () => {
 
   it('supports a dry-run plan without executing jobs', async () => {
     let refreshCalls = 0
+    let staleRecoveryCalls = 0
     const app = createApp({
       mode: 'admin',
       runtime: createRuntime({
+        recoverStaleBackgroundRuns: async () => {
+          staleRecoveryCalls += 1
+          return { recovered: [], skipped: [] }
+        },
         requestTransactionsBackgroundRefresh: async () => {
           refreshCalls += 1
           return true
@@ -268,6 +282,7 @@ describe('createOpsRefreshRoute', () => {
       'pending'
     )
     expect(refreshCalls).toBe(0)
+    expect(staleRecoveryCalls).toBe(0)
   })
 
   it('triggers an individual job in admin mode', async () => {

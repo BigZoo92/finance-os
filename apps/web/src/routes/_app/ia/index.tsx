@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, CardContent } from '@finance-os/ui/components'
+import { isAiRunActiveStatus } from '@finance-os/ai/run-status'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
@@ -142,12 +143,12 @@ function IaOverviewPage() {
     ...dashboardAdvisorManualOperationLatestQueryOptionsWithMode(modeOpts),
     refetchInterval: query => {
       const status = query.state.data?.status
-      return status === 'queued' || status === 'running' ? 3_000 : false
+      return status && isAiRunActiveStatus(status) ? 3_000 : false
     },
   })
-  const manualOperationActive =
-    manualOperationQuery.data?.status === 'queued' ||
-    manualOperationQuery.data?.status === 'running'
+  const manualOperationActive = manualOperationQuery.data?.status
+    ? isAiRunActiveStatus(manualOperationQuery.data.status)
+    : false
   const advisorRefetchInterval = manualOperationActive ? 4_000 : false
 
   const overviewQuery = useQuery({

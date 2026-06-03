@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
+    "@finance-os/ai": "workspace:*",
     "@finance-os/ui": "workspace:*",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
