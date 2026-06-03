@@ -49,6 +49,7 @@ import { createDashboardDerivedRecomputeRepository } from './repositories/dashbo
 import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
 import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
+import { createUserCategorizationRuleRepository } from './repositories/user-categorization-rule-repository'
 import { createInvestmentStrategyRepository } from './repositories/investment-strategy-repository'
 import {
   sendDecisionPointToKnowledgeGraph,
@@ -250,6 +251,7 @@ export const createDashboardRouteRuntime = ({
   const newsRepository = createDashboardNewsRepository({ db })
   const marketsRepository = createDashboardMarketsRepository({ db })
   const advisorRepository = createDashboardAdvisorRepository({ db })
+  const userCategorizationRules = createUserCategorizationRuleRepository({ db })
   const investmentStrategyRepository = createInvestmentStrategyRepository({ db })
   const derivedRecompute = createDashboardDerivedRecomputeRepository({ db })
   const powensJobs = createPowensJobQueueRepository(redisClient)
@@ -318,6 +320,7 @@ export const createDashboardRouteRuntime = ({
   const getTransactions = createGetDashboardTransactionsUseCase({
     listTransactions: readModel.listTransactions,
     listTransactionSyncMetadata: readModel.listTransactionSyncMetadata,
+    listUserCategorizationRules: userCategorizationRules.listEnabledRules,
     now: () => new Date(),
     staleAfterMinutes: transactionsSnapshotStaleAfterMinutes,
     categorizationMigration: {

@@ -30,7 +30,13 @@ export const createTransactionsRoute = () =>
         path: 'demo' | 'admin',
         items: Array<{
           id: number
-          resolutionSource: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+          resolutionSource:
+            | 'manual_override'
+            | 'user_rule'
+            | 'merchant_rules'
+            | 'mcc'
+            | 'counterparty'
+            | 'fallback'
           resolutionTrace: Array<{ matched: boolean }>
           resolutionRuleId: string | null
         }>

@@ -44,6 +44,113 @@ describe('applyTransactionAutoCategorization', () => {
     })
   })
 
+  it('uses enabled user rules after manual override and before built-in rules', () => {
+    const result = applyTransactionAutoCategorization({
+      label: 'OPENAI API',
+      merchant: 'OpenAI',
+      amount: -20,
+      powensAccountId: 'acc-2',
+      accountName: 'Compte checking principal',
+      providerCategory: 'Unknown',
+      customCategory: null,
+      customSubcategory: null,
+      category: null,
+      subcategory: null,
+      incomeType: null,
+      userRules: [
+        {
+          id: 'user-rule-openai-research',
+          enabled: true,
+          priority: 200,
+          matcherType: 'merchant_contains',
+          matcherValue: 'openai',
+          amountSign: 'expense',
+          category: 'Recherche',
+          subcategory: 'IA',
+        },
+      ],
+    })
+
+    expect(result).toMatchObject({
+      category: 'Recherche',
+      subcategory: 'IA',
+      resolutionSource: 'user_rule',
+      resolutionRuleId: 'user-rule-openai-research',
+    })
+  })
+
+  it('does not let disabled user rules override built-in categorization', () => {
+    const result = applyTransactionAutoCategorization({
+      label: 'OPENAI API',
+      merchant: 'OpenAI',
+      amount: -20,
+      powensAccountId: 'acc-2',
+      accountName: 'Compte checking principal',
+      providerCategory: 'Unknown',
+      customCategory: null,
+      customSubcategory: null,
+      category: null,
+      subcategory: null,
+      incomeType: null,
+      userRules: [
+        {
+          id: 'disabled-openai-rule',
+          enabled: false,
+          priority: 999,
+          matcherType: 'merchant_contains',
+          matcherValue: 'openai',
+          category: 'Disabled',
+        },
+      ],
+    })
+
+    expect(result.resolutionSource).toBe('merchant_rules')
+    expect(result.category).toBe('Abonnements')
+  })
+
+  it('applies dated user rules only inside their validity window', () => {
+    const result = applyTransactionAutoCategorization({
+      bookingDate: '2026-06-03',
+      label: 'LOYER JUIN',
+      merchant: 'Foncia',
+      amount: -1100,
+      powensAccountId: 'acc-2',
+      accountName: 'Compte checking principal',
+      providerCategory: 'Unknown',
+      customCategory: null,
+      customSubcategory: null,
+      category: null,
+      subcategory: null,
+      incomeType: null,
+      userRules: [
+        {
+          id: 'future-rent-rule',
+          enabled: true,
+          priority: 900,
+          matcherType: 'label_contains',
+          matcherValue: 'loyer',
+          category: 'Future',
+          validFrom: '2026-07-01',
+        },
+        {
+          id: 'current-rent-rule',
+          enabled: true,
+          priority: 800,
+          matcherType: 'label_contains',
+          matcherValue: 'loyer',
+          category: 'Logement',
+          subcategory: 'Loyer perso',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+        },
+      ],
+    })
+
+    expect(result.resolutionSource).toBe('user_rule')
+    expect(result.resolutionRuleId).toBe('current-rent-rule')
+    expect(result.subcategory).toBe('Loyer perso')
+  })
+
   it('uses provider category in mcc precedence when no rule matches', () => {
     const result = applyTransactionAutoCategorization({
       label: 'Paiement CB',

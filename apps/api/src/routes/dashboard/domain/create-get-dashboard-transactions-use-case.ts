@@ -1,7 +1,10 @@
 import type { DashboardUseCases } from '../types'
 import { decodeDashboardCursor, encodeDashboardCursor } from '../utils/cursor'
 import { getRangeStartDate } from '../utils/range'
-import { applyTransactionAutoCategorization } from './transaction-auto-categorization'
+import {
+  applyTransactionAutoCategorization,
+  type UserCategorizationRule,
+} from './transaction-auto-categorization'
 
 interface CreateGetDashboardTransactionsUseCaseDependencies {
   listTransactions: (params: {
@@ -41,6 +44,7 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       lastFailedAt: Date | null
     }>
   >
+  listUserCategorizationRules?: () => Promise<UserCategorizationRule[]>
   now: () => Date
   staleAfterMinutes: number
   categorizationMigration: {
@@ -102,6 +106,7 @@ const summarizeDisagreement = (
 export const createGetDashboardTransactionsUseCase = ({
   listTransactions,
   listTransactionSyncMetadata,
+  listUserCategorizationRules,
   now,
   staleAfterMinutes,
   categorizationMigration,
@@ -178,10 +183,17 @@ export const createGetDashboardTransactionsUseCase = ({
     const categoryDisagreements = new Map<string, { total: number; disagreements: number }>()
     const accountDisagreements = new Map<string, { total: number; disagreements: number }>()
     let disagreementCount = 0
+    let userRules: UserCategorizationRule[] = []
+    try {
+      userRules = listUserCategorizationRules ? await listUserCategorizationRules() : []
+    } catch {
+      userRules = []
+    }
 
     const items = visibleRows.map(row => {
       const amount = toMoney(row.amount)
       const deterministicClassification = applyTransactionAutoCategorization({
+        bookingDate: row.bookingDate,
         label: row.label,
         amount,
         powensAccountId: row.powensAccountId,
@@ -193,6 +205,7 @@ export const createGetDashboardTransactionsUseCase = ({
         category: row.category,
         subcategory: row.subcategory,
         incomeType: row.incomeType,
+        userRules,
       })
       const legacyCategory = row.customCategory ?? row.category
       const legacySubcategory = row.customSubcategory ?? row.subcategory
@@ -258,7 +271,7 @@ export const createGetDashboardTransactionsUseCase = ({
           : [
               {
                 source: 'fallback' as const,
-                rank: 5,
+                rank: 6,
                 matched: true,
                 reason: 'migration_shadow_legacy_active',
                 category: resolvedCategory,

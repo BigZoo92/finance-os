@@ -23,6 +23,7 @@ import type {
   DashboardAdvisorRunsResponse,
   DashboardAdvisorSignalsResponse,
   DashboardAdvisorSpendAnalyticsResponse,
+  DashboardCostOverviewResponse,
   DashboardDerivedRecomputeActionError,
   DashboardInvestmentHypothesesResponse,
   DashboardInvestmentLessonsResponse,
@@ -482,6 +483,62 @@ export const getDemoDashboardAdvisorSpend = (): DashboardAdvisorSpendAnalyticsRe
   anomalies: [],
 })
 
+export const getDemoDashboardCostOverview = (): DashboardCostOverviewResponse => ({
+  ok: true,
+  mode: 'demo',
+  source: 'demo_fixture',
+  requestId: 'demo-cost-overview',
+  generatedAt: '2026-06-03T00:00:00.000Z',
+  totals: {
+    recurringMonthlyByCurrency: [{ currency: 'EUR', amount: 16 }],
+    recurringAnnualByCurrency: [{ currency: 'EUR', amount: 192 }],
+    variableMonthlyUsd: 0,
+    variableDailyUsd: 0,
+  },
+  recurringSubscriptions: [
+    {
+      id: 'demo-x-basic-seat-1',
+      provider: 'x_twitter',
+      label: 'X API Basic seat 1',
+      amount: 8,
+      currency: 'EUR',
+      cadence: 'monthly',
+      monthlyAmount: 8,
+      annualAmount: 96,
+      category: 'provider_subscription',
+      source: 'demo_fixture',
+    },
+    {
+      id: 'demo-x-basic-seat-2',
+      provider: 'x_twitter',
+      label: 'X API Basic seat 2',
+      amount: 8,
+      currency: 'EUR',
+      cadence: 'monthly',
+      monthlyAmount: 8,
+      annualAmount: 96,
+      category: 'provider_subscription',
+      source: 'demo_fixture',
+    },
+  ],
+  variableUsage: {
+    xTwitter: {
+      dailyUsd: 0,
+      monthlyUsd: 0,
+      costBasisToday: 'estimated',
+      costBasisThisMonth: 'estimated',
+    },
+    advisor: {
+      status: 'ok',
+      dailyUsd: 0,
+      monthlyUsd: 0,
+      dailyBudgetUsd: 0,
+      monthlyBudgetUsd: 0,
+      lastError: null,
+    },
+  },
+})
+
 export const getDemoDashboardAdvisorRuns = (): DashboardAdvisorRunsResponse => ({
   items: [],
 })
@@ -867,6 +924,10 @@ export const fetchDashboardAdvisorSignals = async (limit = 24) => {
 
 export const fetchDashboardAdvisorSpend = async () => {
   return apiFetch<DashboardAdvisorSpendAnalyticsResponse>('/dashboard/advisor/spend')
+}
+
+export const fetchDashboardCostOverview = async () => {
+  return apiFetch<DashboardCostOverviewResponse>('/dashboard/costs/overview')
 }
 
 export const fetchDashboardAdvisorRuns = async (limit = 12) => {

@@ -132,10 +132,22 @@ export type DashboardTransactionsResponse = {
     category: string | null
     subcategory: string | null
     resolvedCategory: string | null
-    resolutionSource: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+    resolutionSource:
+      | 'manual_override'
+      | 'user_rule'
+      | 'merchant_rules'
+      | 'mcc'
+      | 'counterparty'
+      | 'fallback'
     resolutionRuleId: string | null
     resolutionTrace: Array<{
-      source: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+      source:
+        | 'manual_override'
+        | 'user_rule'
+        | 'merchant_rules'
+        | 'mcc'
+        | 'counterparty'
+        | 'fallback'
       rank: number
       matched: boolean
       reason: string
@@ -630,6 +642,52 @@ export type DashboardAdvisorSpendAnalyticsResponse = {
     kind: 'daily_budget' | 'monthly_budget' | 'usage_spike'
     message: string
   }>
+}
+
+export type DashboardCostOverviewResponse = {
+  ok: boolean
+  mode: 'demo' | 'admin'
+  source: 'db' | 'demo_fixture'
+  requestId: string
+  generatedAt: string
+  totals: {
+    recurringMonthlyByCurrency: Array<{ currency: string; amount: number }>
+    recurringAnnualByCurrency: Array<{ currency: string; amount: number }>
+    variableMonthlyUsd: number
+    variableDailyUsd: number
+  }
+  recurringSubscriptions: Array<{
+    id: string
+    provider: string
+    label: string
+    amount: number
+    currency: string
+    cadence: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'one_time'
+    monthlyAmount: number
+    annualAmount: number
+    category: string
+    source: string
+  }>
+  variableUsage: {
+    xTwitter: {
+      dailyUsd: number
+      monthlyUsd: number
+      estimatedDailyUsd?: number
+      estimatedMonthlyUsd?: number
+      actualDailyUsd?: number
+      actualMonthlyUsd?: number
+      costBasisToday: 'actual' | 'estimated' | 'mixed'
+      costBasisThisMonth: 'actual' | 'estimated' | 'mixed'
+    }
+    advisor: {
+      status: 'ok' | 'degraded'
+      dailyUsd: number
+      monthlyUsd: number
+      dailyBudgetUsd: number
+      monthlyBudgetUsd: number
+      lastError: string | null
+    }
+  }
 }
 
 export type DashboardAdvisorChatMessageResponse = {

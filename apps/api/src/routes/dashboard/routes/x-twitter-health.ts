@@ -55,17 +55,17 @@ export const createXTwitterHealthRoute = ({
         const usage = await readXUsageSnapshot(db, now())
         const remainingDailyBudget = Math.max(
           0,
-          env.X_DAILY_BUDGET_USD - usage.estimatedCostToday
+          env.X_DAILY_BUDGET_USD - usage.chargeableCostToday
         )
         const remainingMonthlyBudget = Math.max(
           0,
-          env.X_MONTHLY_BUDGET_USD - usage.estimatedCostThisMonth
+          env.X_MONTHLY_BUDGET_USD - usage.chargeableCostThisMonth
         )
 
         // Estimate the monthly run rate assuming spend continues at today's pace.
         const dayOfMonth = now().getUTCDate() || 1
         const projectedMonthlyAtCurrentRate =
-          (usage.estimatedCostThisMonth / dayOfMonth) *
+          (usage.chargeableCostThisMonth / dayOfMonth) *
           new Date(
             Date.UTC(now().getUTCFullYear(), now().getUTCMonth() + 1, 0)
           ).getUTCDate()
@@ -107,9 +107,15 @@ export const createXTwitterHealthRoute = ({
           postReadsToday: usage.postReadsToday,
           userReadsToday: usage.userReadsToday,
           estimatedCostToday: usage.estimatedCostToday,
+          actualCostToday: usage.actualCostToday,
+          chargeableCostToday: usage.chargeableCostToday,
+          costBasisToday: usage.costBasisToday,
           postReadsThisMonth: usage.postReadsThisMonth,
           userReadsThisMonth: usage.userReadsThisMonth,
           estimatedCostThisMonth: usage.estimatedCostThisMonth,
+          actualCostThisMonth: usage.actualCostThisMonth,
+          chargeableCostThisMonth: usage.chargeableCostThisMonth,
+          costBasisThisMonth: usage.costBasisThisMonth,
           estimatedMonthlyCostAtCurrentRate: Number(
             projectedMonthlyAtCurrentRate.toFixed(2)
           ),

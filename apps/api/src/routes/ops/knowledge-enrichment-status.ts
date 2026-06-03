@@ -8,10 +8,14 @@ import type { ApiDb } from '../dashboard/types'
 export const createOpsKnowledgeEnrichmentStatusRoute = ({
   db,
   knowledgeServiceEnabled,
+  knowledgeServiceUrl,
+  knowledgeServiceTimeoutMs,
   advisorGraphIngestEnabled,
 }: {
   db: ApiDb
   knowledgeServiceEnabled: boolean
+  knowledgeServiceUrl: string
+  knowledgeServiceTimeoutMs: number
   advisorGraphIngestEnabled: boolean
 }) =>
   new Elysia({ prefix: '/ops/knowledge/enrichment' }).get('/status', async context => {
@@ -29,6 +33,7 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
         edgesWrittenLastRun: 0,
         vectorsWrittenLastRun: 0,
         lastError: null,
+        serviceHealth: null,
       }
     }
 
@@ -57,6 +62,57 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
         })
         .from(schema.advisorMemoryEvent)
 
+      let serviceHealth:
+        | {
+            status: 'ok' | 'degraded' | 'unavailable'
+            backend: string | null
+            productionConfigured: boolean | null
+            productionActive: boolean | null
+            backends: unknown
+            lastError: string | null
+          }
+        | null = null
+
+      if (knowledgeServiceEnabled) {
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), knowledgeServiceTimeoutMs)
+          let response: Response
+          try {
+            response = await fetch(`${knowledgeServiceUrl.replace(/\/$/, '')}/health`, {
+              headers: { 'x-request-id': requestId },
+              signal: controller.signal,
+            })
+          } finally {
+            clearTimeout(timeout)
+          }
+          const payload = (await response.json()) as {
+            status?: string
+            backend?: string
+            productionConfigured?: boolean
+            productionActive?: boolean
+            backends?: unknown
+          }
+          serviceHealth = {
+            status: response.ok && payload.status === 'ok' ? 'ok' : 'degraded',
+            backend: payload.backend ?? null,
+            productionConfigured: payload.productionConfigured ?? null,
+            productionActive: payload.productionActive ?? null,
+            backends: payload.backends ?? null,
+            lastError: response.ok ? null : `HTTP_${response.status}`,
+          }
+        } catch (error) {
+          serviceHealth = {
+            status: 'unavailable',
+            backend: null,
+            productionConfigured: null,
+            productionActive: null,
+            backends: null,
+            lastError: error instanceof Error ? error.name : 'UNKNOWN_ERROR',
+          }
+        }
+      }
+
       return {
         requestId,
         mode,
@@ -76,6 +132,7 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
           failed: Number(counts?.failed ?? 0),
           skipped: Number(counts?.skipped ?? 0),
         },
+        serviceHealth,
       }
     } catch (error) {
       return {
@@ -91,6 +148,7 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
         vectorsWrittenLastRun: 0,
         lastError: error instanceof Error ? error.message.slice(0, 300) : 'UNKNOWN_ERROR',
         memoryEventCounts: null,
+        serviceHealth: null,
       }
     }
   })

@@ -82,6 +82,67 @@ export const dashboardTransactionClassificationBodySchema = t.Object({
   tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 32 }), { maxItems: 10 })),
 })
 
+const dashboardUserCategorizationRuleMatcherSchema = t.Union([
+  t.Literal('label_contains'),
+  t.Literal('merchant_contains'),
+  t.Literal('label_regex'),
+  t.Literal('merchant_regex'),
+  t.Literal('account_id'),
+  t.Literal('account_name_contains'),
+])
+
+const dashboardUserCategorizationAmountSignSchema = t.Union([
+  t.Literal('income'),
+  t.Literal('expense'),
+])
+
+const dashboardUserCategorizationIncomeTypeSchema = t.Union([
+  t.Literal('salary'),
+  t.Literal('recurring'),
+  t.Literal('exceptional'),
+])
+
+export const dashboardUserCategorizationRuleBodySchema = t.Object({
+  name: t.String({ minLength: 1, maxLength: 120 }),
+  enabled: t.Optional(t.Boolean()),
+  priority: t.Optional(t.Numeric({ minimum: 0, maximum: 1000 })),
+  matcherType: dashboardUserCategorizationRuleMatcherSchema,
+  matcherValue: t.String({ minLength: 1, maxLength: 120 }),
+  amountSign: t.Optional(t.Union([dashboardUserCategorizationAmountSignSchema, t.Null()])),
+  minAmount: t.Optional(t.Union([t.Numeric({ minimum: 0, maximum: 999999999999.99 }), t.Null()])),
+  maxAmount: t.Optional(t.Union([t.Numeric({ minimum: 0, maximum: 999999999999.99 }), t.Null()])),
+  category: t.String({ minLength: 1, maxLength: 64 }),
+  subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+  incomeType: t.Optional(t.Union([dashboardUserCategorizationIncomeTypeSchema, t.Null()])),
+  validFrom: t.Optional(t.Union([t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' }), t.Null()])),
+  validTo: t.Optional(t.Union([t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' }), t.Null()])),
+  notes: t.Optional(t.Union([t.String({ maxLength: 500 }), t.Null()])),
+  metadata: t.Optional(t.Record(t.String({ minLength: 1, maxLength: 80 }), t.Any())),
+})
+
+export const dashboardUserCategorizationDryRunBodySchema = t.Object({
+  transactionId: t.Optional(t.Numeric({ minimum: 1 })),
+  transaction: t.Optional(
+    t.Object({
+      bookingDate: t.Optional(t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' })),
+      label: t.String({ minLength: 1, maxLength: 240 }),
+      amount: t.Numeric({ minimum: -999999999999.99, maximum: 999999999999.99 }),
+      powensAccountId: t.String({ minLength: 1, maxLength: 120 }),
+      accountName: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 120 }), t.Null()])),
+      merchant: t.Optional(t.String({ maxLength: 128 })),
+      providerCategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+      customCategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+      customSubcategory: t.Optional(
+        t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])
+      ),
+      category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+      subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
+      incomeType: t.Optional(t.Union([dashboardUserCategorizationIncomeTypeSchema, t.Null()])),
+    })
+  ),
+  rule: t.Optional(dashboardUserCategorizationRuleBodySchema),
+})
+
 export const dashboardGoalParamsSchema = t.Object({
   goalId: t.Numeric({ minimum: 1 }),
 })

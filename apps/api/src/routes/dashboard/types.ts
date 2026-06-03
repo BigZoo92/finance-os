@@ -513,10 +513,22 @@ export interface DashboardTransactionsResponse {
     category: string | null
     subcategory: string | null
     resolvedCategory: string | null
-    resolutionSource: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+    resolutionSource:
+      | 'manual_override'
+      | 'user_rule'
+      | 'merchant_rules'
+      | 'mcc'
+      | 'counterparty'
+      | 'fallback'
     resolutionRuleId: string | null
     resolutionTrace: Array<{
-      source: 'manual_override' | 'merchant_rules' | 'mcc' | 'counterparty' | 'fallback'
+      source:
+        | 'manual_override'
+        | 'user_rule'
+        | 'merchant_rules'
+        | 'mcc'
+        | 'counterparty'
+        | 'fallback'
       rank: number
       matched: boolean
       reason: string

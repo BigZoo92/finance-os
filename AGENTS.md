@@ -52,11 +52,11 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
   - failed CI on an autopilot implementation PR must be summarized back onto the PR thread so Codex sees the runner error instead of relying on partial local checks
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
 - When modifying the dashboard news feature (fetch, ingestion, cache, fallback, fixtures, schema, or UI wiring), update [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) in the same change.
-- Design system and frontend identity invariants (direction "Aurora Pink"):
+- Design system and frontend identity invariants (direction "Command Pixel"):
   - Always consult `DESIGN.md` before modifying any UI component, layout, or visual styling.
   - Always consult `docs/frontend/design-system.md` before creating or modifying a shared component.
   - Always reuse or extend the existing design system tokens (colors, spacing, radius, motion, typography) before introducing isolated values.
-  - Always preserve the Aurora Pink brand identity: rose magenta primary (`oklch ~355° hue`), electric violet accent-2 (`oklch ~295° hue`), Inter + JetBrains Mono typography, and the 4-step surface depth system (`surface-0/1/2/3`). Never revert to the legacy amber/gold primary.
+  - Always preserve the Command Pixel identity: compact operational surfaces, crisp Inter + JetBrains Mono typography, the 4-step surface depth system (`surface-0/1/2/3`), and semantic financial colors. Existing `aurora` token/component names are compatibility aliases until a dedicated design-system migration renames them.
   - Always prefer the canonical Finance-OS surface components (`KpiTile`, `Panel`, `PageHeader`, `RangePill`, `BrandMark`, `AuroraBackdrop`, `StatusDot`) before coding a bespoke equivalent.
   - React Bits components live under `apps/web/src/components/reactbits/` as MIT + Commons Clause copies; customize tokens in-place rather than re-installing via CLI.
   - Always maintain mobile responsiveness, performance constraints, and accessibility (including `prefers-reduced-motion`) when changing UI.

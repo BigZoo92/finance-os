@@ -11,6 +11,7 @@ import { createAdvisorKnowledgeRoute } from './routes/advisor-knowledge'
 import { createAdvisorReplayRoute } from './routes/advisor-replay'
 import { createAdvisorV2Route } from './routes/advisor-v2'
 import { createAnalyticsRoute } from './routes/analytics'
+import { createCostsOverviewRoute } from './routes/costs-overview'
 import { createDataQualityRoute } from './routes/data-quality'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
 import { createExternalInvestmentsDashboardRoute } from './routes/external-investments'
@@ -30,6 +31,7 @@ import { createXTwitterHealthRoute } from './routes/x-twitter-health'
 import { createXTwitterLookupRoute } from './routes/x-twitter-lookup'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
+import { createUserCategorizationRulesRoute } from './routes/user-categorization-rules'
 import { createDashboardOpsRefreshConfig } from './ops-refresh-config'
 import { createDashboardRouteRuntime } from './runtime'
 import type { ApiDb, RedisClient } from './types'
@@ -413,7 +415,9 @@ export const createDashboardRoutes = ({
         .use(createExternalInvestmentsDashboardRoute())
         .use(createTransactionsRoute())
         .use(createTransactionClassificationRoute())
+        .use(createUserCategorizationRulesRoute({ db }))
         .use(createTransactionCategorizationBackfillRoute({ db }))
+        .use(createCostsOverviewRoute({ db }))
         .use(
           createXTwitterLookupRoute({
             db,
@@ -536,6 +540,8 @@ export const createDashboardRoutes = ({
       createOpsKnowledgeEnrichmentStatusRoute({
         db,
         knowledgeServiceEnabled,
+        knowledgeServiceUrl,
+        knowledgeServiceTimeoutMs,
         advisorGraphIngestEnabled,
       })
     )

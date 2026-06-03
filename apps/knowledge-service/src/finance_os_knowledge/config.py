@@ -1,4 +1,5 @@
 from functools import lru_cache
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -71,11 +72,16 @@ class KnowledgeSettings(BaseSettings):
 
     @property
     def neo4j_uri(self) -> str | None:
-        return self.knowledge_neo4j_uri or self.legacy_neo4j_uri
+        return self.knowledge_neo4j_uri or self.legacy_neo4j_uri or os.getenv("KNOWLEDGE_NEO4J_URL")
 
     @property
     def neo4j_user(self) -> str | None:
-        return self.knowledge_neo4j_user or self.legacy_neo4j_username
+        return (
+            self.knowledge_neo4j_user
+            or os.getenv("KNOWLEDGE_NEO4J_USERNAME")
+            or self.legacy_neo4j_username
+            or os.getenv("NEO4J_USER")
+        )
 
     @property
     def neo4j_password(self) -> str | None:
@@ -87,7 +93,7 @@ class KnowledgeSettings(BaseSettings):
 
     @property
     def qdrant_url(self) -> str | None:
-        return self.knowledge_qdrant_url or self.legacy_qdrant_url
+        return self.knowledge_qdrant_url or self.legacy_qdrant_url or os.getenv("QDRANT_HOST")
 
     @property
     def qdrant_api_key(self) -> str | None:
@@ -106,6 +112,21 @@ class KnowledgeSettings(BaseSettings):
             and self.neo4j_password
             and self.qdrant_url
         )
+
+    @property
+    def production_backend_missing_reasons(self) -> list[str]:
+        if not self.use_production_backends:
+            return ["production_backends_disabled"]
+        reasons: list[str] = []
+        if not self.neo4j_uri:
+            reasons.append("neo4j_uri_missing")
+        if not self.neo4j_user:
+            reasons.append("neo4j_user_missing")
+        if not self.neo4j_password:
+            reasons.append("neo4j_password_missing")
+        if not self.qdrant_url:
+            reasons.append("qdrant_url_missing")
+        return reasons
 
 
 @lru_cache(maxsize=1)

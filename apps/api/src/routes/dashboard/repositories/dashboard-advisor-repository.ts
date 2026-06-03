@@ -1394,21 +1394,38 @@ export const createDashboardAdvisorRepository = ({
       }
 
       const candidateIds = candidates.map(row => row.id)
+      const recoveredAt = new Date()
       await db
         .update(schema.aiManualOperation)
         .set({
           status: 'failed',
           errorCode: 'STALE_TIMED_OUT',
           errorMessage: `Run did not finalize within ${Math.round(staleAfterMs / 60_000)} minutes; marked stale by recovery sweeper.`,
-          finishedAt: new Date(),
+          finishedAt: recoveredAt,
           degraded: true,
-          updatedAt: new Date(),
+          updatedAt: recoveredAt,
         })
         .where(
           and(
             inArray(schema.aiManualOperation.id, candidateIds),
             // Defensive: race-safe — only flip rows that are still active.
             inArray(schema.aiManualOperation.status, ['queued', 'running'])
+          )
+        )
+
+      await db
+        .update(schema.aiManualOperationStep)
+        .set({
+          status: 'failed',
+          errorCode: 'STALE_TIMED_OUT',
+          errorMessage: 'Parent operation exceeded the stale recovery threshold.',
+          finishedAt: recoveredAt,
+          updatedAt: recoveredAt,
+        })
+        .where(
+          and(
+            inArray(schema.aiManualOperationStep.operationId, candidateIds),
+            inArray(schema.aiManualOperationStep.status, ['queued', 'running'])
           )
         )
 
@@ -1433,20 +1450,37 @@ export const createDashboardAdvisorRepository = ({
       // Single atomic UPDATE … WHERE status IN (queued, running) so a
       // concurrent finalize wins gracefully (the cancel becomes a no-op,
       // we return the already-final operation).
+      const cancelledAt = new Date()
       await db
         .update(schema.aiManualOperation)
         .set({
           status: 'failed',
           errorCode: 'CANCELLED',
           errorMessage: 'Cancelled via /ops/refresh/runs/:runId/cancel.',
-          finishedAt: new Date(),
+          finishedAt: cancelledAt,
           degraded: true,
-          updatedAt: new Date(),
+          updatedAt: cancelledAt,
         })
         .where(
           and(
             eq(schema.aiManualOperation.id, operationId),
             inArray(schema.aiManualOperation.status, ['queued', 'running'])
+          )
+        )
+
+      await db
+        .update(schema.aiManualOperationStep)
+        .set({
+          status: 'failed',
+          errorCode: 'CANCELLED',
+          errorMessage: 'Parent operation was cancelled.',
+          finishedAt: cancelledAt,
+          updatedAt: cancelledAt,
+        })
+        .where(
+          and(
+            eq(schema.aiManualOperationStep.operationId, operationId),
+            inArray(schema.aiManualOperationStep.status, ['queued', 'running'])
           )
         )
 

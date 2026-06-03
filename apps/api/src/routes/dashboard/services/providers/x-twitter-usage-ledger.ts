@@ -45,12 +45,23 @@ export type XLedgerUsageSnapshot = {
   postReadsToday: number
   userReadsToday: number
   estimatedCostToday: number
+  actualCostToday: number
+  chargeableCostToday: number
+  costBasisToday: 'actual' | 'estimated' | 'mixed'
   postReadsThisMonth: number
   userReadsThisMonth: number
   estimatedCostThisMonth: number
+  actualCostThisMonth: number
+  chargeableCostThisMonth: number
+  costBasisThisMonth: 'actual' | 'estimated' | 'mixed'
   lastStatusCode: number | null
   lastErrorCode: string | null
   lastErrorAt: string | null
+}
+
+const resolveCostBasis = (actualRows: number, totalRows: number): 'actual' | 'estimated' | 'mixed' => {
+  if (totalRows === 0 || actualRows === 0) return 'estimated'
+  return actualRows === totalRows ? 'actual' : 'mixed'
 }
 
 export const readXUsageSnapshot = async (
@@ -74,6 +85,18 @@ export const readXUsageSnapshot = async (
         sql<number>`coalesce(sum(${schema.xTwitterUsageLedger.estimatedCostUsd}), 0)`.as(
           'estimated_cost'
         ),
+      actualCost: sql<number>`coalesce(sum(${schema.xTwitterUsageLedger.actualCostUsd}), 0)`.as(
+        'actual_cost'
+      ),
+      chargeableCost:
+        sql<number>`coalesce(sum(coalesce(${schema.xTwitterUsageLedger.actualCostUsd}, ${schema.xTwitterUsageLedger.estimatedCostUsd})), 0)`.as(
+          'chargeable_cost'
+        ),
+      actualRows:
+        sql<number>`count(*) filter (where ${schema.xTwitterUsageLedger.actualCostUsd} is not null)`.as(
+          'actual_rows'
+        ),
+      totalRows: sql<number>`count(*)`.as('total_rows'),
     })
     .from(schema.xTwitterUsageLedger)
     .where(gte(schema.xTwitterUsageLedger.occurredAt, startOfDay))
@@ -90,6 +113,18 @@ export const readXUsageSnapshot = async (
         sql<number>`coalesce(sum(${schema.xTwitterUsageLedger.estimatedCostUsd}), 0)`.as(
           'estimated_cost'
         ),
+      actualCost: sql<number>`coalesce(sum(${schema.xTwitterUsageLedger.actualCostUsd}), 0)`.as(
+        'actual_cost'
+      ),
+      chargeableCost:
+        sql<number>`coalesce(sum(coalesce(${schema.xTwitterUsageLedger.actualCostUsd}, ${schema.xTwitterUsageLedger.estimatedCostUsd})), 0)`.as(
+          'chargeable_cost'
+        ),
+      actualRows:
+        sql<number>`count(*) filter (where ${schema.xTwitterUsageLedger.actualCostUsd} is not null)`.as(
+          'actual_rows'
+        ),
+      totalRows: sql<number>`count(*)`.as('total_rows'),
     })
     .from(schema.xTwitterUsageLedger)
     .where(gte(schema.xTwitterUsageLedger.occurredAt, startOfMonth))
@@ -114,9 +149,21 @@ export const readXUsageSnapshot = async (
     postReadsToday: Number(dayAgg?.postReads ?? 0),
     userReadsToday: Number(dayAgg?.userReads ?? 0),
     estimatedCostToday: Number(dayAgg?.estimatedCost ?? 0),
+    actualCostToday: Number(dayAgg?.actualCost ?? 0),
+    chargeableCostToday: Number(dayAgg?.chargeableCost ?? 0),
+    costBasisToday: resolveCostBasis(
+      Number(dayAgg?.actualRows ?? 0),
+      Number(dayAgg?.totalRows ?? 0)
+    ),
     postReadsThisMonth: Number(monthAgg?.postReads ?? 0),
     userReadsThisMonth: Number(monthAgg?.userReads ?? 0),
     estimatedCostThisMonth: Number(monthAgg?.estimatedCost ?? 0),
+    actualCostThisMonth: Number(monthAgg?.actualCost ?? 0),
+    chargeableCostThisMonth: Number(monthAgg?.chargeableCost ?? 0),
+    costBasisThisMonth: resolveCostBasis(
+      Number(monthAgg?.actualRows ?? 0),
+      Number(monthAgg?.totalRows ?? 0)
+    ),
     lastStatusCode: lastError?.statusCode ?? null,
     lastErrorCode: lastError?.errorCode ?? null,
     lastErrorAt:

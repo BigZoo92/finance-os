@@ -253,6 +253,13 @@
       "when": 1779648000000,
       "tag": "0035_user_asset_interest",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1780501360788,
+      "tag": "0036_plain_krista_starr",
+      "breakpoints": true
     }
   ]
 }

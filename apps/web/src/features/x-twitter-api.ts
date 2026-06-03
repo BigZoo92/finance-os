@@ -14,9 +14,15 @@ export type XHealthResponse = {
   postReadsToday?: number
   userReadsToday?: number
   estimatedCostToday?: number
+  actualCostToday?: number
+  chargeableCostToday?: number
+  costBasisToday?: 'actual' | 'estimated' | 'mixed'
   postReadsThisMonth?: number
   userReadsThisMonth?: number
   estimatedCostThisMonth?: number
+  actualCostThisMonth?: number
+  chargeableCostThisMonth?: number
+  costBasisThisMonth?: 'actual' | 'estimated' | 'mixed'
   estimatedMonthlyCostAtCurrentRate?: number
   remainingDailyBudget?: number
   remainingMonthlyBudget?: number

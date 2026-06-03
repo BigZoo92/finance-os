@@ -1,6 +1,6 @@
 # AI Costs
 
-Last updated: 2026-04-26
+Last updated: 2026-06-03
 
 ## What Is Implemented
 
@@ -11,6 +11,9 @@ Finance-OS now tracks AI spend as a first-class operational concern:
 - per run: `ai_run` + `ai_run_step`
 - per manual mission: `ai_manual_operation` + `ai_manual_operation_step`
 - per UI view: `/dashboard/advisor/spend`
+- combined provider overview: `/dashboard/costs/overview`
+- fixed provider subscriptions: `recurring_provider_cost`
+- X variable usage: `x_twitter_usage_ledger`
 
 The pricing source of truth is:
 
@@ -59,6 +62,59 @@ The spend analytics endpoint aggregates:
 - by model
 - by feature
 - anomalies and budget-state warnings
+
+The combined cost overview separates:
+
+- Advisor variable model spend in USD from `/dashboard/advisor/spend`
+- X variable usage in USD from `x_twitter_usage_ledger`
+- fixed subscriptions by currency from `recurring_provider_cost`
+
+Demo mode returns deterministic fixtures only. It includes two X subscription
+lines at `8 EUR / month` each to represent the current fixed subscription
+case without reading the DB.
+
+Admin mode reads the DB, requires admin auth, and fails soft if Advisor spend
+analytics are unavailable.
+
+## X Cost Precedence
+
+`x_twitter_usage_ledger` stores both `estimated_cost_usd` and
+`actual_cost_usd`.
+
+Read models use:
+
+1. `actual_cost_usd` when present
+2. `estimated_cost_usd` otherwise
+
+The health and cost overview DTOs expose `costBasisToday` /
+`costBasisThisMonth` as `actual`, `estimated`, or `mixed` so reviewers can see
+whether the total is reconciled or still estimated.
+
+## Fixed Provider Costs
+
+`recurring_provider_cost` is the source of truth for fixed subscriptions such
+as X seats, paid APIs, or other provider plans.
+
+Cadence values:
+
+- `daily`
+- `weekly`
+- `monthly`
+- `yearly`
+- `one_time`
+
+Only active rows whose date window includes today are counted. Totals are
+grouped by currency; no live FX conversion is implied.
+
+Post-migration seed example for two X seats:
+
+```sql
+insert into recurring_provider_cost
+  (provider, label, amount, currency, cadence, category, source, owner)
+values
+  ('x_twitter', 'X API Basic seat 1', '8', 'EUR', 'monthly', 'provider_subscription', 'manual_admin', 'admin'),
+  ('x_twitter', 'X API Basic seat 2', '8', 'EUR', 'monthly', 'provider_subscription', 'manual_admin', 'admin');
+```
 
 ## Budget Controls
 

@@ -152,7 +152,9 @@ class QdrantAdapter:
             if self.collection in collections:
                 self._initialized = True
                 return
-            self._client.recreate_collection(
+            create_collection = getattr(self._client, "create_collection", None)
+            create = create_collection or self._client.recreate_collection
+            create(
                 collection_name=self.collection,
                 vectors_config=self._models.VectorParams(
                     size=self.settings.embedding_dimensions,

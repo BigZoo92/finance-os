@@ -121,7 +121,8 @@ Historique complet des sync runs : timestamps, resultats, erreurs par fingerprin
 
 ## 3. Transactions
 
-**Routes** : `GET /dashboard/transactions?range=...&limit=...&cursor=...`, `/transactions`
+**Routes** : `GET /dashboard/transactions?range=...&limit=...&cursor=...`, `/depenses`
+**Legacy redirect** : `/transactions` -> `/depenses`
 
 ### 3.1 Liste de transactions
 - Pagination cursor-based (performant sur gros volumes)
@@ -136,12 +137,22 @@ Systeme de resolution multi-source ordonne par priorite :
 | Priorite | Source | Description |
 |---|---|---|
 | 1 | Override manuel | L'utilisateur choisit la categorie |
-| 2 | Regles marchand | Regles custom par nom de marchand |
-| 3 | Code MCC Powens | Categorisation automatique Powens |
-| 4 | Contrepartie | Inference par contrepartie |
-| 5 | Fallback | "Unknown - [marchand]" |
+| 2 | Regles utilisateur | Regles reutilisables stockees dans `user_categorization_rule` |
+| 3 | Regles marchand | Regles integrees par nom de marchand |
+| 4 | Code MCC Powens | Categorisation automatique Powens |
+| 5 | Contrepartie | Inference par contrepartie |
+| 6 | Fallback | "Unknown - [marchand]" |
 
 Chaque transaction expose sa chaine de resolution ("Why this category?" expandable).
+
+Routes admin pour les regles reutilisables :
+
+- `GET /dashboard/transactions/categorization-rules`
+- `POST /dashboard/transactions/categorization-rules`
+- `POST /dashboard/transactions/categorization-rules/dry-run`
+
+Demo retourne des fixtures deterministes et ne lit pas la DB. Admin lit/ecrit
+uniquement les regles; le dry-run est read-only pour les transactions.
 
 ### 3.3 Enrichissement
 - **Notes** : annotations utilisateur par transaction

@@ -72,7 +72,15 @@ def select_backend(settings: KnowledgeSettings) -> KnowledgeBackend:
     """
     if not settings.production_backends_configured:
         if settings.require_production_backends_in_admin:
-            logger.error("knowledge service requires production backends but none configured")
+            logger.error(
+                "knowledge service requires production backends but configuration is incomplete: %s",
+                ",".join(settings.production_backend_missing_reasons),
+            )
+            if not settings.allow_local_fallback_in_admin:
+                raise RuntimeError(
+                    "Knowledge service required production backends but configuration is incomplete: "
+                    + ",".join(settings.production_backend_missing_reasons)
+                )
         return KnowledgeGraphStore(settings=settings)
 
     production = ProductionKnowledgeStore(settings=settings)

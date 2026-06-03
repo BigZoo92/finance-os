@@ -1,11 +1,13 @@
 export type TransactionResolutionSource =
   | 'manual_override'
+  | 'user_rule'
   | 'merchant_rules'
   | 'mcc'
   | 'counterparty'
   | 'fallback'
 
 interface TransactionAutoCategorizationInput {
+  bookingDate?: string
   label: string
   amount: number
   powensAccountId: string
@@ -17,6 +19,7 @@ interface TransactionAutoCategorizationInput {
   category: string | null
   subcategory: string | null
   incomeType: 'salary' | 'recurring' | 'exceptional' | null
+  userRules?: UserCategorizationRule[]
 }
 
 interface CategorizationRule {
@@ -35,6 +38,29 @@ interface CategorizationRule {
     subcategory?: string
     incomeType?: 'salary' | 'recurring' | 'exceptional'
   }
+}
+
+export interface UserCategorizationRule {
+  id: string
+  name?: string
+  enabled: boolean
+  priority: number
+  matcherType:
+    | 'label_contains'
+    | 'merchant_contains'
+    | 'label_regex'
+    | 'merchant_regex'
+    | 'account_id'
+    | 'account_name_contains'
+  matcherValue: string
+  amountSign?: 'income' | 'expense' | null
+  minAmount?: number | null
+  maxAmount?: number | null
+  category: string
+  subcategory?: string | null
+  incomeType?: 'salary' | 'recurring' | 'exceptional' | null
+  validFrom?: string | null
+  validTo?: string | null
 }
 
 export interface ResolutionTraceStep {
@@ -59,6 +85,7 @@ export interface TransactionAutoCategorizationResult {
 
 const PRECEDENCE: TransactionResolutionSource[] = [
   'manual_override',
+  'user_rule',
   'merchant_rules',
   'mcc',
   'counterparty',
@@ -500,6 +527,97 @@ const matchesRule = (
   return true
 }
 
+const compileSafeRegex = (pattern: string) => {
+  if (pattern.length > 120) {
+    return null
+  }
+  try {
+    return new RegExp(pattern, 'i')
+  } catch {
+    return null
+  }
+}
+
+const isUserRuleInDateWindow = (rule: UserCategorizationRule, bookingDate: string | undefined) => {
+  if (!bookingDate) {
+    return true
+  }
+  if (rule.validFrom && bookingDate < rule.validFrom) {
+    return false
+  }
+  if (rule.validTo && bookingDate > rule.validTo) {
+    return false
+  }
+  return true
+}
+
+const matchesUserRule = (
+  rule: UserCategorizationRule,
+  input: {
+    bookingDate?: string
+    normalizedLabel: string
+    normalizedAccount: string
+    normalizedMerchant: string
+    powensAccountId: string
+    amount: number
+  }
+) => {
+  if (!rule.enabled || !isUserRuleInDateWindow(rule, input.bookingDate)) {
+    return false
+  }
+
+  const direction = amountDirection(input.amount)
+  if (rule.amountSign && direction !== rule.amountSign) {
+    return false
+  }
+
+  const absoluteAmount = Math.abs(input.amount)
+  if (typeof rule.minAmount === 'number' && absoluteAmount < rule.minAmount) {
+    return false
+  }
+
+  if (typeof rule.maxAmount === 'number' && absoluteAmount > rule.maxAmount) {
+    return false
+  }
+
+  const matcherValue = rule.matcherValue.trim()
+  if (!matcherValue) {
+    return false
+  }
+
+  switch (rule.matcherType) {
+    case 'label_contains':
+      return input.normalizedLabel.includes(normalizeText(matcherValue))
+    case 'merchant_contains':
+      return input.normalizedMerchant.includes(normalizeText(matcherValue))
+    case 'account_id':
+      return input.powensAccountId === matcherValue
+    case 'account_name_contains':
+      return input.normalizedAccount.includes(normalizeText(matcherValue))
+    case 'label_regex': {
+      const regex = compileSafeRegex(matcherValue)
+      return regex ? regex.test(input.normalizedLabel) : false
+    }
+    case 'merchant_regex': {
+      const regex = compileSafeRegex(matcherValue)
+      return regex ? regex.test(input.normalizedMerchant) : false
+    }
+    default:
+      return false
+  }
+}
+
+const selectBestUserRule = (matches: UserCategorizationRule[]) => {
+  return (
+    [...matches].sort((left, right) => {
+      if (left.priority !== right.priority) {
+        return right.priority - left.priority
+      }
+      return left.id.localeCompare(right.id)
+    })[0] ?? null
+  )
+}
+
 const selectBestRule = (matches: CategorizationRule[]) => {
   return (
     [...matches].sort((left, right) => {
@@ -556,6 +674,51 @@ export const applyTransactionAutoCategorization = (
   const normalizedLabel = normalizeText(input.label)
   const normalizedMerchant = normalizeText(input.merchant)
   const normalizedAccount = normalizeText(input.accountName ?? input.powensAccountId)
+
+  const userRule = selectBestUserRule(
+    (input.userRules ?? []).filter(rule =>
+      matchesUserRule(rule, {
+        ...(input.bookingDate ? { bookingDate: input.bookingDate } : {}),
+        normalizedLabel,
+        normalizedAccount,
+        normalizedMerchant,
+        powensAccountId: input.powensAccountId,
+        amount: input.amount,
+      })
+    )
+  )
+
+  if (userRule) {
+    withTraceStep(
+      trace,
+      'user_rule',
+      true,
+      'matched_user_rule',
+      userRule.category,
+      userRule.subcategory ?? input.subcategory,
+      userRule.id
+    )
+
+    return {
+      category: userRule.category,
+      subcategory: userRule.subcategory ?? input.subcategory,
+      incomeType: userRule.incomeType ?? input.incomeType,
+      resolvedCategory: userRule.category,
+      resolutionTrace: trace,
+      resolutionSource: 'user_rule',
+      resolutionRuleId: userRule.id,
+    }
+  }
+
+  withTraceStep(
+    trace,
+    'user_rule',
+    false,
+    (input.userRules ?? []).length > 0 ? 'no_user_rule_match' : 'no_user_rules',
+    null,
+    null,
+    null
+  )
 
   const merchantRule = selectBestRule(
     MERCHANT_RULES.filter(rule =>
