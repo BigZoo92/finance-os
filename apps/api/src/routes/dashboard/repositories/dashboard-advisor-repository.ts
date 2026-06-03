@@ -1,4 +1,5 @@
 import { computeAiBudgetState } from '@finance-os/ai'
+import { isAiRunTerminalStatus } from '@finance-os/ai/run-status'
 import { schema } from '@finance-os/db'
 import { and, asc, desc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm'
 import type {
@@ -1344,10 +1345,26 @@ export const createDashboardAdvisorRepository = ({
     },
 
     async getLatestActiveManualOperation() {
-      return getManualOperationByPredicate({
-        db,
-        whereClause: inArray(schema.aiManualOperation.status, ['queued', 'running']),
-      })
+      const rows = await db
+        .select({
+          id: schema.aiManualOperation.id,
+        })
+        .from(schema.aiManualOperation)
+        .where(inArray(schema.aiManualOperation.status, ['queued', 'running']))
+        .orderBy(desc(schema.aiManualOperation.startedAt), desc(schema.aiManualOperation.id))
+        .limit(10)
+
+      for (const row of rows) {
+        const operation = await getManualOperationByPredicate({
+          db,
+          whereClause: eq(schema.aiManualOperation.id, row.id),
+        })
+        if (!operation?.advisorRun || !isAiRunTerminalStatus(operation.advisorRun.status)) {
+          return operation
+        }
+      }
+
+      return null
     },
 
     async recoverStaleManualOperations({ staleAfterMs }) {

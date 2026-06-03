@@ -6,6 +6,11 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
+  isAdvisorManualOperationActive,
+  resolveAdvisorManualOperationUiStatus,
+} from '@/features/advisor-run-state'
+import { dashboardQueryKeys } from '@/features/dashboard-query-options'
+import {
   opsRefreshStatusQueryOptionsWithMode,
   opsRefreshQueryKeys,
 } from '@/features/ops-refresh/query-options'
@@ -16,6 +21,7 @@ import {
   runRefreshJob,
 } from '@/features/ops-refresh/api'
 import type { RefreshJobDefinition, RefreshJobStatus } from '@/features/ops-refresh/types'
+import { getRecoveryFeedbackMessage, isRefreshStatusActive } from '@/features/ops-refresh/view-state'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { StatusDot } from '@/components/surfaces/status-dot'
 import { formatDateTime } from '@/lib/format'
@@ -132,7 +138,7 @@ const matchesFilter = (
     case 'failed':
       return stepStatus === 'failed' || stepStatus === 'timed_out' || stepStatus === 'cancelled'
     case 'running':
-      return stepStatus === 'running' || stepStatus === 'queued'
+      return isRefreshStatusActive(stepStatus)
     case 'missing_config':
       return !job.enabled || stepStatus === 'skipped_missing_config'
     case 'success':
@@ -171,6 +177,18 @@ function OrchestrationPage() {
       queryKey: opsRefreshQueryKeys.all,
     })
 
+  const refreshAfterRecovery = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: opsRefreshQueryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+    ])
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: opsRefreshQueryKeys.status() }),
+      queryClient.refetchQueries({ queryKey: dashboardQueryKeys.advisorManualOperationLatest() }),
+      queryClient.refetchQueries({ queryKey: dashboardQueryKeys.advisorRuns(12) }),
+    ])
+  }
+
   const fullMutation = useMutation({
     mutationFn: runFullRefresh,
     onSuccess: invalidate,
@@ -183,12 +201,9 @@ function OrchestrationPage() {
 
   const recoverMutation = useMutation({
     mutationFn: () => recoverStaleRuns(),
-    onSuccess: result => {
-      const warning = result.warning ? ` ${result.warning}` : ''
-      setRecoveryFeedback(
-        `${result.recoveredCount} run(s) marqué(s) en stale_timed_out, ${result.skippedCount} ignoré(s).${warning}`
-      )
-      invalidate()
+    onSuccess: async result => {
+      setRecoveryFeedback(getRecoveryFeedbackMessage(result))
+      await refreshAfterRecovery()
     },
     onError: () => {
       setRecoveryFeedback('Échec de la recovery (voir logs admin).')
@@ -200,7 +215,8 @@ function OrchestrationPage() {
     onSuccess: invalidate,
   })
 
-  const isLatestActive = latest?.status === 'running' || latest?.status === 'queued'
+  const latestUiStatus = resolveAdvisorManualOperationUiStatus(latest)
+  const isLatestActive = isAdvisorManualOperationActive(latest)
   const filteredJobs = jobs.filter(job => {
     const step = findLatestStepForJob(latest, job)
     return matchesFilter(filter, job, step?.status)
@@ -268,7 +284,7 @@ function OrchestrationPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Dernier run</p>
-            <p className="mt-2 font-financial text-lg font-semibold">{latest?.status ?? 'aucun'}</p>
+            <p className="mt-2 font-financial text-lg font-semibold">{latestUiStatus ?? 'aucun'}</p>
           </CardContent>
         </Card>
         <Card>

@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import type { AuthMode } from '@/features/auth-types'
 import { fetchRefreshJobs, fetchRefreshStatus } from './api'
 import type { RefreshJobsResponse, RefreshStatusResponse } from './types'
+import { isRefreshStatusActive } from './view-state'
 
 export const opsRefreshQueryKeys = {
   all: ['ops-refresh'] as const,
@@ -67,6 +68,6 @@ export const opsRefreshStatusQueryOptionsWithMode = ({ mode }: { mode?: AuthMode
         return false
       }
       const latest = query.state.data?.latestRun
-      return latest?.status === 'queued' || latest?.status === 'running' ? 3000 : false
+      return latest && isRefreshStatusActive(latest.status) ? 3000 : false
     },
   })

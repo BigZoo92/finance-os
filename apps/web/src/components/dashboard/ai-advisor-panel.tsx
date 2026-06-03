@@ -13,6 +13,10 @@ import {
 import { isAiRunActiveStatus } from '@finance-os/ai/run-status'
 import { MiniSparkline } from '@/components/ui/d3-sparkline'
 import type { AuthMode } from '@/features/auth-types'
+import {
+  resolveAdvisorManualOperationUiStatus,
+  type AdvisorManualOperationUiStatus,
+} from '@/features/advisor-run-state'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorKnowledgeAnswerResponse,
@@ -72,14 +76,12 @@ const runStatusVariant = (
   return 'secondary' as const
 }
 
-const operationStatusVariant = (
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded'
-) => {
+const operationStatusVariant = (status: AdvisorManualOperationUiStatus) => {
   if (status === 'failed') {
     return 'destructive' as const
   }
 
-  if (status === 'degraded' || isAiRunActiveStatus(status)) {
+  if (status === 'degraded' || status === 'skipped' || isAiRunActiveStatus(status)) {
     return 'outline' as const
   }
 
@@ -234,6 +236,7 @@ export const AiAdvisorPanel = ({
 
   const snapshotMetrics = overview?.snapshot?.metrics
   const spendSeries = spend?.daily.map(point => point.usd) ?? []
+  const manualOperationUiStatus = resolveAdvisorManualOperationUiStatus(manualOperation)
   const socialIncludedSignals = (signals?.socialSignals.included ?? []).filter(signal => {
     if (!includeSocialSignals) {
       return false
@@ -316,8 +319,8 @@ export const AiAdvisorPanel = ({
           <CardHeader>
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle>Mission manuelle</CardTitle>
-              <Badge variant={operationStatusVariant(manualOperation.status)}>
-                {manualOperation.status}
+              <Badge variant={operationStatusVariant(manualOperationUiStatus ?? manualOperation.status)}>
+                {manualOperationUiStatus ?? manualOperation.status}
               </Badge>
               {manualOperation.degraded ? <Badge variant="outline">degraded</Badge> : null}
               {manualOperation.currentStage ? (

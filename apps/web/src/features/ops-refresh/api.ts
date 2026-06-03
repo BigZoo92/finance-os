@@ -28,10 +28,31 @@ export type RecoverStaleRunsResponse = {
   requestId: string
   recoveredCount: number
   skippedCount: number
-  recovered: DashboardAdvisorManualOperationResponse[]
-  skipped: DashboardAdvisorManualOperationResponse[]
+  manualRecoveredCount?: number
+  manualSkippedCount?: number
+  backgroundRecoveredCount?: number
+  backgroundSkippedCount?: number
+  recovered: RecoverStaleRunItem[]
+  skipped: RecoverStaleRunItem[]
   warning?: string
 }
+
+export type BackgroundRunRecoveryResponse = {
+  table: 'free_firehose_run' | 'signal_ingestion_run'
+  id: string
+  requestId: string | null
+  previousStatus: 'running'
+  status: 'failed_timeout'
+  startedAt: string
+  finishedAt: string
+  durationMs: number
+  errorCode: 'STALE_TIMED_OUT'
+  errorMessage: string
+}
+
+export type RecoverStaleRunItem =
+  | DashboardAdvisorManualOperationResponse
+  | BackgroundRunRecoveryResponse
 
 /**
  * Default to a 30-minute stale threshold — matches the recovery sweeper
