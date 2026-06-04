@@ -2,6 +2,19 @@
 
 Date: 2026-06-03
 
+> **Follow-up (PRE-MAQUETTES-FOLLOWUP-VALIDATION-0):** the data-foundation gaps
+> below (stale-run/recovery status, fixed-cost accounting, memory enrichment
+> status, reusable categorization rules) have been addressed. See
+> [`PRE_MAQUETTES_FOLLOWUP_VALIDATION_0.md`](PRE_MAQUETTES_FOLLOWUP_VALIDATION_0.md)
+> for what changed, why the Ops card showed "en cours" then "échec", the new UI
+> behaviour, and prod validation commands. Companion docs:
+> [`ops/refresh-orchestrator.md`](../ops/refresh-orchestrator.md) (recovery
+> taxonomy), [`ops/memory-lifecycle.md`](../ops/memory-lifecycle.md),
+> [`ops/costs-model.md`](../ops/costs-model.md),
+> [`ops/categorization-rules.md`](../ops/categorization-rules.md). Route/nav
+> policy (§3/§10) and a11y/perf tooling (§8) remain open before
+> `UI-A11Y-PERF-BASELINE-0`.
+
 Scope: diagnostic pre-maquettes / pre-UI-refactor only. No UI refactor, route deletion,
 destructive migration, production change, provider call, DB mutation, or secret-bearing
 operation was performed.

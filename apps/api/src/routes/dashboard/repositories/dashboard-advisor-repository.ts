@@ -1,7 +1,14 @@
 import { computeAiBudgetState } from '@finance-os/ai'
+import {
+  isManualOperationTerminalStatus,
+  reconcileManualOperationStepForDisplay,
+  resolveOrphanStepClosure,
+  type ManualOperationTerminalStatus,
+} from '@finance-os/ai/manual-operation-recovery'
 import { isAiRunTerminalStatus } from '@finance-os/ai/run-status'
 import { schema } from '@finance-os/db'
 import { and, asc, desc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm'
+import { recoverOrphanedManualOperationSteps } from '../../ops/recover-orphaned-manual-operation-steps'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorChatPostResponse,
@@ -396,7 +403,13 @@ const getManualOperationByPredicate = async ({
           row: advisorRunRow,
         })
       : null,
-    steps: mapManualOperationStepRows(stepRows),
+    // Defensive display reconciliation: a terminal operation must never expose
+    // a still-active child step (it would render as a phantom "en cours"). The
+    // write-side cascade keeps the DB clean going forward; this guards any
+    // legacy/in-flight row at read time without mutating storage.
+    steps: mapManualOperationStepRows(stepRows).map(step =>
+      reconcileManualOperationStepForDisplay(step, row.status)
+    ),
     outputDigest: row.outputDigest,
   } satisfies DashboardAdvisorManualOperationResponse
 }
@@ -1264,6 +1277,7 @@ export const createDashboardAdvisorRepository = ({
     },
 
     async updateManualOperation(input) {
+      const closedAt = input.finishedAt ?? new Date()
       await db
         .update(schema.aiManualOperation)
         .set({
@@ -1281,6 +1295,31 @@ export const createDashboardAdvisorRepository = ({
           updatedAt: new Date(),
         })
         .where(eq(schema.aiManualOperation.id, input.operationId))
+
+      // Invariant: an operation that reaches a terminal status must not leave
+      // any active child step behind. On the happy path every step is already
+      // terminal by the time we finalize, so this matches zero rows. On the
+      // failure path (e.g. a step threw before being marked terminal — the prod
+      // `advisor_run` stuck-`running` incident), this closes the orphan so the
+      // Ops UI never shows a phantom "en cours" under a failed operation.
+      if (input.status !== undefined && isManualOperationTerminalStatus(input.status)) {
+        const closure = resolveOrphanStepClosure(input.status as ManualOperationTerminalStatus)
+        await db
+          .update(schema.aiManualOperationStep)
+          .set({
+            status: closure.status,
+            errorCode: closure.errorCode,
+            errorMessage: closure.errorMessage,
+            finishedAt: closedAt,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(schema.aiManualOperationStep.operationId, input.operationId),
+              inArray(schema.aiManualOperationStep.status, ['queued', 'running'])
+            )
+          )
+      }
     },
 
     async upsertManualOperationStep(input) {
@@ -1368,6 +1407,12 @@ export const createDashboardAdvisorRepository = ({
     },
 
     async recoverStaleManualOperations({ staleAfterMs }) {
+      // Heal already-terminal operations that still carry an active child step
+      // (parent failed/degraded/completed + child stuck running). This is
+      // independent of the stale-age cutoff below: the parent is already
+      // terminal, so the orphan must close immediately, not after 30 minutes.
+      await recoverOrphanedManualOperationSteps({ db })
+
       const cutoff = new Date(Date.now() - staleAfterMs)
       // Two-phase: 1) read ids of candidates BEFORE the update so we can
       // hydrate the post-recovery shape with full step/run details. The

@@ -111,3 +111,31 @@ instead of "internal error".
   legacy registry behavior + redaction.
 - [`refresh.test.ts`](../../apps/api/src/routes/ops/refresh.test.ts):
   HTTP-level demo isolation + admin paths.
+- [`recover-orphaned-manual-operation-steps.test.ts`](../../apps/api/src/routes/ops/recover-orphaned-manual-operation-steps.test.ts):
+  orphaned-step recovery (parent terminal + child active).
+
+## Stale-step recovery taxonomy
+
+A manual operation must never leave a child `ai_manual_operation_step` active
+once it reaches a terminal status. Two paths enforce this:
+
+- **Write-side cascade** — `updateManualOperation` closes active steps when the
+  operation transitions to `completed`/`failed`/`degraded` (covers the failure
+  path where a step throws before being marked terminal).
+- **Recovery sweep** — `recoverOrphanedManualOperationSteps` (called inside
+  `recoverStaleManualOperations`) closes any step still active under an
+  already-terminal parent, independent of the stale-age cutoff.
+
+Closure codes (machine codes mapped to readable admin copy in the UI):
+
+| Code | Cause | Step status |
+| ---- | ----- | ----------- |
+| `STALE_TIMED_OUT` | parent exceeded the stale threshold (sweeper) | `failed` |
+| `STALE_PARENT_OPERATION_FAILED` | active step under a `failed`/`degraded` parent | `failed` |
+| `PARENT_OPERATION_COMPLETED` | active step under a `completed` parent | `skipped` |
+| `CANCELLED` | cancelled via UI/admin | `failed` |
+
+Source of truth: `packages/ai/src/manual-operation-recovery.ts`. The Ops UI
+renders these as muted "incident ancien récupéré" (not a red `échec`) and does
+not naively offer "Relancer" on a recovered step. See
+[`PRE_MAQUETTES_FOLLOWUP_VALIDATION_0`](../debug/PRE_MAQUETTES_FOLLOWUP_VALIDATION_0.md).

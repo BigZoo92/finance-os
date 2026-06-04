@@ -6,14 +6,12 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
+  describeManualOperationError,
   isAdvisorManualOperationActive,
   resolveAdvisorManualOperationUiStatus,
 } from '@/features/advisor-run-state'
-import { dashboardQueryKeys } from '@/features/dashboard-query-options'
-import {
-  opsRefreshStatusQueryOptionsWithMode,
-  opsRefreshQueryKeys,
-} from '@/features/ops-refresh/query-options'
+import { opsRefreshStatusQueryOptionsWithMode } from '@/features/ops-refresh/query-options'
+import { invalidateAndRefetchAfterOpsMutation } from '@/features/ops-refresh/invalidate'
 import {
   cancelRefreshRun,
   recoverStaleRuns,
@@ -172,38 +170,27 @@ function OrchestrationPage() {
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [recoveryFeedback, setRecoveryFeedback] = useState<string | null>(null)
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: opsRefreshQueryKeys.all,
-    })
-
-  const refreshAfterRecovery = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: opsRefreshQueryKeys.all }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
-    ])
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: opsRefreshQueryKeys.status() }),
-      queryClient.refetchQueries({ queryKey: dashboardQueryKeys.advisorManualOperationLatest() }),
-      queryClient.refetchQueries({ queryKey: dashboardQueryKeys.advisorRuns(12) }),
-    ])
-  }
+  // After any ops mutation (full refresh, single job, recovery, cancel) the
+  // operation status, advisor runs, manual-operation history and the broader
+  // ops dashboard can all change. Invalidate + refetch them together so a
+  // recovered/closed step never lingers as "en cours" in any surface.
+  const refreshAfterMutation = () => invalidateAndRefetchAfterOpsMutation(queryClient)
 
   const fullMutation = useMutation({
     mutationFn: runFullRefresh,
-    onSuccess: invalidate,
+    onSuccess: refreshAfterMutation,
   })
 
   const jobMutation = useMutation({
     mutationFn: (jobId: string) => runRefreshJob(jobId),
-    onSuccess: invalidate,
+    onSuccess: refreshAfterMutation,
   })
 
   const recoverMutation = useMutation({
     mutationFn: () => recoverStaleRuns(),
     onSuccess: async result => {
       setRecoveryFeedback(getRecoveryFeedbackMessage(result))
-      await refreshAfterRecovery()
+      await refreshAfterMutation()
     },
     onError: () => {
       setRecoveryFeedback('Échec de la recovery (voir logs admin).')
@@ -212,11 +199,20 @@ function OrchestrationPage() {
 
   const cancelMutation = useMutation({
     mutationFn: (runId: string) => cancelRefreshRun(runId),
-    onSuccess: invalidate,
+    onSuccess: refreshAfterMutation,
   })
 
   const latestUiStatus = resolveAdvisorManualOperationUiStatus(latest)
   const isLatestActive = isAdvisorManualOperationActive(latest)
+  // A6: a terminal operation recovered by the sweeper (stale parent/timeout) is
+  // an old, closed incident — it must not stay surfaced as the principal red
+  // failure. Relegate it to a muted "recupere" with an age note.
+  const latestErrorInfo = describeManualOperationError(latest?.errorCode, latest?.errorMessage)
+  const latestRecoveredStale = !!latest && !isLatestActive && !!latestErrorInfo?.recovered
+  const latestRecoveredAgeDays =
+    latestRecoveredStale && latest?.finishedAt
+      ? Math.floor((Date.now() - new Date(latest.finishedAt).getTime()) / 86_400_000)
+      : null
   const filteredJobs = jobs.filter(job => {
     const step = findLatestStepForJob(latest, job)
     return matchesFilter(filter, job, step?.status)
@@ -284,7 +280,18 @@ function OrchestrationPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Dernier run</p>
-            <p className="mt-2 font-financial text-lg font-semibold">{latestUiStatus ?? 'aucun'}</p>
+            <p className="mt-2 font-financial text-lg font-semibold">
+              {latestRecoveredStale ? 'récupéré' : (latestUiStatus ?? 'aucun')}
+            </p>
+            {latestRecoveredStale && (
+              <p className="mt-1 text-[11px] text-muted-foreground/80">
+                Incident ancien clôturé automatiquement
+                {latestRecoveredAgeDays !== null && latestRecoveredAgeDays >= 1
+                  ? ` il y a ${latestRecoveredAgeDays} j`
+                  : ''}
+                .
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -341,7 +348,13 @@ function OrchestrationPage() {
           {filteredJobs.map(job => {
             const step = findLatestStepForJob(latest, job)
             const stepStatus = step?.status ?? (job.enabled ? 'idle' : 'skipped_disabled')
-            const descriptor = describeStatus(stepStatus)
+            const errorInfo = describeManualOperationError(step?.errorCode, step?.errorMessage)
+            // A recovered/auto-closed step is an old incident, not a current red
+            // failure: present it muted (outline) with readable copy.
+            const descriptor =
+              errorInfo?.recovered
+                ? { tone: 'outline' as const, label: errorInfo.label }
+                : describeStatus(stepStatus)
             return (
               <div
                 key={job.id}
@@ -357,11 +370,6 @@ function OrchestrationPage() {
                     <Badge variant={badgeVariantFromTone(descriptor.tone)} className="text-[11px]">
                       {descriptor.label}
                     </Badge>
-                    {step?.errorCode && (
-                      <span className="font-mono text-[10px] text-muted-foreground/75">
-                        {step.errorCode}
-                      </span>
-                    )}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{job.description}</p>
                   {job.dependencies.length > 0 && (
@@ -369,20 +377,48 @@ function OrchestrationPage() {
                       deps: {job.dependencies.join(', ')}
                     </p>
                   )}
-                  {step?.errorMessage && (
-                    <p className="mt-1 truncate text-xs text-negative">{step.errorMessage}</p>
+                  {errorInfo && (
+                    <p
+                      className={`mt-1 text-xs ${
+                        errorInfo.recovered ? 'text-muted-foreground/80' : 'text-negative'
+                      }`}
+                    >
+                      {errorInfo.detail}
+                    </p>
                   )}
                 </div>
                 {job.manualTriggerAllowed ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!isAdmin || !job.enabled || jobMutation.isPending}
-                    onClick={() => jobMutation.mutate(job.id)}
-                  >
-                    {jobMutation.variables === job.id && jobMutation.isPending ? '…' : 'Relancer'}
-                  </Button>
+                  errorInfo && !errorInfo.actionable ? (
+                    // A7: an old recovered/stale step must not naively offer
+                    // "Relancer". Keep a low-emphasis, explicit escape hatch.
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/75">
+                        clôturé auto
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={!isAdmin || !job.enabled || jobMutation.isPending}
+                        onClick={() => jobMutation.mutate(job.id)}
+                        title="Incident ancien récupéré — relancer uniquement si nécessaire"
+                      >
+                        {jobMutation.variables === job.id && jobMutation.isPending
+                          ? '…'
+                          : 'Relancer si besoin'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!isAdmin || !job.enabled || jobMutation.isPending}
+                      onClick={() => jobMutation.mutate(job.id)}
+                    >
+                      {jobMutation.variables === job.id && jobMutation.isPending ? '…' : 'Relancer'}
+                    </Button>
+                  )
                 ) : (
                   <ManualTriggerHint domain={job.domain} />
                 )}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DashboardAdvisorManualOperationResponse } from './dashboard-types'
 import {
+  describeManualOperationError,
   isAdvisorManualOperationActive,
   resolveAdvisorManualOperationUiStatus,
 } from './advisor-run-state'
@@ -82,5 +83,42 @@ describe('advisor manual operation UI state', () => {
 
     expect(resolveAdvisorManualOperationUiStatus(operation)).toBe('failed')
     expect(isAdvisorManualOperationActive(operation)).toBe(false)
+  })
+})
+
+describe('describeManualOperationError', () => {
+  it('maps STALE_PARENT_OPERATION_FAILED to readable, non-actionable recovery copy (no raw code)', () => {
+    const descriptor = describeManualOperationError(
+      'STALE_PARENT_OPERATION_FAILED',
+      'Step was still running while parent operation was already failed; closed during stale recovery validation.'
+    )
+
+    expect(descriptor).not.toBeNull()
+    expect(descriptor?.category).toBe('recovered_stale')
+    expect(descriptor?.recovered).toBe(true)
+    expect(descriptor?.actionable).toBe(false)
+    // The raw machine code is never surfaced in the human copy.
+    expect(descriptor?.label).not.toContain('STALE_PARENT_OPERATION_FAILED')
+    expect(descriptor?.detail).not.toContain('STALE_PARENT_OPERATION_FAILED')
+  })
+
+  it('treats a timed-out recovery as recovered, not a current actionable error', () => {
+    const descriptor = describeManualOperationError('STALE_TIMED_OUT')
+    expect(descriptor?.category).toBe('recovered_timeout')
+    expect(descriptor?.recovered).toBe(true)
+    expect(descriptor?.actionable).toBe(false)
+  })
+
+  it('surfaces a genuine run error as an actionable failure with its message', () => {
+    const descriptor = describeManualOperationError('MANUAL_REFRESH_AND_RUN_FAILED', 'TypeError: x.toFixed')
+    expect(descriptor?.category).toBe('real_error')
+    expect(descriptor?.recovered).toBe(false)
+    expect(descriptor?.actionable).toBe(true)
+    expect(descriptor?.detail).toBe('TypeError: x.toFixed')
+  })
+
+  it('returns null when there is no error code', () => {
+    expect(describeManualOperationError(null)).toBeNull()
+    expect(describeManualOperationError(undefined)).toBeNull()
   })
 })

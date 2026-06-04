@@ -4,5 +4,6 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["src", "drizzle.config.cjs"]
+  "include": ["src", "drizzle.config.cjs"],
+  "exclude": ["src/**/*.test.ts"]
 }

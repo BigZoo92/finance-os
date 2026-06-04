@@ -14,6 +14,7 @@ import { isAiRunActiveStatus } from '@finance-os/ai/run-status'
 import { MiniSparkline } from '@/components/ui/d3-sparkline'
 import type { AuthMode } from '@/features/auth-types'
 import {
+  describeManualOperationError,
   resolveAdvisorManualOperationUiStatus,
   type AdvisorManualOperationUiStatus,
 } from '@/features/advisor-run-state'
@@ -350,27 +351,53 @@ export const AiAdvisorPanel = ({
                 </p>
               </div>
             </div>
-            {manualOperation.errorMessage ? (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {manualOperation.errorMessage}
-              </div>
-            ) : null}
-            <div className="grid gap-3 lg:grid-cols-2">
-              {manualOperation.steps.map(step => (
-                <div key={step.stepKey} className="rounded-lg border border-border/70 bg-background/50 p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{step.label}</p>
-                    <Badge variant={runStatusVariant(step.status)}>{step.status}</Badge>
-                  </div>
-                  <p className="pt-2 text-xs text-muted-foreground">
-                    {step.startedAt ? formatDateTime(step.startedAt) : 'en attente'}
-                    {step.finishedAt ? ` · ${formatDateTime(step.finishedAt)}` : ''}
-                  </p>
-                  {step.errorMessage ? (
-                    <p className="pt-2 text-sm text-destructive">{step.errorMessage}</p>
-                  ) : null}
+            {(() => {
+              const operationError = describeManualOperationError(
+                manualOperation.errorCode,
+                manualOperation.errorMessage
+              )
+              if (!operationError) {
+                return null
+              }
+              return (
+                <div
+                  className={`rounded-lg border p-3 text-sm ${
+                    operationError.recovered
+                      ? 'border-border/60 bg-muted/20 text-muted-foreground'
+                      : 'border-destructive/30 bg-destructive/10 text-destructive'
+                  }`}
+                >
+                  {operationError.detail}
                 </div>
-              ))}
+              )
+            })()}
+            <div className="grid gap-3 lg:grid-cols-2">
+              {manualOperation.steps.map(step => {
+                const stepError = describeManualOperationError(step.errorCode, step.errorMessage)
+                return (
+                  <div key={step.stepKey} className="rounded-lg border border-border/70 bg-background/50 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{step.label}</p>
+                      <Badge variant={stepError?.recovered ? 'outline' : runStatusVariant(step.status)}>
+                        {stepError?.recovered ? stepError.label : step.status}
+                      </Badge>
+                    </div>
+                    <p className="pt-2 text-xs text-muted-foreground">
+                      {step.startedAt ? formatDateTime(step.startedAt) : 'en attente'}
+                      {step.finishedAt ? ` · ${formatDateTime(step.finishedAt)}` : ''}
+                    </p>
+                    {stepError ? (
+                      <p
+                        className={`pt-2 text-sm ${
+                          stepError.recovered ? 'text-muted-foreground' : 'text-destructive'
+                        }`}
+                      >
+                        {stepError.detail}
+                      </p>
+                    ) : null}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>

@@ -59,7 +59,17 @@ export type XLedgerUsageSnapshot = {
   lastErrorAt: string | null
 }
 
-const resolveCostBasis = (actualRows: number, totalRows: number): 'actual' | 'estimated' | 'mixed' => {
+/**
+ * Cost basis for a window of ledger rows. `chargeableCost` is computed at the
+ * SQL level as `coalesce(actual_cost_usd, estimated_cost_usd)` per row, so the
+ * actual billed amount always takes precedence over the estimate when present.
+ * This label tells the UI whether the displayed total is real, estimated, or a
+ * mix — so an estimate is never silently presented as a real billed cost.
+ */
+export const resolveCostBasis = (
+  actualRows: number,
+  totalRows: number
+): 'actual' | 'estimated' | 'mixed' => {
   if (totalRows === 0 || actualRows === 0) return 'estimated'
   return actualRows === totalRows ? 'actual' : 'mixed'
 }

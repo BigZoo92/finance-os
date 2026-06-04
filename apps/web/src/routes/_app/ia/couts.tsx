@@ -5,6 +5,7 @@ import { isAiRunActiveStatus } from '@finance-os/ai/run-status'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
+import { describeCostBasis } from '@/features/costs'
 import {
   dashboardAdvisorRunsQueryOptionsWithMode,
   dashboardAdvisorSpendQueryOptionsWithMode,
@@ -137,17 +138,35 @@ function IaCoutsPage() {
       {costOverviewQuery.data ? (
         <Panel title="Fournisseurs" tone="plain" icon={<span aria-hidden="true">$</span>}>
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-border/50 bg-background/60 p-3">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                X variable mois
-              </p>
-              <p className="mt-1 font-financial text-lg font-semibold">
-                ${costOverviewQuery.data.variableUsage.xTwitter.monthlyUsd.toFixed(2)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {costOverviewQuery.data.variableUsage.xTwitter.costBasisThisMonth}
-              </p>
-            </div>
+            {(() => {
+              const x = costOverviewQuery.data.variableUsage.xTwitter
+              const basis = describeCostBasis(x.costBasisThisMonth)
+              return (
+                <div className="rounded-xl border border-border/50 bg-background/60 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    X variable mois
+                  </p>
+                  <p className="mt-1 font-financial text-lg font-semibold">
+                    ${x.monthlyUsd.toFixed(2)}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge variant={basis.isEstimate ? 'warning' : 'secondary'} className="text-[10px]">
+                      {basis.label}
+                    </Badge>
+                  </div>
+                  {x.estimatedMonthlyUsd !== undefined || x.actualMonthlyUsd !== undefined ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      estimé ${(x.estimatedMonthlyUsd ?? 0).toFixed(2)} · réel{' '}
+                      {x.actualMonthlyUsd != null ? `$${x.actualMonthlyUsd.toFixed(2)}` : '—'}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Montant {basis.isEstimate ? 'estimé' : 'facturé'} (pay-per-use).
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
             <div className="rounded-xl border border-border/50 bg-background/60 p-3">
               <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 Advisor mois

@@ -79,6 +79,36 @@ def _backend_health(store: Any) -> dict[str, Any] | None:
     return None
 
 
+def _local_storage_status(settings: Any) -> dict[str, Any]:
+    """Storage status when running on the local deterministic fallback store.
+
+    No external Qdrant/Neo4j is involved, so it is reported as fallback-active
+    and empty (the production graph holds nothing).
+    """
+    return {
+        "backend": "local",
+        "productionConfigured": settings.production_backends_configured,
+        "productionActive": False,
+        "fallbackActive": True,
+        "neo4j": {
+            "reachable": False,
+            "nodes": 0,
+            "relationships": 0,
+            "database": None,
+            "lastError": None,
+        },
+        "qdrant": {
+            "reachable": False,
+            "collectionExists": False,
+            "collection": None,
+            "points": 0,
+            "lastError": None,
+        },
+        "empty": True,
+        "degradedReasons": ["local_fallback_active"],
+    }
+
+
 def _storage_diagnostics(path: Any) -> dict[str, Any]:
     storage_path = os.fspath(path)
     try:
@@ -295,6 +325,41 @@ def create_app() -> FastAPI:
         if backend_health:
             payload["backendHealth"] = backend_health
         return ORJSONResponse(payload, headers={"x-request-id": request_id})
+
+    @app.get("/knowledge/storage/status")
+    async def storage_status(request: Request):
+        request_id = _request_id(request)
+        active = store()
+        status = (
+            active.storage_status()
+            if isinstance(active, ProductionKnowledgeStore)
+            else _local_storage_status(settings)
+        )
+        return ORJSONResponse(
+            {"ok": True, "requestId": request_id, "storage": status},
+            headers={"x-request-id": request_id},
+        )
+
+    @app.post("/knowledge/storage/ensure")
+    async def ensure_storage(request: Request):
+        request_id = _request_id(request)
+        active = store()
+        if isinstance(active, ProductionKnowledgeStore):
+            status = active.ensure_storage()
+        else:
+            status = _local_storage_status(settings)
+        _log(
+            "info",
+            "knowledge storage ensure",
+            requestId=request_id,
+            backend=status["backend"],
+            empty=status["empty"],
+            productionActive=status["productionActive"],
+        )
+        return ORJSONResponse(
+            {"ok": True, "requestId": request_id, "storage": status},
+            headers={"x-request-id": request_id},
+        )
 
     @app.get("/knowledge/schema")
     async def schema(request: Request):

@@ -10,7 +10,7 @@ import { readXUsageSnapshot } from '../services/providers/x-twitter-usage-ledger
 
 type RecurringCostCadence = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'one_time'
 
-type CostOverviewSubscription = {
+export type CostOverviewSubscription = {
   id: string
   provider: string
   label: string
@@ -59,7 +59,7 @@ const toNumber = (value: unknown) => {
   return 0
 }
 
-const toMonthlyAmount = (amount: number, cadence: RecurringCostCadence) => {
+export const toMonthlyAmount = (amount: number, cadence: RecurringCostCadence) => {
   switch (cadence) {
     case 'daily':
       return amount * 30.4375
@@ -74,7 +74,7 @@ const toMonthlyAmount = (amount: number, cadence: RecurringCostCadence) => {
   }
 }
 
-const summarizeByCurrency = (
+export const summarizeByCurrency = (
   subscriptions: CostOverviewSubscription[],
   field: 'monthlyAmount' | 'annualAmount'
 ) => {

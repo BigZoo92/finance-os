@@ -262,3 +262,67 @@ class ProductionKnowledgeStore:
             "degradedReasons": list(self.degraded_reasons),
             "productionActive": self.is_production_active,
         }
+
+    # Storage lifecycle (admin) -------------------------------------------
+    def ensure_storage(self) -> dict[str, Any]:
+        """Idempotent, NON-DESTRUCTIVE storage initialization.
+
+        Reconnects if needed, then ensures the Neo4j schema (constraints +
+        indices) and the Qdrant collection exist. Never resets, deletes, or
+        rebuilds data — only `ensure_*` calls, which are no-ops when the schema
+        / collection already exist. Returns the post-ensure storage status.
+        """
+        if not self.neo4j.available:
+            if self.neo4j.connect():
+                self.neo4j.ensure_schema()
+            else:
+                self._degrade("neo4j_unavailable")
+        else:
+            self.neo4j.ensure_schema()
+
+        if not self.qdrant.available:
+            if self.qdrant.connect():
+                self.qdrant.ensure_collection()
+            else:
+                self._degrade("qdrant_unavailable")
+        else:
+            self.qdrant.ensure_collection()
+
+        return self.storage_status()
+
+    def storage_status(self) -> dict[str, Any]:
+        """Read-only snapshot of Qdrant + Neo4j reachability and counts.
+
+        `empty` is True when the production graph holds no nodes and the vector
+        store holds no points — i.e. nothing has been ingested/rebuilt yet.
+        """
+        neo_stats = self.neo4j.stats() if self.neo4j.available else {}
+        qdrant_stats = self.qdrant.stats() if self.qdrant.available else {}
+
+        neo_nodes = int(neo_stats.get("nodes", 0) or 0)
+        neo_relationships = int(neo_stats.get("relations", 0) or 0)
+        qdrant_collection_exists = bool(qdrant_stats.get("available"))
+        qdrant_points = int(qdrant_stats.get("vectors", 0) or 0)
+
+        return {
+            "backend": "production",
+            "productionConfigured": self.settings.production_backends_configured,
+            "productionActive": self.is_production_active,
+            "fallbackActive": self.degraded,
+            "neo4j": {
+                "reachable": self.neo4j.available,
+                "nodes": neo_nodes,
+                "relationships": neo_relationships,
+                "database": self.neo4j.database,
+                "lastError": self.neo4j.last_error,
+            },
+            "qdrant": {
+                "reachable": self.qdrant.available,
+                "collectionExists": qdrant_collection_exists,
+                "collection": self.qdrant.collection,
+                "points": qdrant_points,
+                "lastError": self.qdrant.last_error,
+            },
+            "empty": neo_nodes == 0 and qdrant_points == 0,
+            "degradedReasons": list(self.degraded_reasons),
+        }

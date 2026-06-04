@@ -54,6 +54,7 @@
     "db:generate": "pnpm --filter @finance-os/db db:generate",
     "db:migrate": "pnpm --filter @finance-os/db db:migrate",
     "db:studio": "pnpm --filter @finance-os/db db:studio",
+    "db:seed:recurring-costs": "pnpm --filter @finance-os/db db:seed:recurring-costs",
     "auth:hash": "pnpm --filter @finance-os/api auth:hash",
     "auth:hash-b64": "pnpm --filter @finance-os/api auth:hash-b64",
     "worker:dev": "bun --watch apps/worker/src/index.ts",

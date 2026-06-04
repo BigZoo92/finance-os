@@ -2,6 +2,7 @@ import { Badge, Button, Input } from '@finance-os/ui/components'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
+import { MemoryStoragePanel } from '@/components/memory/memory-storage-panel'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { StatusDot } from '@/components/surfaces/status-dot'
@@ -200,6 +201,8 @@ function MemoirePage() {
         <Metric label="Contradictions" value={statsQuery.data?.contradictionCount ?? 0} loading={statsQuery.isPending} />
         <Metric label="Latence query" value={`${Math.round(statsQuery.data?.queryLatencyMs ?? 0)} ms`} loading={statsQuery.isPending} />
       </section>
+
+      <MemoryStoragePanel mode={authMode} isAdmin={isAdmin} />
 
       {errorMessage ? (
         <Panel tone="warning" title="Surface dégradée" icon={<StatusDot tone="warn" size={8} pulse />}>

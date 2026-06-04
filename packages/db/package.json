@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.cjs",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.cjs",
     "db:studio": "drizzle-kit studio --config=drizzle.config.cjs",
+    "db:seed:recurring-costs": "bun src/seeds/recurring-provider-cost.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

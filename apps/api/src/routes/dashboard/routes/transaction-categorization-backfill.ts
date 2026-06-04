@@ -5,7 +5,11 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import type { ApiDb } from '../types'
-import { applyTransactionAutoCategorization } from '../domain/transaction-auto-categorization'
+import {
+  applyTransactionAutoCategorization,
+  type UserCategorizationRule,
+} from '../domain/transaction-auto-categorization'
+import { createUserCategorizationRuleRepository } from '../repositories/user-categorization-rule-repository'
 
 const backfillBodySchema = t.Object({
   dryRun: t.Optional(t.Boolean()),
@@ -42,9 +46,11 @@ const isUnknownCategory = (value: string | null) => !value || value === 'Unknown
 const runBackfill = async ({
   db,
   body,
+  userRules = [],
 }: {
   db: ApiDb
   body: BackfillBody
+  userRules?: UserCategorizationRule[]
 }): Promise<{
   dryRun: boolean
   limit: number
@@ -104,6 +110,7 @@ const runBackfill = async ({
     }
 
     const result = applyTransactionAutoCategorization({
+      ...(row.bookingDate ? { bookingDate: row.bookingDate } : {}),
       label: row.label,
       amount: Number(row.amount),
       powensAccountId: row.powensAccountId,
@@ -115,6 +122,7 @@ const runBackfill = async ({
       category: row.category,
       subcategory: null,
       incomeType: null,
+      userRules,
     })
 
     const next = result.category
@@ -168,7 +176,11 @@ export const createTransactionCategorizationBackfillRoute = ({ db }: { db: ApiDb
           requireAdmin(context)
           const startedAt = Date.now()
           const body = context.body as BackfillBody
-          const result = await runBackfill({ db, body })
+          // Respect persisted user categorization rules in backfill too, so it
+          // stays consistent with the live transaction list (which already
+          // applies enabled user rules by priority).
+          const userRules = await createUserCategorizationRuleRepository({ db }).listEnabledRules()
+          const result = await runBackfill({ db, body, userRules })
           return {
             ok: true,
             requestId,
