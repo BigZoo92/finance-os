@@ -26,7 +26,6 @@ Start here for optimized agentic workflows:
 - [context-packs/design-system.md](context-packs/design-system.md) — design tokens + identity
 - [context-packs/testing.md](context-packs/testing.md) — verification strategy
 - [context-packs/security.md](context-packs/security.md) — security invariants
-- [context-packs/autopilot.md](context-packs/autopilot.md) — autopilot workflow
 
 ### Commands
 

@@ -38,11 +38,6 @@ export const DESKTOP_SCOPE_RULES = [
     value: "scripts/check-ci.mjs",
     reason: "local CI orchestration changed",
   },
-  {
-    type: "exact",
-    value: "scripts/codex-env-setup.sh",
-    reason: "Codex environment bootstrap changed",
-  },
 ];
 
 function normalizePath(value) {

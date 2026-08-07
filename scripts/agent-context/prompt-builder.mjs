@@ -79,7 +79,6 @@ const domainPackMap = {
   'design-polish': 'design-system',
   'testing': 'testing',
   'security': 'security',
-  'agentic-autopilot': 'autopilot',
 }
 
 const loadedPacks = new Set(['core'])

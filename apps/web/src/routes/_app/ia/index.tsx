@@ -11,7 +11,6 @@ import { postDashboardAdvisorManualRefreshAndRun } from '@/features/dashboard-ap
 import {
   dashboardAdvisorAssumptionsQueryOptionsWithMode,
   dashboardAdvisorEvalsQueryOptionsWithMode,
-  dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode,
   dashboardAdvisorManualOperationLatestQueryOptionsWithMode,
   dashboardAdvisorQueryOptionsWithMode,
   dashboardAdvisorRecommendationsQueryOptionsWithMode,
@@ -66,9 +65,6 @@ export const Route = createFileRoute('/_app/ia/')({
         dashboardAdvisorAssumptionsQueryOptionsWithMode({ mode })
       ),
       context.queryClient.ensureQueryData(dashboardAdvisorEvalsQueryOptionsWithMode({ mode })),
-      context.queryClient.ensureQueryData(
-        dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode({ mode })
-      ),
     ])
   },
   component: IaOverviewPage,
@@ -176,11 +172,6 @@ function IaOverviewPage() {
     ...dashboardAdvisorEvalsQueryOptionsWithMode(modeOpts),
     refetchInterval: advisorRefetchInterval,
   })
-  const knowledgeTopicsQuery = useQuery({
-    ...dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode(modeOpts),
-    refetchInterval: advisorRefetchInterval,
-  })
-
   const manualRefreshAndRunMutation = useMutation({
     mutationFn: postDashboardAdvisorManualRefreshAndRun,
     onSuccess: async () => {
@@ -242,7 +233,6 @@ function IaOverviewPage() {
     runsQuery.error,
     assumptionsQuery.error,
     evalsQuery.error,
-    knowledgeTopicsQuery.error,
   ].find(Boolean)
 
   if (!aiAdvisorVisible) {
@@ -345,7 +335,6 @@ function IaOverviewPage() {
           description="Ce que l'Advisor comprend maintenant, sans te demander de lire les signaux bruts."
           tone="brand"
           icon={<span aria-hidden="true">□</span>}
-          actions={overview?.brief?.model ? <Badge variant="outline">{overview.brief.model}</Badge> : null}
         >
           {overview?.brief ? (
             <div className="space-y-4">
@@ -494,30 +483,6 @@ function IaOverviewPage() {
         </Panel>
       </section>
 
-      <footer className="rounded-2xl border border-border/50 bg-card/60 px-5 py-3 backdrop-blur-md">
-        <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
-          <span className="text-muted-foreground/55">
-            status<span className="mx-1 text-muted-foreground/25">:</span>
-            <span className="text-foreground/85">{overview?.status ?? 'loading'}</span>
-          </span>
-          <span className="text-muted-foreground/55">
-            source<span className="mx-1 text-muted-foreground/25">:</span>
-            <span className="text-foreground/85">{overview?.source ?? '-'}</span>
-          </span>
-          <span className="text-muted-foreground/55">
-            recs<span className="mx-1 text-muted-foreground/25">:</span>
-            <span className="text-foreground/85">{recs.length}</span>
-          </span>
-          <span className="text-muted-foreground/55">
-            runs<span className="mx-1 text-muted-foreground/25">:</span>
-            <span className="text-foreground/85">{runsQuery.data?.items.length ?? 0}</span>
-          </span>
-          <span className="text-muted-foreground/55">
-            topics<span className="mx-1 text-muted-foreground/25">:</span>
-            <span className="text-foreground/85">{knowledgeTopicsQuery.data?.topics.length ?? 0}</span>
-          </span>
-        </div>
-      </footer>
     </div>
   )
 }

@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Finance OS",
   "short_name": "Finance OS",
-  "description": "Cockpit personnel de finance avec mode demo deterministe et mode admin securise.",
+  "description": "Cockpit finance avec mode demo deterministe et mode admin securise.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

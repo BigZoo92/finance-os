@@ -19,24 +19,19 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
 import { Route as AppSanteRouteImport } from './routes/_app/sante'
 import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
-import { Route as AppParametresRouteImport } from './routes/_app/parametres'
 import { Route as AppOrchestrationRouteImport } from './routes/_app/orchestration'
-import { Route as AppOpsEnvDiagnosticsRouteImport } from './routes/_app/ops-env-diagnostics'
 import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
 import { Route as AppMemoireRouteImport } from './routes/_app/memoire'
 import { Route as AppMarchesRouteImport } from './routes/_app/marches'
 import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
-import { Route as AppFiscaliteRouteImport } from './routes/_app/fiscalite'
 import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
 import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
 import { Route as AppSignauxXTwitterRouteImport } from './routes/_app/signaux/x-twitter'
-import { Route as AppSignauxSourcesRouteImport } from './routes/_app/signaux/sources'
 import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
 import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
-import { Route as AppSignauxFreeFirehoseRouteImport } from './routes/_app/signaux/free-firehose'
 import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
 import { Route as AppIaStrategieInvestissementRouteImport } from './routes/_app/ia/strategie-investissement'
 import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
@@ -93,19 +88,9 @@ const AppPatrimoineRoute = AppPatrimoineRouteImport.update({
   path: '/patrimoine',
   getParentRoute: () => AppRoute,
 } as any)
-const AppParametresRoute = AppParametresRouteImport.update({
-  id: '/parametres',
-  path: '/parametres',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppOrchestrationRoute = AppOrchestrationRouteImport.update({
   id: '/orchestration',
   path: '/orchestration',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppOpsEnvDiagnosticsRoute = AppOpsEnvDiagnosticsRouteImport.update({
-  id: '/ops-env-diagnostics',
-  path: '/ops-env-diagnostics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppObjectifsRoute = AppObjectifsRouteImport.update({
@@ -133,11 +118,6 @@ const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppRoute,
 } as any)
-const AppFiscaliteRoute = AppFiscaliteRouteImport.update({
-  id: '/fiscalite',
-  path: '/fiscalite',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppDepensesRoute = AppDepensesRouteImport.update({
   id: '/depenses',
   path: '/depenses',
@@ -163,11 +143,6 @@ const AppSignauxXTwitterRoute = AppSignauxXTwitterRouteImport.update({
   path: '/signaux/x-twitter',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSignauxSourcesRoute = AppSignauxSourcesRouteImport.update({
-  id: '/signaux/sources',
-  path: '/signaux/sources',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
   id: '/signaux/social',
   path: '/signaux/social',
@@ -176,11 +151,6 @@ const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
 const AppSignauxMarchesRoute = AppSignauxMarchesRouteImport.update({
   id: '/signaux/marches',
   path: '/signaux/marches',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSignauxFreeFirehoseRoute = AppSignauxFreeFirehoseRouteImport.update({
-  id: '/signaux/free-firehose',
-  path: '/signaux/free-firehose',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
@@ -224,15 +194,12 @@ export interface FileRoutesByFullPath {
   '/version': typeof VersionRoute
   '/actualites': typeof AppActualitesRoute
   '/depenses': typeof AppDepensesRoute
-  '/fiscalite': typeof AppFiscaliteRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
   '/marches': typeof AppMarchesRoute
   '/memoire': typeof AppMemoireRoute
   '/objectifs': typeof AppObjectifsRoute
-  '/ops-env-diagnostics': typeof AppOpsEnvDiagnosticsRoute
   '/orchestration': typeof AppOrchestrationRoute
-  '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
   '/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
@@ -240,10 +207,8 @@ export interface FileRoutesByFullPath {
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/strategie-investissement': typeof AppIaStrategieInvestissementRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
-  '/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
-  '/signaux/sources': typeof AppSignauxSourcesRoute
   '/signaux/x-twitter': typeof AppSignauxXTwitterRoute
   '/ia/': typeof AppIaIndexRoute
   '/signaux/': typeof AppSignauxIndexRoute
@@ -258,15 +223,12 @@ export interface FileRoutesByTo {
   '/version': typeof VersionRoute
   '/actualites': typeof AppActualitesRoute
   '/depenses': typeof AppDepensesRoute
-  '/fiscalite': typeof AppFiscaliteRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
   '/marches': typeof AppMarchesRoute
   '/memoire': typeof AppMemoireRoute
   '/objectifs': typeof AppObjectifsRoute
-  '/ops-env-diagnostics': typeof AppOpsEnvDiagnosticsRoute
   '/orchestration': typeof AppOrchestrationRoute
-  '/parametres': typeof AppParametresRoute
   '/patrimoine': typeof AppPatrimoineRoute
   '/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
@@ -275,10 +237,8 @@ export interface FileRoutesByTo {
   '/ia/couts': typeof AppIaCoutsRoute
   '/ia/strategie-investissement': typeof AppIaStrategieInvestissementRoute
   '/ia/trading-lab': typeof AppIaTradingLabRoute
-  '/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/signaux/marches': typeof AppSignauxMarchesRoute
   '/signaux/social': typeof AppSignauxSocialRoute
-  '/signaux/sources': typeof AppSignauxSourcesRoute
   '/signaux/x-twitter': typeof AppSignauxXTwitterRoute
   '/ia': typeof AppIaIndexRoute
   '/signaux': typeof AppSignauxIndexRoute
@@ -295,15 +255,12 @@ export interface FileRoutesById {
   '/version': typeof VersionRoute
   '/_app/actualites': typeof AppActualitesRoute
   '/_app/depenses': typeof AppDepensesRoute
-  '/_app/fiscalite': typeof AppFiscaliteRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/investissements': typeof AppInvestissementsRoute
   '/_app/marches': typeof AppMarchesRoute
   '/_app/memoire': typeof AppMemoireRoute
   '/_app/objectifs': typeof AppObjectifsRoute
-  '/_app/ops-env-diagnostics': typeof AppOpsEnvDiagnosticsRoute
   '/_app/orchestration': typeof AppOrchestrationRoute
-  '/_app/parametres': typeof AppParametresRoute
   '/_app/patrimoine': typeof AppPatrimoineRoute
   '/_app/sante': typeof AppSanteRoute
   '/powens/callback': typeof PowensCallbackRoute
@@ -312,10 +269,8 @@ export interface FileRoutesById {
   '/_app/ia/couts': typeof AppIaCoutsRoute
   '/_app/ia/strategie-investissement': typeof AppIaStrategieInvestissementRoute
   '/_app/ia/trading-lab': typeof AppIaTradingLabRoute
-  '/_app/signaux/free-firehose': typeof AppSignauxFreeFirehoseRoute
   '/_app/signaux/marches': typeof AppSignauxMarchesRoute
   '/_app/signaux/social': typeof AppSignauxSocialRoute
-  '/_app/signaux/sources': typeof AppSignauxSourcesRoute
   '/_app/signaux/x-twitter': typeof AppSignauxXTwitterRoute
   '/_app/ia/': typeof AppIaIndexRoute
   '/_app/signaux/': typeof AppSignauxIndexRoute
@@ -333,15 +288,12 @@ export interface FileRouteTypes {
     | '/version'
     | '/actualites'
     | '/depenses'
-    | '/fiscalite'
     | '/integrations'
     | '/investissements'
     | '/marches'
     | '/memoire'
     | '/objectifs'
-    | '/ops-env-diagnostics'
     | '/orchestration'
-    | '/parametres'
     | '/patrimoine'
     | '/sante'
     | '/powens/callback'
@@ -349,10 +301,8 @@ export interface FileRouteTypes {
     | '/ia/couts'
     | '/ia/strategie-investissement'
     | '/ia/trading-lab'
-    | '/signaux/free-firehose'
     | '/signaux/marches'
     | '/signaux/social'
-    | '/signaux/sources'
     | '/signaux/x-twitter'
     | '/ia/'
     | '/signaux/'
@@ -367,15 +317,12 @@ export interface FileRouteTypes {
     | '/version'
     | '/actualites'
     | '/depenses'
-    | '/fiscalite'
     | '/integrations'
     | '/investissements'
     | '/marches'
     | '/memoire'
     | '/objectifs'
-    | '/ops-env-diagnostics'
     | '/orchestration'
-    | '/parametres'
     | '/patrimoine'
     | '/sante'
     | '/powens/callback'
@@ -384,10 +331,8 @@ export interface FileRouteTypes {
     | '/ia/couts'
     | '/ia/strategie-investissement'
     | '/ia/trading-lab'
-    | '/signaux/free-firehose'
     | '/signaux/marches'
     | '/signaux/social'
-    | '/signaux/sources'
     | '/signaux/x-twitter'
     | '/ia'
     | '/signaux'
@@ -403,15 +348,12 @@ export interface FileRouteTypes {
     | '/version'
     | '/_app/actualites'
     | '/_app/depenses'
-    | '/_app/fiscalite'
     | '/_app/integrations'
     | '/_app/investissements'
     | '/_app/marches'
     | '/_app/memoire'
     | '/_app/objectifs'
-    | '/_app/ops-env-diagnostics'
     | '/_app/orchestration'
-    | '/_app/parametres'
     | '/_app/patrimoine'
     | '/_app/sante'
     | '/powens/callback'
@@ -420,10 +362,8 @@ export interface FileRouteTypes {
     | '/_app/ia/couts'
     | '/_app/ia/strategie-investissement'
     | '/_app/ia/trading-lab'
-    | '/_app/signaux/free-firehose'
     | '/_app/signaux/marches'
     | '/_app/signaux/social'
-    | '/_app/signaux/sources'
     | '/_app/signaux/x-twitter'
     | '/_app/ia/'
     | '/_app/signaux/'
@@ -513,25 +453,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPatrimoineRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/parametres': {
-      id: '/_app/parametres'
-      path: '/parametres'
-      fullPath: '/parametres'
-      preLoaderRoute: typeof AppParametresRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/orchestration': {
       id: '/_app/orchestration'
       path: '/orchestration'
       fullPath: '/orchestration'
       preLoaderRoute: typeof AppOrchestrationRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/ops-env-diagnostics': {
-      id: '/_app/ops-env-diagnostics'
-      path: '/ops-env-diagnostics'
-      fullPath: '/ops-env-diagnostics'
-      preLoaderRoute: typeof AppOpsEnvDiagnosticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/objectifs': {
@@ -569,13 +495,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIntegrationsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/fiscalite': {
-      id: '/_app/fiscalite'
-      path: '/fiscalite'
-      fullPath: '/fiscalite'
-      preLoaderRoute: typeof AppFiscaliteRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/depenses': {
       id: '/_app/depenses'
       path: '/depenses'
@@ -611,13 +530,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSignauxXTwitterRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/signaux/sources': {
-      id: '/_app/signaux/sources'
-      path: '/signaux/sources'
-      fullPath: '/signaux/sources'
-      preLoaderRoute: typeof AppSignauxSourcesRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/signaux/social': {
       id: '/_app/signaux/social'
       path: '/signaux/social'
@@ -630,13 +542,6 @@ declare module '@tanstack/react-router' {
       path: '/signaux/marches'
       fullPath: '/signaux/marches'
       preLoaderRoute: typeof AppSignauxMarchesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/signaux/free-firehose': {
-      id: '/_app/signaux/free-firehose'
-      path: '/signaux/free-firehose'
-      fullPath: '/signaux/free-firehose'
-      preLoaderRoute: typeof AppSignauxFreeFirehoseRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/ia/trading-lab': {
@@ -687,15 +592,12 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppActualitesRoute: typeof AppActualitesRoute
   AppDepensesRoute: typeof AppDepensesRoute
-  AppFiscaliteRoute: typeof AppFiscaliteRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppInvestissementsRoute: typeof AppInvestissementsRoute
   AppMarchesRoute: typeof AppMarchesRoute
   AppMemoireRoute: typeof AppMemoireRoute
   AppObjectifsRoute: typeof AppObjectifsRoute
-  AppOpsEnvDiagnosticsRoute: typeof AppOpsEnvDiagnosticsRoute
   AppOrchestrationRoute: typeof AppOrchestrationRoute
-  AppParametresRoute: typeof AppParametresRoute
   AppPatrimoineRoute: typeof AppPatrimoineRoute
   AppSanteRoute: typeof AppSanteRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -703,10 +605,8 @@ interface AppRouteChildren {
   AppIaCoutsRoute: typeof AppIaCoutsRoute
   AppIaStrategieInvestissementRoute: typeof AppIaStrategieInvestissementRoute
   AppIaTradingLabRoute: typeof AppIaTradingLabRoute
-  AppSignauxFreeFirehoseRoute: typeof AppSignauxFreeFirehoseRoute
   AppSignauxMarchesRoute: typeof AppSignauxMarchesRoute
   AppSignauxSocialRoute: typeof AppSignauxSocialRoute
-  AppSignauxSourcesRoute: typeof AppSignauxSourcesRoute
   AppSignauxXTwitterRoute: typeof AppSignauxXTwitterRoute
   AppIaIndexRoute: typeof AppIaIndexRoute
   AppSignauxIndexRoute: typeof AppSignauxIndexRoute
@@ -717,15 +617,12 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppActualitesRoute: AppActualitesRoute,
   AppDepensesRoute: AppDepensesRoute,
-  AppFiscaliteRoute: AppFiscaliteRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppInvestissementsRoute: AppInvestissementsRoute,
   AppMarchesRoute: AppMarchesRoute,
   AppMemoireRoute: AppMemoireRoute,
   AppObjectifsRoute: AppObjectifsRoute,
-  AppOpsEnvDiagnosticsRoute: AppOpsEnvDiagnosticsRoute,
   AppOrchestrationRoute: AppOrchestrationRoute,
-  AppParametresRoute: AppParametresRoute,
   AppPatrimoineRoute: AppPatrimoineRoute,
   AppSanteRoute: AppSanteRoute,
   AppIndexRoute: AppIndexRoute,
@@ -733,10 +630,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaCoutsRoute: AppIaCoutsRoute,
   AppIaStrategieInvestissementRoute: AppIaStrategieInvestissementRoute,
   AppIaTradingLabRoute: AppIaTradingLabRoute,
-  AppSignauxFreeFirehoseRoute: AppSignauxFreeFirehoseRoute,
   AppSignauxMarchesRoute: AppSignauxMarchesRoute,
   AppSignauxSocialRoute: AppSignauxSocialRoute,
-  AppSignauxSourcesRoute: AppSignauxSourcesRoute,
   AppSignauxXTwitterRoute: AppSignauxXTwitterRoute,
   AppIaIndexRoute: AppIaIndexRoute,
   AppSignauxIndexRoute: AppSignauxIndexRoute,

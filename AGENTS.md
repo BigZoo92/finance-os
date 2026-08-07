@@ -38,18 +38,7 @@ Use the nearest `AGENTS.md` before editing. Keep this root file small and durabl
 - The Temporal Knowledge Graph / GraphRAG layer is internal-only derived memory for the AI Advisor. It enriches, explains, and challenges deterministic finance-engine outputs; it is not a source of truth for transactions, not part of the agentic development pipeline, and must never enable trading execution.
 - Knowledge graph demo mode must use deterministic fixtures only. Admin mode may call the internal knowledge service, but it must fail soft when unavailable and must preserve request IDs, safe errors, provenance, confidence, recency, temporal validity, and contradiction history.
 - External investment ingestion is read-only analytics only. IBKR must stay on Flex reporting; Binance must stay on signed read-only Spot/Wallet `GET` allowlists. Never add trading, order, withdrawal, transfer, convert, margin/futures, staking/earn mutation, automatic rebalancing, or hidden execution-ready paths.
-- `batch:` issues are first-class product briefs. Preserve their context, objectives, design principles, non-negotiable constraints, expected result, cost bias, decision rules, and explicit out-of-scope when spawning downstream work.
-- Autopilot workflow invariants:
-  - batch spec expansion must stay 1:1 with the raw bullet list, with no extra spawned requested specs
-  - only one implementation lane may auto-start from a batch at a time; the rest stay queued
-  - `issue_comment` workflows must gate on Codex-authored comments before doing work
-  - implementation PRs are created automatically as draft `agent/impl-*` branches; Codex should implement by replying on the PR thread with `AUTOPILOT_PATCH_V1`, and autopilot applies that patch onto the same branch
-  - PR-thread implementation patches must be Git-generated diffs that pass `git apply --check`; autopilot may use `git apply --recount` to tolerate hunk-count drift, but hand-written malformed hunks still count as a workflow failure
-  - once an implementation PR is created, the linked `spec:` and `improve:` issues are closed as `completed`; if that PR is closed without merge, autopilot reopens and requeues the linked work
-  - only one autopilot implementation PR may stay open at a time; extra improve issues wait in `autopilot:queued-pr`
-  - only one writer may own an active autopilot implementation branch at a time; if a human or Claude takes over locally, stop prompting Codex on that branch until the handoff is complete
-  - merge-on-green may only promote and merge an autopilot PR after real non-stub files land on the branch, all `.github/agent-stubs/**` files are gone from the PR diff, and the branch is up to date with green CI
-  - failed CI on an autopilot implementation PR must be summarized back onto the PR thread so Codex sees the runner error instead of relying on partial local checks
+- The GitHub agentic development pipeline (autopilot issue-to-PR automation) was removed in the RESET-AUDIT-CLEANUP-0 pass. Development is done manually or with local coding agents; only classic CI/CD workflows (`ci.yml`, `release.yml`, `ghcr-cleanup.yml`) remain in `.github/workflows`.
 - When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
 - When modifying the dashboard news feature (fetch, ingestion, cache, fallback, fixtures, schema, or UI wiring), update [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) in the same change.
 - Design system and frontend identity invariants (direction "Command Pixel"):
@@ -137,7 +126,6 @@ Full inventory with trust tiers, overlaps, and usage guide: [docs/SKILLS-INVENTO
 | GitNexus guides | `gitnexus/` | 6 | Code intelligence workflows |
 | GitNexus generated | `generated/` | 20 | Auto-indexed domain clusters |
 | External recommended | root-level dirs | 17+ | Best practices (React, TanStack, Redis, Drizzle, CI/CD, security, perf, testing) |
-| Codex workflow | root-level dirs | 11 | Autopilot-specific guards and strategies |
 | Impeccable (UI) | root-level dirs | 33 | UI refinement and design system |
 | Experimental | `experimental/` | 1 | Unproven — use with caution |
 

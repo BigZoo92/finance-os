@@ -27,7 +27,7 @@ export type NavGroupMeta = {
 export const NAV_GROUPS: NavGroupMeta[] = [
   {
     id: 'cockpit',
-    label: 'Cockpit personnel',
+    label: 'Cockpit',
     shortLabel: 'Cockpit',
     description: 'Usage quotidien, decisions et suivi personnel.',
     icon: 'O',
@@ -45,7 +45,7 @@ export const NAV_GROUPS: NavGroupMeta[] = [
     id: 'expert',
     label: 'Ops & Admin',
     shortLabel: 'Ops',
-    description: 'Diagnostics, ingestion, couts et sources avancees.',
+    description: 'Diagnostics, ingestion et couts.',
     icon: '<>',
     color: 'text-accent-2/55',
   },
@@ -82,14 +82,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '/\\',
     description: 'Positions et portefeuille lisible',
     group: 'cockpit',
-  },
-  {
-    to: '/fiscalite',
-    label: 'Fiscalite',
-    icon: 'TAX',
-    description: 'Dossier preparatoire a verifier',
-    group: 'cockpit',
-    adminOnly: true,
   },
   {
     to: '/objectifs',
@@ -159,22 +151,6 @@ export const NAV_ITEMS: NavItem[] = [
     adminOnly: true,
   },
   {
-    to: '/signaux/sources',
-    label: 'Sources',
-    icon: '*',
-    description: 'Fraicheur, provenance et qualite',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/signaux/free-firehose',
-    label: 'Free Firehose',
-    icon: '>>',
-    description: 'Fetch manuel: GDELT, HN, SEC, FRED, ECB',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
     to: '/ia/trading-lab',
     label: 'Trading Lab',
     icon: 'TL',
@@ -213,21 +189,6 @@ export const NAV_ITEMS: NavItem[] = [
     description: 'Daily Intelligence Run et relances manuelles',
     group: 'expert',
     adminOnly: true,
-  },
-  {
-    to: '/ops-env-diagnostics',
-    label: 'Env diagnostics',
-    icon: 'ENV',
-    description: 'Flags, secrets attendus et leaks par service',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/parametres',
-    label: 'Parametres',
-    icon: '..',
-    description: 'Notifications, exports et configuration',
-    group: 'expert',
   },
 ]
 

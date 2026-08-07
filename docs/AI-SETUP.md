@@ -13,7 +13,7 @@ This document describes the currently recommended advisor posture for Finance-OS
 - manual orchestration first
 - no silent auto-run and no silent Powens auto-sync
 
-This does not change GitHub workflows or the agentic/autopilot pipeline.
+This does not change GitHub workflows.
 
 ## Current Recommended Mode
 

@@ -268,41 +268,18 @@ uniquement les regles; le dry-run est read-only pour les transactions.
 
 - Pas de trading, retrait, transfert, reequilibrage execute ou endpoint Binance mutant.
 - Pas d'IBKR Client Portal trading.
-- Pas de reporting fiscal officiel; les donnees utiles alimentent uniquement le dossier preparatoire `/fiscalite`.
+- Pas de reporting fiscal officiel.
 - Binance trade backfill est volontairement conservateur et limite aux symboles connus.
 
 ---
 
-## 6.ter Fiscalite preparatoire personnelle
+## 6.ter Fiscalite preparatoire personnelle — SUPPRIMEE
 
-**Route UI** : `/fiscalite`
-**Routes API dediees** : aucune
-**Sources lues** : `dashboardSummary`, `externalInvestmentsSummary`, `externalInvestmentsPositions`, `externalInvestmentsTrades`, `externalInvestmentsCashFlows`
-
-### Objectif
-
-- Preparer un dossier fiscal personnel a verifier.
-- Aider a reperer les comptes, mouvements et justificatifs a controler.
-- Tenir compte du contexte personnel actuel: utilisateur rattache au foyer fiscal de sa mere.
-- Ne pas calculer la declaration complete du foyer fiscal.
-
-### Perimetre
-
-- Comptes a verifier: Binance, IBKR, Trade Republic si present, comptes fintech/hors France detectes, PEA.
-- Evenements a revoir: cessions crypto, ventes CTO/titres, dividendes/interets, retrait/rachat/cloture PEA, ouverture/usage/cloture de compte.
-- Donnees manquantes visibles: dates d'ouverture/cloture, pays ou entite provider, historique annuel complet, prix d'acquisition, prix de cession, frais, FX, releves annuels, anciennete PEA.
-- Exports autorises: CSV checklist, CSV evenements, impression du dossier preparatoire.
-
-### Garde-fous
-
-- Aucun appel impots.gouv.
-- Aucune soumission, depot automatise ou Cerfa officiel.
-- Aucun conseil fiscal, juridique ou strategie de reduction d'impot.
-- Les formulaires `3916 / 3916-bis`, `2086`, `2074` et `PEA` sont des indices de revue uniquement.
-- Demo deterministe, sans DB ni provider call.
-- Admin lecture seule depuis les chemins existants, sans sync automatique ni appel provider depuis la page.
-- Si les helpers existants retombent sur une fixture demo en mode admin, la page exclut ces exemples du dossier et affiche un etat degrade.
-- Pas d'integration Advisor IA, pas de Force Graph, pas de trading/execution.
+Feature retiree du produit (RESET-AUDIT-CLEANUP-0). La page `/fiscalite`, son
+view-model et ses tests ont ete supprimes. Elle etait purement frontend
+(aucune route API, aucune table dediee); seules subsistent des colonnes/chaines
+partagees non fiscales (`tax_wrapper` sur `account_strategy_policy`, categorie
+transaction `taxes`, guardrail Advisor `guardrail_regulatory_or_tax`).
 
 ---
 

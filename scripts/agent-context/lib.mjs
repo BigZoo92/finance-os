@@ -226,7 +226,7 @@ function classifySkill(relPath, name) {
 
   // GitNexus skills
   if (relPath.includes('gitnexus/')) {
-    return { tier: 'core', domains: ['agentic-autopilot', 'architecture'] }
+    return { tier: 'core', domains: ['architecture'] }
   }
 
   // Generated domain skills
@@ -280,7 +280,7 @@ function classifySkill(relPath, name) {
 
   // Meta skills
   if (['learn', 'review-skill', 'empirical-prompt-tuning'].includes(name)) {
-    return { tier: 'optional', domains: ['agentic-autopilot'] }
+    return { tier: 'optional', domains: ['documentation'] }
   }
 
   return { tier: 'optional', domains: ['unknown'] }
@@ -380,11 +380,6 @@ export const TASK_DOMAINS = {
     requiredSkills: ['documentation-and-adrs'],
     optionalSkills: [],
     docs: ['AGENTS.md'],
-  },
-  'agentic-autopilot': {
-    requiredSkills: ['finance-os/core-invariants'],
-    optionalSkills: [],
-    docs: ['AGENTS.md', 'docs/agentic/INDEX.md'],
   },
 }
 

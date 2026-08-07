@@ -31,11 +31,8 @@ import {
   startPowensManualSyncCooldown,
 } from '@/features/powens/manual-sync-cooldown'
 import {
-  powensDiagnosticsQueryOptionsWithMode,
   powensQueryKeys,
   powensStatusQueryOptionsWithMode,
-  powensSyncRunsQueryOptionsWithMode,
-  powensAuditTrailQueryOptionsWithMode,
 } from '@/features/powens/query-options'
 import {
   deleteExternalInvestmentCredential,
@@ -45,7 +42,6 @@ import {
 import {
   externalInvestmentsQueryKeys,
   externalInvestmentsStatusQueryOptionsWithMode,
-  externalInvestmentsSyncRunsQueryOptionsWithMode,
 } from '@/features/external-investments/query-options'
 import type {
   ExternalInvestmentCredentialInput,
@@ -53,7 +49,7 @@ import type {
 } from '@/features/external-investments/types'
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 import { pushToast } from '@/lib/toast-store'
-import { formatDateTime, formatDuration, toErrorMessage } from '@/lib/format'
+import { formatDateTime, toErrorMessage } from '@/lib/format'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { ActionDock } from '@/components/surfaces/action-dock'
 
@@ -104,10 +100,7 @@ export const Route = createFileRoute('/_app/integrations')({
     const opts = { mode }
     await Promise.all([
       context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(powensSyncRunsQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(powensDiagnosticsQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(externalInvestmentsSyncRunsQueryOptionsWithMode(opts)),
     ])
   },
   component: IntegrationsPage,
@@ -148,20 +141,8 @@ function IntegrationsPage() {
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
 
   const statusQuery = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const syncRunsQuery = useQuery(
-    powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const diagnosticsQuery = useQuery(
-    powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const auditTrailQuery = useQuery(
-    powensAuditTrailQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
   const externalStatusQuery = useQuery(
     externalInvestmentsStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const externalSyncRunsQuery = useQuery(
-    externalInvestmentsSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
   )
 
   const statusConnections = statusQuery.data?.connections ?? []
@@ -170,10 +151,6 @@ function IntegrationsPage() {
   const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false
   const isExternalSafeMode = externalStatusQuery.data?.safeModeActive ?? false
   const syncStatusPersistenceEnabled = statusQuery.data?.syncStatusPersistenceEnabled ?? false
-  const syncRuns = syncRunsQuery.data?.runs ?? []
-  const externalSyncRuns = externalSyncRunsQuery.data?.items ?? []
-  const diagnostics = diagnosticsQuery.data
-  const auditEvents = auditTrailQuery.data?.events ?? []
 
   const manualSyncUiState = getPowensManualSyncUiState({
     cooldownUiEnabled: manualSyncCooldownUiConfig.enabled,
@@ -356,17 +333,6 @@ function IntegrationsPage() {
         ? { ipRestrictionNote: binanceDraft.ipRestrictionNote.trim() }
         : {}),
     })
-  }
-
-  const diagnosticsOutcomeBadge: Record<
-    string,
-    { label: string; variant: 'secondary' | 'outline' | 'destructive' }
-  > = {
-    ok: { label: 'OK', variant: 'secondary' },
-    degraded: { label: 'Dégradé', variant: 'outline' },
-    timeout: { label: 'Timeout', variant: 'destructive' },
-    auth_error: { label: 'Auth', variant: 'destructive' },
-    provider_error: { label: 'Erreur', variant: 'destructive' },
   }
 
   return (
@@ -736,47 +702,6 @@ function IntegrationsPage() {
             </div>
           </div>
 
-          {externalSyncRuns.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Derniers runs investissements
-              </p>
-              {externalSyncRuns.slice(0, 4).map(run => (
-                <div
-                  key={run.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-surface-1 px-4 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {providerLabel(run.provider)} · {run.triggerSource}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateTime(run.startedAt)}
-                      {formatDuration(run.startedAt, run.finishedAt)
-                        ? ` · ${formatDuration(run.startedAt, run.finishedAt)}`
-                        : ''}
-                    </p>
-                    {run.errorMessage && (
-                      <p className="truncate text-xs text-destructive">{run.errorMessage}</p>
-                    )}
-                  </div>
-                  <Badge
-                    variant={
-                      run.status === 'success'
-                        ? 'positive'
-                        : run.status === 'running'
-                          ? 'outline'
-                          : run.status === 'degraded'
-                            ? 'warning'
-                            : 'destructive'
-                    }
-                  >
-                    {run.status}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -913,123 +838,6 @@ function IntegrationsPage() {
         </CardContent>
       </Card>
 
-      {/* Sync runs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Derniers runs de synchronisation</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {syncRunsQuery.isPending ? (
-            <div className="space-y-2">
-              {Array.from(
-                { length: 3 },
-                (_, index) => `integration-sync-skeleton-${index + 1}`
-              ).map(key => (
-                <div key={key} className="h-12 animate-pulse rounded bg-muted" />
-              ))}
-            </div>
-          ) : syncRuns.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Aucun run récent.</p>
-          ) : (
-            syncRuns.slice(0, 10).map(run => (
-              <div
-                key={run.id}
-                className="flex items-center justify-between rounded-lg border border-border/50 bg-surface-1 px-4 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm">
-                    <span className="font-medium">#{run.connectionId}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {formatDateTime(run.startedAt)}
-                    </span>
-                    {formatDuration(run.startedAt, run.endedAt) && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        · {formatDuration(run.startedAt, run.endedAt)}
-                      </span>
-                    )}
-                  </p>
-                  {run.errorMessage && (
-                    <p className="text-xs text-destructive truncate">{run.errorMessage}</p>
-                  )}
-                </div>
-                <Badge
-                  variant={
-                    run.result === 'success'
-                      ? 'secondary'
-                      : run.result === 'running'
-                        ? 'outline'
-                        : 'destructive'
-                  }
-                  className="text-xs"
-                >
-                  {run.result}
-                </Badge>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Diagnostics */}
-      {diagnostics && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">Diagnostic provider</CardTitle>
-              <Badge variant={diagnosticsOutcomeBadge[diagnostics.outcome]?.variant ?? 'outline'}>
-                {diagnosticsOutcomeBadge[diagnostics.outcome]?.label ?? diagnostics.outcome}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p className="text-muted-foreground">{diagnostics.guidance}</p>
-            <p className="text-xs text-muted-foreground">
-              Dernière vérification : {formatDateTime(diagnostics.lastCheckedAt)}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => diagnosticsQuery.refetch()}
-              disabled={diagnosticsQuery.isFetching}
-              className="text-xs"
-            >
-              Re-vérifier
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Audit trail */}
-      {auditEvents.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Audit trail</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {auditEvents.slice(0, 10).map(event => (
-              <div
-                key={event.id}
-                className="flex items-center justify-between rounded-lg border border-border/50 bg-surface-1 px-4 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {event.action} · {event.actorMode}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{formatDateTime(event.at)}</p>
-                </div>
-                <Badge
-                  variant={event.result === 'allowed' ? 'secondary' : 'destructive'}
-                  className="text-xs"
-                >
-                  {event.result}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Action dock */}
       <ActionDock
         items={[
@@ -1046,23 +854,6 @@ function IntegrationsPage() {
             tone: 'violet',
             disabled: manualSyncUiState.blocked || syncMutation.isPending,
             onClick: () => syncMutation.mutate({}),
-          },
-          {
-            icon: <span aria-hidden="true">♡</span>,
-            label: 'Diagnostiquer',
-            tone: 'positive',
-            disabled: diagnosticsQuery.isFetching,
-            onClick: () => diagnosticsQuery.refetch(),
-          },
-          {
-            icon: <span aria-hidden="true">▣</span>,
-            label: 'Audit trail',
-            tone: 'plain',
-            disabled: auditEvents.length === 0,
-            onClick: () => {
-              const target = document.querySelector('[data-section="audit"]')
-              target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            },
           },
         ]}
         className="mt-6"

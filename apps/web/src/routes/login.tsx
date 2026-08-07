@@ -10,9 +10,6 @@ import { powensQueryKeys } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
 import { PixelBlastBackdrop } from '@/components/brand/pixel-blast-backdrop'
 import { BrandMark } from '@/components/brand/brand-mark'
-import { CircularEmblem } from '@/components/brand/circular-emblem'
-import { BorderGlow } from '@/components/reactbits/border-glow'
-import { ShinyText } from '@/components/reactbits/shiny-text'
 
 const toErrorMessage = (value: unknown) => {
   if (value instanceof Error) return value.message
@@ -90,42 +87,27 @@ function LoginPage() {
       />
 
       <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md flex-col items-center justify-center">
-        {/* Brand — circular emblem orbits the brand mark */}
+        {/* Brand */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="mb-8 flex flex-col items-center gap-3"
         >
-          <CircularEmblem text="· FINANCE · OS · COCKPIT · PREMIUM " size={172} spinDuration={26}>
-            <BrandMark size="xl" />
-          </CircularEmblem>
+          <BrandMark size="xl" />
           <div className="mt-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              <ShinyText text="Finance OS" speed={4} />
-            </h1>
-            <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.22em] text-primary/70">
-              cockpit · personnel · premium
-            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Finance OS</h1>
           </div>
         </motion.div>
 
-        {/* Auth card with BorderGlow */}
+        {/* Auth card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
           className="w-full"
         >
-          <BorderGlow
-            animated
-            borderRadius={22}
-            glowIntensity={0.6}
-            backgroundColor="var(--card)"
-            colors={['#ff5db1', '#c084fc', '#7aa2ff']}
-            glowColor="335 92 68"
-            className="w-full"
-          >
+          <div className="w-full rounded-[22px] border border-border/60 bg-card shadow-lg">
             <div className="p-6 md:p-8">
               <h2 className="text-lg font-semibold tracking-tight">Accès admin</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -168,7 +150,7 @@ function LoginPage() {
                 </Button>
               </form>
             </div>
-          </BorderGlow>
+          </div>
         </motion.div>
 
         <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground/50">

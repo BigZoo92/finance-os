@@ -38,12 +38,7 @@ import { D3Sparkline, MiniSparkline } from '@/components/ui/d3-sparkline'
 import { RangePill } from '@/components/surfaces/range-pill'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
-import {
-  PersonalActionsPanel,
-  PersonalEmptyState,
-  PersonalSectionHeading,
-  type PersonalActionItem,
-} from '@/components/personal/personal-ux'
+import { PersonalEmptyState, PersonalSectionHeading } from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (value: string | undefined): DashboardRange =>
@@ -221,35 +216,6 @@ function PatrimoinePage() {
     const ageMs = Date.now() - new Date(asset.valuationAsOf).getTime()
     return Number.isFinite(ageMs) && ageMs > 45 * 86_400_000
   }).length
-  const patrimoineActions: PersonalActionItem[] = [
-    {
-      label: isAdmin ? 'Ajouter un actif manuel' : 'Voir les actifs manuels',
-      description: isAdmin
-        ? 'Compléter ce que les banques ne remontent pas automatiquement.'
-        : 'Connecte-toi en admin pour modifier les actifs manuels.',
-      to: '/patrimoine',
-      icon: '◇',
-      tone: isAdmin ? 'brand' : 'plain',
-      disabled: !isAdmin,
-    },
-    {
-      label: 'Vérifier les intégrations',
-      description: externalUnknownCount > 0 || staleAssetCount > 0
-        ? 'Certaines valorisations ou sources méritent une vérification.'
-        : 'Contrôler les connexions si un solde semble absent.',
-      to: '/integrations',
-      icon: '⊞',
-      tone: externalUnknownCount > 0 || staleAssetCount > 0 ? 'warning' : 'plain',
-    },
-    {
-      label: 'Voir les investissements',
-      description: 'Passer du patrimoine global aux positions détenues.',
-      to: '/investissements',
-      icon: '△',
-      tone: 'plain',
-    },
-  ]
-
   const resetManualAssetForm = () => {
     setManualAssetDraft(EMPTY_MANUAL_ASSET_DRAFT)
     setEditingManualAssetId(null)
@@ -320,7 +286,6 @@ function PatrimoinePage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        eyebrow="Cockpit personnel"
         icon="◇"
         title="Patrimoine"
         description="Ce que tu possèdes, ce qui est liquide, et les valorisations à vérifier."
@@ -484,50 +449,30 @@ function PatrimoinePage() {
       </section>
 
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Aujourd'hui"
-          title="Ce que tu possèdes"
-          description="Une lecture simple: liquidités, investissements, actifs manuels et données à vérifier."
-        />
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <Panel
-            title="Répartition lisible"
-            description="Liquidités = argent plus facilement mobilisable. Le reste demande souvent plus de temps ou de vérification."
-            icon={<span aria-hidden="true">◇</span>}
-            tone="brand"
-          >
-            <div className="grid gap-3 sm:grid-cols-3">
-              <WealthBucket label="Liquidités" value={liquidAssetsValue} detail="Comptes et cash détectés" />
-              <WealthBucket
-                label="Investi"
-                value={investmentAssetsValue + externalKnownValue}
-                detail="Positions et snapshots externes"
-              />
-              <WealthBucket label="Manuel" value={manualAssetsValue} detail="Actifs ajoutés ou à maintenir" />
+        <Panel
+          title="Répartition"
+          icon={<span aria-hidden="true">◇</span>}
+          tone="brand"
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <WealthBucket label="Liquidités" value={liquidAssetsValue} detail="Comptes et cash détectés" />
+            <WealthBucket
+              label="Investi"
+              value={investmentAssetsValue + externalKnownValue}
+              detail="Positions et snapshots externes"
+            />
+            <WealthBucket label="Manuel" value={manualAssetsValue} detail="Actifs ajoutés ou à maintenir" />
+          </div>
+          {externalUnknownCount > 0 || staleAssetCount > 0 ? (
+            <div className="mt-4 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-warning">
+              {externalUnknownCount > 0 ? `${externalUnknownCount} position${externalUnknownCount > 1 ? 's' : ''} externe${externalUnknownCount > 1 ? 's' : ''} sans valeur fiable. ` : ''}
+              {staleAssetCount > 0 ? `${staleAssetCount} actif${staleAssetCount > 1 ? 's' : ''} avec valorisation ancienne.` : ''}
             </div>
-            {externalUnknownCount > 0 || staleAssetCount > 0 ? (
-              <div className="mt-4 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-warning">
-                {externalUnknownCount > 0 ? `${externalUnknownCount} position${externalUnknownCount > 1 ? 's' : ''} externe${externalUnknownCount > 1 ? 's' : ''} sans valeur fiable. ` : ''}
-                {staleAssetCount > 0 ? `${staleAssetCount} actif${staleAssetCount > 1 ? 's' : ''} avec valorisation ancienne.` : ''}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">Aucune donnée patrimoniale importante à vérifier pour l'instant.</p>
-            )}
-          </Panel>
-
-          <PersonalActionsPanel
-            title="Prochaines actions"
-            description="Compléter ou vérifier le patrimoine sans appeler de provider depuis cette page."
-            items={patrimoineActions}
-          />
-        </div>
+          ) : null}
+        </Panel>
       </section>
 
-      <PersonalSectionHeading
-        eyebrow="Mes données"
-        title="Comptes et actifs"
-        description="Les détails viennent après le résumé pour garder la lecture calme."
-      />
+      <PersonalSectionHeading title="Comptes et actifs" />
 
       <section>
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
@@ -610,28 +555,7 @@ function PatrimoinePage() {
       </section>
 
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Données à vérifier"
-          title="Investissements externes"
-          description="Snapshots IBKR/Binance en lecture seule, utiles pour expliquer le patrimoine sans transformer cette page en diagnostic provider."
-        />
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
-              Investissements externes
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              IBKR et Binance sont lus depuis les snapshots persistants. Aucun provider n est appele par cette vue.
-            </p>
-          </div>
-          <Badge variant={externalSummaryQuery.isError ? 'destructive' : externalUnknownCount > 0 ? 'outline' : 'secondary'}>
-            {externalSummaryQuery.isPending
-              ? 'chargement'
-              : externalUnknownCount > 0
-                ? `${externalUnknownCount} valuation inconnue`
-                : 'cache pret'}
-          </Badge>
-        </div>
+        <PersonalSectionHeading title="Investissements externes" />
 
         <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
           <div className="rounded-2xl border border-border/40 bg-card/55 p-4">
@@ -639,29 +563,6 @@ function PatrimoinePage() {
             <p className="mt-2 font-financial text-3xl font-semibold">
               {externalSummaryQuery.isPending ? '...' : formatMoney(externalKnownValue)}
             </p>
-            <div className="mt-4 space-y-2">
-              {(externalBundle?.providerCoverage ?? []).map(provider => (
-                <div key={provider.provider} className="flex items-center justify-between gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        provider.status === 'healthy'
-                          ? 'bg-positive'
-                          : provider.status === 'degraded'
-                            ? 'bg-warning'
-                            : provider.status === 'failing'
-                              ? 'bg-negative'
-                              : 'bg-muted-foreground'
-                      }`}
-                    />
-                    <span className="uppercase">{provider.provider}</span>
-                  </div>
-                  <span className="text-muted-foreground">
-                    {provider.stale ? 'stale' : provider.configured ? 'configure' : 'manquant'}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="rounded-2xl border border-border/40 bg-card/55 p-4">

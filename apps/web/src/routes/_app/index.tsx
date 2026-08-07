@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
@@ -10,7 +10,6 @@ import { resolveAuthViewState } from '@/features/auth-view-state'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
 import {
   dashboardSummaryQueryOptionsWithMode,
-  dashboardAdvisorQueryOptionsWithMode,
   dashboardAdvisorRecommendationsQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
 import type { DashboardRange } from '@/features/dashboard-types'
@@ -20,17 +19,14 @@ import { adaptDailySurfaceViewModel } from '@/features/dashboard-view-model-adap
 import { getTrendDirection, summarizeCashflowDirection } from '@/components/dashboard/trend-visuals'
 import { formatMoney } from '@/lib/format'
 import { D3Sparkline } from '@/components/ui/d3-sparkline'
-import { CockpitHero } from '@/components/surfaces/cockpit-hero'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
+import { RangePill } from '@/components/surfaces/range-pill'
 import { StatusDot } from '@/components/surfaces/status-dot'
 import { attentionItemsQueryOptions } from '@/features/trading-lab-query-options'
 import type { AttentionItem } from '@/features/trading-lab-api'
-import {
-  PersonalActionsPanel,
-  PersonalSectionHeading,
-  type PersonalActionItem,
-} from '@/components/personal/personal-ux'
+import { PersonalSectionHeading } from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (v: string | undefined): DashboardRange => (v === '7d' || v === '90d' ? v : '30d')
@@ -56,7 +52,6 @@ export const Route = createFileRoute('/_app/')({
 
     if (advisorVisible) {
       prefetches.push(
-        context.queryClient.ensureQueryData(dashboardAdvisorQueryOptionsWithMode({ range: '30d', mode })),
         context.queryClient.ensureQueryData(dashboardAdvisorRecommendationsQueryOptionsWithMode({ mode })),
       )
     }
@@ -70,12 +65,6 @@ const RANGES: Array<{ label: string; value: DashboardRange }> = [
   { label: '7 j', value: '7d' },
   { label: '30 j', value: '30d' },
   { label: '90 j', value: '90d' },
-]
-
-const COCKPIT_ROTATIONS = [
-  'cockpit · personnel · premium',
-  'dense · lisible · vivant',
-  'vos finances · à vue',
 ]
 
 function CockpitPage() {
@@ -125,10 +114,6 @@ function CockpitPage() {
 
   const advisorFlags = getAiAdvisorUiFlags()
   const advisorVisible = advisorFlags.enabled && (!advisorFlags.adminOnly || isAdmin)
-  const advisorQ = useQuery({
-    ...dashboardAdvisorQueryOptionsWithMode({ range: '30d', ...(advisorVisible && authMode ? { mode: authMode } : {}) }),
-    enabled: advisorVisible,
-  })
   const recsQ = useQuery({
     ...dashboardAdvisorRecommendationsQueryOptionsWithMode(advisorVisible && authMode ? { mode: authMode } : {}),
     enabled: advisorVisible,
@@ -136,7 +121,6 @@ function CockpitPage() {
 
   const attentionQ = useQuery(attentionItemsQueryOptions({ status: 'open' }))
   const attentionItems: AttentionItem[] = attentionQ.data?.items ?? []
-  const attentionCount = attentionQ.data?.openCount ?? attentionItems.length
 
   const goals = goalsQ.data?.items ?? []
   const activeGoals = goals.filter(g => !g.archivedAt)
@@ -157,53 +141,6 @@ function CockpitPage() {
       ? 'Synchronisation à vérifier'
       : 'Aucune connexion'
 
-  const nextActions: PersonalActionItem[] = []
-  if (connsFail > 0) {
-    nextActions.push({
-      label: 'Vérifier les intégrations',
-      description: `${connsFail} connexion${connsFail > 1 ? 's' : ''} à reprendre avant de faire confiance aux chiffres.`,
-      to: '/integrations',
-      icon: '⊞',
-      tone: 'warning',
-    })
-  }
-  if (goalsNeedingAttention.length > 0) {
-    nextActions.push({
-      label: 'Revoir les objectifs',
-      description: `${goalsNeedingAttention.length} objectif${goalsNeedingAttention.length > 1 ? 's' : ''} encore bas dans la progression.`,
-      to: '/objectifs',
-      icon: '◎',
-      tone: 'brand',
-    })
-  }
-  if (highRiskRecommendations.length > 0) {
-    nextActions.push({
-      label: "Lire l'Advisor",
-      description: `${highRiskRecommendations.length} recommandation${highRiskRecommendations.length > 1 ? 's' : ''} à examiner.`,
-      to: '/ia',
-      icon: '□',
-      tone: 'warning',
-    })
-  }
-  if (nextActions.length < 5) {
-    nextActions.push({
-      label: 'Inspecter les dépenses',
-      description: 'Comprendre où part le cash et vérifier les transactions récentes.',
-      to: '/depenses',
-      icon: '↔',
-      tone: cf.direction === 'down' ? 'negative' : 'plain',
-    })
-  }
-  if (nextActions.length < 5) {
-    nextActions.push({
-      label: 'Voir le détail du patrimoine',
-      description: 'Passer des chiffres globaux aux comptes, actifs et positions.',
-      to: '/patrimoine',
-      icon: '◇',
-      tone: 'plain',
-    })
-  }
-
   const sparkData = adapted.dailyWealthSnapshots.map(s => ({ date: s.date, value: s.balance }))
   const [secondaryReady, setSecondaryReady] = useState(false)
   const staleData = !summaryQ.isPending && summaryQ.isError && summaryQ.data !== undefined
@@ -220,23 +157,22 @@ function CockpitPage() {
 
   return (
     <div className="space-y-10 md:space-y-12">
-      {/* ── Hero — LiquidEther + TextPressure "COCKPIT" + CircularText halo ── */}
-      <CockpitHero
-        rotations={COCKPIT_ROTATIONS}
-        range={range}
-        rangeOptions={RANGES}
-        onRangeChange={next => navigate({ search: { range: next } })}
-        isDemo={isDemo}
-        isAdmin={isAdmin}
+      <PageHeader
+        title="Cockpit"
+        status={isDemo ? <Badge variant="outline">Mode démo</Badge> : null}
+        actions={
+          <RangePill
+            options={RANGES}
+            value={range}
+            onChange={next => navigate({ search: { range: next } })}
+            layoutId="cockpit-range"
+            ariaLabel="Période"
+          />
+        }
       />
 
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Aujourd'hui"
-          title="Ta situation en un coup d'œil"
-          description="Les chiffres utiles maintenant, avec le bruit expert gardé en arrière-plan."
-        />
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <div className="grid gap-4">
           <Panel
             title={attentionTotal > 0 ? 'Ce qui mérite ton attention' : 'Aucune alerte importante'}
             description={
@@ -267,22 +203,11 @@ function CockpitPage() {
               />
             </div>
           </Panel>
-
-          <PersonalActionsPanel
-            title="Prochaines actions"
-            description="Pas plus de quelques gestes utiles pour avancer."
-            items={nextActions}
-          />
         </div>
       </section>
 
       {/* ── Wealth chart + KPI rail ── */}
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Ma trajectoire"
-          title="Ce qui change sur la période"
-          description="Patrimoine, revenus, dépenses et cashflow réunis dans une lecture simple."
-        />
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
         <Panel
           title={
@@ -373,113 +298,9 @@ function CockpitPage() {
         </Panel>
       ) : null}
 
-      {/* ── AI Advisor digest + personal attention summary ── */}
-      {advisorVisible && (
-        <section className="grid gap-4 md:grid-cols-2">
-          <Link
-            to="/ia"
-            className="group rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md transition-all hover:border-primary/30 hover:bg-card/80"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-aurora/70">
-              ▣ synthèse Advisor
-            </p>
-            <p className="mt-3 text-lg font-semibold text-foreground group-hover:text-primary">
-              {advisorQ.data?.brief?.title ?? 'Brief quotidien'}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-              {advisorQ.data?.brief?.summary ?? 'Ce que l’Advisor comprend, ce qui manque, et quoi vérifier ensuite.'}
-            </p>
-            <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <StatusDot tone={advisorQ.data?.status === 'degraded' ? 'warn' : 'ok'} size={6} />
-                {advisorQ.data?.status ?? 'loading'}
-              </span>
-              {activeRecs.length > 0 && (
-                <span className="text-primary">{activeRecs.length} recommandation{activeRecs.length > 1 ? 's' : ''}</span>
-              )}
-              <span>aide à la décision</span>
-            </div>
-          </Link>
-
-          <div className="space-y-2 rounded-2xl border border-border/50 bg-card/60 p-5 backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-negative/70">
-                ⚠ à traiter
-              </p>
-              {attentionCount > 0 ? (
-                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">
-                  {attentionCount}
-                </span>
-              ) : null}
-            </div>
-            <div className="space-y-1.5">
-              {/* Digested attention items from API; raw expert surfaces stay outside the daily flow. */}
-              {attentionItems.slice(0, 4).map(item => {
-                const tone =
-                  item.severity === 'critical' ? 'err' : item.severity === 'important' ? 'warn' : 'ok'
-                const linkProps = item.actionHref
-                  ? { to: item.actionHref, asLink: true as const }
-                  : { asLink: false as const }
-                return (
-                  <div key={item.id} className="flex items-start gap-2 text-sm">
-                    <StatusDot tone={tone} size={6} pulse={item.severity === 'critical'} />
-                    {linkProps.asLink ? (
-                      <a
-                        href={item.actionHref ?? '#'}
-                        className="line-clamp-1 text-foreground hover:text-primary"
-                        title={item.summary ?? item.title}
-                      >
-                        {item.title}
-                      </a>
-                    ) : (
-                      <span className="line-clamp-1 text-foreground" title={item.summary ?? item.title}>
-                        {item.title}
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-              {connsFail > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <StatusDot tone="err" size={6} pulse />
-                  <Link to="/integrations" className="text-foreground hover:text-primary">
-                    {connsFail} connexion{connsFail > 1 ? 's' : ''} bancaire{connsFail > 1 ? 's' : ''} en erreur
-                  </Link>
-                </div>
-              )}
-              {activeRecs.filter(r => r.riskLevel === 'high').length > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <StatusDot tone="warn" size={6} />
-                  <Link to="/ia" className="text-foreground hover:text-primary">
-                    {activeRecs.filter(r => r.riskLevel === 'high').length} recommandation{activeRecs.filter(r => r.riskLevel === 'high').length > 1 ? 's' : ''} risque élevé
-                  </Link>
-                </div>
-              )}
-              {goalsNeedingAttention.length > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <StatusDot tone="warn" size={6} />
-                  <Link to="/objectifs" className="text-foreground hover:text-primary">
-                    {goalsNeedingAttention.length} objectif{goalsNeedingAttention.length > 1 ? 's' : ''} à reprendre
-                  </Link>
-                </div>
-              )}
-              {attentionTotal === 0 && (
-                <p className="py-2 text-sm text-muted-foreground">
-                  Rien de critique aujourd'hui.
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── Insights — top expenses / connections / goals ── */}
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Mes données"
-          title="Les détails à portée de main"
-          description="Dépenses, connexions et objectifs restent accessibles sans remplir la page de données brutes."
-        />
+        <PersonalSectionHeading title="Mes données" />
       <section className="grid gap-5 md:gap-6 lg:grid-cols-3">
         {!secondaryReady ? (
           <Panel title="Chargement progressif" description="Affinage des surfaces quotidiennes…" tone="plain">
@@ -612,25 +433,6 @@ function CockpitPage() {
         ) : null}
       </section>
       </section>
-
-      {/* ── Status bar — mono cockpit footer ── */}
-      <footer className="rounded-2xl border border-border/50 bg-card/60 px-5 py-3 backdrop-blur-md">
-        <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px]">
-          <Stat
-            label="patrimoine"
-            value={formatMoney(adapted.totals.balance)}
-            {...(trend === 'up' ? { tone: 'positive' as const } : trend === 'down' ? { tone: 'negative' as const } : {})}
-          />
-          <Stat
-            label="cashflow"
-            value={formatMoney(cf.net)}
-            {...(cf.direction === 'up' ? { tone: 'positive' as const } : cf.direction === 'down' ? { tone: 'negative' as const } : {})}
-          />
-          <Stat label="connexions" value={`${connsOk}/${conns.length}`} />
-          <Stat label="objectifs" value={`${activeGoals.length}`} />
-          <Stat label="période" value={range} />
-        </div>
-      </footer>
     </div>
   )
 }
@@ -661,29 +463,5 @@ function TodayMetric({
       <p className={`mt-1 font-financial text-lg font-semibold ${valueClass}`}>{value}</p>
       <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </div>
-  )
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: string
-  tone?: 'positive' | 'negative'
-}) {
-  return (
-    <span className="text-muted-foreground/55">
-      {label}
-      <span className="mx-1 text-muted-foreground/25">:</span>
-      <span
-        className={
-          tone === 'positive' ? 'text-positive' : tone === 'negative' ? 'text-negative' : 'text-foreground/85'
-        }
-      >
-        {value}
-      </span>
-    </span>
   )
 }

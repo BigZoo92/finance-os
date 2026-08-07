@@ -16,18 +16,11 @@ import type { DashboardRange, DashboardTransactionsResponse } from '@/features/d
 import { patchTransactionClassification } from '@/features/dashboard-api'
 import { ExpenseStructureCard } from '@/components/dashboard/expense-structure-card'
 import { MonthlyCategoryBudgetsCard } from '@/components/dashboard/monthly-category-budgets-card'
-import { MonthEndProjectionCard } from '@/components/dashboard/month-end-projection-card'
 import { formatMoney, formatDate, toErrorMessage } from '@/lib/format'
 import { exportTransactionsCsv } from '@/lib/export'
 import { pushToast } from '@/lib/toast-store'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
-import { Panel } from '@/components/surfaces/panel'
-import {
-  PersonalActionsPanel,
-  PersonalEmptyState,
-  PersonalSectionHeading,
-  type PersonalActionItem,
-} from '@/components/personal/personal-ux'
+import { PersonalEmptyState } from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -98,40 +91,6 @@ function DepensesPage() {
     .reduce((sum, transaction) => sum + transaction.amount, 0)
   const netFlow = totalIncomes - totalExpenses
   const uncategorizedTransactions = transactions.filter(transaction => !transaction.category)
-  const topExpenseCategory = [...transactions
-    .filter(transaction => transaction.direction === 'expense')
-    .reduce<Map<string, number>>((map, transaction) => {
-      const key = (transaction.category ?? 'Sans catégorie').trim() || 'Sans catégorie'
-      map.set(key, (map.get(key) ?? 0) + Math.abs(transaction.amount))
-      return map
-    }, new Map())]
-    .sort((left, right) => right[1] - left[1])[0]
-  const expenseActions: PersonalActionItem[] = [
-    {
-      label: uncategorizedTransactions.length > 0 ? 'Catégoriser les transactions' : 'Revoir les dernières lignes',
-      description:
-        uncategorizedTransactions.length > 0
-          ? `${uncategorizedTransactions.length} transaction${uncategorizedTransactions.length > 1 ? 's' : ''} sans catégorie.`
-          : 'Vérifier les libellés et les montants récents.',
-      to: '/depenses',
-      icon: '↔',
-      tone: uncategorizedTransactions.length > 0 ? 'warning' : 'plain',
-    },
-    {
-      label: 'Voir les objectifs',
-      description: 'Relier tes dépenses à ce que tu veux financer.',
-      to: '/objectifs',
-      icon: '◎',
-      tone: 'brand',
-    },
-    {
-      label: "Demander à l'Advisor",
-      description: 'Obtenir une lecture simple de ce qui pèse le plus.',
-      to: '/ia/chat',
-      icon: '□',
-      tone: 'plain',
-    },
-  ]
 
   const classifyMutation = useMutation({
     mutationFn: async (transaction: DashboardTransactionsResponse['items'][number]) => {
@@ -166,10 +125,8 @@ function DepensesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Cockpit personnel"
         icon="↔"
         title="Dépenses & revenus"
-        description="Comprendre ce qui sort, ce qui rentre, et quelles lignes méritent une vérification."
         actions={
           <>
             <Button
@@ -194,11 +151,6 @@ function DepensesPage() {
       />
 
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Aujourd'hui"
-          title="Tes flux en clair"
-          description="Le résumé avant les catégories et la table de transactions."
-        />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <KpiTile
             label="Dépenses"
@@ -235,62 +187,11 @@ function DepensesPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Panel
-          title="Ce qui pèse le plus"
-          description="Une lecture simple du principal poste de dépense sur la période."
-          icon={<span aria-hidden="true">↔</span>}
-          tone="negative"
-        >
-          {transactionsQuery.isPending ? (
-            <div className="h-16 animate-shimmer rounded-xl" />
-          ) : topExpenseCategory ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Poste principal</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight">{topExpenseCategory[0]}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  À comparer avec tes budgets et objectifs avant de couper quoi que ce soit.
-                </p>
-              </div>
-              <p className="font-financial text-3xl font-semibold text-negative">
-                {formatMoney(topExpenseCategory[1])}
-              </p>
-            </div>
-          ) : (
-            <PersonalEmptyState
-              title="Aucune dépense sur cette période"
-              description="Essaie une plage plus large ou connecte un compte bancaire pour alimenter cette vue."
-            />
-          )}
-        </Panel>
-        <PersonalActionsPanel
-          title="Prochaines actions"
-          description="Garder la page utile sans transformer chaque ligne en problème."
-          items={expenseActions}
-        />
-      </section>
-
-      <PersonalSectionHeading
-        eyebrow="Ma trajectoire"
-        title="Structure et projection"
-        description="Les catégories, budgets et fin de mois viennent après le résumé."
-      />
-
       {/* Expense structure + budgets */}
       <div className="grid gap-6 md:grid-cols-2">
         <ExpenseStructureCard range={range} transactions={transactions} demo={isDemo} />
         <MonthlyCategoryBudgetsCard isAdmin={isAdmin} isDemo={isDemo} transactions={transactions} />
       </div>
-
-      {/* Projection */}
-      <MonthEndProjectionCard isAdmin={isAdmin} transactions={transactions} />
-
-      <PersonalSectionHeading
-        eyebrow="Mes données"
-        title="Transactions"
-        description="Inspecte les lignes, exporte si besoin, et classe uniquement en session admin."
-      />
 
       {/* Transactions table */}
       <Card>

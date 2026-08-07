@@ -19,11 +19,7 @@ import type { ExternalInvestmentProvider } from '@/features/external-investments
 import { pushSettingsQueryOptionsWithMode } from '@/features/notifications/query-options'
 import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
 import { formatDateTime, formatDuration } from '@/lib/format'
-import { AsciiStatusLine, AsciiDivider } from '@/components/ui/ascii-brand'
 import { PageHeader } from '@/components/surfaces/page-header'
-import { useReducedMotion } from 'motion/react'
-import { useEffect, useState } from 'react'
-import PixelBlast from '@/components/reactbits/pixel-blast'
 
 const providerLabel = (provider: ExternalInvestmentProvider) =>
   provider === 'ibkr' ? 'IBKR' : 'Binance'
@@ -55,10 +51,6 @@ type HealthSignal = {
 }
 
 function SantePage() {
-  const prefersReducedMotion = useReducedMotion()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
@@ -169,7 +161,7 @@ function SantePage() {
         description="Diagnostics système, synchronisation et pipelines dérivés. Utile pour vérifier les sources, pas nécessaire au quotidien."
       />
 
-      {/* Overall status hero — PixelBlast in the OK state, calm gradient otherwise */}
+      {/* Overall status summary */}
       <Card
         className={`relative overflow-hidden ${
           overallStatus === 'error'
@@ -179,30 +171,6 @@ function SantePage() {
               : 'border-positive/30 bg-positive/5'
         }`}
       >
-        {/* PixelBlast WebGL layer — only when system is OK and motion allowed */}
-        {overallStatus === 'ok' && mounted && !prefersReducedMotion && (
-          <div className="pointer-events-none absolute inset-0 opacity-60">
-            <PixelBlast
-              variant="circle"
-              pixelSize={6}
-              color="#5fe39d"
-              patternScale={3}
-              patternDensity={1.0}
-              pixelSizeJitter={0.4}
-              enableRipples
-              rippleSpeed={0.4}
-              rippleThickness={0.12}
-              rippleIntensityScale={1.5}
-              liquid
-              liquidStrength={0.06}
-              liquidRadius={1.0}
-              liquidWobbleSpeed={5}
-              speed={0.5}
-              edgeFade={0.35}
-              transparent
-            />
-          </div>
-        )}
         <CardContent className="relative flex items-center gap-4 p-6">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -222,8 +190,6 @@ function SantePage() {
           </div>
         </CardContent>
       </Card>
-
-      <AsciiDivider variant="bold" />
 
       {/* Signal grid */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -404,15 +370,6 @@ function SantePage() {
         </CardContent>
       </Card>
 
-      {/* ASCII footer accent */}
-      <AsciiStatusLine
-        items={[
-          { label: 'mode', value: authMode ?? '…' },
-          { label: 'conn', value: `${connections.length}`, tone: connections.length > 0 ? 'positive' : 'neutral' },
-          { label: 'sync', value: latestSync.badgeLabel, tone: latestSync.badgeVariant === 'destructive' ? 'negative' : 'positive' },
-          { label: 'derived', value: derived?.state ?? '…' },
-        ]}
-      />
     </div>
   )
 }

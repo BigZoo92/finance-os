@@ -12,24 +12,21 @@ const KEYWORDS: Record<string, string> = {
   '/depenses': 'transactions budgets projections quotidien',
   '/patrimoine': 'actifs soldes assets wealth',
   '/investissements': 'positions portfolio bourse invest',
-  '/fiscalite': 'fiscalite impots taxes declaration comptes etrangers crypto 3916 2086 2074 pea',
   '/objectifs': 'goals épargne cibles progression',
   '/integrations': 'powens sync banque connexion provider admin expert',
   '/sante': 'health diagnostics système admin expert',
   '/orchestration': 'refresh daily intelligence cron jobs ops orchestration sync admin',
-  '/parametres': 'settings notifications export config admin',
   '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils vue ia',
   '/ia/strategie-investissement':
     'investissement strategie allocation 60 30 10 pea ibkr binance plan action advisor',
   '/ia/chat': 'chat conversation question reponse advisor dialogue',
-  '/ia/memoire': 'graphe connaissances graphrag memoire knowledge neo4j qdrant',
+  '/ia/memoire': 'graphe connaissances memoire contexte',
   '/ia/trading-lab': 'trading lab papier paper backtest recherche strategies expert',
   '/ia/couts': 'tokens couts budget modeles llm depenses ia usage admin expert',
   '/signaux': 'news actualites feed flux macro signal briefing donnees brutes expert',
   '/signaux/marches': 'macro watchlist regime taux inflation fred eodhd marches bourse expert',
   '/signaux/social':
     'social intelligence x twitter bluesky comptes surveilles lookup handle sync j-1 previous day budget admin expert',
-  '/signaux/sources': 'sources api fraicheur qualite donnees providers admin expert',
 }
 
 const PAGES = NAV_ITEMS.map(item => ({

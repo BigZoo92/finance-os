@@ -14,28 +14,18 @@ Read [AGENTS.md](AGENTS.md) first. This file is Claude-specific and intentionall
 ## Default Role
 
 - Default to challenger, reviewer, and local high-context collaborator.
-- Prefer reviewing assumptions, risk, UX states, contracts, rollout notes, and test gaps before becoming a second writer on active autopilot work.
-
-## Autopilot Branch Ownership
-
-- Active autopilot implementation work lives on `implement:` PRs backed by `agent/impl-*` branches.
-- Codex is the default writer for those branches because GitHub automation is wired around Codex PR-thread patch replies.
-- Do not write concurrently with Codex on the same active autopilot branch.
-- If a human explicitly wants Claude to implement on that branch, treat it as a manual takeover:
-  - keep the same branch
-  - do not open a second PR
-  - pause Codex prompting on that branch until Claude's turn is complete
+- The GitHub agentic development pipeline (Codex autopilot) was removed in RESET-AUDIT-CLEANUP-0. Development happens manually or with local coding agents; Claude may implement directly when asked.
 
 ## Where Claude Adds The Most Value
 
-- challenge or refine batch/spec scope before implementation
-- review active PRs for bugs, regressions, missing tests, and rollout risks
-- do risky local investigations or prototypes on non-autopilot branches
+- challenge or refine scope before implementation
+- review PRs for bugs, regressions, missing tests, and rollout risks
+- do risky local investigations or prototypes on dedicated branches
 - critique UI structure, copy, accessibility, and color decisions
 
 ## AI Advisor Memory Boundary
 
-- The Temporal Knowledge Graph / GraphRAG service is AI Advisor memory for personal financial context, not the Codex/Claude agentic development pipeline.
+- The Temporal Knowledge Graph / GraphRAG service is AI Advisor memory for personal financial context, not a development tool.
 - Deterministic `packages/finance-engine` outputs remain first; graph context only enriches, explains, and challenges recommendations.
 - Never treat graph memory as trading execution infrastructure. Technical/trading nodes are knowledge-only and paper-trading-ready at most.
 - External investment context comes from the compact `advisor_investment_context_bundle`; never prompt from raw IBKR XML, Binance JSON, provider credentials, signed URLs or secrets.
@@ -111,7 +101,7 @@ Use context packs and skill routing instead of loading the entire repo brain:
 - **Full index**: [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
 
 Claude's primary roles (challenger, reviewer) typically need `medium` budget.
-Implementation tasks handed off to Codex typically need `large` or `xlarge`.
+Implementation tasks typically need `large` or `xlarge`.
 
 **Skills**: `.claude/skills/` is a **generated projection** — never edit directly.
 Edit skills in `.agentic/source/skills/`, then run `pnpm agent:skills:sync`.

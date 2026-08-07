@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-05-24T15:34:40.156Z",
+  "generatedAt": "2026-08-07T16:14:06.188Z",
   "canonical": ".agentic/source/skills",
   "references": ".agentic/source/references",
   "targets": [
@@ -311,7 +311,7 @@
       ".claude/skills/redis-development/rules/vector-hybrid-search.md": "294c0addc2d1776d47bfef0d1718e60fc4715b0feff6f001af216b45e9c50da5",
       ".claude/skills/redis-development/rules/vector-index-creation.md": "790ef8e67b3655211db276f4341215362b2bd70f7351e10197935dbdbd9eb80c",
       ".claude/skills/redis-development/rules/vector-rag-pattern.md": "0a3748e1f5e32fe5901ac33ab1f6653d0a58ef18efbf3d497c5f6f82baa622c6",
-      ".claude/skills/release-sanity/SKILL.md": "47791c1add0f3302fc8b45233397ecbde73e98dca551d6175f49741153259a31",
+      ".claude/skills/release-sanity/SKILL.md": "ad57cf0af5e5947f7eb88c188ad6295b74a0237a3554334384bd6fd3c921725a",
       ".claude/skills/repo-recall/SKILL.md": "dc54308788314792b94d23b28e6c4fb5e28255f41a3e98ba0a0dab84d03b03bd",
       ".claude/skills/review-skill/SKILL.md": "ebeeddd86939e17e3c8a0cc3b8438bf58c9fba1aa7794c5e89997660cbf2da6d",
       ".claude/skills/review-skill/references/rubric.md": "4d99fde79af82cf300cab573daaa69a6b04bc18504f100aa431e88c6f5f1a329",
@@ -766,7 +766,7 @@
       ".agents/skills/redis-development/rules/vector-hybrid-search.md": "294c0addc2d1776d47bfef0d1718e60fc4715b0feff6f001af216b45e9c50da5",
       ".agents/skills/redis-development/rules/vector-index-creation.md": "790ef8e67b3655211db276f4341215362b2bd70f7351e10197935dbdbd9eb80c",
       ".agents/skills/redis-development/rules/vector-rag-pattern.md": "0a3748e1f5e32fe5901ac33ab1f6653d0a58ef18efbf3d497c5f6f82baa622c6",
-      ".agents/skills/release-sanity/SKILL.md": "47791c1add0f3302fc8b45233397ecbde73e98dca551d6175f49741153259a31",
+      ".agents/skills/release-sanity/SKILL.md": "ad57cf0af5e5947f7eb88c188ad6295b74a0237a3554334384bd6fd3c921725a",
       ".agents/skills/repo-recall/SKILL.md": "dc54308788314792b94d23b28e6c4fb5e28255f41a3e98ba0a0dab84d03b03bd",
       ".agents/skills/security-and-hardening/SKILL.md": "6f3b9d0fa3f36b36176380813c6bec6f2eb33316e46f082bed0465be0a2f704c",
       ".agents/skills/tanstack-integration-best-practices/SKILL.md": "a3a4ebc5bef6417d5396017e81a14f99f2169adc80c24ccc51dc7bb55974c367",

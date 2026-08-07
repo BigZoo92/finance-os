@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Card, CardContent } from '@finance-os/ui/components'
-import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
-import { dashboardNewsQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { signalHealthQueryOptions, signalItemsQueryOptions, signalSourcesQueryOptions, signalRunsQueryOptions } from '@/features/signals-query-options'
 import type { SignalItem } from '@/features/signals-api'
@@ -12,17 +9,16 @@ import { createScenarioFromSignal } from '@/features/trading-lab-api'
 import { Badge } from '@finance-os/ui/components'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
-import { NewsFeed } from '@/components/dashboard/news-feed'
 
+// NOTE: page temporaire. La future page fusionnée "Radar / Marchés & Signaux"
+// remplacera cette surface (mission dédiée). L'ancien layout news a été retiré;
+// les pipelines d'ingestion news/marchés/social restent actifs côté backend.
 export const Route = createFileRoute('/_app/signaux/')({
   loader: async ({ context }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-    const mode: AuthMode | undefined =
-      auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
-    if (!mode) return
+    if (auth.mode !== 'admin' && auth.mode !== 'demo') return
 
     await Promise.all([
-      context.queryClient.ensureQueryData(dashboardNewsQueryOptionsWithMode({ mode })),
       context.queryClient.ensureQueryData(signalHealthQueryOptions()),
       context.queryClient.ensureQueryData(signalSourcesQueryOptions()),
       context.queryClient.ensureQueryData(signalItemsQueryOptions({ limit: 20 })),
@@ -38,9 +34,7 @@ function SignauxActualitesPage() {
     isPending: authQuery.isPending,
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
-  const isDemo = authViewState === 'demo'
   const isAdmin = authViewState === 'admin'
-  const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
 
   useQuery(signalHealthQueryOptions())
   const sourcesQuery = useQuery(signalSourcesQueryOptions())
@@ -123,19 +117,6 @@ function SignauxActualitesPage() {
             </div>
           </Panel>
         </Link>
-        {isAdmin && (
-          <Link to="/signaux/sources" className="block">
-            <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">⊡</span>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">Sources & fraîcheur</p>
-                  <p className="text-xs text-text-tertiary">Qualité et provenance des données</p>
-                </div>
-              </div>
-            </Panel>
-          </Link>
-        )}
       </div>
 
       {/* Context note */}
@@ -169,17 +150,6 @@ function SignauxActualitesPage() {
             {' '}ou attendez une ingestion automatique.
           </p>
         </Panel>
-      )}
-
-      {/* News feed (existing news backbone) */}
-      {authMode ? (
-        <NewsFeed mode={authMode} />
-      ) : (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Chargement...
-          </CardContent>
-        </Card>
       )}
     </div>
   )

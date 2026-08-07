@@ -1,14 +1,9 @@
 import { Badge, Input } from '@finance-os/ui/components'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { z } from 'zod'
-import {
-  type PersonalActionItem,
-  PersonalActionsPanel,
-  PersonalEmptyState,
-  PersonalSectionHeading,
-} from '@/components/personal/personal-ux'
+import { PersonalEmptyState } from '@/components/personal/personal-ux'
 import { ActionDock } from '@/components/surfaces/action-dock'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { PageHeader } from '@/components/surfaces/page-header'
@@ -33,10 +28,6 @@ import {
   getUnpositionedPowensInvestmentAssets,
   sumPowensInvestmentAssetValuations,
 } from '@/features/investments/powens-investment-assets'
-import {
-  buildSocialBenchmarkExplainability,
-  logSocialBenchmarkExplainabilityEvent,
-} from '@/features/social-benchmark-explainability'
 import { formatDateTime, formatMoney, formatQuantity } from '@/lib/format'
 import { pushToast } from '@/lib/toast-store'
 
@@ -146,7 +137,6 @@ function InvestissementsPage() {
   const powensInvestmentAssetsValue = sumPowensInvestmentAssetValuations(powensInvestmentAssets)
   const externalPositions = externalPositionsQuery.data?.items ?? []
   const externalBundle = externalSummaryQuery.data?.bundle ?? null
-  const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null)
 
   const totalValue = positions.reduce(
     (sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0),
@@ -187,36 +177,6 @@ function InvestissementsPage() {
   })
   const externalTrades = externalTradesQuery.data?.items ?? []
   const externalCashFlows = externalCashFlowsQuery.data?.items ?? []
-  const qualityWarningCount =
-    (externalBundle?.unknownCostBasisWarnings.length ?? 0) +
-    (externalBundle?.missingMarketDataWarnings.length ?? 0) +
-    (externalBundle?.staleDataWarnings.length ?? 0)
-  const investmentActions: PersonalActionItem[] = [
-    {
-      label: qualityWarningCount > 0 ? 'Vérifier les données' : 'Contrôler les intégrations',
-      description:
-        qualityWarningCount > 0
-          ? `${qualityWarningCount} alerte${qualityWarningCount > 1 ? 's' : ''}: coût, prix ou fraîcheur à clarifier.`
-          : 'S’assurer que les snapshots IBKR/Binance sont bien récents.',
-      to: '/integrations',
-      icon: '⊞',
-      tone: qualityWarningCount > 0 ? 'warning' : 'plain',
-    },
-    {
-      label: "Demander à l'Advisor",
-      description: 'Comprendre les risques, la concentration ou les données manquantes.',
-      to: '/ia/chat',
-      icon: '□',
-      tone: 'brand',
-    },
-    {
-      label: 'Voir le patrimoine global',
-      description: 'Replacer les investissements dans l’ensemble de tes actifs.',
-      to: '/patrimoine',
-      icon: '◇',
-      tone: 'plain',
-    },
-  ]
   const updateExternalSearch = (next: {
     provider?: ExternalInvestmentProvider | 'all'
     account?: string
@@ -232,35 +192,14 @@ function InvestissementsPage() {
         q: next.q ?? q,
       },
     })
-  const explainabilityModel = useMemo(
-    () =>
-      buildSocialBenchmarkExplainability({
-        mode: authMode ?? 'unknown',
-        positions: adaptedSummary.positions,
-        assets: adaptedSummary.assets,
-      }),
-    [adaptedSummary.assets, adaptedSummary.positions, authMode]
-  )
-
-  useEffect(() => {
-    logSocialBenchmarkExplainabilityEvent(explainabilityModel)
-  }, [explainabilityModel])
-
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Cockpit personnel"
         icon="△"
         title="Investissements"
-        description="Ce que tu détiens, ce qui est valorisé, et ce qui doit rester en lecture seule ou à vérifier."
       />
 
       <section className="space-y-4">
-        <PersonalSectionHeading
-          eyebrow="Aujourd'hui"
-          title="Ton portefeuille en clair"
-          description="Les providers restent en arrière-plan; la première lecture porte sur les montants et la qualité des données."
-        />
         <div className="grid gap-3 sm:grid-cols-2">
           <KpiTile
             label="Valorisation totale"
@@ -305,56 +244,8 @@ function InvestissementsPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Panel
-          title={
-            qualityWarningCount > 0 ? 'Données à vérifier' : 'Données de portefeuille utilisables'
-          }
-          description="Coût d'achat, prix de marché et fraîcheur changent le niveau de confiance, pas les garde-fous read-only."
-          icon={<span aria-hidden="true">△</span>}
-          tone={qualityWarningCount > 0 ? 'warning' : 'positive'}
-        >
-          {qualityWarningCount > 0 ? (
-            <div className="space-y-2 text-sm">
-              {externalBundle?.unknownCostBasisWarnings.slice(0, 2).map(item => (
-                <p key={item} className="text-warning">
-                  Coût inconnu: {item}
-                </p>
-              ))}
-              {externalBundle?.missingMarketDataWarnings.slice(0, 2).map(item => (
-                <p key={item} className="text-warning">
-                  Prix manquant: {item}
-                </p>
-              ))}
-              {externalBundle?.staleDataWarnings.slice(0, 2).map(item => (
-                <p key={item} className="text-warning">
-                  Donnée ancienne: {item}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Aucune alerte majeure sur les positions chargées. Les données externes restent lues
-              depuis le cache.
-            </p>
-          )}
-        </Panel>
-        <PersonalActionsPanel
-          title="Prochaines actions"
-          description="Comprendre et vérifier, sans action de marché."
-          items={investmentActions}
-        />
-      </section>
-
-      <PersonalSectionHeading
-        eyebrow="Mes données"
-        title="Positions et allocations"
-        description="Les détails provider sont disponibles, mais secondaires par rapport à tes avoirs."
-      />
-
       <Panel
         title="Portefeuille externe"
-        description="Positions IBKR Flex et Binance Spot lues depuis le cache. Aucun ordre, aucune exécution."
         icon={<span aria-hidden="true">◇</span>}
         tone="brand"
       >
@@ -373,19 +264,6 @@ function InvestissementsPage() {
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Spot USER_DATA / Wallet en lecture seule.
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Qualite</p>
-            <p className="mt-1 text-lg font-semibold">
-              {qualityWarningCount === 0
-                ? 'OK'
-                : `${qualityWarningCount} alerte${qualityWarningCount !== 1 ? 's' : ''}`}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {externalBundle?.confidence
-                ? `Confiance ${externalBundle.confidence}`
-                : 'Bundle non genere'}
             </p>
           </div>
         </div>
@@ -838,82 +716,6 @@ function InvestissementsPage() {
           </div>
         )}
       </Panel>
-
-      {explainabilityModel.enabled && (
-        <Panel
-          title="Pourquoi ce benchmark diffère"
-          icon={<span aria-hidden="true">◉</span>}
-          tone="violet"
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Résumé: lecture heuristique non-conseil. Les benchmarks bruts restent affichés même en
-              fallback.
-            </p>
-            <div className="rounded-lg border border-border/50 bg-surface-1 p-3 text-xs text-muted-foreground">
-              <p className="font-mono uppercase tracking-[0.16em]">Trace</p>
-              <p className="mt-1 font-mono">{explainabilityModel.traceId}</p>
-              {explainabilityModel.staleInsight && (
-                <p className="mt-2 text-warning">
-                  Données potentiellement anciennes: narration générée avec confiance réduite.
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              {explainabilityModel.insights.map(insight => {
-                const expanded = expandedInsightId === insight.id
-                return (
-                  <div
-                    key={insight.id}
-                    className="rounded-lg border border-border/60 bg-surface-1/70 p-3"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{insight.title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{insight.summary}</p>
-                      </div>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                          insight.confidence === 'high'
-                            ? 'bg-positive/15 text-positive'
-                            : insight.confidence === 'medium'
-                              ? 'bg-warning/15 text-warning'
-                              : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        confiance {insight.confidence}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline"
-                      aria-expanded={expanded}
-                      onClick={() => setExpandedInsightId(expanded ? null : insight.id)}
-                    >
-                      {expanded ? 'Masquer le détail' : 'Afficher le détail'}
-                    </button>
-                    {expanded && (
-                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                        <p>{insight.detail}</p>
-                        {insight.fallbackReason && (
-                          <p className="text-warning">Fallback: {insight.fallbackReason}</p>
-                        )}
-                        <p className="font-mono">Règles: {insight.ruleHits.join(', ')}</p>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            {explainabilityModel.generationFailed && (
-              <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-                Génération narrative indisponible ({explainabilityModel.failureReason}). Les
-                benchmarks de base restent visibles.
-              </p>
-            )}
-          </div>
-        </Panel>
-      )}
 
       {/* Action dock — magnification toolbar for actions */}
       <ActionDock

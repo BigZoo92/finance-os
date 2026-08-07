@@ -1,6 +1,6 @@
 # Information Architecture - Finance-OS
 
-Last updated: 2026-06-03
+Last updated: 2026-08-07 (RESET-AUDIT-CLEANUP-0)
 
 Finance-OS keeps everyday use separate from expert/admin operations. Demo
 navigation must stay small and deterministic; admin can access Ops surfaces
@@ -10,14 +10,11 @@ behind the admin session.
 
 | Route | Role | Nav |
 |---|---|---|
-| `/` | Daily overview, KPIs, connections, Advisor digest | Mobile tab 1 |
+| `/` | Daily overview, KPIs, connections | Mobile tab 1 |
 | `/depenses` | Transactions, income, spending, budgets | Mobile tab 2 |
 | `/patrimoine` | Assets, balances, wealth trajectory | Mobile tab 3 |
 | `/investissements` | Read-only investment portfolio view | More |
 | `/objectifs` | Personal goals | More |
-
-`/fiscalite` remains routable but is hidden from normal demo navigation until
-the final mockups decide whether it belongs under Patrimoine or Ops.
 
 ## Advisor
 
@@ -39,19 +36,26 @@ The routes still keep their own guards/fail-soft behavior.
 
 | Route | Role |
 |---|---|
-| `/signaux` | Raw signals hub |
+| `/signaux` | Signals hub (temporary; future merged Radar page) |
 | `/signaux/marches` | Market/macro signals |
-| `/signaux/social` | X/social provider operations |
-| `/signaux/sources` | Signal sources and provenance |
-| `/signaux/free-firehose` | Manual free-source ingestion |
+| `/signaux/social` | Followed social accounts (X/Bluesky) |
 | `/ia/trading-lab` | Paper research and backtests, no execution |
 | `/ia/couts` | Advisor, X, and provider subscription costs |
-| `/integrations` | Provider connections and diagnostics |
+| `/integrations` | Provider connections |
 | `/sante` | Admin health/status |
 | `/orchestration` | Daily Intelligence and stale-run recovery |
-| `/ops-env-diagnostics` | Feature/env diagnostics |
 
-`/parametres` remains visible in normal navigation for personal settings.
+## Removed pages (RESET-AUDIT-CLEANUP-0)
+
+| Route | Decision |
+|---|---|
+| `/fiscalite` | Feature removed from the product (frontend-only; no backend existed). URL now 404s. |
+| `/signaux/sources` | Page removed; ingestion/provider pipelines untouched. Technical info will resurface in Ops later. |
+| `/signaux/free-firehose` | Standalone page removed; backend endpoints/jobs kept. Future home: Orchestration. |
+| `/ops-env-diagnostics` | Page removed; env validation, guards and the `/ops/env/diagnostics` API endpoint kept. |
+| `/parametres` | Page removed (placeholders + movable admin actions). Recompute -> Orchestration later; push notifications UI only if made functional; exports live on Dépenses. |
+
+Removed URLs intentionally 404 (routes deleted, no redirects added).
 
 ## Redirects
 
