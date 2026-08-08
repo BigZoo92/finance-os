@@ -43,6 +43,7 @@ import {
 } from './domain/derived-recompute'
 import { DEFAULT_FAILSOFT_SOURCE_ORDER, type FailsoftSource } from './domain/failsoft-policy'
 import { recordCategorizationMigrationSnapshot } from './domain/transaction-categorization-migration-observability'
+import { createAssetValuationUseCases } from './domain/valuation/create-asset-valuation-use-cases'
 import { createDashboardAdvisorPostMortemRepository } from './repositories/dashboard-advisor-post-mortem-repository'
 import { createDashboardAdvisorRepository } from './repositories/dashboard-advisor-repository'
 import { createDashboardDerivedRecomputeRepository } from './repositories/dashboard-derived-recompute-repository'
@@ -52,9 +53,16 @@ import { createDashboardReadRepository } from './repositories/dashboard-read-rep
 import { createUserCategorizationRuleRepository } from './repositories/user-categorization-rule-repository'
 import { createInvestmentStrategyRepository } from './repositories/investment-strategy-repository'
 import {
+  createAssetValuationRepository,
+  createAssetValuationRunRepository,
+  createExternalInstrumentIdentityRepository,
+  createFxRateRepository,
+} from './repositories/valuation-repositories'
+import {
   sendDecisionPointToKnowledgeGraph,
   sendPostMortemToKnowledgeGraph,
 } from './services/advisor-graph-ingest'
+import { fetchEcbFxRates } from './services/fetch-ecb-fx-rates'
 import { createLiveMarketDataRefreshService } from './services/fetch-live-market-data'
 import { createLiveNewsIngestionService } from './services/fetch-live-news'
 import {
@@ -160,6 +168,10 @@ export const createDashboardRouteRuntime = ({
   externalInvestmentsStaleAfterMinutes,
   ibkrFlexEnabled,
   binanceSpotEnabled,
+  assetValuationEnabled,
+  fxRatesEnabled,
+  fxRatesEcbUrl,
+  fxRatesStaleAfterSeconds,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -246,6 +258,10 @@ export const createDashboardRouteRuntime = ({
   externalInvestmentsStaleAfterMinutes: number
   ibkrFlexEnabled: boolean
   binanceSpotEnabled: boolean
+  assetValuationEnabled: boolean
+  fxRatesEnabled: boolean
+  fxRatesEcbUrl: string
+  fxRatesStaleAfterSeconds: number
 }): DashboardRouteRuntime => {
   const readModel = createDashboardReadRepository({ db })
   const newsRepository = createDashboardNewsRepository({ db })
@@ -264,7 +280,13 @@ export const createDashboardRouteRuntime = ({
   const investmentStrategy = createInvestmentStrategyUseCases({
     repository: investmentStrategyRepository,
     listExternalPositions: () => externalInvestments.listPositions(),
-    listPowensInvestmentPositions: () => readModel.listInvestmentPositions(),
+    // External positions are already listed above; the bridged copies in
+    // investment_position (source 'external_investment') and closed positions
+    // must be excluded or every IBKR/Binance holding is counted twice.
+    listPowensInvestmentPositions: async () =>
+      (await readModel.listInvestmentPositions()).filter(
+        position => position.source !== 'external_investment' && position.closedAt === null
+      ),
     knowledgeConfig: {
       enabled: knowledgeConfig.enabled,
       url: knowledgeConfig.url,
@@ -308,6 +330,25 @@ export const createDashboardRouteRuntime = ({
     }
   }
 
+  const fxRateRepository = createFxRateRepository({ db })
+  const assetValuationSnapshots = createAssetValuationRepository({ db })
+  const assetValuationRuns = createAssetValuationRunRepository({ db })
+  const externalInstrumentIdentity = createExternalInstrumentIdentityRepository({ db })
+
+  const assetValuation = createAssetValuationUseCases({
+    featureEnabled: featureEnabled && assetValuationEnabled,
+    fxEnabled: fxRatesEnabled,
+    fxStaleAfterSeconds: fxRatesStaleAfterSeconds,
+    fetchFxRates: ({ requestId }) => fetchEcbFxRates({ url: fxRatesEcbUrl, requestId }),
+    fxRates: fxRateRepository,
+    valuationSnapshots: assetValuationSnapshots,
+    valuationRuns: assetValuationRuns,
+    listAssets: readModel.listAssets,
+    listExternalPositions: () => externalInvestments.listPositions(),
+    listInternalPositions: readModel.listInvestmentPositions,
+    listInstrumentIdentities: externalInstrumentIdentity.listIdentity,
+  })
+
   const getSummary = createGetDashboardSummaryUseCase({
     listAccountsWithConnections: readModel.listAccountsWithConnections,
     listAssets: readModel.listAssets,
@@ -315,6 +356,24 @@ export const createDashboardRouteRuntime = ({
     getFlowTotals: readModel.getFlowTotals,
     listDailyNetFlows: readModel.listDailyNetFlows,
     listTopExpenseGroups: readModel.listTopExpenseGroups,
+    // Canonical valuation overlay — DB reads + pure computation only, no
+    // provider calls; fail-soft so the summary never 500s on valuation issues.
+    getValuationOverlay: async () => {
+      try {
+        const { valuations, coverage } = await assetValuation.computeValuations({
+          requestId: 'summary-inline',
+        })
+        return { valuations, coverage }
+      } catch (error) {
+        logApiEvent({
+          level: 'warn',
+          msg: 'dashboard summary valuation overlay failed',
+          requestId: 'summary-inline',
+          ...toErrorLogFields({ error, includeStack: false }),
+        })
+        return null
+      }
+    },
   })
 
   const getTransactions = createGetDashboardTransactionsUseCase({
@@ -978,6 +1037,9 @@ export const createDashboardRouteRuntime = ({
       archiveGoal,
       getDerivedRecomputeStatus,
       runDerivedRecompute,
+      getAssetValuationStatus: () => assetValuation.getValuationStatus(),
+      runAssetValuationRefresh: input => assetValuation.runValuationRefresh(input),
+      listAssetValuationUnresolved: input => assetValuation.listUnresolvedAssets(input),
       getNews: news.getNews,
       getNewsContextBundle: news.getNewsContextBundle,
       ingestNews: news.ingestNews,

@@ -11,6 +11,7 @@ const config = {
   marketsEnabled: true,
   advisorEnabled: true,
   socialEnabled: false,
+  assetValuationEnabled: true,
 }
 
 const createRuntime = (
@@ -76,6 +77,18 @@ const createRuntime = (
         plan: { items: [], warnings: [] },
         warnings: [],
         hypotheses: [],
+      }),
+      runAssetValuationRefresh: async () => ({
+        featureEnabled: true,
+        fxEnabled: true,
+        state: 'completed',
+        latestRun: null,
+        fx: {
+          baseCurrency: 'EUR',
+          ratesAvailable: 0,
+          staleRates: 0,
+          latestRateTimestamp: null,
+        },
       }),
       runAdvisorDaily: async () => ({
         run: {

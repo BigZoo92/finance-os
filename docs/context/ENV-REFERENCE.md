@@ -305,6 +305,10 @@ Notes:
 | `MARKET_DATA_FRED_SERIES_IDS` | `FEDFUNDS,SOFR,DGS2,DGS10,T10Y2Y,CPIAUCSL,UNRATE` | Dokploy, Local | API | Liste CSV des series macro |
 | `EODHD_API_KEY` | -- | Dokploy, Local | API | Cle API EODHD |
 | `TWELVEDATA_API_KEY` | -- | Dokploy, Local | API | Cle API Twelve Data |
+| `ASSET_VALUATION_ENABLED` | `true` | Dokploy, Local | API | Active la couche Financial Data Core (statut, refresh, snapshots de valorisation) |
+| `FX_RATES_ENABLED` | `true` | Dokploy, Local | API | Active le rafraichissement des taux FX ECB (gratuit, sans cle) pendant le refresh valorisation |
+| `FX_RATES_ECB_URL` | URL eurofxref-daily ECB | Dokploy, Local | API | Source XML des taux de reference ECB (override test/debug) |
+| `FX_RATES_STALE_AFTER_SECONDS` | `345600` (96 h) | Dokploy, Local | API | Fraicheur toleree d'un taux FX daily (couvre week-ends) |
 
 Notes:
 

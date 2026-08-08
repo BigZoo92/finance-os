@@ -12,6 +12,7 @@
  */
 
 import {
+  type BinanceFxBridge,
   type BinancePriceOutcome,
   type BinanceTickerPriceFetcher,
   type FxRateFetcher,
@@ -30,7 +31,7 @@ export type BinanceValuationSnapshotEntry = {
   confidence: 'high' | 'medium' | 'low'
   asOf: string
   providerSymbol: string
-  bridge: { stable: string; fxRate: number; fxAsOf: string } | null
+  bridge: BinanceFxBridge | null
 }
 
 export type BinanceValuationEnrichmentResult = {
@@ -117,12 +118,19 @@ export const enrichBinanceValuations = async ({
       enrichedCount += 1
       const valuationEntry = positionToValuationSnapshot(position, outcome)
       valuationSnapshots.push(valuationEntry)
+      // FX provenance is persisted with the position (assumptions +
+      // valueSource marker); a stale FX bridge makes the value an estimate,
+      // never a silently precise figure.
+      const fxIsStale = outcome.bridge?.fxIsStale === true
+      const fxProvenance = outcome.bridge
+        ? ` FX ${outcome.bridge.stable}->${outcome.valueCurrency} via ${outcome.bridge.fxSource ?? 'unknown'} @ ${outcome.bridge.fxAsOf}${fxIsStale ? ' (stale)' : ''}.`
+        : ''
       nextPositions.push({
         ...position,
         providerValue: outcome.value.toString(),
         normalizedValue: outcome.value.toString(),
         valueCurrency: outcome.valueCurrency,
-        valueSource: 'market_resolved',
+        valueSource: fxIsStale ? 'market_resolved_estimated' : 'market_resolved',
         valueAsOf: outcome.asOf,
         assumptions: [
           ...position.assumptions.filter(
@@ -130,7 +138,7 @@ export const enrichBinanceValuations = async ({
               entry !==
               'Binance Spot balances do not include EUR valuation in USER_DATA account info.'
           ),
-          `Resolved via Binance ${outcome.providerSymbol} (${outcome.source}).`,
+          `Resolved via Binance ${outcome.providerSymbol} (${outcome.source}).${fxProvenance}`,
         ],
         degradedReasons: position.degradedReasons.filter(
           reason => reason !== 'VALUATION_PARTIAL'
@@ -172,53 +180,120 @@ export const enrichBinanceValuations = async ({
   }
 }
 
+export type SnapshotFxRateReader = (params: {
+  baseCurrency: string
+  quoteCurrency: string
+}) => Promise<{
+  rate: number
+  rateTimestamp: string
+  staleAfterSeconds: number
+  provider: string
+} | null>
+
 /**
- * Build an FX fetcher that uses the Binance EURUSDT spot ticker to derive
- * USDT/USDC → EUR rates without depending on a paid FX provider. Falls back to
- * the supplied static rate (e.g. `env.AI_USD_TO_EUR_RATE`) when Binance fails
- * to return a usable EURUSDT price.
+ * FX fetcher backed by the canonical `fx_rate_snapshot` rows (ECB convention:
+ * base EUR, `rate` = quote units per 1 EUR). `from → EUR` therefore converts
+ * with `1 / rate(EUR → from)`. The result carries provenance and an explicit
+ * staleness flag — a stale rate is still returned (callers downgrade the
+ * valuation to an estimate), a missing rate returns null, never a constant.
+ */
+export const createSnapshotFxFetcher = ({
+  readLatestRate,
+  now,
+}: {
+  readLatestRate: SnapshotFxRateReader
+  now: () => string
+}): FxRateFetcher => {
+  return async ({ from, to }) => {
+    const normalizedFrom = from.trim().toUpperCase()
+    const normalizedTo = to.trim().toUpperCase()
+
+    if (normalizedFrom === normalizedTo) {
+      return { rate: 1, asOf: now(), source: 'identity', isStale: false }
+    }
+
+    // Snapshots are stored base→quote (EUR→USD); converting into the base.
+    const row = await readLatestRate({
+      baseCurrency: normalizedTo,
+      quoteCurrency: normalizedFrom,
+    })
+    if (row === null || !Number.isFinite(row.rate) || row.rate <= 0) {
+      return null
+    }
+
+    const rateMs = new Date(row.rateTimestamp).getTime()
+    const isStale =
+      !Number.isFinite(rateMs) ||
+      new Date(now()).getTime() - rateMs > row.staleAfterSeconds * 1000
+
+    return {
+      rate: 1 / row.rate,
+      asOf: row.rateTimestamp,
+      source: `${row.provider}_snapshot`,
+      isStale,
+    }
+  }
+}
+
+/**
+ * FX fetcher for the Binance valuation chain. USD → EUR resolves first from
+ * the live Binance EURUSDT spot ticker (a real market rate), then from the
+ * canonical `fx_rate_snapshot` fallback when provided. Other pairs go straight
+ * to the snapshot fallback. There is NO static rate: when no reliable FX
+ * exists the fetcher returns null and the position stays unvalued
+ * (`FX_RATE_UNAVAILABLE`) instead of receiving a fake precise value.
  */
 export const createBinanceUsdEurFxFetcher = ({
   tickerFetcher,
   now,
-  fallbackUsdEurRate,
+  snapshotFxFetcher,
 }: {
   tickerFetcher: BinanceTickerPriceFetcher
   now: () => string
-  fallbackUsdEurRate: number | null
+  snapshotFxFetcher: FxRateFetcher | null
 }): FxRateFetcher => {
-  let cached: { rate: number; asOf: string } | null = null
+  let cachedUsdEur: Awaited<ReturnType<FxRateFetcher>> = null
 
   return async ({ from, to }) => {
     const normalizedFrom = from.trim().toUpperCase()
     const normalizedTo = to.trim().toUpperCase()
 
     if (normalizedFrom === normalizedTo) {
-      return { rate: 1, asOf: now() }
+      return { rate: 1, asOf: now(), source: 'identity', isStale: false }
     }
 
     if (normalizedFrom !== 'USD' || normalizedTo !== 'EUR') {
-      return null
+      return snapshotFxFetcher
+        ? snapshotFxFetcher({ from: normalizedFrom, to: normalizedTo })
+        : null
     }
 
-    if (cached) {
-      return cached
+    if (cachedUsdEur) {
+      return cachedUsdEur
     }
 
     try {
       const eurUsdt = await tickerFetcher({ symbol: 'EURUSDT' })
       const eurUsdtPrice = Number(eurUsdt.price)
       if (Number.isFinite(eurUsdtPrice) && eurUsdtPrice > 0) {
-        cached = { rate: 1 / eurUsdtPrice, asOf: now() }
-        return cached
+        cachedUsdEur = {
+          rate: 1 / eurUsdtPrice,
+          asOf: now(),
+          source: 'binance_eurusdt',
+          isStale: false,
+        }
+        return cachedUsdEur
       }
     } catch {
-      // Fall through to fallback rate
+      // Fall through to the canonical snapshot fallback.
     }
 
-    if (fallbackUsdEurRate !== null && fallbackUsdEurRate > 0) {
-      cached = { rate: fallbackUsdEurRate, asOf: now() }
-      return cached
+    if (snapshotFxFetcher) {
+      const snapshotRate = await snapshotFxFetcher({ from: 'USD', to: 'EUR' })
+      if (snapshotRate !== null) {
+        cachedUsdEur = snapshotRate
+        return cachedUsdEur
+      }
     }
 
     return null

@@ -14,6 +14,7 @@ import { createAnalyticsRoute } from './routes/analytics'
 import { createCostsOverviewRoute } from './routes/costs-overview'
 import { createDataQualityRoute } from './routes/data-quality'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
+import { createValuationRoute } from './routes/valuation'
 import { createExternalInvestmentsDashboardRoute } from './routes/external-investments'
 import { createGoalsRoute } from './routes/goals'
 import { createInvestmentStrategyRoute } from './routes/investment-strategy'
@@ -156,6 +157,10 @@ export const createDashboardRoutes = ({
   externalInvestmentsStaleAfterMinutes,
   ibkrFlexEnabled,
   binanceSpotEnabled,
+  assetValuationEnabled,
+  fxRatesEnabled,
+  fxRatesEcbUrl,
+  fxRatesStaleAfterSeconds,
 }: {
   db: ApiDb
   redisClient: RedisClient
@@ -276,6 +281,10 @@ export const createDashboardRoutes = ({
   externalInvestmentsStaleAfterMinutes: number
   ibkrFlexEnabled: boolean
   binanceSpotEnabled: boolean
+  assetValuationEnabled: boolean
+  fxRatesEnabled: boolean
+  fxRatesEcbUrl: string
+  fxRatesStaleAfterSeconds: number
 }) => {
   const runtime = createDashboardRouteRuntime({
     db,
@@ -371,6 +380,10 @@ export const createDashboardRoutes = ({
     externalInvestmentsStaleAfterMinutes,
     ibkrFlexEnabled,
     binanceSpotEnabled,
+    assetValuationEnabled,
+    fxRatesEnabled,
+    fxRatesEcbUrl,
+    fxRatesStaleAfterSeconds,
   })
 
   return new Elysia()
@@ -411,6 +424,7 @@ export const createDashboardRoutes = ({
           })
         )
         .use(createDerivedRecomputeRoute())
+        .use(createValuationRoute())
         .use(createGoalsRoute())
         .use(createExternalInvestmentsDashboardRoute())
         .use(createTransactionsRoute())
@@ -518,6 +532,7 @@ export const createDashboardRoutes = ({
           marketDataRefreshEnabled,
           aiAdvisorEnabled,
           signalsSocialPollingEnabled,
+          assetValuationEnabled,
         }),
       })
     )

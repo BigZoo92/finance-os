@@ -10,6 +10,7 @@ const enabledConfig = {
   marketsEnabled: true,
   advisorEnabled: true,
   socialEnabled: false,
+  assetValuationEnabled: true,
 }
 
 const createRuntime = (

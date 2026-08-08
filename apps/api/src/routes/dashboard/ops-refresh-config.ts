@@ -7,6 +7,7 @@ export type DashboardOpsRefreshConfigInput = {
   marketDataRefreshEnabled: boolean
   aiAdvisorEnabled: boolean
   signalsSocialPollingEnabled: boolean
+  assetValuationEnabled: boolean
 }
 
 export const createDashboardOpsRefreshConfig = ({
@@ -18,6 +19,7 @@ export const createDashboardOpsRefreshConfig = ({
   marketDataRefreshEnabled,
   aiAdvisorEnabled,
   signalsSocialPollingEnabled,
+  assetValuationEnabled,
 }: DashboardOpsRefreshConfigInput) => ({
   externalInvestmentsEnabled,
   ibkrFlexEnabled,
@@ -26,4 +28,5 @@ export const createDashboardOpsRefreshConfig = ({
   marketsEnabled: marketDataEnabled && marketDataRefreshEnabled,
   advisorEnabled: aiAdvisorEnabled,
   socialEnabled: signalsSocialPollingEnabled,
+  assetValuationEnabled,
 })

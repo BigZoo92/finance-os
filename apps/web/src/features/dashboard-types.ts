@@ -2,13 +2,37 @@ import type { AiRunStatus } from '@finance-os/ai/run-status'
 
 export type DashboardRange = '7d' | '30d' | '90d'
 
+export type DashboardValuationStatus =
+  | 'priced'
+  | 'derived'
+  | 'estimated'
+  | 'manual'
+  | 'stale'
+  | 'unresolved'
+  | 'unavailable'
+
+export type DashboardSummaryValuation = {
+  baseCurrency: 'EUR'
+  /** Canonical EUR total. Null means unknown — never render as 0. */
+  totalValueBase: number | null
+  coveragePercent: number | null
+  statusCounts: Record<DashboardValuationStatus, number>
+  unknownValueCount: number
+  totalUnrealizedPnlBase: number | null
+  pnlCoverageCount: number
+  asOf: string
+}
+
 export type DashboardSummaryResponse = {
   range: DashboardRange
   totals: {
+    /** Legacy naive sum (native currencies, no FX). Prefer valuation.totalValueBase. */
     balance: number
     incomes: number
     expenses: number
   }
+  /** Canonical valuation summary; null/absent = unknown, never zero. */
+  valuation?: DashboardSummaryValuation | null
   connections: Array<{
     powensConnectionId: string
     source: string
@@ -49,6 +73,8 @@ export type DashboardSummaryResponse = {
     currency: string
     valuation: number
     valuationAsOf: string | null
+    valueBase?: number | null
+    valuationStatus?: DashboardValuationStatus | null
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
@@ -75,6 +101,8 @@ export type DashboardSummaryResponse = {
     closedAt: string | null
     valuedAt: string | null
     lastSyncedAt: string | null
+    valueBase?: number | null
+    valuationStatus?: DashboardValuationStatus | null
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>

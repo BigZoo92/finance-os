@@ -1050,6 +1050,50 @@ export const createExternalInvestmentsRepository = ({
       }))
     },
 
+    /**
+     * Latest canonical FX rate for a pair (fx_rate_snapshot, ECB convention:
+     * base EUR, rate = quote units per 1 EUR). Read-only; used as the
+     * Binance valuation FX fallback instead of any static rate.
+     */
+    async getLatestFxRate({
+      baseCurrency,
+      quoteCurrency,
+    }: {
+      baseCurrency: string
+      quoteCurrency: string
+    }) {
+      const [row] = await db
+        .select({
+          rate: schema.fxRateSnapshot.rate,
+          rateTimestamp: schema.fxRateSnapshot.rateTimestamp,
+          staleAfterSeconds: schema.fxRateSnapshot.staleAfterSeconds,
+          provider: schema.fxRateSnapshot.provider,
+        })
+        .from(schema.fxRateSnapshot)
+        .where(
+          and(
+            eq(schema.fxRateSnapshot.baseCurrency, baseCurrency),
+            eq(schema.fxRateSnapshot.quoteCurrency, quoteCurrency)
+          )
+        )
+        .orderBy(desc(schema.fxRateSnapshot.rateTimestamp))
+        .limit(1)
+
+      if (!row) {
+        return null
+      }
+      const rate = Number(row.rate)
+      if (!Number.isFinite(rate) || rate <= 0) {
+        return null
+      }
+      return {
+        rate,
+        rateTimestamp: row.rateTimestamp.toISOString(),
+        staleAfterSeconds: row.staleAfterSeconds,
+        provider: row.provider,
+      }
+    },
+
     async getProviderHealth() {
       const rows = await db.select().from(schema.externalInvestmentProviderHealth)
       return rows.map(row => ({

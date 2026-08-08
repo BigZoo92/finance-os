@@ -22,17 +22,31 @@ export type BinanceTickerPriceFetcher = (params: { symbol: string }) => Promise<
   price: string
 }>
 
-export type FxRateFetcher = (params: { from: string; to: string }) => Promise<{
+export type FxRateResult = {
   rate: number
   asOf: string
-} | null>
+  /** Where the rate comes from, e.g. 'binance_eurusdt' or 'ecb_snapshot'. */
+  source?: string
+  /** True when the rate is older than its freshness policy — usable but approximate. */
+  isStale?: boolean
+}
+
+export type FxRateFetcher = (params: { from: string; to: string }) => Promise<FxRateResult | null>
+
+export type BinanceFxBridge = {
+  stable: string
+  fxRate: number
+  fxAsOf: string
+  fxSource: string | null
+  fxIsStale: boolean
+}
 
 export type BinancePriceResolution = {
   value: number
   valueCurrency: string
   providerSymbol: string
   source: 'binance_direct' | 'binance_via_stable'
-  bridge: { stable: string; fxRate: number; fxAsOf: string } | null
+  bridge: BinanceFxBridge | null
   asOf: string
   confidence: 'high' | 'medium' | 'low'
   degradedReason: null
@@ -140,7 +154,7 @@ export const resolveBinanceAssetValue = async ({
         valueCurrency: normalizedTarget,
         providerSymbol: stableSymbol,
         source: 'binance_via_stable',
-        bridge: { stable, fxRate: 1, fxAsOf: now() },
+        bridge: { stable, fxRate: 1, fxAsOf: now(), fxSource: 'stable_peg', fxIsStale: false },
         asOf: now(),
         confidence: 'high',
         degradedReason: null,
@@ -164,9 +178,16 @@ export const resolveBinanceAssetValue = async ({
       valueCurrency: normalizedTarget,
       providerSymbol: stableSymbol,
       source: 'binance_via_stable',
-      bridge: { stable, fxRate: fx.rate, fxAsOf: fx.asOf },
+      bridge: {
+        stable,
+        fxRate: fx.rate,
+        fxAsOf: fx.asOf,
+        fxSource: fx.source ?? null,
+        fxIsStale: fx.isStale === true,
+      },
       asOf: now(),
-      confidence: 'medium',
+      // A stale FX rate produces a usable but approximate value.
+      confidence: fx.isStale === true ? 'low' : 'medium',
       degradedReason: null,
     }
   }

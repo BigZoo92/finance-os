@@ -13,6 +13,8 @@ import type { DashboardRange, DashboardSummaryResponse } from './dashboard-types
 export interface LegacyDashboardAdapterResult {
   range: DashboardRange
   totals: DashboardSummaryResponse['totals']
+  /** Canonical valuation block; null when the API did not provide one (unknown, not zero). */
+  valuation: NonNullable<DashboardSummaryResponse['valuation']> | null
   connections: DashboardSummaryResponse['connections']
   accounts: DashboardSummaryResponse['accounts']
   assets: DashboardSummaryResponse['assets']
@@ -179,6 +181,7 @@ export const adaptDashboardSummaryLegacy = ({
   const result: LegacyDashboardAdapterResult = {
     range,
     totals: toTotalsWithFallback(summary?.totals, diagnostics),
+    valuation: summary?.valuation ?? null,
     connections: toArrayWithFallback(summary?.connections, 'connections', diagnostics),
     accounts: toArrayWithFallback(summary?.accounts, 'accounts', diagnostics),
     assets: toArrayWithFallback(summary?.assets, 'assets', diagnostics),

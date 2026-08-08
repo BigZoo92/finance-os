@@ -402,6 +402,10 @@ const registerAppRoutes = (app: Elysia) => {
         externalInvestmentsStaleAfterMinutes: env.EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES,
         ibkrFlexEnabled: env.IBKR_FLEX_ENABLED,
         binanceSpotEnabled: env.BINANCE_SPOT_ENABLED,
+        assetValuationEnabled: env.ASSET_VALUATION_ENABLED,
+        fxRatesEnabled: env.FX_RATES_ENABLED,
+        fxRatesEcbUrl: env.FX_RATES_ECB_URL,
+        fxRatesStaleAfterSeconds: env.FX_RATES_STALE_AFTER_SECONDS,
       })
     )
     .use(

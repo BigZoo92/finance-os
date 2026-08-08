@@ -440,10 +440,6 @@ const externalInvestmentsShape = {
     .string()
     .optional()
     .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-  EXTERNAL_INVESTMENTS_BINANCE_VALUATION_USD_EUR_FALLBACK: z.coerce
-    .number()
-    .positive()
-    .default(0.92),
 } satisfies z.ZodRawShape
 
 const assertProductionApiEnv = (values: {
@@ -796,6 +792,23 @@ export const getApiEnv = () => {
       ),
     EODHD_API_KEY: z.string().min(1).optional(),
     TWELVEDATA_API_KEY: z.string().min(1).optional(),
+    FX_RATES_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
+    FX_RATES_ECB_URL: z
+      .string()
+      .url('FX_RATES_ECB_URL must be a valid URL')
+      .default('https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'),
+    FX_RATES_STALE_AFTER_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(96 * 60 * 60),
+    ASSET_VALUATION_ENABLED: z
+      .string()
+      .optional()
+      .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     FAILSOFT_POLICY_ENABLED: z
       .string()
       .optional()

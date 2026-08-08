@@ -83,6 +83,7 @@ export const createOpsRefreshRoute = ({
     marketsEnabled: boolean
     advisorEnabled: boolean
     socialEnabled: boolean
+    assetValuationEnabled: boolean
   }
 }) => {
   const registry = createRefreshJobRegistry({ runtime, config })

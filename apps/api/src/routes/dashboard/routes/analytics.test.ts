@@ -8,6 +8,7 @@ import { createAnalyticsRoute } from './analytics'
 
 const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => ({
   range,
+  valuation: null,
   totals: {
     balance: 100,
     incomes: 80,
@@ -30,6 +31,8 @@ const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => 
       currency: 'EUR',
       valuation: 60,
       valuationAsOf: '2026-04-01T00:00:00.000Z',
+      valueBase: null,
+      valuationStatus: null,
       enabled: true,
       metadata: null,
     },
@@ -47,6 +50,8 @@ const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => 
       currency: 'EUR',
       valuation: 40,
       valuationAsOf: '2026-04-01T00:00:00.000Z',
+      valueBase: null,
+      valuationStatus: null,
       enabled: true,
       metadata: null,
     },

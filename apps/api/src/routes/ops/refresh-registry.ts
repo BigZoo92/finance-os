@@ -278,6 +278,7 @@ export const createRefreshJobRegistry = ({
     marketsEnabled: boolean
     advisorEnabled: boolean
     socialEnabled: boolean
+    assetValuationEnabled: boolean
   }
 }) => {
   const topologicalHistory: RefreshRunExecutionResponse[] = []
@@ -337,6 +338,19 @@ export const createRefreshJobRegistry = ({
       domain: 'investments',
       dependencies: [],
       enabled: config.externalInvestmentsEnabled && config.binanceSpotEnabled,
+      manualTriggerAllowed: true,
+      scheduleGroup: 'daily-intelligence',
+      timeoutMs: 90_000,
+      retryPolicy: { maxAttempts: 1, backoffMs: 0 },
+    },
+    {
+      id: 'asset-valuation',
+      label: 'Valorisation des actifs',
+      description:
+        'Recalcule la source de verite des valorisations (FX ECB, statuts, P&L, coverage) et ecrit les snapshots.',
+      domain: 'investments',
+      dependencies: ['market-data', 'external-investments'],
+      enabled: config.assetValuationEnabled,
       manualTriggerAllowed: true,
       scheduleGroup: 'daily-intelligence',
       timeoutMs: 90_000,
@@ -648,6 +662,40 @@ export const createRefreshJobRegistry = ({
           startedAtMs,
           message: 'News refreshed.',
           details: { ...result, cryptoSignalCount: cryptoSignals.length },
+        })
+      }
+
+      if (jobId === 'asset-valuation') {
+        if (!runtime.useCases.runAssetValuationRefresh) {
+          return createResult({
+            jobId,
+            status: 'skipped',
+            requestId,
+            startedAtMs,
+            message: 'Asset valuation runtime unavailable.',
+          })
+        }
+        const status = await runtime.useCases.runAssetValuationRefresh({
+          requestId,
+          triggerSource:
+            triggerSource === 'internal' || triggerSource === 'cron' ? 'internal' : 'admin',
+          dryRun: false,
+        })
+        const coverage = status.latestRun?.coverage ?? null
+        return createResult({
+          jobId,
+          status: status.state === 'failed' ? 'failed' : 'success',
+          requestId,
+          startedAtMs,
+          message: `Asset valuation ${status.state}.`,
+          details: {
+            state: status.state,
+            coveragePercent: coverage?.coveragePercent ?? null,
+            totalValueBase: coverage?.totalValueBase ?? null,
+            unresolved: coverage?.statusCounts.unresolved ?? null,
+            unavailable: coverage?.statusCounts.unavailable ?? null,
+            providerFailures: status.latestRun?.providerFailures ?? [],
+          },
         })
       }
 

@@ -6,7 +6,8 @@ describe('buildAdvisorFinancialContext', () => {
   it('builds a concise server context from dashboard summary', () => {
     const summary: DashboardSummaryResponse = {
       range: '30d',
-      totals: { balance: 12345.678, incomes: 2500, expenses: 1800 },
+      valuation: null,
+  totals: { balance: 12345.678, incomes: 2500, expenses: 1800 },
       connections: [],
       accounts: [],
       assets: [
@@ -24,6 +25,8 @@ describe('buildAdvisorFinancialContext', () => {
           currency: 'EUR',
           valuation: 5100.551,
           valuationAsOf: '2026-04-07T00:00:00.000Z',
+          valueBase: null,
+          valuationStatus: null,
           enabled: true,
           metadata: null,
         },
@@ -41,6 +44,8 @@ describe('buildAdvisorFinancialContext', () => {
           currency: 'EUR',
           valuation: 2400.337,
           valuationAsOf: '2026-04-07T00:00:00.000Z',
+          valueBase: null,
+          valuationStatus: null,
           enabled: true,
           metadata: null,
         },

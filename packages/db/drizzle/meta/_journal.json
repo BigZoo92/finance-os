@@ -260,6 +260,13 @@
       "when": 1780501360788,
       "tag": "0036_plain_krista_starr",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1786464000000,
+      "tag": "0037_financial_data_core_valuation",
+      "breakpoints": true
     }
   ]
 }

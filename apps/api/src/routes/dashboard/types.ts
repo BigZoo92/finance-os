@@ -11,6 +11,10 @@ import type {
 import type { AdvisorReplayResponse } from './domain/advisor/replay/replay-types'
 import type { AdvisorFineTuningReadinessResponse } from './domain/advisor/fine-tuning/fine-tuning-types'
 import type {
+  AssetValuationStatusResponse,
+  AssetValuationUnresolvedItem,
+} from './domain/valuation/create-asset-valuation-use-cases'
+import type {
   AssetSearchInput,
   GenerateActionPlanInput,
   InvestmentStrategyUpdateInput,
@@ -130,6 +134,7 @@ export interface AssetRow {
   source: string
   provider: string | null
   providerConnectionId: string | null
+  providerExternalAssetId: string | null
   providerInstitutionName: string | null
   powensConnectionId: string | null
   powensAccountId: string | null
@@ -381,13 +386,41 @@ export interface DashboardBackgroundRunRecoveryResponse {
   errorMessage: string
 }
 
+export type DashboardValuationStatus =
+  | 'priced'
+  | 'derived'
+  | 'estimated'
+  | 'manual'
+  | 'stale'
+  | 'unresolved'
+  | 'unavailable'
+
 export interface DashboardSummaryResponse {
   range: DashboardRange
   totals: {
+    /**
+     * Legacy naive sum of enabled asset valuations in their native currencies
+     * (no FX). Kept for compatibility; prefer `valuation.totalValueBase`.
+     */
     balance: number
     incomes: number
     expenses: number
   }
+  /**
+   * Canonical valuation summary (Financial Data Core). Null when the
+   * valuation overlay is unavailable — a missing block means "unknown",
+   * never "zero".
+   */
+  valuation: {
+    baseCurrency: 'EUR'
+    totalValueBase: number | null
+    coveragePercent: number | null
+    statusCounts: Record<DashboardValuationStatus, number>
+    unknownValueCount: number
+    totalUnrealizedPnlBase: number | null
+    pnlCoverageCount: number
+    asOf: string
+  } | null
   connections: Array<{
     powensConnectionId: string
     source: string
@@ -429,6 +462,9 @@ export interface DashboardSummaryResponse {
     currency: string
     valuation: number
     valuationAsOf: string | null
+    /** Canonical EUR value; null when unknown/unconvertible (never 0). */
+    valueBase: number | null
+    valuationStatus: DashboardValuationStatus | null
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
@@ -455,6 +491,9 @@ export interface DashboardSummaryResponse {
     closedAt: string | null
     valuedAt: string | null
     lastSyncedAt: string | null
+    /** Canonical EUR value for unbridged positions; null when unknown. */
+    valueBase: number | null
+    valuationStatus: DashboardValuationStatus | null
     enabled: boolean
     metadata: Record<string, unknown> | null
   }>
@@ -1322,6 +1361,15 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource: 'admin' | 'internal'
   }) => Promise<DashboardDerivedRecomputeStatusResponse>
+  getAssetValuationStatus?: () => Promise<AssetValuationStatusResponse>
+  runAssetValuationRefresh?: (input: {
+    requestId: string
+    triggerSource: 'admin' | 'internal'
+    dryRun: boolean
+  }) => Promise<AssetValuationStatusResponse>
+  listAssetValuationUnresolved?: (input: {
+    requestId: string
+  }) => Promise<{ items: AssetValuationUnresolvedItem[]; totalItems: number }>
   getNews?: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
   getNewsContextBundle?: (input: {
     requestId: string

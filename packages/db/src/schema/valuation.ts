@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 export type AssetClass = 'stock' | 'etf' | 'crypto' | 'cash' | 'fund' | 'other'
@@ -66,6 +67,15 @@ export const assetPriceSnapshot = pgTable(
   ]
 )
 
+export type AssetValuationStatus =
+  | 'priced'
+  | 'derived'
+  | 'estimated'
+  | 'manual'
+  | 'stale'
+  | 'unresolved'
+  | 'unavailable'
+
 export const assetValuationSnapshot = pgTable(
   'asset_valuation_snapshot',
   {
@@ -87,6 +97,20 @@ export const assetValuationSnapshot = pgTable(
     valuationTimestamp: timestamp('valuation_timestamp', { withTimezone: true }).notNull(),
     confidence: doublePrecision('confidence').notNull().default(0),
     staleReason: text('stale_reason'),
+    // Financial Data Core additions (0037): canonical status/provenance per snapshot.
+    runId: integer('run_id'),
+    itemKey: text('item_key'),
+    kind: text('kind').$type<'cash' | 'investment' | 'manual' | 'position'>(),
+    status: text('status').$type<AssetValuationStatus>(),
+    valuationSource: text('valuation_source'),
+    provider: text('provider'),
+    valueOriginal: numeric('value_original', { precision: 28, scale: 10 }),
+    costBasisBase: numeric('cost_basis_base', { precision: 28, scale: 10 }),
+    unrealizedPnlBase: numeric('unrealized_pnl_base', { precision: 28, scale: 10 }),
+    unrealizedPnlPct: numeric('unrealized_pnl_pct', { precision: 12, scale: 6 }),
+    asOf: timestamp('as_of', { withTimezone: true }),
+    errorCode: text('error_code'),
+    safeErrorMessage: text('safe_error_message'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   table => [
@@ -94,6 +118,41 @@ export const assetValuationSnapshot = pgTable(
     index('asset_valuation_snapshot_instrument_idx').on(table.instrumentId),
     index('asset_valuation_snapshot_price_snapshot_idx').on(table.priceSnapshotId),
     index('asset_valuation_snapshot_created_at_idx').on(table.createdAt),
+    index('asset_valuation_snapshot_run_idx').on(table.runId),
+    uniqueIndex('asset_valuation_snapshot_run_item_unique')
+      .on(table.runId, table.itemKey)
+      .where(sql`${table.runId} is not null and ${table.itemKey} is not null`),
+  ]
+)
+
+export const assetValuationRun = pgTable(
+  'asset_valuation_run',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    status: text('status').notNull().$type<'running' | 'completed' | 'failed'>(),
+    triggerSource: text('trigger_source').notNull().$type<'admin' | 'internal'>(),
+    requestId: text('request_id').notNull(),
+    dryRun: boolean('dry_run').notNull().default(false),
+    coverage: jsonb('coverage').$type<Record<string, unknown> | null>(),
+    totals: jsonb('totals').$type<Record<string, unknown> | null>(),
+    itemCount: integer('item_count'),
+    snapshotCount: integer('snapshot_count'),
+    providerFailures: jsonb('provider_failures').$type<Array<Record<string, unknown>> | null>(),
+    safeErrorCode: text('safe_error_code'),
+    safeErrorMessage: text('safe_error_message'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    durationMs: integer('duration_ms'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  table => [
+    index('asset_valuation_run_started_at_idx').on(table.startedAt),
+    index('asset_valuation_run_status_idx').on(table.status),
+    // Concurrency guard: at most one running row. Session-scoped advisory
+    // locks are unreliable behind the pooled postgres-js client.
+    uniqueIndex('asset_valuation_run_single_running')
+      .on(table.status)
+      .where(sql`${table.status} = 'running'`),
   ]
 )
 
@@ -144,5 +203,12 @@ export const fxRateSnapshot = pgTable(
     index('fx_rate_snapshot_pair_idx').on(table.baseCurrency, table.quoteCurrency),
     index('fx_rate_snapshot_provider_idx').on(table.provider),
     index('fx_rate_snapshot_rate_ts_idx').on(table.rateTimestamp),
+    // 0037: idempotent FX ingestion — one row per (pair, provider, rate timestamp).
+    uniqueIndex('fx_rate_snapshot_pair_provider_ts_unique').on(
+      table.baseCurrency,
+      table.quoteCurrency,
+      table.provider,
+      table.rateTimestamp
+    ),
   ]
 )

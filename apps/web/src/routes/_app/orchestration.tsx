@@ -20,6 +20,7 @@ import {
 } from '@/features/ops-refresh/api'
 import type { RefreshJobDefinition, RefreshJobStatus } from '@/features/ops-refresh/types'
 import { getRecoveryFeedbackMessage, isRefreshStatusActive } from '@/features/ops-refresh/view-state'
+import { ValuationOpsPanel } from '@/components/dashboard/valuation-ops-panel'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { StatusDot } from '@/components/surfaces/status-dot'
 import { formatDateTime } from '@/lib/format'
@@ -275,6 +276,8 @@ function OrchestrationPage() {
           </CardContent>
         </Card>
       )}
+
+      <ValuationOpsPanel mode={authMode} isAdmin={isAdmin} />
 
       <section className="grid gap-4 md:grid-cols-4">
         <Card>

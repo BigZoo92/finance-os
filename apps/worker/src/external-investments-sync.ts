@@ -9,6 +9,7 @@ import {
   createBinanceReadonlyClient,
   createBinanceUsdEurFxFetcher,
   createExternalInvestmentsRepository,
+  createSnapshotFxFetcher,
   createIbkrFlexClient,
   enrichBinanceValuations,
   enrichMarketQuotedValuations,
@@ -492,10 +493,16 @@ export const createExternalInvestmentsSyncWorker = ({
     let snapshot = baseSnapshot
     if (env.EXTERNAL_INVESTMENTS_BINANCE_VALUATION_ENABLED) {
       const targetCurrency = env.EXTERNAL_INVESTMENTS_VALUATION_TARGET_CURRENCY
+      // No static FX rate: live EURUSDT first, then the canonical
+      // fx_rate_snapshot (ECB) fallback; no reliable rate → position stays
+      // unvalued (FX_RATE_UNAVAILABLE) instead of a fake precise value.
       const fxFetcher = createBinanceUsdEurFxFetcher({
         tickerFetcher: params => client.getTickerPrice(params),
         now: () => new Date().toISOString(),
-        fallbackUsdEurRate: env.EXTERNAL_INVESTMENTS_BINANCE_VALUATION_USD_EUR_FALLBACK,
+        snapshotFxFetcher: createSnapshotFxFetcher({
+          readLatestRate: params => repository.getLatestFxRate(params),
+          now: () => new Date().toISOString(),
+        }),
       })
       try {
         const enriched = await enrichBinanceValuations({
@@ -665,6 +672,22 @@ export const createExternalInvestmentsSyncWorker = ({
           syncMetadata: {
             rowCounts: result.rowCounts,
             degradedReasons,
+          },
+          success: true,
+        })
+      } else {
+        // Without this branch a clean sync leaves the connection stuck on
+        // status 'syncing' with no lastSuccessAt, which reads as stale data.
+        await repository.updateConnectionSyncState({
+          connectionId: connection.id,
+          status: 'connected',
+          lastSyncStatus: 'OK',
+          lastSyncReasonCode: 'SUCCESS',
+          lastErrorCode: null,
+          lastErrorMessage: null,
+          syncMetadata: {
+            rowCounts: result.rowCounts,
+            degradedReasons: [],
           },
           success: true,
         })

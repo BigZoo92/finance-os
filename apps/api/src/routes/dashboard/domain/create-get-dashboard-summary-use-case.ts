@@ -1,5 +1,11 @@
+import type { ItemValuation, ValuationCoverageReport } from '@finance-os/finance-engine'
 import type { DashboardSummaryResponse, DashboardUseCases } from '../types'
 import { getRangeStartDate } from '../utils/range'
+
+export interface DashboardValuationOverlay {
+  valuations: ItemValuation[]
+  coverage: ValuationCoverageReport
+}
 
 interface CreateGetDashboardSummaryUseCaseDependencies {
   listAccountsWithConnections: () => Promise<
@@ -34,6 +40,7 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
       source: string
       provider: string | null
       providerConnectionId: string | null
+      providerExternalAssetId: string | null
       providerInstitutionName: string | null
       powensConnectionId: string | null
       powensAccountId: string | null
@@ -78,6 +85,11 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
     fromDate: string,
     limit: number
   ) => Promise<Array<{ category: string; merchant: string; total: string; count: number }>>
+  /**
+   * Canonical valuation overlay (Financial Data Core). Optional and fail-soft:
+   * a null result yields `valuation: null` and null per-item statuses, never 0.
+   */
+  getValuationOverlay?: () => Promise<DashboardValuationOverlay | null>
   now?: () => Date
 }
 
@@ -168,6 +180,7 @@ export const createGetDashboardSummaryUseCase = ({
   getFlowTotals,
   listDailyNetFlows,
   listTopExpenseGroups,
+  getValuationOverlay,
   now = () => new Date(),
 }: CreateGetDashboardSummaryUseCaseDependencies): DashboardUseCases['getSummary'] => {
   return async range => {
@@ -175,14 +188,20 @@ export const createGetDashboardSummaryUseCase = ({
     const fromDate = getRangeStartDate(range, currentDate)
     const toDate = toDateOnly(currentDate)
 
-    const [accounts, assets, positions, flowTotals, dailyNetFlows, topExpenseGroups] = await Promise.all([
-      listAccountsWithConnections(),
-      listAssets(),
-      listInvestmentPositions(),
-      getFlowTotals(fromDate),
-      listDailyNetFlows(fromDate),
-      listTopExpenseGroups(fromDate, 5),
-    ])
+    const [accounts, assets, positions, flowTotals, dailyNetFlows, topExpenseGroups, overlay] =
+      await Promise.all([
+        listAccountsWithConnections(),
+        listAssets(),
+        listInvestmentPositions(),
+        getFlowTotals(fromDate),
+        listDailyNetFlows(fromDate),
+        listTopExpenseGroups(fromDate, 5),
+        getValuationOverlay ? getValuationOverlay() : Promise.resolve(null),
+      ])
+
+    const valuationByItemKey = new Map<string, ItemValuation>(
+      overlay?.valuations.map(valuation => [valuation.itemKey, valuation]) ?? []
+    )
 
     const perConnection = new Map<
       string,
@@ -208,25 +227,38 @@ export const createGetDashboardSummaryUseCase = ({
     const accountSummaries: DashboardSummaryResponse['accounts'] = []
     const assetSummaries: DashboardSummaryResponse['assets'] = assets
       .filter(asset => asset.enabled)
-      .map(asset => ({
-        assetId: asset.assetId,
-        type: asset.assetType,
-        origin: asset.origin,
-        source: asset.source,
-        provider: asset.provider,
-        providerConnectionId: asset.providerConnectionId,
-        providerInstitutionName: asset.providerInstitutionName,
-        powensConnectionId: asset.powensConnectionId,
-        powensAccountId: asset.powensAccountId,
-        name: asset.name,
-        currency: asset.currency,
-        valuation: toMoney(toNumber(asset.valuation)),
-        valuationAsOf: toIsoString(asset.valuationAsOf),
-        enabled: asset.enabled,
-        metadata: asset.metadata,
-      }))
+      .map(asset => {
+        // Bridged external assets are valued through their canonical
+        // external position (itemKey === providerExternalAssetId).
+        const itemKey =
+          asset.source === 'external_investment' && asset.providerExternalAssetId
+            ? asset.providerExternalAssetId
+            : `asset:${asset.assetId}`
+        const itemValuation = valuationByItemKey.get(itemKey)
+        return {
+          assetId: asset.assetId,
+          type: asset.assetType,
+          origin: asset.origin,
+          source: asset.source,
+          provider: asset.provider,
+          providerConnectionId: asset.providerConnectionId,
+          providerInstitutionName: asset.providerInstitutionName,
+          powensConnectionId: asset.powensConnectionId,
+          powensAccountId: asset.powensAccountId,
+          name: asset.name,
+          currency: asset.currency,
+          valuation: toMoney(toNumber(asset.valuation)),
+          valuationAsOf: toIsoString(asset.valuationAsOf),
+          valueBase: itemValuation?.valueBase ?? null,
+          valuationStatus: itemValuation?.status ?? null,
+          enabled: asset.enabled,
+          metadata: asset.metadata,
+        }
+      })
 
-    const positionSummaries: DashboardSummaryResponse['positions'] = positions.map(position => ({
+    const positionSummaries: DashboardSummaryResponse['positions'] = positions.map(position => {
+      const itemValuation = valuationByItemKey.get(`position:${position.positionKey}`)
+      return {
       positionId: position.positionId,
       positionKey: position.positionKey,
       assetId: position.assetId,
@@ -250,9 +282,12 @@ export const createGetDashboardSummaryUseCase = ({
       closedAt: toIsoString(position.closedAt),
       valuedAt: toIsoString(position.valuedAt),
       lastSyncedAt: toIsoString(position.lastSyncedAt),
+      valueBase: itemValuation?.valueBase ?? null,
+      valuationStatus: itemValuation?.status ?? null,
       enabled: position.closedAt === null,
       metadata: position.metadata,
-    }))
+      }
+    })
 
     for (const account of accounts) {
       if (!account.enabled) {
@@ -306,6 +341,27 @@ export const createGetDashboardSummaryUseCase = ({
       dailyNetFlows,
     })
 
+    const valuationBlock: DashboardSummaryResponse['valuation'] = overlay
+      ? (() => {
+          const knownPnl = overlay.valuations
+            .map(valuation => valuation.unrealizedPnlBase)
+            .filter((value): value is number => value !== null)
+          return {
+            baseCurrency: overlay.coverage.baseCurrency,
+            totalValueBase: overlay.coverage.totalValueBase,
+            coveragePercent: overlay.coverage.coveragePercent,
+            statusCounts: overlay.coverage.statusCounts,
+            unknownValueCount: overlay.coverage.unknownValueCount,
+            totalUnrealizedPnlBase:
+              knownPnl.length > 0
+                ? toMoney(knownPnl.reduce((sum, value) => sum + value, 0))
+                : null,
+            pnlCoverageCount: knownPnl.length,
+            asOf: currentDate.toISOString(),
+          }
+        })()
+      : null
+
     return {
       range,
       totals: {
@@ -313,6 +369,7 @@ export const createGetDashboardSummaryUseCase = ({
         incomes: toMoney(toNumber(flowTotals.income)),
         expenses: toMoney(toNumber(flowTotals.expenses)),
       },
+      valuation: valuationBlock,
       connections: Array.from(perConnection.values()),
       accounts: accountSummaries,
       assets: assetSummaries,

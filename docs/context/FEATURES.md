@@ -214,6 +214,17 @@ uniquement les regles; le dry-run est read-only pour les transactions.
 - Affichage en tableau avec colonnes : nom, actif, quantite, cout base, valeur, dates
 - Les comptes d'investissement Powens sans lignes de titres detaillees (ex: PEA/CTO Trade Republic) restent affiches dans `/investissements` comme actifs valorises au niveau compte, pour eviter de les masquer en attendant des positions provider plus fines.
 
+### Financial Data Core (FINANCIAL-DATA-CORE-0)
+
+**Schema** : `asset_valuation_snapshot`, `asset_valuation_run`, `fx_rate_snapshot`
+
+- Source de verite canonique des valorisations : statuts `priced/derived/estimated/manual/stale/unresolved/unavailable`, valeur EUR (`valueBase: number | null` — `unknown != 0`), P&L unrealized (null si cost basis inconnu), provenance et fraicheur par actif.
+- FX : taux de reference ECB quotidiens (gratuit, sans cle, fail-soft), persistes idempotents dans `fx_rate_snapshot`, base EUR.
+- Coeur pur dans `packages/finance-engine/src/valuation/` (identite, FX, statuts, coverage), orchestration dans `apps/api/.../domain/valuation/`.
+- Endpoints : `GET /dashboard/valuation/status`, `POST /dashboard/valuation/refresh` (`dryRun` supporte, admin only), `GET /dashboard/valuation/unresolved`; job `asset-valuation` dans le registry `/ops/refresh`; bloc `valuation` dans `GET /dashboard/summary`.
+- UI minimale : panneau admin « Valorisation des actifs » sur `/orchestration` (coverage, statuts, FX, unresolved, dry-run/refresh).
+- Regle anti-double-comptage documentee dans `docs/debug/FINANCIAL_DATA_CORE_0.md` (section H).
+
 ---
 
 ## 6.bis Investissements externes IBKR / Binance

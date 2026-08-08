@@ -39,6 +39,7 @@ describe('createGetDashboardSummaryUseCase', () => {
           source: 'banking',
           provider: 'powens',
           providerConnectionId: 'conn-1',
+          providerExternalAssetId: null,
           providerInstitutionName: 'Bank 1',
           powensConnectionId: 'conn-1',
           powensAccountId: 'acc-1',
@@ -56,6 +57,7 @@ describe('createGetDashboardSummaryUseCase', () => {
           source: 'manual',
           provider: null,
           providerConnectionId: null,
+          providerExternalAssetId: null,
           providerInstitutionName: null,
           powensConnectionId: null,
           powensAccountId: null,
@@ -130,6 +132,7 @@ describe('createGetDashboardSummaryUseCase', () => {
         incomes: 100,
         expenses: 25.4,
       },
+      valuation: null,
       connections: [
         {
           powensConnectionId: 'conn-1',
@@ -179,6 +182,8 @@ describe('createGetDashboardSummaryUseCase', () => {
           currency: 'EUR',
           valuation: 42.5,
           valuationAsOf: '2026-03-23T00:00:00.000Z',
+          valueBase: null,
+          valuationStatus: null,
           enabled: true,
           metadata: null,
         },
@@ -196,6 +201,8 @@ describe('createGetDashboardSummaryUseCase', () => {
           currency: 'EUR',
           valuation: 10,
           valuationAsOf: null,
+          valueBase: null,
+          valuationStatus: null,
           enabled: true,
           metadata: {
             note: 'Static manual asset',
@@ -226,6 +233,8 @@ describe('createGetDashboardSummaryUseCase', () => {
           closedAt: null,
           valuedAt: '2026-03-23T00:00:00.000Z',
           lastSyncedAt: '2026-03-23T00:30:00.000Z',
+          valueBase: null,
+          valuationStatus: null,
           enabled: true,
           metadata: {
             strategy: 'buy_and_hold',
@@ -285,6 +294,7 @@ describe('createGetDashboardSummaryUseCase', () => {
           source: 'banking',
           provider: 'powens',
           providerConnectionId: 'conn-1',
+          providerExternalAssetId: null,
           providerInstitutionName: 'Bank 1',
           powensConnectionId: 'conn-1',
           powensAccountId: 'acc-1',

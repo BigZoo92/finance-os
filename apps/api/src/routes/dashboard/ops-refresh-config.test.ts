@@ -9,6 +9,7 @@ const baseInput = {
   marketDataEnabled: true,
   marketDataRefreshEnabled: true,
   aiAdvisorEnabled: true,
+  assetValuationEnabled: true,
 }
 
 describe('createDashboardOpsRefreshConfig', () => {

@@ -45,7 +45,13 @@ describe('resolveBinanceAssetValue', () => {
     })
     expect(outcome.source).toBe('binance_via_stable')
     expect(outcome.providerSymbol).toBe('BTCUSDT')
-    expect(outcome.bridge).toEqual({ stable: 'USDT', fxRate: 0.92, fxAsOf: now() })
+    expect(outcome.bridge).toEqual({
+      stable: 'USDT',
+      fxRate: 0.92,
+      fxAsOf: now(),
+      fxSource: null,
+      fxIsStale: false,
+    })
     expect(outcome.value).toBe(59800)
     expect(outcome.confidence).toBe('medium')
   })
@@ -61,7 +67,13 @@ describe('resolveBinanceAssetValue', () => {
     })
     expect(outcome.source).toBe('binance_via_stable')
     expect(outcome.providerSymbol).toBe('BTCUSDT')
-    expect(outcome.bridge).toEqual({ stable: 'USDT', fxRate: 1, fxAsOf: now() })
+    expect(outcome.bridge).toEqual({
+      stable: 'USDT',
+      fxRate: 1,
+      fxAsOf: now(),
+      fxSource: 'stable_peg',
+      fxIsStale: false,
+    })
     expect(outcome.value).toBe(7000)
     expect(outcome.confidence).toBe('high')
   })

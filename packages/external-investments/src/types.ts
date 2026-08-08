@@ -21,6 +21,8 @@ export type ExternalInvestmentValueSource =
   | 'provider_reported'
   | 'market_cache'
   | 'market_resolved'
+  /** Market-resolved through a stale FX bridge: usable but approximate. */
+  | 'market_resolved_estimated'
   | 'manual'
   | 'unknown'
 
