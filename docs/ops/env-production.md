@@ -1,14 +1,14 @@
 # Env in production — service responsibilities
 
-Last reviewed: 2026-05-18.
+Last reviewed: 2026-08-08.
 
-The architectural invariant: **the worker triggers API routes; it does not
-call providers directly.** Provider secrets (EODHD, Twelve Data, FRED,
-OpenAI, Anthropic, X bearer, IBKR Flex token, Binance API key) live on the
-API container only. The worker carries scheduler config (crons, intervals,
-lock TTLs) and a base URL to reach the API via `API_INTERNAL_URL`. The API
-also receives Daily Intelligence scheduler envs so `/ops/scheduler/status`
-can report configured next runs without exposing worker internals.
+Most worker schedulers trigger API routes, so their provider secrets remain
+API-only. External investment ingestion is the deliberate exception: the
+worker calls IBKR Flex and Binance read-only endpoints directly, so their
+credentials are injected into both worker (execution) and API (configuration
+presence only). The API also receives Daily Intelligence scheduler envs so
+`/ops/scheduler/status` can report configured next runs without exposing
+worker internals.
 
 This document is the operator-facing contract. The machine-readable truth
 lives in [`packages/env/src/diagnostics.ts`](../../packages/env/src/diagnostics.ts).
@@ -44,8 +44,8 @@ lengths.
 | `AI_POST_MORTEM_ENABLED`                | api    | at least one of `AI_OPENAI_API_KEY`, `AI_ANTHROPIC_API_KEY` |
 | `KNOWLEDGE_SERVICE_ENABLED`             | api    | `KNOWLEDGE_SERVICE_URL` (Neo4j/Qdrant creds stay on knowledge-service) |
 | `QUANT_SERVICE_ENABLED`                 | api    | `QUANT_SERVICE_URL` |
-| `IBKR_FLEX_ENABLED`                     | api    | per-user `flexToken` + `queryIds[]` in DB; `IBKR_FLEX_BASE_URL` env |
-| `BINANCE_SPOT_ENABLED`                  | api    | per-user `apiKey`/`apiSecret` in DB; `BINANCE_SPOT_BASE_URL` env |
+| `IBKR_FLEX_ENABLED`                     | worker | `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_IDS` |
+| `BINANCE_SPOT_ENABLED`                  | worker | `BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET` |
 | `POWENS_*`                              | api    | `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `POWENS_DOMAIN`, `APP_ENCRYPTION_KEY` |
 | `FREE_FIREHOSE_ENABLED`                 | api    | none mandatory (caps + `SEC_USER_AGENT`, `FRED_API_KEY` recommended if sub-providers enabled) |
 
@@ -59,6 +59,9 @@ The **worker** receives only:
 - `API_INTERNAL_URL` + `PRIVATE_ACCESS_TOKEN`.
 - Database / Redis URLs.
 - Binance valuation enrichment flags (`EXTERNAL_INVESTMENTS_BINANCE_VALUATION_*`).
+- Read-only IBKR/Binance credentials (`IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_IDS`,
+  `BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET`). The API receives the same
+  values only to report configuration presence; neither service serializes them.
 
 **The worker MUST NOT carry** `NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN`,
 `EODHD_API_KEY`, `TWELVEDATA_API_KEY`, `FRED_API_KEY`, `AI_OPENAI_API_KEY`,

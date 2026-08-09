@@ -131,6 +131,8 @@ Manual rollback process:
 
 ## 7. Environment Variables in Deploy
 
+Binance/IBKR credential envs are runtime-only and must be injected into API and worker, never web, ops-alerts, or image build args.
+
 - **Build-time**: `NODE_VERSION`, `BUN_VERSION`, `PNPM_VERSION`, `GIT_SHA`, `GIT_TAG`
 - **Runtime**: All others — set in Dokploy compose environment
 - **Secrets**: `DATABASE_URL`, `AUTH_SESSION_SECRET`, `APP_ENCRYPTION_KEY`, `POWENS_CLIENT_SECRET` — set in Dokploy, never in repo

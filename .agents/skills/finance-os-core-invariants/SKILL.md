@@ -1,6 +1,6 @@
 <!-- GENERATED — DO NOT EDIT
      Source: .agentic/source/skills/finance-os/core-invariants/SKILL.md
-     Hash:   sha256:4e57c12583ca187d
+     Hash:   sha256:53b81b4e479d1ac2
      Sync:   pnpm agent:skills:sync -->
 
 ---
@@ -59,6 +59,7 @@ return db.query(...); // demo path could reach here on edge cases
 
 ### Secrets
 - **NEVER** put secrets in `VITE_*` env vars (exposed to client bundle)
+- Binance/IBKR credentials are server-env-only; never add browser credential DTOs/forms or read the legacy external-investment credential table.
 - Tokens encrypted AES-256-GCM at rest (format: `v1:base64(iv):base64(authTag):base64(encrypted)`)
 - `APP_ENCRYPTION_KEY` must be exactly 32 bytes (raw, hex, or base64)
 - `AUTH_SESSION_SECRET` minimum 32 bytes

@@ -168,6 +168,7 @@ export const createDashboardRouteRuntime = ({
   externalInvestmentsStaleAfterMinutes,
   ibkrFlexEnabled,
   binanceSpotEnabled,
+  externalInvestmentProviderConfigured,
   assetValuationEnabled,
   fxRatesEnabled,
   fxRatesEcbUrl,
@@ -258,6 +259,7 @@ export const createDashboardRouteRuntime = ({
   externalInvestmentsStaleAfterMinutes: number
   ibkrFlexEnabled: boolean
   binanceSpotEnabled: boolean
+  externalInvestmentProviderConfigured: Record<'ibkr' | 'binance', boolean>
   assetValuationEnabled: boolean
   fxRatesEnabled: boolean
   fxRatesEcbUrl: string
@@ -276,6 +278,7 @@ export const createDashboardRouteRuntime = ({
   const externalInvestments = createExternalInvestmentsRepository({
     db,
     staleAfterMinutes: externalInvestmentsStaleAfterMinutes,
+    providerConfigured: externalInvestmentProviderConfigured,
   })
   const investmentStrategy = createInvestmentStrategyUseCases({
     repository: investmentStrategyRepository,
@@ -316,7 +319,7 @@ export const createDashboardRouteRuntime = ({
     const status = await externalInvestments.getStatus()
     const healthRow = status.health.find(item => item.provider === provider) ?? null
     const connection = status.connections.find(item => item.provider === provider) ?? null
-    if (!healthRow && !connection) {
+    if (!healthRow && !connection && !externalInvestmentProviderConfigured[provider]) {
       return null
     }
     return {
@@ -324,7 +327,7 @@ export const createDashboardRouteRuntime = ({
       status: (healthRow?.status ?? 'idle') as 'healthy' | 'degraded' | 'failing' | 'idle',
       lastSuccessAt: healthRow?.lastSuccessAt ?? connection?.lastSuccessAt ?? null,
       lastFailureAt: healthRow?.lastFailureAt ?? connection?.lastFailedAt ?? null,
-      credentialConfigured: connection?.credentialStatus === 'configured',
+      credentialConfigured: externalInvestmentProviderConfigured[provider],
       successCount: healthRow?.successCount ?? 0,
       failureCount: healthRow?.failureCount ?? 0,
     }
@@ -863,6 +866,7 @@ export const createDashboardRouteRuntime = ({
           safeMode: externalInvestmentsSafeMode,
           ibkrEnabledByFlag: ibkrFlexEnabled,
           binanceEnabledByFlag: binanceSpotEnabled,
+          providerConfigured: externalInvestmentProviderConfigured,
           health: [
             ...(ibkrHealth
               ? [
@@ -1064,6 +1068,7 @@ export const createDashboardRouteRuntime = ({
             ibkr: ibkrFlexEnabled,
             binance: binanceSpotEnabled,
           },
+          providerConfigured: externalInvestmentProviderConfigured,
           generatedAt: latestBundle?.generatedAt ?? null,
           dataStatus: latestBundle
             ? {

@@ -79,15 +79,6 @@ export type ExternalInvestmentCredentialPayload =
   | IbkrFlexCredentialPayload
   | BinanceSpotCredentialPayload
 
-export type ExternalInvestmentMaskedCredential = {
-  provider: ExternalInvestmentProvider
-  kind: ExternalInvestmentCredentialKind
-  accountAlias: string | null
-  maskedSecretRefs: Record<string, string>
-  metadata: Record<string, unknown>
-  warnings: string[]
-}
-
 export type ExternalInvestmentCanonicalAccount = {
   provider: ExternalInvestmentProvider
   connectionId: string

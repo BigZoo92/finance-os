@@ -1,7 +1,6 @@
 import { Elysia } from 'elysia'
 import { createExternalInvestmentsRuntimePlugin } from './plugin'
 import { createExternalInvestmentsRouteRuntime } from './runtime'
-import { createExternalInvestmentsCredentialRoute } from './routes/credentials'
 import { createExternalInvestmentsDiagnosticsRoute } from './routes/diagnostics'
 import { createExternalInvestmentsStatusRoute } from './routes/status'
 import { createExternalInvestmentsSyncRoute } from './routes/sync'
@@ -21,5 +20,4 @@ export const createExternalInvestmentsRoutes = ({
     .use(createExternalInvestmentsSyncRunsRoute())
     .use(createExternalInvestmentsDiagnosticsRoute())
     .use(createExternalInvestmentsSyncRoute())
-    .use(createExternalInvestmentsCredentialRoute())
 }

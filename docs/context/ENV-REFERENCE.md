@@ -141,29 +141,34 @@
 
 ## 8.bis Investissements externes -- IBKR / Binance
 
-Ces variables sont des reglages applicatifs serveur. Les credentials IBKR/Binance ne sont pas des variables d'env: ils sont configures en admin via `/integrations`, chiffres en DB avec `APP_ENCRYPTION_KEY`, et jamais exposes dans `VITE_*`.
+Binance and IBKR are configured server-side through environment variables. Credentials cannot be managed from the Finance-OS UI. Les secrets restent absents des variables `VITE_*`, des DTO et des logs.
 
 | Variable | Default | Ou la definir | Consommateur | Description |
 |---|---|---|---|---|
-| `EXTERNAL_INVESTMENTS_ENABLED` | `true` | Dokploy, Local | API, Worker | Active les routes cache-only, la configuration admin et les jobs worker |
+| `EXTERNAL_INVESTMENTS_ENABLED` | `true` | Dokploy, Local | API, Worker | Active les routes cache-only, le statut et les jobs worker |
 | `EXTERNAL_INVESTMENTS_SAFE_MODE` | `false` | Dokploy, Local | API, Worker | Kill-switch dedie IBKR/Binance: bloque les syncs provider et laisse les lectures cache/demo disponibles |
 | `EXTERNAL_INVESTMENTS_SYNC_COOLDOWN_SECONDS` | `300` | Dokploy, Local | API | Cooldown des syncs manuelles IBKR/Binance |
 | `EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES` | `1440` | Dokploy, Local | API, Worker | Seuil de fraicheur pour health, UI et Advisor bundle |
 | `IBKR_FLEX_ENABLED` | `true` | Dokploy, Local | API, Worker | Active le provider IBKR Flex Web Service |
-| `IBKR_FLEX_BASE_URL` | `https://ndcdyn.interactivebrokers.com` | Dokploy, Local | API, Worker | Base URL Flex par defaut; le client ajoute `/AccountManagement/FlexWebService`; surcharge possible par credential admin |
+| `IBKR_FLEX_BASE_URL` | `https://ndcdyn.interactivebrokers.com` | Dokploy, Local | API, Worker | Base URL Flex; le client ajoute `/AccountManagement/FlexWebService` |
 | `IBKR_FLEX_USER_AGENT` | `Finance-OS External Investments/1.0` | Dokploy, Local | API, Worker | User-Agent requis pour les appels Flex |
 | `IBKR_FLEX_TIMEOUT_MS` | `30000` | Dokploy, Local | Worker | Timeout des appels Flex |
+| `IBKR_FLEX_TOKEN` | -- | Dokploy, Local | API, Worker | Token Flex server-only; optionnel au démarrage, requis pour déclarer IBKR configuré |
+| `IBKR_FLEX_QUERY_IDS` | -- | Dokploy, Local | API, Worker | Un ou plusieurs Query IDs séparés par des virgules; le premier doit rester le rapport quotidien |
 | `BINANCE_SPOT_ENABLED` | `true` | Dokploy, Local | API, Worker | Active le provider Binance Spot/Wallet read-only |
-| `BINANCE_SPOT_BASE_URL` | `https://api.binance.com` | Dokploy, Local | API, Worker | Base URL Spot REST par defaut; surcharge possible par credential admin |
+| `BINANCE_SPOT_BASE_URL` | `https://api.binance.com` | Dokploy, Local | API, Worker | Base URL Spot REST |
 | `BINANCE_SPOT_RECV_WINDOW_MS` | `5000` | Dokploy, Local | Worker | `recvWindow` signe pour les endpoints USER_DATA |
 | `BINANCE_SPOT_TIMEOUT_MS` | `30000` | Dokploy, Local | Worker | Timeout des appels Binance |
+| `BINANCE_SPOT_API_KEY` | -- | Dokploy, Local | API, Worker | Clé API server-only configurée sans permission trading/withdrawal |
+| `BINANCE_SPOT_API_SECRET` | -- | Dokploy, Local | API, Worker | Secret API server-only |
 
 Notes:
 
-- `APP_ENCRYPTION_KEY` est obligatoire pour chiffrer/dechiffrer les credentials.
+- Une paire incomplète produit `not configured` sans empêcher le démarrage de l'API ou du worker.
 - `EXTERNAL_INTEGRATIONS_SAFE_MODE` reste le kill-switch global; `EXTERNAL_INVESTMENTS_SAFE_MODE` est le kill-switch specifique IBKR/Binance.
 - Aucune permission trading, withdrawal, transfer, convert, margin/futures ou staking/earn mutation n'est acceptee.
-- Les noms historiques `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_ID_DAILY`, `IBKR_FLEX_QUERY_ID_BACKFILL_MONTH`, `IBKR_FLEX_QUERY_ID_BACKFILL_YEAR`, `BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET` ne sont PAS des variables d'environnement et ne doivent jamais etre definis sur aucun service. Ils vivent en DB chiffree via `/integrations`. `env:check` les refuse explicitement comme leaks de secrets cote web/knowledge/quant.
+- Les secrets sont propagés uniquement aux conteneurs serveur API/worker. `env:check` les refuse sur web, knowledge-service, quant-service et ops-alerts.
+- Les anciennes lignes de `external_investment_credential` peuvent rester en DB pour cette passe, mais aucun chemin runtime ne les lit ou ne les écrit.
 
 ---
 

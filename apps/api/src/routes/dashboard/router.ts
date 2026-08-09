@@ -157,6 +157,7 @@ export const createDashboardRoutes = ({
   externalInvestmentsStaleAfterMinutes,
   ibkrFlexEnabled,
   binanceSpotEnabled,
+  externalInvestmentProviderConfigured,
   assetValuationEnabled,
   fxRatesEnabled,
   fxRatesEcbUrl,
@@ -281,6 +282,7 @@ export const createDashboardRoutes = ({
   externalInvestmentsStaleAfterMinutes: number
   ibkrFlexEnabled: boolean
   binanceSpotEnabled: boolean
+  externalInvestmentProviderConfigured: Record<'ibkr' | 'binance', boolean>
   assetValuationEnabled: boolean
   fxRatesEnabled: boolean
   fxRatesEcbUrl: string
@@ -380,6 +382,7 @@ export const createDashboardRoutes = ({
     externalInvestmentsStaleAfterMinutes,
     ibkrFlexEnabled,
     binanceSpotEnabled,
+    externalInvestmentProviderConfigured,
     assetValuationEnabled,
     fxRatesEnabled,
     fxRatesEcbUrl,

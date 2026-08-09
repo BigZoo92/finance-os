@@ -92,6 +92,7 @@ export interface BuildDataQualitySnapshotInput {
     readonly safeMode: boolean
     readonly ibkrEnabledByFlag: boolean
     readonly binanceEnabledByFlag: boolean
+    readonly providerConfigured: Readonly<Record<'ibkr' | 'binance', boolean>>
     readonly health: ReadonlyArray<ExternalInvestmentsHealthRow>
     readonly connections: ReadonlyArray<ExternalInvestmentsConnectionRow>
   }
@@ -212,7 +213,7 @@ const buildExternalInvestmentsDimension = (
   }
   const connection = input.connections.find(c => c.provider === providerId) ?? null
   const health = input.health.find(h => h.provider === providerId) ?? null
-  if (!connection || connection.credentialStatus !== 'configured') {
+  if (!input.providerConfigured[providerId]) {
     return {
       key,
       status: 'unconfigured',
@@ -222,7 +223,7 @@ const buildExternalInvestmentsDimension = (
       staleAfterMinutes,
     }
   }
-  if (!health) {
+  if (!connection || !health) {
     return {
       key,
       status: 'missing',

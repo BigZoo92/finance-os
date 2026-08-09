@@ -9,7 +9,6 @@ import {
 } from './demo-data'
 import type {
   ExternalInvestmentCashFlow,
-  ExternalInvestmentCredentialInput,
   ExternalInvestmentListResponse,
   ExternalInvestmentPosition,
   ExternalInvestmentProvider,
@@ -105,29 +104,3 @@ export const postExternalInvestmentSync = (provider?: ExternalInvestmentProvider
     }
   )
 }
-
-export const putExternalInvestmentCredential = (input: ExternalInvestmentCredentialInput) => {
-  const { provider, ...body } = input
-  return apiFetch<{
-    ok: boolean
-    requestId: string
-    provider: ExternalInvestmentProvider
-    credential: Record<string, unknown>
-  }>(`/integrations/external-investments/${provider}/credential`, {
-    method: 'PUT',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  })
-}
-
-export const deleteExternalInvestmentCredential = (provider: ExternalInvestmentProvider) =>
-  apiFetch<{
-    ok: boolean
-    requestId: string
-    provider: ExternalInvestmentProvider
-    deleted: boolean
-  }>(`/integrations/external-investments/${provider}/credential`, {
-    method: 'DELETE',
-  })

@@ -1,6 +1,6 @@
 <!-- GENERATED — DO NOT EDIT
      Source: .agentic/source/skills/finance-os/deploy-ghcr-dokploy/SKILL.md
-     Hash:   sha256:f58b6f6e72989e31
+     Hash:   sha256:ffe3f182471a9c8b
      Sync:   pnpm agent:skills:sync -->
 
 ---
@@ -135,6 +135,8 @@ Manual rollback process:
 ---
 
 ## 7. Environment Variables in Deploy
+
+Binance/IBKR credential envs are runtime-only and must be injected into API and worker, never web, ops-alerts, or image build args.
 
 - **Build-time**: `NODE_VERSION`, `BUN_VERSION`, `PNPM_VERSION`, `GIT_SHA`, `GIT_TAG`
 - **Runtime**: All others — set in Dokploy compose environment

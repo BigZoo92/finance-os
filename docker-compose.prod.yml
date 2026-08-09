@@ -414,10 +414,14 @@ services:
       IBKR_FLEX_BASE_URL: ${IBKR_FLEX_BASE_URL:-https://ndcdyn.interactivebrokers.com}
       IBKR_FLEX_USER_AGENT: ${IBKR_FLEX_USER_AGENT:-Finance-OS External Investments/1.0}
       IBKR_FLEX_TIMEOUT_MS: ${IBKR_FLEX_TIMEOUT_MS:-30000}
+      IBKR_FLEX_TOKEN: ${IBKR_FLEX_TOKEN:-}
+      IBKR_FLEX_QUERY_IDS: ${IBKR_FLEX_QUERY_IDS:-}
       BINANCE_SPOT_ENABLED: ${BINANCE_SPOT_ENABLED:-true}
       BINANCE_SPOT_BASE_URL: ${BINANCE_SPOT_BASE_URL:-https://api.binance.com}
       BINANCE_SPOT_RECV_WINDOW_MS: ${BINANCE_SPOT_RECV_WINDOW_MS:-5000}
       BINANCE_SPOT_TIMEOUT_MS: ${BINANCE_SPOT_TIMEOUT_MS:-30000}
+      BINANCE_SPOT_API_KEY: ${BINANCE_SPOT_API_KEY:-}
+      BINANCE_SPOT_API_SECRET: ${BINANCE_SPOT_API_SECRET:-}
       # PWA / push
       PWA_NOTIFICATIONS_ENABLED: ${PWA_NOTIFICATIONS_ENABLED:-true}
       PWA_CRITICAL_ENABLED: ${PWA_CRITICAL_ENABLED:-true}
@@ -533,10 +537,14 @@ services:
       IBKR_FLEX_BASE_URL: ${IBKR_FLEX_BASE_URL:-https://ndcdyn.interactivebrokers.com}
       IBKR_FLEX_USER_AGENT: ${IBKR_FLEX_USER_AGENT:-Finance-OS External Investments/1.0}
       IBKR_FLEX_TIMEOUT_MS: ${IBKR_FLEX_TIMEOUT_MS:-30000}
+      IBKR_FLEX_TOKEN: ${IBKR_FLEX_TOKEN:-}
+      IBKR_FLEX_QUERY_IDS: ${IBKR_FLEX_QUERY_IDS:-}
       BINANCE_SPOT_ENABLED: ${BINANCE_SPOT_ENABLED:-true}
       BINANCE_SPOT_BASE_URL: ${BINANCE_SPOT_BASE_URL:-https://api.binance.com}
       BINANCE_SPOT_RECV_WINDOW_MS: ${BINANCE_SPOT_RECV_WINDOW_MS:-5000}
       BINANCE_SPOT_TIMEOUT_MS: ${BINANCE_SPOT_TIMEOUT_MS:-30000}
+      BINANCE_SPOT_API_KEY: ${BINANCE_SPOT_API_KEY:-}
+      BINANCE_SPOT_API_SECRET: ${BINANCE_SPOT_API_SECRET:-}
       # Visibility-only: these flags are consumed by the API, not the worker
       # zod schema. Propagating them here keeps `docker exec ... env` parity
       # with Dokploy so ops can diff intent vs container state in one place.

@@ -6,8 +6,8 @@
 > `/dashboard/providers/diagnostics`. The existing `/dashboard/external-investments/*`
 > routes, the `/integrations/external-investments/*` admin routes, and the worker
 > sync continue to consume `packages/external-investments` directly. **Read routing
-> through `provider.call()` is deferred. Public API response shapes are unchanged.
-> Sync behavior is unchanged. Credential storage and encryption are unchanged.**
+> through `provider.call()` is deferred. Provider credentials are server-env-only and
+> the wrapper receives configuration presence, never credential values.**
 
 ## Provider id
 
@@ -36,13 +36,10 @@ The wrapper does not declare any other capability. Forbidden capabilities
 
 ## Credentials
 
-The wrapper reads NO credentials, NO env vars, and NO secrets directly. It is wired
-purely from a closure that reads two local tables (`externalInvestmentProviderHealth`
-+ `externalInvestmentConnection`):
+The wrapper reads NO credentials, NO env vars, and NO secrets directly. The worker
+resolves `IBKR_FLEX_TOKEN` and `IBKR_FLEX_QUERY_IDS` from its server-only environment
+before constructing the reporting client.
 
-- `APP_ENCRYPTION_KEY` — used by `packages/external-investments/src/credentials.ts`
-  to encrypt the Flex token payload. **The wrapper does NOT decrypt or read tokens.**
-  Encryption logic is unchanged.
 - `IBKR_FLEX_ENABLED` — feature flag consumed by the existing IBKR client + sync.
   The wrapper reads only the resolved boolean (`ibkrFlexEnabled`) from the runtime
   config, never the raw env value.
@@ -51,9 +48,9 @@ The injected `getProviderSnapshot` closure projects only the non-sensitive colum
 
 - `enabled`, `status`, `lastSuccessAt`, `lastFailureAt`, `successCount`, `failureCount`
   (from `externalInvestmentProviderHealth`)
-- `credentialStatus === 'configured'` (from `externalInvestmentConnection`)
+- `credentialConfigured` derived from complete server environment configuration
 
-It explicitly excludes `encryptedPayload`, `maskedMetadata`, `lastErrorMessage`,
+It explicitly excludes credential values, `maskedMetadata`, `lastErrorMessage`,
 `lastRequestId`, `accountAlias`, account ids, `metadata`, and `syncMetadata`.
 
 ## Cache / freshness
@@ -97,7 +94,7 @@ repeated local failure state. Unconfigured / disabled / never-synced soft-fail t
   Flex token, query id, raw XML payload, account id, or upstream HTTP body ever
   reaches a log line, the output DTO, or the diagnostics surface.
 - Repository exceptions thrown inside `refreshHealth()` are caught and DROPPED.
-- The wrapper never touches `IbkrFlexCredentialPayload`, encrypted credentials,
+- The wrapper never touches `IbkrFlexCredentialPayload`, environment credentials,
   Flex query orchestration, or sync result rows.
 
 ## Health check

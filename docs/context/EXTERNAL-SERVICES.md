@@ -120,7 +120,7 @@ Rapport detaille: [EXTERNAL-INVESTMENTS.md](EXTERNAL-INVESTMENTS.md)
 | **Type** | XML reporting API |
 | **Role** | Import read-only de statements, positions, trades et cash transactions |
 | **Base URL** | `IBKR_FLEX_BASE_URL` |
-| **Auth** | Flex token chiffre en DB |
+| **Auth** | `IBKR_FLEX_TOKEN` + `IBKR_FLEX_QUERY_IDS`, environnement serveur uniquement |
 | **Consommateur** | Worker `externalInvestments.sync*` |
 | **Docs officielles** | <https://www.interactivebrokers.com/campus/ibkr-api-page/flex-web-service/> |
 
@@ -147,7 +147,7 @@ Regles:
 | **Type** | REST Spot API + Wallet USER_DATA |
 | **Role** | Import read-only des soldes Spot, trades, depots, retraits historiques et metadata coins |
 | **Base URL** | `BINANCE_SPOT_BASE_URL` |
-| **Auth** | API key + secret chiffres en DB, signature HMAC cote worker |
+| **Auth** | `BINANCE_SPOT_API_KEY` + `BINANCE_SPOT_API_SECRET`, environnement serveur uniquement; signature HMAC cote worker |
 | **Consommateur** | Worker `externalInvestments.sync*` |
 | **Docs officielles** | <https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints> |
 
@@ -174,7 +174,7 @@ Interdits explicitement:
 ### Variables et secrets
 
 - Les reglages app-level sont documentes dans [ENV-REFERENCE.md](ENV-REFERENCE.md).
-- Les credentials provider sont configures en admin et chiffres avec `APP_ENCRYPTION_KEY`.
+- Les credentials IBKR/Binance sont injectes uniquement dans l'environnement runtime API/worker; ils ne transitent jamais par une route de mutation, le navigateur ou la DB. Les anciennes lignes DB eventuelles sont conservees pour rollback mais ignorees par le runtime.
 - Aucune cle Binance, secret, signature, URL signee, token IBKR ou query sensible ne doit apparaitre dans les logs ou le navigateur.
 
 ---

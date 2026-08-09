@@ -10,7 +10,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
 } from '@finance-os/ui/components'
 import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -34,19 +33,12 @@ import {
   powensQueryKeys,
   powensStatusQueryOptionsWithMode,
 } from '@/features/powens/query-options'
-import {
-  deleteExternalInvestmentCredential,
-  postExternalInvestmentSync,
-  putExternalInvestmentCredential,
-} from '@/features/external-investments/api'
+import { postExternalInvestmentSync } from '@/features/external-investments/api'
 import {
   externalInvestmentsQueryKeys,
   externalInvestmentsStatusQueryOptionsWithMode,
 } from '@/features/external-investments/query-options'
-import type {
-  ExternalInvestmentCredentialInput,
-  ExternalInvestmentProvider,
-} from '@/features/external-investments/types'
+import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
 import { pushToast } from '@/lib/toast-store'
 import { formatDateTime, toErrorMessage } from '@/lib/format'
@@ -55,40 +47,8 @@ import { ActionDock } from '@/components/surfaces/action-dock'
 
 const EXTERNAL_PROVIDERS: ExternalInvestmentProvider[] = ['ibkr', 'binance']
 
-type IbkrCredentialDraft = {
-  accountAlias: string
-  flexToken: string
-  queryIds: string
-  expectedAccountIds: string
-  baseUrl: string
-  userAgent: string
-}
-
-type BinanceCredentialDraft = {
-  accountAlias: string
-  apiKey: string
-  apiSecret: string
-  baseUrl: string
-  ipRestricted: boolean
-  ipRestrictionNote: string
-}
-
-const splitCsv = (value: string) =>
-  value
-    .split(',')
-    .map(item => item.trim())
-    .filter(item => item.length > 0)
-
 const providerLabel = (provider: ExternalInvestmentProvider) =>
   provider === 'ibkr' ? 'IBKR Flex' : 'Binance Spot'
-
-const getMaskedRefs = (metadata: Record<string, unknown> | null) => {
-  const refs = metadata?.maskedSecretRefs
-  if (!refs || typeof refs !== 'object' || Array.isArray(refs)) return []
-  return Object.entries(refs as Record<string, unknown>)
-    .filter(([, value]) => typeof value === 'string')
-    .map(([key, value]) => `${key}: ${value}`)
-}
 
 export const Route = createFileRoute('/_app/integrations')({
   loader: async ({ context }) => {
@@ -111,22 +71,6 @@ function IntegrationsPage() {
   const [pendingDisconnectConnectionId, setPendingDisconnectConnectionId] = useState<string | null>(
     null
   )
-  const [ibkrDraft, setIbkrDraft] = useState<IbkrCredentialDraft>({
-    accountAlias: '',
-    flexToken: '',
-    queryIds: '',
-    expectedAccountIds: '',
-    baseUrl: '',
-    userAgent: '',
-  })
-  const [binanceDraft, setBinanceDraft] = useState<BinanceCredentialDraft>({
-    accountAlias: '',
-    apiKey: '',
-    apiSecret: '',
-    baseUrl: '',
-    ipRestricted: true,
-    ipRestrictionNote: '',
-  })
   const manualSyncCooldownUiConfig = getPowensManualSyncCooldownUiConfig()
   const manualSyncCooldownState = useStore(powensManualSyncCooldownStore)
   const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
@@ -254,87 +198,6 @@ function IntegrationsPage() {
     },
   })
 
-  const credentialMutation = useMutation({
-    mutationFn: async (input: ExternalInvestmentCredentialInput) => {
-      if (!isAdmin) throw new Error('Admin session required')
-      return putExternalInvestmentCredential(input)
-    },
-    onSuccess: async payload => {
-      await invalidateExternalInvestments()
-      if (payload.provider === 'ibkr') {
-        setIbkrDraft(current => ({ ...current, flexToken: '' }))
-      } else {
-        setBinanceDraft(current => ({ ...current, apiKey: '', apiSecret: '' }))
-      }
-      pushToast({
-        title: 'Identifiants enregistres',
-        description: `${providerLabel(payload.provider)} configure sans exposer les secrets.`,
-        tone: 'success',
-      })
-    },
-    onError: error => {
-      pushToast({ title: 'Configuration refusee', description: toErrorMessage(error), tone: 'error' })
-    },
-  })
-
-  const deleteExternalCredentialMutation = useMutation({
-    mutationFn: async (provider: ExternalInvestmentProvider) => {
-      if (!isAdmin) throw new Error('Admin session required')
-      return deleteExternalInvestmentCredential(provider)
-    },
-    onSuccess: async payload => {
-      await invalidateExternalInvestments()
-      pushToast({
-        title: payload.deleted ? 'Identifiants retires' : 'Identifiants absents',
-        description: `${providerLabel(payload.provider)} ne sera pas appele sans nouvelle configuration.`,
-        tone: 'success',
-      })
-    },
-    onError: error => {
-      pushToast({ title: 'Retrait refuse', description: toErrorMessage(error), tone: 'error' })
-    },
-  })
-
-  const submitIbkrCredential = () => {
-    const queryIds = splitCsv(ibkrDraft.queryIds)
-    if (ibkrDraft.flexToken.trim().length === 0 || queryIds.length === 0) return
-    credentialMutation.mutate({
-      provider: 'ibkr',
-      flexToken: ibkrDraft.flexToken.trim(),
-      queryIds,
-      ...(ibkrDraft.accountAlias.trim()
-        ? { accountAlias: ibkrDraft.accountAlias.trim() }
-        : {}),
-      ...(splitCsv(ibkrDraft.expectedAccountIds).length > 0
-        ? { expectedAccountIds: splitCsv(ibkrDraft.expectedAccountIds) }
-        : {}),
-      ...(ibkrDraft.baseUrl.trim() ? { baseUrl: ibkrDraft.baseUrl.trim() } : {}),
-      ...(ibkrDraft.userAgent.trim() ? { userAgent: ibkrDraft.userAgent.trim() } : {}),
-    })
-  }
-
-  const submitBinanceCredential = () => {
-    if (binanceDraft.apiKey.trim().length === 0 || binanceDraft.apiSecret.trim().length === 0) return
-    credentialMutation.mutate({
-      provider: 'binance',
-      apiKey: binanceDraft.apiKey.trim(),
-      apiSecret: binanceDraft.apiSecret.trim(),
-      permissionsMetadata: {
-        canRead: true,
-        tradingEnabled: false,
-        withdrawEnabled: false,
-        ipRestricted: binanceDraft.ipRestricted,
-      },
-      ...(binanceDraft.accountAlias.trim()
-        ? { accountAlias: binanceDraft.accountAlias.trim() }
-        : {}),
-      ...(binanceDraft.baseUrl.trim() ? { baseUrl: binanceDraft.baseUrl.trim() } : {}),
-      ...(binanceDraft.ipRestrictionNote.trim()
-        ? { ipRestrictionNote: binanceDraft.ipRestrictionNote.trim() }
-        : {}),
-    })
-  }
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -389,14 +252,21 @@ function IntegrationsPage() {
             <div>
               <CardTitle className="text-base">Investissements externes</CardTitle>
               <CardDescription>
-                Configuration admin chiffree pour IBKR Flex et Binance Spot en lecture seule.
+                IBKR Flex et Binance Spot sont configurés côté serveur et restent strictement en lecture seule.
               </CardDescription>
             </div>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              disabled={!isAdmin || isExternalSafeMode || externalSyncMutation.isPending}
+              disabled={
+                !isAdmin ||
+                isExternalSafeMode ||
+                externalSyncMutation.isPending ||
+                !EXTERNAL_PROVIDERS.some(
+                  provider => externalStatusQuery.data?.providerConfigured?.[provider]
+                )
+              }
               onClick={() => externalSyncMutation.mutate({})}
             >
               <span aria-hidden="true">↻</span>
@@ -411,8 +281,7 @@ function IntegrationsPage() {
             {EXTERNAL_PROVIDERS.map(provider => {
               const connection = externalConnections.find(item => item.provider === provider)
               const health = externalHealth.find(item => item.provider === provider)
-              const maskedRefs = getMaskedRefs(connection?.maskedMetadata ?? null)
-              const configured = connection?.credentialStatus === 'configured'
+              const configured = externalStatusQuery.data?.providerConfigured?.[provider] ?? false
               const isProviderSyncPending =
                 externalSyncMutation.isPending &&
                 externalSyncMutation.variables?.provider === provider
@@ -432,7 +301,7 @@ function IntegrationsPage() {
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <Badge variant={configured ? 'positive' : 'outline'}>
-                        {configured ? 'configure' : 'manquant'}
+                        {configured ? 'Configuré via l’environnement' : 'Non configuré'}
                       </Badge>
                       <Badge
                         variant={
@@ -460,26 +329,7 @@ function IntegrationsPage() {
                     >
                       {isProviderSyncPending ? 'Sync...' : 'Synchroniser'}
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-xs"
-                      disabled={!isAdmin || !configured || deleteExternalCredentialMutation.isPending}
-                      onClick={() => deleteExternalCredentialMutation.mutate(provider)}
-                    >
-                      Retirer
-                    </Button>
                   </div>
-                  {maskedRefs.length > 0 && (
-                    <div className="mt-3 rounded-lg border border-border/40 bg-surface-0 p-2 text-xs text-muted-foreground">
-                      {maskedRefs.map(ref => (
-                        <p key={ref} className="font-mono">
-                          {ref}
-                        </p>
-                      ))}
-                    </div>
-                  )}
                   {connection?.lastErrorMessage && (
                     <p className="mt-2 text-xs text-destructive">{connection.lastErrorMessage}</p>
                   )}
@@ -491,215 +341,6 @@ function IntegrationsPage() {
                 </div>
               )
             })}
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-border/50 bg-surface-1 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Configurer IBKR Flex</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Token Flex et Query IDs uniquement; le worker genere puis recupere les statements.
-                  </p>
-                </div>
-                <Badge variant="outline">read-only</Badge>
-              </div>
-              <div className="mt-4 grid gap-3">
-                <label className="space-y-2 text-sm" htmlFor="ibkr-account-alias">
-                  <span className="text-muted-foreground">Alias compte</span>
-                  <Input
-                    id="ibkr-account-alias"
-                    value={ibkrDraft.accountAlias}
-                    onChange={event =>
-                      setIbkrDraft(current => ({ ...current, accountAlias: event.target.value }))
-                    }
-                    placeholder="IBKR Flex"
-                  />
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="ibkr-flex-token">
-                  <span className="text-muted-foreground">Flex token</span>
-                  <Input
-                    id="ibkr-flex-token"
-                    type="password"
-                    value={ibkrDraft.flexToken}
-                    onChange={event =>
-                      setIbkrDraft(current => ({ ...current, flexToken: event.target.value }))
-                    }
-                    placeholder="Stocke chiffre; jamais renvoye au navigateur"
-                  />
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="ibkr-query-ids">
-                  <span className="text-muted-foreground">Query IDs Flex</span>
-                  <Input
-                    id="ibkr-query-ids"
-                    value={ibkrDraft.queryIds}
-                    onChange={event =>
-                      setIbkrDraft(current => ({ ...current, queryIds: event.target.value }))
-                    }
-                    placeholder="123456, 789012"
-                  />
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="ibkr-expected-account-ids">
-                  <span className="text-muted-foreground">Comptes attendus (optionnel)</span>
-                  <Input
-                    id="ibkr-expected-account-ids"
-                    value={ibkrDraft.expectedAccountIds}
-                    onChange={event =>
-                      setIbkrDraft(current => ({
-                        ...current,
-                        expectedAccountIds: event.target.value,
-                      }))
-                    }
-                    placeholder="U****123, U****456"
-                  />
-                </label>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="space-y-2 text-sm" htmlFor="ibkr-base-url">
-                    <span className="text-muted-foreground">Base URL optionnelle</span>
-                    <Input
-                      id="ibkr-base-url"
-                      value={ibkrDraft.baseUrl}
-                      onChange={event =>
-                        setIbkrDraft(current => ({ ...current, baseUrl: event.target.value }))
-                      }
-                      placeholder="Defaut serveur"
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm" htmlFor="ibkr-user-agent">
-                    <span className="text-muted-foreground">User-Agent optionnel</span>
-                    <Input
-                      id="ibkr-user-agent"
-                      value={ibkrDraft.userAgent}
-                      onChange={event =>
-                        setIbkrDraft(current => ({ ...current, userAgent: event.target.value }))
-                      }
-                      placeholder="Defaut serveur"
-                    />
-                  </label>
-                </div>
-                <Button
-                  type="button"
-                  variant="aurora"
-                  disabled={
-                    !isAdmin ||
-                    credentialMutation.isPending ||
-                    ibkrDraft.flexToken.trim().length === 0 ||
-                    splitCsv(ibkrDraft.queryIds).length === 0
-                  }
-                  onClick={submitIbkrCredential}
-                >
-                  Enregistrer IBKR
-                </Button>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border/50 bg-surface-1 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Configurer Binance Spot</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Cle API lecture seule. Les permissions trading, transfert et retrait sont refusees.
-                  </p>
-                </div>
-                <Badge variant="warning">no trade</Badge>
-              </div>
-              <div className="mt-4 grid gap-3">
-                <label className="space-y-2 text-sm" htmlFor="binance-account-alias">
-                  <span className="text-muted-foreground">Alias compte</span>
-                  <Input
-                    id="binance-account-alias"
-                    value={binanceDraft.accountAlias}
-                    onChange={event =>
-                      setBinanceDraft(current => ({
-                        ...current,
-                        accountAlias: event.target.value,
-                      }))
-                    }
-                    placeholder="Binance Spot"
-                  />
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="binance-api-key">
-                  <span className="text-muted-foreground">API key</span>
-                  <Input
-                    id="binance-api-key"
-                    type="password"
-                    value={binanceDraft.apiKey}
-                    onChange={event =>
-                      setBinanceDraft(current => ({ ...current, apiKey: event.target.value }))
-                    }
-                    placeholder="Masquee apres enregistrement"
-                  />
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="binance-api-secret">
-                  <span className="text-muted-foreground">API secret</span>
-                  <Input
-                    id="binance-api-secret"
-                    type="password"
-                    value={binanceDraft.apiSecret}
-                    onChange={event =>
-                      setBinanceDraft(current => ({ ...current, apiSecret: event.target.value }))
-                    }
-                    placeholder="Chiffre cote serveur"
-                  />
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="binance-base-url">
-                  <span className="text-muted-foreground">Base URL optionnelle</span>
-                  <Input
-                    id="binance-base-url"
-                    value={binanceDraft.baseUrl}
-                    onChange={event =>
-                      setBinanceDraft(current => ({ ...current, baseUrl: event.target.value }))
-                    }
-                    placeholder="https://api.binance.com"
-                  />
-                </label>
-                <label className="flex items-start gap-3 rounded-lg border border-border/40 bg-surface-0 px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={binanceDraft.ipRestricted}
-                    onChange={event =>
-                      setBinanceDraft(current => ({
-                        ...current,
-                        ipRestricted: event.target.checked,
-                      }))
-                    }
-                  />
-                  <span>
-                    Cle IP-restreinte
-                    <span className="block text-xs text-muted-foreground">
-                      Recommande; aucune permission trade/withdraw ne doit etre active.
-                    </span>
-                  </span>
-                </label>
-                <label className="space-y-2 text-sm" htmlFor="binance-ip-restriction-note">
-                  <span className="text-muted-foreground">Note restriction IP</span>
-                  <Input
-                    id="binance-ip-restriction-note"
-                    value={binanceDraft.ipRestrictionNote}
-                    onChange={event =>
-                      setBinanceDraft(current => ({
-                        ...current,
-                        ipRestrictionNote: event.target.value,
-                      }))
-                    }
-                    placeholder="Adresse worker / Dokploy / VPN..."
-                  />
-                </label>
-                <Button
-                  type="button"
-                  variant="aurora"
-                  disabled={
-                    !isAdmin ||
-                    credentialMutation.isPending ||
-                    binanceDraft.apiKey.trim().length === 0 ||
-                    binanceDraft.apiSecret.trim().length === 0
-                  }
-                  onClick={submitBinanceCredential}
-                >
-                  Enregistrer Binance
-                </Button>
-              </div>
-            </div>
           </div>
 
         </CardContent>

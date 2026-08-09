@@ -1,6 +1,6 @@
 <!-- GENERATED — DO NOT EDIT
      Source: .agentic/source/skills/finance-os/ui-cockpit/SKILL.md
-     Hash:   sha256:ca809475e79f1bf2
+     Hash:   sha256:38846b947906e567
      Sync:   pnpm agent:skills:sync -->
 
 ---
@@ -155,6 +155,7 @@ Components: `AsciiLogo`, `AsciiDivider`, `AsciiFrame`, `AsciiStatusLine`, `Secti
 - Blocking animations that delay content
 - Adding chart/UI libraries without justification (D3 + shadcn are sufficient)
 - Forced ASCII accents (use only where they add character)
+- Binance or IBKR credential inputs/mutations in the browser; integrations UI is status-and-sync only.
 - Borders/dividers instead of whitespace for separation
 
 ## Common Mistakes

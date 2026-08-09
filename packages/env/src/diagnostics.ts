@@ -52,11 +52,10 @@ export const EXECUTING_SERVICE_BY_FEATURE: Record<string, ServiceName> = {
   AI_CHAT: 'api',
   AI_CHALLENGER: 'api',
   AI_RELABEL: 'api',
-  // External investments providers (IBKR Flex / Binance Spot) — read-only,
-  // executed by the API. Credentials live in DB (admin /integrations,
-  // encrypted with APP_ENCRYPTION_KEY); env flag only gates the runtime path.
-  IBKR_FLEX: 'api',
-  BINANCE_SPOT: 'api',
+  // External investments providers (IBKR Flex / Binance Spot) are read-only
+  // and execute in the worker from server-only environment configuration.
+  IBKR_FLEX: 'worker',
+  BINANCE_SPOT: 'worker',
   // Free Firehose orchestrator — API-side.
   FREE_FIREHOSE: 'api',
   // Knowledge / quant services are reached from the API.
@@ -202,24 +201,17 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     feature: 'IBKR Flex read-only',
     flagKey: 'IBKR_FLEX_ENABLED',
     enabledWhen: truthy,
-    // IBKR Flex credentials (token + query ids) are NOT env vars. They are
-    // configured per-account in admin via /integrations and stored encrypted
-    // in DB with APP_ENCRYPTION_KEY. See docs/context/ENV-REFERENCE.md §8.bis.
-    // The env flag only gates whether the runtime path is enabled.
-    requiredSecrets: [],
+    requiredSecrets: ['IBKR_FLEX_TOKEN', 'IBKR_FLEX_QUERY_IDS'],
     description:
-      'IBKR Flex runtime path. Credentials (token, query ids) are admin-managed in DB via /integrations, encrypted with APP_ENCRYPTION_KEY — never env vars.',
+      'IBKR Flex runtime path. Token and comma-separated query ids are configured only through server environment variables.',
   },
   {
     feature: 'Binance Spot read-only',
     flagKey: 'BINANCE_SPOT_ENABLED',
     enabledWhen: truthy,
-    // Binance Spot credentials are NOT env vars. They are configured per-account
-    // in admin via /integrations and stored encrypted in DB with APP_ENCRYPTION_KEY.
-    // See docs/context/ENV-REFERENCE.md §8.bis.
-    requiredSecrets: [],
+    requiredSecrets: ['BINANCE_SPOT_API_KEY', 'BINANCE_SPOT_API_SECRET'],
     description:
-      'Binance Spot read-only runtime path. API key + secret are admin-managed in DB via /integrations, encrypted with APP_ENCRYPTION_KEY — never env vars.',
+      'Binance Spot read-only runtime path. API key and secret are configured only through server environment variables.',
   },
   {
     feature: 'Powens banking connector',
@@ -387,6 +379,7 @@ export const FORBIDDEN_KEYS_BY_SERVICE: Record<ServiceName, readonly string[]> =
     'BLUESKY_APP_PASSWORD',
     'PUSH_VAPID_PRIVATE_KEY',
     'IBKR_FLEX_TOKEN',
+    'IBKR_FLEX_QUERY_IDS',
     'BINANCE_SPOT_API_KEY',
     'BINANCE_SPOT_API_SECRET',
   ],
@@ -400,6 +393,7 @@ export const FORBIDDEN_KEYS_BY_SERVICE: Record<ServiceName, readonly string[]> =
     'POWENS_CLIENT_SECRET',
     'AUTH_SESSION_SECRET',
     'IBKR_FLEX_TOKEN',
+    'IBKR_FLEX_QUERY_IDS',
     'BINANCE_SPOT_API_KEY',
     'BINANCE_SPOT_API_SECRET',
   ],
@@ -410,6 +404,7 @@ export const FORBIDDEN_KEYS_BY_SERVICE: Record<ServiceName, readonly string[]> =
     'POWENS_CLIENT_SECRET',
     'AUTH_SESSION_SECRET',
     'IBKR_FLEX_TOKEN',
+    'IBKR_FLEX_QUERY_IDS',
     'BINANCE_SPOT_API_KEY',
     'BINANCE_SPOT_API_SECRET',
   ],
@@ -423,6 +418,10 @@ export const FORBIDDEN_KEYS_BY_SERVICE: Record<ServiceName, readonly string[]> =
     'POWENS_CLIENT_SECRET',
     'AUTH_SESSION_SECRET',
     'APP_ENCRYPTION_KEY',
+    'IBKR_FLEX_TOKEN',
+    'IBKR_FLEX_QUERY_IDS',
+    'BINANCE_SPOT_API_KEY',
+    'BINANCE_SPOT_API_SECRET',
   ],
 }
 
@@ -520,9 +519,13 @@ export const API_REQUIRED_KEYS: readonly string[] = [
   'IBKR_FLEX_ENABLED',
   'IBKR_FLEX_BASE_URL',
   'IBKR_FLEX_TIMEOUT_MS',
+  'IBKR_FLEX_TOKEN',
+  'IBKR_FLEX_QUERY_IDS',
   'BINANCE_SPOT_ENABLED',
   'BINANCE_SPOT_BASE_URL',
   'BINANCE_SPOT_TIMEOUT_MS',
+  'BINANCE_SPOT_API_KEY',
+  'BINANCE_SPOT_API_SECRET',
   // Failsoft
   'FAILSOFT_POLICY_ENABLED',
   'FAILSOFT_SOURCE_ORDER',
@@ -573,6 +576,10 @@ export const WORKER_REQUIRED_KEYS: readonly string[] = [
   'IBKR_FLEX_BASE_URL',
   'IBKR_FLEX_TIMEOUT_MS',
   'IBKR_FLEX_USER_AGENT',
+  'IBKR_FLEX_TOKEN',
+  'IBKR_FLEX_QUERY_IDS',
+  'BINANCE_SPOT_API_KEY',
+  'BINANCE_SPOT_API_SECRET',
   // X daily previous-day scheduler — worker triggers the API endpoint.
   'X_DAILY_PREVIOUS_DAY_SYNC_ENABLED',
   'X_DAILY_PREVIOUS_DAY_CRON',

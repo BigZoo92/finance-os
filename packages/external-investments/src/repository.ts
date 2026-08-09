@@ -2,19 +2,12 @@ import { createHash } from 'node:crypto'
 import { schema, type createDbClient } from '@finance-os/db'
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { buildExternalInvestmentContextBundle } from './context-bundle'
-import {
-  decryptExternalInvestmentCredential,
-  encryptExternalInvestmentCredential,
-  maskExternalInvestmentCredential,
-} from './credentials'
 import type {
   ExternalInvestmentBundle,
   ExternalInvestmentBundlePositionInput,
   ExternalInvestmentCanonicalCashFlow,
   ExternalInvestmentCanonicalPosition,
   ExternalInvestmentCanonicalTrade,
-  ExternalInvestmentCredentialPayload,
-  ExternalInvestmentMaskedCredential,
   ExternalInvestmentNormalizedSnapshot,
   ExternalInvestmentProvider,
   ExternalInvestmentProviderCoverage,
@@ -45,22 +38,10 @@ export type ExternalInvestmentConnectionRecord = {
   updatedAt: Date
 }
 
-export type ExternalInvestmentCredentialRecord = {
-  connection: ExternalInvestmentConnectionRecord
-  credentialId: number
-  credentialKind: string
-  encryptedPayload: string
-}
-
 const DEFAULT_PROVIDER_CONNECTION_IDS: Record<ExternalInvestmentProvider, string> = {
   ibkr: 'ibkr:flex',
   binance: 'binance:spot',
 }
-
-const toProviderConnectionId = (payload: ExternalInvestmentCredentialPayload) =>
-  payload.provider === 'ibkr'
-    ? DEFAULT_PROVIDER_CONNECTION_IDS.ibkr
-    : DEFAULT_PROVIDER_CONNECTION_IDS.binance
 
 const isProvider = (value: string): value is ExternalInvestmentProvider =>
   value === 'ibkr' || value === 'binance'
@@ -168,9 +149,6 @@ const mapConnectionRow = (row: typeof schema.externalInvestmentConnection.$infer
   provider: isProvider(row.provider) ? row.provider : 'ibkr',
 }) satisfies ExternalInvestmentConnectionRecord
 
-const mapMasked = (value: ExternalInvestmentMaskedCredential) =>
-  value as unknown as Record<string, unknown>
-
 const sumCounts = (snapshot: ExternalInvestmentNormalizedSnapshot) => ({
   accounts: snapshot.accounts.length,
   instruments: snapshot.instruments.length,
@@ -197,9 +175,11 @@ const positionMetadata = (position: ExternalInvestmentCanonicalPosition) => ({
 export const createExternalInvestmentsRepository = ({
   db,
   staleAfterMinutes,
+  providerConfigured,
 }: {
   db: ExternalInvestmentsDb
   staleAfterMinutes: number
+  providerConfigured: Record<ExternalInvestmentProvider, boolean>
 }) => {
   const getConnectionByProvider = async (provider: ExternalInvestmentProvider) => {
     const [row] = await db
@@ -236,20 +216,18 @@ export const createExternalInvestmentsRepository = ({
     return rows.map(mapConnectionRow)
   }
 
-  const ensureConnection = async (payload: ExternalInvestmentCredentialPayload) => {
+  const ensureConnection = async (provider: ExternalInvestmentProvider) => {
     const now = new Date()
-    const providerConnectionId = toProviderConnectionId(payload)
-    const masked = maskExternalInvestmentCredential(payload)
+    const providerConnectionId = DEFAULT_PROVIDER_CONNECTION_IDS[provider]
     await db
       .insert(schema.externalInvestmentConnection)
       .values({
-        provider: payload.provider,
+        provider,
         providerConnectionId,
-        accountAlias: masked.accountAlias,
         enabled: true,
         status: 'configured',
         credentialStatus: 'configured',
-        maskedMetadata: mapMasked(masked),
+        maskedMetadata: { configuredVia: 'environment' },
         updatedAt: now,
       })
       .onConflictDoUpdate({
@@ -258,18 +236,17 @@ export const createExternalInvestmentsRepository = ({
           schema.externalInvestmentConnection.providerConnectionId,
         ],
         set: {
-          accountAlias: masked.accountAlias,
           enabled: true,
           status: sql`case when ${schema.externalInvestmentConnection.status} = 'syncing' then 'syncing' else 'configured' end`,
           credentialStatus: 'configured',
-          maskedMetadata: mapMasked(masked),
+          maskedMetadata: { configuredVia: 'environment' },
           archivedAt: null,
           archivedReason: null,
           updatedAt: now,
         },
       })
 
-    const connection = await getConnectionByProvider(payload.provider)
+    const connection = await getConnectionByProvider(provider)
     if (!connection) {
       throw new Error('Failed to load external investment connection')
     }
@@ -280,137 +257,7 @@ export const createExternalInvestmentsRepository = ({
     getConnectionByProvider,
     getConnectionById,
     listConnections,
-
-    async upsertCredential({
-      payload,
-      encryptionKey,
-    }: {
-      payload: ExternalInvestmentCredentialPayload
-      encryptionKey: string
-    }) {
-      const connection = await ensureConnection(payload)
-      const encryptedPayload = encryptExternalInvestmentCredential(payload, encryptionKey)
-      const masked = maskExternalInvestmentCredential(payload)
-      const now = new Date()
-      const [active] = await db
-        .select()
-        .from(schema.externalInvestmentCredential)
-        .where(
-          and(
-            eq(schema.externalInvestmentCredential.connectionId, connection.id),
-            eq(schema.externalInvestmentCredential.provider, payload.provider),
-            eq(schema.externalInvestmentCredential.kind, payload.kind),
-            isNull(schema.externalInvestmentCredential.deletedAt)
-          )
-        )
-        .limit(1)
-
-      if (active) {
-        await db
-          .update(schema.externalInvestmentCredential)
-          .set({
-            encryptedPayload,
-            maskedMetadata: mapMasked(masked),
-            rotatedAt: now,
-            updatedAt: now,
-          })
-          .where(eq(schema.externalInvestmentCredential.id, active.id))
-      } else {
-        await db.insert(schema.externalInvestmentCredential).values({
-          connectionId: connection.id,
-          provider: payload.provider,
-          kind: payload.kind,
-          encryptedPayload,
-          maskedMetadata: mapMasked(masked),
-        })
-      }
-
-      return {
-        connection,
-        credential: masked,
-      }
-    },
-
-    async deleteCredential(provider: ExternalInvestmentProvider) {
-      const connection = await getConnectionByProvider(provider)
-      if (!connection) {
-        return false
-      }
-      const now = new Date()
-      await db
-        .update(schema.externalInvestmentCredential)
-        .set({
-          deletedAt: now,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(schema.externalInvestmentCredential.connectionId, connection.id),
-            isNull(schema.externalInvestmentCredential.deletedAt)
-          )
-        )
-      await db
-        .update(schema.externalInvestmentConnection)
-        .set({
-          status: 'disabled',
-          credentialStatus: 'missing',
-          enabled: false,
-          updatedAt: now,
-        })
-        .where(eq(schema.externalInvestmentConnection.id, connection.id))
-      return true
-    },
-
-    async listCredentialRecords(provider?: ExternalInvestmentProvider) {
-      const whereClause = provider
-        ? and(
-            eq(schema.externalInvestmentCredential.provider, provider),
-            isNull(schema.externalInvestmentCredential.deletedAt),
-            isNull(schema.externalInvestmentConnection.archivedAt)
-          )
-        : and(
-            isNull(schema.externalInvestmentCredential.deletedAt),
-            isNull(schema.externalInvestmentConnection.archivedAt)
-          )
-
-      const rows = await db
-        .select({
-          credentialId: schema.externalInvestmentCredential.id,
-          credentialKind: schema.externalInvestmentCredential.kind,
-          encryptedPayload: schema.externalInvestmentCredential.encryptedPayload,
-          connection: schema.externalInvestmentConnection,
-        })
-        .from(schema.externalInvestmentCredential)
-        .innerJoin(
-          schema.externalInvestmentConnection,
-          eq(
-            schema.externalInvestmentCredential.connectionId,
-            schema.externalInvestmentConnection.id
-          )
-        )
-        .where(whereClause)
-
-      return rows.map(row => ({
-        credentialId: row.credentialId,
-        credentialKind: row.credentialKind,
-        encryptedPayload: row.encryptedPayload,
-        connection: mapConnectionRow(row.connection),
-      })) satisfies ExternalInvestmentCredentialRecord[]
-    },
-
-    async listCredentialPayloads({
-      encryptionKey,
-      provider,
-    }: {
-      encryptionKey: string
-      provider?: ExternalInvestmentProvider
-    }) {
-      const records = await this.listCredentialRecords(provider)
-      return records.map(record => ({
-        ...record,
-        payload: decryptExternalInvestmentCredential(record.encryptedPayload, encryptionKey),
-      }))
-    },
+    ensureEnvironmentConnection: ensureConnection,
 
     async createSyncRun(input: {
       runId: string
@@ -1122,16 +969,22 @@ export const createExternalInvestmentsRepository = ({
         this.getProviderHealth(),
       ])
       return {
-        connections: connections.map(connection => ({
-          ...connection,
-          lastSyncAttemptAt: toIso(connection.lastSyncAttemptAt),
-          lastSyncAt: toIso(connection.lastSyncAt),
-          lastSuccessAt: toIso(connection.lastSuccessAt),
-          lastFailedAt: toIso(connection.lastFailedAt),
-          archivedAt: toIso(connection.archivedAt),
-          updatedAt: connection.updatedAt.toISOString(),
-        })),
+        connections: connections.map(connection => {
+          const { maskedMetadata: _maskedMetadata, ...safeConnection } = connection
+          void _maskedMetadata
+          return {
+            ...safeConnection,
+            credentialStatus: providerConfigured[connection.provider] ? 'configured' : 'missing',
+            lastSyncAttemptAt: toIso(connection.lastSyncAttemptAt),
+            lastSyncAt: toIso(connection.lastSyncAt),
+            lastSuccessAt: toIso(connection.lastSuccessAt),
+            lastFailedAt: toIso(connection.lastFailedAt),
+            archivedAt: toIso(connection.archivedAt),
+            updatedAt: connection.updatedAt.toISOString(),
+          }
+        }),
         health,
+        providerConfigured,
       }
     },
 
@@ -1247,7 +1100,7 @@ export const createExternalInvestmentsRepository = ({
             now.getTime() - lastSuccessDate.getTime() > staleAfterMinutes * 60 * 1000
           return {
             provider,
-            configured: Boolean(connection && connection.credentialStatus === 'configured'),
+            configured: status.providerConfigured[provider],
             status: !connection
               ? 'missing'
               : stale

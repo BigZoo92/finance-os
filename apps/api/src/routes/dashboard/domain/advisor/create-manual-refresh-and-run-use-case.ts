@@ -52,6 +52,7 @@ const MANUAL_OPERATION_STEPS = [
 type ManualOperationStepKey = (typeof MANUAL_OPERATION_STEPS)[number]['stepKey']
 
 type ExternalInvestmentStatusView = {
+  providerConfigured: Record<ExternalInvestmentProvider, boolean>
   connections: Array<{
     provider: ExternalInvestmentProvider
     credentialStatus: string
@@ -239,7 +240,7 @@ const summarizeExternalInvestmentProviderSync = ({
   stageStartedAt: Date
 }) => {
   const connection = status.connections.find(item => item.provider === provider)
-  if (!connection || connection.credentialStatus !== 'configured') {
+  if (!status.providerConfigured[provider]) {
     return {
       done: true,
       stepStatus: 'skipped' as const,
@@ -247,6 +248,17 @@ const summarizeExternalInvestmentProviderSync = ({
         provider,
         configured: false,
         message: `${provider} credentials are not configured.`,
+      },
+    }
+  }
+  if (!connection) {
+    return {
+      done: false,
+      stepStatus: 'degraded' as const,
+      details: {
+        provider,
+        configured: true,
+        status: 'pending_connection',
       },
     }
   }

@@ -21,11 +21,7 @@ const createSyncRuntime = (
       ibkr: true,
       binance: true,
     },
-    credentialDefaults: {
-      ibkrBaseUrl: 'https://ndcdyn.interactivebrokers.com',
-      ibkrUserAgent: 'Finance-OS External Investments/1.0',
-      binanceBaseUrl: 'https://api.binance.com',
-    },
+    providerConfigured: { ibkr: true, binance: true },
   },
   repository: {} as ExternalInvestmentsRouteRuntime['repository'],
   jobs: {
@@ -35,17 +31,6 @@ const createSyncRuntime = (
       throw new Error('not used in sync route tests')
     },
     getSyncBacklogCount: async () => 0,
-  },
-  credentials: {
-    upsertCredential: async () => {
-      throw new Error('not used in sync route tests')
-    },
-    deleteCredential: async () => {
-      throw new Error('not used in sync route tests')
-    },
-    testCredential: async () => {
-      throw new Error('not used in sync route tests')
-    },
   },
 })
 

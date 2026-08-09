@@ -6,7 +6,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./binance": "./src/binance-readonly-client.ts",
-    "./credentials": "./src/credentials.ts",
     "./ibkr": "./src/ibkr-flex-client.ts",
     "./jobs": "./src/jobs.ts"
   },
@@ -16,7 +15,6 @@
   },
   "dependencies": {
     "@finance-os/db": "workspace:*",
-    "@finance-os/powens": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "effect": "^3.21.2",
     "fast-xml-parser": "^5.5.11"

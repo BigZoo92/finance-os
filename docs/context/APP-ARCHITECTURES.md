@@ -241,7 +241,7 @@ graph TB
                 FinanceEngine["packages/finance-engine
                 deterministic metrics + recommendations"]
                 ExternalInvPkg["packages/external-investments
-                credentials + normalization + bundle"]
+                server env config + normalization + bundle"]
             end
         end
 
@@ -265,8 +265,8 @@ graph TB
 
         subgraph "routes/integrations/external-investments/"
             ExternalRouter["router.ts"]
-            ExternalCredentials["admin credential routes
-            configure/delete/test"]
+            ExternalStatus["admin status route
+            env configuration presence only"]
             ExternalSync["admin sync routes
             all/provider enqueue"]
             ExternalStatus["status, sync runs,

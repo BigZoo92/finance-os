@@ -14,9 +14,11 @@ import {
   enrichBinanceValuations,
   enrichMarketQuotedValuations,
   type ExternalInvestmentCredentialPayload,
+  type ExternalInvestmentConnectionRecord,
   type ExternalInvestmentProvider,
   type ExternalInvestmentsJob,
   isSoftExternalInvestmentError,
+  resolveExternalInvestmentServerConfig,
   type MarketQuoteLookup,
   normalizeBinanceSnapshot,
   normalizeIbkrFlexStatement,
@@ -28,6 +30,20 @@ import type { createRedisClient } from '@finance-os/redis'
 type WorkerDb = ReturnType<typeof createDbClient>['db']
 type WorkerRedisClient = ReturnType<typeof createRedisClient>['client']
 type WorkerEnv = ReturnType<typeof getWorkerEnv>
+type ExternalInvestmentWorkerEnvConfig = Pick<
+  WorkerEnv,
+  | 'IBKR_FLEX_TOKEN'
+  | 'IBKR_FLEX_QUERY_IDS'
+  | 'IBKR_FLEX_BASE_URL'
+  | 'IBKR_FLEX_USER_AGENT'
+  | 'BINANCE_SPOT_API_KEY'
+  | 'BINANCE_SPOT_API_SECRET'
+  | 'BINANCE_SPOT_BASE_URL'
+>
+type ExternalInvestmentEnvironmentRecord = {
+  connection: ExternalInvestmentConnectionRecord
+  payload: ExternalInvestmentCredentialPayload
+}
 type WorkerLog = (
   event: Record<string, unknown> & { level: 'debug' | 'info' | 'warn' | 'error'; msg: string }
 ) => void
@@ -85,6 +101,23 @@ const isProviderEnabled = ({
 
 const isExternalInvestmentsSafeModeActive = (env: WorkerEnv) =>
   env.EXTERNAL_INTEGRATIONS_SAFE_MODE || env.EXTERNAL_INVESTMENTS_SAFE_MODE
+
+export const resolveExternalInvestmentWorkerServerConfig = (
+  env: ExternalInvestmentWorkerEnvConfig
+) =>
+  resolveExternalInvestmentServerConfig({
+    ibkr: {
+      ...(env.IBKR_FLEX_TOKEN ? { flexToken: env.IBKR_FLEX_TOKEN } : {}),
+      queryIds: env.IBKR_FLEX_QUERY_IDS,
+      baseUrl: env.IBKR_FLEX_BASE_URL,
+      userAgent: env.IBKR_FLEX_USER_AGENT,
+    },
+    binance: {
+      ...(env.BINANCE_SPOT_API_KEY ? { apiKey: env.BINANCE_SPOT_API_KEY } : {}),
+      ...(env.BINANCE_SPOT_API_SECRET ? { apiSecret: env.BINANCE_SPOT_API_SECRET } : {}),
+      baseUrl: env.BINANCE_SPOT_BASE_URL,
+    },
+  })
 
 const sanitizeError = (error: unknown) =>
   toSafeExternalInvestmentErrorMessage(error).slice(0, 1000)
@@ -176,9 +209,11 @@ export const createExternalInvestmentsSyncWorker = ({
   env: WorkerEnv
   log: WorkerLog
 }) => {
+  const serverConfig = resolveExternalInvestmentWorkerServerConfig(env)
   const repository = createExternalInvestmentsRepository({
     db,
     staleAfterMinutes: env.EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES,
+    providerConfigured: serverConfig.configured,
   })
 
   const acquireConnectionLock = async (connectionId: number) => {
@@ -252,7 +287,7 @@ export const createExternalInvestmentsSyncWorker = ({
     payload,
     requestId,
   }: {
-    connection: Awaited<ReturnType<typeof repository.listCredentialPayloads>>[number]['connection']
+    connection: ExternalInvestmentConnectionRecord
     payload: Extract<ExternalInvestmentCredentialPayload, { provider: 'ibkr' }>
     requestId?: string
   }) => {
@@ -443,7 +478,7 @@ export const createExternalInvestmentsSyncWorker = ({
     payload,
     requestId,
   }: {
-    connection: Awaited<ReturnType<typeof repository.listCredentialPayloads>>[number]['connection']
+    connection: ExternalInvestmentConnectionRecord
     payload: Extract<ExternalInvestmentCredentialPayload, { provider: 'binance' }>
     requestId?: string
   }) => {
@@ -559,7 +594,7 @@ export const createExternalInvestmentsSyncWorker = ({
     requestId,
     triggerSource,
   }: {
-    record: Awaited<ReturnType<typeof repository.listCredentialPayloads>>[number]
+    record: ExternalInvestmentEnvironmentRecord
     requestId?: string
     triggerSource: string
   }) => {
@@ -797,12 +832,8 @@ export const createExternalInvestmentsSyncWorker = ({
       return
     }
 
-    const records = await repository.listCredentialPayloads({
-      encryptionKey: env.APP_ENCRYPTION_KEY,
-      provider,
-    })
-
-    if (records.length === 0) {
+    const payload = serverConfig.credentials[provider]
+    if (!payload) {
       await repository.updateProviderHealth({
         provider,
         enabled: true,
@@ -822,13 +853,12 @@ export const createExternalInvestmentsSyncWorker = ({
       return
     }
 
-    for (const record of records) {
-      await syncCredentialRecord({
-        record,
-        ...(requestId ? { requestId } : {}),
-        triggerSource,
-      })
-    }
+    const connection = await repository.ensureEnvironmentConnection(provider)
+    await syncCredentialRecord({
+      record: { connection, payload },
+      ...(requestId ? { requestId } : {}),
+      triggerSource,
+    })
   }
 
   const generateBundle = async (requestId?: string) => {
@@ -892,12 +922,9 @@ export const createExternalInvestmentsSyncWorker = ({
       }
 
       const connectionId = Number(job.connectionId)
-      const records = await repository.listCredentialPayloads({
-        encryptionKey: env.APP_ENCRYPTION_KEY,
-        provider: job.provider,
-      })
-      const record = records.find(item => item.connection.id === connectionId)
-      if (!record) {
+      const connection = await repository.getConnectionById(connectionId)
+      const payload = serverConfig.credentials[job.provider]
+      if (!connection || connection.provider !== job.provider || !payload) {
         await repository.updateProviderHealth({
           provider: job.provider,
           enabled: true,
@@ -912,7 +939,7 @@ export const createExternalInvestmentsSyncWorker = ({
       }
 
       await syncCredentialRecord({
-        record,
+        record: { connection, payload },
         ...(job.requestId ? { requestId: job.requestId } : {}),
         triggerSource: 'worker.syncConnection',
       })

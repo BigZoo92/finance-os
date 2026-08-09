@@ -124,6 +124,10 @@ export const getExternalInvestmentsStatusMock = (requestId: string) => ({
     ibkr: true,
     binance: true,
   },
+  providerConfigured: {
+    ibkr: true,
+    binance: true,
+  },
   connections: [
     {
       id: 1,
@@ -133,14 +137,6 @@ export const getExternalInvestmentsStatusMock = (requestId: string) => ({
       enabled: true,
       status: 'connected',
       credentialStatus: 'configured',
-      maskedMetadata: {
-        provider: 'ibkr',
-        kind: 'ibkr_flex',
-        accountAlias: 'Compte IBKR Flex',
-        maskedSecretRefs: { flexToken: 'flx_********demo' },
-        metadata: { queryIds: ['Q***42'] },
-        warnings: [],
-      },
       lastSyncStatus: 'OK',
       lastSyncReasonCode: 'SUCCESS',
       lastSyncAttemptAt: generatedAt,
@@ -161,14 +157,6 @@ export const getExternalInvestmentsStatusMock = (requestId: string) => ({
       enabled: true,
       status: 'degraded',
       credentialStatus: 'configured',
-      maskedMetadata: {
-        provider: 'binance',
-        kind: 'binance_spot',
-        accountAlias: 'Binance Spot',
-        maskedSecretRefs: { apiKey: 'BN********demo', apiSecret: '********demo' },
-        metadata: { permissions: { canRead: true, tradingEnabled: false, withdrawEnabled: false } },
-        warnings: ['Binance valuation remains partial without cached market prices.'],
-      },
       lastSyncStatus: 'PARTIAL',
       lastSyncReasonCode: 'VALUATION_PARTIAL',
       lastSyncAttemptAt: generatedAt,

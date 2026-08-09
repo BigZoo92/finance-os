@@ -6,6 +6,7 @@ Scope: `packages/env/**`
 
 - Keep [src/index.ts](src/index.ts) as the single source of truth for env parsing and validation across API, web SSR, and worker.
 - Secrets stay server-only unless they are explicitly safe for browser exposure. Never move secrets into `VITE_*`.
+- Keep `BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET`, `IBKR_FLEX_TOKEN`, and `IBKR_FLEX_QUERY_IDS` optional at process startup, server-only, and complete-pair validated through provider configuration presence. They must be mapped to API/worker only.
 - Keep server-side Powens control flags such as `SYNC_STATUS_PERSISTENCE_ENABLED` out of the public runtime path; kill-switches that affect DB/worker writes must remain API/worker env only unless the task explicitly adds a safe browser-facing mirror.
 - Make production-only requirements explicit in validation instead of relying on deploy folklore.
 - When env contracts change, update `.env.prod.example`, deploy docs, and the relevant `docs/agentic/*.md` entry points in the same change.

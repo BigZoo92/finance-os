@@ -5,15 +5,9 @@ import {
   signBinanceUserDataParams,
 } from './binance-readonly-client'
 import { buildExternalInvestmentContextBundle } from './context-bundle'
-import {
-  decryptExternalInvestmentCredential,
-  encryptExternalInvestmentCredential,
-  maskExternalInvestmentCredential,
-} from './credentials'
 import { createIbkrFlexClient, parseIbkrFlexXml } from './ibkr-flex-client'
 import { normalizeBinanceSnapshot, normalizeIbkrFlexStatement } from './normalizer'
 
-const ENCRYPTION_KEY = '12345678901234567890123456789012'
 const GENERATED_AT = '2026-05-01T08:00:00.000Z'
 
 describe('Binance read-only client guards', () => {
@@ -69,47 +63,6 @@ describe('Binance read-only client guards', () => {
     expect(urls[0]).toContain('/api/v3/exchangeInfo?symbols=%5B%22BTCEUR%22%5D')
     expect(urls[0]).not.toContain('signature=')
     expect(urls[0]).not.toContain('timestamp=')
-  })
-})
-
-describe('external investment credentials', () => {
-  it('encrypts, decrypts and masks IBKR credentials without returning secrets', () => {
-    const payload = {
-      provider: 'ibkr',
-      kind: 'ibkr_flex',
-      flexToken: 'ibkr-flex-token-secret',
-      queryIds: ['123456789'],
-      accountAlias: 'IBKR',
-    } as const
-
-    const encrypted = encryptExternalInvestmentCredential(payload, ENCRYPTION_KEY)
-    expect(encrypted).not.toContain(payload.flexToken)
-
-    const decrypted = decryptExternalInvestmentCredential(encrypted, ENCRYPTION_KEY)
-    expect(decrypted).toEqual(payload)
-
-    const masked = maskExternalInvestmentCredential(payload)
-    expect(masked.maskedSecretRefs.flexToken).toEndWith('cret')
-    expect(JSON.stringify(masked)).not.toContain(payload.flexToken)
-  })
-
-  it('rejects Binance credentials with unsafe permissions', () => {
-    expect(() =>
-      encryptExternalInvestmentCredential(
-        {
-          provider: 'binance',
-          kind: 'binance_spot',
-          apiKey: 'binance-key',
-          apiSecret: 'binance-secret',
-          permissionsMetadata: {
-            canRead: true,
-            tradingEnabled: true,
-            withdrawEnabled: false,
-          },
-        },
-        ENCRYPTION_KEY
-      )
-    ).toThrow(/unsafe trading or withdrawal/)
   })
 })
 

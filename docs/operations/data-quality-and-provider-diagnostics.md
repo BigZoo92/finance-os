@@ -97,7 +97,7 @@ when an integration simply has not been set up.
 
 | `errorCode` | Meaning |
 |---|---|
-| `unconfigured` | No credential / connection record exists for this provider. |
+| `unconfigured` | Required server environment credentials are incomplete for this provider. |
 | `disabled_by_flag` | Provider is registered but the corresponding feature flag is off. |
 | `auth_failed` | Connection requires reconnect (e.g. Powens reconnect_required). |
 | `transient` | One or more recent calls failed; retried successfully later. |
@@ -176,8 +176,8 @@ failure.
 | Dimension | Source(s) | What `ok` means |
 |---|---|---|
 | `banking` | `powensConnection` rows | At least one Powens connection has a recorded successful sync, no connections in error or reconnect_required. |
-| `investments` | `externalInvestmentProviderHealth` for IBKR + IBKR connection record | IBKR enabled by flag, credentials configured, provider diagnostics status `ok`. |
-| `crypto` | Same tables, Binance row | Binance enabled by flag, credentials configured, provider diagnostics status `ok`. |
+| `investments` | `externalInvestmentProviderHealth` for IBKR + env configuration presence | IBKR enabled by flag, server credentials configured, provider diagnostics status `ok`. |
+| `crypto` | Same health table + Binance env configuration presence | Binance enabled by flag, server credentials configured, provider diagnostics status `ok`. |
 | `market_data` | `marketCacheState` | Last refresh succeeded and is not older than the configured staleness threshold. |
 | `news` | `newsCacheState` | Live news ingestion enabled, last successful aggregation is fresh. |
 | `advisor_memory` | `knowledge-service` provider health from the registry (no live call) | Knowledge service is enabled, last health check passed. |

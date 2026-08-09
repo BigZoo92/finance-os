@@ -90,6 +90,7 @@ export const getDemoExternalInvestmentStatus = (): ExternalInvestmentStatusRespo
   enabled: true,
   safeModeActive: false,
   providerEnabled: { ibkr: true, binance: true },
+  providerConfigured: { ibkr: true, binance: true },
   backlogCount: 0,
   connections: [
     {
@@ -100,7 +101,6 @@ export const getDemoExternalInvestmentStatus = (): ExternalInvestmentStatusRespo
       enabled: true,
       status: 'connected',
       credentialStatus: 'configured',
-      maskedMetadata: { maskedSecretRefs: { flexToken: '********demo' } },
       lastSyncStatus: 'OK',
       lastSyncReasonCode: 'SUCCESS',
       lastSyncAttemptAt: EXTERNAL_INVESTMENTS_DEMO_GENERATED_AT,
@@ -121,7 +121,6 @@ export const getDemoExternalInvestmentStatus = (): ExternalInvestmentStatusRespo
       enabled: true,
       status: 'degraded',
       credentialStatus: 'configured',
-      maskedMetadata: { maskedSecretRefs: { apiKey: '********demo' } },
       lastSyncStatus: 'PARTIAL',
       lastSyncReasonCode: 'VALUATION_PARTIAL',
       lastSyncAttemptAt: EXTERNAL_INVESTMENTS_DEMO_GENERATED_AT,

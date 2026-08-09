@@ -1,6 +1,6 @@
 # External Investment Ingestion
 
-> Last updated: 2026-06-02
+> Last updated: 2026-08-08
 > Maintained by agents + human
 
 Finance-OS supports read-only ingestion for external investment providers. This feature is analytics-only: it stores reporting facts, normalizes them into canonical investment entities, and builds a compact Advisor context bundle. It is not trading infrastructure.
@@ -20,8 +20,9 @@ Provider calls happen only from admin/internal sync actions or worker jobs. Dash
 
 ```mermaid
 graph LR
-  Admin["Admin UI / Integrations"] --> API["API integration routes"]
-  API --> Cred["encrypted external_investment_credential"]
+  Env["Server environment"] --> Validation["packages/env validation"]
+  Validation --> API["API status / sync routes"]
+  Validation --> Worker["Worker provider configuration"]
   API --> Queue["Redis external-investments queue"]
   Queue --> Worker["Worker sync"]
   Worker --> IBKR["IBKR Flex Web Service"]
@@ -38,7 +39,7 @@ graph LR
 Core tables:
 
 - `external_investment_connection`
-- `external_investment_credential`
+- `external_investment_credential` (legacy rows retained but no longer read or written)
 - `external_investment_sync_run`
 - `external_investment_provider_health`
 - `external_investment_raw_import`
@@ -54,25 +55,15 @@ Canonical rows keep provider provenance, raw import references, confidence, assu
 
 ## Credentials
 
-Credentials are configured in `/integrations` in admin mode and stored encrypted with `APP_ENCRYPTION_KEY`.
+Binance and IBKR are configured server-side through environment variables. Credentials cannot be managed from the Finance-OS UI.
 
-IBKR supports:
+- IBKR requires `IBKR_FLEX_TOKEN` plus one or more comma-separated values in `IBKR_FLEX_QUERY_IDS`.
+- Binance requires `BINANCE_SPOT_API_KEY` and `BINANCE_SPOT_API_SECRET`.
+- Incomplete or absent values resolve to `not configured` without crashing the API or worker.
+- The API receives the variables only to expose boolean configuration presence. Provider calls and signing remain worker-only.
+- No credential value, query id, masked secret reference, or signed URL is returned by status, health or dashboard DTOs.
 
-- Flex token
-- one or more Flex Query IDs
-- optional account alias
-- optional expected account IDs as masked metadata
-- optional base URL and User-Agent override
-
-Binance supports:
-
-- Spot API key
-- Spot API secret
-- optional account alias
-- optional base URL
-- permissions metadata and IP restriction note
-
-Credential APIs never return decrypted values. UI receives only masked secret references and non-secret metadata. Binance credentials with trading or withdrawal permission flags are rejected as `PROVIDER_PERMISSION_UNSAFE`.
+The former PUT/DELETE/test credential routes and browser forms have been removed. Existing rows in `external_investment_credential` are intentionally left untouched by this non-destructive pass and are ignored at runtime.
 
 ## IBKR Flex
 
@@ -86,7 +77,7 @@ Finance-OS uses IBKR Flex Web Service as a reporting mechanism:
 4. Parse XML with attributes preserved.
 5. Normalize account information, open positions, trades, commissions, cash transactions, dividends, interest and fees when present.
 
-User-Agent is required by configuration. The default `IBKR_FLEX_BASE_URL` is the IBKR host root (`https://ndcdyn.interactivebrokers.com`); the client appends the current Account Management Flex Web Service path and still preserves legacy `/Universal/servlet/FlexStatementService.*` compatibility for existing credential overrides. `GetStatement` retries bounded provider "report still generating" responses before failing. Flex open position valuation accepts both `marketValue` and `positionValue` attributes because Flex query exports can label the same field differently. Flex provider errors are normalized into safe Finance-OS error codes. Temporary async/report-generation issues are retryable. No IBKR Client Portal or trading endpoint is used.
+User-Agent is required by configuration. The default `IBKR_FLEX_BASE_URL` is the IBKR host root (`https://ndcdyn.interactivebrokers.com`); the client appends the current Account Management Flex Web Service path and preserves legacy `/Universal/servlet/FlexStatementService.*` URL compatibility. `GetStatement` retries bounded provider "report still generating" responses before failing. Flex open position valuation accepts both `marketValue` and `positionValue` attributes because Flex query exports can label the same field differently. Flex provider errors are normalized into safe Finance-OS error codes. Temporary async/report-generation issues are retryable. No IBKR Client Portal or trading endpoint is used.
 
 ## Binance Spot / Wallet
 
@@ -172,12 +163,16 @@ Server-only app-level settings:
 - `IBKR_FLEX_BASE_URL`
 - `IBKR_FLEX_USER_AGENT`
 - `IBKR_FLEX_TIMEOUT_MS`
+- `IBKR_FLEX_TOKEN`
+- `IBKR_FLEX_QUERY_IDS`
 - `BINANCE_SPOT_ENABLED`
 - `BINANCE_SPOT_BASE_URL`
 - `BINANCE_SPOT_RECV_WINDOW_MS`
 - `BINANCE_SPOT_TIMEOUT_MS`
+- `BINANCE_SPOT_API_KEY`
+- `BINANCE_SPOT_API_SECRET`
 
-Provider credentials are not env vars. They are encrypted in DB through the admin credential routes.
+In development, set credentials only in the unversioned local env file used by the repo. In production, set them in Dokploy so Compose injects them into API and worker at runtime. Empty values are valid and mean that provider is not configured.
 
 ## Operations
 

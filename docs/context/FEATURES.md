@@ -236,7 +236,7 @@ uniquement les regles; le dry-run est read-only pour les transactions.
 
 ### Fonctionnement
 
-- Configuration admin chiffree pour IBKR Flex et Binance Spot.
+- Configuration exclusivement par variables d'environnement serveur pour IBKR Flex et Binance Spot; aucun credential n'est saisi dans l'UI ni lu depuis la DB.
 - Demo: fixtures deterministes, zero DB write, zero provider call.
 - Admin: lectures dashboard cache-only depuis PostgreSQL; syncs uniquement sur action explicite ou job worker.
 - Worker Redis:
@@ -266,7 +266,7 @@ uniquement les regles; le dry-run est read-only pour les transactions.
 
 - `/patrimoine` ajoute un bloc investissements externes avec provider freshness, allocations et warnings.
 - `/investissements` devient un cockpit avec filtres provider/compte/classe/recherche, table positions, trades recents, cash flows et quality panel.
-- `/integrations` permet la configuration des credentials, le retrait et la sync manuelle par provider.
+- `/integrations` affiche uniquement l'etat de configuration issu de l'environnement et permet la sync manuelle par provider; aucun secret n'est affiche, saisi ou modifie dans le navigateur.
 - `/sante` expose health providers, derniers runs, request IDs, raw imports et compte de lignes normalisees.
 
 ### Advisor

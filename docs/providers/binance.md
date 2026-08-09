@@ -7,8 +7,8 @@
 > `/dashboard/external-investments/*` routes, the
 > `/integrations/external-investments/*` admin routes, and the worker sync continue to
 > consume `packages/external-investments` directly. **Read routing through
-> `provider.call()` is deferred. Public API response shapes are unchanged. Sync
-> behavior is unchanged. Credential storage and encryption are unchanged.**
+> `provider.call()` is deferred. Provider credentials are server-env-only and the
+> wrapper receives configuration presence, never credential values.**
 
 ## Provider id
 
@@ -37,13 +37,10 @@ NOT implemented or planned.
 
 ## Credentials
 
-The wrapper reads NO credentials, NO env vars, and NO secrets directly. It is wired
-purely from a closure that reads two local tables (`externalInvestmentProviderHealth`
-+ `externalInvestmentConnection`):
+The wrapper reads NO credentials, NO env vars, and NO secrets directly. The worker
+resolves `BINANCE_SPOT_API_KEY` and `BINANCE_SPOT_API_SECRET` from its server-only
+environment before constructing the read-only client.
 
-- `APP_ENCRYPTION_KEY` — used by `packages/external-investments/src/credentials.ts`
-  to encrypt the API key/secret payload. **The wrapper does NOT decrypt or read API
-  credentials.** Encryption logic is unchanged.
 - `BINANCE_SPOT_ENABLED` — feature flag consumed by the existing Binance client +
   sync. The wrapper reads only the resolved boolean (`binanceSpotEnabled`) from the
   runtime config, never the raw env value or the API key/secret.
@@ -51,7 +48,7 @@ purely from a closure that reads two local tables (`externalInvestmentProviderHe
 The injected `getProviderSnapshot` closure projects the same closed-vocabulary subset
 as `ibkr` — only `enabled`, `status`, `lastSuccessAt`, `lastFailureAt`,
 `successCount`, `failureCount`, `credentialConfigured`. It explicitly excludes
-`encryptedPayload`, `maskedMetadata`, `lastErrorMessage`, `lastRequestId`,
+credential values, `maskedMetadata`, `lastErrorMessage`, `lastRequestId`,
 `accountAlias`, account ids, `metadata`, and `syncMetadata`.
 
 ## Cache / freshness
@@ -91,7 +88,7 @@ repeated local failure state. Unconfigured / disabled / never-synced soft-fail t
   thrown exception object can carry signed URLs and raw JSON; the wrapper drops the
   entire exception object — only `lastErrorCode: 'transient'` and a closed-vocab
   note flag the failure.
-- The wrapper never touches `BinanceSpotCredentialPayload`, encrypted credentials,
+- The wrapper never touches `BinanceSpotCredentialPayload`, environment credentials,
   HMAC signing, or the underlying read-only HTTP allowlist.
 
 ## Health check

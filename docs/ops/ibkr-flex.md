@@ -15,14 +15,14 @@ For Finance-OS we expect **three distinct queries**, identified by their
 | Manual backfill — month    | Last Month *or* Last 30 Calendar Days | Admin clicks "Backfill 30d" in the integrations UI. |
 | Manual backfill — year     | Last 365 Calendar Days     | Admin one-shot for a fresh deployment / audit. |
 
-The connection record stored at `external_investment_connections` has a
-`queryIds: string[]` field — historically a single id was sufficient.
-Going forward, the operator should store all three (in any order); the
-orchestrator will pick the matching id by intent.
+Finance-OS reads the configured query list from the server-only
+`IBKR_FLEX_QUERY_IDS` environment variable. Values are comma-separated;
+historically a single id was sufficient. The operator may provide all three
+queries in the required order.
 
 > **Until the per-mode picker lands**, the daily cron will read whichever
-> queryId is first in the `queryIds` array. **Move the Last-Business-Day
-> queryId to the FIRST position** in the IBKR settings UI to make the cron
+> queryId is first in the resolved query list. **Put the Last-Business-Day
+> queryId FIRST in `IBKR_FLEX_QUERY_IDS`** to make the cron
 > consistent with the new contract.
 
 ## Error semantics
@@ -72,8 +72,8 @@ The Flex client must never log raw token / queryId values. Helpers:
 3. Make sure every query includes the sections Finance-OS reads:
    AccountInformation, OpenPositions, Trades, CashTransactions, CashReport,
    EquitySummary.
-4. Copy each `queryId` and add it to the connection in the Finance-OS
-   integrations page (Patrimoine → Integrations → IBKR → queryIds).
+4. Copy each `queryId` into the server-only `IBKR_FLEX_QUERY_IDS` environment
+   variable as a comma-separated list.
 5. **Verify the Last Business Day query is FIRST in the list** until the
    per-mode picker lands.
 

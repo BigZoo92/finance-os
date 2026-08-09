@@ -33,6 +33,7 @@ const baseInput = (
     safeMode: false,
     ibkrEnabledByFlag: false,
     binanceEnabledByFlag: false,
+    providerConfigured: { ibkr: false, binance: false },
     health: [],
     connections: [],
   },
@@ -115,6 +116,7 @@ describe('buildDataQualityDimensions', () => {
           safeMode: false,
           ibkrEnabledByFlag: false,
           binanceEnabledByFlag: false,
+          providerConfigured: { ibkr: false, binance: false },
           health: [],
           connections: [],
         },
@@ -134,6 +136,7 @@ describe('buildDataQualityDimensions', () => {
           safeMode: false,
           ibkrEnabledByFlag: true,
           binanceEnabledByFlag: true,
+          providerConfigured: { ibkr: false, binance: false },
           health: [],
           connections: [
             {
@@ -158,6 +161,7 @@ describe('buildDataQualityDimensions', () => {
           safeMode: false,
           ibkrEnabledByFlag: true,
           binanceEnabledByFlag: false,
+          providerConfigured: { ibkr: true, binance: false },
           health: [
             {
               provider: 'ibkr',
@@ -281,6 +285,7 @@ describe('buildDataQualityDimensions', () => {
           safeMode: false,
           ibkrEnabledByFlag: true,
           binanceEnabledByFlag: true,
+          providerConfigured: { ibkr: true, binance: false },
           health: [
             {
               provider: 'ibkr',

@@ -72,8 +72,10 @@ function SantePage() {
   const connections = statusQuery.data?.connections ?? []
   const syncRuns = syncRunsQuery.data?.runs ?? []
   const diagnostics = diagnosticsQuery.data
-  const externalConnections = externalStatusQuery.data?.connections ?? []
   const externalHealth = externalStatusQuery.data?.health ?? []
+  const externalConfiguredProviderCount = Object.values(
+    externalStatusQuery.data?.providerConfigured ?? {}
+  ).filter(Boolean).length
   const externalSyncRuns = externalSyncRunsQuery.data?.items ?? []
   const externalSafeModeActive = externalStatusQuery.data?.safeModeActive ?? false
   const derived = derivedQuery.data
@@ -119,10 +121,10 @@ function SantePage() {
         ? 'error'
         : externalHealth.some(item => item.status === 'degraded')
           ? 'warning'
-          : externalConnections.length > 0
+          : externalConfiguredProviderCount > 0
             ? 'ok'
             : 'unknown',
-      detail: `${externalConnections.filter(item => item.credentialStatus === 'configured').length}/${externalConnections.length} providers configures`,
+      detail: `${externalConfiguredProviderCount}/2 providers configurés via l’environnement`,
     },
     {
       label: 'Safe mode investissements',

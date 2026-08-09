@@ -64,7 +64,6 @@ export type ExternalInvestmentConnection = {
   enabled: boolean
   status: string
   credentialStatus: string
-  maskedMetadata: Record<string, unknown> | null
   lastSyncStatus: string | null
   lastSyncReasonCode: string | null
   lastSyncAttemptAt: string | null
@@ -85,6 +84,7 @@ export type ExternalInvestmentStatusResponse = {
   enabled: boolean
   safeModeActive: boolean
   providerEnabled: Record<ExternalInvestmentProvider, boolean>
+  providerConfigured: Record<ExternalInvestmentProvider, boolean>
   backlogCount?: number
   connections: ExternalInvestmentConnection[]
   health: Array<{
@@ -216,28 +216,3 @@ export type ExternalInvestmentSyncRunsResponse = ExternalInvestmentListResponse<
   rowCounts: Record<string, number> | null
   degradedReasons: string[]
 }>
-
-export type ExternalInvestmentCredentialInput =
-  | {
-      provider: 'ibkr'
-      flexToken: string
-      queryIds: string[]
-      accountAlias?: string
-      expectedAccountIds?: string[]
-      baseUrl?: string
-      userAgent?: string
-    }
-  | {
-      provider: 'binance'
-      apiKey: string
-      apiSecret: string
-      accountAlias?: string
-      baseUrl?: string
-      permissionsMetadata?: {
-        canRead?: boolean
-        tradingEnabled?: boolean
-        withdrawEnabled?: boolean
-        ipRestricted?: boolean
-      }
-      ipRestrictionNote?: string
-    }

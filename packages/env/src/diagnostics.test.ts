@@ -150,4 +150,34 @@ describe('diagnoseServiceEnv', () => {
       )
     ).toBe(true)
   })
+
+  it('reports IBKR and Binance as not configured when their worker secrets are absent', () => {
+    const report = diagnoseServiceEnv('worker', {
+      IBKR_FLEX_ENABLED: 'true',
+      BINANCE_SPOT_ENABLED: 'true',
+    })
+
+    const ibkr = report.features.find(feature => feature.flagKey === 'IBKR_FLEX_ENABLED')
+    const binance = report.features.find(feature => feature.flagKey === 'BINANCE_SPOT_ENABLED')
+    expect(ibkr?.canRun).toBe(false)
+    expect(ibkr?.reasonIfBlocked).toMatch(/IBKR_FLEX_TOKEN/)
+    expect(ibkr?.reasonIfBlocked).toMatch(/IBKR_FLEX_QUERY_IDS/)
+    expect(binance?.canRun).toBe(false)
+    expect(binance?.reasonIfBlocked).toMatch(/BINANCE_SPOT_API_KEY/)
+    expect(binance?.reasonIfBlocked).toMatch(/BINANCE_SPOT_API_SECRET/)
+  })
+
+  it('reports each external investment provider independently configured from worker env', () => {
+    const report = diagnoseServiceEnv('worker', {
+      IBKR_FLEX_ENABLED: 'true',
+      IBKR_FLEX_TOKEN: 'test-flex-token',
+      IBKR_FLEX_QUERY_IDS: 'daily-query',
+      BINANCE_SPOT_ENABLED: 'true',
+    })
+
+    const ibkr = report.features.find(feature => feature.flagKey === 'IBKR_FLEX_ENABLED')
+    const binance = report.features.find(feature => feature.flagKey === 'BINANCE_SPOT_ENABLED')
+    expect(ibkr?.canRun).toBe(true)
+    expect(binance?.canRun).toBe(false)
+  })
 })

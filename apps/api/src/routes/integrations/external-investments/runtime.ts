@@ -1,8 +1,6 @@
 import {
   createExternalInvestmentsRepository,
-  decryptExternalInvestmentCredential,
-  isExternalInvestmentProvider,
-  maskExternalInvestmentCredential,
+  resolveExternalInvestmentServerConfig,
 } from '@finance-os/external-investments'
 import { createExternalInvestmentsJobQueueRepository } from './repositories/external-investments-job-queue-repository'
 import type {
@@ -15,9 +13,23 @@ export const createExternalInvestmentsRouteRuntime = ({
   redisClient,
   env,
 }: ExternalInvestmentsRoutesDependencies): ExternalInvestmentsRouteRuntime => {
+  const serverConfig = resolveExternalInvestmentServerConfig({
+    ibkr: {
+      ...(env.IBKR_FLEX_TOKEN ? { flexToken: env.IBKR_FLEX_TOKEN } : {}),
+      queryIds: env.IBKR_FLEX_QUERY_IDS,
+      baseUrl: env.IBKR_FLEX_BASE_URL,
+      userAgent: env.IBKR_FLEX_USER_AGENT,
+    },
+    binance: {
+      ...(env.BINANCE_SPOT_API_KEY ? { apiKey: env.BINANCE_SPOT_API_KEY } : {}),
+      ...(env.BINANCE_SPOT_API_SECRET ? { apiSecret: env.BINANCE_SPOT_API_SECRET } : {}),
+      baseUrl: env.BINANCE_SPOT_BASE_URL,
+    },
+  })
   const repository = createExternalInvestmentsRepository({
     db,
     staleAfterMinutes: env.EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES,
+    providerConfigured: serverConfig.configured,
   })
   const jobs = createExternalInvestmentsJobQueueRepository(redisClient)
 
@@ -30,62 +42,9 @@ export const createExternalInvestmentsRouteRuntime = ({
         ibkr: env.IBKR_FLEX_ENABLED,
         binance: env.BINANCE_SPOT_ENABLED,
       },
-      credentialDefaults: {
-        ibkrBaseUrl: env.IBKR_FLEX_BASE_URL,
-        ibkrUserAgent: env.IBKR_FLEX_USER_AGENT,
-        binanceBaseUrl: env.BINANCE_SPOT_BASE_URL,
-      },
+      providerConfigured: serverConfig.configured,
     },
     repository,
     jobs,
-    credentials: {
-      async upsertCredential({ payload }) {
-        return repository.upsertCredential({
-          payload,
-          encryptionKey: env.APP_ENCRYPTION_KEY,
-        })
-      },
-
-      async deleteCredential(provider) {
-        return repository.deleteCredential(provider)
-      },
-
-      async testCredential(provider) {
-        if (!isExternalInvestmentProvider(provider)) {
-          return {
-            ok: false,
-            provider: 'ibkr',
-            configured: false,
-            credentialKind: null,
-            warnings: ['Unknown provider.'],
-          }
-        }
-
-        const [record] = await repository.listCredentialRecords(provider)
-        if (!record) {
-          return {
-            ok: false,
-            provider,
-            configured: false,
-            credentialKind: null,
-            warnings: ['Credential is not configured.'],
-          }
-        }
-
-        const payload = decryptExternalInvestmentCredential(
-          record.encryptedPayload,
-          env.APP_ENCRYPTION_KEY
-        )
-        const masked = maskExternalInvestmentCredential(payload)
-
-        return {
-          ok: true,
-          provider,
-          configured: true,
-          credentialKind: record.credentialKind,
-          warnings: masked.warnings,
-        }
-      },
-    },
   }
 }

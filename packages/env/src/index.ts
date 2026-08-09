@@ -420,6 +420,11 @@ const externalInvestmentsShape = {
     .min(1, 'IBKR_FLEX_USER_AGENT is required')
     .default('Finance-OS External Investments/1.0'),
   IBKR_FLEX_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  IBKR_FLEX_TOKEN: z.string().trim().min(1).optional(),
+  IBKR_FLEX_QUERY_IDS: z
+    .string()
+    .optional()
+    .transform(value => toStringArrayEnv(value)),
   BINANCE_SPOT_ENABLED: z
     .string()
     .optional()
@@ -430,6 +435,8 @@ const externalInvestmentsShape = {
     .default('https://api.binance.com'),
   BINANCE_SPOT_RECV_WINDOW_MS: z.coerce.number().int().positive().default(5000),
   BINANCE_SPOT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  BINANCE_SPOT_API_KEY: z.string().trim().min(1).optional(),
+  BINANCE_SPOT_API_SECRET: z.string().trim().min(1).optional(),
   EXTERNAL_INVESTMENTS_VALUATION_TARGET_CURRENCY: z
     .string()
     .min(3)

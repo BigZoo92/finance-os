@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
+import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments'
 import { resolveRuntimeVersion } from '@finance-os/prelude'
 import { createInMemoryRedisClient, createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
@@ -32,6 +33,19 @@ import { registerSystemRoutes } from './routes/system'
 import { applyApiSecurityHeaders, createApiSecurityHeaders } from './security/http-headers'
 
 const { db, sql, close } = createDbClient(env.DATABASE_URL)
+const externalInvestmentServerConfig = resolveExternalInvestmentServerConfig({
+  ibkr: {
+    ...(env.IBKR_FLEX_TOKEN ? { flexToken: env.IBKR_FLEX_TOKEN } : {}),
+    queryIds: env.IBKR_FLEX_QUERY_IDS,
+    baseUrl: env.IBKR_FLEX_BASE_URL,
+    userAgent: env.IBKR_FLEX_USER_AGENT,
+  },
+  binance: {
+    ...(env.BINANCE_SPOT_API_KEY ? { apiKey: env.BINANCE_SPOT_API_KEY } : {}),
+    ...(env.BINANCE_SPOT_API_SECRET ? { apiSecret: env.BINANCE_SPOT_API_SECRET } : {}),
+    baseUrl: env.BINANCE_SPOT_BASE_URL,
+  },
+})
 const redisClient = env.API_ALLOW_IN_MEMORY_REDIS
   ? createInMemoryRedisClient()
   : createRedisClient(env.REDIS_URL)
@@ -402,6 +416,7 @@ const registerAppRoutes = (app: Elysia) => {
         externalInvestmentsStaleAfterMinutes: env.EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES,
         ibkrFlexEnabled: env.IBKR_FLEX_ENABLED,
         binanceSpotEnabled: env.BINANCE_SPOT_ENABLED,
+        externalInvestmentProviderConfigured: externalInvestmentServerConfig.configured,
         assetValuationEnabled: env.ASSET_VALUATION_ENABLED,
         fxRatesEnabled: env.FX_RATES_ENABLED,
         fxRatesEcbUrl: env.FX_RATES_ECB_URL,

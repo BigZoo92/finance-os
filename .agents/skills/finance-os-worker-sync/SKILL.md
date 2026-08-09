@@ -1,6 +1,6 @@
 <!-- GENERATED — DO NOT EDIT
      Source: .agentic/source/skills/finance-os/worker-sync/SKILL.md
-     Hash:   sha256:126052f2473ed4e4
+     Hash:   sha256:6628004f2833c298
      Sync:   pnpm agent:skills:sync -->
 
 ---
@@ -146,6 +146,8 @@ const accessToken = decrypt(connection.accessToken, APP_ENCRYPTION_KEY);
 ---
 
 ## 7. Error Isolation
+
+For external investments, resolve Binance and IBKR credentials only from validated worker env. Missing Binance config must not block IBKR, and missing IBKR config must not block Binance or Powens. Do not fall back to legacy DB credential rows.
 
 Each sync job is isolated — one connection's failure must not affect others.
 
