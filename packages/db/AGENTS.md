@@ -1,23 +1,11 @@
-# AGENTS.md - packages/db
+# Database instructions
 
-Scope: `packages/db/**`
+Scope: `packages/db/**`.
 
-## Local Rules
+- Schema and migration journal are canonical. Add migrations; do not rewrite shipped migrations casually.
+- Preserve financial precision, explicit null/default semantics, and provider-ingestion unique/idempotency constraints.
+- Powens disconnects stay audit-preserving/soft-archived; unified account and asset provenance must remain aligned with worker upserts and read models.
+- Never resume reads/writes from legacy `external_investment_credential`.
+- Update every repository/domain/API consumer when an exported schema contract changes.
 
-- Keep this package as the source of truth for schema and DB client exports.
-- Add new migrations for shipped schema changes; do not rewrite existing migrations casually.
-- Preserve Powens uniqueness and indexing guarantees in [src/schema/powens.ts](src/schema/powens.ts); these are part of sync idempotence and dashboard performance.
-- Preserve Powens soft-archive fields (`archived_at`, `archived_reason`) so disconnects and duplicate suppression stay audit-preserving instead of hard-deleting financial history.
-- Keep the unified financial account model in [src/schema/powens.ts](src/schema/powens.ts) aligned with dashboard read models and worker upserts whenever provider account provenance or source-connection linkage changes.
-- Keep the unified asset model in [src/schema/assets.ts](src/schema/assets.ts) aligned with dashboard read models and worker upserts whenever asset provenance or valuation fields change.
-- Keep exported schema names stable unless the whole call chain is updated in the same change.
-
-## Verify
-
-- `pnpm --filter @finance-os/db typecheck`
-- `pnpm db:generate` when schema changes
-- `pnpm db:migrate` when verifying new migrations locally
-
-## Pitfalls
-
-- Schema changes often require matching updates in [../env/AGENTS.md](../env/AGENTS.md), [../../docs/agentic/contracts-map.md](../../docs/agentic/contracts-map.md), and [../../docs/agentic/testing-map.md](../../docs/agentic/testing-map.md).
+Verify with DB typecheck, `pnpm db:generate`, local migration, and affected repository/ingestion tests.

@@ -1,18 +1,10 @@
-# AGENTS.md - packages/prelude
+# Prelude instructions
 
-Scope: `packages/prelude/**`
+Scope: `packages/prelude/**`.
 
-## Local Rules
+- Keep helpers low-level, predictable, side-effect-light, and reusable across runtimes.
+- Do not move finance rules, provider knowledge, or UI behavior here.
+- Shared errors and runtime payloads must remain normalized and safe; contract changes update every consumer.
+- Run GitNexus impact before changing widely imported helpers.
 
-- Keep helpers here low-level, side-effect light, and reusable across apps and packages.
-- Do not move app-specific finance rules, Powens knowledge, or UI concerns into this package.
-- Favor small, predictable utilities such as [src/errors/index.ts](src/errors/index.ts), [src/format/index.ts](src/format/index.ts), and shared runtime/system payload builders.
-- Preserve shared runtime payload contracts deliberately: if health/version fields change, update every consumer and the repo docs in the same patch.
-
-## Verify
-
-- `pnpm --filter @finance-os/prelude typecheck`
-
-## Pitfalls
-
-- Changes here can have broad blast radius because API, worker, and web code may all consume these helpers.
+Verify package typecheck and affected API/web/worker tests.

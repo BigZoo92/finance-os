@@ -76,6 +76,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Root tooling tests
+        run: pnpm test
+
+      - name: Agent skill projection check
+        run: pnpm agent:skills:check
+
+      - name: Documentation link check
+        run: pnpm docs:check
+
       - name: Root lint
         run: pnpm lint
 

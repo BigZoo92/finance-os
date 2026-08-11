@@ -440,7 +440,7 @@ function OrchestrationPage() {
             [
               ['success', 'Job terminé avec données utiles.'],
               ['partial', 'Au moins un provider a échoué; les autres ont produit des données.'],
-              ['timed_out', 'Hard timeout — voir docs/ops/refresh-orchestrator.md.'],
+              ['timed_out', 'Hard timeout — voir docs/operations.md.'],
               ['skipped_disabled', 'Feature flag désactivé.'],
               [
                 'skipped_missing_config',

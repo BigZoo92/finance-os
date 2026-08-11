@@ -9,7 +9,7 @@
 // runtime provider module. The const tuples are literal strings used for compile-time +
 // test-level guards.
 //
-// See ADR `docs/adr/provider-abstraction-v2.md` §6.1 for the design rationale.
+// See `docs/integrations.md` for the design rationale.
 
 // ---------------------------------------------------------------------------
 // Allowed capabilities — every key is a read-only contract surface.

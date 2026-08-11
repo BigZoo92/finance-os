@@ -1,567 +1,64 @@
 # Deployment
 
-## Objectif
+## Release contract
 
-Ce repo est deploye en production avec:
+Production uses immutable GHCR images orchestrated by Dokploy from `docker-compose.prod.yml`.
 
-- GitHub Actions pour la CI et la publication des images
-- GHCR pour les images Docker immuables
-- Dokploy pour l'orchestration Docker Compose
+`.github/workflows/release.yml` publishes five images:
 
-Le flux cible est:
+- `finance-os-web`
+- `finance-os-api`
+- `finance-os-worker`
+- `finance-os-knowledge-service`
+- `finance-os-quant-service`
 
-1. coder
-2. `git push`
-3. `git tag vX.Y.Z`
-4. `git push origin vX.Y.Z`
-5. GitHub Actions build et push:
-   - `ghcr.io/.../finance-os-web:vX.Y.Z`
-   - `ghcr.io/.../finance-os-api:vX.Y.Z`
-   - `ghcr.io/.../finance-os-worker:vX.Y.Z`
-   - plus les tags techniques `sha-<commit>`
-6. GitHub Actions met a jour Dokploy:
-   - `docker-compose.prod.yml`
-   - `APP_IMAGE_TAG=vX.Y.Z`
-7. GitHub Actions declenche le deploy Dokploy
+The exact repository prefix comes from `GHCR_IMAGE_NAME`; tags are a release tag and a commit SHA. Do not use mutable `latest` deployment semantics.
 
-Chaque release correspond donc a un tag immuable precis.
+## Runtime topology
 
-## Strategie recommandee
+`web` is the only public service. API, worker, ops-alerts, knowledge-service, quant-service, Neo4j, Qdrant, PostgreSQL, and Redis remain on the internal network. The API runs migrations when the current `RUN_DB_MIGRATIONS` contract enables them.
 
-Cette configuration suit un principe simple:
+Health contracts:
 
-- Dokploy ne build pas le code applicatif
-- Dokploy ne depend pas d'un tag mutable comme `latest`
-- la production execute uniquement des images GHCR deja publiees
-- le tag deploye est stocke explicitement dans `APP_IMAGE_TAG`
-- les limites CPU/memoire/PIDs, la rotation des logs et le tuning datastore
-  vivent dans `docker-compose.prod.yml`
+- web: `/healthz`
+- API: `/health`
+- worker: heartbeat file shared with healthcheck and ops-alerts
+- internal Python services: their Compose health checks
 
-Pour ce repo, la meilleure option est un service **Docker Compose** Dokploy avec images GHCR, pas un build Git provider cote serveur.
+## Normal release
 
-Pourquoi:
+1. CI validates root tooling, skills/docs drift, lint, types, tests, Python checks, builds, E2E demo smoke, and Docker build smoke.
+2. Release builds and optionally pushes all five images.
+3. The workflow updates Dokploy Compose and `APP_IMAGE_TAG`.
+4. Dokploy pulls immutable images and restarts the stack.
+5. The workflow verifies the persisted tag; operators run post-deploy probes.
 
-- l'application a plusieurs services couples (`web`, `api`, `worker`, `postgres`, `redis`)
-- les releases doivent etre immuables
-- le rollback doit etre trivial
+Required GitHub/Dokploy values are defined by the workflow, Compose, and [Configuration](configuration.md). Store secrets in GitHub secrets or Dokploy runtime values, not repository files.
 
-References officielles Dokploy utilisees pour cette strategie:
-
-- Docker Compose deployments
-- Docker tags / immutable images
-- API endpoints `compose.update`, `compose.one`, `compose.deploy`
-
-## Resource governance
-
-Le compose prod versionne est aussi la source de verite pour les garde-fous
-runtime:
-
-- `deploy.resources.limits` pour CPU, memoire et PIDs des services Finance-OS
-- `logging` par service avec rotation `json-file`
-- `redis-server --maxmemory 192mb --maxmemory-policy noeviction`
-- `neo4j` avec heap/pagecache bornees sous la limite container
-- `postgres` avec `shm_size` et reglages memoire conservateurs
-
-Dokploy recoit ce fichier via `compose.update` en mode `Raw`, puis deploye la
-version synchronisee. Apres un tag de release, verifier les `HostConfig`
-Docker sur le VPS avec le runbook:
-[docs/ops/VPS_RESOURCE_LIMITS_AND_SWAP.md](ops/VPS_RESOURCE_LIMITS_AND_SWAP.md).
-
-Si le moteur Docker/Compose du VPS n'applique pas `deploy.resources` hors Swarm,
-ne pas corriger a la main dans Dokploy comme solution durable. Modifier le
-compose versionne avec une strategie fallback documentee, puis redeployer un tag.
-
-## Dokploy
-
-### Type de service
-
-Creer un service **Docker Compose**.
-
-Configuration recommandee:
-
-- `Source Type`: `Raw`
-- `Auto Deploy`: desactive
-- deploy uniquement via l'API Dokploy appelee par GitHub Actions
-
-Pourquoi `Raw`:
-
-- Dokploy n'a pas a relire une branche Git ou a rebuild
-- GitHub Actions pousse le `docker-compose.prod.yml` du tag exact via `compose.update`
-- GitHub Actions met a jour `APP_IMAGE_TAG`, `APP_VERSION` et `APP_COMMIT_SHA` directement dans l'env du Compose via `compose.update`
-- GitHub Actions relit `compose.one` et echoue si `APP_IMAGE_TAG` n'a pas persiste
-- le deploy reste aligne sur le commit tague, pas sur l'etat mouvant de `main`
-
-### Registry GHCR
-
-Si les images GHCR sont privees:
-
-1. Creer un token GitHub avec `read:packages`
-2. Ajouter GHCR comme registry dans Dokploy
-3. Verifier que le serveur Dokploy peut pull:
-   - `ghcr.io/<owner>/finance-os-web:<tag>`
-   - `ghcr.io/<owner>/finance-os-api:<tag>`
-   - `ghcr.io/<owner>/finance-os-worker:<tag>`
-
-Si les packages GHCR sont publics, cette etape peut etre simplifiee.
-
-### Routing Dokploy
-
-Configuration recommandee:
-
-- un seul domaine public:
-  - host: `finance-os.enzogivernaud.fr`
-  - path: `/`
-  - service: `web`
-  - port: `3000`
-  - HTTPS: active
-
-Ne pas creer une route publique separee vers `api`.
-
-Pourquoi:
-
-- le runtime `web` TanStack Start/Nitro proxyfie deja `/api/*` vers `API_INTERNAL_URL=http://finance-os-api:3001`
-- cela conserve le routing externe `/api`
-- cela elimine une source frequente de `404`/`500` liee a un mauvais strip-path ou a un mauvais backend cible
-
-Resultat:
-
-- `https://finance-os.enzogivernaud.fr/` -> `web:3000`
-- `https://finance-os.enzogivernaud.fr/api/*` -> `web`, puis proxy interne vers `finance-os-api:3001`
-
-## Variables Dokploy
-
-Coller ces variables dans l'environnement Dokploy du service Compose.
-
-### Variables obligatoires
-
-```env
-GHCR_IMAGE_NAME=ghcr.io/bigzoo92/finance-os
-APP_IMAGE_TAG=v1.0.0
-
-NODE_ENV=production
-TZ=Europe/Paris
-WEB_PORT=3000
-
-APP_URL=https://finance-os.enzogivernaud.fr
-WEB_URL=https://finance-os.enzogivernaud.fr
-API_URL=https://finance-os.enzogivernaud.fr/api
-
-RUN_DB_MIGRATIONS=true
-API_INTERNAL_URL=http://finance-os-api:3001
-VITE_API_BASE_URL=/api
-VITE_APP_ORIGIN=https://finance-os.enzogivernaud.fr
-VITE_APP_TITLE=finance-os
-VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=true
-VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=true
-VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=true
-VITE_UI_RECONNECT_BANNER_ENABLED=true
-VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=true
-VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
-
-DATABASE_URL=postgresql://finance_os:<PASSWORD>@postgres:5432/finance_os
-REDIS_URL=redis://redis:6379
-POSTGRES_DB=finance_os
-POSTGRES_USER=finance_os
-POSTGRES_PASSWORD=<PASSWORD>
-
-PRIVATE_ACCESS_TOKEN=<long-random-token>
-DEBUG_METRICS_TOKEN=<long-random-token>
-POWENS_MANUAL_SYNC_COOLDOWN_SECONDS=300
-SYNC_STATUS_PERSISTENCE_ENABLED=true
-DERIVED_RECOMPUTE_ENABLED=true
-
-AUTH_ADMIN_EMAIL=<admin@email>
-AUTH_ADMIN_PASSWORD_HASH_B64=<base64-hash>
-AUTH_SESSION_SECRET=<32+-bytes>
-AUTH_SESSION_TTL_DAYS=30
-AUTH_LOGIN_RATE_LIMIT_PER_MIN=5
-AUTH_ALLOW_INSECURE_COOKIE_IN_PROD=false
-
-WORKER_HEARTBEAT_MS=30000
-WORKER_HEALTHCHECK_MAX_AGE_MS=120000
-WORKER_AUTO_SYNC_ENABLED=false
-POWENS_SYNC_INTERVAL_MS=43200000
-POWENS_SYNC_MIN_INTERVAL_PROD_MS=43200000
-POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS=7
-POWENS_FORCE_FULL_SYNC=false
-POWENS_SYNC_DISABLED_PROVIDERS=
-
-EXTERNAL_INVESTMENTS_ENABLED=true
-EXTERNAL_INVESTMENTS_SAFE_MODE=false
-EXTERNAL_INVESTMENTS_SYNC_COOLDOWN_SECONDS=300
-EXTERNAL_INVESTMENTS_STALE_AFTER_MINUTES=1440
-IBKR_FLEX_ENABLED=true
-IBKR_FLEX_BASE_URL=https://ndcdyn.interactivebrokers.com
-IBKR_FLEX_USER_AGENT=Finance-OS External Investments/1.0
-IBKR_FLEX_TIMEOUT_MS=30000
-BINANCE_SPOT_ENABLED=true
-BINANCE_SPOT_BASE_URL=https://api.binance.com
-BINANCE_SPOT_RECV_WINDOW_MS=5000
-BINANCE_SPOT_TIMEOUT_MS=30000
-
-ALERTS_ENABLED=true
-ALERTS_WEBHOOK_URL=<webhook-ops>
-ALERTS_WEBHOOK_HEADERS_JSON={"Authorization":"Bearer <token>"}
-ALERTS_POLL_INTERVAL_MS=30000
-ALERTS_HTTP_TIMEOUT_MS=5000
-ALERTS_5XX_THRESHOLD=3
-ALERTS_5XX_WINDOW_MS=300000
-ALERTS_5XX_PROBE_URLS=http://web:3000/api/auth/me,http://web:3000/api/dashboard/summary?range=30d
-ALERTS_HEALTHCHECK_FAILURE_THRESHOLD=2
-ALERTS_HEALTHCHECK_URLS=http://web:3000/healthz,http://finance-os-api:3001/health
-ALERTS_WORKER_STALE_AFTER_MS=120000
-ALERTS_DISK_FREE_PERCENT_THRESHOLD=10
-ALERTS_DISK_PATHS=/mnt/postgres,/mnt/redis
-
-POWENS_CLIENT_ID=<powens-client-id>
-
-Les variables web non sensibles `VITE_APP_TITLE`, `VITE_APP_ORIGIN`, `VITE_API_BASE_URL`, `VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED`, `VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS`, `VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED`, `VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED`, `VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED` et `VITE_UI_RECONNECT_BANNER_ENABLED` sont maintenant consommees via l'injection SSR de `apps/web/src/lib/public-runtime-env.ts`. Elles restent donc **runtime-safe** pour le conteneur web (override Dokploy / env du conteneur sans rebuild), mais seules ces cles publiques et non sensibles doivent suivre ce chemin.
-POWENS_CLIENT_SECRET=<powens-client-secret>
-POWENS_BASE_URL=https://<tenant>.biapi.pro
-POWENS_DOMAIN=<powens-domain>
-POWENS_REDIRECT_URI_DEV=http://localhost:3000/powens/callback
-POWENS_REDIRECT_URI_PROD=https://finance-os.enzogivernaud.fr/powens/callback
-POWENS_WEBVIEW_BASE_URL=https://webview.powens.com/connect
-POWENS_WEBVIEW_URL=
-
-APP_ENCRYPTION_KEY=<32-byte-key>
-```
-
-### Variables a ne pas definir
-
-Ne pas mettre dans Dokploy:
-
-- `VITE_PRIVATE_ACCESS_TOKEN`
-- `AUTH_PASSWORD_HASH_B64` si `AUTH_ADMIN_PASSWORD_HASH_B64` est deja renseigne
-- `latest` comme valeur de `APP_IMAGE_TAG`
-
-### Notes
-
-- `APP_IMAGE_TAG` est la cle du systeme: chaque deploy doit pointer vers un tag immuable, par exemple `v1.2.3`
-- `AUTH_ADMIN_PASSWORD_HASH_B64` est la variable canonique
-- `SYNC_STATUS_PERSISTENCE_ENABLED=false` coupe la persistance du dernier resultat synthétique Powens (DB + compteurs derives) et force l'UI admin a revenir au fallback runtime/placeholder sans conserver un snapshot stale
-- `POWENS_SYNC_INCREMENTAL_LOOKBACK_DAYS` regle la fenetre de rattrapage incremental (recommande: 3-7 jours) autour de `last_success_at` pour absorber les operations retardees
-- `POWENS_FORCE_FULL_SYNC=true` force temporairement tous les jobs en mode full-sync (kill-switch rollback en cas de doute sur l'incremental)
-- `POWENS_SYNC_DISABLED_PROVIDERS` desactive la sync pour les providers listes (CSV) sans couper toute l'integration
-- `EXTERNAL_INVESTMENTS_SAFE_MODE=true` coupe uniquement les syncs IBKR/Binance; les lectures cache/demo et diagnostics restent disponibles
-- Les credentials IBKR/Binance ne doivent pas etre mis en env Dokploy: les configurer via `/integrations`, chiffres avec `APP_ENCRYPTION_KEY`
-- `DERIVED_RECOMPUTE_ENABLED=false` coupe le trigger admin de recompute derivee sans changer le snapshot courant
-- `APP_VERSION` et `APP_COMMIT_SHA` sont mis a jour automatiquement par GitHub Actions
-- `ALERTS_WEBHOOK_URL` est la seule variable strictement requise pour activer le canal d'alerte; garder `ALERTS_ENABLED=false` tant que le webhook n'est pas configure
-- `ALERTS_WEBHOOK_HEADERS_JSON` peut rester vide pour un canal type ntfy, ou contenir un petit objet JSON pour des entetes de type `Authorization`
-
-## GitHub
-
-### Repository variables
-
-Configurer dans GitHub Actions Variables:
+## Pre-deploy checks
 
 ```text
-GHCR_IMAGE_NAME=ghcr.io/bigzoo92/finance-os
-NODE_VERSION=22.15.0
-BUN_VERSION=1.2.22
-PNPM_VERSION=10.15.0
-API_INTERNAL_URL=http://finance-os-api:3001
-VITE_API_BASE_URL=/api
-VITE_APP_TITLE=finance-os
-VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=true
-VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=true
-VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=true
-VITE_UI_RECONNECT_BANNER_ENABLED=true
-VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED=true
-VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
+pnpm check:ci
+pnpm env:check:parity
+pnpm docker:check
+pnpm docker:build:smoke
 ```
 
-`GHCR_IMAGE_NAME` est obligatoire.
+For routing/proxy changes also exercise `pnpm smoke:api` locally against the intended runtime.
 
-Les autres ont des valeurs par defaut raisonnables dans le workflow.
+## Post-deploy checks
 
-`SYNC_STATUS_PERSISTENCE_ENABLED` ne fait pas partie des repo variables GitHub: c'est un flag runtime serveur a definir dans l'env Dokploy du Compose pour qu'il s'applique a la fois a `api` et a `worker`.
+1. Confirm the deployed `APP_IMAGE_TAG` and commit SHA.
+2. Check web `/healthz` and the proxied API health path.
+3. Confirm API, worker heartbeat, PostgreSQL, Redis, knowledge, quant, Neo4j, Qdrant, and ops-alerts health.
+4. Open demo mode first; it must work even if providers are unavailable.
+5. In admin mode inspect provider diagnostics and data quality before running manual refresh.
+6. Run `scripts/smoke-prod.mjs` with the target URL and credentials supplied through the documented environment contract.
 
-### Repository secrets
+## Rollback
 
-Configurer dans GitHub Actions Secrets:
+Set Dokploy `APP_IMAGE_TAG` to the last known-good immutable tag and redeploy the same Compose file. Verify health and smoke probes. Database migrations must remain backward compatible across the rollback window; any destructive migration requires a separate reviewed rollout and recovery plan.
 
-```text
-DOKPLOY_URL
-DOKPLOY_API_KEY
-DOKPLOY_COMPOSE_ID
-SMOKE_ADMIN_EMAIL      # optionnel, pour un smoke cible admin
-SMOKE_ADMIN_PASSWORD   # optionnel, pour un smoke cible admin
-```
+## Incident boundaries
 
-Variables GitHub optionnelles pour le smoke post-deploy:
-
-```text
-SMOKE_AUTH_MODE=demo|admin|auto
-SMOKE_SUMMARY_RANGE=7d|30d|90d
-```
-
-Utilisation:
-
-- `DOKPLOY_URL`: URL base Dokploy, par exemple `https://dokploy.example.com`
-- `DOKPLOY_API_KEY`: cle API Dokploy
-- `DOKPLOY_COMPOSE_ID`: identifiant du service Compose Dokploy
-
-Secrets GitHub a supprimer si encore presents mais inutiles pour ce flux:
-
-- `DOKPLOY_WEBHOOK_URL`
-- `DOKPLOY_WEBHOOK_TOKEN`
-- `VITE_PRIVATE_ACCESS_TOKEN`
-- `VITE_APP_ORIGIN` en secret GitHub
-- `VITE_API_BASE_URL` en secret GitHub
-- `API_INTERNAL_URL` en secret GitHub
-
-Ces valeurs doivent vivre soit dans les repo variables GitHub non sensibles, soit dans l'env Dokploy runtime.
-
-## Alerting minimal en production
-
-Le compose de production embarque maintenant un sidecar `ops-alerts` qui reutilise l'image `api` existante pour lancer [infra/docker/ops-alerts/monitor.mjs](../infra/docker/ops-alerts/monitor.mjs).
-
-Ce sidecar couvre les 4 familles d'alertes demandees sans stack d'observabilite supplementaire:
-
-- **Burst 5xx**: alerte `warning` si au moins `ALERTS_5XX_THRESHOLD` reponses `>=500` sont observees sur `ALERTS_5XX_PROBE_URLS` pendant `ALERTS_5XX_WINDOW_MS`.
-- **Healthcheck en echec**: alerte `critical` apres `ALERTS_HEALTHCHECK_FAILURE_THRESHOLD` echecs consecutifs sur `ALERTS_HEALTHCHECK_URLS`.
-- **Worker bloque**: alerte `critical` si le heartbeat partage du worker est absent ou plus vieux que `ALERTS_WORKER_STALE_AFTER_MS`.
-- **Disque faible**: alerte `critical` si l'espace libre d'un chemin de `ALERTS_DISK_PATHS` descend sous `ALERTS_DISK_FREE_PERCENT_THRESHOLD`.
-
-### Canal d'alerte recommande
-
-Le sidecar envoie un POST JSON generique vers `ALERTS_WEBHOOK_URL`. Cela permet un canal minimal et peu couteux, par exemple:
-
-- **ntfy**: `ALERTS_WEBHOOK_URL=https://ntfy.sh/<topic>` sans entete supplementaire.
-- **Slack / Mattermost / Discord**: webhook entrant dedie.
-- **Webhook prive**: renseigner `ALERTS_WEBHOOK_HEADERS_JSON` avec un petit objet JSON d'entetes.
-
-Exemple de payload envoye:
-
-```json
-{
-  "source": "finance-os",
-  "status": "triggered",
-  "family": "worker_stalled",
-  "severity": "critical",
-  "summary": "Heartbeat worker stale ou introuvable",
-  "details": {
-    "staleAfterMs": 120000
-  },
-  "timestamp": "2026-03-23T00:00:00.000Z"
-}
-```
-
-### Runbook minimal
-
-- **5xx burst**
-  1. verifier `web` puis `api` dans `docker compose ps`
-  2. regarder les logs `web` et `api` avec le meme `x-request-id` si disponible
-  3. si la cause est Powens ou un provider externe, garder l'app utilisable et activer temporairement `EXTERNAL_INTEGRATIONS_SAFE_MODE=true` si necessaire
-- **Healthcheck failure**
-  1. verifier `curl https://<host>/health` et `curl https://<host>/api/health`
-  2. confirmer que la route publique pointe toujours vers `web` puis proxy interne vers `api`
-  3. si seul le sidecar alerte, comparer avec `docker inspect --format='{{json .State.Health}}' <container>`
-- **Worker stalled**
-  1. verifier l'etat du conteneur `worker`
-  2. verifier le heartbeat partage et les logs `worker`
-  3. relancer le worker si le heartbeat ne bouge plus et ouvrir l'incident Powens/Redis/DB associe
-- **Disk low**
-  1. verifier l'espace libre de l'hote et des volumes Docker
-  2. nettoyer images/volumes obsoletes puis relancer si besoin
-  3. si l'alerte vise `postgres_data`, prioriser backup puis extension de capacite
-
-## Workflow GitHub Actions
-
-Le workflow release fait maintenant trois choses:
-
-1. build + push des images GHCR sur tag `v*`
-2. mise a jour du `docker-compose.prod.yml` et de l'env du Compose dans Dokploy via `compose.update`
-3. verification via `compose.one` que `APP_IMAGE_TAG` correspond bien au tag release
-4. deploy Dokploy via `compose.deploy`
-5. attendre `GET /health` puis lancer le smoke post-deploy sur `/health`, `/auth/me`, `/dashboard/summary`, `/integrations/powens/status` (racine et compat `/api`)
-
-Tags pushes:
-
-- release fonctionnelle: `v1.2.3`
-- tag technique toujours publie aussi: `sha-<commit>`
-
-Rollback:
-
-- relancer `Release` en `workflow_dispatch` avec `release_tag=v1.2.2`
-- ou changer manuellement `APP_IMAGE_TAG=v1.2.2` dans Dokploy puis redeployer
-
-## Fichiers du repo
-
-### Production Dokploy
-
-- [docker-compose.prod.yml](/c:/Users/giver/dev/finance-os/docker-compose.prod.yml)
-  - images GHCR seulement
-  - aucun `build:`
-  - `pull_policy: always`
-
-### Local prod-like
-
-- [docker-compose.prod.build.yml](/c:/Users/giver/dev/finance-os/docker-compose.prod.build.yml)
-  - reintroduit `build:` pour `web`, `api`, `worker`
-  - reserve au debug local
-
-Exemple local:
-
-```bash
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml -f docker-compose.prod.build.yml up -d --build
-```
-
-HTTPS local:
-
-```bash
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml -f docker-compose.prod.build.yml -f docker-compose.prod.https.yml up -d --build
-```
-
-## Comment deployer
-
-### Release normale
-
-```bash
-git checkout main
-git pull
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-Puis:
-
-1. attendre la fin du workflow `Release`
-2. verifier que les images GHCR `v1.0.0` existent
-3. verifier que Dokploy a redeploye
-
-### Rollback
-
-Option recommandee:
-
-1. lancer `Release` manuellement
-2. saisir `release_tag=v0.9.3`
-3. le workflow remet `APP_IMAGE_TAG=v0.9.3` puis redeploie
-
-Option manuelle:
-
-1. changer `APP_IMAGE_TAG` dans Dokploy
-2. relancer le deploy Compose
-
-## Simulation / validation controlee des alertes
-
-Ces simulations permettent de valider le cablage sans provoquer d'incident reel durable.
-
-### 1. Verifier le sidecar
-
-```bash
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml ps ops-alerts
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml logs --tail=100 ops-alerts
-```
-
-### 2. Simuler un healthcheck en echec
-
-```bash
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml stop api
-# attendre deux cycles de polling puis verifier la notification
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml start api
-```
-
-### 3. Simuler un worker bloque
-
-```bash
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml exec worker sh -lc 'rm -f /var/run/finance-os/worker-heartbeat && sleep 150'
-# verifier l'alerte puis redemarrer le worker pour la resolution
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml restart worker
-```
-
-### 4. Simuler un seuil disque agressif
-
-```bash
-docker compose --env-file .env.prod.local -f docker-compose.prod.yml run --rm \
-  -e ALERTS_ENABLED=true \
-  -e ALERTS_WEBHOOK_URL=https://ntfy.sh/<topic> \
-  -e ALERTS_DISK_FREE_PERCENT_THRESHOLD=99 \
-  ops-alerts bun infra/docker/ops-alerts/monitor.mjs
-```
-
-### 5. Simuler un burst 5xx
-
-Pointer temporairement `ALERTS_5XX_PROBE_URLS` vers un endpoint de test qui renvoie `500`, ou lancer un conteneur jetable du sidecar avec un seuil bas (`ALERTS_5XX_THRESHOLD=1`) contre une URL volontairement en erreur.
-
-## Verifications post-deploy
-
-Checks minimum:
-
-```bash
-curl -i https://finance-os.enzogivernaud.fr/health
-curl -i https://finance-os.enzogivernaud.fr/api/health
-curl -i https://finance-os.enzogivernaud.fr/api/version
-curl -i https://finance-os.enzogivernaud.fr/api/auth/me
-```
-
-Attendu:
-
-- `/health` repond depuis `web` (`/healthz` reste un alias de compatibilite)
-- `/api/health` repond depuis `api`
-- `/api/version` existe
-- `/api/auth/me` existe et ne doit jamais renvoyer `404`
-
-## Debug
-
-### Symptomes typiques
-
-Si tu vois:
-
-- `GET /api/health` -> `{"ok":true}`
-- `GET /api/auth/me` -> `{"message":"Route GET:/auth/me not found",...}`
-
-alors le domaine ne sert pas le bon runtime. Ce n'est pas un simple cache navigateur.
-
-### Depuis le conteneur web
-
-```bash
-wget -qSO- http://127.0.0.1:3000/health
-wget -qSO- http://finance-os-api:3001/health
-wget -qSO- http://finance-os-api:3001/version
-wget -qSO- http://127.0.0.1:3002/health
-wget -qSO- http://127.0.0.1:3002/version
-wget -qSO- http://finance-os-api:3001/auth/me
-wget -qSO- http://finance-os-api:3001/debug/config --header='x-internal-token: <PRIVATE_ACCESS_TOKEN>'
-```
-
-### Logs utiles
-
-Mettre temporairement:
-
-```env
-LOG_LEVEL=debug
-APP_DEBUG=1
-```
-
-Puis regarder:
-
-- logs `web` pour les erreurs SSR
-- logs `api` pour les erreurs de routes ou d'env
-
-### Cloudflare / proxy
-
-Si Cloudflare est devant Dokploy, bypass cache pour:
-
-- `/`
-- `/login*`
-- `/api/*`
-- `/powens/*`
-
-## Decision technique finale
-
-La complexite venait du melange de trois modes incompatibles:
-
-- build serveur Dokploy
-- tags mutables comme `latest`
-- routage public `web` + `api` en meme temps
-
-La base propre pour ce repo est:
-
-- un seul compose Dokploy
-- images GHCR immuables
-- un seul domaine public vers `web`
-- `/api` gere par le proxy interne du runtime `web`
-- deploy pilote uniquement par GitHub Actions sur tag
+Do not expose the API publicly to work around routing problems, disable auth checks for probes, or print resolved secrets. If only a provider/internal advisory service fails, keep the core cockpit online and follow [Operations](operations.md).

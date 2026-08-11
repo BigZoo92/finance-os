@@ -5,7 +5,7 @@ import { cn } from "@finance-os/ui/lib/utils"
 /**
  * Card — primary surface container.
  *
- * In the Aurora Pink direction, the default card is quiet: subtle border,
+ * In the Command Pixel direction, the default card is quiet: subtle border,
  * a 1-step elevation ambient, and a whisper of warm tint. Visual intensity
  * is opt-in through variants (`tone="brand"` for rose-accented surfaces,
  * `tone="violet"` for the secondary accent). Keep data-dense cards `tone="plain"`.

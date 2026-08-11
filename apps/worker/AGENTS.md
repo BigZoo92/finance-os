@@ -1,41 +1,13 @@
-# AGENTS.md - apps/worker
+# Worker instructions
 
-Scope: `apps/worker/**`
+Scope: `apps/worker/**`.
 
-## Local Rules
+- `src/index.ts` is the entry point. Preserve typed queue dispatch, per-job isolation, idempotent writes, locks, request IDs, heartbeat, graceful shutdown, and scheduler boundaries.
+- Never log provider credentials/codes/tokens/raw payloads. Resolve IBKR/Binance credentials only from validated server env and skip an unconfigured provider without blocking others.
+- Preserve raw -> normalized -> derived boundaries; manual/user-authored data is authoritative and is not overwritten by ingestion.
+- Use queue keys and serializers exported by provider packages; do not duplicate Redis key strings.
+- Schedulers call guarded API orchestration over `API_INTERNAL_URL` or enqueue typed provider jobs; they do not move provider/DB logic into timers.
+- Demo behavior is never a worker dependency. Provider failure remains isolated and fail-soft for API/web consumers.
+- Keep heartbeat paths aligned with Compose healthcheck and ops-alerts.
 
-- [src/index.ts](src/index.ts) is the worker entrypoint and operational contract. Keep connection-level failure isolation, Redis locks, idempotent upserts, and metric updates intact.
-- Treat worker code as provider-facing and secret-sensitive. Never log Powens codes, tokens, decrypted access tokens, or raw provider payloads.
-- Resolve IBKR Flex and Binance Spot credentials only from validated server env. Do not read legacy `external_investment_credential` rows; missing configuration must skip that provider without blocking the other provider or Powens.
-- Keep provider cash account upserts and unified asset upserts in sync so dashboard patrimoine reads do not drift from normalized banking data.
-- Preserve the data-layer boundary for sync pipelines:
-  - `raw`: provider payload snapshots are staged in `provider_raw_import` only.
-  - `normalized`: read-model-safe business fields are persisted in first-class tables (`bank_account`, `transaction`, unified assets, recurring commitments).
-  - `derived`: worker-derived helpers (label/category/merchant/object timestamps) must be deterministic and recomputable from raw payloads.
-  - `manual`: user-authored edits stay authoritative in manual/domain tables and must not be overwritten by provider normalization runs.
-- Preserve the current safety model:
-  - per-connection Redis lock
-  - reconnect-required handling on auth failures
-  - archived Powens connections are skipped by manual and scheduled sync
-  - heartbeat and scheduler behavior
-  - graceful shutdown of DB and Redis clients
-  - heartbeat file compatibility with `infra/docker/ops-alerts/monitor.mjs` and `infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs`
-- Worker changes must not degrade the fail-soft behavior of the web or API runtimes.
-- Keep the persisted Powens last-sync snapshot minimal and end-of-job only: transition logs, Redis counters, and DB writes for `lastSyncStatus` / `lastSyncReasonCode` must stay correlated by request id and must all short-circuit when `SYNC_STATUS_PERSISTENCE_ENABLED=false`.
-- Keep the worker's localhost-only `GET /health` and `GET /version` contract aligned with the shared system contract used by api and web.
-- Keep the optional market refresh scheduler (`src/market-refresh-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/markets/refresh` over `API_INTERNAL_URL`, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or raw provider payloads.
-- Keep the optional advisor daily scheduler (`src/advisor-daily-scheduler.ts`) internal-only and fail-soft: it may only trigger `POST /dashboard/advisor/run-daily` over `API_INTERNAL_URL`, must use the internal token path when configured, must respect `EXTERNAL_INTEGRATIONS_SAFE_MODE`, and must never log provider keys or prompt payloads. The current recommended posture keeps this scheduler disabled by env and relies on the admin manual mission.
-- Keep the Daily Intelligence scheduler (`src/daily-intelligence-scheduler.ts`) as the single worker entrypoint for the global `/ops/refresh/all` orchestration. It owns the night/morning cron decision and Redis trigger lock only; job orchestration, provider calls, DB writes, dry-run, and run status remain API-owned.
-- Keep the social signal scheduler contract aligned with `POST /dashboard/news/ingest`: `trigger: "social_poll"` is intentional and must remain accepted by the API. Social scheduler failures must stay isolated from other worker schedulers.
-
-## Verify
-
-- `pnpm worker:typecheck`
-- There is no worker package test script today; when changing sync behavior, add or update focused tests in the touched package if possible and document any manual verification gaps.
-- `bun test apps/worker/src/market-refresh-scheduler.test.ts` when market refresh scheduling changes
-
-## Pitfalls
-
-- Do not weaken transaction/account upsert idempotence backed by [../../packages/db/src/schema/powens.ts](../../packages/db/src/schema/powens.ts).
-- Do not re-enable provider accounts/assets from an archived or superseded Powens connection without an explicit reconnect flow.
-- Do not add browser-facing or SSR-facing concerns here.
+Verify with `pnpm worker:typecheck` and the focused scheduler/ingestion tests for changed behavior.

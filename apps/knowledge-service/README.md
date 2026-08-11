@@ -17,7 +17,7 @@ Rebuild deterministic seed memory:
 curl -X POST http://127.0.0.1:8011/knowledge/rebuild -H "content-type: application/json" -d "{\"scope\":\"admin\",\"includeSeed\":true}"
 ```
 
-No endpoint performs trading execution or external provider calls. Embeddings default to deterministic local hashing unless an explicit server-only embedding provider is configured later.
+No endpoint performs trading execution or external provider calls. The shipped image uses deterministic local hashing for embeddings; an external provider requires an explicitly supplied dependency and server-only configuration.
 
 ## Backends and selection
 
@@ -42,7 +42,9 @@ Ingest the existing Finance-OS context bundles directly:
 
 - `POST /knowledge/ingest/markets` — macro signals, tickers, sectors → `MacroSignal`/`Asset`/`Ticker`/`Sector`
 - `POST /knowledge/ingest/news` — news items → `NewsSignal`/`MarketEvent`/`SourceDocument`
+- `POST /knowledge/ingest/social` — social observations and source provenance
 - `POST /knowledge/ingest/advisor` — recommendations + assumptions + evidence → `Recommendation`/`Assumption`/`Evidence`
 - `POST /knowledge/ingest/cost-ledger` — AI cost rows → `Model`/`AgentRun`/`TokenUsageObservation`/`CostObservation`
+- `POST /knowledge/ingest/trading-lab` — research hypotheses, scenarios, and evidence
 
 All ingestion is idempotent and carries provenance, temporal fields and confidence.

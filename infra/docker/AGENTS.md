@@ -1,37 +1,12 @@
-# AGENTS.md - infra/docker
+# Docker instructions
 
-Scope: `infra/docker/**`
+Scope: `infra/docker/**` plus the root production Compose contract.
 
-## Local Rules
+- Public traffic terminates on `web`; API and data/internal services remain private.
+- Keep web `/healthz`, API `/health`, and worker heartbeat paths aligned with runtime code and ops-alerts.
+- Preserve the four minimum alert families: 5xx burst, service health, heartbeat freshness, and disk capacity.
+- Webhook URLs/headers are runtime secrets, never `VITE_*`, logs, or examples.
+- Preserve read-only mounts, `no-new-privileges`, dropped capabilities, bounded logs, and resource/PID limits unless explicitly changing security posture.
+- Keep PostgreSQL/Redis/Neo4j/Qdrant resource settings aligned with `docs/deployment.md` and `docs/operations.md`.
 
-- Treat this tree as the production runtime topology contract. Public browser traffic must continue to terminate on `web`; `api` stays internal-only and `/api/*` continues to flow through the web proxy.
-- Keep healthcheck and observability wiring aligned across runtime and deploy files:
-  - `web` health probes use `/healthz`
-  - `api` health probes use `/health`
-  - `worker` heartbeat file paths stay consistent with the worker runtime and the `ops-alerts` sidecar
-- The `ops-alerts` sidecar is the minimum production observability layer. When changing it, preserve all four alert families unless the task explicitly scopes a contract change:
-  - 5xx burst probes
-  - healthcheck failures
-  - worker heartbeat freshness
-  - disk free percent
-- Keep `ops-alerts` secret-safe: webhook URLs and headers must stay in runtime env only, never in `VITE_*`, docs examples, client code, or logs.
-- Keep shared deploy assumptions intact when editing Compose or container entrypoints:
-  - readonly mounts for heartbeat and disk probes stay aligned
-  - `no-new-privileges` and current read-only/tmpfs hardening stay intact unless the task explicitly changes the security posture
-  - the sidecar continues to reuse the existing API image instead of introducing a separate build surface
-- Keep production resource governance synchronized when editing `docker-compose.prod.yml`:
-  - service CPU/memory/PID profiles live in the root compose file as reusable `deploy.resources` anchors
-  - per-service Docker log rotation must stay bounded
-  - Redis `maxmemory`, Neo4j heap/pagecache, Postgres `shm_size`, and the VPS validation runbook must stay aligned
-
-## Verify
-
-- `node --test infra/docker/ops-alerts/monitor.test.mjs` for alerting or health-monitor changes
-- `pnpm smoke:api` when routing, proxy, or healthcheck URLs change
-- `pnpm check:ci` when the environment can install and run the full repo suite
-
-## Pitfalls
-
-- Do not expose `apps/api` directly on a new public route in deploy config unless the task explicitly changes the external topology.
-- Do not change worker heartbeat paths in only one place; update the worker runtime, healthchecks, and `ops-alerts` sidecar together.
-- Do not weaken the observability signal by removing `x-request-id` propagation expectations, safe structured logging, or smoke coverage without replacing them with an equivalent guardrail.
+Verify Compose drift, relevant builds/smoke probes, and `node --test infra/docker/ops-alerts/monitor.test.mjs` for monitor changes.

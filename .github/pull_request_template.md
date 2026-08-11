@@ -6,11 +6,6 @@
 
 <!-- Why is this change needed? Link issue/spec if available. -->
 
-## Scope (no-refactor)
-
-- [ ] This PR is intentionally small and scoped.
-- [ ] No unrelated refactor was introduced.
-
 ## Definition of Done (DoD)
 
 - [ ] Acceptance criteria are met.
@@ -18,14 +13,8 @@
 - [ ] Observability/logging impacts are documented.
 - [ ] Risks and rollback notes are documented.
 - [ ] CI is green.
-- [ ] If contracts/arch/env changed: docs + AGENT(S).md updated.
+- [ ] If contracts, architecture, or environment changed: the relevant guide and nearest `AGENTS.md` are updated.
 - [ ] No secrets exposed to client (no sensitive `VITE_*`).
-
-## Breakpoints
-
-- [ ] **BP1 — Spec validated**: goal, non-goals, acceptance criteria confirmed.
-- [ ] **BP2 — Implementation validated**: dual-path demo/admin behavior checked.
-- [ ] **BP3 — Ready to ship**: flags/kill-switch + monitoring ready, merge approved.
 
 ## ENV / API Keys (mandatory)
 
@@ -34,7 +23,7 @@
 - New/updated env vars:
 - New/updated API keys/secrets:
 - How to obtain keys (steps/links):
-- Where to set in prod (Dokploy: web/api/worker):
+- Runtime consumers and where to set them in production:
 - Rotation/backfill/migration notes:
 - Failure mode + fallback:
 
@@ -49,12 +38,13 @@
 - Alerts/dashboards impacted:
 - Request IDs / correlation impact:
 
-## UI Screenshots
+## UI evidence
 
 > Required for UI changes. If not applicable, write `N/A`.
 
-- Before:
-- After:
+- Rationale:
+- Desktop before/after:
+- Mobile before/after:
 
 ## Flags / Rollout (if applicable)
 

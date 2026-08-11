@@ -1,6 +1,6 @@
 // Manual Hypothesis Lab — minimal use-cases backed by existing Trading Lab tables.
 //
-// Per ADR `docs/adr/advisor-learning-loop.md` (PR3): no new table is created. A "manual
+// Per `docs/advisor.md`: no new table is created. A "manual
 // hypothesis" is a `tradingLabStrategy` row with `strategyType = 'manual-hypothesis'`. Paper
 // scenarios for a hypothesis are `tradingLabPaperScenario` rows linked via `linkedStrategyId`.
 //

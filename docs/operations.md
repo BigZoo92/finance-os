@@ -1,0 +1,61 @@
+# Operations
+
+## Daily posture
+
+1. Confirm the cockpit loads in demo mode.
+2. In admin mode inspect provider diagnostics and data quality before refreshing.
+3. Run manual refresh/orchestration only when source freshness requires it; watch the operation status rather than repeatedly submitting.
+4. Review stale/partial badges, the Advisor evidence window, and any P0/P1 actionable alert.
+5. Keep decision journal and post-mortem entries factual; they are evidence for review, not execution instructions.
+
+## Operational surfaces
+
+- `/dashboard/providers/diagnostics`: admin-only read-only provider health snapshot.
+- `/dashboard/data-quality`: local data-quality/readiness view; it does not trigger provider refresh.
+- `/dashboard/advisor/manual-refresh-and-run`: guarded, locked orchestration with operation status.
+- web `/healthz`, API `/health`, worker heartbeat, and internal service health checks.
+- `infra/docker/ops-alerts`: 5xx probes, service health, heartbeat freshness, and disk capacity.
+
+Exact route prefixes are mounted by `apps/api/src/routes/dashboard/router.ts`; tests beside each route are the contract.
+
+## Degraded provider
+
+1. Check configuration presence without printing values.
+2. Compare last success/failure, freshness, provider-specific status, and request ID.
+3. Determine whether the failure is auth/reconnect, rate limit, transient network, invalid payload, or local persistence.
+4. Preserve cached/local data with a degraded marker; do not disable unrelated providers.
+5. Retry only through the supported admin/worker path and respect locks/cooldowns.
+6. Confirm recovery generates a state-change resolution, not repeated interval noise.
+
+For Powens reconnect, use the signed connect flow. For IBKR/Binance, rotate server environment credentials—never add or recover a browser/database credential workflow.
+
+## Alert policy
+
+- `critical -> P0`, `high -> P1`, `medium/low -> P2`.
+- Score = impact (0-5) + confidence (0-3) + recency (0-2).
+- Deduplicate by fingerprint, suppress during cooldown, and prefer state transitions.
+- Digest order: priority, score, owner, next step; collapse informational tails.
+
+Monitor changes require `node --test infra/docker/ops-alerts/monitor.test.mjs`.
+
+## Incident triage
+
+Use the request ID to follow web -> API -> worker/provider. Inspect structured logs without copying tokens, URLs with secrets, raw bodies, or resolved environment. Classify:
+
+- P0: secret exposure, unauthorized access, data loss, execution path;
+- P1: demo/admin breach, broken contract, persistent provider/data pipeline, failed production probe;
+- P2: isolated presentation or maintenance defect.
+
+If only Advisor/knowledge/quant is unavailable, keep deterministic cockpit features online. If persistence integrity is uncertain, stop writes for the affected ingestion path and preserve evidence before retrying.
+
+## Useful checks
+
+```text
+pnpm env:check:prod
+pnpm docker:check
+node --test infra/docker/ops-alerts/monitor.test.mjs
+pnpm smoke:api
+pnpm smoke:prod
+```
+
+Release and rollback procedures are in [Deployment](deployment.md); provider boundaries are in [Integrations](integrations.md).

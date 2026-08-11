@@ -56,7 +56,7 @@ export type RecoverStaleRunItem =
 
 /**
  * Default to a 30-minute stale threshold — matches the recovery sweeper
- * documented in docs/ops/refresh-orchestrator.md. Caller can override.
+ * documented in docs/operations.md. Caller can override.
  */
 export const recoverStaleRuns = (staleAfterMs = 30 * 60 * 1000) =>
   apiFetch<RecoverStaleRunsResponse>('/ops/refresh/stale-runs/recover', {

@@ -1,46 +1,16 @@
-# AGENTS.md - apps/api
+# API instructions
 
-Scope: `apps/api/**`
+Scope: `apps/api/**`.
 
-## Local Rules
+- `src/index.ts` is the composition root. Preserve bare and `/api` compatibility mounts, startup route assertions, request IDs, `/health`, and `/version`.
+- Routes own HTTP parsing/status/shape; domain code owns orchestration; repositories own persistence; services own providers/deterministic helpers; runtime/plugin files wire them.
+- Demo short-circuits before DB, Redis, provider, model, or write work. `/auth/me` remains DB/provider-free, `200`, and `no-store`.
+- Cookie-auth mutations keep same-origin protection; worker/internal mutations require the current internal-token guard.
+- Powens callback accepts admin or valid signed state, respects safe mode, and never logs codes/tokens.
+- External-investment routes expose configuration/health/data only—never credentials or mutation capabilities.
+- Advisor/news/markets GET routes read local normalized/cache state; live refresh stays on guarded POST/worker paths and fails soft.
+- Keep errors normalized and logs structured through `src/observability/`.
 
-- Keep [src/index.ts](src/index.ts) as the API composition root. Preserve both bare and `/api` compatibility mounts, request-id propagation, and startup route assertions.
-- Keep public `GET /health` and `GET /version` aligned with the shared system contract used by web and worker, including runtime flags such as `safeModeActive`.
-- Keep HTTP parsing, validation, status codes, and response shaping in route files such as [src/routes/dashboard/routes/summary.ts](src/routes/dashboard/routes/summary.ts) and [src/routes/integrations/powens/routes/callback.ts](src/routes/integrations/powens/routes/callback.ts).
-- Keep external-investment status env-backed and secret-safe: expose only per-provider configuration presence, never Binance/IBKR credential values or masked references, and do not add credential CRUD routes.
-- Keep orchestration in `domain/`, persistence in `repositories/`, provider and deterministic helpers in `services/`, and wiring in `runtime.ts` plus `plugin.ts`.
-- Demo must short-circuit before any DB, Redis, or Powens access. `GET /auth/me` must stay `200`, `Cache-Control: no-store`, and must never hit DB or Powens.
-- Keep dashboard summary read models coherent across low-level accounts/connections and the higher-level unified `assets` collection used for patrimoine-style views.
-- Keep `/dashboard/derived-recompute` demo-safe on reads, admin/internal-token gated on real execution, and `Cache-Control: no-store` on both status and trigger paths.
-- Keep the advisor stack (`/dashboard/advisor`, `/dashboard/advisor/*`, `/dashboard/manual-assets`, persisted runs/artifacts/cost ledger, grounded chat, educational knowledge Q&A, challenger flow, admin-triggered `POST /dashboard/advisor/manual-refresh-and-run`, optional worker-triggered `POST /dashboard/advisor/run-daily`) aligned with `docs/AI-ARCHITECTURE.md` and `docs/AI-SETUP.md`: demo must stay fully deterministic and write-free, admin/internal-token mutations must remain guarded, and GET routes must never trigger live provider work. `GET /dashboard/advisor/knowledge-topics` and `GET /dashboard/advisor/knowledge-answer` stay read-only, log safe retrieval telemetry, and must degrade to browse-only when `AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED=false` or `AI_ADVISOR_FORCE_LOCAL_ONLY=true`.
-- Keep the dashboard news pipeline (`/dashboard/news`, `/dashboard/news/context`, `/dashboard/news/ingest`, cache-state semantics, provider health, metadata scraping, dataset fallback) aligned with [../../docs/context/NEWS-FETCH.md](../../docs/context/NEWS-FETCH.md), and update that document whenever this feature changes.
-- Keep `POST /dashboard/news/ingest` accepting the worker social trigger `trigger: "social_poll"`; it is an explicit scheduler contract, not an arbitrary string alias.
-- Keep `/ops/refresh/all` wired to the refresh-registry topological plan. Legacy Advisor manual operations may remain exposed for compatibility, but must not be presented as proof that the global Daily Intelligence orchestrator ran.
-- Keep the dashboard markets pipeline (`/dashboard/markets/overview`, `/dashboard/markets/watchlist`, `/dashboard/markets/macro`, `/dashboard/markets/context-bundle`, `/dashboard/markets/refresh`) aligned with [../../docs/context/MARKETS-MACRO.md](../../docs/context/MARKETS-MACRO.md): demo must stay deterministic, `GET` reads remain cache-only, `POST /refresh` stays admin/internal-token only, and quote provenance/freshness metadata must remain explicit.
-- Powens callback must continue to allow either an admin session or a valid signed state. Never log callback codes, tokens, or decrypted provider payloads.
-- Powens connection management must stay soft-delete/soft-disconnect: archive connection rows, disable linked provider accounts/assets, preserve transaction history, and hide archived connections from active status/dashboard reads.
-- Keep `/integrations/powens/status` demo-safe and secret-safe while exposing the persisted last-sync snapshot (`lastSyncStatus`, `lastSyncReasonCode`) plus the `SYNC_STATUS_PERSISTENCE_ENABLED` kill-switch state; when the flag is off, blank the persisted fields so web can downgrade immediately to runtime placeholders.
-- Keep Powens status and fail-soft behavior contract-stable:
-  - Runtime connection `status` values are `connected`, `syncing`, `error`, `reconnect_required`; preserve this taxonomy unless contract/docs/tests are updated together.
-  - Persisted sync snapshot uses `lastSyncStatus: OK|KO` with `lastSyncReasonCode: SUCCESS|PARTIAL_IMPORT|SYNC_FAILED|RECONNECT_REQUIRED`.
-  - If persistence is disabled, omit stale meaning by blanking persisted snapshot fields (return `null` values) and rely on runtime status only.
-  - If safe mode is active, `/integrations/powens/status` must remain available with deterministic fallback payloads (`safeModeActive`, optional `fallback: safe_mode`) so web stays usable.
-  - Fail-soft is mandatory: provider outages/timeouts must not break unrelated dashboard reads or escalate to unsafe payloads/logs.
-- Preserve normalized API errors, safe details only, and structured logs from [src/observability/logger.ts](src/observability/logger.ts).
-- Preserve global browser-origin protection for cookie-auth mutations: unsafe methods require same-origin `Origin`/`Referer` unless a valid internal token is present.
-- Preserve request-id propagation on every API path, including bare and `/api` compatibility routes, so smoke checks and runtime logs can correlate the same request end to end.
-- Keep `/dashboard/goals*` demo-safe on reads and admin-gated on writes, with no ad hoc payload drift between route schemas, domain use cases, and web callers.
+Update `docs/integrations.md`, `docs/advisor.md`, or `docs/operations.md` only when their durable contract changes.
 
-## Verify
-
-- `pnpm api:typecheck`
-- `bun test apps/api/src/auth/routes.test.ts`
-- `bun test <changed-api-test-file>` for any changed Bun test file under `apps/api/src`
-- `bun test apps/api/src/routes/dashboard/domain/market-analytics.test.ts` when markets logic changes
-- `pnpm smoke:api` when public routes, proxy compatibility, or auth routing changes
-
-## Pitfalls
-
-- Do not move DB or provider work into route files.
-- Do not remove route guards or startup route assertions without replacing them with equivalent protection.
-- Keep `/auth/me`, `/dashboard/*` including `/dashboard/goals*`, `/dashboard/markets*`, and `/dashboard/derived-recompute`, and `/integrations/powens/*` aligned with [../../docs/agentic/contracts-map.md](../../docs/agentic/contracts-map.md).
+Verify with the changed Bun tests, `pnpm api:typecheck`, and `pnpm smoke:api` for route/proxy/auth topology.

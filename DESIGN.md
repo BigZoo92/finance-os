@@ -1,94 +1,81 @@
-# Finance-OS - Direction Artistique
+# Finance-OS design system
 
-> Source de verite visuelle. Toute modification UI doit partir d'ici.
-> Complement: `docs/frontend/design-system.md` pour les tokens/composants et
-> `docs/context/DESIGN-DIRECTION.md` pour le contexte partage avec les agents.
+## Command Pixel
 
-## Vision - Command Pixel
+Finance-OS should feel like a precise personal financial instrument with the character of a compact command OS. The balance is approximately 85% contemporary premium finance and 15% controlled software nostalgia. Financial clarity always wins.
 
-Finance-OS est un cockpit financier personnel, dense, calme et lisible. La
-direction courante est **Command Pixel**: une interface d'operations
-personnelles inspiree des consoles de mission, des pixels nets, des surfaces
-compactes et des signaux de statut clairs.
+The visual system combines:
 
-Parti pris: **moins de vitrine, plus de commande**. L'app doit ressembler a un
-poste de pilotage personnel: decisions, flux, alertes, memoire et couts sont
-visibles sans transformer l'ecran en page marketing.
+- dark software precision, restrained navigation, and calm technical framing;
+- credible numeric hierarchy and monochrome-first data visualization;
+- graphite surfaces, thin rules, compact rhythm, and one controlled accent at a time;
+- rare pixel pictograms, micro-labels, bracket language, and tiny system readouts.
 
-Aurora Pink est l'ancienne direction. Les noms de tokens `aurora` peuvent
-rester temporairement comme alias techniques, mais ils ne sont plus la source
-de verite produit.
+It is not a trading terminal, generic SaaS dashboard, marketing landing page, or retro poster.
 
-## Principes
+## Typography lock
 
-1. Clarte avant densite: chaque page doit etre scannable en quelques secondes.
-2. Surfaces compactes: privilegier panels, tableaux, listes et KPI stables.
-3. Commandes visibles: les actions admin restent sous Ops/admin; le quotidien
-   reste centre sur Cockpit, Depenses, Patrimoine et Advisor.
-4. Pixel net: pas de glow gratuit, pas d'orbes decoratives, pas de gradients
-   one-note. Les textures doivent soutenir la hierarchie.
-5. Donnees financieres lisibles: montants en `.font-financial`; couleurs
-   semantiques pour gain/perte/alerte.
+- Geist Sans: navigation, titles, labels, and body text.
+- Geist Mono: amounts, percentages, dates, metadata, and operational values.
+- Geist Pixel: exceptionally rare wordmark, loader, empty-state, or micro-label accents.
+- `.font-financial` is required for financial amounts and tabular figures.
 
-## Palette
+Do not introduce another family. Existing Inter/JetBrains declarations are migration debt from the previous direction; do not expand their use while the product tokens move to the Geist lock.
 
-Command Pixel conserve les tokens existants pour limiter le risque avant les
-maquettes finales:
+## Surfaces and tokens
 
-| Role | Token | Usage |
-|---|---|---|
-| Primary | `--primary` | Accent de commande, focus, actif nav |
-| Secondary | `--accent-2` | Accent admin/Ops, etats secondaires |
-| Surfaces | `--surface-0/1/2/3` | Profondeur stable des panels |
-| Positive | `--positive` | Revenus, gains, tendances positives |
-| Negative | `--negative` | Depenses, pertes, tendances negatives |
-| Warning | `--warning` | Attente, degradation, seuils |
+Use the tokens in `packages/ui/src/styles/globals.css`; do not create isolated color, radius, spacing, shadow, or motion values.
 
-Regle stricte: les couleurs de marque ne communiquent jamais un signal
-financier. Utiliser `positive`, `negative` et `warning`.
+The four levels are:
 
-## Typographie
+- `surface-0`: application canvas;
+- `surface-1`: primary working plane;
+- `surface-2`: panels and grouped controls;
+- `surface-3`: overlays, menus, and focused controls.
 
-- Inter Variable: texte, titres, navigation.
-- JetBrains Mono Variable: montants, status lines, identifiants techniques.
-- `.font-financial`: obligatoire pour les montants.
-- Les titres hero doivent rester rares; les surfaces outil utilisent des
-  headings compacts.
+Separation comes from depth, whitespace, and thin technical rules—not a wall of rounded cards. `aurora` token/component names are compatibility aliases only.
 
-## Surfaces Canonique
+Financial semantics are stable:
 
-Utiliser d'abord les primitives Finance-OS:
+- `positive` for gains/inflows;
+- `negative` for losses/outflows;
+- `warning` for caution, stale data, or intervention;
+- brand accents never encode financial meaning.
 
-- `PageHeader` pour les pages `_app/*`
-- `KpiTile` pour les chiffres de synthese
-- `Panel` pour les sections de travail
-- `RangePill` pour les controles de periode
-- `BrandMark`, `AuroraBackdrop`, `StatusDot` lorsque le composant existe deja
+## Canonical building blocks
 
-Les noms herites (`AuroraBackdrop`, `.text-aurora`, etc.) sont des alias
-techniques jusqu'a une migration de design system. Ne pas en deduire une
-direction visuelle Aurora Pink.
+Prefer the existing `KpiTile`, `Panel`, `PageHeader`, `RangePill`, `BrandMark`, and `StatusDot` components before creating an equivalent. The only retained React Bits component is `pixel-blast.tsx`, wrapped by the login backdrop; do not add another React Bits component.
+
+Navigation is compact and anchored. Dropdowns use a concise icon/title/description hierarchy; avoid giant mega-menus and permanent new sidebars. Pixel icon tiles may add character but never outweigh the data.
+
+## Data presentation
+
+- Lead with the total, its period/context, and data freshness.
+- Align comparable numbers and preserve tabular figures.
+- Prefer a small number of legible charts to a grid of decorative widgets.
+- Use semantic colors sparingly and label signals; do not rely on color alone.
+- Show provenance or degraded status when a figure is cached, partial, stale, or estimated.
+
+Every applicable remote surface covers loading, empty, degraded, error, offline/cache, and gated states.
 
 ## Motion
 
-- Motion utile seulement: etat, chargement, changement de contexte.
-- Respect obligatoire de `prefers-reduced-motion`.
-- Eviter les animations decoratives continues sur les surfaces de travail.
+Motion explains causality, continuity, or state change. Use existing tokens, favor opacity/transform, and keep interactions available immediately. Avoid scroll-jacking, cursor followers, ambient loops, large staggered lists, and animations that delay financial values.
 
-## Anti-Patterns
+`prefers-reduced-motion` removes nonessential movement and keeps the same information hierarchy.
 
-- Page d'accueil marketing a la place de l'outil.
-- Sidebar normale remplie de routes Ops/admin.
-- Cartes imbriquees ou sections flottantes sans role.
-- Gradients, halos, glassmorphism ou textures qui dominent les donnees.
-- Couleurs brand pour signaler gain, perte, risque ou budget.
+## Accessibility and responsive behavior
 
-## Documentation
+Maintain semantic structure, visible focus, keyboard flow, contrast, 44px touch targets, zoom support, safe areas, and usable tables/charts from 320px through wide desktop. Mobile is a deliberate information hierarchy, not a compressed desktop grid.
 
-Tout ajout de route, token, pattern visuel ou composant partage doit mettre a
-jour:
+## Anti-patterns
 
-- `DESIGN.md`
-- `docs/frontend/design-system.md`
-- `docs/context/DESIGN-DIRECTION.md`
-- `docs/frontend/information-architecture.md` si la navigation change
+- generic rounded KPI-card walls;
+- glassy or purple AI identity;
+- giant hero text inside the cockpit;
+- full terminal, hacker, Y2K, or nostalgic cosplay;
+- hardcoded financial colors;
+- pixel body text or decorative diagrams that compete with data;
+- new UI libraries that duplicate the current system.
+
+UI changes require rationale plus desktop/mobile screenshot notes. Use the `finance-os-command-pixel`, `finance-os-ui-review`, and `finance-os-ui-motion` skills for implementation and review.

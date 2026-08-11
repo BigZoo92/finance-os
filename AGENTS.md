@@ -1,274 +1,54 @@
-# AGENTS.md - Finance-OS
+# Finance-OS repository instructions
 
-Last updated: 2026-04-09
+Use the nearest `AGENTS.md` before editing. Keep permanent instructions short; task-specific workflows live in `.agentic/source/skills/`, and durable operator/product context lives in the ten maintained Markdown guides.
 
-Use the nearest `AGENTS.md` before editing. Keep this root file small and durable; push local detail into nested `AGENTS.md`, `.agents/skills/`, and `docs/agentic/`.
+## Product boundaries
 
-## Global Invariants
+- Finance-OS is personal and single-user.
+- `demo` is the default: deterministic fixtures only, with no DB, Redis, provider, model, or write side effects.
+- `admin` may use live state only behind the admin session. Explicit server-to-server API routes may instead accept a valid `PRIVATE_ACCESS_TOKEN`; Powens callbacks use HMAC-signed state.
+- Fail soft: one provider or advisory service must not make the cockpit unusable.
+- Public traffic terminates on `apps/web`; `/api/*` is proxied to internal `apps/api` through `API_INTERNAL_URL`.
+- The finance engine and normalized source data are authoritative. Analytics, LLM output, and the temporal knowledge graph are derived consumers.
+- External investments are read-only analytics: IBKR Flex and signed read-only Binance Spot/Wallet GET allowlists only. Historical read-only records may describe orders, withdrawals, or transfers, but never add mutation or execution capability for trading, orders, withdrawals, transfers, convert, margin/futures, staking/earn, or automatic rebalancing.
 
-- Finance-OS is a strictly personal, single-user finance cockpit.
-- Every feature must preserve two explicit execution paths:
-  - `demo` is the default and must use deterministic mocks only, with no DB reads/writes and no provider calls.
-  - `admin` enables DB and providers behind the admin session cookie and/or valid signed internal state.
-- Fail soft: if Powens or any other integration fails, the app must remain usable with clear fallback messaging.
-- Privacy by design is mandatory:
-  - never put secrets in `VITE_*`
-  - never log Powens codes or tokens
-  - encrypt sensitive tokens at rest
-- Observability is mandatory:
-  - propagate `x-request-id` end to end
-  - keep API logs structured and secret-safe
-  - keep error payloads normalized and safe to expose
-  - keep deploy-time probes, smoke checks, and ops alerting aligned with the live route topology
-- TypeScript optional-property invariant:
-  - `exactOptionalPropertyTypes` is enabled; when an optional field is absent, omit the key entirely instead of passing `undefined`
-- Ops alert-quality conventions (for monitor rules, digests, and review notes):
-  - priority levels must be explicit and map to review severity: `critical -> P0`, `high -> P1`, `medium/low -> P2`
-  - scoring must be transparent and additive: `impact (0-5) + confidence (0-3) + recency (0-2)`; include the final score in docs/PR notes when adding or tuning alerts
-  - anti-noise defaults are required: deduplicate by fingerprint, suppress repeats inside a cooldown window, and prefer state-change notifications over interval spam
-  - digests must be decision-first: include only top actionable items first (priority, score, owner, next step), then collapse informational tails to keep the signal concise
-- Analytics conventions and source-of-truth requirements:
-  - analytics is descriptive telemetry, never an execution dependency; core product behavior must not rely on event delivery
-  - every metric, chart, or dashboard must declare one canonical source of truth (DB table/view, API contract, or deterministic demo fixture) and link to it in local docs when introduced
-  - source-of-truth graphs must show upstream provenance and downstream consumers so reviewers can trace transformations end to end
-  - assumptions (time windows, freshness SLOs, sampling, currency/FX handling, timezone boundaries, and null/default semantics) must be explicit and versioned with the feature
-  - when data is delayed, missing, or inconsistent, fail soft with clear fallback UI copy and degraded-but-usable defaults instead of blocking flows
-  - demo-mode analytics must remain deterministic and mock-backed; admin-only analytics may use live providers but must keep demo/admin split explicit
-- Public traffic terminates on `apps/web` only. `/api/*` is proxied internally to `API_INTERNAL_URL`; `apps/api` should not require its own public route.
-- The Temporal Knowledge Graph / GraphRAG layer is internal-only derived memory for the AI Advisor. It enriches, explains, and challenges deterministic finance-engine outputs; it is not a source of truth for transactions, not part of the agentic development pipeline, and must never enable trading execution.
-- Knowledge graph demo mode must use deterministic fixtures only. Admin mode may call the internal knowledge service, but it must fail soft when unavailable and must preserve request IDs, safe errors, provenance, confidence, recency, temporal validity, and contradiction history.
-- External investment ingestion is read-only analytics only. IBKR must stay on Flex reporting; Binance must stay on signed read-only Spot/Wallet `GET` allowlists. Never add trading, order, withdrawal, transfer, convert, margin/futures, staking/earn mutation, automatic rebalancing, or hidden execution-ready paths.
-- Binance and IBKR credentials are server-env-only (`BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET`, `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_IDS`). Never add browser credential forms or resume reads/writes from `external_investment_credential`; legacy rows may remain until an explicit cleanup migration.
-- The GitHub agentic development pipeline (autopilot issue-to-PR automation) was removed in the RESET-AUDIT-CLEANUP-0 pass. Development is done manually or with local coding agents; only classic CI/CD workflows (`ci.yml`, `release.yml`, `ghcr-cleanup.yml`) remain in `.github/workflows`.
-- When code changes alter local architecture, contracts, env, testing, or review guidance, update the nearest `AGENTS.md`, the relevant `docs/agentic/*.md`, and any affected skill in `.agents/skills/` in the same change.
-- When modifying the dashboard news feature (fetch, ingestion, cache, fallback, fixtures, schema, or UI wiring), update [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) in the same change.
-- Design system and frontend identity invariants (direction "Command Pixel"):
-  - Always consult `DESIGN.md` before modifying any UI component, layout, or visual styling.
-  - Always consult `docs/frontend/design-system.md` before creating or modifying a shared component.
-  - Always reuse or extend the existing design system tokens (colors, spacing, radius, motion, typography) before introducing isolated values.
-  - Always preserve the Command Pixel identity: compact operational surfaces, crisp Inter + JetBrains Mono typography, the 4-step surface depth system (`surface-0/1/2/3`), and semantic financial colors. Existing `aurora` token/component names are compatibility aliases until a dedicated design-system migration renames them.
-  - Always prefer the canonical Finance-OS surface components (`KpiTile`, `Panel`, `PageHeader`, `RangePill`, `BrandMark`, `AuroraBackdrop`, `StatusDot`) before coding a bespoke equivalent.
-  - React Bits components live under `apps/web/src/components/reactbits/` as MIT + Commons Clause copies; customize tokens in-place rather than re-installing via CLI.
-  - Always maintain mobile responsiveness, performance constraints, and accessibility (including `prefers-reduced-motion`) when changing UI.
-  - When adding new design tokens, patterns, components, or routes, update the relevant frontend documentation (`DESIGN.md`, `docs/frontend/*.md`, `docs/context/DESIGN-DIRECTION.md`) in the same change.
-  - When modifying navigation or route structure, update `docs/frontend/information-architecture.md` and the `NAV_ITEMS` in `apps/web/src/components/shell/app-sidebar.tsx`.
-  - Financial amounts must use the `.font-financial` class (monospace, tabular figures) for readability.
-  - Use semantic color tokens (`positive`, `negative`, `warning`) for financial data, never hardcoded colors and never the brand rose/violet for signal.
+## Security and contracts
 
-## Global Verification
+- Never put secrets in `VITE_*`, browser DTOs/forms, URLs, fixtures, logs, errors, prompts, or analytics.
+- Never log Powens callback codes, tokens, decrypted provider payloads, session values, or raw financial payloads.
+- Encrypt sensitive tokens at rest with the existing envelope.
+- IBKR/Binance credentials are server environment only. Do not read/write legacy `external_investment_credential` rows.
+- Propagate `x-request-id` end to end; keep logs structured and error payloads normalized and safe.
+- `exactOptionalPropertyTypes` is enabled: omit absent optional keys instead of passing `undefined`.
+- Every behavior change preserves and tests both demo and admin paths.
 
-- Start with the smallest checks that match the changed scope.
-- Use canonical repo-wide commands from [package.json](package.json):
-  - `pnpm check:ci`
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - `pnpm -r --if-present test`
-  - `pnpm -r --if-present build`
-- Use [scripts/smoke-api.mjs](scripts/smoke-api.mjs) and [scripts/smoke-prod.mjs](scripts/smoke-prod.mjs) when route, proxy, or deploy behavior changes.
-- For production Compose alerting or health-monitor changes, run `node --test infra/docker/ops-alerts/monitor.test.mjs` in addition to the relevant runtime checks.
-- Validate the agentic foundation after changing `AGENTS.md`, `.agents/skills/`, or `docs/agentic/`:
-  - `node .agents/skills/scripts/validate-agent-foundation.mjs`
+## Frontend
 
-## Global Review
+- Read `DESIGN.md` before any UI/layout/style change.
+- Command Pixel is canonical. Use Geist Sans, Geist Mono, and rare Geist Pixel accents; do not extend the previous luxury/Inter/JetBrains direction.
+- Reuse tokens and canonical surfaces before adding values/components. Financial amounts use `.font-financial`; financial signals use `positive`, `negative`, and `warning` tokens.
+- Preserve mobile behavior, accessibility, performance, and `prefers-reduced-motion`.
+- Navigation changes update the route tree, `apps/web/src/components/shell/nav-items.ts`, and `docs/product.md` when product structure changes.
 
-- `P0`: security issue, secret leak, Powens token/code exposure, data loss, or broken demo/admin split
-- `P1`: contract regression, missing demo path, missing behavior-change tests, SSR auth flash regression, unsafe logging, or broken observability wiring
-- `P2`: local cleanup or style feedback
-- Always check dual-path correctness, `VITE_*` safety, logging safety, observability wiring, and test evidence for behavior changes.
-- UI changes require rationale plus screenshot notes; see [docs/agentic/code_review.md](docs/agentic/code_review.md).
+## Documentation
 
-## Local Guides
+- Update only the guide whose durable contract changed: `docs/architecture.md`, `docs/product.md`, `docs/configuration.md`, `docs/deployment.md`, `docs/integrations.md`, `docs/advisor.md`, `docs/operations.md`, or `docs/agentic.md`.
+- News ingestion/cache/fallback/schema/UI changes update `docs/integrations.md`.
+- Do not add implementation diaries, completed plans, generated inventories, or archive folders; Git is the history.
+- Run `pnpm docs:check` after Markdown changes.
 
-- [apps/api/AGENTS.md](apps/api/AGENTS.md)
-- [apps/desktop/AGENTS.md](apps/desktop/AGENTS.md)
-- [apps/web/AGENTS.md](apps/web/AGENTS.md)
-- [apps/worker/AGENTS.md](apps/worker/AGENTS.md)
-- [infra/docker/AGENTS.md](infra/docker/AGENTS.md)
-- [packages/db/AGENTS.md](packages/db/AGENTS.md)
-- [packages/env/AGENTS.md](packages/env/AGENTS.md)
-- [packages/powens/AGENTS.md](packages/powens/AGENTS.md)
-- [packages/redis/AGENTS.md](packages/redis/AGENTS.md)
-- [packages/ui/AGENTS.md](packages/ui/AGENTS.md)
-- [packages/prelude/AGENTS.md](packages/prelude/AGENTS.md)
+## Skills and GitNexus
 
-## Agent Efficiency System
+- Canonical skills: `.agentic/source/skills/<name>/SKILL.md`.
+- `.claude/skills` and `.agents/skills` are fully generated projections; never edit them directly.
+- Use `pnpm agent:skills:sync`, `pnpm agent:skills:check`, and `pnpm agent:skills:list`.
+- Use GitNexus query/context for unfamiliar flows, upstream impact before editing functions/classes/methods, and change detection before handoff.
+- Refresh only through `pnpm gitnexus:analyze`; raw analyze writes competing agent files.
 
-Context packs, skill routing, model routing, and token telemetry:
-- **Index**: [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
-- **Context packs**: `docs/agentic/context-packs/` — compact, task-specific bundles
-- **Commands**: `pnpm agent:context:select`, `pnpm agent:context:check`, `pnpm agent:prompt:build`
-- **Budget tiers**: small (8K), medium (16K), large (32K), xlarge (64K), autonomous (128K)
-- Every large agent task must have an explicit context budget.
-- No model should receive the entire repo context by default.
-- AI Advisor costs and agentic dev costs are tracked separately.
+## Verification and review
 
-## Agentic Maps
-
-- [docs/agentic/INDEX.md](docs/agentic/INDEX.md)
-- [docs/agentic/model-routing.md](docs/agentic/model-routing.md)
-- [docs/agentic/skill-routing.md](docs/agentic/skill-routing.md)
-- [docs/agentic/prompt-caching-strategy.md](docs/agentic/prompt-caching-strategy.md)
-- [docs/agentic/token-economics.md](docs/agentic/token-economics.md)
-- [docs/agentic/agent-runbook.md](docs/agentic/agent-runbook.md)
-- [docs/agentic/context-audit.md](docs/agentic/context-audit.md)
-- Canonical skill source: `.agentic/source/skills/` (single agent-neutral source of truth)
-- `.claude/skills/`, `.agents/skills/`, `.qwen/skills/`, root `skills/` are all generated projections — **never edit directly**
-- Sync: `pnpm agent:skills:sync`, CI check: `pnpm agent:skills:check`, dev watch: `pnpm agent:skills:watch`
-- Heavy references (color-expert) live in `.agentic/source/references/` — injected only into `.claude/skills/`
-
-## Skills System
-
-Full inventory with trust tiers, overlaps, and usage guide: [docs/SKILLS-INVENTORY.md](docs/SKILLS-INVENTORY.md)
-
-### Skill categories (`.agentic/source/skills/` — canonical)
-| Category | Path | Count | Purpose |
-|---|---|---|---|
-| Finance-OS local | `finance-os/` | 7 | Repo-specific invariants — highest priority |
-| GitNexus guides | `gitnexus/` | 6 | Code intelligence workflows |
-| GitNexus generated | `generated/` | 20 | Auto-indexed domain clusters |
-| External recommended | root-level dirs | 17+ | Best practices (React, TanStack, Redis, Drizzle, CI/CD, security, perf, testing) |
-| Impeccable (UI) | root-level dirs | 33 | UI refinement and design system |
-| Experimental | `experimental/` | 1 | Unproven — use with caution |
-
-### Priority rule
-When a local Finance-OS skill and an external skill cover the same topic, the local skill takes precedence. External skills provide general best practices that supplement — not override — local invariants.
-
-## Context Documentation
-
-Comprehensive reference docs for agents and external chats (maintained by agents + human):
-
-- [docs/context/STACK.md](docs/context/STACK.md) — Full technical stack, architecture graphs, CI/CD pipeline, deployment
-- [docs/context/FEATURES.md](docs/context/FEATURES.md) — All business features in detail (Powens, goals, transactions, news, etc.)
-- [docs/context/NEWS-FETCH.md](docs/context/NEWS-FETCH.md) — End-to-end news pipeline: provider, ingestion, cache, fail-soft, web consumption, tests, and known gaps
-- [docs/context/EXTERNAL-INVESTMENTS.md](docs/context/EXTERNAL-INVESTMENTS.md) — Read-only IBKR Flex and Binance Spot ingestion, safety boundaries, sync, normalization, Advisor bundle, diagnostics
-- [docs/context/DESIGN-DIRECTION.md](docs/context/DESIGN-DIRECTION.md) — Artistic direction, color palette, typography, motion, layout patterns
-- [docs/context/CONVENTIONS.md](docs/context/CONVENTIONS.md) — Best practices, coding conventions, review process, security rules
-- [docs/context/ENV-REFERENCE.md](docs/context/ENV-REFERENCE.md) — All environment variables, feature flags, where to set them, how to generate
-- [docs/context/EXTERNAL-SERVICES.md](docs/context/EXTERNAL-SERVICES.md) — All external services and APIs (Powens, HN, Redis, GHCR, Dokploy)
-- [docs/context/APP-ARCHITECTURES.md](docs/context/APP-ARCHITECTURES.md) — Per-app and per-package architecture with Mermaid graphs
-
-> When code changes alter stack, features, env vars, or external integrations, update the relevant `docs/context/*.md` in the same change.
-
-## GitNexus Context Layer
-
-Knowledge graph over the full codebase (`gitnexus@1.4.10`, devDep). Available as MCP server for both Claude Code and Codex.
-
-- **Before big refactors**: use `impact <symbol>` or the `detect_impact` prompt
-- **Explore unfamiliar code**: `context <symbol>`, `query "concept"`, or `gitnexus://repo/finance-os/clusters`
-- **Architecture maps**: `generate_map` prompt
-- **Refresh index**: `pnpm gitnexus:analyze && pnpm gitnexus:sync-generated-skills`
-- **Generated skills**: `.claude/skills/generated/` (domain clusters) + `.claude/skills/gitnexus/` (usage guides), mirrored to `.agents/skills/` via sync script
-- **Full reference**: [docs/ai/gitnexus.md](docs/ai/gitnexus.md)
-
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
-
-This project is indexed by GitNexus as **finance-os** (7562 symbols, 17986 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
-
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/finance-os/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/finance-os/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/finance-os/clusters` | All functional areas |
-| `gitnexus://repo/finance-os/processes` | All execution flows |
-| `gitnexus://repo/finance-os/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
-```
-
-If the index previously included embeddings, preserve them by adding `--embeddings`:
-
-```bash
-npx gitnexus analyze --embeddings
-```
-
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
-
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
-
-## Agent Skill Stack
-
-This repository includes Codex-compatible skills under `.agents/skills`.
-
-Rules:
-- Prefer repo-specific instructions over generic community skills.
-- Use imported community skills only when they clearly match the task.
-- Before running helper scripts from imported skills, inspect the script first.
-- Do not overwrite `.codex/config.toml`, `.mcp.json`, deployment files, or CI files without explaining the diff.
-- For large refactors, use: plan → implement → test → review → summarize.
+- Start with the smallest relevant test, then package lint/typecheck/test/build in proportion to risk.
+- Canonical repo commands: `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm -r --if-present test`, `pnpm -r --if-present build`, and `pnpm check:ci`.
+- Route/proxy/deploy changes use the smoke scripts. Ops-alert changes also run `node --test infra/docker/ops-alerts/monitor.test.mjs`.
+- Review priorities: P0 security/secret/data-loss/execution; P1 demo/admin, auth, contract, observability, or missing behavior-test regression; P2 local maintainability/presentation.
+- Never commit, push, deploy, or mutate an external system unless the user asks.

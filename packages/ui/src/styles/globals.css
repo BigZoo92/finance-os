@@ -6,7 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────────
- * Finance-OS — "Aurora Pink" design tokens
+ * Finance-OS — Command Pixel design tokens
  * ─────────────────────────────────────────────────────────────────
  * Direction artistique : cockpit financier personnel, dense, chaud
  * et précis. Rose magenta comme signature de marque, violet
@@ -14,7 +14,7 @@
  * des données, sur dark et light, avec des couleurs sémantiques
  * finance toujours dissociées de la couleur d'identité.
  *
- * Source de vérité visuelle : DESIGN.md + docs/frontend/design-system.md
+ * Source de vérité visuelle : DESIGN.md
  * ─────────────────────────────────────────────────────────────── */
 
 @theme inline {

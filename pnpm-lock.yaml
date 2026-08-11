@@ -23,6 +23,9 @@ importers:
       gitnexus:
         specifier: 1.4.10
         version: 1.4.10(graphology-types@0.24.8)(zod@4.3.6)
+      js-yaml:
+        specifier: ^4.1.1
+        version: 4.1.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
