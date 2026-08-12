@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import * as d3 from 'd3'
+import { area as d3Area, curveCatmullRom, extent, line as d3Line, scaleLinear } from 'd3'
 
 type DataPoint = { date: string; value: number }
 
@@ -61,15 +61,31 @@ export function D3Sparkline({
   const innerH = height - margin.top - margin.bottom
 
   const { line, area, points } = useMemo(() => {
-    if (!data.length || innerW <= 0) return { line: null, area: null, points: [] as Array<{ x: number; y: number; date: string; value: number }> }
+    if (!data.length || innerW <= 0)
+      return {
+        line: null,
+        area: null,
+        points: [] as Array<{ x: number; y: number; date: string; value: number }>,
+      }
 
-    const xs = d3.scaleLinear().domain([0, data.length - 1]).range([0, innerW])
-    const extent = d3.extent(data, d => d.value) as [number, number]
-    const pad = (extent[1] - extent[0]) * 0.1 || 1
-    const ys = d3.scaleLinear().domain([extent[0] - pad, extent[1] + pad]).range([innerH, 0])
+    const xs = scaleLinear()
+      .domain([0, data.length - 1])
+      .range([0, innerW])
+    const valueExtent = extent(data, d => d.value) as [number, number]
+    const pad = (valueExtent[1] - valueExtent[0]) * 0.1 || 1
+    const ys = scaleLinear()
+      .domain([valueExtent[0] - pad, valueExtent[1] + pad])
+      .range([innerH, 0])
 
-    const ln = d3.line<DataPoint>().x((_, i) => xs(i)).y(d => ys(d.value)).curve(d3.curveCatmullRom.alpha(0.5))
-    const ar = d3.area<DataPoint>().x((_, i) => xs(i)).y0(innerH).y1(d => ys(d.value)).curve(d3.curveCatmullRom.alpha(0.5))
+    const ln = d3Line<DataPoint>()
+      .x((_, i) => xs(i))
+      .y(d => ys(d.value))
+      .curve(curveCatmullRom.alpha(0.5))
+    const ar = d3Area<DataPoint>()
+      .x((_, i) => xs(i))
+      .y0(innerH)
+      .y1(d => ys(d.value))
+      .curve(curveCatmullRom.alpha(0.5))
     const pts = data.map((d, i) => ({ x: xs(i), y: ys(d.value), date: d.date, value: d.value }))
 
     return { line: ln, area: ar, points: pts }
@@ -86,41 +102,51 @@ export function D3Sparkline({
     path.style.strokeDasharray = `${length}`
     path.style.strokeDashoffset = `${length}`
     path.getBoundingClientRect()
-    const anim = path.animate(
-      [{ strokeDashoffset: `${length}` }, { strokeDashoffset: '0' }],
-      { duration: 1200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
-    )
+    const anim = path.animate([{ strokeDashoffset: `${length}` }, { strokeDashoffset: '0' }], {
+      duration: 1200,
+      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      fill: 'forwards',
+    })
     animatedRef.current = true
     return () => anim.cancel()
   }, [animate])
 
-  const setClosestHoveredPoint = useCallback((clientX: number) => {
-    if (!showTooltip || !points.length || !containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const pointerX = clientX - rect.left - margin.left
-    let closest = 0
-    let minDist = Infinity
-    for (let i = 0; i < points.length; i++) {
-      const pt = points[i]
-      if (!pt) continue
-      const dist = Math.abs(pt.x - pointerX)
-      if (dist < minDist) {
-        minDist = dist
-        closest = i
+  const setClosestHoveredPoint = useCallback(
+    (clientX: number) => {
+      if (!showTooltip || !points.length || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const pointerX = clientX - rect.left - margin.left
+      let closest = 0
+      let minDist = Infinity
+      for (let i = 0; i < points.length; i++) {
+        const pt = points[i]
+        if (!pt) continue
+        const dist = Math.abs(pt.x - pointerX)
+        if (dist < minDist) {
+          minDist = dist
+          closest = i
+        }
       }
-    }
-    setHoveredIdx(closest)
-  }, [points, showTooltip, margin.left])
+      setHoveredIdx(closest)
+    },
+    [points, showTooltip, margin.left]
+  )
 
-  const handleTouch = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
-    const touch = e.touches[0]
-    if (!touch) return
-    setClosestHoveredPoint(touch.clientX)
-  }, [setClosestHoveredPoint])
+  const handleTouch = useCallback(
+    (e: React.TouchEvent<SVGSVGElement>) => {
+      const touch = e.touches[0]
+      if (!touch) return
+      setClosestHoveredPoint(touch.clientX)
+    },
+    [setClosestHoveredPoint]
+  )
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    setClosestHoveredPoint(e.clientX)
-  }, [setClosestHoveredPoint])
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      setClosestHoveredPoint(e.clientX)
+    },
+    [setClosestHoveredPoint]
+  )
 
   if (!data.length || !line || !area || width <= 0) {
     return (
@@ -179,22 +205,39 @@ export function D3Sparkline({
             className="drop-shadow-[0_1px_2px_oklch(from_var(--primary)_l_c_h/30%)]"
           />
 
-          {showDots && points.map((pt, i) => (
-            <circle
-              key={`${pt.date}-${pt.value}`}
-              cx={pt.x}
-              cy={pt.y}
-              r={hoveredIdx === i ? 4 : 2}
-              fill={color}
-              className="transition-all duration-150"
-              style={{ opacity: hoveredIdx === i ? 1 : 0.5 }}
-            />
-          ))}
+          {showDots &&
+            points.map((pt, i) => (
+              <circle
+                key={`${pt.date}-${pt.value}`}
+                cx={pt.x}
+                cy={pt.y}
+                r={hoveredIdx === i ? 4 : 2}
+                fill={color}
+                className="transition-all duration-150"
+                style={{ opacity: hoveredIdx === i ? 1 : 0.5 }}
+              />
+            ))}
 
           {hovered && (
             <>
-              <line x1={hovered.x} y1={0} x2={hovered.x} y2={innerH} stroke={color} strokeWidth={1} strokeDasharray="2,2" opacity={0.4} />
-              <circle cx={hovered.x} cy={hovered.y} r={5} fill="var(--background)" stroke={color} strokeWidth={2} />
+              <line
+                x1={hovered.x}
+                y1={0}
+                x2={hovered.x}
+                y2={innerH}
+                stroke={color}
+                strokeWidth={1}
+                strokeDasharray="2,2"
+                opacity={0.4}
+              />
+              <circle
+                cx={hovered.x}
+                cy={hovered.y}
+                r={5}
+                fill="var(--background)"
+                stroke={color}
+                strokeWidth={2}
+              />
             </>
           )}
         </g>
@@ -228,11 +271,18 @@ export function MiniSparkline({
 }) {
   const path = useMemo(() => {
     if (data.length < 2) return ''
-    const x = d3.scaleLinear().domain([0, data.length - 1]).range([1, width - 1])
-    const ext = d3.extent(data) as [number, number]
+    const x = scaleLinear()
+      .domain([0, data.length - 1])
+      .range([1, width - 1])
+    const ext = extent(data) as [number, number]
     const pad = (ext[1] - ext[0]) * 0.15 || 1
-    const y = d3.scaleLinear().domain([ext[0] - pad, ext[1] + pad]).range([height - 2, 2])
-    const ln = d3.line<number>().x((_, i) => x(i)).y(d => y(d)).curve(d3.curveCatmullRom.alpha(0.5))
+    const y = scaleLinear()
+      .domain([ext[0] - pad, ext[1] + pad])
+      .range([height - 2, 2])
+    const ln = d3Line<number>()
+      .x((_, i) => x(i))
+      .y(d => y(d))
+      .curve(curveCatmullRom.alpha(0.5))
     return ln(data) ?? ''
   }, [data, width, height])
 
@@ -240,7 +290,10 @@ export function MiniSparkline({
 
   const last = data[data.length - 1]
   const first = data[0]
-  const trendColor = last !== undefined && first !== undefined && last >= first ? 'var(--positive)' : 'var(--negative)'
+  const trendColor =
+    last !== undefined && first !== undefined && last >= first
+      ? 'var(--positive)'
+      : 'var(--negative)'
 
   return (
     <svg
@@ -249,7 +302,14 @@ export function MiniSparkline({
       className={`inline-block ${className ?? ''}`}
       style={{ width, height }}
     >
-      <path d={path} fill="none" stroke={color === 'auto' ? trendColor : color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={path}
+        fill="none"
+        stroke={color === 'auto' ? trendColor : color}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }

@@ -1,6 +1,7 @@
 export * from './finance/amount'
 export * from './finance/percent-change'
 export * from './finance/progress'
+export * from './data/data-table'
 export * from './status/status'
 export * from './status/valuation-state'
 export * from './ui/avatar'

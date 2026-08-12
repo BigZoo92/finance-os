@@ -1,14 +1,26 @@
-import { Button, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
-import { DownloadPixelIcon, ReceiptPixelIcon } from '@finance-os/ui/icons/pixel'
+import {
+  Button,
+  CurrencyAmount,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Freshness,
+  Input,
+  SegmentedControl,
+  Status,
+} from '@finance-os/ui/components'
+import { DownloadPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { z } from 'zod'
+import { TransactionsTable } from '@/components/data/transactions-table'
 import { ExpenseStructureCard } from '@/components/dashboard/expense-structure-card'
 import { MonthlyCategoryBudgetsCard } from '@/components/dashboard/monthly-category-budgets-card'
-import { PersonalEmptyState } from '@/components/personal/personal-ux'
-import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { PageHeader } from '@/components/surfaces/page-header'
-import { RangePill } from '@/components/surfaces/range-pill'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
@@ -19,17 +31,17 @@ import {
   dashboardTransactionsInfiniteQueryOptionsWithMode,
 } from '@/features/dashboard-query-options'
 import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
+import { buildExpensePeriodViewModel } from '@/features/expenses-view-model'
 import { exportTransactionsCsv } from '@/lib/export'
-import { formatDate, formatMoney, toErrorMessage } from '@/lib/format'
+import { toErrorMessage } from '@/lib/format'
 import { pushToast } from '@/lib/toast-store'
 
-const searchSchema = z.object({
-  range: z.enum(['7d', '30d', '90d']).optional(),
-})
+type Transaction = DashboardTransactionsResponse['items'][number]
+type ClassificationDraft = { category: string; subcategory: string; tags: string }
 
-const resolveRange = (value: string | undefined): DashboardRange => {
-  return value === '7d' || value === '90d' ? value : '30d'
-}
+const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
+const resolveRange = (value: string | undefined): DashboardRange =>
+  value === '7d' || value === '90d' ? value : '30d'
 
 export const Route = createFileRoute('/_app/depenses')({
   validateSearch: search => searchSchema.parse(search),
@@ -39,7 +51,6 @@ export const Route = createFileRoute('/_app/depenses')({
     const mode: AuthMode | undefined =
       auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
-
     await Promise.all([
       context.queryClient.ensureQueryData(
         dashboardSummaryQueryOptionsWithMode({ range: deps.range, mode })
@@ -53,9 +64,9 @@ export const Route = createFileRoute('/_app/depenses')({
 })
 
 const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
-  { label: '7j', value: '7d' },
-  { label: '30j', value: '30d' },
-  { label: '90j', value: '90d' },
+  { label: '7 j', value: '7d' },
+  { label: '30 j', value: '30d' },
+  { label: '90 j', value: '90d' },
 ]
 
 function DepensesPage() {
@@ -63,7 +74,6 @@ function DepensesPage() {
   const range = resolveRange(searchRange)
   const navigate = Route.useNavigate()
   const queryClient = useQueryClient()
-
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
@@ -80,66 +90,57 @@ function DepensesPage() {
       ...(authMode ? { mode: authMode } : {}),
     })
   )
-
-  const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
   const summaryQuery = useQuery(
     dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) })
   )
-  const totalExpenses = transactions
-    .filter(transaction => transaction.direction === 'expense')
-    .reduce((sum, transaction) => sum + Math.abs(transaction.amount), 0)
-  const totalIncomes = transactions
-    .filter(transaction => transaction.direction === 'income')
-    .reduce((sum, transaction) => sum + transaction.amount, 0)
-  const netFlow = totalIncomes - totalExpenses
-  const uncategorizedTransactions = transactions.filter(transaction => !transaction.category)
+  const transactions = transactionsQuery.data?.pages.flatMap(page => page.items) ?? []
+  const period = buildExpensePeriodViewModel(summaryQuery.data)
+  const firstPage = transactionsQuery.data?.pages[0]
+  const uncategorizedCount = transactions.filter(transaction => !transaction.category).length
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
 
   const classifyMutation = useMutation({
-    mutationFn: async (transaction: DashboardTransactionsResponse['items'][number]) => {
-      if (!isAdmin) throw new Error('Admin session required')
-      const categoryInput = window.prompt('Catégorie', transaction.category ?? '')
-      if (categoryInput === null) throw new Error('Annulé')
-      const subcategoryInput = window.prompt('Sous-catégorie', transaction.subcategory ?? '')
-      if (subcategoryInput === null) throw new Error('Annulé')
-      const tagsInput = window.prompt('Tags (virgules)', transaction.tags.join(', '))
-      if (tagsInput === null) throw new Error('Annulé')
-      const tags = tagsInput
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t.length > 0)
-      const category = categoryInput.trim()
-      const subcategory = subcategoryInput.trim()
+    mutationFn: async ({
+      transaction,
+      draft,
+    }: {
+      transaction: Transaction
+      draft: ClassificationDraft
+    }) => {
+      if (!isAdmin) throw new Error('Session admin requise')
       return patchTransactionClassification({
         transactionId: transaction.id,
-        category: category.length > 0 ? category : null,
-        subcategory: subcategory.length > 0 ? subcategory : null,
+        category: draft.category.trim() || null,
+        subcategory: draft.subcategory.trim() || null,
         incomeType: null,
-        tags,
+        tags: draft.tags
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(Boolean),
       })
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: dashboardQueryKeys.transactions({ range, limit: 30 }),
       })
+      setEditingTransaction(null)
       pushToast({
         title: 'Classification sauvegardée',
-        description: 'Mise à jour effectuée.',
+        description: 'Catégorie mise à jour.',
         tone: 'success',
       })
     },
     onError: error => {
-      if (error instanceof Error && error.message === 'Annulé') return
       pushToast({ title: 'Échec', description: toErrorMessage(error), tone: 'error' })
     },
   })
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-9 md:space-y-11">
       <PageHeader
-        icon={<ReceiptPixelIcon size={12} />}
-        title="Dépenses & revenus"
+        title="Dépenses"
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -150,207 +151,215 @@ function DepensesPage() {
               <DownloadPixelIcon size={14} />
               Export CSV
             </Button>
-            <RangePill
-              layoutId="depenses-range"
-              ariaLabel="Période"
-              options={RANGE_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
+            <SegmentedControl
+              options={RANGE_OPTIONS}
               value={range}
               onChange={next => navigate({ search: { range: next } })}
+              aria-label="Période"
             />
-          </>
+          </div>
         }
       />
 
-      <section className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiTile
-            label="Dépenses"
-            value={totalExpenses}
-            display={formatMoney(totalExpenses)}
-            tone="negative"
-            loading={transactionsQuery.isPending}
-            hint={`${transactions.filter(transaction => transaction.direction === 'expense').length} sortie${transactions.filter(transaction => transaction.direction === 'expense').length > 1 ? 's' : ''}`}
-          />
-          <KpiTile
-            label="Revenus"
-            value={totalIncomes}
-            display={formatMoney(totalIncomes)}
-            tone="positive"
-            loading={transactionsQuery.isPending}
-            hint={`${transactions.filter(transaction => transaction.direction === 'income').length} entrée${transactions.filter(transaction => transaction.direction === 'income').length > 1 ? 's' : ''}`}
-          />
-          <KpiTile
-            label="Solde de période"
-            value={netFlow}
-            display={formatMoney(netFlow)}
-            tone={netFlow >= 0 ? 'positive' : 'negative'}
-            loading={transactionsQuery.isPending}
-            hint={netFlow >= 0 ? 'Flux net positif' : 'Flux net négatif'}
-          />
-          <KpiTile
-            label="À revoir"
-            value={uncategorizedTransactions.length}
-            display={String(uncategorizedTransactions.length)}
-            tone={uncategorizedTransactions.length > 0 ? 'warning' : 'plain'}
-            loading={transactionsQuery.isPending}
-            hint="Transactions sans catégorie"
-          />
-        </div>
+      <section className="grid gap-6 border-y border-border py-6 sm:grid-cols-3">
+        <PeriodValue
+          label="Dépenses"
+          value={period.expenses}
+          currency={period.currency}
+          tone="negative"
+        />
+        <PeriodValue
+          label="Revenus"
+          value={period.incomes}
+          currency={period.currency}
+          tone="positive"
+        />
+        <PeriodValue
+          label="Solde"
+          value={period.net}
+          currency={period.currency}
+          tone={period.net !== null && period.net < 0 ? 'negative' : 'positive'}
+        />
+      </section>
+      {period.currency === null && summaryQuery.data ? (
+        <Status tone="attention" label="Totaux indisponibles pour plusieurs devises" />
+      ) : summaryQuery.isError && !summaryQuery.data ? (
+        <Status tone="negative" label="Totaux indisponibles" />
+      ) : null}
+
+      <section className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:gap-14">
+        <ExpenseStructureCard model={period} />
+        <MonthlyCategoryBudgetsCard isAdmin={isAdmin} isDemo={isDemo} />
       </section>
 
-      {/* Expense structure + budgets */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <ExpenseStructureCard range={range} transactions={transactions} demo={isDemo} />
-        <MonthlyCategoryBudgetsCard isAdmin={isAdmin} isDemo={isDemo} transactions={transactions} />
-      </div>
+      <section aria-labelledby="transactions-title">
+        <div className="flex flex-wrap items-end justify-between gap-4 pb-4">
+          <div>
+            <h2
+              id="transactions-title"
+              className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
+            >
+              Transactions
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {transactions.length} chargée{transactions.length > 1 ? 's' : ''}
+              {transactionsQuery.hasNextPage ? ', liste partielle' : ''}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            {uncategorizedCount > 0 ? (
+              <Status tone="attention" label={`${uncategorizedCount} à classer`} />
+            ) : null}
+            <Freshness asOf={firstPage?.freshness.lastSyncedAt} />
+          </div>
+        </div>
 
-      {/* Transactions table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Dernières transactions</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {summaryQuery.isError
-              ? 'Données indisponibles pour l’instant, la liste reste utilisable si elle est déjà en cache.'
-              : `${transactions.length} transaction${transactions.length > 1 ? 's' : ''} chargée${transactions.length > 1 ? 's' : ''} sur ${range}.`}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {transactionsQuery.isPending ? (
-            <div className="space-y-3">
-              {Array.from(
-                { length: 5 },
-                (_, index) => `expense-transaction-skeleton-${index + 1}`
-              ).map(key => (
-                <div key={key} className="h-12 animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : transactions.length === 0 ? (
-            <PersonalEmptyState
-              title="Aucune transaction pour cette période"
-              description="Essaie 90 jours ou vérifie les intégrations si tu attends des mouvements bancaires."
-            />
-          ) : (
-            <>
-              {/* Desktop table — hidden on mobile */}
-              <div className="hidden md:block overflow-x-auto -mx-6">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      <th className="px-6 py-3">Date</th>
-                      <th className="px-6 py-3">Libellé</th>
-                      <th className="px-6 py-3">Catégorie</th>
-                      <th className="px-6 py-3 text-right">Montant</th>
-                      {isAdmin && <th className="px-6 py-3" />}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map(tx => (
-                      <tr
-                        key={tx.id}
-                        className="border-b border-border/50 transition-colors hover:bg-surface-1"
-                        style={{ transitionDuration: 'var(--duration-fast)' }}
-                      >
-                        <td className="whitespace-nowrap px-6 py-3 text-muted-foreground">
-                          {formatDate(tx.bookingDate)}
-                        </td>
-                        <td className="px-6 py-3">
-                          <p className="font-medium">{tx.label}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {tx.accountName ?? tx.powensAccountId}
-                          </p>
-                        </td>
-                        <td className="px-6 py-3">
-                          <span className="text-xs text-muted-foreground">
-                            {tx.category ?? 'Non catégorisé'}
-                            {tx.subcategory ? ` / ${tx.subcategory}` : ''}
-                          </span>
-                          {!tx.category ? (
-                            <span className="ml-2 rounded-full border border-warning/25 bg-warning/10 px-2 py-0.5 text-[10px] text-warning">
-                              à classer
-                            </span>
-                          ) : null}
-                        </td>
-                        <td
-                          className={`whitespace-nowrap px-6 py-3 text-right font-financial font-medium ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}
-                        >
-                          {formatMoney(tx.amount, tx.currency)}
-                        </td>
-                        {isAdmin && (
-                          <td className="px-6 py-3">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs"
-                              disabled={classifyMutation.isPending}
-                              onClick={() => classifyMutation.mutate(tx)}
-                            >
-                              Éditer
-                            </Button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        {transactionsQuery.isPending ? (
+          <Status tone="progress" label="Chargement" className="border-y border-border py-8" />
+        ) : transactionsQuery.isError && transactions.length === 0 ? (
+          <div className="border border-dashed border-border p-6">
+            <Status tone="negative" label="Transactions indisponibles" />
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="border border-dashed border-border p-6 text-sm text-muted-foreground">
+            Aucune transaction pour cette période
+          </div>
+        ) : (
+          <TransactionsTable
+            transactions={transactions}
+            isAdmin={isAdmin}
+            editing={classifyMutation.isPending}
+            onEdit={setEditingTransaction}
+          />
+        )}
 
-              {/* Mobile card list */}
-              <div className="space-y-2 md:hidden">
-                {transactions.map(tx => (
-                  <div
-                    key={tx.id}
-                    className="rounded-xl px-3 py-3 transition-colors duration-150 hover:bg-surface-1 active:scale-[0.99]"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{tx.label}</p>
-                        <p className="text-sm text-muted-foreground/60">
-                          {formatDate(tx.bookingDate)} · {tx.category ?? 'Non catégorisé'}
-                          {tx.subcategory ? ` / ${tx.subcategory}` : ''}
-                        </p>
-                      </div>
-                      <p
-                        className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}
-                      >
-                        {formatMoney(tx.amount, tx.currency)}
-                      </p>
-                    </div>
-                    {isAdmin ? (
-                      <div className="pt-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          disabled={classifyMutation.isPending}
-                          onClick={() => classifyMutation.mutate(tx)}
-                        >
-                          Éditer la catégorie
-                        </Button>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
+        {transactionsQuery.hasNextPage ? (
+          <div className="flex justify-center pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => transactionsQuery.fetchNextPage()}
+              disabled={transactionsQuery.isFetchingNextPage}
+            >
+              {transactionsQuery.isFetchingNextPage ? 'Chargement' : 'Afficher plus'}
+            </Button>
+          </div>
+        ) : null}
+      </section>
 
-              {transactionsQuery.hasNextPage && (
-                <div className="flex justify-center pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => transactionsQuery.fetchNextPage()}
-                    disabled={transactionsQuery.isFetchingNextPage}
-                  >
-                    {transactionsQuery.isFetchingNextPage ? 'Chargement...' : 'Charger plus'}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {editingTransaction ? (
+        <TransactionCategoryEditor
+          transaction={editingTransaction}
+          pending={classifyMutation.isPending}
+          onClose={() => !classifyMutation.isPending && setEditingTransaction(null)}
+          onSave={draft => classifyMutation.mutate({ transaction: editingTransaction, draft })}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function PeriodValue({
+  label,
+  value,
+  currency,
+  tone,
+}: {
+  label: string
+  value: number | null
+  currency: string | null
+  tone: 'positive' | 'negative'
+}) {
+  return (
+    <div>
+      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <CurrencyAmount
+        value={value}
+        currency={currency}
+        className={`mt-2 block text-xl font-medium ${tone === 'negative' ? 'text-negative' : 'text-positive'}`}
+      />
+    </div>
+  )
+}
+
+function TransactionCategoryEditor({
+  transaction,
+  pending,
+  onClose,
+  onSave,
+}: {
+  transaction: Transaction
+  pending: boolean
+  onClose: () => void
+  onSave: (draft: ClassificationDraft) => void
+}) {
+  const [draft, setDraft] = useState<ClassificationDraft>({
+    category: transaction.category ?? '',
+    subcategory: transaction.subcategory ?? '',
+    tags: transaction.tags.join(', '),
+  })
+  return (
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogContent className="max-w-md max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:rounded-t-frame">
+        <DialogHeader>
+          <DialogTitle>Modifier la catégorie</DialogTitle>
+          <DialogDescription>{transaction.label}</DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={event => {
+            event.preventDefault()
+            onSave(draft)
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-2">
+            <label htmlFor="transaction-category" className="text-sm font-medium">
+              Catégorie
+            </label>
+            <Input
+              id="transaction-category"
+              value={draft.category}
+              onChange={event =>
+                setDraft(current => ({ ...current, category: event.target.value }))
+              }
+              autoFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="transaction-subcategory" className="text-sm font-medium">
+              Sous-catégorie
+            </label>
+            <Input
+              id="transaction-subcategory"
+              value={draft.subcategory}
+              onChange={event =>
+                setDraft(current => ({ ...current, subcategory: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="transaction-tags" className="text-sm font-medium">
+              Tags
+            </label>
+            <Input
+              id="transaction-tags"
+              value={draft.tags}
+              onChange={event => setDraft(current => ({ ...current, tags: event.target.value }))}
+              placeholder="Séparés par des virgules"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Enregistrement' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
