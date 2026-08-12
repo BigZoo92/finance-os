@@ -7,14 +7,15 @@ import {
   HeadContent,
   Scripts,
 } from '@tanstack/react-router'
-import { getGlobalStartContext } from '@tanstack/react-start'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { ToastViewport } from '@/components/toast-viewport'
+import { getGlobalStartContext } from '@tanstack/react-start'
 import { PwaInstallPrompt } from '@/components/pwa-install-prompt'
+import { ToastViewport } from '@/components/toast-viewport'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
 import { getPublicRuntimeEnvScript, readPublicRuntimeEnv } from '@/lib/public-runtime-env'
 import { logSsrError } from '@/lib/ssr-logger'
+import { themeBootstrapScript } from '@/lib/theme'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
@@ -73,7 +74,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { title: String(appTitle) },
         { name: 'robots', content: 'noindex, nofollow, noarchive' },
-        { name: 'theme-color', content: '#0f0f12' },
+        { name: 'theme-color', content: '#242019' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],
@@ -114,9 +115,13 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className="dark">
+    // SSR renders dark (canonical default). The inline bootstrap corrects
+    // the class before first paint from the persisted or system preference,
+    // so the class may legitimately differ at hydration time.
+    <html lang="fr" className="dark" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script>{themeBootstrapScript}</script>
         <script>{getPublicRuntimeEnvScript()}</script>
       </head>
       <body>

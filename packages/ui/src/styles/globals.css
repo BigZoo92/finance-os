@@ -6,14 +6,16 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────────
- * Finance-OS — Command Pixel design tokens
+ * Finance-OS — Command Pixel V1 design tokens
  * ─────────────────────────────────────────────────────────────────
- * Direction artistique : cockpit financier personnel, dense, chaud
- * et précis. Rose magenta comme signature de marque, violet
- * électrique en accent secondaire. Palette pensée pour la lisibilité
- * des données, sur dark et light, avec des couleurs sémantiques
- * finance toujours dissociées de la couleur d'identité.
+ * Palette canonique : Soft Orange Cream.
+ * Fondations sombres graphite chaud et brun-noir, texte crème,
+ * orange signal comme accent signature. Sémantique financière
+ * (positive, warning, negative) toujours dissociée de la couleur
+ * d'identité. Teal contenu en support secondaire. Mode sombre
+ * canonique, mode clair natif crème chaud et graphite encre.
  *
+ * Valeurs canoniques : .design/command-pixel-v1/tokens/design-tokens.json
  * Source de vérité visuelle : DESIGN.md
  * ─────────────────────────────────────────────────────────────── */
 
@@ -50,15 +52,22 @@
   --color-negative: var(--negative);
   --color-warning: var(--warning);
 
-  /* Brand accents — pink primary + electric violet secondary */
+  /* Canonical support accents */
+  --color-teal: var(--teal);
+  --color-warm-accent: var(--warm-accent);
+  --color-ai: var(--ai);
+
+  /* MIGRATION COMPAT — legacy brand accents (ex rose/violet).
+   * Tamed toward the canonical palette. Do not build new UI on
+   * these tokens; their removal belongs to later phases. */
   --color-accent-2: var(--accent-2);
   --color-accent-2-foreground: var(--accent-2-foreground);
   --color-aurora-a: var(--aurora-a);
   --color-aurora-b: var(--aurora-b);
   --color-aurora-c: var(--aurora-c);
 
-  /* Chart palette — 7 harmonious colors for data viz.
-   * Pink → violet → indigo → emerald → gold → plum → coral */
+  /* Chart palette — Soft Orange Cream data viz.
+   * Orange → teal → warm accent → green → amber → coral → AI violet (rare) */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -67,15 +76,25 @@
   --color-chart-6: var(--chart-6);
   --color-chart-7: var(--chart-7);
 
-  /* Radius */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* Radius — canonical restrained ladder.
+   * tile 6, icon tile 7, control 8, dropdown 10, surface 12, frame 14.
+   * 14px is the maximum for standard product surfaces: legacy
+   * rounded-xl/2xl/3xl usages are intentionally capped. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 10px);
-  --radius-3xl: calc(var(--radius) + 18px);
+  --radius-xl: 14px;
+  --radius-2xl: 14px;
+  --radius-3xl: 14px;
+  --radius-tile: 6px;
+  --radius-icon-tile: 7px;
+  --radius-control: 8px;
+  --radius-dropdown: 10px;
+  --radius-surface: 12px;
+  --radius-frame: 14px;
 
-  /* Sidebar */
+  /* MIGRATION COMPAT — legacy sidebar tokens (the permanent sidebar
+   * is scheduled for replacement by the floating navbar). */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -85,10 +104,12 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Typography */
-  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
-  --font-display: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Typography — Geist only. Pixel is reserved for rare
+   * micro-signature states, never body copy. */
+  --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-pixel: "Geist Pixel", "Geist Mono Variable", ui-monospace, monospace;
+  --font-display: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
 
   /* Motion — easing curves */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -97,25 +118,37 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-aurora: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Motion — durations */
+  /* Motion — durations (canonical functional range 120 à 180 ms) */
   --duration-fast: 120ms;
-  --duration-normal: 200ms;
+  --duration-normal: 180ms;
   --duration-slow: 350ms;
   --duration-enter: 280ms;
   --duration-exit: 180ms;
 
-  /* Shadow system — reworked to carry the pink signature */
+  /* Elevation — restrained neutral shadows, no brand glow */
   --shadow-xs: 0 1px 2px oklch(0 0 0 / 6%);
   --shadow-sm: 0 1px 3px oklch(0 0 0 / 10%), 0 1px 2px oklch(0 0 0 / 5%);
   --shadow-md: 0 4px 10px oklch(0 0 0 / 8%), 0 2px 4px oklch(0 0 0 / 4%);
   --shadow-lg: 0 12px 28px oklch(0 0 0 / 10%), 0 4px 8px oklch(0 0 0 / 4%);
   --shadow-xl: 0 24px 48px oklch(0 0 0 / 14%), 0 8px 16px oklch(0 0 0 / 6%);
-  --shadow-brand: 0 0 0 1px oklch(from var(--primary) l c h / 12%),
-                   0 14px 40px -10px oklch(from var(--primary) l c h / 28%);
-  --shadow-glow: 0 0 20px oklch(from var(--primary) l c h / 22%),
-                  0 0 4px oklch(from var(--primary) l c h / 14%);
-  --shadow-glow-violet: 0 0 20px oklch(from var(--accent-2) l c h / 22%),
-                         0 0 4px oklch(from var(--accent-2) l c h / 14%);
+
+  /* Elevation semantics — base surface, raised control,
+   * floating popover, overlay drawer/modal */
+  --shadow-surface: 0 1px 3px oklch(0 0 0 / 10%), 0 1px 2px oklch(0 0 0 / 5%);
+  --shadow-raised: 0 4px 10px oklch(0 0 0 / 8%), 0 2px 4px oklch(0 0 0 / 4%);
+  --shadow-floating: 0 12px 28px oklch(0 0 0 / 10%), 0 4px 8px oklch(0 0 0 / 4%);
+  --shadow-overlay: 0 24px 48px oklch(0 0 0 / 14%), 0 8px 16px oklch(0 0 0 / 6%);
+
+  /* MIGRATION COMPAT — legacy brand shadows, tamed. Orange never
+   * becomes a generic glow: keyline + neutral depth only. */
+  --shadow-brand:
+    0 0 0 1px oklch(from var(--primary) l c h / 10%), 0 10px 30px -12px oklch(0 0 0 / 30%);
+  --shadow-glow:
+    0 0 0 1px oklch(from var(--primary) l c h / 14%),
+    0 0 10px oklch(from var(--primary) l c h / 10%);
+  --shadow-glow-violet:
+    0 0 0 1px oklch(from var(--accent-2) l c h / 14%),
+    0 0 10px oklch(from var(--accent-2) l c h / 10%);
 }
 
 @layer base {
@@ -124,13 +157,14 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv11", "ss01", "ss03";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   /* Respect reduced motion globally for decorative animations */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       /* biome-ignore lint/complexity/noImportantStyles: Accessibility override must win over component animation declarations. */
       animation-duration: 0.01ms !important;
       /* biome-ignore lint/complexity/noImportantStyles: Accessibility override must win over component animation declarations. */
@@ -141,158 +175,183 @@
   }
 }
 
-/* ─── Light theme — warm pearl with pink undertone ─────────────── */
+/* ─── Light theme — warm cream, ink graphite, signal orange ────── */
 
 :root {
-  --radius: 0.75rem;
+  color-scheme: light;
 
-  /* Surfaces — warm pearl, not clinical white */
-  --background: oklch(0.975 0.006 355);
-  --foreground: oklch(0.16 0.02 325);
-  --card: oklch(0.99 0.004 355);
-  --card-foreground: oklch(0.16 0.02 325);
-  --popover: oklch(0.99 0.003 355);
-  --popover-foreground: oklch(0.16 0.02 325);
+  --radius: 12px;
 
-  /* Surface depth — subtle warm gradient, deeper than card */
-  --surface-0: oklch(0.965 0.008 355);
-  --surface-1: oklch(0.985 0.005 355);
-  --surface-2: oklch(1 0 0);
-  --surface-3: oklch(0.995 0.003 355);
+  /* Z-index foundation — navbar, overlays, toasts */
+  --z-navbar: 30;
+  --z-mobile-nav: 30;
+  --z-dropdown: 40;
+  --z-popover: 50;
+  --z-drawer: 60;
+  --z-modal: 70;
+  --z-toast: 80;
 
-  /* Primary — magenta rose, deep enough for WCAG AA on light */
-  --primary: oklch(0.58 0.21 355);
-  --primary-foreground: oklch(0.985 0.008 355);
+  /* Surfaces — warm cream and off-white (canonical light values) */
+  --background: #f5efe3;
+  --foreground: #221e17;
+  --card: #fcfaf4;
+  --card-foreground: #221e17;
+  --popover: #ffffff;
+  --popover-foreground: #221e17;
 
-  /* Secondary surface */
-  --secondary: oklch(0.93 0.012 325);
-  --secondary-foreground: oklch(0.20 0.025 325);
+  /* Surface depth — canvas, surface, raised */
+  --surface-0: #f5efe3;
+  --surface-1: #fcfaf4;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
 
-  /* Muted */
-  --muted: oklch(0.93 0.01 325);
-  --muted-foreground: oklch(0.44 0.025 325);
+  /* Primary — signal orange (light variant) */
+  --primary: #de5e1e;
+  --primary-foreground: #fff9f0;
 
-  /* Accent (brand-adjacent surface) */
-  --accent: oklch(0.945 0.02 355);
-  --accent-foreground: oklch(0.25 0.04 355);
-
-  /* Accent 2 — electric violet (complementary, H≈295) */
-  --accent-2: oklch(0.52 0.24 295);
-  --accent-2-foreground: oklch(0.98 0.01 295);
-
-  /* Aurora triad — decorative gradients & backgrounds */
-  --aurora-a: oklch(0.65 0.22 355); /* rose */
-  --aurora-b: oklch(0.58 0.24 320); /* magenta-plum */
-  --aurora-c: oklch(0.55 0.22 275); /* indigo-violet */
-
-  /* Destructive — keep coral distinct from brand pink (H≈25 vs 355) */
-  --destructive: oklch(0.54 0.24 25);
-  --destructive-foreground: oklch(0.98 0.008 25);
-
-  /* Utility */
-  --border: oklch(0.88 0.012 325);
-  --input: oklch(0.88 0.012 325);
-  --ring: oklch(0.58 0.21 355);
-
-  /* Financial semantic — deliberately NOT pink/violet */
-  --positive: oklch(0.46 0.18 160);
-  --negative: oklch(0.54 0.24 25);
-  --warning: oklch(0.62 0.18 70);
-
-  /* Chart palette — warm-to-cool, rose → violet → indigo → emerald */
-  --chart-1: oklch(0.62 0.22 355); /* rose */
-  --chart-2: oklch(0.56 0.22 295); /* violet */
-  --chart-3: oklch(0.54 0.20 255); /* indigo */
-  --chart-4: oklch(0.60 0.15 200); /* teal */
-  --chart-5: oklch(0.56 0.15 160); /* emerald */
-  --chart-6: oklch(0.62 0.16 70);  /* gold */
-  --chart-7: oklch(0.58 0.22 25);  /* coral */
-
-  /* Sidebar */
-  --sidebar: oklch(0.985 0.005 355);
-  --sidebar-foreground: oklch(0.18 0.02 325);
-  --sidebar-primary: oklch(0.58 0.21 355);
-  --sidebar-primary-foreground: oklch(0.98 0.008 355);
-  --sidebar-accent: oklch(0.955 0.015 355);
-  --sidebar-accent-foreground: oklch(0.26 0.04 355);
-  --sidebar-border: oklch(0.91 0.008 325);
-  --sidebar-ring: oklch(0.58 0.21 355);
-}
-
-/* ─── Dark theme — midnight plum, pink signature glow ──────────── */
-
-.dark {
-  /* Surfaces — deep midnight plum, not generic slate */
-  --background: oklch(0.12 0.02 325);
-  --foreground: oklch(0.96 0.01 355);
-  --card: oklch(0.16 0.025 325);
-  --card-foreground: oklch(0.96 0.01 355);
-  --popover: oklch(0.16 0.025 325);
-  --popover-foreground: oklch(0.96 0.01 355);
-
-  /* Surface depth — progressive elevation with subtle pink tilt */
-  --surface-0: oklch(0.12 0.02 325);
-  --surface-1: oklch(0.16 0.025 325);
-  --surface-2: oklch(0.20 0.028 325);
-  --surface-3: oklch(0.24 0.03 325);
-
-  /* Primary — vivid rose magenta, brighter in dark */
-  --primary: oklch(0.72 0.19 355);
-  --primary-foreground: oklch(0.14 0.04 355);
-
-  /* Secondary */
-  --secondary: oklch(0.22 0.028 325);
-  --secondary-foreground: oklch(0.94 0.008 355);
+  /* Secondary surface — warm neutral */
+  --secondary: #ede5d1;
+  --secondary-foreground: #221e17;
 
   /* Muted */
-  --muted: oklch(0.22 0.028 325);
-  --muted-foreground: oklch(0.64 0.02 325);
+  --muted: #ece4d2;
+  --muted-foreground: #5e5748;
 
-  /* Accent (brand-adjacent surface) */
-  --accent: oklch(0.24 0.05 355);
-  --accent-foreground: oklch(0.94 0.01 355);
+  /* Accent (brand-adjacent hover surface) */
+  --accent: #f3e3d0;
+  --accent-foreground: #3a2a1a;
 
-  /* Accent 2 — electric violet */
-  --accent-2: oklch(0.70 0.22 295);
-  --accent-2-foreground: oklch(0.14 0.04 295);
+  /* Canonical support accents */
+  --teal: #3e8578;
+  --warm-accent: #9c8557;
+  --ai: #6c5bd4;
 
-  /* Aurora triad */
-  --aurora-a: oklch(0.72 0.21 355);
-  --aurora-b: oklch(0.60 0.24 315);
-  --aurora-c: oklch(0.64 0.22 270);
+  /* MIGRATION COMPAT — legacy secondary accent (ex violet), tamed
+   * to the restrained teal. Do not build new UI on it. */
+  --accent-2: #3e8578;
+  --accent-2-foreground: #f5faf8;
 
-  /* Destructive — coral, clearly warmer than the brand pink */
-  --destructive: oklch(0.68 0.20 25);
-  --destructive-foreground: oklch(0.14 0.04 25);
+  /* MIGRATION COMPAT — legacy aurora triad, tamed to warm tones */
+  --aurora-a: #de5e1e;
+  --aurora-b: #9c8557;
+  --aurora-c: #3e8578;
 
-  /* Utility */
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 13%);
-  --ring: oklch(0.72 0.19 355);
+  /* Destructive — coral, genuine error states only */
+  --destructive: #b23e2c;
+  --destructive-foreground: #fbf5ec;
 
-  /* Financial semantic */
-  --positive: oklch(0.72 0.17 160);
-  --negative: oklch(0.70 0.19 25);
-  --warning: oklch(0.80 0.16 75);
+  /* Utility — warm ink lines (standard contour ≈ 16 %) */
+  --border: #221e1729;
+  --input: #221e1738;
+  --ring: #de5e1e;
+
+  /* Financial semantic — never the brand color */
+  --positive: #1c8a52;
+  --negative: #b23e2c;
+  --warning: #a97614;
 
   /* Chart palette */
-  --chart-1: oklch(0.74 0.21 355); /* rose */
-  --chart-2: oklch(0.70 0.22 295); /* violet */
-  --chart-3: oklch(0.70 0.17 255); /* indigo */
-  --chart-4: oklch(0.74 0.14 200); /* teal */
-  --chart-5: oklch(0.72 0.15 160); /* emerald */
-  --chart-6: oklch(0.78 0.15 75);  /* gold */
-  --chart-7: oklch(0.70 0.20 25);  /* coral */
+  --chart-1: #de5e1e;
+  --chart-2: #3e8578;
+  --chart-3: #9c8557;
+  --chart-4: #1c8a52;
+  --chart-5: #a97614;
+  --chart-6: #b23e2c;
+  --chart-7: #6c5bd4;
 
-  /* Sidebar */
-  --sidebar: oklch(0.14 0.022 325);
-  --sidebar-foreground: oklch(0.96 0.01 355);
-  --sidebar-primary: oklch(0.72 0.19 355);
-  --sidebar-primary-foreground: oklch(0.14 0.04 355);
-  --sidebar-accent: oklch(0.24 0.05 355);
-  --sidebar-accent-foreground: oklch(0.94 0.01 355);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.72 0.19 355);
+  /* MIGRATION COMPAT — legacy sidebar tokens */
+  --sidebar: #fcfaf4;
+  --sidebar-foreground: #221e17;
+  --sidebar-primary: #de5e1e;
+  --sidebar-primary-foreground: #fff9f0;
+  --sidebar-accent: #f3e3d0;
+  --sidebar-accent-foreground: #3a2a1a;
+  --sidebar-border: #221e1726;
+  --sidebar-ring: #de5e1e;
+}
+
+/* ─── Dark theme — warm graphite, cream text, signal orange ────── */
+
+.dark {
+  color-scheme: dark;
+
+  /* Surfaces — warm graphite and brown-black (canonical dark values) */
+  --background: #242019;
+  --foreground: #f6f1e6;
+  --card: #2c2720;
+  --card-foreground: #f6f1e6;
+  --popover: #302b23;
+  --popover-foreground: #f6f1e6;
+
+  /* Surface depth — canvas, surface, floating, high */
+  --surface-0: #242019;
+  --surface-1: #2c2720;
+  --surface-2: #302b23;
+  --surface-3: #363026;
+
+  /* Primary — signal orange */
+  --primary: #f97a3c;
+  --primary-foreground: #241c10;
+
+  /* Secondary */
+  --secondary: #363026;
+  --secondary-foreground: #f6f1e6;
+
+  /* Muted */
+  --muted: #322c24;
+  --muted-foreground: #a89e8b;
+
+  /* Accent (brand-adjacent hover surface) */
+  --accent: #3a2f22;
+  --accent-foreground: #f6f1e6;
+
+  /* Canonical support accents */
+  --teal: #6fb5aa;
+  --warm-accent: #dccba6;
+  --ai: #9b8ce8;
+
+  /* MIGRATION COMPAT — legacy secondary accent (ex violet), tamed
+   * to the restrained teal. Do not build new UI on it. */
+  --accent-2: #6fb5aa;
+  --accent-2-foreground: #182220;
+
+  /* MIGRATION COMPAT — legacy aurora triad, tamed to warm tones */
+  --aurora-a: #f97a3c;
+  --aurora-b: #dccba6;
+  --aurora-c: #6fb5aa;
+
+  /* Destructive — coral, genuine error states only */
+  --destructive: #e0685a;
+  --destructive-foreground: #241512;
+
+  /* Utility — warm cream lines (standard contour ≈ 16 %) */
+  --border: #f6f1e629;
+  --input: #f6f1e638;
+  --ring: #f97a3c;
+
+  /* Financial semantic — never the brand color */
+  --positive: #4cbb82;
+  --negative: #e0685a;
+  --warning: #d9a441;
+
+  /* Chart palette */
+  --chart-1: #f97a3c;
+  --chart-2: #6fb5aa;
+  --chart-3: #dccba6;
+  --chart-4: #4cbb82;
+  --chart-5: #d9a441;
+  --chart-6: #e0685a;
+  --chart-7: #9b8ce8;
+
+  /* MIGRATION COMPAT — legacy sidebar tokens */
+  --sidebar: #2c2720;
+  --sidebar-foreground: #f6f1e6;
+  --sidebar-primary: #f97a3c;
+  --sidebar-primary-foreground: #241c10;
+  --sidebar-accent: #3a2f22;
+  --sidebar-accent-foreground: #f6f1e6;
+  --sidebar-border: #f6f1e624;
+  --sidebar-ring: #f97a3c;
 }
 
 /* ─── Utility classes ─────────────────────────────────────────── */
@@ -309,7 +368,8 @@
   font-feature-settings: "tnum", "zero";
 }
 
-/* Premium glow on primary elements */
+/* MIGRATION COMPAT — legacy glow utilities, tamed to restrained
+ * keylines. Do not use in new UI. */
 .glow-primary {
   box-shadow: var(--shadow-glow);
 }
@@ -327,24 +387,33 @@
   );
 }
 
-/* Aurora mesh — decorative brand wash for hero / empty-state surfaces */
+/* MIGRATION COMPAT — legacy aurora mesh, now a warm tonal wash.
+ * Scheduled for removal with the surfaces that consume it. */
 .bg-aurora-mesh {
   background-image:
-    radial-gradient(60% 80% at 20% 15%, oklch(from var(--aurora-a) l c h / 18%) 0%, transparent 55%),
-    radial-gradient(50% 70% at 85% 25%, oklch(from var(--aurora-b) l c h / 14%) 0%, transparent 60%),
-    radial-gradient(70% 80% at 60% 110%, oklch(from var(--aurora-c) l c h / 20%) 0%, transparent 55%);
+    radial-gradient(60% 80% at 20% 15%, oklch(from var(--aurora-a) l c h / 10%) 0%, transparent 55%),
+    radial-gradient(50% 70% at 85% 25%, oklch(from var(--aurora-b) l c h / 8%) 0%, transparent 60%),
+    radial-gradient(
+      70% 80% at 60% 110%,
+      oklch(from var(--aurora-c) l c h / 10%) 0%,
+      transparent 55%
+    );
   background-attachment: local;
 }
 .bg-aurora-mesh-soft {
   background-image:
-    radial-gradient(55% 70% at 15% 10%, oklch(from var(--aurora-a) l c h / 10%) 0%, transparent 60%),
-    radial-gradient(60% 70% at 95% 0%, oklch(from var(--aurora-b) l c h / 8%) 0%, transparent 60%),
-    radial-gradient(70% 80% at 50% 120%, oklch(from var(--aurora-c) l c h / 10%) 0%, transparent 60%);
+    radial-gradient(55% 70% at 15% 10%, oklch(from var(--aurora-a) l c h / 6%) 0%, transparent 60%),
+    radial-gradient(60% 70% at 95% 0%, oklch(from var(--aurora-b) l c h / 5%) 0%, transparent 60%),
+    radial-gradient(70% 80% at 50% 120%, oklch(from var(--aurora-c) l c h / 6%) 0%, transparent 60%);
 }
 
 /* Dotted grid background — for hero sections */
 .bg-grid-dots {
-  background-image: radial-gradient(circle, oklch(from var(--foreground) l c h / 8%) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    oklch(from var(--foreground) l c h / 8%) 1px,
+    transparent 1px
+  );
   background-size: 22px 22px;
 }
 
@@ -372,7 +441,7 @@
 
 /* Grain noise overlay */
 .texture-grain::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   opacity: 0.04;
@@ -384,8 +453,12 @@
 
 /* Shimmer loading — more premium than pulse */
 @keyframes shimmer {
-  from { background-position: -200% 0; }
-  to { background-position: 200% 0; }
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
 }
 .animate-shimmer {
   background: linear-gradient(
@@ -400,25 +473,37 @@
 
 /* Pulse glow — subtle attention on alerts / sync-in-progress */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 35%); }
-  50% { box-shadow: 0 0 0 8px oklch(from var(--primary) l c h / 0%); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 35%);
+  }
+  50% {
+    box-shadow: 0 0 0 8px oklch(from var(--primary) l c h / 0%);
+  }
 }
 .animate-pulse-glow {
   animation: pulse-glow 2.2s ease-out infinite;
 }
 
-/* Aurora drift — slow brand gradient animation for hero accents */
+/* MIGRATION COMPAT — legacy aurora drift animation */
 @keyframes aurora-drift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 .animate-aurora {
   background-size: 220% 220%;
   animation: aurora-drift 18s ease-in-out infinite;
 }
 
-/* Glass surface — frosted brand-tinted glassmorphism, used sparingly */
+/* MIGRATION COMPAT — legacy glass surface. Glassmorphism is not
+ * part of Command Pixel; remove with its consumers. */
 .glass-surface {
   background: linear-gradient(
     135deg,
@@ -441,15 +526,14 @@
   );
 }
 
-/* Focus glow ring */
+/* Focus ring — visible, restrained */
 .focus-glow:focus-visible {
   box-shadow:
     0 0 0 2px var(--background),
-    0 0 0 4px oklch(from var(--primary) l c h / 45%),
-    0 0 14px oklch(from var(--primary) l c h / 22%);
+    0 0 0 4px oklch(from var(--primary) l c h / 45%);
 }
 
-/* Brand gradient text — use sparingly for hero titles */
+/* MIGRATION COMPAT — legacy gradient text, now warm tonal */
 .text-aurora {
   background-image: linear-gradient(
     92deg,
@@ -465,7 +549,9 @@
 
 /* Conic rotating halo — for brand marks */
 @keyframes halo-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .halo-spin {
   animation: halo-spin 12s linear infinite;
@@ -481,8 +567,14 @@
 
 /* Numeric diff animation helper */
 @keyframes number-flip {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-number-flip {
   animation: number-flip 320ms var(--ease-out-expo);
