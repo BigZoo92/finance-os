@@ -1,8 +1,10 @@
 /**
- * RangePill — shared segmented control for period/filter switches.
+ * RangePill — legacy segmented control for period/filter switches.
  *
- * Uses motion's layoutId to share a single animated pill across all
- * options. Works with any string or enum-shaped value.
+ * @deprecated The canonical primitive is `SegmentedControl` from
+ * `@finance-os/ui/components` (correct radio-group semantics, keyboard
+ * navigation, Command Pixel styling). RangePill is kept only until its
+ * remaining consumers migrate during the page phases, then removed.
  */
 import { motion } from 'motion/react'
 

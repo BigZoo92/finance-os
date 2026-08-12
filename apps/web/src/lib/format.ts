@@ -1,23 +1,16 @@
 /**
  * Shared formatting utilities for Finance-OS dashboard.
- * Extracted from app-shell to enable reuse across pages.
+ *
+ * Money and percentage formatting are owned by the canonical
+ * `@finance-os/ui/lib/format` module (null-aware, French conventions).
+ * `formatMoney` remains for existing non-null call sites; new code should
+ * use the `Amount`/`CurrencyAmount`/`PercentChange` primitives or
+ * `formatAmount` directly.
  */
+import { formatAmount } from '@finance-os/ui/lib/format'
 
-export const formatMoney = (value: number, currency = 'EUR') => {
-  try {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(value)
-  } catch {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 2,
-    }).format(value)
-  }
-}
+export const formatMoney = (value: number, currency = 'EUR') =>
+  formatAmount(value, { currency }) ?? ''
 
 export const formatDateTime = (value: string | null) => {
   if (!value) {

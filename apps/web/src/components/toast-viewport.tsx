@@ -16,7 +16,10 @@ export function ToastViewport() {
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-full max-w-sm flex-col gap-2">
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed bottom-24 right-4 z-[var(--z-toast)] flex w-full max-w-sm flex-col gap-2 lg:bottom-4"
+    >
       {toasts.map(toast => (
         <div
           key={toast.id}

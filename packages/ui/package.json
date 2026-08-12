@@ -6,6 +6,7 @@
   "exports": {
     "./styles.css": "./src/styles/globals.css",
     "./lib/utils": "./src/lib/utils.ts",
+    "./lib/format": "./src/lib/format.ts",
     "./components": "./src/components/index.ts",
     "./components/*": "./src/components/*",
     "./icons/types": "./src/icons/types.ts",
@@ -17,7 +18,8 @@
     "react-dom": "^19.0.0"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -30,6 +32,9 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vitest": "^3.0.5"
   }
 }

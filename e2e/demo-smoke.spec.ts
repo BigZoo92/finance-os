@@ -65,7 +65,7 @@ test('demo cockpit boots and auth/me stays safe', async ({ page, request }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   const body = page.locator('body')
-  await expect(body).toContainText(/Finance OS/i)
+  await expect(body).toContainText(/Finance[- ]OS/i)
   await expect(body).toContainText(/cockpit/i)
   await expect(body).toContainText(/mode/i)
   await expect(body).not.toContainText(

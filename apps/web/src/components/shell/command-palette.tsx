@@ -1,74 +1,85 @@
+/**
+ * CommandPalette — cmdk navigation palette, Command Pixel restyle.
+ *
+ * Rendered inside the canonical Dialog primitive so it inherits real
+ * dialog semantics (focus trap, Escape, scroll lock, focus restoration).
+ * The keyboard shortcut never fires while typing in an editable field.
+ */
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@finance-os/ui/components'
 import { SearchPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { Store, useStore } from '@tanstack/react-store'
 import { Command } from 'cmdk'
-import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { isNavItemVisible, NAV_GROUPS, NAV_ITEMS } from './nav-items'
+import { getPaletteLinks, NAV_ENTRIES, SECONDARY_LINKS, type NavLink } from './nav-items'
+import { NavIconTile } from './nav-icon-tile'
 
-const KEYWORDS: Record<string, string> = {
-  '/': 'accueil home dashboard vue ensemble quotidien',
-  '/depenses': 'transactions budgets projections quotidien',
-  '/patrimoine': 'actifs soldes assets wealth',
-  '/investissements': 'positions portfolio bourse invest',
-  '/objectifs': 'goals épargne cibles progression',
-  '/integrations': 'powens sync banque connexion provider admin expert',
-  '/sante': 'health diagnostics système admin expert',
-  '/orchestration': 'refresh daily intelligence cron jobs ops orchestration sync admin',
-  '/ia': 'advisor IA briefing recommandations intelligence artificielle conseils vue ia',
-  '/ia/strategie-investissement':
-    'investissement strategie allocation 60 30 10 pea ibkr binance plan action advisor',
-  '/ia/chat': 'chat conversation question reponse advisor dialogue',
-  '/ia/memoire': 'graphe connaissances memoire contexte',
-  '/ia/trading-lab': 'trading lab papier paper backtest recherche strategies expert',
-  '/ia/couts': 'tokens couts budget modeles llm depenses ia usage admin expert',
-  '/signaux': 'news actualites feed flux macro signal briefing donnees brutes expert',
-  '/signaux/marches': 'macro watchlist regime taux inflation fred eodhd marches bourse expert',
-  '/signaux/social':
-    'social intelligence x twitter bluesky comptes surveilles lookup handle sync j-1 previous day budget admin expert',
+const paletteOpenStore = new Store(false)
+
+export const openCommandPalette = () => paletteOpenStore.setState(() => true)
+export const closeCommandPalette = () => paletteOpenStore.setState(() => false)
+export const toggleCommandPalette = () => paletteOpenStore.setState(open => !open)
+
+/** True when a keyboard event originates from an editable control. */
+export const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if (target.isContentEditable) return true
+  return target.closest('[contenteditable]:not([contenteditable="false"])') !== null
 }
 
-const PAGES = NAV_ITEMS.map(item => ({
-  to: item.to,
-  label: item.label,
-  icon: item.icon,
-  group: item.group,
-  adminOnly: item.adminOnly ?? false,
-  keywords: KEYWORDS[item.to] ?? '',
-}))
+type PaletteSection = { id: string; label: string; links: NavLink[] }
+
+const buildSections = (visible: NavLink[]): PaletteSection[] => {
+  const visibleSet = new Set(visible.map(link => link.to))
+  const sections: PaletteSection[] = []
+
+  for (const entry of NAV_ENTRIES) {
+    if (entry.kind === 'link') {
+      if (visibleSet.has(entry.link.to)) {
+        sections.push({ id: entry.link.to, label: entry.link.label, links: [entry.link] })
+      }
+      continue
+    }
+    const links = entry.items.filter(item => visibleSet.has(item.to))
+    if (links.length > 0) {
+      sections.push({ id: entry.id, label: entry.label, links })
+    }
+  }
+
+  const secondary = SECONDARY_LINKS.filter(link => visibleSet.has(link.to))
+  if (secondary.length > 0) {
+    sections.push({ id: 'autres', label: 'Autres pages', links: secondary })
+  }
+
+  return sections
+}
 
 export function CommandPalette() {
-  const [open, setOpen] = useState(false)
+  const open = useStore(paletteOpenStore)
   const navigate = useNavigate()
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
-  const visiblePages = PAGES.filter(page =>
-    isNavItemVisible(
-      {
-        to: page.to,
-        label: page.label,
-        icon: page.icon,
-        description: '',
-        group: page.group,
-        ...(page.adminOnly ? { adminOnly: true } : {}),
-      },
-      authViewState
-    )
-  )
+  const sections = buildSections(getPaletteLinks(authViewState))
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        if (!paletteOpenStore.state && isEditableTarget(event.target)) return
         event.preventDefault()
-        setOpen(prev => !prev)
-      }
-      if (event.key === 'Escape') {
-        setOpen(false)
+        toggleCommandPalette()
       }
     }
     document.addEventListener('keydown', onKeyDown)
@@ -76,139 +87,81 @@ export function CommandPalette() {
   }, [])
 
   const handleSelect = (to: string) => {
-    setOpen(false)
+    closeCommandPalette()
     navigate({ to })
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[100] bg-background/65 backdrop-blur-md"
-            onClick={() => setOpen(false)}
-          />
+    <Dialog open={open} onOpenChange={next => paletteOpenStore.setState(() => next)}>
+      <DialogContent className="top-[18%] max-w-[560px] translate-y-0 gap-0 p-0">
+        <DialogTitle className="sr-only">Recherche</DialogTitle>
+        <DialogDescription className="sr-only">
+          Rechercher une page et naviguer au clavier
+        </DialogDescription>
+        <Command loop>
+          <div className="flex items-center gap-3 border-b border-border/60 px-4">
+            <span aria-hidden="true" className="flex items-center text-muted-foreground">
+              <SearchPixelIcon size={14} />
+            </span>
+            <Command.Input
+              placeholder="Rechercher une page"
+              className="w-full bg-transparent py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+              autoFocus
+            />
+            <kbd className="rounded-tile border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70">
+              esc
+            </kbd>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: -10 }}
-            transition={{ type: 'spring', bounce: 0.15, duration: 0.38 }}
-            className="fixed left-1/2 top-[18%] z-[101] w-[92vw] max-w-[560px] -translate-x-1/2"
-          >
-            <div
-              className="relative overflow-hidden rounded-[22px] p-[1px]"
-              style={{
-                background:
-                  'linear-gradient(135deg, oklch(from var(--primary) l c h / 55%) 0%, oklch(from var(--accent-2) l c h / 45%) 100%)',
-                boxShadow:
-                  '0 30px 60px -20px oklch(0 0 0 / 45%), 0 0 0 1px oklch(from var(--primary) l c h / 18%)',
-              }}
-            >
-              <Command className="overflow-hidden rounded-[21px] bg-card" loop>
-                <div
-                  className="relative flex items-center gap-3 border-b border-border/40 px-4 py-3"
-                  style={{
-                    background:
-                      'linear-gradient(180deg, oklch(from var(--primary) l c h / 5%) 0%, transparent 100%)',
-                  }}
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary/65">
-                    ◈ Finance OS
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/50">
-                    · navigation
-                  </span>
-                </div>
+          <Command.List className="max-h-[340px] overflow-y-auto px-2 pb-2">
+            <Command.Empty className="px-4 py-10 text-center text-sm text-muted-foreground">
+              Aucune page trouvée.
+            </Command.Empty>
 
-                <Command.Input
-                  placeholder="Rechercher une page…"
-                  className="w-full bg-transparent px-4 py-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground/55"
-                  autoFocus
-                />
-
-                <Command.List className="max-h-[340px] overflow-y-auto px-2 pb-2">
-                  <Command.Empty className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Aucune page trouvée.
-                  </Command.Empty>
-
-                  {NAV_GROUPS.map(group => {
-                    const groupPages = visiblePages.filter(p => p.group === group.id)
-                    if (groupPages.length === 0) return null
-                    return (
-                      <Command.Group
-                        key={group.id}
-                        heading={group.label}
-                        className={`px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
-                      >
-                        {groupPages.map(page => {
-                          const Icon = page.icon
-                          return (
-                            <Command.Item
-                              key={page.to}
-                              value={`${page.label} ${page.keywords}`}
-                              onSelect={() => handleSelect(page.to)}
-                              className="group/item flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
-                            >
-                              <span
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 transition-colors group-data-[selected=true]/item:bg-primary/15 group-data-[selected=true]/item:text-primary"
-                                aria-hidden="true"
-                              >
-                                <Icon size={16} />
-                              </span>
-                              <span className="flex-1 font-medium">{page.label}</span>
-                              <span
-                                aria-hidden="true"
-                                className="font-mono text-[11px] text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
-                              >
-                                ↵
-                              </span>
-                            </Command.Item>
-                          )
-                        })}
-                      </Command.Group>
-                    )
-                  })}
-                </Command.List>
-
-                <div className="flex items-center justify-between border-t border-border/40 bg-surface-1/50 px-4 py-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/50">
-                    navigation rapide
-                  </span>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground/55">
-                    <kbd className="rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px]">
-                      esc
-                    </kbd>
-                    <span>fermer</span>
-                  </div>
-                </div>
-              </Command>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            {sections.map(section => (
+              <Command.Group
+                key={section.id}
+                heading={section.label}
+                className="px-1 pt-3 pb-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground [&_[cmdk-group-items]]:mt-1.5 [&_[cmdk-group-items]]:space-y-0.5"
+              >
+                {section.links.map(link => (
+                  <Command.Item
+                    key={link.to}
+                    value={`${link.label} ${link.keywords ?? ''}`}
+                    onSelect={() => handleSelect(link.to)}
+                    className="group/item flex cursor-pointer items-center gap-3 rounded-control px-2 py-2 font-sans text-sm normal-case tracking-normal text-foreground/80 transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
+                  >
+                    <NavIconTile icon={link.icon} className="h-7 w-7" />
+                    <span className="flex-1 font-medium">{link.label}</span>
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-[11px] text-muted-foreground/50 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
+                    >
+                      ↵
+                    </span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            ))}
+          </Command.List>
+        </Command>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-export function CommandPaletteTrigger() {
+export function CommandPaletteTrigger({ className = '' }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() =>
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
-      }
-      className="group hidden items-center gap-2 rounded-lg border border-border/60 bg-surface-1 px-3 py-1.5 text-xs text-muted-foreground transition-all duration-150 hover:border-primary/30 hover:bg-surface-2 hover:text-foreground md:inline-flex"
+      onClick={openCommandPalette}
+      className={`group flex items-center gap-2 rounded-control border border-border/60 bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground/70 transition-colors duration-150 hover:border-primary/30 hover:text-foreground ${className}`}
     >
-      <span aria-hidden="true" className="flex items-center text-primary/70">
-        <SearchPixelIcon size={14} />
+      <span aria-hidden="true" className="flex items-center">
+        <SearchPixelIcon size={13} />
       </span>
       <span>Rechercher</span>
-      <kbd className="rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/60 transition-colors group-hover:text-primary/70">
+      <kbd className="ml-auto rounded-[4px] border border-foreground/16 px-1.5 py-px font-mono text-[10px] text-muted-foreground/60">
         ⌘K
       </kbd>
     </button>

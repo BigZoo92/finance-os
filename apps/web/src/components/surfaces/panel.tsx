@@ -56,10 +56,7 @@ export function Panel({
   return (
     <section
       className={[
-        'relative overflow-hidden rounded-2xl border border-border/60 bg-card',
-        'transition-shadow duration-200 ease-out',
-        'shadow-[0_1px_2px_oklch(0_0_0/4%),0_6px_20px_-10px_oklch(0_0_0/6%)]',
-        'hover:shadow-[0_2px_4px_oklch(0_0_0/5%),0_18px_40px_-16px_oklch(0_0_0/10%)]',
+        'relative overflow-hidden rounded-surface border border-border/60 bg-card shadow-surface',
         tone !== 'plain' &&
           `before:content-[''] before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-full ${TONE_RAIL[tone]}`,
         className,

@@ -9,7 +9,6 @@ import {
   HashtagPixelIcon,
   HomePixelIcon,
   LinkPixelIcon,
-  NewspaperPixelIcon,
   NotebookPixelIcon,
   ReceiptPixelIcon,
   RefreshPixelIcon,
@@ -21,214 +20,292 @@ import { FlaskIcon } from '@phosphor-icons/react/dist/csr/Flask'
 import { HeartbeatIcon } from '@phosphor-icons/react/dist/csr/Heartbeat'
 import type { AuthViewState } from '@/features/auth-view-state'
 
-export type NavGroup = 'cockpit' | 'ia' | 'expert'
+/**
+ * Canonical Command Pixel navigation registry.
+ *
+ * Desktop: Cockpit, Argent (dropdown), IA (dropdown), Radar, Ops (dropdown,
+ * Admin only), per `.design/command-pixel-v1/ROUTE_MAP.md`.
+ * Mobile: Cockpit, Dépenses, Patrimoine, Advisor, Plus.
+ *
+ * Nav visibility is NOT a security boundary: pages keep their own
+ * demo/admin handling.
+ */
 
-export type NavItem = {
+export type NavLink = {
   to: string
   label: string
   /**
-   * Pixel Icon by default; Phosphor only where the pixel set has no clear metaphor.
-   * See the `finance-os-icon-system` skill before changing one.
+   * Pixel Icon by default; Phosphor only where the pixel set has no clear
+   * metaphor. See the `finance-os-icon-system` skill before changing one.
    */
   icon: IconComponent
+  /** Very short functional description (dropdowns, drawer, palette). */
   description: string
-  group: NavGroup
-  /** Items with mobilePriority appear as bottom-bar tabs (lower = more prominent). */
-  mobilePriority?: number
-  /** Admin-only items are hidden in demo mode nav (page itself still handles demo). */
+  /** Admin-only links are hidden in demo/pending nav. */
   adminOnly?: boolean
+  /** Palette search keywords. */
+  keywords?: string
 }
 
-export type NavGroupMeta = {
-  id: NavGroup
-  label: string
-  /** Short label for the collapsed sidebar divider. */
-  shortLabel: string
-  description: string
-  color: string
+export type NavGroupId = 'argent' | 'ia' | 'ops'
+
+export type NavEntry =
+  | { kind: 'link'; link: NavLink }
+  | {
+      kind: 'group'
+      id: NavGroupId
+      label: string
+      adminOnly?: boolean
+      items: NavLink[]
+    }
+
+const COCKPIT: NavLink = {
+  to: '/',
+  label: 'Cockpit',
+  icon: HomePixelIcon,
+  description: 'Vue quotidienne',
+  keywords: 'accueil home dashboard vue ensemble quotidien cockpit',
 }
 
-export const NAV_GROUPS: NavGroupMeta[] = [
+const DEPENSES: NavLink = {
+  to: '/depenses',
+  label: 'Dépenses',
+  icon: ReceiptPixelIcon,
+  description: "Comprendre où part l'argent",
+  keywords: 'transactions budgets cashflow revenus depenses',
+}
+
+const PATRIMOINE: NavLink = {
+  to: '/patrimoine',
+  label: 'Patrimoine',
+  icon: BankPixelIcon,
+  description: 'Vue globale des actifs',
+  keywords: 'actifs soldes assets wealth comptes patrimoine',
+}
+
+const INVESTISSEMENTS: NavLink = {
+  to: '/investissements',
+  label: 'Investissements',
+  icon: TrendingPixelIcon,
+  description: 'Positions et performance',
+  keywords: 'positions portfolio bourse invest ibkr binance',
+}
+
+const OBJECTIFS: NavLink = {
+  to: '/objectifs',
+  label: 'Objectifs',
+  icon: FlagPixelIcon,
+  description: 'Suivre les objectifs financiers',
+  keywords: 'goals épargne cibles progression objectifs',
+}
+
+const ADVISOR: NavLink = {
+  to: '/ia',
+  label: 'Advisor',
+  icon: RobotPixelIcon,
+  description: 'Plan et recommandations',
+  keywords: 'advisor ia brief recommandations conseils plan investissement',
+}
+
+const CHAT: NavLink = {
+  to: '/ia/chat',
+  label: 'Chat',
+  icon: CommentPixelIcon,
+  description: 'Questions et réponses',
+  keywords: 'chat conversation question reponse dialogue',
+}
+
+const MEMOIRE: NavLink = {
+  to: '/ia/memoire',
+  label: 'Mémoire',
+  icon: NotebookPixelIcon,
+  description: 'Concepts et relations',
+  keywords: 'memoire connaissances contexte graphe',
+}
+
+const RADAR: NavLink = {
+  to: '/signaux',
+  label: 'Radar',
+  icon: ChartLinePixelIcon,
+  description: 'Marchés et signaux',
+  keywords: 'radar signaux marches macro watchlist news actualites',
+}
+
+const ORCHESTRATION: NavLink = {
+  to: '/orchestration',
+  label: 'Orchestration',
+  icon: RefreshPixelIcon,
+  description: 'Jobs et relances',
+  adminOnly: true,
+  keywords: 'refresh daily intelligence cron jobs ops orchestration sync admin',
+}
+
+const COUTS: NavLink = {
+  to: '/ia/couts',
+  label: 'Coûts',
+  icon: CoinsPixelIcon,
+  description: "Coûts d'exploitation",
+  adminOnly: true,
+  keywords: 'tokens couts budget modeles llm usage abonnements admin',
+}
+
+const INTEGRATIONS: NavLink = {
+  to: '/integrations',
+  label: 'Intégrations',
+  icon: LinkPixelIcon,
+  description: 'Connexions et synchronisation',
+  adminOnly: true,
+  keywords: 'powens sync banque connexion provider ibkr binance admin',
+}
+
+const SANTE: NavLink = {
+  to: '/sante',
+  label: 'Santé',
+  icon: HeartbeatIcon,
+  description: 'État du système',
+  adminOnly: true,
+  keywords: 'health diagnostics systeme fraicheur valorisation admin',
+}
+
+const SOCIAL_INTELLIGENCE: NavLink = {
+  to: '/signaux/social',
+  label: 'Social Intelligence',
+  icon: HashtagPixelIcon,
+  description: 'Sources et comptes suivis',
+  adminOnly: true,
+  keywords: 'social intelligence x twitter bluesky comptes lookup handle sync admin',
+}
+
+/** Primary desktop navigation, in canonical order. */
+export const NAV_ENTRIES: NavEntry[] = [
+  { kind: 'link', link: COCKPIT },
   {
-    id: 'cockpit',
-    label: 'Cockpit',
-    shortLabel: 'Cockpit',
-    description: 'Usage quotidien, decisions et suivi personnel.',
-    color: 'text-primary/55',
+    kind: 'group',
+    id: 'argent',
+    label: 'Argent',
+    items: [DEPENSES, PATRIMOINE, INVESTISSEMENTS, OBJECTIFS],
   },
   {
+    kind: 'group',
     id: 'ia',
-    label: 'Advisor IA',
-    shortLabel: 'IA',
-    description: 'Conseils, questions et memoire comprehensible.',
-    color: 'text-aurora/70',
+    label: 'IA',
+    items: [ADVISOR, CHAT, MEMOIRE],
   },
+  { kind: 'link', link: RADAR },
   {
-    id: 'expert',
-    label: 'Ops & Admin',
-    shortLabel: 'Ops',
-    description: 'Diagnostics, ingestion et couts.',
-    color: 'text-accent-2/55',
+    kind: 'group',
+    id: 'ops',
+    label: 'Ops',
+    adminOnly: true,
+    items: [ORCHESTRATION, COUTS, INTEGRATIONS, SANTE],
   },
 ]
 
-export const NAV_ITEMS: NavItem[] = [
+/**
+ * Live routes outside the canonical primary navigation. Reachable through
+ * the command palette (and the mobile drawer for Social Intelligence)
+ * until their page phases decide their final home.
+ */
+export const SECONDARY_LINKS: NavLink[] = [
+  SOCIAL_INTELLIGENCE,
   {
-    to: '/',
-    label: "Vue d'ensemble",
-    icon: HomePixelIcon,
-    description: 'Resume actionnable de ta situation',
-    group: 'cockpit',
-    mobilePriority: 1,
+    to: '/signaux/marches',
+    label: 'Marchés',
+    icon: ChartLinePixelIcon,
+    description: 'Macro et watchlist',
+    adminOnly: true,
+    keywords: 'macro watchlist regime taux inflation fred eodhd marches bourse admin',
   },
   {
-    to: '/depenses',
-    label: 'Depenses & revenus',
-    icon: ReceiptPixelIcon,
-    description: 'Transactions, budgets et cashflow',
-    group: 'cockpit',
-    mobilePriority: 2,
-  },
-  {
-    to: '/patrimoine',
-    label: 'Patrimoine',
-    icon: BankPixelIcon,
-    description: 'Actifs, soldes et trajectoire',
-    group: 'cockpit',
-    mobilePriority: 3,
-  },
-  {
-    to: '/investissements',
-    label: 'Investissements',
-    icon: TrendingPixelIcon,
-    description: 'Positions et portefeuille lisible',
-    group: 'cockpit',
-  },
-  {
-    to: '/objectifs',
-    label: 'Objectifs',
-    icon: FlagPixelIcon,
-    description: 'Cibles, epargne et progression',
-    group: 'cockpit',
-  },
-  {
-    to: '/ia',
-    label: 'Vue IA',
-    icon: RobotPixelIcon,
-    description: 'Brief, conseils et recommandations',
-    group: 'ia',
-    mobilePriority: 4,
+    to: '/ia/memoire/graph',
+    label: 'Mémoire 3D',
+    icon: ChartNetworkPixelIcon,
+    description: 'Carte des concepts',
+    keywords: 'carte memoire 3d graphe concepts relations',
   },
   {
     to: '/ia/strategie-investissement',
     label: "Plan d'action investissement",
     icon: CheckListPixelIcon,
-    description: 'Strategie, comptes et recommandations tracees',
-    group: 'ia',
-  },
-  {
-    to: '/ia/chat',
-    label: 'Chat',
-    icon: CommentPixelIcon,
-    description: "Questions a l'Advisor sur tes finances",
-    group: 'ia',
-  },
-  {
-    to: '/ia/memoire',
-    label: 'Memoire',
-    icon: NotebookPixelIcon,
-    description: 'Contexte, sources et connaissances IA',
-    group: 'ia',
-  },
-  {
-    to: '/ia/memoire/graph',
-    label: 'Carte 3D',
-    icon: ChartNetworkPixelIcon,
-    description: 'Carte memoire 3D, concepts et relations',
-    group: 'ia',
-  },
-  {
-    to: '/signaux',
-    label: 'Signaux',
-    icon: NewspaperPixelIcon,
-    description: "Donnees brutes resumees pour l'IA",
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/signaux/marches',
-    label: 'Marches',
-    icon: ChartLinePixelIcon,
-    description: 'Macro, watchlist et signaux marche',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/signaux/social',
-    label: 'Social Intelligence',
-    icon: HashtagPixelIcon,
-    description: 'X, comptes suivis, lookup et sync J-1',
-    group: 'expert',
-    adminOnly: true,
+    description: 'Stratégie et allocations',
+    keywords: 'investissement strategie allocation pea plan action advisor',
   },
   {
     to: '/ia/trading-lab',
     label: 'Trading Lab',
     icon: FlaskIcon,
-    description: 'Recherche papier et backtests, sans execution',
-    group: 'expert',
+    description: 'Recherche papier',
     adminOnly: true,
-  },
-  {
-    to: '/ia/couts',
-    label: 'Couts',
-    icon: CoinsPixelIcon,
-    description: 'Tokens, modeles, providers et abonnements',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/integrations',
-    label: 'Integrations',
-    icon: LinkPixelIcon,
-    description: 'Connexions, sync et diagnostics provider',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/sante',
-    label: 'Sante admin',
-    icon: HeartbeatIcon,
-    description: 'Etat systeme et pipelines de donnees',
-    group: 'expert',
-    adminOnly: true,
-  },
-  {
-    to: '/orchestration',
-    label: 'Orchestration',
-    icon: RefreshPixelIcon,
-    description: 'Daily Intelligence Run et relances manuelles',
-    group: 'expert',
-    adminOnly: true,
+    keywords: 'trading lab papier paper backtest recherche strategies admin',
   },
 ]
 
-export const isNavItemVisible = (item: NavItem, authViewState: AuthViewState): boolean =>
-  !item.adminOnly || authViewState === 'admin'
+/** Mobile bottom tabs, canonical order. The fifth tab is Plus (drawer). */
+export const MOBILE_TABS: NavLink[] = [COCKPIT, DEPENSES, PATRIMOINE, ADVISOR]
 
-export const getVisibleNavItems = (authViewState: AuthViewState): NavItem[] =>
-  NAV_ITEMS.filter(item => isNavItemVisible(item, authViewState))
+export type MobileDrawerSection = {
+  id: string
+  label: string
+  items: NavLink[]
+}
 
-/** Items for mobile bottom tabs, sorted by priority. */
-export const getMobileTabItems = (authViewState: AuthViewState): NavItem[] =>
-  getVisibleNavItems(authViewState)
-    .filter(i => i.mobilePriority !== undefined)
-    .sort((a, b) => (a.mobilePriority ?? 99) - (b.mobilePriority ?? 99))
+/** Mobile Plus drawer sections, per the canonical route map handoff. */
+export const MOBILE_DRAWER_SECTIONS: MobileDrawerSection[] = [
+  { id: 'argent', label: 'Argent', items: [INVESTISSEMENTS, OBJECTIFS] },
+  { id: 'ia', label: 'IA', items: [CHAT, MEMOIRE] },
+  { id: 'radar', label: 'Radar', items: [RADAR, SOCIAL_INTELLIGENCE] },
+  { id: 'ops', label: 'Ops', items: [ORCHESTRATION, COUTS, INTEGRATIONS, SANTE] },
+]
 
-/** Items for mobile drawer (everything not in bottom tabs). */
-export const getMobileDrawerItems = (authViewState: AuthViewState): NavItem[] =>
-  getVisibleNavItems(authViewState).filter(i => i.mobilePriority === undefined)
+export const isNavLinkVisible = (link: NavLink, authViewState: AuthViewState): boolean =>
+  !link.adminOnly || authViewState === 'admin'
 
-/** Items for a specific group. */
-export const getGroupItems = (group: NavGroup, authViewState: AuthViewState): NavItem[] =>
-  getVisibleNavItems(authViewState).filter(i => i.group === group)
+export const isNavEntryVisible = (entry: NavEntry, authViewState: AuthViewState): boolean => {
+  if (entry.kind === 'link') return isNavLinkVisible(entry.link, authViewState)
+  if (entry.adminOnly && authViewState !== 'admin') return false
+  return entry.items.some(item => isNavLinkVisible(item, authViewState))
+}
+
+/** Visible primary entries, with group items filtered per auth state. */
+export const getVisibleNavEntries = (authViewState: AuthViewState): NavEntry[] =>
+  NAV_ENTRIES.filter(entry => isNavEntryVisible(entry, authViewState)).map(entry =>
+    entry.kind === 'group'
+      ? { ...entry, items: entry.items.filter(item => isNavLinkVisible(item, authViewState)) }
+      : entry
+  )
+
+/** Visible mobile drawer sections for the Plus drawer. */
+export const getVisibleDrawerSections = (
+  authViewState: AuthViewState
+): MobileDrawerSection[] =>
+  MOBILE_DRAWER_SECTIONS.map(section => ({
+    ...section,
+    items: section.items.filter(item => isNavLinkVisible(item, authViewState)),
+  })).filter(section => section.items.length > 0)
+
+/** Every visible destination (primary + secondary) for the palette. */
+export const getPaletteLinks = (authViewState: AuthViewState): NavLink[] => {
+  const primary = NAV_ENTRIES.flatMap(entry =>
+    entry.kind === 'link' ? [entry.link] : entry.items
+  )
+  return [...primary, ...SECONDARY_LINKS].filter(link =>
+    isNavLinkVisible(link, authViewState)
+  )
+}
+
+/**
+ * Canonical active-route matcher.
+ *
+ * `/` and `/ia` are exact (Advisor must not activate for `/ia/chat` or
+ * `/ia/couts`); every other destination matches itself and its children.
+ */
+export const isRouteActive = (pathname: string, to: string): boolean => {
+  if (to === '/' || to === '/ia') return pathname === to
+  return pathname === to || pathname.startsWith(`${to}/`)
+}
+
+/** A group is active when one of its (visible or not) items is active. */
+export const isGroupActive = (
+  pathname: string,
+  entry: Extract<NavEntry, { kind: 'group' }>
+): boolean => entry.items.some(item => isRouteActive(pathname, item.to))

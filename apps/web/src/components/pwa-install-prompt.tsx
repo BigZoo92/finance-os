@@ -96,7 +96,7 @@ export function PwaInstallPrompt() {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[var(--z-toast)] flex justify-center px-4 lg:bottom-4">
       <div className="pointer-events-auto w-full max-w-xl rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg">
         <p className="text-sm font-semibold">Installer Finance OS</p>
         <p className="mt-1 text-xs text-muted-foreground">

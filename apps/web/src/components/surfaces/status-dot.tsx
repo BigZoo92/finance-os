@@ -1,16 +1,20 @@
 /**
- * StatusDot — canonical live/ok/warn/err/idle indicator with optional pulse.
+ * StatusDot — live/ok/warn/err/idle indicator with optional pulse.
+ *
+ * Converged with the canonical Status family (flat semantic dots, no
+ * glow). Prefer `Status` from `@finance-os/ui/components` when a visible
+ * label accompanies the dot; StatusDot remains for compact compositions.
  */
 type Tone = 'ok' | 'warn' | 'err' | 'idle' | 'live' | 'brand' | 'violet'
 
 const DOT: Record<Tone, string> = {
-  ok: 'bg-positive shadow-[0_0_8px_oklch(from_var(--positive)_l_c_h/55%)]',
-  warn: 'bg-warning shadow-[0_0_8px_oklch(from_var(--warning)_l_c_h/55%)]',
-  err: 'bg-negative shadow-[0_0_8px_oklch(from_var(--negative)_l_c_h/55%)]',
+  ok: 'bg-positive',
+  warn: 'bg-warning',
+  err: 'bg-negative',
   idle: 'bg-muted-foreground/60',
-  live: 'bg-primary shadow-[0_0_10px_oklch(from_var(--primary)_l_c_h/60%)]',
-  brand: 'bg-primary shadow-[0_0_10px_oklch(from_var(--primary)_l_c_h/60%)]',
-  violet: 'bg-accent-2 shadow-[0_0_10px_oklch(from_var(--accent-2)_l_c_h/60%)]',
+  live: 'bg-primary',
+  brand: 'bg-primary',
+  violet: 'bg-accent-2',
 }
 
 type StatusDotProps = {

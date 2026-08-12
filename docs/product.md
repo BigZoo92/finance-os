@@ -19,6 +19,8 @@ Finance-OS is an advisory, read-only personal cockpit. It organizes financial da
 
 The route tree under `apps/web/src/routes/` is the routing source of truth; `apps/web/src/components/shell/nav-items.ts` defines visible navigation.
 
+Primary navigation follows the canonical Command Pixel route map: Cockpit, Argent (Dépenses, Patrimoine, Investissements, Objectifs), IA (Advisor, Chat, Mémoire), Radar, and Ops (Orchestration, Coûts, Intégrations, Santé, Admin mode only). Mobile uses Cockpit, Dépenses, Patrimoine, Advisor, and Plus (secondary destinations and Admin Ops entries). Nav visibility is not a security boundary; pages keep their own demo/admin handling.
+
 ## Sources of truth
 
 | Domain | Admin source | Demo source |

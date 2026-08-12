@@ -1,56 +1,47 @@
 import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
-import { useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
-import { AppSidebar, MobileNav } from '@/components/shell/app-sidebar'
-import { Topbar } from '@/components/shell/topbar'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { CommandPalette } from '@/components/shell/command-palette'
+import { MobileNav, MobileTopBar } from '@/components/shell/mobile-nav'
+import { TopNavbar } from '@/components/shell/top-navbar'
 
 export const Route = createFileRoute('/_app')({
   component: AppLayout,
 })
 
+/**
+ * AppShell — canonical Command Pixel shell.
+ *
+ * Desktop: contained floating navbar (1240px, detached from the viewport
+ * edges) over the warm graphite canvas. Mobile: brand top row and the
+ * five-tab bottom navigation. Page content is centered at the canonical
+ * standard width.
+ */
 function AppLayout() {
-  const [collapsed, setCollapsed] = useState(false)
-  const routerState = useRouterState()
-  const locationKey = routerState.location.pathname
+  const locationKey = useRouterState({ select: state => state.location.pathname })
   const prefersReducedMotion = useReducedMotion()
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
-      {/* Ambient aurora wash — extremely subtle, behind everything */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 bg-aurora-mesh-soft opacity-90"
-      />
+      <TopNavbar />
+      <MobileTopBar />
 
-      <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed(prev => !prev)} />
-
-      <div
-        className={`flex min-h-screen flex-col transition-[margin-left] ${
-          collapsed ? 'lg:ml-[72px]' : 'lg:ml-[248px]'
-        }`}
-        style={{
-          transitionDuration: 'var(--duration-slow)',
-          transitionTimingFunction: 'var(--ease-out-expo)',
-        }}
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-[calc(1240px+2.5rem)] px-5 pb-28 pt-5 lg:pt-9 lg:pb-14"
       >
-        <Topbar />
-
-        <main id="main-content" className="flex-1 px-4 py-6 pb-28 lg:px-8 lg:pb-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={locationKey}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              {...(prefersReducedMotion ? {} : { exit: { opacity: 0, y: -4 } })}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto w-full max-w-7xl"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={locationKey}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            {...(prefersReducedMotion ? {} : { exit: { opacity: 0, y: -4 } })}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
+      </main>
 
       <MobileNav />
       <CommandPalette />
