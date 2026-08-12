@@ -11,9 +11,10 @@
 // Conversion to a manual hypothesis draft uses the existing PR3 endpoint via
 // `postTradingLabHypothesis`; on success the hypotheses query keys are invalidated.
 
-import { useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input } from '@finance-os/ui/components'
+import { ChartNetworkPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 import { Panel } from '@/components/surfaces/panel'
 import type { AuthMode } from '@/features/auth-types'
 import {
@@ -25,9 +26,9 @@ import {
 import { LEARNING_LOOP_INVALIDATION_KEYS } from '@/features/dashboard-query-options'
 import type {
   DashboardTradingLabPatternCandle,
+  DashboardTradingLabPatternDetection,
   DashboardTradingLabPatternDetectRequest,
   DashboardTradingLabPatternDetectResponse,
-  DashboardTradingLabPatternDetection,
   DashboardTradingLabPatternKey,
 } from '@/features/dashboard-types'
 import {
@@ -111,11 +112,7 @@ const parseCandlesJson = (
       return { ok: false, error: `Candle #${i + 1}: champs requis manquants.` }
     }
     const volume =
-      typeof rec.volume === 'number'
-        ? rec.volume
-        : rec.volume === null
-          ? null
-          : undefined
+      typeof rec.volume === 'number' ? rec.volume : rec.volume === null ? null : undefined
     const candle: DashboardTradingLabPatternCandle = { timestamp, open, high, low, close }
     if (volume !== undefined) candle.volume = volume
     candles.push(candle)
@@ -165,9 +162,7 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
   })
 
   const togglePattern = (key: DashboardTradingLabPatternKey) => {
-    setSelectedPatterns(prev =>
-      prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]
-    )
+    setSelectedPatterns(prev => (prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]))
   }
 
   const handleRun = () => {
@@ -220,7 +215,7 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
     <Panel
       title="Détection technique déterministe"
       description="Recherche paper-only. Aucune recommandation, aucune exécution."
-      icon={<span aria-hidden="true">⌬</span>}
+      icon={<ChartNetworkPixelIcon size={16} />}
       tone="plain"
     >
       <div className="space-y-4">
@@ -304,20 +299,16 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
             onChange={event => setCandlesJson(event.target.value)}
           />
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Format : tableau d&apos;objets <code>{'{ timestamp, open, high, low, close, volume? }'}</code>.
-            Le mode démo prérempli ce champ avec une fixture déterministe.
+            Format : tableau d&apos;objets{' '}
+            <code>{'{ timestamp, open, high, low, close, volume? }'}</code>. Le mode démo prérempli
+            ce champ avec une fixture déterministe.
           </p>
         </div>
 
         {parseError ? <p className="text-xs text-destructive">{parseError}</p> : null}
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleRun}
-            disabled={detectMutation.isPending}
-          >
+          <Button type="button" size="sm" onClick={handleRun} disabled={detectMutation.isPending}>
             {mode === 'demo'
               ? 'Voir la détection (démo)'
               : detectMutation.isPending
@@ -330,9 +321,7 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
             </Button>
           ) : null}
           {!isAdmin && mode !== 'demo' ? (
-            <span className="text-xs text-muted-foreground">
-              Détection réservée au mode admin.
-            </span>
+            <span className="text-xs text-muted-foreground">Détection réservée au mode admin.</span>
           ) : null}
         </div>
 
@@ -353,16 +342,12 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
                 <span className="text-muted-foreground">·</span>
                 <span className="text-muted-foreground">Données suffisantes :</span>
                 <span
-                  className={
-                    result.dataQuality.sufficient ? 'text-emerald-500' : 'text-amber-500'
-                  }
+                  className={result.dataQuality.sufficient ? 'text-emerald-500' : 'text-amber-500'}
                 >
                   {result.dataQuality.sufficient ? 'oui' : 'non'}
                 </span>
               </div>
-              {result.dataQuality.hasVolume ? null : (
-                <Badge variant="outline">Volume absent</Badge>
-              )}
+              {result.dataQuality.hasVolume ? null : <Badge variant="outline">Volume absent</Badge>}
             </div>
 
             {result.dataQuality.warnings.length > 0 ? (
@@ -448,8 +433,8 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
                     ) : null}
 
                     <p className="mt-2 text-[11px] text-muted-foreground">
-                      Cette détection n&apos;est pas une recommandation. Les résultats doivent
-                      être backtestés avant toute conclusion.
+                      Cette détection n&apos;est pas une recommandation. Les résultats doivent être
+                      backtestés avant toute conclusion.
                     </p>
 
                     {isAdmin ? (
@@ -482,9 +467,7 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
           </div>
         ) : null}
 
-        {createdMessage ? (
-          <p className="text-xs text-emerald-500">{createdMessage}</p>
-        ) : null}
+        {createdMessage ? <p className="text-xs text-emerald-500">{createdMessage}</p> : null}
         {createHypothesisMutation.isError ? (
           <p className="text-xs text-destructive">
             Échec de la création d&apos;hypothèse : {toErrorMessage(createHypothesisMutation.error)}

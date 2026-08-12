@@ -1,12 +1,27 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, CardContent } from '@finance-os/ui/components'
-import type { AuthMode } from '@/features/auth-types'
-import { authMeQueryOptions } from '@/features/auth-query-options'
+import { CheckListPixelIcon, RobotPixelIcon, SparklesPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import {
+  AdvisorAssumptionsPanel,
+  AdvisorDecisionJournal,
+  type AdvisorQuestionStarter,
+  AdvisorQuestionStarters,
+  AdvisorRecommendationCard,
+} from '@/components/advisor/advisor-decision-ui'
+import { BehaviorAnalyticsCard } from '@/components/advisor/behavior-analytics-card'
+import { DecisionRecorder } from '@/components/advisor/decision-recorder'
+import { EvalScorecard } from '@/components/advisor/eval-scorecard'
+import { PostMortemFeed } from '@/components/advisor/post-mortem-feed'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import { StatusDot } from '@/components/surfaces/status-dot'
 import { isAdvisorManualOperationActive } from '@/features/advisor-run-state'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
-import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
-import { shouldShowLearningLoopOnIa } from '@/features/learning-loop-visibility'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
+import { resolveAuthViewState } from '@/features/auth-view-state'
 import { postDashboardAdvisorManualRefreshAndRun } from '@/features/dashboard-api'
 import {
   dashboardAdvisorAssumptionsQueryOptionsWithMode,
@@ -19,23 +34,9 @@ import {
   dashboardAdvisorSpendQueryOptionsWithMode,
   dashboardQueryKeys,
 } from '@/features/dashboard-query-options'
-import { resolveAuthViewState } from '@/features/auth-view-state'
+import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
+import { shouldShowLearningLoopOnIa } from '@/features/learning-loop-visibility'
 import { formatDateTime, toErrorMessage } from '@/lib/format'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { Panel } from '@/components/surfaces/panel'
-import { StatusDot } from '@/components/surfaces/status-dot'
-import { KpiTile } from '@/components/surfaces/kpi-tile'
-import {
-  AdvisorAssumptionsPanel,
-  AdvisorDecisionJournal,
-  AdvisorQuestionStarters,
-  AdvisorRecommendationCard,
-  type AdvisorQuestionStarter,
-} from '@/components/advisor/advisor-decision-ui'
-import { BehaviorAnalyticsCard } from '@/components/advisor/behavior-analytics-card'
-import { DecisionRecorder } from '@/components/advisor/decision-recorder'
-import { EvalScorecard } from '@/components/advisor/eval-scorecard'
-import { PostMortemFeed } from '@/components/advisor/post-mortem-feed'
 
 export const Route = createFileRoute('/_app/ia/')({
   loader: async ({ context }) => {
@@ -181,7 +182,9 @@ function IaOverviewPage() {
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorSignals(24) }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorSpend() }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorRuns(12) }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorManualOperationLatest() }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardQueryKeys.advisorManualOperationLatest(),
+        }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorAssumptions(24) }),
         queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.advisorEvals() }),
       ])
@@ -208,7 +211,9 @@ function IaOverviewPage() {
   const questionStarters = [...BASE_ADVISOR_QUESTIONS, ...contextualQuestions].slice(0, 5)
   const missingItems = [
     ...(overview?.snapshot ? [] : ['Snapshot financier Advisor absent ou pas encore généré.']),
-    ...(overview?.status === 'degraded' && overview.degradedMessage ? [overview.degradedMessage] : []),
+    ...(overview?.status === 'degraded' && overview.degradedMessage
+      ? [overview.degradedMessage]
+      : []),
     ...(recs.length === 0 ? ['Aucune recommandation persistée pour le moment.'] : []),
     ...(assumptions.length === 0 ? ['Aucune hypothèse explicite enregistrée pour l’instant.'] : []),
     ...(signals?.socialSignals.freshnessState === 'stale' ||
@@ -219,10 +224,7 @@ function IaOverviewPage() {
       ? ['Budget IA bloqué: l’Advisor doit rester sur les artefacts existants.']
       : []),
     ...(spendQuery.data?.anomalies.map(anomaly => anomaly.message) ?? []),
-    ...recs.flatMap(rec => [
-      ...rec.blockingFactors,
-      ...(rec.challenge?.missingSignals ?? []),
-    ]),
+    ...recs.flatMap(rec => [...rec.blockingFactors, ...(rec.challenge?.missingSignals ?? [])]),
   ]
 
   const advisorError = [
@@ -243,7 +245,7 @@ function IaOverviewPage() {
       <div className="space-y-8">
         <PageHeader
           eyebrow="Advisor IA"
-          icon="□"
+          icon={<RobotPixelIcon size={12} />}
           title="Advisor IA"
           description="Conseils digestes sur tes finances personnelles. Les surfaces techniques restent séparées."
         />
@@ -261,7 +263,7 @@ function IaOverviewPage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Advisor IA"
-        icon="□"
+        icon={<RobotPixelIcon size={12} />}
         title="Advisor IA"
         description="Synthèse, recommandations, hypothèses et questions utiles. Pas un terminal de signaux bruts."
         actions={
@@ -289,7 +291,11 @@ function IaOverviewPage() {
       />
 
       {advisorError ? (
-        <Panel tone="warning" title="Surface dégradée" icon={<StatusDot tone="warn" size={8} pulse />}>
+        <Panel
+          tone="warning"
+          title="Surface dégradée"
+          icon={<StatusDot tone="warn" size={8} pulse />}
+        >
           <p className="text-sm text-muted-foreground">{toErrorMessage(advisorError)}</p>
         </Panel>
       ) : null}
@@ -334,7 +340,7 @@ function IaOverviewPage() {
           title="Synthèse"
           description="Ce que l'Advisor comprend maintenant, sans te demander de lire les signaux bruts."
           tone="brand"
-          icon={<span aria-hidden="true">□</span>}
+          icon={<CheckListPixelIcon size={16} />}
         >
           {overview?.brief ? (
             <div className="space-y-4">
@@ -345,14 +351,19 @@ function IaOverviewPage() {
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
-                <BriefList title="Ce qui est sain" items={overview.brief.opportunities} tone="positive" />
+                <BriefList
+                  title="Ce qui est sain"
+                  items={overview.brief.opportunities}
+                  tone="positive"
+                />
                 <BriefList title="À surveiller" items={overview.brief.risks} tone="warning" />
                 <BriefList title="Ce qui a changé" items={overview.brief.keyFacts} tone="plain" />
               </div>
             </div>
           ) : (
             <p className="py-8 text-sm text-muted-foreground">
-              Synthèse indisponible pour l'instant. Le cockpit reste utilisable avec les données existantes.
+              Synthèse indisponible pour l'instant. Le cockpit reste utilisable avec les données
+              existantes.
             </p>
           )}
         </Panel>
@@ -360,13 +371,20 @@ function IaOverviewPage() {
         <Panel
           title="Attention"
           description="Points à clarifier avant de transformer un conseil en décision."
-          icon={<StatusDot tone={missingItems.length > 0 ? 'warn' : 'ok'} size={8} pulse={missingItems.length > 0} />}
+          icon={
+            <StatusDot
+              tone={missingItems.length > 0 ? 'warn' : 'ok'}
+              size={8}
+              pulse={missingItems.length > 0}
+            />
+          }
           tone={missingItems.length > 0 ? 'warning' : 'positive'}
         >
           <div className="space-y-2">
             {highRiskRecs.length > 0 ? (
               <p className="rounded-xl border border-warning/30 bg-warning/8 px-3 py-2 text-sm text-warning">
-                {highRiskRecs.length} recommandation{highRiskRecs.length > 1 ? 's' : ''} à risque élevé.
+                {highRiskRecs.length} recommandation{highRiskRecs.length > 1 ? 's' : ''} à risque
+                élevé.
               </p>
             ) : null}
             {latestRun?.degraded ? (
@@ -376,13 +394,17 @@ function IaOverviewPage() {
             ) : null}
             {missingItems.length > 0 ? (
               missingItems.slice(0, 4).map(item => (
-                <p key={item} className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-2 text-sm text-muted-foreground">
+                <p
+                  key={item}
+                  className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-2 text-sm text-muted-foreground"
+                >
                   {item}
                 </p>
               ))
             ) : (
               <p className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm text-muted-foreground">
-                Aucun blocage majeur dans les artefacts actuels. Vérifie tout de même ton horizon et ta tolérance au risque.
+                Aucun blocage majeur dans les artefacts actuels. Vérifie tout de même ton horizon et
+                ta tolérance au risque.
               </p>
             )}
           </div>
@@ -393,7 +415,7 @@ function IaOverviewPage() {
         <Panel
           title="Conseils & recommandations"
           tone="brand"
-          icon={<span aria-hidden="true">◎</span>}
+          icon={<SparklesPixelIcon size={16} />}
           description="Aide à la décision uniquement: aucune instruction d'achat, aucune exécution."
         >
           {recs.length > 0 ? (
@@ -409,9 +431,12 @@ function IaOverviewPage() {
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-border/45 bg-surface-1/35 px-4 py-8 text-center">
-              <p className="text-sm font-semibold text-foreground">Aucune recommandation disponible</p>
+              <p className="text-sm font-semibold text-foreground">
+                Aucune recommandation disponible
+              </p>
               <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-                L'Advisor a besoin d'un run récent ou de données plus complètes. En admin, tu peux relancer la mission.
+                L'Advisor a besoin d'un run récent ou de données plus complètes. En admin, tu peux
+                relancer la mission.
               </p>
             </div>
           )}
@@ -430,22 +455,37 @@ function IaOverviewPage() {
           <Panel
             title="Accès utiles"
             description="Les surfaces techniques restent séparées du conseil quotidien."
-            icon={<span aria-hidden="true">→</span>}
+            icon={<CheckListPixelIcon size={16} />}
             tone="plain"
           >
             <div className="grid gap-2">
-              <Link to="/ia/chat" className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1">
+              <Link
+                to="/ia/chat"
+                className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1"
+              >
                 Chat finance
-                <span className="mt-1 block text-xs text-muted-foreground">Poser une question sur tes données Finance-OS.</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Poser une question sur tes données Finance-OS.
+                </span>
               </Link>
-              <Link to="/ia/memoire" className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1">
+              <Link
+                to="/ia/memoire"
+                className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1"
+              >
                 Mémoire & connaissances
-                <span className="mt-1 block text-xs text-muted-foreground">Voir provenance, confiance et contexte utilisé.</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Voir provenance, confiance et contexte utilisé.
+                </span>
               </Link>
               {isAdmin ? (
-                <Link to="/ia/couts" className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1">
+                <Link
+                  to="/ia/couts"
+                  className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm hover:border-primary/30 hover:bg-surface-1"
+                >
                   Coûts IA
-                  <span className="mt-1 block text-xs text-muted-foreground">Audit technique, pas une surface de décision.</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Audit technique, pas une surface de décision.
+                  </span>
                 </Link>
               ) : null}
             </div>
@@ -476,13 +516,20 @@ function IaOverviewPage() {
           tone="warning"
         >
           <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-            <p>Pas d'ordre d'achat, de vente, de transfert, de staking ou de rééquilibrage automatique.</p>
-            <p>Avant une décision: objectif, horizon, épargne de précaution, expérience, tolérance au risque et besoin de liquidité doivent être clairs.</p>
-            <p>Si une donnée manque, baisse la confiance et demande une clarification dans le chat.</p>
+            <p>
+              Pas d'ordre d'achat, de vente, de transfert, de staking ou de rééquilibrage
+              automatique.
+            </p>
+            <p>
+              Avant une décision: objectif, horizon, épargne de précaution, expérience, tolérance au
+              risque et besoin de liquidité doivent être clairs.
+            </p>
+            <p>
+              Si une donnée manque, baisse la confiance et demande une clarification dans le chat.
+            </p>
           </div>
         </Panel>
       </section>
-
     </div>
   )
 }

@@ -1,26 +1,27 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { z } from 'zod'
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { RangePill } from '@/components/surfaces/range-pill'
-import type { AuthMode } from '@/features/auth-types'
-import { authMeQueryOptions } from '@/features/auth-query-options'
-import { resolveAuthViewState } from '@/features/auth-view-state'
-import {
-  dashboardSummaryQueryOptionsWithMode,
-  dashboardTransactionsInfiniteQueryOptionsWithMode,
-  dashboardQueryKeys,
-} from '@/features/dashboard-query-options'
-import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
-import { patchTransactionClassification } from '@/features/dashboard-api'
+import { DownloadPixelIcon, ReceiptPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { ExpenseStructureCard } from '@/components/dashboard/expense-structure-card'
 import { MonthlyCategoryBudgetsCard } from '@/components/dashboard/monthly-category-budgets-card'
-import { formatMoney, formatDate, toErrorMessage } from '@/lib/format'
-import { exportTransactionsCsv } from '@/lib/export'
-import { pushToast } from '@/lib/toast-store'
-import { KpiTile } from '@/components/surfaces/kpi-tile'
 import { PersonalEmptyState } from '@/components/personal/personal-ux'
+import { KpiTile } from '@/components/surfaces/kpi-tile'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { RangePill } from '@/components/surfaces/range-pill'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
+import { resolveAuthViewState } from '@/features/auth-view-state'
+import { patchTransactionClassification } from '@/features/dashboard-api'
+import {
+  dashboardQueryKeys,
+  dashboardSummaryQueryOptionsWithMode,
+  dashboardTransactionsInfiniteQueryOptionsWithMode,
+} from '@/features/dashboard-query-options'
+import type { DashboardRange, DashboardTransactionsResponse } from '@/features/dashboard-types'
+import { exportTransactionsCsv } from '@/lib/export'
+import { formatDate, formatMoney, toErrorMessage } from '@/lib/format'
+import { pushToast } from '@/lib/toast-store'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d']).optional(),
@@ -35,7 +36,8 @@ export const Route = createFileRoute('/_app/depenses')({
   loaderDeps: ({ search }) => ({ range: resolveRange(search.range) }),
   loader: async ({ context, deps }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-    const mode: AuthMode | undefined = auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
+    const mode: AuthMode | undefined =
+      auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
 
     await Promise.all([
@@ -101,7 +103,10 @@ function DepensesPage() {
       if (subcategoryInput === null) throw new Error('Annulé')
       const tagsInput = window.prompt('Tags (virgules)', transaction.tags.join(', '))
       if (tagsInput === null) throw new Error('Annulé')
-      const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
+      const tags = tagsInput
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
       const category = categoryInput.trim()
       const subcategory = subcategoryInput.trim()
       return patchTransactionClassification({
@@ -113,8 +118,14 @@ function DepensesPage() {
       })
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.transactions({ range, limit: 30 }) })
-      pushToast({ title: 'Classification sauvegardée', description: 'Mise à jour effectuée.', tone: 'success' })
+      await queryClient.invalidateQueries({
+        queryKey: dashboardQueryKeys.transactions({ range, limit: 30 }),
+      })
+      pushToast({
+        title: 'Classification sauvegardée',
+        description: 'Mise à jour effectuée.',
+        tone: 'success',
+      })
     },
     onError: error => {
       if (error instanceof Error && error.message === 'Annulé') return
@@ -125,7 +136,7 @@ function DepensesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        icon="↔"
+        icon={<ReceiptPixelIcon size={12} />}
         title="Dépenses & revenus"
         actions={
           <>
@@ -136,7 +147,7 @@ function DepensesPage() {
               disabled={transactions.length === 0}
               onClick={() => exportTransactionsCsv(transactions, range)}
             >
-              <span aria-hidden="true">↓</span>
+              <DownloadPixelIcon size={14} />
               Export CSV
             </Button>
             <RangePill
@@ -206,7 +217,10 @@ function DepensesPage() {
         <CardContent>
           {transactionsQuery.isPending ? (
             <div className="space-y-3">
-              {Array.from({ length: 5 }, (_, index) => `expense-transaction-skeleton-${index + 1}`).map(key => (
+              {Array.from(
+                { length: 5 },
+                (_, index) => `expense-transaction-skeleton-${index + 1}`
+              ).map(key => (
                 <div key={key} className="h-12 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
@@ -236,10 +250,14 @@ function DepensesPage() {
                         className="border-b border-border/50 transition-colors hover:bg-surface-1"
                         style={{ transitionDuration: 'var(--duration-fast)' }}
                       >
-                        <td className="whitespace-nowrap px-6 py-3 text-muted-foreground">{formatDate(tx.bookingDate)}</td>
+                        <td className="whitespace-nowrap px-6 py-3 text-muted-foreground">
+                          {formatDate(tx.bookingDate)}
+                        </td>
                         <td className="px-6 py-3">
                           <p className="font-medium">{tx.label}</p>
-                          <p className="text-xs text-muted-foreground">{tx.accountName ?? tx.powensAccountId}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {tx.accountName ?? tx.powensAccountId}
+                          </p>
                         </td>
                         <td className="px-6 py-3">
                           <span className="text-xs text-muted-foreground">
@@ -252,12 +270,21 @@ function DepensesPage() {
                             </span>
                           ) : null}
                         </td>
-                        <td className={`whitespace-nowrap px-6 py-3 text-right font-financial font-medium ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
+                        <td
+                          className={`whitespace-nowrap px-6 py-3 text-right font-financial font-medium ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}
+                        >
                           {formatMoney(tx.amount, tx.currency)}
                         </td>
                         {isAdmin && (
                           <td className="px-6 py-3">
-                            <Button type="button" variant="ghost" size="sm" className="text-xs" disabled={classifyMutation.isPending} onClick={() => classifyMutation.mutate(tx)}>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs"
+                              disabled={classifyMutation.isPending}
+                              onClick={() => classifyMutation.mutate(tx)}
+                            >
                               Éditer
                             </Button>
                           </td>
@@ -283,7 +310,9 @@ function DepensesPage() {
                           {tx.subcategory ? ` / ${tx.subcategory}` : ''}
                         </p>
                       </div>
-                      <p className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}>
+                      <p
+                        className={`font-financial text-sm font-semibold shrink-0 ${tx.direction === 'expense' ? 'text-negative' : 'text-positive'}`}
+                      >
                         {formatMoney(tx.amount, tx.currency)}
                       </p>
                     </div>

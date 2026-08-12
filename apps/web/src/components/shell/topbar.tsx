@@ -1,24 +1,25 @@
 import { Badge, Button } from '@finance-os/ui/components'
+import { DownloadPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { BrandMark } from '@/components/brand/brand-mark'
+import { StatusDot } from '@/components/surfaces/status-dot'
 import { postAuthLogout } from '@/features/auth-api'
-import type { AuthMode } from '@/features/auth-types'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
+import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
   computeCtaOrchestrationMetrics,
   logCtaPolicyEvent,
   orchestrateCtas,
   readCtaPolicyRuntime,
 } from '@/features/cta-policy/policy-registry'
-import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { toErrorMessage } from '@/lib/format'
 import { pushToast } from '@/lib/toast-store'
-import { BrandMark } from '@/components/brand/brand-mark'
-import { StatusDot } from '@/components/surfaces/status-dot'
 import { CommandPaletteTrigger } from './command-palette'
 import { ThemeToggle } from './theme-toggle'
 
@@ -50,7 +51,11 @@ export function Topbar() {
       pushToast({ title: 'Session fermée', description: 'Retour en mode démo.', tone: 'info' })
     },
     onError: error => {
-      pushToast({ title: 'Déconnexion impossible', description: toErrorMessage(error), tone: 'error' })
+      pushToast({
+        title: 'Déconnexion impossible',
+        description: toErrorMessage(error),
+        tone: 'error',
+      })
     },
   })
 
@@ -238,7 +243,7 @@ function PwaInstallButton({ mode }: { mode: AuthMode }) {
       title={decision.disabledReason}
       className="hidden gap-1.5 border-accent-2/35 text-accent-2 hover:border-accent-2/55 hover:bg-accent-2/10 hover:text-accent-2 disabled:opacity-55 sm:inline-flex"
     >
-      <span aria-hidden="true">↓</span>
+      <DownloadPixelIcon size={14} />
       {decision.state === 'disabled' ? 'Installation indisponible' : 'Installer'}
     </Button>
   )

@@ -1,17 +1,19 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { FlagPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
-import type { AuthMode } from '@/features/auth-types'
-import { authMeQueryOptions } from '@/features/auth-query-options'
-import { resolveAuthViewState } from '@/features/auth-view-state'
-import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
+import { createFileRoute } from '@tanstack/react-router'
 import { PersonalFinancialGoalsCard } from '@/components/dashboard/personal-financial-goals-card'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
+import { resolveAuthViewState } from '@/features/auth-view-state'
+import { financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
 
 export const Route = createFileRoute('/_app/objectifs')({
   loader: async ({ context }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-    const mode: AuthMode | undefined = auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
+    const mode: AuthMode | undefined =
+      auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
     await context.queryClient.ensureQueryData(financialGoalsQueryOptionsWithMode({ mode }))
   },
@@ -30,7 +32,9 @@ function ObjectifsPage() {
 
   const goalsQuery = useQuery(financialGoalsQueryOptionsWithMode({ mode: authMode }))
   const goals = goalsQuery.data?.items ?? []
-  const completed = goals.filter(g => g.targetAmount > 0 && g.currentAmount / g.targetAmount >= 1).length
+  const completed = goals.filter(
+    g => g.targetAmount > 0 && g.currentAmount / g.targetAmount >= 1
+  ).length
   const inProgress = goals.filter(g => !g.archivedAt).length
   const activeGoals = goals.filter(g => !g.archivedAt)
   const goalsNeedingAttention = activeGoals.filter(
@@ -46,16 +50,19 @@ function ObjectifsPage() {
     })[0]
   const overallProgress = goals.length
     ? Math.round(
-        (goals.reduce((sum, g) => sum + Math.min(1, g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0), 0) /
+        (goals.reduce(
+          (sum, g) => sum + Math.min(1, g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0),
+          0
+        ) /
           goals.length) *
-          100,
+          100
       )
     : 0
 
   return (
     <div className="space-y-8">
       <PageHeader
-        icon="◎"
+        icon={<FlagPixelIcon size={12} />}
         title="Objectifs"
         description="Ce que tu veux financer, où tu en es, et ce qui mérite une action."
       />
@@ -77,7 +84,8 @@ function ObjectifsPage() {
         ) : null}
         {goalsNeedingAttention.length > 0 ? (
           <p className="mt-2 text-sm text-warning">
-            {goalsNeedingAttention.length} objectif{goalsNeedingAttention.length > 1 ? 's' : ''} à reprendre.
+            {goalsNeedingAttention.length} objectif{goalsNeedingAttention.length > 1 ? 's' : ''} à
+            reprendre.
           </p>
         ) : null}
       </Panel>

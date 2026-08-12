@@ -1,25 +1,72 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
-import { motion } from 'motion/react'
-import type { AuthMode } from '@/features/auth-types'
-import { authMeQueryOptions } from '@/features/auth-query-options'
-import { resolveAuthViewState } from '@/features/auth-view-state'
-import { dashboardDerivedRecomputeStatusQueryOptionsWithMode, dashboardSummaryQueryOptionsWithMode } from '@/features/dashboard-query-options'
 import {
-  powensDiagnosticsQueryOptionsWithMode,
-  powensStatusQueryOptionsWithMode,
-  powensSyncRunsQueryOptionsWithMode,
-} from '@/features/powens/query-options'
+  CheckPixelIcon,
+  ExclamationTrianglePixelIcon,
+  QuestionPixelIcon,
+  TimesPixelIcon,
+} from '@finance-os/ui/icons/pixel'
+import { HeartbeatIcon } from '@phosphor-icons/react/dist/csr/Heartbeat'
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { motion } from 'motion/react'
+import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
+import { resolveAuthViewState } from '@/features/auth-view-state'
+import {
+  dashboardDerivedRecomputeStatusQueryOptionsWithMode,
+  dashboardSummaryQueryOptionsWithMode,
+} from '@/features/dashboard-query-options'
 import {
   externalInvestmentsStatusQueryOptionsWithMode,
   externalInvestmentsSyncRunsQueryOptionsWithMode,
 } from '@/features/external-investments/query-options'
 import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
 import { pushSettingsQueryOptionsWithMode } from '@/features/notifications/query-options'
-import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
+import {
+  powensDiagnosticsQueryOptionsWithMode,
+  powensStatusQueryOptionsWithMode,
+  powensSyncRunsQueryOptionsWithMode,
+} from '@/features/powens/query-options'
 import { formatDateTime, formatDuration } from '@/lib/format'
-import { PageHeader } from '@/components/surfaces/page-header'
+
+type SignalStatus = 'ok' | 'warning' | 'error' | 'unknown'
+
+const STATUS_ICON = {
+  ok: CheckPixelIcon,
+  warning: ExclamationTrianglePixelIcon,
+  error: TimesPixelIcon,
+  unknown: QuestionPixelIcon,
+} as const
+
+/** Status is never conveyed by icon or colour alone: each one carries a text alternative. */
+const STATUS_LABEL = {
+  ok: 'OK',
+  warning: 'Attention',
+  error: 'Erreur',
+  unknown: 'Inconnu',
+} as const
+
+const STATUS_COLOR = {
+  ok: 'text-positive',
+  warning: 'text-warning',
+  error: 'text-negative',
+  unknown: 'text-muted-foreground',
+} as const
+
+function SignalStatusIcon({ status, className }: { status: SignalStatus; className?: string }) {
+  const Icon = STATUS_ICON[status]
+  return (
+    <span
+      role="img"
+      aria-label={STATUS_LABEL[status]}
+      className={`mt-0.5 flex shrink-0 items-center ${className ?? ''}`}
+    >
+      <Icon size={18} />
+    </span>
+  )
+}
 
 const providerLabel = (provider: ExternalInvestmentProvider) =>
   provider === 'ibkr' ? 'IBKR' : 'Binance'
@@ -27,7 +74,8 @@ const providerLabel = (provider: ExternalInvestmentProvider) =>
 export const Route = createFileRoute('/_app/sante')({
   loader: async ({ context }) => {
     const auth = await context.queryClient.fetchQuery(authMeQueryOptions())
-    const mode: AuthMode | undefined = auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
+    const mode: AuthMode | undefined =
+      auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
     const opts = { mode }
     await Promise.all([
@@ -36,8 +84,12 @@ export const Route = createFileRoute('/_app/sante')({
       context.queryClient.ensureQueryData(powensDiagnosticsQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode(opts)),
       context.queryClient.ensureQueryData(externalInvestmentsSyncRunsQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(dashboardDerivedRecomputeStatusQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(dashboardSummaryQueryOptionsWithMode({ range: '30d', ...opts })),
+      context.queryClient.ensureQueryData(
+        dashboardDerivedRecomputeStatusQueryOptionsWithMode(opts)
+      ),
+      context.queryClient.ensureQueryData(
+        dashboardSummaryQueryOptionsWithMode({ range: '30d', ...opts })
+      ),
       context.queryClient.ensureQueryData(pushSettingsQueryOptionsWithMode(opts)),
     ])
   },
@@ -61,12 +113,24 @@ function SantePage() {
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
 
   const statusQuery = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const syncRunsQuery = useQuery(powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const diagnosticsQuery = useQuery(powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const externalStatusQuery = useQuery(externalInvestmentsStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const externalSyncRunsQuery = useQuery(externalInvestmentsSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const derivedQuery = useQuery(dashboardDerivedRecomputeStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const summaryQuery = useQuery(dashboardSummaryQueryOptionsWithMode({ range: '30d', ...(authMode ? { mode: authMode } : {}) }))
+  const syncRunsQuery = useQuery(
+    powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const diagnosticsQuery = useQuery(
+    powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const externalStatusQuery = useQuery(
+    externalInvestmentsStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const externalSyncRunsQuery = useQuery(
+    externalInvestmentsSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const derivedQuery = useQuery(
+    dashboardDerivedRecomputeStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {})
+  )
+  const summaryQuery = useQuery(
+    dashboardSummaryQueryOptionsWithMode({ range: '30d', ...(authMode ? { mode: authMode } : {}) })
+  )
   const pushQuery = useQuery(pushSettingsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
 
   const connections = statusQuery.data?.connections ?? []
@@ -87,27 +151,42 @@ function SantePage() {
     {
       label: 'Connexions Powens',
       status: connections.some(c => c.status === 'error' || c.status === 'reconnect_required')
-        ? 'error' : connections.length > 0 ? 'ok' : 'unknown',
+        ? 'error'
+        : connections.length > 0
+          ? 'ok'
+          : 'unknown',
       detail: `${connections.filter(c => c.status === 'connected').length}/${connections.length} connectées`,
     },
     {
       label: 'Dernière sync',
-      status: latestSync.badgeVariant === 'destructive' ? 'error'
-        : latestSync.badgeVariant === 'outline' ? 'warning' : 'ok',
+      status:
+        latestSync.badgeVariant === 'destructive'
+          ? 'error'
+          : latestSync.badgeVariant === 'outline'
+            ? 'warning'
+            : 'ok',
       detail: latestSync.summary,
     },
     {
       label: 'Diagnostic provider',
-      status: !diagnostics ? 'unknown'
-        : diagnostics.outcome === 'ok' ? 'ok'
-        : diagnostics.outcome === 'degraded' ? 'warning' : 'error',
+      status: !diagnostics
+        ? 'unknown'
+        : diagnostics.outcome === 'ok'
+          ? 'ok'
+          : diagnostics.outcome === 'degraded'
+            ? 'warning'
+            : 'error',
       detail: diagnostics?.guidance ?? 'Chargement…',
     },
     {
       label: 'Derived recompute',
-      status: !derived ? 'unknown'
-        : derived.state === 'completed' ? 'ok'
-        : derived.state === 'failed' ? 'error' : 'warning',
+      status: !derived
+        ? 'unknown'
+        : derived.state === 'completed'
+          ? 'ok'
+          : derived.state === 'failed'
+            ? 'error'
+            : 'warning',
       detail: derived?.latestRun ? formatDateTime(derived.latestRun.finishedAt) : 'Aucun run',
     },
     {
@@ -139,26 +218,27 @@ function SantePage() {
     {
       label: 'Données summary',
       status: summaryQuery.isError ? 'error' : summaryQuery.data ? 'ok' : 'unknown',
-      detail: summaryQuery.isError ? 'Erreur de chargement' : summaryQuery.data ? 'Disponible' : 'Chargement…',
+      detail: summaryQuery.isError
+        ? 'Erreur de chargement'
+        : summaryQuery.data
+          ? 'Disponible'
+          : 'Chargement…',
     },
   ]
 
-  const overallStatus = signals.some(s => s.status === 'error') ? 'error'
-    : signals.some(s => s.status === 'warning') ? 'warning' : 'ok'
+  const overallStatus = signals.some(s => s.status === 'error')
+    ? 'error'
+    : signals.some(s => s.status === 'warning')
+      ? 'warning'
+      : 'ok'
 
-  const STATUS_GLYPH = { ok: '✓', warning: '⚡', error: '✗', unknown: '?' } as const
-  const STATUS_COLOR = {
-    ok: 'text-positive',
-    warning: 'text-warning',
-    error: 'text-negative',
-    unknown: 'text-muted-foreground',
-  } as const
+  const OverallStatusIcon = STATUS_ICON[overallStatus]
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Intelligence & Admin"
-        icon="♡"
+        icon={<HeartbeatIcon size={12} />}
         title="Santé"
         description="Diagnostics système, synchronisation et pipelines dérivés. Utile pour vérifier les sources, pas nécessaire au quotidien."
       />
@@ -180,11 +260,15 @@ function SantePage() {
             transition={{ type: 'spring', bounce: 0.4, duration: 0.5 }}
             className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold ${STATUS_COLOR[overallStatus]} bg-background shadow-sm`}
           >
-            {STATUS_GLYPH[overallStatus]}
+            <OverallStatusIcon size={26} />
           </motion.div>
           <div>
             <p className="text-lg font-semibold">
-              {overallStatus === 'ok' ? 'Système opérationnel' : overallStatus === 'warning' ? 'Attention requise' : 'Problème détecté'}
+              {overallStatus === 'ok'
+                ? 'Système opérationnel'
+                : overallStatus === 'warning'
+                  ? 'Attention requise'
+                  : 'Problème détecté'}
             </p>
             <p className="text-sm text-muted-foreground">
               {signals.filter(s => s.status === 'ok').length}/{signals.length} sous-systèmes OK
@@ -204,9 +288,7 @@ function SantePage() {
           >
             <Card className="h-full">
               <CardContent className="flex items-start gap-3 p-5">
-                <span className={`mt-0.5 text-lg ${STATUS_COLOR[signal.status]}`}>
-                  {STATUS_GLYPH[signal.status]}
-                </span>
+                <SignalStatusIcon status={signal.status} className={STATUS_COLOR[signal.status]} />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{signal.label}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground truncate">{signal.detail}</p>
@@ -234,15 +316,27 @@ function SantePage() {
                 <div className="min-w-0">
                   <p className="text-sm">
                     <span className="font-medium">#{run.connectionId}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(run.startedAt)}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {formatDateTime(run.startedAt)}
+                    </span>
                     {formatDuration(run.startedAt, run.endedAt) && (
-                      <span className="ml-2 text-xs text-muted-foreground">· {formatDuration(run.startedAt, run.endedAt)}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        · {formatDuration(run.startedAt, run.endedAt)}
+                      </span>
                     )}
                   </p>
-                  {run.errorMessage && <p className="text-xs text-negative truncate">{run.errorMessage}</p>}
+                  {run.errorMessage && (
+                    <p className="text-xs text-negative truncate">{run.errorMessage}</p>
+                  )}
                 </div>
                 <Badge
-                  variant={run.result === 'success' ? 'positive' : run.result === 'running' ? 'outline' : 'destructive'}
+                  variant={
+                    run.result === 'success'
+                      ? 'positive'
+                      : run.result === 'running'
+                        ? 'outline'
+                        : 'destructive'
+                  }
                   className="text-xs"
                 >
                   {run.result}
@@ -341,7 +435,8 @@ function SantePage() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{providerLabel(item.provider)}</p>
                   <p className="text-xs text-muted-foreground">
-                    Dernier appel {formatDateTime(item.lastAttemptAt)} · succes {formatDateTime(item.lastSuccessAt)}
+                    Dernier appel {formatDateTime(item.lastAttemptAt)} · succes{' '}
+                    {formatDateTime(item.lastSuccessAt)}
                   </p>
                   {item.lastErrorMessage && (
                     <p className="truncate text-xs text-negative">{item.lastErrorMessage}</p>
@@ -371,7 +466,6 @@ function SantePage() {
           )}
         </CardContent>
       </Card>
-
     </div>
   )
 }

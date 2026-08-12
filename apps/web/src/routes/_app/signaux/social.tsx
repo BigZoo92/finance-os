@@ -1,30 +1,28 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
 import { Badge } from '@finance-os/ui/components'
+import { AtPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import { StatusDot } from '@/components/surfaces/status-dot'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
   createSignalSource,
   deleteSignalSource,
   postManualImport,
-  updateSignalSource,
   type SignalSource,
   type SignalSourceGroup,
+  updateSignalSource,
 } from '@/features/signals-api'
 import { signalSourcesQueryOptions } from '@/features/signals-query-options'
-import {
-  lookupXHandle,
-  type XProfileLookupResponse,
-} from '@/features/x-twitter-api'
-import { formatCount, verificationStatusLabel } from '@/features/x-twitter-view-model'
+import { lookupXHandle, type XProfileLookupResponse } from '@/features/x-twitter-api'
 import {
   dedupeSignalSourcesForDisplay,
   normalizeXHandleForUi,
 } from '@/features/x-twitter-social-dedupe'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { Panel } from '@/components/surfaces/panel'
-import { StatusDot } from '@/components/surfaces/status-dot'
+import { formatCount, verificationStatusLabel } from '@/features/x-twitter-view-model'
 
 export const Route = createFileRoute('/_app/signaux/social')({
   loader: async ({ context }) => {
@@ -67,7 +65,7 @@ function SignauxSocialPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Intelligence & Admin"
-        icon="⊕"
+        icon={<AtPixelIcon size={12} />}
         title="Social Intelligence"
         description="Comptes X / Twitter et Bluesky suivis pour alimenter l'Advisor."
       />
@@ -154,7 +152,7 @@ function SignauxSocialPage() {
             <p className="text-text-secondary text-sm">
               {activeTab === 'finance'
                 ? "Aucun compte finance surveille. Ajoutez des comptes X, Bluesky ou d'autres sources."
-                : "Aucun compte IA/Tech surveille. Ajoutez des comptes pour suivre les nouveaux modeles, outils et mises a jour."}
+                : 'Aucun compte IA/Tech surveille. Ajoutez des comptes pour suivre les nouveaux modeles, outils et mises a jour.'}
             </p>
             {!isAdmin && (
               <p className="text-text-tertiary text-xs mt-2">
@@ -240,12 +238,11 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
   const profile = source.profileMetadata ?? null
   const avatar = source.profileImageUrl ?? null
   const canonicalUsername = profile?.username ?? sanitizeHandleForDisplay(source.handle)
-  const verificationTone: 'ok' | 'warn' | 'idle' =
-    !isX
-      ? 'idle'
-      : source.verificationStatus === 'verified'
-        ? 'ok'
-        : 'warn'
+  const verificationTone: 'ok' | 'warn' | 'idle' = !isX
+    ? 'idle'
+    : source.verificationStatus === 'verified'
+      ? 'ok'
+      : 'warn'
 
   return (
     <Panel>
@@ -273,9 +270,7 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
                   className="text-[10px]"
                   data-testid={`source-verification-${source.id}`}
                 >
-                  {source.verificationStatus === 'verified'
-                    ? 'vérifié'
-                    : 'non résolu'}
+                  {source.verificationStatus === 'verified' ? 'vérifié' : 'non résolu'}
                 </Badge>
               )}
               {profile?.verified && (
@@ -299,7 +294,8 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
               <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-text-tertiary">
                 {profile.publicMetrics.followersCount != null && (
                   <span>
-                    Followers: <strong className="text-text-secondary">
+                    Followers:{' '}
+                    <strong className="text-text-secondary">
                       {profile.publicMetrics.followersCount.toLocaleString('fr-FR')}
                     </strong>
                   </span>
@@ -310,14 +306,10 @@ function SourceCard({ source, isAdmin }: { source: SignalSource; isAdmin: boolea
                   </span>
                 )}
                 {profile.publicMetrics.tweetCount != null && (
-                  <span>
-                    Tweets: {profile.publicMetrics.tweetCount.toLocaleString('fr-FR')}
-                  </span>
+                  <span>Tweets: {profile.publicMetrics.tweetCount.toLocaleString('fr-FR')}</span>
                 )}
                 {profile.publicMetrics.listedCount != null && (
-                  <span>
-                    Listed: {profile.publicMetrics.listedCount.toLocaleString('fr-FR')}
-                  </span>
+                  <span>Listed: {profile.publicMetrics.listedCount.toLocaleString('fr-FR')}</span>
                 )}
               </div>
             )}
@@ -389,8 +381,7 @@ function AddSourceForm({
   const [success, setSuccess] = useState<string | null>(null)
 
   const lookupMutation = useMutation({
-    mutationFn: () =>
-      lookupXHandle({ handle: handle.trim(), persist: false, forceRefresh: false }),
+    mutationFn: () => lookupXHandle({ handle: handle.trim(), persist: false, forceRefresh: false }),
     onSuccess: data => {
       setError(null)
       // Auto-fill displayName from the profile name on first successful lookup.
@@ -459,7 +450,12 @@ function AddSourceForm({
       <h3 className="text-sm font-medium text-text-primary mb-3">Nouveau compte</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-provider">Provider</label>
+          <label
+            className="text-xs text-text-secondary block mb-1"
+            htmlFor="signal-source-provider"
+          >
+            Provider
+          </label>
           <select
             id="signal-source-provider"
             value={provider}
@@ -472,7 +468,9 @@ function AddSourceForm({
           </select>
         </div>
         <div>
-          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-group">Groupe</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-group">
+            Groupe
+          </label>
           <select
             id="signal-source-group"
             value={group}
@@ -502,7 +500,12 @@ function AddSourceForm({
           />
         </div>
         <div>
-          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-display-name">Nom d'affichage</label>
+          <label
+            className="text-xs text-text-secondary block mb-1"
+            htmlFor="signal-source-display-name"
+          >
+            Nom d'affichage
+          </label>
           <input
             id="signal-source-display-name"
             type="text"
@@ -513,7 +516,9 @@ function AddSourceForm({
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-tags">Tags (separes par virgule)</label>
+          <label className="text-xs text-text-secondary block mb-1" htmlFor="signal-source-tags">
+            Tags (separes par virgule)
+          </label>
           <input
             id="signal-source-tags"
             type="text"
@@ -575,7 +580,11 @@ function AddSourceForm({
                   vérifié{lookupProfile.verifiedType ? ` (${lookupProfile.verifiedType})` : ''}
                 </Badge>
               )}
-              {lookupProfile.protected && <Badge variant="outline" className="text-xs">privé</Badge>}
+              {lookupProfile.protected && (
+                <Badge variant="outline" className="text-xs">
+                  privé
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -643,9 +652,7 @@ function ManualImportPanel({ onImported }: { onImported: () => void }) {
         className="w-full rounded-lg bg-surface-1 border border-surface-2 px-3 py-2 text-sm text-text-primary font-mono resize-y"
       />
       {error && <p className="text-negative text-xs mt-1">{error}</p>}
-      {result && (
-        <p className="text-positive text-xs mt-1">{result.count} signal(s) importe(s).</p>
-      )}
+      {result && <p className="text-positive text-xs mt-1">{result.count} signal(s) importe(s).</p>}
       <button
         type="button"
         onClick={() => {

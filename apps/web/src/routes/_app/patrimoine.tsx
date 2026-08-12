@@ -1,7 +1,3 @@
-import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { z } from 'zod'
 import {
   Badge,
   Button,
@@ -12,33 +8,39 @@ import {
   CardTitle,
   Input,
 } from '@finance-os/ui/components'
+import { BankPixelIcon } from '@finance-os/ui/icons/pixel'
+import { ChartPieSliceIcon } from '@phosphor-icons/react/dist/csr/ChartPieSlice'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import type { AuthMode } from '@/features/auth-types'
+import { useState } from 'react'
+import { z } from 'zod'
+import { getTrendDirection } from '@/components/dashboard/trend-visuals'
+import { PersonalEmptyState, PersonalSectionHeading } from '@/components/personal/personal-ux'
+import { PageHeader } from '@/components/surfaces/page-header'
+import { Panel } from '@/components/surfaces/panel'
+import { RangePill } from '@/components/surfaces/range-pill'
+import { D3Sparkline, MiniSparkline } from '@/components/ui/d3-sparkline'
 import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import {
-  dashboardManualAssetsQueryOptionsWithMode,
-  dashboardQueryKeys,
-  dashboardSummaryQueryOptionsWithMode,
-} from '@/features/dashboard-query-options'
-import {
-  externalInvestmentsPositionsQueryOptionsWithMode,
-  externalInvestmentsSummaryQueryOptionsWithMode,
-} from '@/features/external-investments/query-options'
 import {
   deleteDashboardManualAsset,
   patchDashboardManualAsset,
   postDashboardManualAsset,
 } from '@/features/dashboard-api'
-import type { DashboardManualAssetResponse, DashboardRange } from '@/features/dashboard-types'
 import { adaptDashboardSummaryLegacy } from '@/features/dashboard-legacy-adapter'
-import { getTrendDirection } from '@/components/dashboard/trend-visuals'
+import {
+  dashboardManualAssetsQueryOptionsWithMode,
+  dashboardQueryKeys,
+  dashboardSummaryQueryOptionsWithMode,
+} from '@/features/dashboard-query-options'
+import type { DashboardManualAssetResponse, DashboardRange } from '@/features/dashboard-types'
+import {
+  externalInvestmentsPositionsQueryOptionsWithMode,
+  externalInvestmentsSummaryQueryOptionsWithMode,
+} from '@/features/external-investments/query-options'
 import { formatDateTime, formatMoney } from '@/lib/format'
-import { D3Sparkline, MiniSparkline } from '@/components/ui/d3-sparkline'
-import { RangePill } from '@/components/surfaces/range-pill'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { Panel } from '@/components/surfaces/panel'
-import { PersonalEmptyState, PersonalSectionHeading } from '@/components/personal/personal-ux'
 
 const searchSchema = z.object({ range: z.enum(['7d', '30d', '90d']).optional() })
 const resolveRange = (value: string | undefined): DashboardRange =>
@@ -63,7 +65,9 @@ export const Route = createFileRoute('/_app/patrimoine')({
     )
     await Promise.all([
       context.queryClient.ensureQueryData(externalInvestmentsSummaryQueryOptionsWithMode({ mode })),
-      context.queryClient.ensureQueryData(externalInvestmentsPositionsQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(
+        externalInvestmentsPositionsQueryOptionsWithMode({ mode })
+      ),
     ])
   },
   component: PatrimoinePage,
@@ -286,7 +290,7 @@ function PatrimoinePage() {
   return (
     <div className="space-y-10">
       <PageHeader
-        icon="◇"
+        icon={<BankPixelIcon size={12} />}
         title="Patrimoine"
         description="Ce que tu possèdes, ce qui est liquide, et les valorisations à vérifier."
         compact
@@ -307,7 +311,10 @@ function PatrimoinePage() {
         style={{ background: 'var(--surface-0)' }}
       >
         {/* Layer 1 — aurora wash + dotted grid, soft and fading to clean */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-aurora-mesh-soft opacity-90" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-aurora-mesh-soft opacity-90"
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 opacity-60"
@@ -334,7 +341,7 @@ function PatrimoinePage() {
           {/* Top row — eyebrow + RangePill */}
           <div className="flex flex-wrap items-start justify-between gap-3">
             <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.24em] text-primary/85">
-              <span aria-hidden="true" className="text-base leading-none">◊</span>
+              <BankPixelIcon size={13} />
               Patrimoine <span className="text-muted-foreground/40">·</span> net
             </p>
             <RangePill
@@ -371,7 +378,9 @@ function PatrimoinePage() {
               {!summaryQuery.isPending && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Badge
-                    variant={trend === 'up' ? 'positive' : trend === 'down' ? 'destructive' : 'outline'}
+                    variant={
+                      trend === 'up' ? 'positive' : trend === 'down' ? 'destructive' : 'outline'
+                    }
                     className="gap-1 text-[11px]"
                   >
                     <span aria-hidden="true">
@@ -407,7 +416,11 @@ function PatrimoinePage() {
                   </span>
                   <span
                     className={`font-mono text-[11px] ${
-                      trend === 'up' ? 'text-positive' : trend === 'down' ? 'text-negative' : 'text-foreground/80'
+                      trend === 'up'
+                        ? 'text-positive'
+                        : trend === 'down'
+                          ? 'text-negative'
+                          : 'text-foreground/80'
                     }`}
                   >
                     {rangeLabel}
@@ -417,7 +430,13 @@ function PatrimoinePage() {
                   data={miniTrendData}
                   width={108}
                   height={32}
-                  color={trend === 'up' ? 'var(--positive)' : trend === 'down' ? 'var(--negative)' : 'var(--primary)'}
+                  color={
+                    trend === 'up'
+                      ? 'var(--positive)'
+                      : trend === 'down'
+                        ? 'var(--negative)'
+                        : 'var(--primary)'
+                  }
                 />
               </div>
             )}
@@ -449,24 +468,32 @@ function PatrimoinePage() {
       </section>
 
       <section className="space-y-4">
-        <Panel
-          title="Répartition"
-          icon={<span aria-hidden="true">◇</span>}
-          tone="brand"
-        >
+        <Panel title="Répartition" icon={<ChartPieSliceIcon size={16} />} tone="brand">
           <div className="grid gap-3 sm:grid-cols-3">
-            <WealthBucket label="Liquidités" value={liquidAssetsValue} detail="Comptes et cash détectés" />
+            <WealthBucket
+              label="Liquidités"
+              value={liquidAssetsValue}
+              detail="Comptes et cash détectés"
+            />
             <WealthBucket
               label="Investi"
               value={investmentAssetsValue + externalKnownValue}
               detail="Positions et snapshots externes"
             />
-            <WealthBucket label="Manuel" value={manualAssetsValue} detail="Actifs ajoutés ou à maintenir" />
+            <WealthBucket
+              label="Manuel"
+              value={manualAssetsValue}
+              detail="Actifs ajoutés ou à maintenir"
+            />
           </div>
           {externalUnknownCount > 0 || staleAssetCount > 0 ? (
             <div className="mt-4 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-warning">
-              {externalUnknownCount > 0 ? `${externalUnknownCount} position${externalUnknownCount > 1 ? 's' : ''} externe${externalUnknownCount > 1 ? 's' : ''} sans valeur fiable. ` : ''}
-              {staleAssetCount > 0 ? `${staleAssetCount} actif${staleAssetCount > 1 ? 's' : ''} avec valorisation ancienne.` : ''}
+              {externalUnknownCount > 0
+                ? `${externalUnknownCount} position${externalUnknownCount > 1 ? 's' : ''} externe${externalUnknownCount > 1 ? 's' : ''} sans valeur fiable. `
+                : ''}
+              {staleAssetCount > 0
+                ? `${staleAssetCount} actif${staleAssetCount > 1 ? 's' : ''} avec valorisation ancienne.`
+                : ''}
             </div>
           ) : null}
         </Panel>
@@ -571,16 +598,26 @@ function PatrimoinePage() {
               {(externalBundle?.allocationByAssetClass ?? []).map(item => (
                 <div key={item.key} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="uppercase tracking-[0.12em] text-muted-foreground">{item.key}</span>
-                    <span className="font-financial">{formatMoney(item.value)} · {item.weightPct.toFixed(1)}%</span>
+                    <span className="uppercase tracking-[0.12em] text-muted-foreground">
+                      {item.key}
+                    </span>
+                    <span className="font-financial">
+                      {formatMoney(item.value)} · {item.weightPct.toFixed(1)}%
+                    </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-surface-0">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, item.weightPct)}%` }} />
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.min(100, item.weightPct)}%` }}
+                    />
                   </div>
                 </div>
               ))}
-              {!externalSummaryQuery.isPending && (externalBundle?.allocationByAssetClass.length ?? 0) === 0 ? (
-                <p className="py-4 text-sm text-muted-foreground">Aucun snapshot externe importe.</p>
+              {!externalSummaryQuery.isPending &&
+              (externalBundle?.allocationByAssetClass.length ?? 0) === 0 ? (
+                <p className="py-4 text-sm text-muted-foreground">
+                  Aucun snapshot externe importe.
+                </p>
               ) : null}
             </div>
           </div>
@@ -589,7 +626,10 @@ function PatrimoinePage() {
         {(externalBundle?.missingMarketDataWarnings.length ?? 0) > 0 ||
         (externalBundle?.unknownCostBasisWarnings.length ?? 0) > 0 ? (
           <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
-            {[...(externalBundle?.missingMarketDataWarnings ?? []), ...(externalBundle?.unknownCostBasisWarnings ?? [])]
+            {[
+              ...(externalBundle?.missingMarketDataWarnings ?? []),
+              ...(externalBundle?.unknownCostBasisWarnings ?? []),
+            ]
               .slice(0, 3)
               .map(item => (
                 <p key={item}>{item}</p>
@@ -599,7 +639,10 @@ function PatrimoinePage() {
 
         <div className="grid gap-3 md:grid-cols-2">
           {externalPositions.slice(0, 4).map(position => (
-            <div key={position.positionKey} className="rounded-2xl border border-border/40 bg-surface-1 p-4">
+            <div
+              key={position.positionKey}
+              className="rounded-2xl border border-border/40 bg-surface-1 p-4"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{position.name}</p>
@@ -610,7 +653,10 @@ function PatrimoinePage() {
                 <p className="font-financial text-sm font-semibold">
                   {position.normalizedValue === null
                     ? 'Valeur inconnue'
-                    : formatMoney(position.normalizedValue, position.valueCurrency ?? position.currency ?? 'EUR')}
+                    : formatMoney(
+                        position.normalizedValue,
+                        position.valueCurrency ?? position.currency ?? 'EUR'
+                      )}
                 </p>
               </div>
             </div>
@@ -626,8 +672,8 @@ function PatrimoinePage() {
                 Actifs manuels admin
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Aucun actif manuel n est injecte par defaut. Seuls les actifs provider et ceux
-                que tu crees ici apparaissent.
+                Aucun actif manuel n est injecte par defaut. Seuls les actifs provider et ceux que
+                tu crees ici apparaissent.
               </p>
             </div>
             <Badge variant="outline">
@@ -818,9 +864,7 @@ function PatrimoinePage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {manualAssetsQuery.isPending ? (
-                  <p className="text-sm text-muted-foreground">
-                    Chargement des actifs manuels...
-                  </p>
+                  <p className="text-sm text-muted-foreground">Chargement des actifs manuels...</p>
                 ) : null}
                 {!manualAssetsQuery.isPending && manualAssets.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-border/40 px-4 py-8 text-center text-sm text-muted-foreground">
@@ -886,15 +930,7 @@ function PatrimoinePage() {
   )
 }
 
-function WealthBucket({
-  label,
-  value,
-  detail,
-}: {
-  label: string
-  value: number
-  detail: string
-}) {
+function WealthBucket({ label, value, detail }: { label: string; value: number; detail: string }) {
   return (
     <div className="rounded-xl border border-border/45 bg-surface-1/55 px-4 py-3">
       <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>

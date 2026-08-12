@@ -1,0 +1,63 @@
+{
+  "name": "Finance-OS Command Pixel V1",
+  "status": "FINAL",
+  "colors": {
+    "dark": {
+      "background": "#242019",
+      "surface": "#2C2720",
+      "floating": "#302B23",
+      "text": "#F6F1E6",
+      "orange": "#F97A3C",
+      "positive": "#4CBB82",
+      "attention": "#D9A441",
+      "negative": "#E0685A",
+      "teal": "#6FB5AA",
+      "warmAccent": "#DCCBA6",
+      "aiSemantic": "#9B8CE8"
+    },
+    "light": {
+      "background": "#F5EFE3",
+      "surface": "#FCFAF4",
+      "raised": "#FFFFFF",
+      "ink": "#221E17",
+      "orange": "#DE5E1E",
+      "positive": "#1C8A52",
+      "attention": "#A97614",
+      "negative": "#B23E2C",
+      "teal": "#3E8578",
+      "warmAccent": "#9C8557",
+      "aiSemantic": "#6C5BD4"
+    }
+  },
+  "spacingPx": [
+    8,
+    12,
+    16,
+    20,
+    26,
+    36,
+    44,
+    56
+  ],
+  "radiusPx": {
+    "tile": 6,
+    "iconTile": 7,
+    "control": 8,
+    "dropdown": 10,
+    "surface": 12,
+    "frame": 14
+  },
+  "pageWidthPx": {
+    "standard": 1240,
+    "focused": 780
+  },
+  "motionMs": {
+    "functionalMin": 120,
+    "functionalMax": 180
+  },
+  "fonts": {
+    "ui": "Geist Sans",
+    "data": "Geist Mono",
+    "signature": "Geist Pixel"
+  }
+}

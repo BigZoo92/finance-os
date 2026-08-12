@@ -9,9 +9,10 @@
 //   • Never frame anything as a buy/sell instruction.
 //   • Demo mode renders a deterministic read-only list — no mutations.
 
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Input } from '@finance-os/ui/components'
+import { FlaskIcon } from '@phosphor-icons/react/dist/csr/Flask'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Panel } from '@/components/surfaces/panel'
 import type { AuthMode } from '@/features/auth-types'
 import {
@@ -20,15 +21,15 @@ import {
   postTradingLabHypothesisScenario,
 } from '@/features/dashboard-api'
 import {
-  LEARNING_LOOP_INVALIDATION_KEYS,
   dashboardTradingLabHypothesesQueryOptionsWithMode,
+  LEARNING_LOOP_INVALIDATION_KEYS,
 } from '@/features/dashboard-query-options'
 import type { DashboardTradingLabHypothesis } from '@/features/dashboard-types'
 import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
 import {
   buildHypothesisCreatePayload,
-  readHypothesisExtras,
   type HypothesisFormState,
+  readHypothesisExtras,
 } from '@/features/learning-loop-view-model'
 import { toErrorMessage } from '@/lib/format'
 import { StrategyScorecardCard } from './strategy-scorecard-card'
@@ -128,7 +129,7 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
     <Panel
       title="Hypothèses (Paper only)"
       description="Hypothèses manuelles tenues en paper trading. Pas d'exécution. Pas d'ordre."
-      icon={<span aria-hidden="true">∝</span>}
+      icon={<FlaskIcon size={16} />}
       tone="plain"
     >
       <div className="space-y-4">
@@ -316,9 +317,7 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                     <p className="mt-1 text-xs text-muted-foreground">Thèse : {extras.thesis}</p>
                   ) : null}
                   {extras.horizon ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Horizon : {extras.horizon}
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Horizon : {extras.horizon}</p>
                   ) : null}
                   {extras.invalidationCriteria.length > 0 ? (
                     <div className="mt-2">

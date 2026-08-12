@@ -10,6 +10,7 @@
  * props (neighbors, path, pinned ids, etc.).
  */
 import { Badge } from '@finance-os/ui/components'
+import { ChartNetworkPixelIcon, ThumbtackPixelIcon } from '@finance-os/ui/icons/pixel'
 import { Link } from '@tanstack/react-router'
 import { Panel } from '@/components/surfaces/panel'
 import {
@@ -116,7 +117,9 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           {node.confidence !== undefined ? (
             <Badge variant="outline">{confidencePct}% confiance</Badge>
           ) : null}
-          {node.freshness ? <Badge variant="outline">{freshnessLabel(node.freshness)}</Badge> : null}
+          {node.freshness ? (
+            <Badge variant="outline">{freshnessLabel(node.freshness)}</Badge>
+          ) : null}
           {node.isPersonal ? <Badge variant="secondary">personnel</Badge> : null}
           {node.isContradicted ? <Badge variant="destructive">contradiction</Badge> : null}
           {isPinned ? <Badge variant="secondary">épinglé</Badge> : null}
@@ -134,25 +137,33 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
         ) : null}
 
         <div className="grid grid-cols-2 gap-2 text-[11px]">
-          <Score label="Confiance" value={node.confidence ?? 0} tone={confidenceTone(node.confidence ?? 0)} />
+          <Score
+            label="Confiance"
+            value={node.confidence ?? 0}
+            tone={confidenceTone(node.confidence ?? 0)}
+          />
           <Score label="Importance" value={node.importance ?? 0} tone="plain" />
         </div>
 
         {pathPeerLabel ? (
           <div className="rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11.5px] text-amber-200">
             <p className="font-medium">Chemin actif</p>
-            <p className="mt-0.5 text-amber-100/80">
-              Trace en cours vers&nbsp;: {pathPeerLabel}
-            </p>
+            <p className="mt-0.5 text-amber-100/80">Trace en cours vers&nbsp;: {pathPeerLabel}</p>
           </div>
         ) : null}
 
         {/* Quick actions — terse, all functional. */}
         <div className="grid grid-cols-2 gap-1.5">
           <ActionButton onClick={() => onTogglePin(node.id)} active={isPinned}>
-            {isPinned ? '◉ Désépingler' : '◯ Épingler'}
+            <span className="inline-flex items-center gap-1.5">
+              <ThumbtackPixelIcon size={12} />
+              {isPinned ? 'Désépingler' : 'Épingler'}
+            </span>
           </ActionButton>
-          <ActionButton onClick={() => (isIsolated ? onClearIsolation() : onIsolate(node.id))} active={isIsolated}>
+          <ActionButton
+            onClick={() => (isIsolated ? onClearIsolation() : onIsolate(node.id))}
+            active={isIsolated}
+          >
             {isIsolated ? 'Quitter l’isolation' : 'Isoler le voisinage'}
           </ActionButton>
           <ActionButton onClick={() => onTracePath(node.id)}>Tracer un chemin →</ActionButton>
@@ -212,10 +223,7 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           <Link to="/ia/chat" className="text-primary hover:underline">
             Demander à l’Advisor →
           </Link>
-          <Link
-            to="/ia/memoire"
-            className="ml-auto text-muted-foreground hover:text-foreground"
-          >
+          <Link to="/ia/memoire" className="ml-auto text-muted-foreground hover:text-foreground">
             Voir l’inspection texte
           </Link>
         </div>
@@ -265,22 +273,28 @@ export function AdvisorGraphLinkDetails({ link, source, target }: LinkDetailsPro
 
 export function AdvisorGraphEmptyDetails({ hasGraph }: EmptyDetailsProps) {
   return (
-    <Panel
-      title="Sélectionne un nœud"
-      tone="plain"
-      icon={<span aria-hidden="true">◌</span>}
-    >
+    <Panel title="Sélectionne un nœud" tone="plain" icon={<ChartNetworkPixelIcon size={16} />}>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Clique sur un nœud pour voir son type, sa confiance, sa fraîcheur, ses voisins
-        directs, les recommandations connectées et les sources de provenance.
+        Clique sur un nœud pour voir son type, sa confiance, sa fraîcheur, ses voisins directs, les
+        recommandations connectées et les sources de provenance.
         {hasGraph ? ' Clique sur un lien pour inspecter une relation.' : null}
       </p>
       <ul className="mt-3 space-y-1 text-[11.5px] leading-relaxed text-muted-foreground">
-        <li>· <span className="text-foreground">survol</span> · met en relief un voisinage immédiat</li>
-        <li>· <span className="text-foreground">clic</span> · ouvre la fiche détaillée</li>
-        <li>· <span className="text-foreground">épingler</span> · garde un nœud en référence</li>
-        <li>· <span className="text-foreground">isoler</span> · ne montre que le voisinage</li>
-        <li>· <span className="text-foreground">tracer</span> · cherche un chemin entre deux nœuds</li>
+        <li>
+          · <span className="text-foreground">survol</span> · met en relief un voisinage immédiat
+        </li>
+        <li>
+          · <span className="text-foreground">clic</span> · ouvre la fiche détaillée
+        </li>
+        <li>
+          · <span className="text-foreground">épingler</span> · garde un nœud en référence
+        </li>
+        <li>
+          · <span className="text-foreground">isoler</span> · ne montre que le voisinage
+        </li>
+        <li>
+          · <span className="text-foreground">tracer</span> · cherche un chemin entre deux nœuds
+        </li>
       </ul>
     </Panel>
   )
@@ -326,11 +340,7 @@ function Score({
 }) {
   const pct = Math.min(100, Math.max(0, Math.round(value * 100)))
   const barClass =
-    tone === 'positive'
-      ? 'bg-positive'
-      : tone === 'warning'
-        ? 'bg-warning'
-        : 'bg-primary'
+    tone === 'positive' ? 'bg-positive' : tone === 'warning' ? 'bg-warning' : 'bg-primary'
   return (
     <div className="rounded-lg border border-border/40 bg-surface-1 p-2">
       <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
@@ -430,9 +440,9 @@ const KIND_COPY: Partial<Record<AdvisorGraphNode['kind'], string>> = {
   recommendation:
     'Une conclusion proposée par l’Advisor. Ses voisins immédiats sont ses hypothèses, ses sources et les risques qui la fragilisent.',
   risk: 'Une zone de fragilité — surveiller, ne pas alarmer. Sert à challenger les recommandations associées.',
-  contradiction: 'Quelque chose dans la mémoire vient affaiblir une autre affirmation. Demande une lecture attentive.',
-  source:
-    'Une provenance — interne ou externe. Toute conclusion devrait pouvoir y remonter.',
+  contradiction:
+    'Quelque chose dans la mémoire vient affaiblir une autre affirmation. Demande une lecture attentive.',
+  source: 'Une provenance — interne ou externe. Toute conclusion devrait pouvoir y remonter.',
   concept: 'Un concept financier mobilisé pour expliquer une décision. Indépendant de tes données.',
   formula: 'Une formule sous-jacente. Sert à dériver des concepts ou à comparer des mesures.',
   assumption:
@@ -449,15 +459,18 @@ const KIND_COPY: Partial<Record<AdvisorGraphNode['kind'], string>> = {
 }
 
 const LINK_KIND_MEANING: Record<AdvisorGraphLink['kind'], string> = {
-  supports: 'Cette relation soutient l’affirmation cible. Plus la confiance est haute, plus elle compte.',
+  supports:
+    'Cette relation soutient l’affirmation cible. Plus la confiance est haute, plus elle compte.',
   explains: 'Le concept de gauche explique la conclusion de droite — pédagogie ou raisonnement.',
-  contradicts: 'Une contradiction explicite. Ne supprime pas l’autre affirmation, mais la fragilise.',
+  contradicts:
+    'Une contradiction explicite. Ne supprime pas l’autre affirmation, mais la fragilise.',
   weakens:
     'Cette relation affaiblit la cible — sans la contredire frontalement, elle ajoute du doute.',
   derived_from: 'Provenance ou dérivation : la cible vient de la source.',
   related_to: 'Lien faible — utile à la navigation, pas une preuve.',
   affects: 'Impact d’un signal sur une cible : suivi à surveiller.',
   mentions: 'Mention sans engagement — utile pour la traçabilité.',
-  uses_assumption: 'La cible repose sur une hypothèse explicite. À revisiter si l’hypothèse vieillit.',
+  uses_assumption:
+    'La cible repose sur une hypothèse explicite. À revisiter si l’hypothèse vieillit.',
   belongs_to: 'Appartenance structurelle (compte → snapshot, etc.).',
 }

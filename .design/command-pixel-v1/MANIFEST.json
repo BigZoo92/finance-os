@@ -1,0 +1,70 @@
+{
+  "package": "finance-os-command-pixel-v1-handoff",
+  "files": [
+    {
+      "path": "CLAUDE.md",
+      "bytes": 2033,
+      "sha256": "e0bb78b69274502de4c4e73fcb98e185ec0a5fbd98ffc4bf4cd8ee95fdc2bc3f"
+    },
+    {
+      "path": "COPY_RULES.md",
+      "bytes": 1695,
+      "sha256": "59937aca1a894c6908151fb3d0d5a4b0c6a6b3d17fc2c1aebb483b88db2ebfe2"
+    },
+    {
+      "path": "DESIGN_SYSTEM.md",
+      "bytes": 3894,
+      "sha256": "a73209c06668315994104f0bed2a0db433a34932ba053f34907716a47f24c570"
+    },
+    {
+      "path": "EXPORT_QA.md",
+      "bytes": 400,
+      "sha256": "7ae3818167e7f3a7a8e5e2eba1a2d6aa8b8fa1fa4e1f2d036fb1e2e2084f1aa3"
+    },
+    {
+      "path": "FRAME_INVENTORY.md",
+      "bytes": 2233,
+      "sha256": "a09c0d01b9e2df2ff64d3694fdfe2cf404a675163c4aa9661a2ae07ba5784d87"
+    },
+    {
+      "path": "IMPLEMENTATION_PHASES.md",
+      "bytes": 2411,
+      "sha256": "16162808c30ada216fb7e33d2094936e1decaaebac1d10a9ae09e9c99923956b"
+    },
+    {
+      "path": "IMPLEMENTATION_RULES.md",
+      "bytes": 2553,
+      "sha256": "7c4cfeea36f2771d59581c55795db5097816287f6ec9839adf22e326a3ece27f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1690,
+      "sha256": "cbfafb0f1b8172d95482727c5ccbbb416332e105350c70f7a06e38602b6701f6"
+    },
+    {
+      "path": "ROUTE_MAP.md",
+      "bytes": 1090,
+      "sha256": "97689b26a8b0e526a888c9d25e4d6b7a0d85d56e6f7fa8d8cbf5491c9893e426"
+    },
+    {
+      "path": "archive/README.md",
+      "bytes": 746,
+      "sha256": "b3e9f709d444c02b0333614481f135e26919252ccc2e3dc729804eda6d30dc7c"
+    },
+    {
+      "path": "canonical/source/Finance-OS Command Pixel V1.dc.html",
+      "bytes": 796682,
+      "sha256": "b36ef47f606e8b6e8ff12c1cab47fad40da7fa14349492da185b558ffb60a156"
+    },
+    {
+      "path": "canonical/source/support.js",
+      "bytes": 69150,
+      "sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+    },
+    {
+      "path": "tokens/design-tokens.json",
+      "bytes": 1199,
+      "sha256": "3bf870584f90e0c15c2320c95168f565061a0c5fbdb26a42a2cc8af7fb8d43b2"
+    }
+  ]
+}

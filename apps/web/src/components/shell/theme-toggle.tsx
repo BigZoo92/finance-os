@@ -1,3 +1,4 @@
+import { MoonPixelIcon, SunPixelIcon } from '@finance-os/ui/icons/pixel'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 
@@ -58,9 +59,9 @@ export function ThemeToggle() {
             animate={{ opacity: 1, rotate: 0, scale: 1 }}
             {...(prefersReducedMotion ? {} : { exit: { opacity: 0, rotate: 90, scale: 0.6 } })}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="text-base"
+            className="flex items-center"
           >
-            ☾
+            <MoonPixelIcon size={16} />
           </motion.span>
         ) : (
           <motion.span
@@ -69,9 +70,9 @@ export function ThemeToggle() {
             animate={{ opacity: 1, rotate: 0, scale: 1 }}
             {...(prefersReducedMotion ? {} : { exit: { opacity: 0, rotate: -90, scale: 0.6 } })}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="text-base"
+            className="flex items-center"
           >
-            ☀
+            <SunPixelIcon size={16} />
           </motion.span>
         )}
       </AnimatePresence>

@@ -32,9 +32,7 @@ export function PageHeader({
   // One clamp token per size. `clamp(min, preferred, max)` guarantees the
   // title never falls below `min` on narrow viewports and never exceeds
   // `max` on wide ones.
-  const fontSize = compact
-    ? 'clamp(26px, 4vw, 38px)'
-    : 'clamp(32px, 5vw, 52px)'
+  const fontSize = compact ? 'clamp(26px, 4vw, 38px)' : 'clamp(32px, 5vw, 52px)'
 
   return (
     <motion.header
@@ -46,7 +44,11 @@ export function PageHeader({
       <div className="min-w-0 flex-1">
         {eyebrow && (
           <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.22em] text-primary/70">
-            {icon && <span className="text-primary/90" aria-hidden="true">{icon}</span>}
+            {icon && (
+              <span className="flex items-center text-primary/90" aria-hidden="true">
+                {icon}
+              </span>
+            )}
             {eyebrow}
           </p>
         )}
@@ -57,7 +59,9 @@ export function PageHeader({
           {title}
         </h1>
         {description && (
-          <p className="mt-3 max-w-prose text-[13.5px] text-muted-foreground leading-relaxed">{description}</p>
+          <p className="mt-3 max-w-prose text-[13.5px] text-muted-foreground leading-relaxed">
+            {description}
+          </p>
         )}
         {status && <div className="mt-3">{status}</div>}
       </div>

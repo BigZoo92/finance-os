@@ -4,8 +4,9 @@
 // retrospective, never recommends an action, never shows freeNote text. Mounted on `/ia`
 // behind the existing `VITE_LEARNING_LOOP_UI_ENABLED` flag.
 
-import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@finance-os/ui/components'
+import { AnalyticsPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useQuery } from '@tanstack/react-query'
 import { Panel } from '@/components/surfaces/panel'
 import type { AuthMode } from '@/features/auth-types'
 import { dashboardAdvisorBehaviorAnalyticsQueryOptionsWithMode } from '@/features/dashboard-query-options'
@@ -21,10 +22,7 @@ interface BehaviorAnalyticsCardProps {
   learningLoopEnabled: boolean
 }
 
-const DECISION_LABEL: Record<
-  DashboardAdvisorBehaviorDecisionBreakdownEntry['decision'],
-  string
-> = {
+const DECISION_LABEL: Record<DashboardAdvisorBehaviorDecisionBreakdownEntry['decision'], string> = {
   accepted: 'Acceptées',
   rejected: 'Rejetées',
   deferred: 'Différées',
@@ -63,7 +61,7 @@ export function BehaviorAnalyticsCard({ mode, learningLoopEnabled }: BehaviorAna
     <Panel
       title="Analyse comportementale"
       description="Basé sur le journal de décisions. Ne constitue pas une recommandation."
-      icon={<span aria-hidden="true">⌗</span>}
+      icon={<AnalyticsPixelIcon size={16} />}
       tone="plain"
     >
       <div className="space-y-3">
@@ -135,8 +133,7 @@ export function BehaviorAnalyticsCard({ mode, learningLoopEnabled }: BehaviorAna
                         </span>
                         <span className="text-muted-foreground">
                           + {entry.outcomeMix.positive} · − {entry.outcomeMix.negative} · ~{' '}
-                          {entry.outcomeMix.neutral} · ?{' '}
-                          {entry.outcomeMix.unknown}
+                          {entry.outcomeMix.neutral} · ? {entry.outcomeMix.unknown}
                         </span>
                       </li>
                     ))}
@@ -149,8 +146,9 @@ export function BehaviorAnalyticsCard({ mode, learningLoopEnabled }: BehaviorAna
                       Codes de raison
                     </p>
                     <ul className="mt-2 space-y-1">
-                      {data.reasonCodeBreakdown.slice(0, 8).map(
-                        (entry: DashboardAdvisorBehaviorReasonCodeBreakdownEntry) => (
+                      {data.reasonCodeBreakdown
+                        .slice(0, 8)
+                        .map((entry: DashboardAdvisorBehaviorReasonCodeBreakdownEntry) => (
                           <li
                             key={entry.reasonCode}
                             className="flex flex-wrap items-center justify-between gap-2"
@@ -164,8 +162,7 @@ export function BehaviorAnalyticsCard({ mode, learningLoopEnabled }: BehaviorAna
                               <span className="basis-full text-amber-500">· {entry.caution}</span>
                             ) : null}
                           </li>
-                        )
-                      )}
+                        ))}
                     </ul>
                   </div>
                 ) : null}

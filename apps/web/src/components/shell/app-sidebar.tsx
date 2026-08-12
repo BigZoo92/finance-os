@@ -1,15 +1,16 @@
-import { Link, useRouterState } from '@tanstack/react-router'
+import { EllipsesHorizontalPixelIcon, SideNavCollapsePixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { BrandMark } from '@/components/brand/brand-mark'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import {
-  NAV_GROUPS,
-  getVisibleNavItems,
-  getMobileTabItems,
   getMobileDrawerItems,
+  getMobileTabItems,
+  getVisibleNavItems,
+  NAV_GROUPS,
   type NavItem,
 } from './nav-items'
 
@@ -53,13 +54,19 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
       />
 
       {/* Brand */}
-      <div className={`relative flex h-16 items-center ${collapsed ? 'justify-center px-3' : 'px-5'}`}>
+      <div
+        className={`relative flex h-16 items-center ${collapsed ? 'justify-center px-3' : 'px-5'}`}
+      >
         <Link to="/" className="flex items-center gap-3 overflow-hidden">
           <BrandMark size="md" halo={!collapsed} />
           {!collapsed && (
             <div className="flex flex-col overflow-hidden leading-tight">
-              <span className="text-[13px] font-semibold tracking-tight text-sidebar-foreground">Finance OS</span>
-              <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-primary/55">cockpit</span>
+              <span className="text-[13px] font-semibold tracking-tight text-sidebar-foreground">
+                Finance OS
+              </span>
+              <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-primary/55">
+                cockpit
+              </span>
             </div>
           )}
         </Link>
@@ -75,7 +82,9 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
               {gi > 0 && <div className="mb-3 hair-rule" />}
               {!collapsed && (
                 <div className="mb-2 px-3">
-                  <p className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${group.color}`}>
+                  <p
+                    className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${group.color}`}
+                  >
                     {group.label}
                   </p>
                   <p className="mt-1 text-[11px] leading-snug text-muted-foreground/55">
@@ -88,12 +97,17 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
                   className="mb-1.5 px-1 text-center text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/40"
                   title={group.label}
                 >
-                  {group.icon}
+                  {group.shortLabel}
                 </p>
               )}
               <ul className="space-y-px">
                 {items.map(item => (
-                  <SidebarItem key={item.to} item={item} active={isActive(item.to)} collapsed={collapsed} />
+                  <SidebarItem
+                    key={item.to}
+                    item={item}
+                    active={isActive(item.to)}
+                    collapsed={collapsed}
+                  />
                 ))}
               </ul>
             </div>
@@ -111,12 +125,12 @@ export function AppSidebar({ collapsed, onToggle }: { collapsed: boolean; onTogg
           aria-label={collapsed ? 'Déployer la navigation' : 'Réduire la navigation'}
         >
           <motion.span
-            className="text-base"
+            className="flex items-center"
             animate={{ rotate: collapsed ? 180 : 0 }}
             transition={{ type: 'spring', bounce: 0.35, duration: 0.45 }}
             aria-hidden="true"
           >
-            ◂
+            <SideNavCollapsePixelIcon size={16} />
           </motion.span>
           {!collapsed && <span>Réduire</span>}
         </button>
@@ -138,7 +152,7 @@ function SidebarFooterBlock() {
         className="font-mono text-[10px] leading-[1.35] text-aurora whitespace-pre select-none"
         aria-hidden="true"
       >
-{`╔═╗ ╦ ╔╗╔
+        {`╔═╗ ╦ ╔╗╔
 ╠╣  ║ ║║║  OS
 ╚   ╩ ╝╚╝`}
       </pre>
@@ -149,7 +163,16 @@ function SidebarFooterBlock() {
   )
 }
 
-function SidebarItem({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
+function SidebarItem({
+  item,
+  active,
+  collapsed,
+}: {
+  item: NavItem
+  active: boolean
+  collapsed: boolean
+}) {
+  const Icon = item.icon
   return (
     <li>
       <Link
@@ -177,17 +200,19 @@ function SidebarItem({ item, active, collapsed }: { item: NavItem; active: boole
         )}
 
         <span
-          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center text-[17px] leading-none transition-all duration-200 ${
+          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center leading-none transition-all duration-200 ${
             active
               ? 'scale-110 drop-shadow-[0_0_6px_oklch(1_0_0/45%)]'
               : 'opacity-60 group-hover:opacity-90 group-hover:scale-105'
           }`}
           aria-hidden="true"
         >
-          {item.icon}
+          <Icon size={16} />
         </span>
         {!collapsed && (
-          <span className={`truncate font-medium ${active ? '' : 'tracking-tight'}`}>{item.label}</span>
+          <span className={`truncate font-medium ${active ? '' : 'tracking-tight'}`}>
+            {item.label}
+          </span>
         )}
       </Link>
     </li>
@@ -218,11 +243,15 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden safe-area-bottom" aria-label="Navigation principale">
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 lg:hidden safe-area-bottom"
+        aria-label="Navigation principale"
+      >
         <div className="mx-3 mb-3 rounded-2xl border border-border/60 glass-surface shadow-lg">
           <div className="relative flex items-stretch justify-around px-2 py-1">
             {tabItems.map(item => {
               const active = isActive(item.to)
+              const Icon = item.icon
               return (
                 <Link
                   key={item.to}
@@ -245,12 +274,14 @@ export function MobileNav() {
                     />
                   )}
                   <motion.span
-                    className="text-[17px] leading-none"
-                    animate={active && !prefersReducedMotion ? { scale: 1.15, y: -1 } : { scale: 1, y: 0 }}
+                    className="flex items-center leading-none"
+                    animate={
+                      active && !prefersReducedMotion ? { scale: 1.15, y: -1 } : { scale: 1, y: 0 }
+                    }
                     transition={{ type: 'spring', bounce: 0.45, duration: 0.3 }}
                     aria-hidden="true"
                   >
-                    {item.icon}
+                    <Icon size={18} />
                   </motion.span>
                   <span className="truncate font-medium">{item.label}</span>
                 </Link>
@@ -268,9 +299,7 @@ export function MobileNav() {
               }}
               aria-label="Plus d'options"
             >
-              <span className="text-[24px] leading-none" aria-hidden="true">
-                ⋯
-              </span>
+              <EllipsesHorizontalPixelIcon size={24} />
             </button>
           </div>
         </div>
@@ -302,7 +331,9 @@ export function MobileNav() {
                   return (
                     <div key={group.id} className="mb-4">
                       <div className="mb-2 px-1">
-                        <p className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}>
+                        <p
+                          className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
+                        >
                           {group.label}
                         </p>
                         <p className="mt-1 text-xs leading-snug text-muted-foreground/60">
@@ -312,12 +343,16 @@ export function MobileNav() {
                       <ul className="space-y-0.5">
                         {items.map((item, i) => {
                           const active = isActive(item.to)
+                          const Icon = item.icon
                           return (
                             <motion.li
                               key={item.to}
                               initial={{ opacity: 0, x: -12 }}
                               animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: prefersReducedMotion ? 0 : i * 0.03, duration: 0.2 }}
+                              transition={{
+                                delay: prefersReducedMotion ? 0 : i * 0.03,
+                                duration: 0.2,
+                              }}
                             >
                               <Link
                                 to={item.to}
@@ -328,10 +363,14 @@ export function MobileNav() {
                                     : 'text-foreground/75 hover:bg-accent/50'
                                 }`}
                               >
-                                <span className="text-lg" aria-hidden="true">{item.icon}</span>
+                                <span className="flex shrink-0 items-center" aria-hidden="true">
+                                  <Icon size={18} />
+                                </span>
                                 <div>
                                   <p>{item.label}</p>
-                                  <p className="text-xs text-muted-foreground/70">{item.description}</p>
+                                  <p className="text-xs text-muted-foreground/70">
+                                    {item.description}
+                                  </p>
                                 </div>
                               </Link>
                             </motion.li>

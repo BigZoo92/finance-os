@@ -22,7 +22,7 @@ Read `DESIGN.md` and `apps/web/AGENTS.md` before editing UI. `DESIGN.md` is the 
 - Prefer the canonical shared surfaces documented in `DESIGN.md`, including `KpiTile`, `Panel`, `PageHeader`, `RangePill`, `BrandMark`, and `StatusDot`.
 - Customize the vendored React Bits copies in place when needed; do not reinstall them.
 - Keep navigation sourced from `apps/web/src/components/shell/nav-items.ts` and update `docs/product.md` when product or route structure changes.
-- Use pixel iconography as micro-expression, not decoration across every surface.
+- Iconography is owned by the `finance-os-icon-system` skill: consult it before adding or changing any icon, icon button, navigation icon, or status symbol. The canonical order is Pixel Icon, then Phosphor, then Pxlkit for rare expressive moments. Keep icons as micro-expression, never decoration across every surface.
 
 ## Required states
 

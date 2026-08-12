@@ -14,16 +14,35 @@
  * NOT a learning loop, NOT fiscality. Demo mode never calls providers.
  */
 import { Badge, Input } from '@finance-os/ui/components'
+import {
+  BranchPixelIcon,
+  ChartLinePixelIcon,
+  ChartNetworkPixelIcon,
+  CheckPixelIcon,
+  ChevronDownPixelIcon,
+  ChevronUpPixelIcon,
+  ClockPixelIcon,
+  ExclamationTrianglePixelIcon,
+  EyePixelIcon,
+  FilterPixelIcon,
+  GridPixelIcon,
+  PausePixelIcon,
+  PlayPixelIcon,
+  RefreshPixelIcon,
+  SearchPixelIcon,
+  TablePixelIcon,
+  TimesPixelIcon,
+} from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AdvisorGraphEmptyDetails,
   AdvisorGraphLinkDetails,
-  AdvisorGraphNodeDetails,
   type AdvisorGraphNeighbor,
+  AdvisorGraphNodeDetails,
 } from '@/components/advisor/advisor-graph-details-panel'
-import { KnowledgeGraph3D, type CameraApi } from '@/components/advisor/knowledge-graph-3d'
+import { type CameraApi, KnowledgeGraph3D } from '@/components/advisor/knowledge-graph-3d'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
 import { StatusDot } from '@/components/surfaces/status-dot'
@@ -45,8 +64,8 @@ import {
 } from '@/features/advisor-graph-data'
 import { mapAdvisorKnowledgeGraphDtoToViewModel } from '@/features/advisor-graph-dto'
 import {
-  ADVISOR_GRAPH_LENSES,
   ADVISOR_GRAPH_LENS_BY_ID,
+  ADVISOR_GRAPH_LENSES,
   ADVISOR_GRAPH_QUICK_FILTERS,
   ADVISOR_GRAPH_TOURS,
   type AdvisorGraphLens,
@@ -55,13 +74,13 @@ import {
 } from '@/features/advisor-graph-lenses'
 import { pickPinPathEndpoints } from '@/features/advisor-graph-pin-path'
 import {
+  type AdvisorGraphPinOrigin,
+  type AdvisorGraphPinScope,
   buildPinStorageKey,
   clearPersistedPins,
   readPersistedPins,
   reconcilePinsAgainstGraph,
   writePersistedPins,
-  type AdvisorGraphPinOrigin,
-  type AdvisorGraphPinScope,
 } from '@/features/advisor-graph-pins'
 import { validateAdvisorGraphSearch } from '@/features/advisor-graph-search-params'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -306,14 +325,8 @@ function AdvisorGraphPage() {
     }
   }, [graph, hideExamples])
 
-  const lensVisibleKinds = useMemo(
-    () => new Set<AdvisorGraphNodeKind>(lens.includedKinds),
-    [lens]
-  )
-  const emphasizedKinds = useMemo(
-    () => new Set<AdvisorGraphNodeKind>(lens.emphasizedKinds),
-    [lens]
-  )
+  const lensVisibleKinds = useMemo(() => new Set<AdvisorGraphNodeKind>(lens.includedKinds), [lens])
+  const emphasizedKinds = useMemo(() => new Set<AdvisorGraphNodeKind>(lens.emphasizedKinds), [lens])
 
   const visibleNodeKinds = useMemo(() => {
     const base = nodeKindOverride ?? lensVisibleKinds
@@ -327,9 +340,7 @@ function AdvisorGraphPage() {
 
   // Apply quick filters + isolation on top of the base graph (after lens kinds).
   const renderedGraph: AdvisorGraph = useMemo(() => {
-    const quickPredicates = ADVISOR_GRAPH_QUICK_FILTERS.filter(qf =>
-      activeQuickFilters.has(qf.id)
-    )
+    const quickPredicates = ADVISOR_GRAPH_QUICK_FILTERS.filter(qf => activeQuickFilters.has(qf.id))
     let nodes = baseGraph.nodes
     if (quickPredicates.length > 0) {
       nodes = nodes.filter(n => quickPredicates.every(qf => qf.predicate(n)))
@@ -382,10 +393,7 @@ function AdvisorGraphPage() {
       })
       .slice(0, 30)
   }, [renderedGraph, searchTerm])
-  const matchingNodeIds = useMemo(
-    () => new Set(searchResults.map(n => n.id)),
-    [searchResults]
-  )
+  const matchingNodeIds = useMemo(() => new Set(searchResults.map(n => n.id)), [searchResults])
 
   // ─── path ─────────────────────────────────────────────────────────────
   const path: AdvisorGraphPath | null = useMemo(() => {
@@ -604,15 +612,13 @@ function AdvisorGraphPage() {
     return null
   }, [path, selectedNodeId, pathFromId, pathToId, renderedGraph])
 
-  const tourBadge = activeTour
-    ? ADVISOR_GRAPH_TOURS.find(t => t.id === activeTour.id)?.label
-    : null
+  const tourBadge = activeTour ? ADVISOR_GRAPH_TOURS.find(t => t.id === activeTour.id)?.label : null
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={`${lens.eyebrow} · ${tourBadge ?? 'libre'}`}
-        icon="◴"
+        icon={<ChartNetworkPixelIcon size={12} />}
         title={lens.label}
         description={lens.tagline}
         compact
@@ -664,7 +670,7 @@ function AdvisorGraphPage() {
           tone="brand"
           title="Visite guidée active"
           description={tourBadge ?? undefined}
-          icon={<span aria-hidden="true">◐</span>}
+          icon={<ClockPixelIcon size={16} />}
           actions={
             <button
               type="button"
@@ -687,7 +693,7 @@ function AdvisorGraphPage() {
           <Panel
             title="Lentilles"
             tone="brand"
-            icon={<span aria-hidden="true">▦</span>}
+            icon={<GridPixelIcon size={16} />}
             description="7 vues curatées de la mémoire."
           >
             <div className="flex flex-col gap-1.5">
@@ -711,7 +717,7 @@ function AdvisorGraphPage() {
           <Panel
             title="Recherche"
             tone="violet"
-            icon={<span aria-hidden="true">⌕</span>}
+            icon={<SearchPixelIcon size={16} />}
             description="⌘K · label, type, source"
           >
             <form onSubmit={handleSearchSubmit} className="space-y-2">
@@ -749,7 +755,7 @@ function AdvisorGraphPage() {
           <Panel
             title="Filtres rapides"
             tone="warning"
-            icon={<span aria-hidden="true">⚠</span>}
+            icon={<ExclamationTrianglePixelIcon size={16} />}
             description="Combinables — agissent dans la lentille active."
             actions={
               activeQuickFilters.size > 0 ? (
@@ -789,7 +795,7 @@ function AdvisorGraphPage() {
             <Panel
               title="Aperçu enrichi"
               tone="warning"
-              icon={<span aria-hidden="true">◐</span>}
+              icon={<ClockPixelIcon size={16} />}
               description="Mélange volontaire d’exemples curés."
             >
               <button
@@ -818,17 +824,16 @@ function AdvisorGraphPage() {
                       : 'border-border/60 bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground'
                   }`}
                 >
-                  {hideExamples ? 'Afficher uniquement mes données ✓' : 'Masquer les exemples'}
+                  <span className="inline-flex items-center gap-1.5">
+                    {hideExamples ? <CheckPixelIcon size={11} /> : null}
+                    {hideExamples ? 'Afficher uniquement mes données' : 'Masquer les exemples'}
+                  </span>
                 </button>
               ) : null}
             </Panel>
           ) : null}
 
-          <Panel
-            title="Caméra & rendu"
-            tone="plain"
-            icon={<span aria-hidden="true">◎</span>}
-          >
+          <Panel title="Caméra & rendu" tone="plain" icon={<EyePixelIcon size={16} />}>
             <div className="grid grid-cols-2 gap-1.5">
               <CameraButton onClick={() => cameraApiRef.current?.fitView()}>Ajuster</CameraButton>
               <CameraButton onClick={() => cameraApiRef.current?.resetView()}>Reset</CameraButton>
@@ -845,12 +850,12 @@ function AdvisorGraphPage() {
                 aria-pressed={paused}
                 className="col-span-2 rounded-lg border border-border/60 bg-surface-1 px-3 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
               >
-                {paused ? '▶ Reprendre simulation' : '❙❙ Pause simulation'}
+                <span className="inline-flex items-center gap-1.5">
+                  {paused ? <PlayPixelIcon size={11} /> : <PausePixelIcon size={11} />}
+                  {paused ? 'Reprendre simulation' : 'Pause simulation'}
+                </span>
               </button>
-              <PresetSelector
-                value={preset}
-                onChange={setPreset}
-              />
+              <PresetSelector value={preset} onChange={setPreset} />
               <button
                 type="button"
                 onClick={() => setAutoOrbit(v => !v)}
@@ -861,7 +866,10 @@ function AdvisorGraphPage() {
                     : 'border-border/60 bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground'
                 }`}
               >
-                {autoOrbit ? '◴ Orbite cinématique active' : 'Activer l’orbite cinématique'}
+                <span className="inline-flex items-center gap-1.5">
+                  {autoOrbit ? <RefreshPixelIcon size={11} /> : null}
+                  {autoOrbit ? 'Orbite cinématique active' : 'Activer l’orbite cinématique'}
+                </span>
               </button>
             </div>
           </Panel>
@@ -927,7 +935,7 @@ function AdvisorGraphPage() {
               tone="warning"
               title="Sélectionne un nœud d’arrivée"
               description="Le chemin BFS sera tracé sur les liens visibles."
-              icon={<span aria-hidden="true">↳</span>}
+              icon={<BranchPixelIcon size={16} />}
               actions={
                 <button
                   type="button"
@@ -955,7 +963,7 @@ function AdvisorGraphPage() {
               tone="warning"
               title="Aucun chemin visible"
               description="Aucun chemin trouvé sur les liens visibles entre ces deux nœuds."
-              icon={<span aria-hidden="true">↯</span>}
+              icon={<TimesPixelIcon size={16} />}
               actions={
                 <button
                   type="button"
@@ -967,8 +975,8 @@ function AdvisorGraphPage() {
               }
             >
               <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-                Élargis la lentille, désactive les filtres rapides ou
-                quitte une isolation pour augmenter la connectivité visible.
+                Élargis la lentille, désactive les filtres rapides ou quitte une isolation pour
+                augmenter la connectivité visible.
               </p>
             </Panel>
           ) : null}
@@ -990,9 +998,9 @@ function AdvisorGraphPage() {
               }
             >
               <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-                ID demandé : <span className="font-mono text-foreground">{pendingNodeMissing}</span>.
-                Il a peut-être été filtré par la lentille active ou retiré
-                depuis la dernière session.
+                ID demandé : <span className="font-mono text-foreground">{pendingNodeMissing}</span>
+                . Il a peut-être été filtré par la lentille active ou retiré depuis la dernière
+                session.
               </p>
             </Panel>
           ) : null}
@@ -1002,11 +1010,11 @@ function AdvisorGraphPage() {
               tone="plain"
               title="Mode mouvement réduit"
               description="Les particules et l’orbite cinématique sont désactivées par défaut."
-              icon={<span aria-hidden="true">≈</span>}
+              icon={<ChartLinePixelIcon size={16} />}
             >
               <p className="text-[12px] leading-relaxed text-muted-foreground">
-                Détecté via <code>prefers-reduced-motion</code>. Tu peux toujours
-                forcer un autre préréglage ou activer manuellement l’orbite.
+                Détecté via <code>prefers-reduced-motion</code>. Tu peux toujours forcer un autre
+                préréglage ou activer manuellement l’orbite.
               </p>
             </Panel>
           ) : null}
@@ -1067,7 +1075,7 @@ function AdvisorGraphPage() {
             title={lens.label}
             description={lens.tagline}
             tone={lens.tone === 'aurora' ? 'brand' : lens.tone}
-            icon={<span aria-hidden="true">▦</span>}
+            icon={<GridPixelIcon size={16} />}
           >
             <p className="text-[12.5px] leading-relaxed text-muted-foreground">
               {lens.description}
@@ -1076,11 +1084,10 @@ function AdvisorGraphPage() {
               <Hint title="Couleur de nœud">
                 Identifie le type. Les nœuds emphasés par la lentille sont plus saturés.
               </Hint>
-              <Hint title="Halo">
-                Profondeur visuelle proportionnelle à l’importance du nœud.
-              </Hint>
+              <Hint title="Halo">Profondeur visuelle proportionnelle à l’importance du nœud.</Hint>
               <Hint title="Particules">
-                Flux d’evidence sur les liens « soutient » / « explique ». Désactivable en mode performance.
+                Flux d’evidence sur les liens « soutient » / « explique ». Désactivable en mode
+                performance.
               </Hint>
               <Hint title="Liens courbes">
                 Contradictions et affaiblissements — appelés à challenger les conclusions.
@@ -1101,101 +1108,104 @@ function AdvisorGraphPage() {
             className="flex items-center justify-between rounded-2xl border border-border/60 bg-surface-1 px-4 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-2 lg:hidden"
           >
             <span className="flex items-center gap-2">
-              <span aria-hidden="true">▤</span>
+              <TablePixelIcon size={14} />
               <span>{detailsCollapsed ? 'Afficher les détails' : 'Masquer les détails'}</span>
             </span>
             <span aria-hidden="true" className="text-muted-foreground">
-              {detailsCollapsed ? '▾' : '▴'}
+              {detailsCollapsed ? (
+                <ChevronDownPixelIcon size={12} />
+              ) : (
+                <ChevronUpPixelIcon size={12} />
+              )}
             </span>
           </button>
-          <div
-            className={`flex flex-col gap-4 ${detailsCollapsed ? 'hidden lg:flex' : ''}`}
-          >
-          {selectedNode ? (
-            <AdvisorGraphNodeDetails
-              node={selectedNode}
-              neighbors={selectedNeighbors}
-              isPinned={pinnedIds.has(selectedNode.id)}
-              isIsolated={isolationSeedId === selectedNode.id}
-              pathPeerLabel={pathPeerLabel}
-              onSelectNeighbor={id => {
-                setSelectedNodeIdNav(id)
-                cameraApiRef.current?.focusNode(id)
-              }}
-              onTogglePin={togglePin}
-              onIsolate={isolateNode}
-              onClearIsolation={clearIsolation}
-              onCopyLabel={copyLabel}
-              onTracePath={tracePath}
-            />
-          ) : selectedLink ? (
-            <AdvisorGraphLinkDetails
-              link={selectedLink}
-              source={renderedGraph.nodes.find(n => n.id === selectedLink.source) ?? null}
-              target={renderedGraph.nodes.find(n => n.id === selectedLink.target) ?? null}
-            />
-          ) : (
-            <AdvisorGraphEmptyDetails hasGraph={renderedGraph.nodes.length > 0} />
-          )}
+          <div className={`flex flex-col gap-4 ${detailsCollapsed ? 'hidden lg:flex' : ''}`}>
+            {selectedNode ? (
+              <AdvisorGraphNodeDetails
+                node={selectedNode}
+                neighbors={selectedNeighbors}
+                isPinned={pinnedIds.has(selectedNode.id)}
+                isIsolated={isolationSeedId === selectedNode.id}
+                pathPeerLabel={pathPeerLabel}
+                onSelectNeighbor={id => {
+                  setSelectedNodeIdNav(id)
+                  cameraApiRef.current?.focusNode(id)
+                }}
+                onTogglePin={togglePin}
+                onIsolate={isolateNode}
+                onClearIsolation={clearIsolation}
+                onCopyLabel={copyLabel}
+                onTracePath={tracePath}
+              />
+            ) : selectedLink ? (
+              <AdvisorGraphLinkDetails
+                link={selectedLink}
+                source={renderedGraph.nodes.find(n => n.id === selectedLink.source) ?? null}
+                target={renderedGraph.nodes.find(n => n.id === selectedLink.target) ?? null}
+              />
+            ) : (
+              <AdvisorGraphEmptyDetails hasGraph={renderedGraph.nodes.length > 0} />
+            )}
 
-          <Panel
-            title="À propos de cette carte"
-            tone="violet"
-            icon={<span aria-hidden="true">[#]</span>}
-          >
-            <div className="space-y-2 text-[12.5px] leading-relaxed text-muted-foreground">
-              <p>
-                Cette visualisation est une <strong className="text-foreground">mémoire dérivée</strong>{' '}
-                — pas une base financière de vérité, pas un système de trading, pas un conseil
-                fiscal.
-              </p>
-              <div className="rounded-lg border border-border/40 bg-surface-1 p-3 text-[12px]">
-                <p className="font-medium text-foreground">Origine du graphe</p>
-                <ul className="mt-1.5 space-y-1 text-muted-foreground">
-                  <li>
-                    <span className="text-positive">réel</span> · uniquement ta mémoire Advisor.
-                  </li>
-                  <li>
-                    <span className="text-accent-2">démo</span> · fixture déterministe en mode démo.
-                  </li>
-                  <li>
-                    <span className="text-warning">aperçu</span> · réel + exemples curés après
-                    opt-in. Les exemples sont marqués «&nbsp;exemple&nbsp;» et préfixés.
-                  </li>
-                  <li>
-                    <span className="text-muted-foreground">vide</span> · mémoire trop pauvre,
-                    aucun mélange automatique.
-                  </li>
-                </ul>
-              </div>
-              <p>
-                <span className="text-foreground">Confiance</span> = probabilité que la mémoire
-                soit correcte. <span className="text-foreground">Fraîcheur</span> = à quel point
-                l’information est récente. Les contradictions sont surfacées pour challenger.
-              </p>
-            </div>
-          </Panel>
-
-          {bundleQuery.data ? (
             <Panel
-              title="Contexte bundle"
-              tone="positive"
-              icon={<span aria-hidden="true">∑</span>}
+              title="À propos de cette carte"
+              tone="violet"
+              icon={<span aria-hidden="true">[#]</span>}
             >
-              <p className="line-clamp-4 text-[12.5px] leading-relaxed text-muted-foreground">
-                {bundleQuery.data.summary}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Badge variant="outline">
-                  {Math.round((bundleQuery.data.confidence ?? 0) * 100)}% confiance
-                </Badge>
-                <Badge variant="outline">
-                  {Math.round((bundleQuery.data.recency ?? 0) * 100)}% fraîcheur
-                </Badge>
-                <Badge variant="outline">{bundleQuery.data.tokenEstimate} tokens</Badge>
+              <div className="space-y-2 text-[12.5px] leading-relaxed text-muted-foreground">
+                <p>
+                  Cette visualisation est une{' '}
+                  <strong className="text-foreground">mémoire dérivée</strong> — pas une base
+                  financière de vérité, pas un système de trading, pas un conseil fiscal.
+                </p>
+                <div className="rounded-lg border border-border/40 bg-surface-1 p-3 text-[12px]">
+                  <p className="font-medium text-foreground">Origine du graphe</p>
+                  <ul className="mt-1.5 space-y-1 text-muted-foreground">
+                    <li>
+                      <span className="text-positive">réel</span> · uniquement ta mémoire Advisor.
+                    </li>
+                    <li>
+                      <span className="text-accent-2">démo</span> · fixture déterministe en mode
+                      démo.
+                    </li>
+                    <li>
+                      <span className="text-warning">aperçu</span> · réel + exemples curés après
+                      opt-in. Les exemples sont marqués «&nbsp;exemple&nbsp;» et préfixés.
+                    </li>
+                    <li>
+                      <span className="text-muted-foreground">vide</span> · mémoire trop pauvre,
+                      aucun mélange automatique.
+                    </li>
+                  </ul>
+                </div>
+                <p>
+                  <span className="text-foreground">Confiance</span> = probabilité que la mémoire
+                  soit correcte. <span className="text-foreground">Fraîcheur</span> = à quel point
+                  l’information est récente. Les contradictions sont surfacées pour challenger.
+                </p>
               </div>
             </Panel>
-          ) : null}
+
+            {bundleQuery.data ? (
+              <Panel
+                title="Contexte bundle"
+                tone="positive"
+                icon={<span aria-hidden="true">∑</span>}
+              >
+                <p className="line-clamp-4 text-[12.5px] leading-relaxed text-muted-foreground">
+                  {bundleQuery.data.summary}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <Badge variant="outline">
+                    {Math.round((bundleQuery.data.confidence ?? 0) * 100)}% confiance
+                  </Badge>
+                  <Badge variant="outline">
+                    {Math.round((bundleQuery.data.recency ?? 0) * 100)}% fraîcheur
+                  </Badge>
+                  <Badge variant="outline">{bundleQuery.data.tokenEstimate} tokens</Badge>
+                </div>
+              </Panel>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1400,7 +1410,7 @@ function KindFilters<TKind extends string>({
     <Panel
       title={title}
       tone={tone}
-      icon={<span aria-hidden="true">●</span>}
+      icon={<FilterPixelIcon size={16} />}
       actions={
         <button
           type="button"
@@ -1494,7 +1504,7 @@ function PinnedBar({
             aria-label={`Désépingler ${node.label}`}
             className="text-muted-foreground/70 hover:text-foreground"
           >
-            ✕
+            <TimesPixelIcon size={12} />
           </button>
         </span>
       ))}
@@ -1506,7 +1516,8 @@ function PinnedBar({
           className="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-40"
           title="BFS frontend sur les liens visibles"
         >
-          ↳ Tracer entre les épinglés
+          <BranchPixelIcon size={12} className="mr-1 inline-block align-[-1px]" />
+          Tracer entre les épinglés
         </button>
         <button
           type="button"
@@ -1520,19 +1531,13 @@ function PinnedBar({
   )
 }
 
-function PathBanner({
-  path,
-  onClear,
-}: {
-  path: AdvisorGraphPath
-  onClear: () => void
-}) {
+function PathBanner({ path, onClear }: { path: AdvisorGraphPath; onClear: () => void }) {
   return (
     <Panel
       tone="brand"
       title="Chemin actif"
       description={`${path.nodes.length} étapes · ${path.links.length} liens`}
-      icon={<span aria-hidden="true">↳</span>}
+      icon={<BranchPixelIcon size={16} />}
       actions={
         <button
           type="button"
@@ -1655,7 +1660,7 @@ function SparseRealMemoryBanner({
     <Panel
       title="Mémoire réelle trop pauvre"
       tone="warning"
-      icon={<span aria-hidden="true">◐</span>}
+      icon={<ClockPixelIcon size={16} />}
       actions={
         <button
           type="button"
@@ -1669,8 +1674,8 @@ function SparseRealMemoryBanner({
       <p className="text-[12.5px] leading-relaxed text-muted-foreground">{summary}</p>
       <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
         Aucun exemple n&apos;est ajouté tant que tu ne l&apos;as pas demandé. Active la
-        prévisualisation pour voir à quoi ressemblera ta carte une fois la mémoire enrichie —
-        les nœuds ajoutés seront marqués «&nbsp;exemple&nbsp;» et clairement distincts.
+        prévisualisation pour voir à quoi ressemblera ta carte une fois la mémoire enrichie — les
+        nœuds ajoutés seront marqués «&nbsp;exemple&nbsp;» et clairement distincts.
       </p>
     </Panel>
   )
@@ -1694,7 +1699,7 @@ function MixedPreviewBanner({
       title="Aperçu enrichi · des exemples sont mélangés"
       description="Certaines entités affichées sont des exemples curés, pas ta mémoire Advisor."
       tone="warning"
-      icon={<span aria-hidden="true">⚠</span>}
+      icon={<ExclamationTrianglePixelIcon size={16} />}
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1725,8 +1730,8 @@ function MixedPreviewBanner({
         </Badge>
         <Badge variant="secondary">{exampleCount} exemples</Badge>
         <span className="text-[11.5px]">
-          Les nœuds exemples sont désaturés, marqués «&nbsp;exemple&nbsp;» dans le tooltip et
-          dans le panneau, et leurs IDs sont préfixés par «&nbsp;example:&nbsp;».
+          Les nœuds exemples sont désaturés, marqués «&nbsp;exemple&nbsp;» dans le tooltip et dans
+          le panneau, et leurs IDs sont préfixés par «&nbsp;example:&nbsp;».
         </span>
       </div>
     </Panel>
@@ -1857,4 +1862,3 @@ function Legend({ showExample }: { showExample: boolean }) {
     </div>
   )
 }
-

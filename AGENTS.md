@@ -1,7 +1,5 @@
 # Finance-OS repository instructions
 
-Use the nearest `AGENTS.md` before editing. Keep permanent instructions short; task-specific workflows live in `.agentic/source/skills/`, and durable operator/product context lives in the ten maintained Markdown guides.
-
 ## Product boundaries
 
 - Finance-OS is personal and single-user.
@@ -21,6 +19,12 @@ Use the nearest `AGENTS.md` before editing. Keep permanent instructions short; t
 - Propagate `x-request-id` end to end; keep logs structured and error payloads normalized and safe.
 - `exactOptionalPropertyTypes` is enabled: omit absent optional keys instead of passing `undefined`.
 - Every behavior change preserves and tests both demo and admin paths.
+
+## Engineering quality
+
+- Prefer the simplest correct solution that is modern, performant, maintainable, testable, and consistent with the repository. Complexity must earn its place.
+- Avoid over-engineering, speculative abstraction, unnecessary dependencies, duplicated state or work, code smells, and premature optimization.
+- For new or materially changed TypeScript, React, backend, worker, module, or build code, apply `finance-os-engineering-optimization`: improve clear local issues in touched code when safe and bounded, and keep optimization within task scope.
 
 ## Frontend
 

@@ -1,7 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useStore } from '@tanstack/react-store'
-import { useState } from 'react'
 import {
   Badge,
   Button,
@@ -11,10 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@finance-os/ui/components'
-import type { AuthMode } from '@/features/auth-types'
+import { LinkPixelIcon, RefreshPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { useStore } from '@tanstack/react-store'
+import { useState } from 'react'
+import { ActionDock } from '@/components/surfaces/action-dock'
+import { PageHeader } from '@/components/surfaces/page-header'
 import { authMeQueryOptions } from '@/features/auth-query-options'
+import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { dashboardQueryKeys } from '@/features/dashboard-query-options'
+import { postExternalInvestmentSync } from '@/features/external-investments/api'
+import {
+  externalInvestmentsQueryKeys,
+  externalInvestmentsStatusQueryOptionsWithMode,
+} from '@/features/external-investments/query-options'
+import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
 import {
   deletePowensConnection,
@@ -29,21 +38,10 @@ import {
   powensManualSyncCooldownStore,
   startPowensManualSyncCooldown,
 } from '@/features/powens/manual-sync-cooldown'
-import {
-  powensQueryKeys,
-  powensStatusQueryOptionsWithMode,
-} from '@/features/powens/query-options'
-import { postExternalInvestmentSync } from '@/features/external-investments/api'
-import {
-  externalInvestmentsQueryKeys,
-  externalInvestmentsStatusQueryOptionsWithMode,
-} from '@/features/external-investments/query-options'
-import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
+import { powensQueryKeys, powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
 import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
-import { pushToast } from '@/lib/toast-store'
 import { formatDateTime, toErrorMessage } from '@/lib/format'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { ActionDock } from '@/components/surfaces/action-dock'
+import { pushToast } from '@/lib/toast-store'
 
 const EXTERNAL_PROVIDERS: ExternalInvestmentProvider[] = ['ibkr', 'binance']
 
@@ -202,7 +200,7 @@ function IntegrationsPage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Intelligence & Admin"
-        icon="⊞"
+        icon={<LinkPixelIcon size={12} />}
         title="Intégrations"
         description="Connexions, synchronisations et diagnostics provider. Le cockpit reste utilisable si une source est dégradée."
         actions={
@@ -252,7 +250,8 @@ function IntegrationsPage() {
             <div>
               <CardTitle className="text-base">Investissements externes</CardTitle>
               <CardDescription>
-                IBKR Flex et Binance Spot sont configurés côté serveur et restent strictement en lecture seule.
+                IBKR Flex et Binance Spot sont configurés côté serveur et restent strictement en
+                lecture seule.
               </CardDescription>
             </div>
             <Button
@@ -269,7 +268,7 @@ function IntegrationsPage() {
               }
               onClick={() => externalSyncMutation.mutate({})}
             >
-              <span aria-hidden="true">↻</span>
+              <RefreshPixelIcon size={14} />
               {externalSyncMutation.isPending && !externalSyncMutation.variables?.provider
                 ? 'Sync...'
                 : 'Sync IBKR + Binance'}
@@ -296,7 +295,8 @@ function IntegrationsPage() {
                           : 'Spot USER_DATA / Wallet GET; trading, transfert et retrait interdits.'}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Dernier succes : {formatDateTime(health?.lastSuccessAt ?? connection?.lastSuccessAt ?? null)}
+                        Dernier succes :{' '}
+                        {formatDateTime(health?.lastSuccessAt ?? connection?.lastSuccessAt ?? null)}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -324,7 +324,9 @@ function IntegrationsPage() {
                       size="sm"
                       variant="ghost"
                       className="text-xs"
-                      disabled={!isAdmin || !configured || isExternalSafeMode || isProviderSyncPending}
+                      disabled={
+                        !isAdmin || !configured || isExternalSafeMode || isProviderSyncPending
+                      }
                       onClick={() => externalSyncMutation.mutate({ provider })}
                     >
                       {isProviderSyncPending ? 'Sync...' : 'Synchroniser'}
@@ -342,7 +344,6 @@ function IntegrationsPage() {
               )
             })}
           </div>
-
         </CardContent>
       </Card>
 
@@ -483,7 +484,7 @@ function IntegrationsPage() {
       <ActionDock
         items={[
           {
-            icon: <span aria-hidden="true">⊞</span>,
+            icon: <LinkPixelIcon size={16} />,
             label: 'Connecter banque',
             tone: 'brand',
             disabled: !isAdmin || isIntegrationsSafeMode || connectMutation.isPending,

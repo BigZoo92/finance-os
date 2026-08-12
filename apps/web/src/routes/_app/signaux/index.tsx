@@ -1,14 +1,20 @@
-import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { authMeQueryOptions } from '@/features/auth-query-options'
-import { resolveAuthViewState } from '@/features/auth-view-state'
-import { signalHealthQueryOptions, signalItemsQueryOptions, signalSourcesQueryOptions, signalRunsQueryOptions } from '@/features/signals-query-options'
-import type { SignalItem } from '@/features/signals-api'
-import { createScenarioFromSignal } from '@/features/trading-lab-api'
 import { Badge } from '@finance-os/ui/components'
+import { AtPixelIcon, ChartLinePixelIcon, NewspaperPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useState } from 'react'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { Panel } from '@/components/surfaces/panel'
+import { authMeQueryOptions } from '@/features/auth-query-options'
+import { resolveAuthViewState } from '@/features/auth-view-state'
+import type { SignalItem } from '@/features/signals-api'
+import {
+  signalHealthQueryOptions,
+  signalItemsQueryOptions,
+  signalRunsQueryOptions,
+  signalSourcesQueryOptions,
+} from '@/features/signals-query-options'
+import { createScenarioFromSignal } from '@/features/trading-lab-api'
 
 // NOTE: page temporaire. La future page fusionnée "Radar / Marchés & Signaux"
 // remplacera cette surface (mission dédiée). L'ancien layout news a été retiré;
@@ -53,7 +59,7 @@ function SignauxActualitesPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Intelligence & Admin"
-        icon="⊟"
+        icon={<NewspaperPixelIcon size={12} />}
         title="Signaux"
         description="Données brutes et signaux avancés utilisés par l'Advisor. Utile pour comprendre, pas nécessaire au quotidien."
       />
@@ -61,7 +67,11 @@ function SignauxActualitesPage() {
       {/* Quick overview strip */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <QuickStat label="Signaux persistes" value={signalTotal} />
-        <QuickStat label="Attention requise" value={attentionItems.length} highlight={attentionItems.length > 0} />
+        <QuickStat
+          label="Attention requise"
+          value={attentionItems.length}
+          highlight={attentionItems.length > 0}
+        />
         <QuickStat label="Sources" value={totalSources} />
         <QuickStat label="Finance" value={sourceCounts.finance} />
         <QuickStat label="IA / Tech" value={sourceCounts.ai_tech} />
@@ -71,12 +81,23 @@ function SignauxActualitesPage() {
       {lastRun && (
         <Panel>
           <div className="flex items-center justify-between text-xs text-text-secondary">
-            <span>Dernière ingestion: {lastRun.provider} ({lastRun.runType})</span>
             <span>
-              {lastRun.insertedCount} inseres, {lastRun.dedupedCount} dedup, {lastRun.graphIngestedCount} graph
-              {lastRun.status === 'success' ? ' — OK' : lastRun.status === 'failed' ? ' — Echec' : ''}
+              Dernière ingestion: {lastRun.provider} ({lastRun.runType})
             </span>
-            <span>{lastRun.finishedAt ? new Date(lastRun.finishedAt).toLocaleString('fr-FR') : 'en cours'}</span>
+            <span>
+              {lastRun.insertedCount} inseres, {lastRun.dedupedCount} dedup,{' '}
+              {lastRun.graphIngestedCount} graph
+              {lastRun.status === 'success'
+                ? ' — OK'
+                : lastRun.status === 'failed'
+                  ? ' — Echec'
+                  : ''}
+            </span>
+            <span>
+              {lastRun.finishedAt
+                ? new Date(lastRun.finishedAt).toLocaleString('fr-FR')
+                : 'en cours'}
+            </span>
           </div>
         </Panel>
       )}
@@ -98,7 +119,7 @@ function SignauxActualitesPage() {
         <Link to="/signaux/marches" className="block">
           <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
             <div className="flex items-center gap-2">
-              <span className="text-lg">≈</span>
+              <ChartLinePixelIcon size={18} />
               <div>
                 <p className="text-sm font-medium text-text-primary">Marchés & macro</p>
                 <p className="text-xs text-text-tertiary">Panorama brut et signaux déterministes</p>
@@ -109,7 +130,7 @@ function SignauxActualitesPage() {
         <Link to="/signaux/social" className="block">
           <Panel className="hover:border-primary/30 transition-colors cursor-pointer">
             <div className="flex items-center gap-2">
-              <span className="text-lg">⊕</span>
+              <AtPixelIcon size={18} />
               <div>
                 <p className="text-sm font-medium text-text-primary">Comptes sociaux</p>
                 <p className="text-xs text-text-tertiary">{totalSources} compte(s) surveille(s)</p>
@@ -125,15 +146,17 @@ function SignauxActualitesPage() {
           role de cette surface
         </p>
         <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-          Ces signaux alimentent l'IA Advisor et enrichissent le graphe de connaissances.
-          Ils ne sont pas des conseils financiers. Consultez l'IA pour des analyses personnalisees.
+          Ces signaux alimentent l'IA Advisor et enrichissent le graphe de connaissances. Ils ne
+          sont pas des conseils financiers. Consultez l'IA pour des analyses personnalisees.
         </p>
       </div>
 
       {/* Recent persisted signal items */}
       {signalItems.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-text-primary mb-2">Signaux recents ({signalTotal})</h3>
+          <h3 className="text-sm font-medium text-text-primary mb-2">
+            Signaux recents ({signalTotal})
+          </h3>
           <div className="space-y-2">
             {signalItems.slice(0, 10).map(item => (
               <SignalItemCard key={item.id} item={item} isAdmin={isAdmin} />
@@ -146,8 +169,10 @@ function SignauxActualitesPage() {
         <Panel>
           <p className="text-text-secondary text-sm py-4 text-center">
             Aucun signal persiste. Utilisez l'import manuel depuis{' '}
-            <Link to="/signaux/social" className="text-primary underline">Comptes sociaux</Link>
-            {' '}ou attendez une ingestion automatique.
+            <Link to="/signaux/social" className="text-primary underline">
+              Comptes sociaux
+            </Link>{' '}
+            ou attendez une ingestion automatique.
           </p>
         </Panel>
       )}
@@ -155,11 +180,23 @@ function SignauxActualitesPage() {
   )
 }
 
-function QuickStat({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) {
+function QuickStat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string
+  value: number | string
+  highlight?: boolean
+}) {
   return (
     <Panel>
       <p className="text-xs text-text-tertiary">{label}</p>
-      <p className={`text-lg font-medium font-financial ${highlight ? 'text-warning' : 'text-text-primary'}`}>{value}</p>
+      <p
+        className={`text-lg font-medium font-financial ${highlight ? 'text-warning' : 'text-text-primary'}`}
+      >
+        {value}
+      </p>
     </Panel>
   )
 }
@@ -184,10 +221,16 @@ function SignalItemCard({ item, isAdmin }: { item: SignalItem; isAdmin: boolean 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             {item.requiresAttention && (
-              <Badge variant="destructive" className="text-[10px] shrink-0">Attention</Badge>
+              <Badge variant="destructive" className="text-[10px] shrink-0">
+                Attention
+              </Badge>
             )}
-            <Badge variant="outline" className="text-[10px] shrink-0">{item.signalDomain}</Badge>
-            <Badge variant="secondary" className="text-[10px] shrink-0">{item.sourceProvider}</Badge>
+            <Badge variant="outline" className="text-[10px] shrink-0">
+              {item.signalDomain}
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] shrink-0">
+              {item.sourceProvider}
+            </Badge>
           </div>
           <p className="text-sm text-text-primary mt-1 line-clamp-2">{item.title}</p>
           {item.attentionReason && (

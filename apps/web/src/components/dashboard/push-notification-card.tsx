@@ -1,4 +1,9 @@
 import { Badge, Button } from '@finance-os/ui/components'
+import {
+  BellPixelIcon,
+  CheckPixelIcon,
+  ExclamationTrianglePixelIcon,
+} from '@finance-os/ui/icons/pixel'
 import type { PushSettingsResponse } from '@/features/notifications/types'
 
 type Props = {
@@ -17,27 +22,55 @@ const permissionLabel: Record<PushSettingsResponse['permission'], string> = {
   granted: 'Accordée',
 }
 
-export const PushNotificationCard = ({ settings, unavailable, readOnly, onToggle, onRegisterSubscription, onSendPreview, busy }: Props) => {
+export const PushNotificationCard = ({
+  settings,
+  unavailable,
+  readOnly,
+  onToggle,
+  onRegisterSubscription,
+  onSendPreview,
+  busy,
+}: Props) => {
   if (!settings) return null
 
-  const isHealthy = settings.optIn && settings.permission === 'granted' && !settings.subscriptionStale && settings.providerStatus !== 'unavailable'
+  const isHealthy =
+    settings.optIn &&
+    settings.permission === 'granted' &&
+    !settings.subscriptionStale &&
+    settings.providerStatus !== 'unavailable'
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
-          <span className="text-base" aria-hidden="true">🔔</span> Notifications push
+          <BellPixelIcon size={13} /> Notifications push
         </p>
-        <Badge variant={isHealthy ? 'positive' : 'warning'} className="text-xs">
-          {isHealthy ? '✓ actif' : '⚡ attention'}
+        <Badge
+          variant={isHealthy ? 'positive' : 'warning'}
+          className="inline-flex items-center gap-1 text-xs"
+        >
+          {isHealthy ? <CheckPixelIcon size={11} /> : <ExclamationTrianglePixelIcon size={11} />}
+          {isHealthy ? 'actif' : 'attention'}
         </Badge>
       </div>
 
       {/* Status grid */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatusPill label="Opt-in" value={settings.optIn ? 'Activé' : 'Désactivé'} active={settings.optIn} />
-        <StatusPill label="Permission" value={permissionLabel[settings.permission]} active={settings.permission === 'granted'} />
-        <StatusPill label="Provider" value={settings.providerStatus === 'unavailable' ? 'Indisponible' : 'OK'} active={settings.providerStatus !== 'unavailable'} />
+        <StatusPill
+          label="Opt-in"
+          value={settings.optIn ? 'Activé' : 'Désactivé'}
+          active={settings.optIn}
+        />
+        <StatusPill
+          label="Permission"
+          value={permissionLabel[settings.permission]}
+          active={settings.permission === 'granted'}
+        />
+        <StatusPill
+          label="Provider"
+          value={settings.providerStatus === 'unavailable' ? 'Indisponible' : 'OK'}
+          active={settings.providerStatus !== 'unavailable'}
+        />
       </div>
 
       {/* Warnings */}
@@ -59,10 +92,20 @@ export const PushNotificationCard = ({ settings, unavailable, readOnly, onToggle
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={onToggle} disabled={busy || unavailable || readOnly}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onToggle}
+          disabled={busy || unavailable || readOnly}
+        >
           {settings.optIn ? 'Désactiver' : 'Activer'}
         </Button>
-        <Button size="sm" variant="outline" onClick={onRegisterSubscription} disabled={busy || unavailable || readOnly}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onRegisterSubscription}
+          disabled={busy || unavailable || readOnly}
+        >
           {settings.subscriptionStale ? 'Réactiver' : 'Enregistrer'}
         </Button>
         <Button size="sm" onClick={onSendPreview} disabled={busy || unavailable || readOnly}>
@@ -75,11 +118,19 @@ export const PushNotificationCard = ({ settings, unavailable, readOnly, onToggle
 
 function StatusPill({ label, value, active }: { label: string; value: string; active: boolean }) {
   return (
-    <div className={`rounded-xl border px-4 py-3 transition-colors duration-150 ${
-      active ? 'border-positive/20 bg-positive/5' : 'border-border/30 bg-card/30'
-    }`}>
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/50">{label}</p>
-      <p className={`mt-0.5 text-sm font-semibold ${active ? 'text-positive' : 'text-muted-foreground'}`}>{value}</p>
+    <div
+      className={`rounded-xl border px-4 py-3 transition-colors duration-150 ${
+        active ? 'border-positive/20 bg-positive/5' : 'border-border/30 bg-card/30'
+      }`}
+    >
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/50">
+        {label}
+      </p>
+      <p
+        className={`mt-0.5 text-sm font-semibold ${active ? 'text-positive' : 'text-muted-foreground'}`}
+      >
+        {value}
+      </p>
     </div>
   )
 }

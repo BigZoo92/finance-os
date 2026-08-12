@@ -1,21 +1,22 @@
-import { useState } from 'react'
+import { ExclamationTrianglePixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { Panel } from '@/components/surfaces/panel'
 import {
-  runTradingLabBacktest,
-  runTradingLabWalkForward,
-  previewTradingLabMarketData,
   type BacktestRunRequest,
   type BacktestRunResponse,
   type DataSourcePreference,
+  type MarketDataPreviewResponse,
   type PreferredProvider,
+  previewTradingLabMarketData,
+  runTradingLabBacktest,
+  runTradingLabWalkForward,
   type TradingLabStrategy,
   type WalkForwardResponse,
-  type MarketDataPreviewResponse,
 } from '@/features/trading-lab-api'
-import { Panel } from '@/components/surfaces/panel'
-import { StrategyPicker } from './strategy-picker'
-import { MarketDataSourcePicker } from './market-data-source-picker'
 import { DataSourceBadge } from './data-source-badge'
+import { MarketDataSourcePicker } from './market-data-source-picker'
+import { StrategyPicker } from './strategy-picker'
 
 type Props = {
   strategies: TradingLabStrategy[]
@@ -147,7 +148,8 @@ export function BacktestRunner({
         <div className="space-y-3">
           {isDemo ? (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-              Mode démo — les boutons sont visibles mais désactivés. Connecte-toi en admin pour exécuter.
+              Mode démo — les boutons sont visibles mais désactivés. Connecte-toi en admin pour
+              exécuter.
             </div>
           ) : null}
 
@@ -292,7 +294,10 @@ export function BacktestRunner({
 
           <PreviewResultPanel data={previewMutation.data} error={previewMutation.error} />
           <BacktestResultPanel data={runMutation.data} error={runMutation.error} />
-          <WalkForwardResultPanel data={walkForwardMutation.data} error={walkForwardMutation.error} />
+          <WalkForwardResultPanel
+            data={walkForwardMutation.data}
+            error={walkForwardMutation.error}
+          />
         </div>
       )}
     </Panel>
@@ -392,7 +397,9 @@ function BacktestResultPanel({
       </div>
       {data.fallbackUsed ? (
         <div className="mt-2 text-amber-300/80">
-          ⚠ Fallback utilisé ({data.fallbackReason ?? 'inconnu'}). Les chiffres ne reflètent pas un marché réel.
+          <ExclamationTrianglePixelIcon size={12} className="mr-1 inline-block align-[-1px]" />
+          Fallback utilisé ({data.fallbackReason ?? 'inconnu'}). Les chiffres ne reflètent pas un
+          marché réel.
         </div>
       ) : null}
       {data.dataWarnings && data.dataWarnings.length > 0 ? (
@@ -458,7 +465,9 @@ function WalkForwardResultPanel({
     <div className="rounded-md border border-accent-2/30 bg-accent-2/5 p-2 text-xs">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="font-medium text-accent-2">Walk-forward</span>
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${TONE_BADGE[tone]}`}>
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${TONE_BADGE[tone]}`}
+        >
           {TONE_LABEL[tone]}
         </span>
         <DataSourceBadge
@@ -477,9 +486,7 @@ function WalkForwardResultPanel({
         <Metric
           label="Dégradation"
           value={
-            data.degradationRatio != null
-              ? `${(data.degradationRatio * 100).toFixed(0)}%`
-              : '—'
+            data.degradationRatio != null ? `${(data.degradationRatio * 100).toFixed(0)}%` : '—'
           }
         />
         <Metric label="Fenêtres" value={String(windows.length)} />
@@ -499,7 +506,9 @@ function WalkForwardResultPanel({
             <tbody className="font-financial">
               {windows.map(w => (
                 <tr key={w.index} className="border-b border-border/20">
-                  <td className="px-2 py-1">{w.test_start} → {w.test_end}</td>
+                  <td className="px-2 py-1">
+                    {w.test_start} → {w.test_end}
+                  </td>
                   <td className="px-2 py-1 text-right">{formatPct(w.test_return)}</td>
                   <td className="px-2 py-1 text-right">{formatNum(w.test_sharpe)}</td>
                   <td className="px-2 py-1 text-right">{formatPct(w.test_max_drawdown)}</td>
@@ -510,7 +519,8 @@ function WalkForwardResultPanel({
         </div>
       ) : null}
       <div className="mt-2 text-[10px] text-amber-400/70">
-        La validation walk-forward réduit le risque d'overfitting mais n'est pas une preuve de performance future.
+        La validation walk-forward réduit le risque d'overfitting mais n'est pas une preuve de
+        performance future.
       </div>
     </div>
   )

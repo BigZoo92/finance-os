@@ -1,4 +1,13 @@
 import { Badge, Input } from '@finance-os/ui/components'
+import {
+  BankPixelIcon,
+  DownloadPixelIcon,
+  ShufflePixelIcon,
+  SortPixelIcon,
+  TablePixelIcon,
+  TimesPixelIcon,
+  TrendingPixelIcon,
+} from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
@@ -194,10 +203,7 @@ function InvestissementsPage() {
     })
   return (
     <div className="space-y-8">
-      <PageHeader
-        icon="△"
-        title="Investissements"
-      />
+      <PageHeader icon={<TrendingPixelIcon size={12} />} title="Investissements" />
 
       <section className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -244,11 +250,7 @@ function InvestissementsPage() {
         </div>
       </section>
 
-      <Panel
-        title="Portefeuille externe"
-        icon={<span aria-hidden="true">◇</span>}
-        tone="brand"
-      >
+      <Panel title="Portefeuille externe" icon={<BankPixelIcon size={16} />} tone="brand">
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-lg border border-border/50 bg-surface-1 p-3">
             <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">IBKR</p>
@@ -443,7 +445,7 @@ function InvestissementsPage() {
       <Panel
         title="Comptes d'investissement Powens"
         description="PEA, CTO ou comptes titres exposes par Powens au niveau compte. Les lignes de titres detaillees restent separees des providers IBKR/Binance."
-        icon={<span aria-hidden="true">△</span>}
+        icon={<TrendingPixelIcon size={16} />}
         tone="positive"
       >
         {summaryQuery.isPending ? (
@@ -500,7 +502,7 @@ function InvestissementsPage() {
         <Panel
           title="Mouvements récents"
           description="Historique lu en cache pour comprendre ce qui a changé."
-          icon={<span aria-hidden="true">↕</span>}
+          icon={<SortPixelIcon size={16} />}
           tone="violet"
         >
           {externalTrades.length === 0 ? (
@@ -548,7 +550,7 @@ function InvestissementsPage() {
         <Panel
           title="Flux cash"
           description="Entrées et sorties de cash liées aux providers externes."
-          icon={<span aria-hidden="true">⇄</span>}
+          icon={<ShufflePixelIcon size={16} />}
           tone="positive"
         >
           {externalCashFlows.length === 0 ? (
@@ -588,7 +590,7 @@ function InvestissementsPage() {
       <Panel
         title="Positions internes"
         description="Positions déjà présentes dans le résumé patrimonial."
-        icon={<span aria-hidden="true">△</span>}
+        icon={<TrendingPixelIcon size={16} />}
         tone="brand"
       >
         {summaryQuery.isPending ? (
@@ -732,7 +734,7 @@ function InvestissementsPage() {
               }),
           },
           {
-            icon: <span aria-hidden="true">↧</span>,
+            icon: <DownloadPixelIcon size={16} />,
             label: 'Exporter',
             tone: 'violet',
             disabled: positions.length === 0,
@@ -744,7 +746,7 @@ function InvestissementsPage() {
               }),
           },
           {
-            icon: <span aria-hidden="true">▣</span>,
+            icon: <TablePixelIcon size={16} />,
             label: 'Nouvelle position',
             tone: 'positive',
             onClick: () =>
@@ -755,7 +757,7 @@ function InvestissementsPage() {
               }),
           },
           {
-            icon: <span aria-hidden="true">✕</span>,
+            icon: <TimesPixelIcon size={16} />,
             label: 'Réinitialiser',
             tone: 'negative',
             onClick: () =>

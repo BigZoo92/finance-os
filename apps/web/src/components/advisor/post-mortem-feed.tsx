@@ -4,15 +4,16 @@
 // /dashboard/advisor/post-mortem and /dashboard/advisor/post-mortem/run.
 // All wording is advisory-only / lessons-only — never a directive.
 
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button } from '@finance-os/ui/components'
+import { CommandPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Panel } from '@/components/surfaces/panel'
 import type { AuthMode } from '@/features/auth-types'
 import { postAdvisorPostMortemRun } from '@/features/dashboard-api'
 import {
-  LEARNING_LOOP_INVALIDATION_KEYS,
   dashboardAdvisorPostMortemsQueryOptionsWithMode,
+  LEARNING_LOOP_INVALIDATION_KEYS,
 } from '@/features/dashboard-query-options'
 import type { DashboardAdvisorPostMortemRunResponse } from '@/features/dashboard-types'
 import {
@@ -26,7 +27,10 @@ interface PostMortemFeedProps {
   mode: AuthMode
 }
 
-const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'outline' | 'destructive' }> = {
+const STATUS_BADGE: Record<
+  string,
+  { label: string; variant: 'secondary' | 'outline' | 'destructive' }
+> = {
   completed: { label: 'Terminé', variant: 'secondary' },
   pending: { label: 'En attente', variant: 'outline' },
   skipped: { label: 'Ignoré', variant: 'outline' },
@@ -67,7 +71,7 @@ export function PostMortemFeed({ mode }: PostMortemFeedProps) {
     <Panel
       title="Post-Mortems"
       description="Analyses rétrospectives advisory-only. Pas de directive d'exécution."
-      icon={<span aria-hidden="true">⌘</span>}
+      icon={<CommandPixelIcon size={16} />}
       tone="plain"
     >
       <div className="space-y-4">
@@ -115,7 +119,10 @@ export function PostMortemFeed({ mode }: PostMortemFeedProps) {
         ) : (
           <ul className="space-y-3">
             {feed.map(row => {
-              const statusBadge = STATUS_BADGE[row.status] ?? { label: row.status, variant: 'outline' as const }
+              const statusBadge = STATUS_BADGE[row.status] ?? {
+                label: row.status,
+                variant: 'outline' as const,
+              }
               return (
                 <li
                   key={row.id}

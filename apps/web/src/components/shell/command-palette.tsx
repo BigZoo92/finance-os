@@ -1,11 +1,12 @@
-import { useNavigate } from '@tanstack/react-router'
+import { SearchPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { NAV_GROUPS, NAV_ITEMS, isNavItemVisible } from './nav-items'
+import { isNavItemVisible, NAV_GROUPS, NAV_ITEMS } from './nav-items'
 
 const KEYWORDS: Record<string, string> = {
   '/': 'accueil home dashboard vue ensemble quotidien',
@@ -32,7 +33,7 @@ const KEYWORDS: Record<string, string> = {
 const PAGES = NAV_ITEMS.map(item => ({
   to: item.to,
   label: item.label,
-  glyph: item.icon,
+  icon: item.icon,
   group: item.group,
   adminOnly: item.adminOnly ?? false,
   keywords: KEYWORDS[item.to] ?? '',
@@ -51,7 +52,7 @@ export function CommandPalette() {
       {
         to: page.to,
         label: page.label,
-        icon: page.glyph,
+        icon: page.icon,
         description: '',
         group: page.group,
         ...(page.adminOnly ? { adminOnly: true } : {}),
@@ -144,28 +145,31 @@ export function CommandPalette() {
                         heading={group.label}
                         className={`px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${group.color}`}
                       >
-                        {groupPages.map(page => (
-                          <Command.Item
-                            key={page.to}
-                            value={`${page.label} ${page.keywords}`}
-                            onSelect={() => handleSelect(page.to)}
-                            className="group/item flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
-                          >
-                            <span
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 text-sm transition-colors group-data-[selected=true]/item:bg-primary/15 group-data-[selected=true]/item:text-primary"
-                              aria-hidden="true"
+                        {groupPages.map(page => {
+                          const Icon = page.icon
+                          return (
+                            <Command.Item
+                              key={page.to}
+                              value={`${page.label} ${page.keywords}`}
+                              onSelect={() => handleSelect(page.to)}
+                              className="group/item flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
                             >
-                              {page.glyph}
-                            </span>
-                            <span className="flex-1 font-medium">{page.label}</span>
-                            <span
-                              aria-hidden="true"
-                              className="font-mono text-[11px] text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
-                            >
-                              ↵
-                            </span>
-                          </Command.Item>
-                        ))}
+                              <span
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-1 transition-colors group-data-[selected=true]/item:bg-primary/15 group-data-[selected=true]/item:text-primary"
+                                aria-hidden="true"
+                              >
+                                <Icon size={16} />
+                              </span>
+                              <span className="flex-1 font-medium">{page.label}</span>
+                              <span
+                                aria-hidden="true"
+                                className="font-mono text-[11px] text-muted-foreground/40 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
+                              >
+                                ↵
+                              </span>
+                            </Command.Item>
+                          )
+                        })}
                       </Command.Group>
                     )
                   })}
@@ -200,8 +204,8 @@ export function CommandPaletteTrigger() {
       }
       className="group hidden items-center gap-2 rounded-lg border border-border/60 bg-surface-1 px-3 py-1.5 text-xs text-muted-foreground transition-all duration-150 hover:border-primary/30 hover:bg-surface-2 hover:text-foreground md:inline-flex"
     >
-      <span aria-hidden="true" className="text-primary/70">
-        ⌕
+      <span aria-hidden="true" className="flex items-center text-primary/70">
+        <SearchPixelIcon size={14} />
       </span>
       <span>Rechercher</span>
       <kbd className="rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/60 transition-colors group-hover:text-primary/70">

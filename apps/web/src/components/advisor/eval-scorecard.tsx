@@ -5,8 +5,9 @@
 // the scorecard still renders the deterministic case-count groupings. We never fabricate trends:
 // `insufficient_data` is surfaced explicitly when fewer than two historical runs exist.
 
-import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@finance-os/ui/components'
+import { CheckListPixelIcon } from '@finance-os/ui/icons/pixel'
+import { useQuery } from '@tanstack/react-query'
 import { Panel } from '@/components/surfaces/panel'
 import type { AuthMode } from '@/features/auth-types'
 import {
@@ -17,10 +18,10 @@ import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
 import {
   buildEvalScorecard,
   buildEvalScorecardTrends,
-  TREND_STATUS_LABEL,
   type EvalTrendsCategoryView,
   type EvalTrendsGroupView,
   type EvalTrendsLoadState,
+  TREND_STATUS_LABEL,
 } from '@/features/learning-loop-view-model'
 
 interface EvalScorecardProps {
@@ -143,7 +144,7 @@ export function EvalScorecard({ mode }: EvalScorecardProps) {
     <Panel
       title="Garde-fous qualité"
       description="Évaluations déterministes. Aucun LLM-as-judge."
-      icon={<span aria-hidden="true">⊟</span>}
+      icon={<CheckListPixelIcon size={16} />}
       tone="plain"
     >
       <div className="space-y-3">
@@ -235,8 +236,8 @@ export function EvalScorecard({ mode }: EvalScorecardProps) {
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          Cas live ignorés sans contexte : transactions, recommandations, signaux & coûts
-          requièrent un run advisor récent.
+          Cas live ignorés sans contexte : transactions, recommandations, signaux & coûts requièrent
+          un run advisor récent.
         </p>
       </div>
     </Panel>

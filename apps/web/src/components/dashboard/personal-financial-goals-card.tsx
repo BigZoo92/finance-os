@@ -1,7 +1,17 @@
 import { Badge, Button, Input } from '@finance-os/ui/components'
+import {
+  FlagPixelIcon,
+  GraduationCapPixelIcon,
+  HomePixelIcon,
+  LockPixelIcon,
+  PlaneDeparturePixelIcon,
+  StarPixelIcon,
+} from '@finance-os/ui/icons/pixel'
+import type { IconComponent } from '@finance-os/ui/icons/types'
+import { ArmchairIcon } from '@phosphor-icons/react/dist/csr/Armchair'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
 import { motion } from 'motion/react'
+import { useMemo, useState } from 'react'
 import type { AuthMode } from '@/features/auth-types'
 import {
   archiveFinancialGoal,
@@ -9,8 +19,15 @@ import {
   normalizeFinancialGoalActionError,
   updateFinancialGoal,
 } from '@/features/goals/api'
-import { financialGoalsQueryKeys, financialGoalsQueryOptionsWithMode } from '@/features/goals/query-options'
-import type { FinancialGoal, FinancialGoalType, FinancialGoalWriteInput } from '@/features/goals/types'
+import {
+  financialGoalsQueryKeys,
+  financialGoalsQueryOptionsWithMode,
+} from '@/features/goals/query-options'
+import type {
+  FinancialGoal,
+  FinancialGoalType,
+  FinancialGoalWriteInput,
+} from '@/features/goals/types'
 import { pushToast } from '@/lib/toast-store'
 
 const EMPTY_GOAL_FORM: FinancialGoalWriteInput = {
@@ -32,13 +49,17 @@ const GOAL_TYPE_LABEL: Record<FinancialGoalType, string> = {
   custom: 'Personnalisé',
 }
 
-const GOAL_TYPE_ICON: Record<FinancialGoalType, string> = {
-  emergency_fund: '🛡',
-  travel: '✈',
-  home: '🏠',
-  education: '📚',
-  retirement: '🌅',
-  custom: '◎',
+/**
+ * Pixel Icon where the metaphor is clear. Retirement is the one concept with no pixel
+ * equivalent, so it falls back to Phosphor. See the `finance-os-icon-system` skill.
+ */
+const GOAL_TYPE_ICON: Record<FinancialGoalType, IconComponent> = {
+  emergency_fund: LockPixelIcon,
+  travel: PlaneDeparturePixelIcon,
+  home: HomePixelIcon,
+  education: GraduationCapPixelIcon,
+  retirement: ArmchairIcon,
+  custom: StarPixelIcon,
 }
 
 const GOAL_STATUS_LABEL: Record<string, string> = {
@@ -213,10 +234,7 @@ const GoalsSkeleton = () => {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map(index => (
-        <div
-          key={index}
-          className="rounded-xl border border-border/70 bg-muted/20 p-4"
-        >
+        <div key={index} className="rounded-xl border border-border/70 bg-muted/20 p-4">
           <div className="animate-pulse space-y-3">
             <div className="h-4 w-32 rounded bg-muted" />
             <div className="h-2 w-full rounded bg-muted" />
@@ -496,9 +514,13 @@ export function PersonalFinancialGoalsCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/50">
-              <span className="text-lg" aria-hidden="true">◎</span> Mes objectifs
+              <FlagPixelIcon size={14} /> Mes objectifs
             </p>
-            {isDemo && <Badge variant="warning" className="mt-1 text-xs">DÉMO — lecture seule</Badge>}
+            {isDemo && (
+              <Badge variant="warning" className="mt-1 text-xs">
+                DÉMO — lecture seule
+              </Badge>
+            )}
           </div>
           <Button type="button" size="sm" onClick={openCreateDrawer} disabled={!isAdmin}>
             + Nouvel objectif
@@ -509,7 +531,9 @@ export function PersonalFinancialGoalsCard({
           <ErrorBanner
             error={bannerError}
             onRetry={retryLastAction}
-            {...(bannerError.source === 'query' ? {} : { onDismiss: () => setRecoverableError(null) })}
+            {...(bannerError.source === 'query'
+              ? {}
+              : { onDismiss: () => setRecoverableError(null) })}
           />
         ) : null}
 
@@ -521,7 +545,10 @@ export function PersonalFinancialGoalsCard({
             <p className="font-semibold text-warning">Objectifs à reprendre</p>
             <ul className="mt-2 space-y-1.5">
               {goalAlerts.map(alert => (
-                <li key={alert.goalId} className={`text-xs ${alert.level === 'high' ? 'text-negative font-medium' : 'text-muted-foreground'}`}>
+                <li
+                  key={alert.goalId}
+                  className={`text-xs ${alert.level === 'high' ? 'text-negative font-medium' : 'text-muted-foreground'}`}
+                >
                   {alert.message}
                 </li>
               ))}
@@ -532,13 +559,17 @@ export function PersonalFinancialGoalsCard({
         {/* Empty state */}
         {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length === 0 ? (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border/30 py-12 text-center">
-            <span className="text-4xl" aria-hidden="true">◎</span>
+            <FlagPixelIcon size={36} className="text-muted-foreground/40" />
             <div>
               <p className="text-lg font-semibold">Aucun objectif</p>
-              <p className="mt-1 text-sm text-muted-foreground">Crée ton premier objectif pour donner une direction au cockpit.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Crée ton premier objectif pour donner une direction au cockpit.
+              </p>
             </div>
             {isAdmin && (
-              <Button type="button" onClick={openCreateDrawer}>Créer un objectif</Button>
+              <Button type="button" onClick={openCreateDrawer}>
+                Créer un objectif
+              </Button>
             )}
           </div>
         ) : null}
@@ -550,7 +581,7 @@ export function PersonalFinancialGoalsCard({
               const progress = clampProgress(goal)
               const remainingAmount = Math.max(goal.targetAmount - goal.currentAmount, 0)
               const status = getGoalStatus(goal)
-              const icon = GOAL_TYPE_ICON[goal.goalType] ?? '◎'
+              const GoalIcon = GOAL_TYPE_ICON[goal.goalType] ?? StarPixelIcon
 
               return (
                 <motion.div
@@ -573,18 +604,27 @@ export function PersonalFinancialGoalsCard({
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <motion.span
-                          className="text-2xl"
+                          className="flex items-center text-primary/80"
                           whileHover={{ scale: 1.2, rotate: 5 }}
                           transition={{ type: 'spring', bounce: 0.5 }}
+                          aria-hidden="true"
                         >
-                          {icon}
+                          <GoalIcon size={22} />
                         </motion.span>
                         <div>
                           <h3 className="text-base font-bold">{goal.name}</h3>
                           <div className="mt-0.5 flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground/50">{GOAL_TYPE_LABEL[goal.goalType]}</span>
+                            <span className="text-xs text-muted-foreground/50">
+                              {GOAL_TYPE_LABEL[goal.goalType]}
+                            </span>
                             <Badge
-                              variant={status.label === 'On track' || status.label === 'Reached' ? 'positive' : status.label === 'Behind' ? 'destructive' : 'warning'}
+                              variant={
+                                status.label === 'On track' || status.label === 'Reached'
+                                  ? 'positive'
+                                  : status.label === 'Behind'
+                                    ? 'destructive'
+                                    : 'warning'
+                              }
                               className="text-xs"
                             >
                               {GOAL_STATUS_LABEL[status.label] ?? status.label}
@@ -607,10 +647,14 @@ export function PersonalFinancialGoalsCard({
                     {/* Amount display — big and clear */}
                     <div className="mt-4 flex items-end justify-between gap-4">
                       <div>
-                        <p className="font-financial text-2xl font-bold tracking-tight">{formatMoney(goal.currentAmount, goal.currency)}</p>
+                        <p className="font-financial text-2xl font-bold tracking-tight">
+                          {formatMoney(goal.currentAmount, goal.currency)}
+                        </p>
                         <p className="text-sm text-muted-foreground/60">
                           sur {formatMoney(goal.targetAmount, goal.currency)}
-                          {remainingAmount > 0 && <span> · reste {formatMoney(remainingAmount, goal.currency)}</span>}
+                          {remainingAmount > 0 && (
+                            <span> · reste {formatMoney(remainingAmount, goal.currency)}</span>
+                          )}
                         </p>
                       </div>
                       <motion.span
@@ -644,7 +688,9 @@ export function PersonalFinancialGoalsCard({
                     {/* Footer — date + note */}
                     <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground/60">
                       <span>{formatDate(goal.targetDate)}</span>
-                      {goal.note && <span className="truncate ml-2 italic max-w-[50%]">{goal.note}</span>}
+                      {goal.note && (
+                        <span className="truncate ml-2 italic max-w-[50%]">{goal.note}</span>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -657,16 +703,24 @@ export function PersonalFinancialGoalsCard({
         {!goalsQuery.isPending && !goalsQuery.isError && archivedGoals.length > 0 ? (
           <details className="group">
             <summary className="cursor-pointer text-xs font-medium text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-              {archivedGoals.length} objectif{archivedGoals.length > 1 ? 's' : ''} archivé{archivedGoals.length > 1 ? 's' : ''}
+              {archivedGoals.length} objectif{archivedGoals.length > 1 ? 's' : ''} archivé
+              {archivedGoals.length > 1 ? 's' : ''}
             </summary>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {archivedGoals.map(goal => (
-                <div key={goal.id} className="flex items-center justify-between rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-sm">
+                <div
+                  key={goal.id}
+                  className="flex items-center justify-between rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-sm"
+                >
                   <div>
                     <p className="font-medium text-muted-foreground">{goal.name}</p>
-                    <p className="text-xs text-muted-foreground/50">Archivé le {formatDate(goal.archivedAt?.slice(0, 10) ?? null)}</p>
+                    <p className="text-xs text-muted-foreground/50">
+                      Archivé le {formatDate(goal.archivedAt?.slice(0, 10) ?? null)}
+                    </p>
                   </div>
-                  <p className="font-financial text-sm text-muted-foreground">{formatMoney(goal.currentAmount, goal.currency)}</p>
+                  <p className="font-financial text-sm text-muted-foreground">
+                    {formatMoney(goal.currentAmount, goal.currency)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -864,7 +918,8 @@ export function PersonalFinancialGoalsCard({
                   <p className="text-sm font-medium">Aperçu</p>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
                     <p className="font-medium">
-                      {formatMoney(formState.currentAmount, formState.currency || 'EUR')} déjà financés
+                      {formatMoney(formState.currentAmount, formState.currency || 'EUR')} déjà
+                      financés
                     </p>
                     <p className="text-muted-foreground">
                       {clampProgressFromInput(formState)}% financé

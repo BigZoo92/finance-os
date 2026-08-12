@@ -60,14 +60,20 @@ export function KpiTile({
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
-          {icon && <span className="mr-1.5 opacity-70">{icon}</span>}
+          {icon && (
+            <span className="mr-1.5 inline-flex translate-y-[1px] align-middle opacity-70">
+              {icon}
+            </span>
+          )}
           {label}
         </p>
         {trailing}
       </div>
 
       {loading ? (
-        <div className={`${size === 'lg' ? 'mt-2 h-9 w-36' : 'mt-2 h-6 w-24'} animate-shimmer rounded-md`} />
+        <div
+          className={`${size === 'lg' ? 'mt-2 h-9 w-36' : 'mt-2 h-6 w-24'} animate-shimmer rounded-md`}
+        />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 4 }}
@@ -85,7 +91,9 @@ export function KpiTile({
         </motion.div>
       )}
 
-      {hint && <p className="mt-1.5 text-[11px] text-muted-foreground/70 leading-relaxed">{hint}</p>}
+      {hint && (
+        <p className="mt-1.5 text-[11px] text-muted-foreground/70 leading-relaxed">{hint}</p>
+      )}
     </div>
   )
 }
