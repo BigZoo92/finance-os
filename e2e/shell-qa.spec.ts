@@ -170,6 +170,7 @@ test.describe('mobile shell (390px)', () => {
     await expect(drawer.getByRole('link', { name: /Investissements/ })).toBeVisible()
     await expect(drawer.getByRole('link', { name: /Objectifs/ })).toBeVisible()
     await expect(drawer.getByRole('link', { name: /Radar/ })).toBeVisible()
+    await expect(drawer.getByRole('link', { name: /Social Intelligence/ })).toBeVisible()
     await expect(drawer.getByRole('link', { name: /Chat/ })).toBeVisible()
     await expect(drawer.getByRole('link', { name: /Mémoire/ })).toBeVisible()
     await expect(drawer.getByRole('link', { name: /Orchestration/ })).toHaveCount(0)
@@ -180,7 +181,10 @@ test.describe('mobile shell (390px)', () => {
     await expect(drawer).toHaveCount(0)
 
     await plus.click()
-    await page.getByRole('dialog').getByRole('link', { name: /Objectifs/ }).click()
+    await page
+      .getByRole('dialog')
+      .getByRole('link', { name: /Objectifs/ })
+      .click()
     await expect(page).toHaveURL(/\/objectifs/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })
@@ -208,7 +212,7 @@ test.describe('reduced motion', () => {
     const navbar = page.getByRole('navigation', { name: 'Navigation principale' })
     await expect(navbar.getByRole('link', { name: 'Cockpit' })).toBeVisible()
     await navbar.getByRole('link', { name: 'Radar' }).click()
-    await expect(page).toHaveURL(/\/signaux/)
+    await expect(page).toHaveURL(/\/radar/)
     await expect(page.locator('#main-content')).toBeVisible()
   })
 })

@@ -5,12 +5,7 @@
  * dialog semantics (focus trap, Escape, scroll lock, focus restoration).
  * The keyboard shortcut never fires while typing in an editable field.
  */
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@finance-os/ui/components'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@finance-os/ui/components'
 import { SearchPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -45,8 +40,9 @@ const buildSections = (visible: NavLink[]): PaletteSection[] => {
 
   for (const entry of NAV_ENTRIES) {
     if (entry.kind === 'link') {
-      if (visibleSet.has(entry.link.to)) {
-        sections.push({ id: entry.link.to, label: entry.link.label, links: [entry.link] })
+      const links = [entry.link, ...(entry.related ?? [])].filter(link => visibleSet.has(link.to))
+      if (links.length > 0) {
+        sections.push({ id: entry.link.to, label: entry.link.label, links })
       }
       continue
     }

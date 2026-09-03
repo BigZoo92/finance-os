@@ -1662,7 +1662,7 @@ export const createTradingLabRoute = ({
               title: 'Fed rate decision signal detected',
               summary: 'Multiple sources report potential Fed policy shift.',
               reason: 'High-impact macro signal from multiple providers',
-              actionHref: '/signaux',
+              actionHref: '/radar',
               dedupeKey: 'demo-attention-1',
               scope: 'demo',
               createdAt: '2026-04-26T08:00:00Z',

@@ -22,7 +22,9 @@ import type { AuthViewState } from '@/features/auth-view-state'
  * Canonical Command Pixel navigation registry.
  *
  * Desktop: Cockpit, Argent (dropdown), IA (dropdown), Radar, Ops (dropdown,
- * Admin only), per `.design/command-pixel-v1/ROUTE_MAP.md`.
+ * Admin only), per `.design/command-pixel-v1/ROUTE_MAP.md`. Social
+ * Intelligence is a separate canonical screen in the Radar product area:
+ * reached from Radar, the command palette and the mobile Plus drawer.
  * Mobile: Cockpit, Dépenses, Patrimoine, Advisor, Plus.
  *
  * Nav visibility is NOT a security boundary: pages keep their own
@@ -43,12 +45,19 @@ export type NavLink = {
   adminOnly?: boolean
   /** Palette search keywords. */
   keywords?: string
+  /** Extra route prefixes that keep this top-level link active. */
+  activeFor?: string[]
 }
 
 export type NavGroupId = 'argent' | 'ia' | 'ops'
 
 export type NavEntry =
-  | { kind: 'link'; link: NavLink }
+  | {
+      kind: 'link'
+      link: NavLink
+      /** Canonical screens of the same product area, outside the navbar. */
+      related?: NavLink[]
+    }
   | {
       kind: 'group'
       id: NavGroupId
@@ -121,12 +130,21 @@ const MEMOIRE: NavLink = {
   keywords: 'memoire connaissances contexte graphe',
 }
 
+const SOCIAL_INTELLIGENCE: NavLink = {
+  to: '/social-intelligence',
+  label: 'Social Intelligence',
+  icon: HashtagPixelIcon,
+  description: 'Sources et comptes suivis',
+  keywords: 'social intelligence sources x twitter bluesky comptes',
+}
+
 const RADAR: NavLink = {
-  to: '/signaux',
+  to: '/radar',
   label: 'Radar',
   icon: ChartLinePixelIcon,
-  description: 'Marchés et signaux',
-  keywords: 'radar signaux marches macro watchlist news actualites',
+  description: 'Marchés, signaux et événements',
+  keywords: 'radar signaux marches macro watchlist evenements actualites',
+  activeFor: [SOCIAL_INTELLIGENCE.to],
 }
 
 const ORCHESTRATION: NavLink = {
@@ -165,15 +183,6 @@ const SANTE: NavLink = {
   keywords: 'health diagnostics systeme fraicheur valorisation admin',
 }
 
-const SOCIAL_INTELLIGENCE: NavLink = {
-  to: '/signaux/social',
-  label: 'Social Intelligence',
-  icon: HashtagPixelIcon,
-  description: 'Sources et comptes suivis',
-  adminOnly: true,
-  keywords: 'social intelligence x twitter bluesky comptes lookup handle sync admin',
-}
-
 /** Primary desktop navigation, in canonical order. */
 export const NAV_ENTRIES: NavEntry[] = [
   { kind: 'link', link: COCKPIT },
@@ -189,7 +198,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     label: 'IA',
     items: [ADVISOR, CHAT, MEMOIRE],
   },
-  { kind: 'link', link: RADAR },
+  { kind: 'link', link: RADAR, related: [SOCIAL_INTELLIGENCE] },
   {
     kind: 'group',
     id: 'ops',
@@ -201,19 +210,9 @@ export const NAV_ENTRIES: NavEntry[] = [
 
 /**
  * Live routes outside the canonical primary navigation. Reachable through
- * the command palette (and the mobile drawer for Social Intelligence)
- * until their page phases decide their final home.
+ * the command palette until their page phases decide their final home.
  */
 export const SECONDARY_LINKS: NavLink[] = [
-  SOCIAL_INTELLIGENCE,
-  {
-    to: '/signaux/marches',
-    label: 'Marchés',
-    icon: ChartLinePixelIcon,
-    description: 'Macro et watchlist',
-    adminOnly: true,
-    keywords: 'macro watchlist regime taux inflation fred eodhd marches bourse admin',
-  },
   {
     to: '/ia/trading-lab',
     label: 'Trading Lab',
@@ -265,9 +264,11 @@ export const getVisibleDrawerSections = (authViewState: AuthViewState): MobileDr
     items: section.items.filter(item => isNavLinkVisible(item, authViewState)),
   })).filter(section => section.items.length > 0)
 
-/** Every visible destination (primary + secondary) for the palette. */
+/** Every visible destination (primary, related and secondary) for the palette. */
 export const getPaletteLinks = (authViewState: AuthViewState): NavLink[] => {
-  const primary = NAV_ENTRIES.flatMap(entry => (entry.kind === 'link' ? [entry.link] : entry.items))
+  const primary = NAV_ENTRIES.flatMap(entry =>
+    entry.kind === 'link' ? [entry.link, ...(entry.related ?? [])] : entry.items
+  )
   return [...primary, ...SECONDARY_LINKS].filter(link => isNavLinkVisible(link, authViewState))
 }
 
@@ -281,6 +282,11 @@ export const isRouteActive = (pathname: string, to: string): boolean => {
   if (to === '/' || to === '/ia') return pathname === to
   return pathname === to || pathname.startsWith(`${to}/`)
 }
+
+/** A top-level link is active for its own route and its related screens. */
+export const isNavLinkActive = (pathname: string, link: NavLink): boolean =>
+  isRouteActive(pathname, link.to) ||
+  (link.activeFor ?? []).some(prefix => isRouteActive(pathname, prefix))
 
 /** A group is active when one of its (visible or not) items is active. */
 export const isGroupActive = (

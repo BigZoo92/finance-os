@@ -480,7 +480,7 @@ function ManualTriggerHint({ domain }: { domain: string }) {
   if (domain === 'social') {
     return (
       <Link
-        to="/signaux/social"
+        to="/social-intelligence"
         className="inline-flex items-center justify-center rounded-md border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-surface-2 hover:text-foreground"
         data-testid="manual-trigger-redirect-social"
         title="Lancer ce job depuis le cockpit Social Intelligence pour respecter budget et caps."

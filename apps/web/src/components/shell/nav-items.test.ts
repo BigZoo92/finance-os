@@ -4,6 +4,7 @@ import {
   getVisibleDrawerSections,
   getVisibleNavEntries,
   isGroupActive,
+  isNavLinkActive,
   isRouteActive,
   MOBILE_TABS,
   NAV_ENTRIES,
@@ -12,6 +13,11 @@ import {
 
 const groupOf = (entries: NavEntry[], id: string) =>
   entries.find((e): e is Extract<NavEntry, { kind: 'group' }> => e.kind === 'group' && e.id === id)
+
+const linkOf = (entries: NavEntry[], label: string) =>
+  entries.find(
+    (e): e is Extract<NavEntry, { kind: 'link' }> => e.kind === 'link' && e.link.label === label
+  )
 
 describe('canonical nav grouping', () => {
   it('follows the canonical desktop order: Cockpit, Argent, IA, Radar, Ops', () => {
@@ -34,6 +40,14 @@ describe('canonical nav grouping', () => {
     expect(ia?.items.map(i => i.label)).toEqual(['Advisor', 'Chat', 'Mémoire'])
   })
 
+  it('Radar points to the canonical route and carries Social Intelligence as its related screen', () => {
+    const radar = linkOf(NAV_ENTRIES, 'Radar')
+    expect(radar?.link.to).toBe('/radar')
+    expect(radar?.link.adminOnly).toBeUndefined()
+    expect(radar?.related?.map(item => item.to)).toEqual(['/social-intelligence'])
+    expect(radar?.related?.[0]?.adminOnly).toBeUndefined()
+  })
+
   it('Ops contains the four admin destinations', () => {
     const ops = groupOf(NAV_ENTRIES, 'ops')
     expect(ops?.adminOnly).toBe(true)
@@ -48,7 +62,11 @@ describe('canonical nav grouping', () => {
   it('uses accented canonical labels without forbidden punctuation', () => {
     const labels = NAV_ENTRIES.flatMap(e =>
       e.kind === 'link'
-        ? [e.link.label, e.link.description]
+        ? [
+            e.link.label,
+            e.link.description,
+            ...(e.related ?? []).flatMap(i => [i.label, i.description]),
+          ]
         : e.items.flatMap(i => [i.label, i.description])
     )
     for (const label of labels) {
@@ -78,16 +96,19 @@ describe('admin gating', () => {
     expect(entries.some(e => e.kind === 'link' && e.link.label === 'Radar')).toBe(true)
   })
 
-  it('filters admin-only palette destinations in demo mode', () => {
+  it('exposes Radar and Social Intelligence to normal users and keeps admin-only pages out of demo', () => {
     const demoLinks = getPaletteLinks('demo')
     const demoLabels = demoLinks.map(l => l.label)
+    expect(demoLabels).toContain('Radar')
+    expect(demoLabels).toContain('Social Intelligence')
     expect(demoLabels).not.toContain('Trading Lab')
-    expect(demoLabels).not.toContain('Social Intelligence')
+    expect(demoLabels).not.toContain('Coûts')
     expect(demoLinks.filter(link => link.to === '/ia/memoire')).toHaveLength(1)
-    expect(demoLinks.some(link => link.to === '/ia/memoire/graph')).toBe(false)
+    expect(demoLinks.some(link => link.to.startsWith('/signaux'))).toBe(false)
     const adminLabels = getPaletteLinks('admin').map(l => l.label)
     expect(adminLabels).toContain('Trading Lab')
     expect(adminLabels).toContain('Coûts')
+    expect(adminLabels.filter(label => label === 'Social Intelligence')).toHaveLength(1)
   })
 })
 
@@ -96,11 +117,11 @@ describe('mobile navigation', () => {
     expect(MOBILE_TABS.map(t => t.label)).toEqual(['Cockpit', 'Dépenses', 'Patrimoine', 'Advisor'])
   })
 
-  it('drawer hides Ops and Social Intelligence in demo mode', () => {
+  it('drawer offers Radar and Social Intelligence in demo mode and hides Ops', () => {
     const sections = getVisibleDrawerSections('demo')
     expect(sections.map(s => s.id)).toEqual(['argent', 'ia', 'radar'])
     const radar = sections.find(s => s.id === 'radar')
-    expect(radar?.items.map(i => i.label)).toEqual(['Radar'])
+    expect(radar?.items.map(i => i.label)).toEqual(['Radar', 'Social Intelligence'])
   })
 
   it('drawer shows Ops entries in admin mode', () => {
@@ -130,8 +151,16 @@ describe('active route semantics', () => {
   it('matches children for normal destinations', () => {
     expect(isRouteActive('/ia/memoire', '/ia/memoire')).toBe(true)
     expect(isRouteActive('/ia/memoire/graph', '/ia/memoire')).toBe(true)
-    expect(isRouteActive('/signaux/social', '/signaux')).toBe(true)
+    expect(isRouteActive('/radar', '/radar')).toBe(true)
     expect(isRouteActive('/depensesx', '/depenses')).toBe(false)
+  })
+
+  it('keeps the Radar link active on the Social Intelligence screen', () => {
+    const radar = linkOf(NAV_ENTRIES, 'Radar')
+    if (!radar) throw new Error('missing Radar link')
+    expect(isNavLinkActive('/radar', radar.link)).toBe(true)
+    expect(isNavLinkActive('/social-intelligence', radar.link)).toBe(true)
+    expect(isNavLinkActive('/ia/chat', radar.link)).toBe(false)
   })
 
   it('activates the parent group for its children only', () => {

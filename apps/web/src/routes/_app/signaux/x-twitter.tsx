@@ -1,14 +1,13 @@
 /**
- * Legacy admin route /signaux/x-twitter — kept for bookmarks and historical
- * links. The Social Intelligence cockpit has been consolidated under
- * /signaux/social; the X / Twitter health, account lookup, and previous-day
- * sync panels live there alongside the followed-account CRUD.
+ * Legacy admin route `/signaux/x-twitter`, kept for bookmarks. The followed
+ * X accounts are managed from Social Intelligence.
  */
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { SOCIAL_REDIRECT } from './social'
 
 export const Route = createFileRoute('/_app/signaux/x-twitter')({
   beforeLoad: () => {
-    throw redirect({ to: '/signaux/social', replace: true })
+    throw redirect(SOCIAL_REDIRECT)
   },
   component: () => null,
 })

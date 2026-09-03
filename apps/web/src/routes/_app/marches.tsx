@@ -1,8 +1,9 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { RADAR_REDIRECT } from './signaux/index'
 
 export const Route = createFileRoute('/_app/marches')({
   beforeLoad: () => {
-    throw redirect({ to: '/signaux/marches', statusCode: 301 })
+    throw redirect(RADAR_REDIRECT)
   },
   component: () => null,
 })

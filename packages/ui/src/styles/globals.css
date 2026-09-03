@@ -226,6 +226,11 @@
   --warm-accent: #9c8557;
   --ai: #6c5bd4;
 
+  /* Signature surface — Radar immersive canvas (warm cream wash) */
+  --radar-canvas-center: #fcf7eb;
+  --radar-canvas-mid: #f5efe3;
+  --radar-canvas-edge: #ede4d2;
+
   /* MIGRATION COMPAT — legacy secondary accent (ex violet), tamed
    * to the restrained teal. Do not build new UI on it. */
   --accent-2: #3e8578;
@@ -310,6 +315,11 @@
   --warm-accent: #dccba6;
   --ai: #9b8ce8;
 
+  /* Signature surface — Radar immersive canvas (deep warm graphite) */
+  --radar-canvas-center: #211b12;
+  --radar-canvas-mid: #17130e;
+  --radar-canvas-edge: #110e09;
+
   /* MIGRATION COMPAT — legacy secondary accent (ex violet), tamed
    * to the restrained teal. Do not build new UI on it. */
   --accent-2: #6fb5aa;
@@ -366,6 +376,17 @@
 /* Tabular numerics even in sans — for dashboards */
 .font-tnum {
   font-feature-settings: "tnum", "zero";
+}
+
+/* Radar immersive canvas — the only full-frame signature wash outside
+ * Mémoire. Static gradient, no motion. */
+.bg-radar-canvas {
+  background: radial-gradient(
+    1000px 620px at 46% 44%,
+    var(--radar-canvas-center) 0%,
+    var(--radar-canvas-mid) 58%,
+    var(--radar-canvas-edge) 100%
+  );
 }
 
 /* MIGRATION COMPAT — legacy glow utilities, tamed to restrained

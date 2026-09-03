@@ -77,6 +77,7 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { knowledgeGraphQueryOptionsWithMode } from '@/features/knowledge-query-options'
+import { useIsMobile } from '@/lib/use-is-mobile'
 import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion'
 
 const LazyKnowledgeGraph3D = lazy(async () => {
@@ -1633,18 +1634,4 @@ function isEditableTarget(target: EventTarget | null) {
     target instanceof HTMLTextAreaElement ||
     (target instanceof HTMLElement && target.isContentEditable)
   )
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 1023px)')
-    const update = () => setIsMobile(media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
-
-  return isMobile
 }

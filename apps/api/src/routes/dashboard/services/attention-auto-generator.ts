@@ -71,7 +71,7 @@ export const runAttentionAutoGenerator = async ({
         title: row.title.slice(0, 160),
         summary: (row.attentionReason ?? row.body ?? row.title).slice(0, 280),
         reason: `Signal flagged (${row.signalDomain}) by ${row.sourceProvider}`,
-        actionHref: '/signaux',
+        actionHref: '/radar',
         dedupeKey: `signal:item:${row.id}`,
         expiresAt: inDays(SIGNAL_ATTENTION_EXPIRY_DAYS),
       })
@@ -101,7 +101,7 @@ export const runAttentionAutoGenerator = async ({
         title: `Provider stale: ${row.provider}`,
         summary: row.lastErrorMessage ?? `No success in last ${STALE_PROVIDER_HOURS}h`,
         reason: row.lastErrorCode ?? 'stale_provider',
-        actionHref: '/signaux/sources',
+        actionHref: '/orchestration',
         dedupeKey: `provider:health:${row.provider}`,
         expiresAt: inDays(PROVIDER_ATTENTION_EXPIRY_DAYS),
       })
@@ -128,7 +128,7 @@ export const runAttentionAutoGenerator = async ({
         title: `Signal ingestion failed: ${row.provider}`,
         summary: row.errorSummary ?? 'Ingestion run failed',
         reason: 'failed_ingestion_run',
-        actionHref: '/signaux/sources',
+        actionHref: '/orchestration',
         dedupeKey: `ingestion-run:${row.id}`,
         expiresAt: inDays(PROVIDER_ATTENTION_EXPIRY_DAYS),
       })

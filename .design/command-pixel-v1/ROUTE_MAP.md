@@ -23,7 +23,7 @@ Dropdown destinations:
 
 - Advisor
 - Chat
-- Mémoire 3D
+- Mémoire
 
 ### Radar
 

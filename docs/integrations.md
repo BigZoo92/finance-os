@@ -41,6 +41,8 @@ Worker/admin ingestion writes normalized cache/state tables. Dashboard routes re
 
 Social and news content is untrusted input. Sanitize metadata, bound fetches, enforce destination allowlists, and keep it out of execution decisions. A provider outage degrades its surface only.
 
+The web surfaces are `/radar` (markets overview, deterministic market signals, persisted signal items shown as dated events, freshness; Admin-only manual market refresh) and `/social-intelligence` (followed sources; Admin-only create, enable/disable, delete, X lookup, and manual import). Ingestion runs, provider diagnostics, and raw statuses are not shown on either page and belong to the Ops surfaces.
+
 When news fetching, ingestion, cache, fallback, fixtures, schema, or UI wiring changes, update this document in the same change.
 
 ## Adapter checklist

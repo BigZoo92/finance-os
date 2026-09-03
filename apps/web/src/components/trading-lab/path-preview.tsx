@@ -71,7 +71,7 @@ const buildPaths = ({
         kind: 'signal',
         title: `Signal #${scenario.linkedSignalItemId}`,
         subtitle: 'flagged',
-        href: '/signaux',
+        href: '/radar',
       })
     }
     steps.push({

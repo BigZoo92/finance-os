@@ -17,7 +17,9 @@ import { Route as HealthRouteImport } from './routes/health'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
+import { Route as AppSocialIntelligenceRouteImport } from './routes/_app/social-intelligence'
 import { Route as AppSanteRouteImport } from './routes/_app/sante'
+import { Route as AppRadarRouteImport } from './routes/_app/radar'
 import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
 import { Route as AppOrchestrationRouteImport } from './routes/_app/orchestration'
 import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
@@ -78,9 +80,19 @@ const PowensCallbackRoute = PowensCallbackRouteImport.update({
   path: '/powens/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSocialIntelligenceRoute = AppSocialIntelligenceRouteImport.update({
+  id: '/social-intelligence',
+  path: '/social-intelligence',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSanteRoute = AppSanteRouteImport.update({
   id: '/sante',
   path: '/sante',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRadarRoute = AppRadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPatrimoineRoute = AppPatrimoineRouteImport.update({
@@ -201,7 +213,9 @@ export interface FileRoutesByFullPath {
   '/objectifs': typeof AppObjectifsRoute
   '/orchestration': typeof AppOrchestrationRoute
   '/patrimoine': typeof AppPatrimoineRoute
+  '/radar': typeof AppRadarRoute
   '/sante': typeof AppSanteRoute
+  '/social-intelligence': typeof AppSocialIntelligenceRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
@@ -230,7 +244,9 @@ export interface FileRoutesByTo {
   '/objectifs': typeof AppObjectifsRoute
   '/orchestration': typeof AppOrchestrationRoute
   '/patrimoine': typeof AppPatrimoineRoute
+  '/radar': typeof AppRadarRoute
   '/sante': typeof AppSanteRoute
+  '/social-intelligence': typeof AppSocialIntelligenceRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/': typeof AppIndexRoute
   '/ia/chat': typeof AppIaChatRoute
@@ -262,7 +278,9 @@ export interface FileRoutesById {
   '/_app/objectifs': typeof AppObjectifsRoute
   '/_app/orchestration': typeof AppOrchestrationRoute
   '/_app/patrimoine': typeof AppPatrimoineRoute
+  '/_app/radar': typeof AppRadarRoute
   '/_app/sante': typeof AppSanteRoute
+  '/_app/social-intelligence': typeof AppSocialIntelligenceRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/_app/': typeof AppIndexRoute
   '/_app/ia/chat': typeof AppIaChatRoute
@@ -295,7 +313,9 @@ export interface FileRouteTypes {
     | '/objectifs'
     | '/orchestration'
     | '/patrimoine'
+    | '/radar'
     | '/sante'
+    | '/social-intelligence'
     | '/powens/callback'
     | '/ia/chat'
     | '/ia/couts'
@@ -324,7 +344,9 @@ export interface FileRouteTypes {
     | '/objectifs'
     | '/orchestration'
     | '/patrimoine'
+    | '/radar'
     | '/sante'
+    | '/social-intelligence'
     | '/powens/callback'
     | '/'
     | '/ia/chat'
@@ -355,7 +377,9 @@ export interface FileRouteTypes {
     | '/_app/objectifs'
     | '/_app/orchestration'
     | '/_app/patrimoine'
+    | '/_app/radar'
     | '/_app/sante'
+    | '/_app/social-intelligence'
     | '/powens/callback'
     | '/_app/'
     | '/_app/ia/chat'
@@ -439,11 +463,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PowensCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/social-intelligence': {
+      id: '/_app/social-intelligence'
+      path: '/social-intelligence'
+      fullPath: '/social-intelligence'
+      preLoaderRoute: typeof AppSocialIntelligenceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/sante': {
       id: '/_app/sante'
       path: '/sante'
       fullPath: '/sante'
       preLoaderRoute: typeof AppSanteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/radar': {
+      id: '/_app/radar'
+      path: '/radar'
+      fullPath: '/radar'
+      preLoaderRoute: typeof AppRadarRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/patrimoine': {
@@ -599,7 +637,9 @@ interface AppRouteChildren {
   AppObjectifsRoute: typeof AppObjectifsRoute
   AppOrchestrationRoute: typeof AppOrchestrationRoute
   AppPatrimoineRoute: typeof AppPatrimoineRoute
+  AppRadarRoute: typeof AppRadarRoute
   AppSanteRoute: typeof AppSanteRoute
+  AppSocialIntelligenceRoute: typeof AppSocialIntelligenceRoute
   AppIndexRoute: typeof AppIndexRoute
   AppIaChatRoute: typeof AppIaChatRoute
   AppIaCoutsRoute: typeof AppIaCoutsRoute
@@ -624,7 +664,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppObjectifsRoute: AppObjectifsRoute,
   AppOrchestrationRoute: AppOrchestrationRoute,
   AppPatrimoineRoute: AppPatrimoineRoute,
+  AppRadarRoute: AppRadarRoute,
   AppSanteRoute: AppSanteRoute,
+  AppSocialIntelligenceRoute: AppSocialIntelligenceRoute,
   AppIndexRoute: AppIndexRoute,
   AppIaChatRoute: AppIaChatRoute,
   AppIaCoutsRoute: AppIaCoutsRoute,

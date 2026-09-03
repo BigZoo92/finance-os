@@ -17,6 +17,7 @@ import { CommandPaletteTrigger } from './command-palette'
 import {
   getVisibleNavEntries,
   isGroupActive,
+  isNavLinkActive,
   isRouteActive,
   type NavEntry,
   type NavLink,
@@ -62,7 +63,7 @@ export function TopNavbar() {
               <Link
                 key={entry.link.to}
                 to={entry.link.to}
-                className={navItemClass(isRouteActive(pathname, entry.link.to))}
+                className={navItemClass(isNavLinkActive(pathname, entry.link))}
               >
                 {entry.link.label}
               </Link>
@@ -100,11 +101,7 @@ function NavDropdown({
           {open ? '▴' : '▾'}
         </span>
       </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        sideOffset={18}
-        className="w-[560px] rounded-dropdown p-2.5"
-      >
+      <PopoverContent align="start" sideOffset={18} className="w-[560px] rounded-dropdown p-2.5">
         <div className="flex items-center justify-between border-b border-border/60 px-3 pb-2.5 pt-1.5">
           <span className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
             {entry.label}
@@ -142,9 +139,7 @@ function NavDropdownItem({
       to={item.to}
       onClick={onNavigate}
       className={`flex items-center gap-3 rounded-control border p-3 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/70 ${
-        active
-          ? 'border-foreground/16 bg-primary/12'
-          : 'border-transparent hover:bg-accent/50'
+        active ? 'border-foreground/16 bg-primary/12' : 'border-transparent hover:bg-accent/50'
       }`}
     >
       <NavIconTile icon={item.icon} />
