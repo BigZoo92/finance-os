@@ -12,8 +12,9 @@ Finance-OS is an advisory, read-only personal cockpit. It organizes financial da
 | Goals | Personal financial goals and progress |
 | Markets and signals | Cached market, macro, news, and social intelligence with provenance |
 | Integrations | Powens connection lifecycle plus read-only IBKR/Binance status and sync |
-| Advisor | Deterministic brief, model-assisted explanation, decision journal, replay, learning/eval views |
-| Memory | Temporal knowledge graph status and evidence exploration |
+| Advisor | Monthly investment plan, allocation guidance, risk framing, and investment profile |
+| Chat | Focused financial conversation with evidence, assumptions, caveats, and hypothetical simulations |
+| Mémoire | Immersive temporal memory map for concepts, evidence, and relationships |
 | Orchestration/health | Manual refresh, provider diagnostics, data quality, operation progress |
 | Trading Lab | Research scenarios and backtests only |
 

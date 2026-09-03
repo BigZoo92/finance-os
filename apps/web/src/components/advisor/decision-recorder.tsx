@@ -58,7 +58,7 @@ export function DecisionRecorder({ recommendation, mode }: DecisionRecorderProps
       setState(initialFormState())
       setOpen(false)
       await Promise.all(
-        LEARNING_LOOP_INVALIDATION_KEYS.afterDecisionJournal().map(queryKey =>
+        LEARNING_LOOP_INVALIDATION_KEYS.afterDecisionJournal(mode).map(queryKey =>
           queryClient.invalidateQueries({ queryKey })
         )
       )

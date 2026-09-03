@@ -48,7 +48,12 @@ vi.mock('./demo-data', () => ({
   getDemoDashboardTransactions: vi.fn(),
 }))
 
-import { fetchDashboardAdvisorKnowledgeAnswer, fetchDashboardNews } from './dashboard-api'
+import {
+  fetchDashboardAdvisorKnowledgeAnswer,
+  fetchDashboardNews,
+  putDashboardInvestmentStrategy,
+} from './dashboard-api'
+import type { DashboardInvestmentStrategyUpdateInput } from './dashboard-types'
 
 describe('fetchDashboardNews', () => {
   beforeEach(() => {
@@ -114,5 +119,45 @@ describe('fetchDashboardAdvisorKnowledgeAnswer', () => {
     expect(apiFetchMock).toHaveBeenCalledWith(
       '/dashboard/advisor/knowledge-answer?question=Pourquoi+diversifier+un+portefeuille+actions+%3F'
     )
+  })
+})
+
+describe('putDashboardInvestmentStrategy', () => {
+  beforeEach(() => {
+    apiFetchMock.mockReset()
+  })
+
+  it('sends the supported profile fields as JSON to the strategy endpoint', async () => {
+    const response = { requestId: 'request-1' }
+    const input: DashboardInvestmentStrategyUpdateInput = {
+      description: 'Construire un portefeuille diversifié.',
+      horizonYears: 12,
+      riskProfile: 'balanced',
+      monthlyContributionTarget: 750,
+      rebalanceThresholdPct: 8,
+    }
+    apiFetchMock.mockResolvedValue(response)
+
+    const result = await putDashboardInvestmentStrategy(input)
+
+    expect(result).toBe(response)
+    expect(apiFetchMock).toHaveBeenCalledWith('/dashboard/advisor/investment-strategy', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+  })
+
+  it('preserves an explicit null and omits absent optional fields', async () => {
+    const input: DashboardInvestmentStrategyUpdateInput = {
+      monthlyContributionTarget: null,
+    }
+    apiFetchMock.mockResolvedValue({ requestId: 'request-2' })
+
+    await putDashboardInvestmentStrategy(input)
+
+    const request = apiFetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(JSON.parse(String(request.body))).toEqual({ monthlyContributionTarget: null })
+    expect(JSON.parse(String(request.body))).not.toHaveProperty('description')
   })
 })

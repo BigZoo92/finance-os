@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import type {
-  DashboardInvestmentActionPlan,
-  DashboardInvestmentPlanItem,
-} from './dashboard-types'
+import type { DashboardInvestmentActionPlan, DashboardInvestmentPlanItem } from './dashboard-types'
 import {
   actionableStepsForPlan,
   activeGraphStatusForPlan,
+  advisorAllocationComparison,
+  advisorFlashState,
+  advisorPlanRows,
   buildInvestmentAccountSections,
   creativeIdeasForPlan,
   dataGapItemsForPlan,
   formatInvestmentConfidence,
+  INVESTMENT_BUCKET_LABEL,
   investmentFreshnessBadgeLabel,
   investmentFreshnessBadgeTone,
   investmentFreshnessOf,
   investmentListFor,
+  mapAdvisorPlanItem,
   normalizeInvestmentWarning,
   priceabilityLabel,
   recommendabilityLabel,
@@ -64,6 +66,164 @@ const planItem = (overrides: Partial<DashboardInvestmentPlanItem> = {}) =>
   }) as DashboardInvestmentPlanItem
 
 describe('investment strategy view model', () => {
+  it('maps the three domain buckets to the approved user-facing model', () => {
+    expect(INVESTMENT_BUCKET_LABEL).toEqual({
+      core: 'Socle',
+      growth: 'Croissance',
+      asymmetric: 'Opportuniste',
+    })
+  })
+
+  it('keeps recommendation rows advisory and preserves unknown amounts and destinations', () => {
+    const row = mapAdvisorPlanItem(
+      planItem({
+        accountLabel: '',
+        assetName: null,
+        symbol: null,
+        action: 'buy',
+        amountValue: '',
+        recommendedContributionAmount: null,
+      })
+    )
+
+    expect(row.amount).toBeNull()
+    expect(row.amountKind).toBe('unknown')
+    expect(row.destination).toBe('Destination à préciser')
+    expect(row.asset).toBe('Actif à préciser')
+    expect(row.actionLabel).toBe('Achat proposé')
+    expect(row.canExecute).toBe(false)
+  })
+
+  it('uses policy-backed plan items and contribution amounts for the current plan', () => {
+    const plan = {
+      items: [
+        planItem({
+          accountPolicyId: 4,
+          recommendedContributionAmount: 180,
+          amountValue: null,
+        }),
+        planItem({
+          id: 2,
+          accountPolicyId: null,
+          accountLabel: 'Watchlist utilisateur',
+          recommendedContributionAmount: null,
+          symbol: 'IDEA',
+        }),
+      ],
+      contribution: [{ bucket: 'core', amount: 180, currency: 'EUR', reason: 'underweight' }],
+    } as DashboardInvestmentActionPlan
+
+    const rows = advisorPlanRows(plan)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount: 180, amountKind: 'contribution' })
+  })
+
+  it('does not duplicate a bucket contribution across unrelated recommendation rows', () => {
+    const plan = {
+      items: [
+        planItem({
+          recommendationTier: 'growth_candidate',
+          bucket: 'growth',
+          recommendedContributionAmount: 300,
+          amountValue: null,
+        }),
+        planItem({
+          id: 2,
+          recommendationTier: 'asymmetric_candidate',
+          bucket: 'asymmetric',
+          recommendedContributionAmount: 300,
+          amountValue: null,
+        }),
+      ],
+      contribution: [{ bucket: 'asymmetric', amount: 300, currency: 'EUR', reason: 'underweight' }],
+    } as DashboardInvestmentActionPlan
+
+    const rows = advisorPlanRows(plan)
+
+    expect(rows.map(row => row.amount)).toEqual([null, 300])
+    expect(rows.map(row => row.amountKind)).toEqual(['unknown', 'contribution'])
+  })
+
+  it('keeps one honest candidate when a plan contribution targets a secondary bucket', () => {
+    const plan = {
+      items: [
+        planItem({ recommendationTier: 'core_candidate', bucket: 'core' }),
+        planItem({
+          id: 2,
+          recommendationTier: 'speculative_watch',
+          bucket: 'asymmetric',
+          accountLabel: 'Binance',
+          symbol: 'BTC',
+          recommendedContributionAmount: 75,
+        }),
+        planItem({
+          id: 3,
+          recommendationTier: 'speculative_watch',
+          bucket: 'asymmetric',
+          accountLabel: 'Binance',
+          symbol: 'ETH',
+          recommendedContributionAmount: 75,
+        }),
+      ],
+      contribution: [
+        { bucket: 'asymmetric', amount: 75, currency: 'EUR', reason: 'underweight' },
+      ],
+    } as DashboardInvestmentActionPlan
+
+    const rows = advisorPlanRows(plan)
+
+    expect(rows.map(row => row.key)).toEqual(['1', '2'])
+    expect(rows[1]).toMatchObject({ destination: 'Binance', amount: 75 })
+  })
+
+  it('separates the long-term target from this plan and rejects invalid target totals', () => {
+    const comparison = advisorAllocationComparison({
+      buckets: [
+        { bucketKey: 'core', targetPct: 60 },
+        { bucketKey: 'growth', targetPct: 35 },
+        { bucketKey: 'asymmetric', targetPct: 15 },
+      ] as never,
+      plan: {
+        contribution: [
+          { bucket: 'core', amount: 200, currency: 'EUR', reason: 'underweight' },
+          { bucket: 'growth', amount: 100, currency: 'EUR', reason: 'underweight' },
+        ],
+        items: [],
+      } as never,
+    })
+
+    expect(comparison.targetTotalPct).toBe(110)
+    expect(comparison.targetIsValid).toBe(false)
+    expect(comparison.plan).toEqual({ value: 300, currency: 'EUR', reason: 'available' })
+    expect(comparison.rows.find(row => row.bucket === 'core')?.planPct).toBeCloseTo(66.67, 1)
+    expect(comparison.rows.find(row => row.bucket === 'asymmetric')?.planPct).toBe(0)
+  })
+
+  it('does not add amounts across currencies', () => {
+    const comparison = advisorAllocationComparison({
+      buckets: [],
+      plan: {
+        contribution: [
+          { bucket: 'core', amount: 200, currency: 'EUR', reason: 'one' },
+          { bucket: 'growth', amount: 100, currency: 'USD', reason: 'two' },
+        ],
+        items: [],
+      } as never,
+    })
+
+    expect(comparison.plan).toEqual({ value: null, currency: null, reason: 'mixed_currency' })
+    expect(comparison.rows.every(row => row.planPct === null)).toBe(true)
+  })
+
+  it('keeps Flash explicitly unavailable without fake items or timers', () => {
+    expect(advisorFlashState()).toEqual({
+      supported: false,
+      items: [],
+      message: 'Aucune opportunité exceptionnelle disponible.',
+    })
+  })
+
   it('builds deterministic PEA / IBKR / Binance account sections from the latest plan', () => {
     const plan = {
       items: [
@@ -83,7 +243,11 @@ describe('investment strategy view model', () => {
       ],
     })
 
-    expect(sections.map(section => section.label)).toEqual(['PEA Trade Republic', 'IBKR', 'Binance'])
+    expect(sections.map(section => section.label)).toEqual([
+      'PEA Trade Republic',
+      'IBKR',
+      'Binance',
+    ])
     expect(sections[0]?.item?.accountLabel).toBe('PEA Trade Republic')
     expect(sections[0]?.policy?.humanReadablePolicy).toBe('PEA policy')
     expect(sections[1]?.item).toBeNull()

@@ -1,62 +1,34 @@
-import { Badge, Button, Card, CardContent, Input } from '@finance-os/ui/components'
-import { CheckListPixelIcon, CommentPixelIcon } from '@finance-os/ui/icons/pixel'
+import { CommentPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import {
-  type AdvisorQuestionStarter,
-  AdvisorQuestionStarters,
-} from '@/components/advisor/advisor-decision-ui'
-import { PageHeader } from '@/components/surfaces/page-header'
-import { Panel } from '@/components/surfaces/panel'
-import { StatusDot } from '@/components/surfaces/status-dot'
+  AdvisorChatComposer,
+  type AdvisorChatSendNotice,
+} from '@/components/advisor/advisor-chat-composer'
+import {
+  AdvisorChatMessage,
+  ChatResponsePending,
+  UserMessage,
+} from '@/components/advisor/advisor-chat-message'
+import { ADVISOR_CHAT_EMPTY_SUGGESTIONS } from '@/features/advisor-chat-view-model'
 import { getAiAdvisorUiFlags } from '@/features/ai-advisor-config'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import {
-  fetchDashboardAdvisorKnowledgeAnswer,
-  getDemoDashboardAdvisorKnowledgeAnswer,
-  postDashboardAdvisorChat,
-} from '@/features/dashboard-api'
+import { postDashboardAdvisorChat } from '@/features/dashboard-api'
 import {
   dashboardAdvisorChatQueryOptionsWithMode,
-  dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode,
   dashboardAdvisorQueryOptionsWithMode,
-  dashboardQueryKeys,
 } from '@/features/dashboard-query-options'
-import { formatDateTime, toErrorMessage } from '@/lib/format'
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion'
 
 const advisorThreadKey = 'default'
 
-const CHAT_QUESTIONS: AdvisorQuestionStarter[] = [
-  {
-    label: 'Est-ce que je peux investir ce mois-ci ?',
-    detail: 'Avec limites, horizon et données manquantes.',
-    prompt:
-      'Est-ce que je peux investir ce mois-ci ? Réponds avec prudence, limites et données manquantes.',
-    tone: 'brand',
-  },
-  {
-    label: 'Qu’est-ce qui a changé récemment ?',
-    detail: 'Dépenses, patrimoine, recommandations.',
-    prompt: 'Qu’est-ce qui a le plus changé récemment dans mes finances Finance-OS ?',
-    tone: 'plain',
-  },
-  {
-    label: 'Quelles données dois-je vérifier ?',
-    detail: 'Fraîcheur, comptes, hypothèses, profil.',
-    prompt: 'Quelles données dois-je vérifier avant de suivre une recommandation Advisor ?',
-    tone: 'warning',
-  },
-  {
-    label: 'Explique-moi la recommandation principale',
-    detail: 'Pourquoi, risques, prochaine question.',
-    prompt:
-      'Explique-moi la recommandation principale avec les données utilisées, les hypothèses et les risques.',
-    tone: 'plain',
-  },
-]
+type SendVariables = {
+  message: string
+  knownMessageIds: ReadonlySet<number>
+}
 
 export const Route = createFileRoute('/_app/ia/chat')({
   loader: async ({ context }) => {
@@ -65,19 +37,16 @@ export const Route = createFileRoute('/_app/ia/chat')({
       auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
 
-    const advisorFlags = getAiAdvisorUiFlags()
-    const advisorVisible = advisorFlags.enabled && (!advisorFlags.adminOnly || mode === 'admin')
-    if (!advisorVisible) return
+    const flags = getAiAdvisorUiFlags()
+    const visible = flags.enabled && (!flags.adminOnly || mode === 'admin')
+    if (!visible) return
 
-    await Promise.all([
+    await Promise.allSettled([
       context.queryClient.ensureQueryData(
         dashboardAdvisorQueryOptionsWithMode({ mode, range: '30d' })
       ),
       context.queryClient.ensureQueryData(
         dashboardAdvisorChatQueryOptionsWithMode({ mode, threadKey: advisorThreadKey })
-      ),
-      context.queryClient.ensureQueryData(
-        dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode({ mode })
       ),
     ])
   },
@@ -86,6 +55,7 @@ export const Route = createFileRoute('/_app/ia/chat')({
 
 function IaChatPage() {
   const queryClient = useQueryClient()
+  const prefersReducedMotion = usePrefersReducedMotion()
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
@@ -94,397 +64,291 @@ function IaChatPage() {
   const isDemo = authViewState === 'demo'
   const isAdmin = authViewState === 'admin'
   const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
+  const flags = getAiAdvisorUiFlags()
+  const visible = flags.enabled && (!flags.adminOnly || isAdmin)
+  const modeOptions = visible && authMode ? { mode: authMode } : {}
+  const chatOptions = dashboardAdvisorChatQueryOptionsWithMode({
+    ...modeOptions,
+    threadKey: advisorThreadKey,
+  })
 
-  const aiAdvisorFlags = getAiAdvisorUiFlags()
-  const aiAdvisorVisible = aiAdvisorFlags.enabled && (!aiAdvisorFlags.adminOnly || isAdmin)
-  const modeOpts = aiAdvisorVisible && authMode ? { mode: authMode } : {}
-
-  const [chatDraft, setChatDraft] = useState('')
-  const [knowledgeDraft, setKnowledgeDraft] = useState('')
+  const [draft, setDraft] = useState('')
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+  const [sendNotice, setSendNotice] = useState<AdvisorChatSendNotice | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const scrollRegionRef = useRef<HTMLDivElement>(null)
+  const conversationEndRef = useRef<HTMLDivElement>(null)
+  const shouldFollowConversationRef = useRef(true)
 
   const chatQuery = useQuery({
-    ...dashboardAdvisorChatQueryOptionsWithMode({ ...modeOpts, threadKey: advisorThreadKey }),
+    ...chatOptions,
     refetchInterval: false,
+    refetchOnWindowFocus: false,
   })
   const overviewQuery = useQuery(
-    dashboardAdvisorQueryOptionsWithMode({ ...modeOpts, range: '30d' })
+    dashboardAdvisorQueryOptionsWithMode({ ...modeOptions, range: '30d' })
   )
-  const knowledgeTopicsQuery = useQuery(
-    dashboardAdvisorKnowledgeTopicsQueryOptionsWithMode(modeOpts)
-  )
+  const messages = chatQuery.data?.messages ?? []
+  const canSend = isAdmin && overviewQuery.data?.chatEnabled === true
 
   const chatMutation = useMutation({
-    mutationFn: (message: string) =>
+    mutationFn: ({ message }: SendVariables) =>
       postDashboardAdvisorChat({ threadKey: advisorThreadKey, message }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.advisorChat(advisorThreadKey),
+    retry: false,
+    onSuccess: (result, variables) => {
+      queryClient.setQueryData(chatOptions.queryKey, result.thread)
+      setDraft(current => (current.trim() === variables.message ? '' : current))
+      setPendingMessage(null)
+      setSendNotice(null)
+    },
+    onError: async (_error, variables) => {
+      setPendingMessage(null)
+
+      if (!authMode) {
+        setSendNotice({
+          tone: 'warning',
+          message: 'Envoi non confirmé. Vérifiez la conversation avant de renvoyer.',
+        })
+        return
+      }
+
+      try {
+        const refreshed = await queryClient.fetchQuery({
+          ...dashboardAdvisorChatQueryOptionsWithMode({
+            mode: authMode,
+            threadKey: advisorThreadKey,
+          }),
+          staleTime: 0,
+        })
+        const recovered = refreshed.messages.some(
+          message =>
+            message.role === 'user' &&
+            !variables.knownMessageIds.has(message.id) &&
+            message.content.trim() === variables.message
+        )
+
+        if (recovered) {
+          setDraft(current => (current.trim() === variables.message ? '' : current))
+          setSendNotice({
+            tone: 'neutral',
+            message: 'Message retrouvé dans la conversation.',
+          })
+          return
+        }
+      } catch {
+        // The draft stays intact when reconciliation is unavailable.
+      }
+
+      setSendNotice({
+        tone: 'warning',
+        message: 'Envoi non confirmé. Vérifiez la conversation avant de renvoyer.',
       })
     },
   })
 
-  const knowledgeAnswerMutation = useMutation({
-    mutationFn: (question: string) => {
-      if (authMode === 'demo') {
-        return Promise.resolve(getDemoDashboardAdvisorKnowledgeAnswer(question))
-      }
-      return fetchDashboardAdvisorKnowledgeAnswer(question)
-    },
-  })
+  useEffect(() => {
+    void draft
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = '0px'
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`
+  }, [draft])
 
-  const handleSendChat = () => {
-    const normalized = chatDraft.trim()
-    if (!normalized) return
-    if (!isAdmin || overviewQuery.data?.chatEnabled === false) return
-    chatMutation.mutate(normalized)
-    setChatDraft('')
+  const conversationVersion = `${messages.length}:${pendingMessage ?? ''}`
+
+  useEffect(() => {
+    void conversationVersion
+    if (!shouldFollowConversationRef.current) return
+    conversationEndRef.current?.scrollIntoView({
+      block: 'end',
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    })
+  }, [conversationVersion, prefersReducedMotion])
+
+  const sendMessage = () => {
+    const message = draft.trim()
+    if (!message || !canSend || chatMutation.isPending) return
+
+    shouldFollowConversationRef.current = true
+    setPendingMessage(message)
+    setSendNotice(null)
+    chatMutation.reset()
+    chatMutation.mutate({
+      message,
+      knownMessageIds: new Set(messages.map(item => item.id)),
+    })
   }
 
-  const handleAskKnowledge = (overrideQuestion?: string) => {
-    const normalized = (overrideQuestion ?? knowledgeDraft).trim()
-    if (!normalized) return
-    knowledgeAnswerMutation.mutate(normalized)
-    if (!overrideQuestion) setKnowledgeDraft('')
-    else setKnowledgeDraft(normalized)
+  const handleConversationScroll = () => {
+    const region = scrollRegionRef.current
+    if (!region) return
+    const remaining = region.scrollHeight - region.scrollTop - region.clientHeight
+    shouldFollowConversationRef.current = remaining < 96
   }
 
-  if (!aiAdvisorVisible) {
+  const selectSuggestion = (suggestion: string) => {
+    setDraft(suggestion)
+    setSendNotice(null)
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }
+
+  if (!visible) {
     return (
-      <div className="space-y-8">
-        <PageHeader
-          eyebrow="Advisor IA · Chat"
-          icon={<CommentPixelIcon size={12} />}
-          title="Chat finance"
-          description="Pose une question à l'Advisor sur tes dépenses, ton patrimoine ou tes investissements."
+      <ChatShell>
+        <ChatEmptyState
+          title="Chat indisponible"
+          description="Advisor n’est pas disponible dans cette session."
         />
-        <Card>
-          <CardContent className="py-8 text-sm text-muted-foreground">
-            Advisor IA indisponible sur cette session.
-          </CardContent>
-        </Card>
-      </div>
+      </ChatShell>
     )
   }
 
-  const messages = chatQuery.data?.messages ?? []
-  const overview = overviewQuery.data
-  const chatCanSend = isAdmin && overview?.chatEnabled !== false
-  const chatWarnings = [
-    ...(isDemo
-      ? ['Mode démo: conversation déterministe en lecture seule, aucun appel provider.']
-      : []),
-    ...(overview?.status === 'degraded' && overview.degradedMessage
-      ? [overview.degradedMessage]
-      : []),
-    ...(overview?.snapshot
-      ? []
-      : ['Snapshot Advisor indisponible: les réponses doivent rester prudentes.']),
-    ...(knowledgeTopicsQuery.data?.browseOnlyReason
-      ? ['Q&A connaissance en mode browse-only: la récupération est limitée.']
-      : []),
-    ...(!chatCanSend
-      ? ['Envoi de message réservé à la session admin ou désactivé par configuration.']
-      : []),
-  ]
+  const isInitialLoading = chatQuery.isPending && messages.length === 0
+  const isUnavailable = chatQuery.isError && messages.length === 0
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow="Advisor IA · Chat"
-        icon={<CommentPixelIcon size={12} />}
-        title="Chat finance"
-        description="Pose une question sur tes données Finance-OS. La réponse reste une aide à la décision, pas une instruction d'investissement."
-      />
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Panel
-          title="Cadre de réponse"
-          description="L'Advisor doit dire ce qu'il sait, ce qui manque, et où la confiance baisse."
-          icon={<CheckListPixelIcon size={16} />}
-          tone="brand"
-        >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <ChatPrinciple
-              title="Ancré"
-              text="Réponses basées sur les artefacts Finance-OS disponibles."
-            />
-            <ChatPrinciple
-              title="Prudent"
-              text="Pas de buy/sell now, pas d'exécution, pas de promesse de rendement."
-            />
-            <ChatPrinciple
-              title="Traçable"
-              text="Hypothèses, caveats et données manquantes doivent rester visibles."
-            />
-          </div>
-        </Panel>
-
-        <Panel
-          title={chatWarnings.length > 0 ? 'Données à vérifier' : 'Contexte utilisable'}
-          description="Fraîcheur, mode et disponibilité du contexte avant de poser une question."
-          icon={
-            <StatusDot
-              tone={chatWarnings.length > 0 ? 'warn' : 'ok'}
-              size={8}
-              pulse={chatWarnings.length > 0}
-            />
-          }
-          tone={chatWarnings.length > 0 ? 'warning' : 'positive'}
-        >
-          <div className="space-y-2">
-            {chatWarnings.length > 0 ? (
-              chatWarnings.map(item => (
-                <p
-                  key={item}
-                  className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-2 text-sm text-muted-foreground"
-                >
-                  {item}
-                </p>
-              ))
-            ) : (
-              <p className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3 text-sm text-muted-foreground">
-                Le chat peut utiliser les artefacts Advisor récents. Vérifie quand même horizon,
-                profil et liquidité avant décision.
-              </p>
-            )}
-          </div>
-        </Panel>
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        {/* ── Chat thread ── */}
-        <Panel
-          title="Conversation"
-          tone="brand"
-          icon={<CommentPixelIcon size={16} />}
-          actions={
-            <Badge variant="outline" className="text-[10px]">
-              {chatCanSend ? `thread: ${advisorThreadKey}` : 'lecture seule'}
-            </Badge>
-          }
-        >
-          <div className="space-y-4">
-            {/* Messages */}
-            <div className="max-h-[520px] space-y-3 overflow-y-auto rounded-xl border border-border/40 bg-background/60 p-4">
-              {messages.length === 0 && !chatQuery.isPending && (
-                <div className="py-10 text-center">
-                  <p className="text-sm font-medium text-foreground">Aucun message dans ce fil</p>
-                  <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-                    Choisis une question à droite ou formule une demande. L'Advisor doit répondre
-                    avec limites et hypothèses.
-                  </p>
-                </div>
-              )}
-              {chatQuery.isPending && messages.length === 0 && (
-                <p className="py-10 text-center text-sm text-muted-foreground">Chargement...</p>
-              )}
-              {messages.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`rounded-xl px-4 py-3 ${
-                    msg.role === 'user'
-                      ? 'ml-8 bg-primary/10 text-foreground'
-                      : 'mr-8 border border-border/40 bg-surface-1 text-foreground'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
-                    <span className="font-mono uppercase tracking-[0.18em]">
-                      {msg.role === 'user' ? 'vous' : 'advisor'}
-                    </span>
-                    <span>{formatDateTime(msg.createdAt)}</span>
-                    {msg.model && (
-                      <Badge variant="outline" className="text-[9px]">
-                        {msg.model}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              ))}
-              {chatMutation.isPending && (
-                <div className="mr-8 rounded-xl border border-border/40 bg-surface-1 px-4 py-3">
-                  <p className="text-sm text-muted-foreground animate-pulse">
-                    Advisor réfléchit...
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Input */}
-            <form
-              className="flex gap-2"
-              onSubmit={e => {
-                e.preventDefault()
-                handleSendChat()
-              }}
-            >
-              <Input
-                value={chatDraft}
-                onChange={e => setChatDraft(e.target.value)}
-                placeholder="Ex: quelles données manquent avant d'investir ?"
-                className="min-h-11 flex-1"
-                disabled={chatMutation.isPending || !chatCanSend}
-              />
-              <Button
-                type="submit"
-                disabled={chatMutation.isPending || !chatDraft.trim() || !chatCanSend}
-              >
-                Envoyer
-              </Button>
-            </form>
-            {!chatCanSend ? (
-              <p className="text-xs text-muted-foreground">
-                Envoi désactivé ici. En démo, aucune mutation ni appel provider n'est lancé.
-              </p>
-            ) : null}
-            {chatMutation.error && (
-              <p className="text-xs text-negative">{toErrorMessage(chatMutation.error)}</p>
-            )}
-          </div>
-        </Panel>
-
-        {/* ── Knowledge Q&A + topics ── */}
-        <div className="space-y-4">
-          <Panel
-            title="Questions à poser"
-            description="Point de départ contextualisé. Tu peux modifier le texte avant envoi."
-            icon={<span aria-hidden="true">?</span>}
-            tone="violet"
-          >
-            <AdvisorQuestionStarters questions={CHAT_QUESTIONS} onSelect={setChatDraft} />
-          </Panel>
-
-          <Panel
-            title="Comprendre un concept"
-            tone="violet"
-            icon={<span aria-hidden="true">[#]</span>}
-            description="Question éducative sur un concept financier. Séparé des décisions personnelles."
-          >
-            <form
-              className="flex gap-2"
-              onSubmit={e => {
-                e.preventDefault()
-                handleAskKnowledge()
-              }}
-            >
-              <Input
-                value={knowledgeDraft}
-                onChange={e => setKnowledgeDraft(e.target.value)}
-                placeholder="Ex: qu'est-ce que le cash drag ?"
-                className="min-h-11 flex-1"
-                disabled={knowledgeAnswerMutation.isPending}
-              />
-              <Button
-                type="submit"
-                disabled={knowledgeAnswerMutation.isPending || !knowledgeDraft.trim()}
-              >
-                Chercher
-              </Button>
-            </form>
-
-            {knowledgeAnswerMutation.data && (
-              <div className="mt-4 space-y-3 rounded-xl border border-border/40 bg-background/60 p-4">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{knowledgeAnswerMutation.data.status}</Badge>
-                  <Badge variant="secondary">
-                    {Math.round(knowledgeAnswerMutation.data.confidenceScore * 100)}%
-                  </Badge>
-                </div>
-                {knowledgeAnswerMutation.data.answer && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">
-                      {knowledgeAnswerMutation.data.answer.headline}
-                    </p>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {knowledgeAnswerMutation.data.answer.summary}
-                    </p>
-                    {knowledgeAnswerMutation.data.answer.keyPoints.length > 0 && (
-                      <ul className="space-y-1 text-sm text-muted-foreground">
-                        {knowledgeAnswerMutation.data.answer.keyPoints.map(kp => (
-                          <li key={kp} className="flex gap-2">
-                            <span className="text-primary">-</span>
-                            {kp}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-                {knowledgeAnswerMutation.data.citations.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {knowledgeAnswerMutation.data.citations.map(cit => (
-                      <span
-                        key={cit.citationId}
-                        className="rounded bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground"
-                      >
-                        {cit.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {knowledgeAnswerMutation.error && (
-              <p className="mt-2 text-xs text-negative">
-                {toErrorMessage(knowledgeAnswerMutation.error)}
-              </p>
-            )}
-          </Panel>
-
-          {/* Knowledge topics */}
-          <Panel
-            title="Sujets du knowledge pack"
-            tone="plain"
-            icon={<span aria-hidden="true">::</span>}
-          >
-            {knowledgeTopicsQuery.data?.topics.length ? (
-              <div className="space-y-1">
-                {knowledgeTopicsQuery.data.topics.slice(0, 10).map(topic => (
-                  <button
-                    key={topic.topicId}
-                    type="button"
-                    onClick={() => handleAskKnowledge(topic.title)}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-1"
-                  >
-                    <span className="text-primary/60" aria-hidden="true">
-                      ·
-                    </span>
-                    <span className="text-foreground/75">{topic.title}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="py-4 text-sm text-muted-foreground">Aucun sujet disponible.</p>
-            )}
-          </Panel>
-        </div>
-      </div>
-      <Panel
-        title="Décision réelle"
-        description="Le chat peut aider à formuler un raisonnement, mais il ne décide pas à ta place."
-        icon={<span aria-hidden="true">!</span>}
-        tone="warning"
-        actions={
-          <Link to="/ia" className="text-xs text-primary hover:underline">
-            Retour synthèse
-          </Link>
-        }
+    <ChatShell>
+      <div
+        ref={scrollRegionRef}
+        onScroll={handleConversationScroll}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-5 sm:px-4 sm:py-7"
       >
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Avant d'agir, vérifie ton objectif, ton horizon, ton épargne de précaution, ta tolérance
-          au risque et la fraîcheur des données. Aucune réponse ne prépare un ordre, un transfert ou
-          un rééquilibrage automatique.
-        </p>
-      </Panel>
+        {isInitialLoading ? <ChatLoadingState /> : null}
+
+        {isUnavailable ? (
+          <ChatEmptyState
+            title="Conversation indisponible"
+            description="Réessayez dans quelques instants. Votre brouillon reste local."
+          />
+        ) : null}
+
+        {!isInitialLoading && !isUnavailable && messages.length === 0 && !pendingMessage ? (
+          <ChatEmptyState
+            title={canSend ? 'Que voulez-vous savoir ?' : 'Conversation en lecture seule'}
+            {...(!canSend
+              ? {
+                  description: isDemo
+                    ? 'Le chat ne crée aucun message dans la démonstration.'
+                    : 'L’envoi de messages est désactivé pour cette session.',
+                }
+              : {})}
+            {...(canSend
+              ? {
+                  suggestions: ADVISOR_CHAT_EMPTY_SUGGESTIONS,
+                  onSelectSuggestion: selectSuggestion,
+                }
+              : {})}
+          />
+        ) : null}
+
+        {messages.length > 0 ? (
+          <ol aria-label="Conversation" className="space-y-8 sm:space-y-10">
+            {messages.map(message => (
+              <li key={message.id}>
+                <AdvisorChatMessage message={message} />
+              </li>
+            ))}
+            {pendingMessage ? (
+              <li className="space-y-8 sm:space-y-10">
+                <UserMessage content={pendingMessage} pending />
+                <ChatResponsePending />
+              </li>
+            ) : null}
+          </ol>
+        ) : pendingMessage ? (
+          <div className="space-y-8 sm:space-y-10">
+            <UserMessage content={pendingMessage} pending />
+            <ChatResponsePending />
+          </div>
+        ) : null}
+        <div ref={conversationEndRef} aria-hidden="true" />
+      </div>
+
+      <AdvisorChatComposer
+        ref={textareaRef}
+        value={draft}
+        canSend={canSend}
+        sending={chatMutation.isPending}
+        notice={sendNotice}
+        onChange={value => {
+          setDraft(value)
+          setSendNotice(null)
+        }}
+        onSend={sendMessage}
+      />
+    </ChatShell>
+  )
+}
+
+function ChatShell({ children }: { children: ReactNode }) {
+  return (
+    <section className="mx-auto flex h-[calc(100dvh-9.75rem)] min-h-[32rem] w-full max-w-[780px] flex-col overflow-hidden lg:h-[calc(100dvh-9.25rem)]">
+      <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-border/55 px-1 sm:px-4">
+        <span className="grid size-7 place-items-center rounded-md border border-primary/35 bg-primary/10 text-primary">
+          <CommentPixelIcon size={13} aria-hidden="true" />
+        </span>
+        <h1 className="text-[15px] font-semibold tracking-tight text-foreground">Chat</h1>
+      </header>
+      {children}
+    </section>
+  )
+}
+
+function ChatEmptyState({
+  title,
+  description,
+  suggestions,
+  onSelectSuggestion,
+}: {
+  title: string
+  description?: string
+  suggestions?: readonly string[]
+  onSelectSuggestion?: (suggestion: string) => void
+}) {
+  return (
+    <div className="flex min-h-full flex-col justify-end pb-6 sm:pb-10">
+      <div className="mx-auto w-full max-w-[520px]">
+        <h2 className="text-center text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          {title}
+        </h2>
+        {description ? (
+          <p className="mx-auto mt-2 max-w-md text-center text-sm leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+        {suggestions?.length && onSelectSuggestion ? (
+          <fieldset className="mt-6 grid gap-2">
+            <legend className="sr-only">Questions suggérées</legend>
+            {suggestions.map(suggestion => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => onSelectSuggestion(suggestion)}
+                className="min-h-11 rounded-lg border border-border/65 bg-card/35 px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:border-primary/35 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </fieldset>
+        ) : null}
+      </div>
     </div>
   )
 }
 
-function ChatPrinciple({ title, text }: { title: string; text: string }) {
+function ChatLoadingState() {
   return (
-    <div className="rounded-xl border border-border/45 bg-surface-1/45 px-3 py-3">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
-    </div>
+    <output className="flex min-h-full items-center" aria-live="polite">
+      <div className="w-full max-w-[560px] space-y-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          Réponse en cours
+        </p>
+        <div className="space-y-3" aria-hidden="true">
+          <div className="h-3 w-2/5 animate-pulse rounded-sm bg-surface-2 motion-reduce:animate-none" />
+          <div className="h-3 w-4/5 animate-pulse rounded-sm bg-surface-2 motion-reduce:animate-none" />
+          <div className="h-3 w-3/5 animate-pulse rounded-sm bg-surface-2 motion-reduce:animate-none" />
+        </div>
+      </div>
+    </output>
   )
 }

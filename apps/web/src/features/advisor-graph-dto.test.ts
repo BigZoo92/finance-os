@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
-  mapAdvisorKnowledgeGraphDtoToViewModel,
   type AdvisorKnowledgeGraphDto,
+  mapAdvisorKnowledgeGraphDtoToViewModel,
 } from './advisor-graph-dto'
 
 const baseDto: AdvisorKnowledgeGraphDto = {
   nodes: [
-    { id: 'a', label: 'A', kind: 'recommendation', origin: 'real', confidence: 0.8, importance: 0.6 },
+    {
+      id: 'a',
+      label: 'A',
+      kind: 'recommendation',
+      origin: 'real',
+      confidence: 0.8,
+      importance: 0.6,
+    },
     { id: 'b', label: 'B', kind: 'concept', origin: 'real' },
     { id: 'example:c', label: 'C', kind: 'risk', origin: 'example', confidence: 0.6 },
   ],
@@ -69,6 +76,44 @@ describe('mapAdvisorKnowledgeGraphDtoToViewModel', () => {
     const view = mapAdvisorKnowledgeGraphDtoToViewModel(dto)
     expect(view.meta.origin).toBe('empty')
     expect(view.meta.degraded).toBe(true)
-    expect(view.meta.summary).toBe('service down')
+    expect(view.meta.summary).toBe('La mémoire est momentanément indisponible.')
+  })
+
+  it('replaces opaque labels and technical prose with human presentation copy', () => {
+    const dto: AdvisorKnowledgeGraphDto = {
+      ...baseDto,
+      nodes: [
+        {
+          id: 'provider:account:secret',
+          label: 'provider:account:secret',
+          kind: 'financial_account',
+          summary: 'GraphRAG retrieval bundle request_id: hidden',
+          source: 'source_id:hidden',
+          origin: 'real',
+        },
+      ],
+      links: [],
+      meta: { ...baseDto.meta, origin: 'real', nodeCount: 1, linkCount: 0 },
+    }
+
+    const view = mapAdvisorKnowledgeGraphDtoToViewModel(dto)
+    expect(view.nodes[0]).toMatchObject({
+      id: 'provider:account:secret',
+      label: 'Compte financier',
+    })
+    expect(view.nodes[0]?.summary).toBeUndefined()
+    expect(view.nodes[0]?.source).toBeUndefined()
+    expect(JSON.stringify(view.nodes[0])).not.toContain('GraphRAG')
+  })
+
+  it('never presents a raw node id as its visible label', () => {
+    const dto: AdvisorKnowledgeGraphDto = {
+      ...baseDto,
+      nodes: [{ id: 'artifact-938242', label: 'artifact-938242', kind: 'source', origin: 'real' }],
+      links: [],
+      meta: { ...baseDto.meta, origin: 'real', nodeCount: 1, linkCount: 0 },
+    }
+
+    expect(mapAdvisorKnowledgeGraphDtoToViewModel(dto).nodes[0]?.label).toBe('Source')
   })
 })

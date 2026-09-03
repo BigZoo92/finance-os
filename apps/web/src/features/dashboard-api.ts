@@ -31,6 +31,7 @@ import type {
   DashboardInvestmentScorecardResponse,
   DashboardInvestmentStatusResponse,
   DashboardInvestmentStrategyResponse,
+  DashboardInvestmentStrategyUpdateInput,
   DashboardManualAssetResponse,
   DashboardManualAssetsResponse,
   DashboardNewsResponse,
@@ -975,6 +976,16 @@ export const fetchDashboardAdvisorBehaviorAnalytics = async (windowDays?: number
 
 export const fetchDashboardInvestmentStrategy = async () => {
   return apiFetch<DashboardInvestmentStrategyResponse>('/dashboard/advisor/investment-strategy')
+}
+
+export const putDashboardInvestmentStrategy = async (
+  input: DashboardInvestmentStrategyUpdateInput
+) => {
+  return apiFetch<DashboardInvestmentStrategyResponse>('/dashboard/advisor/investment-strategy', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 }
 
 export const fetchDashboardAdvisorAssetsSearch = async (query: string) => {

@@ -47,7 +47,9 @@ describe('canonical nav grouping', () => {
 
   it('uses accented canonical labels without forbidden punctuation', () => {
     const labels = NAV_ENTRIES.flatMap(e =>
-      e.kind === 'link' ? [e.link.label, e.link.description] : e.items.flatMap(i => [i.label, i.description])
+      e.kind === 'link'
+        ? [e.link.label, e.link.description]
+        : e.items.flatMap(i => [i.label, i.description])
     )
     for (const label of labels) {
       expect(label).not.toMatch(/[·—;]/)
@@ -77,10 +79,12 @@ describe('admin gating', () => {
   })
 
   it('filters admin-only palette destinations in demo mode', () => {
-    const demoLabels = getPaletteLinks('demo').map(l => l.label)
+    const demoLinks = getPaletteLinks('demo')
+    const demoLabels = demoLinks.map(l => l.label)
     expect(demoLabels).not.toContain('Trading Lab')
     expect(demoLabels).not.toContain('Social Intelligence')
-    expect(demoLabels).toContain('Mémoire 3D')
+    expect(demoLinks.filter(link => link.to === '/ia/memoire')).toHaveLength(1)
+    expect(demoLinks.some(link => link.to === '/ia/memoire/graph')).toBe(false)
     const adminLabels = getPaletteLinks('admin').map(l => l.label)
     expect(adminLabels).toContain('Trading Lab')
     expect(adminLabels).toContain('Coûts')
@@ -89,12 +93,7 @@ describe('admin gating', () => {
 
 describe('mobile navigation', () => {
   it('exposes the four canonical tabs (Plus is the fifth)', () => {
-    expect(MOBILE_TABS.map(t => t.label)).toEqual([
-      'Cockpit',
-      'Dépenses',
-      'Patrimoine',
-      'Advisor',
-    ])
+    expect(MOBILE_TABS.map(t => t.label)).toEqual(['Cockpit', 'Dépenses', 'Patrimoine', 'Advisor'])
   })
 
   it('drawer hides Ops and Social Intelligence in demo mode', () => {
@@ -129,6 +128,7 @@ describe('active route semantics', () => {
   })
 
   it('matches children for normal destinations', () => {
+    expect(isRouteActive('/ia/memoire', '/ia/memoire')).toBe(true)
     expect(isRouteActive('/ia/memoire/graph', '/ia/memoire')).toBe(true)
     expect(isRouteActive('/signaux/social', '/signaux')).toBe(true)
     expect(isRouteActive('/depensesx', '/depenses')).toBe(false)

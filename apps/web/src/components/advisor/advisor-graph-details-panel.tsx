@@ -21,6 +21,7 @@ import {
   NODE_KIND_COLOR,
   NODE_KIND_LABEL,
 } from '@/features/advisor-graph-data'
+import { toAdvisorMemoryNodeViewModel } from '@/features/advisor-memory-view-model'
 
 export interface AdvisorGraphNeighbor {
   link: AdvisorGraphLink
@@ -51,16 +52,17 @@ interface EmptyDetailsProps {
   hasGraph: boolean
 }
 
-const freshnessLabel = (freshness: 'fresh' | 'stale' | 'unknown'): string => {
-  if (freshness === 'fresh') return 'fraîche'
-  if (freshness === 'stale') return 'stale'
-  return 'inconnue'
+export const toMemoryFreshnessLabel = (freshness: 'fresh' | 'stale' | 'unknown'): string => {
+  if (freshness === 'fresh') return 'Récente'
+  if (freshness === 'stale') return 'À actualiser'
+  return 'Date inconnue'
 }
 
-const confidenceTone = (value: number): 'positive' | 'plain' | 'warning' => {
-  if (value >= 0.75) return 'positive'
-  if (value >= 0.55) return 'plain'
-  return 'warning'
+export const toMemoryReliabilityLabel = (value: number | undefined): string | null => {
+  if (value === undefined) return null
+  if (value >= 0.75) return 'Fiabilité élevée'
+  if (value >= 0.55) return 'Fiabilité moyenne'
+  return 'Fiabilité à confirmer'
 }
 
 export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
@@ -78,7 +80,8 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
     onTracePath,
   } = props
 
-  const confidencePct = Math.round((node.confidence ?? 0) * 100)
+  const reliabilityLabel = toMemoryReliabilityLabel(node.confidence)
+  const nodeViewModel = toAdvisorMemoryNodeViewModel(node)
 
   const recommendations = neighbors.filter(n => n.other.kind === 'recommendation')
   const sources = neighbors.filter(n => n.other.kind === 'source')
@@ -105,20 +108,18 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
         {/* Provenance / origin row — most important trust signal first. */}
         {node.isExample ? (
           <div className="rounded-lg border border-warning/40 border-dashed bg-warning/10 px-3 py-2 text-[12px] text-warning">
-            <p className="font-medium">Exemple, pas donnée réelle</p>
+            <p className="font-medium">Exemple, pas une donnée réelle</p>
             <p className="mt-0.5 text-[11.5px] text-warning/85">
-              Ajouté depuis le seed démo pour illustration. Aucune décision Advisor ne s’y appuie.
+              Ajouté uniquement pour illustrer la carte. Aucune décision ne s’y appuie.
             </p>
           </div>
         ) : null}
 
         <div className="flex flex-wrap gap-1.5">
           {node.isExample ? <Badge variant="destructive">exemple</Badge> : null}
-          {node.confidence !== undefined ? (
-            <Badge variant="outline">{confidencePct}% confiance</Badge>
-          ) : null}
+          {reliabilityLabel ? <Badge variant="outline">{reliabilityLabel}</Badge> : null}
           {node.freshness ? (
-            <Badge variant="outline">{freshnessLabel(node.freshness)}</Badge>
+            <Badge variant="outline">{toMemoryFreshnessLabel(node.freshness)}</Badge>
           ) : null}
           {node.isPersonal ? <Badge variant="secondary">personnel</Badge> : null}
           {node.isContradicted ? <Badge variant="destructive">contradiction</Badge> : null}
@@ -136,19 +137,17 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           <p className="text-[12.5px] leading-relaxed text-muted-foreground">{node.summary}</p>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2 text-[11px]">
-          <Score
-            label="Confiance"
-            value={node.confidence ?? 0}
-            tone={confidenceTone(node.confidence ?? 0)}
-          />
-          <Score label="Importance" value={node.importance ?? 0} tone="plain" />
-        </div>
+        {nodeViewModel.sourceLabel ? (
+          <dl className="flex items-center justify-between gap-4 border-t border-border/45 pt-3 text-xs">
+            <dt className="text-muted-foreground">Source</dt>
+            <dd className="text-right text-foreground">{nodeViewModel.sourceLabel}</dd>
+          </dl>
+        ) : null}
 
         {pathPeerLabel ? (
           <div className="rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11.5px] text-amber-200">
             <p className="font-medium">Chemin actif</p>
-            <p className="mt-0.5 text-amber-100/80">Trace en cours vers&nbsp;: {pathPeerLabel}</p>
+            <p className="mt-0.5 text-amber-100/80">Trace en cours vers {pathPeerLabel}</p>
           </div>
         ) : null}
 
@@ -166,8 +165,8 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           >
             {isIsolated ? 'Quitter l’isolation' : 'Isoler le voisinage'}
           </ActionButton>
-          <ActionButton onClick={() => onTracePath(node.id)}>Tracer un chemin →</ActionButton>
-          <ActionButton onClick={() => onCopyLabel(node.label)}>Copier le label</ActionButton>
+          <ActionButton onClick={() => onTracePath(node.id)}>Tracer un chemin</ActionButton>
+          <ActionButton onClick={() => onCopyLabel(node.label)}>Copier le nom</ActionButton>
         </div>
 
         {/* Kind-specific neighbor groupings, only shown when populated. */}
@@ -178,7 +177,7 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           onSelect={onSelectNeighbor}
         />
         <NeighborGroup
-          title="Risques & contradictions"
+          title="Risques et contradictions"
           tone="warning"
           items={risks}
           onSelect={onSelectNeighbor}
@@ -221,10 +220,7 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
 
         <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px]">
           <Link to="/ia/chat" className="text-primary hover:underline">
-            Demander à l’Advisor →
-          </Link>
-          <Link to="/ia/memoire" className="ml-auto text-muted-foreground hover:text-foreground">
-            Voir l’inspection texte
+            Poser une question dans Chat
           </Link>
         </div>
       </div>
@@ -248,9 +244,9 @@ export function AdvisorGraphLinkDetails({ link, source, target }: LinkDetailsPro
     >
       <div className="space-y-3 text-[12.5px]">
         <p className="text-muted-foreground">
-          <span className="text-foreground">{source?.label ?? link.source}</span>{' '}
+          <span className="text-foreground">{source?.label ?? 'Souvenir indisponible'}</span>{' '}
           <span className="text-muted-foreground/60">→</span>{' '}
-          <span className="text-foreground">{target?.label ?? link.target}</span>
+          <span className="text-foreground">{target?.label ?? 'Souvenir indisponible'}</span>
         </p>
         {meaning ? (
           <p className="rounded-lg bg-surface-1 px-3 py-2 text-[11.5px] italic leading-relaxed text-muted-foreground">
@@ -258,14 +254,9 @@ export function AdvisorGraphLinkDetails({ link, source, target }: LinkDetailsPro
           </p>
         ) : null}
         {link.summary ? <p className="text-muted-foreground">{link.summary}</p> : null}
-        <div className="flex flex-wrap gap-1.5">
-          {link.confidence !== undefined ? (
-            <Badge variant="outline">{Math.round(link.confidence * 100)}% confiance</Badge>
-          ) : null}
-          {link.strength !== undefined ? (
-            <Badge variant="outline">{Math.round(link.strength * 100)}% force</Badge>
-          ) : null}
-        </div>
+        {toMemoryReliabilityLabel(link.confidence) ? (
+          <Badge variant="outline">{toMemoryReliabilityLabel(link.confidence)}</Badge>
+        ) : null}
       </div>
     </Panel>
   )
@@ -275,26 +266,15 @@ export function AdvisorGraphEmptyDetails({ hasGraph }: EmptyDetailsProps) {
   return (
     <Panel title="Sélectionne un nœud" tone="plain" icon={<ChartNetworkPixelIcon size={16} />}>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Clique sur un nœud pour voir son type, sa confiance, sa fraîcheur, ses voisins directs, les
-        recommandations connectées et les sources de provenance.
-        {hasGraph ? ' Clique sur un lien pour inspecter une relation.' : null}
+        Sélectionne un souvenir pour afficher son résumé, sa fraîcheur et ses liens directs.
+        {hasGraph ? ' Sélectionne une relation pour comprendre son rôle.' : null}
       </p>
       <ul className="mt-3 space-y-1 text-[11.5px] leading-relaxed text-muted-foreground">
-        <li>
-          · <span className="text-foreground">survol</span> · met en relief un voisinage immédiat
-        </li>
-        <li>
-          · <span className="text-foreground">clic</span> · ouvre la fiche détaillée
-        </li>
-        <li>
-          · <span className="text-foreground">épingler</span> · garde un nœud en référence
-        </li>
-        <li>
-          · <span className="text-foreground">isoler</span> · ne montre que le voisinage
-        </li>
-        <li>
-          · <span className="text-foreground">tracer</span> · cherche un chemin entre deux nœuds
-        </li>
+        <li>Le survol met en relief le voisinage immédiat.</li>
+        <li>Le clic ouvre la fiche détaillée.</li>
+        <li>Une épingle garde un souvenir en référence.</li>
+        <li>L’isolation réduit la carte au voisinage utile.</li>
+        <li>Le tracé cherche un chemin entre deux souvenirs.</li>
       </ul>
     </Panel>
   )
@@ -318,7 +298,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`min-h-11 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? 'border-primary/40 bg-primary/12 text-primary'
           : 'border-border/60 bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground'
@@ -326,29 +306,6 @@ function ActionButton({
     >
       {children}
     </button>
-  )
-}
-
-function Score({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone: 'positive' | 'plain' | 'warning'
-}) {
-  const pct = Math.min(100, Math.max(0, Math.round(value * 100)))
-  const barClass =
-    tone === 'positive' ? 'bg-positive' : tone === 'warning' ? 'bg-warning' : 'bg-primary'
-  return (
-    <div className="rounded-lg border border-border/40 bg-surface-1 p-2">
-      <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-0.5 font-financial text-sm text-foreground">{pct}%</p>
-      <div className="mt-1 h-1 rounded-full bg-background">
-        <div className={`h-full rounded-full ${barClass}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
   )
 }
 
@@ -379,9 +336,9 @@ function NeighborGroup({
             <button
               type="button"
               onClick={() => onSelect(other.id)}
-              className="text-left text-[12px] text-foreground hover:underline"
+              className="min-h-11 text-left text-[12px] text-foreground hover:underline"
             >
-              · {other.label}
+              {other.label}
               {other.isExample ? (
                 <span className="ml-1.5 rounded bg-warning/15 px-1 py-0.5 text-[9px] uppercase tracking-wider text-warning">
                   ex
@@ -407,7 +364,7 @@ function NeighborRow({
     <button
       type="button"
       onClick={() => onSelect(other.id)}
-      className={`flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
+      className={`flex min-h-11 w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
         other.isExample
           ? 'border-warning/30 border-dashed bg-warning/5 hover:bg-warning/10'
           : 'border-border/40 bg-surface-1 hover:bg-surface-2'
@@ -438,39 +395,36 @@ function NeighborRow({
 
 const KIND_COPY: Partial<Record<AdvisorGraphNode['kind'], string>> = {
   recommendation:
-    'Une conclusion proposée par l’Advisor. Ses voisins immédiats sont ses hypothèses, ses sources et les risques qui la fragilisent.',
-  risk: 'Une zone de fragilité — surveiller, ne pas alarmer. Sert à challenger les recommandations associées.',
+    'Une conclusion proposée. Ses voisins montrent les hypothèses, sources et risques qui la soutiennent.',
+  risk: 'Une zone de fragilité à examiner avec les recommandations associées.',
   contradiction:
-    'Quelque chose dans la mémoire vient affaiblir une autre affirmation. Demande une lecture attentive.',
-  source: 'Une provenance — interne ou externe. Toute conclusion devrait pouvoir y remonter.',
+    'Un souvenir vient affaiblir une autre affirmation et demande une lecture attentive.',
+  source: 'Une origine interne ou externe utilisée pour retracer une information.',
   concept: 'Un concept financier mobilisé pour expliquer une décision. Indépendant de tes données.',
-  formula: 'Une formule sous-jacente. Sert à dériver des concepts ou à comparer des mesures.',
+  formula: 'Une méthode de calcul utilisée pour comparer ou expliquer des mesures.',
   assumption:
-    'Une hypothèse explicite. Sa fraîcheur et sa confiance déterminent à quel point elle peut être réutilisée.',
-  personal_snapshot: 'Vue agrégée et anonymisée de ton patrimoine et de tes flux courants.',
-  goal: 'Un objectif personnel utilisé comme cible par l’Advisor.',
-  market_signal: 'Un signal externe agrégé. Affecte certains actifs / investissements.',
+    'Une hypothèse explicite. Sa fraîcheur et sa fiabilité déterminent si elle peut être réutilisée.',
+  personal_snapshot: 'Vue agrégée de ton patrimoine et de tes flux courants.',
+  goal: 'Un objectif personnel utilisé comme cible.',
+  market_signal: 'Un signal externe agrégé qui peut affecter certains investissements.',
   news_signal: 'Un signal d’actualité agrégé. Sert à contextualiser l’instant.',
-  social_signal: 'Un signal social agrégé. Imports manuels uniquement, jamais raw.',
-  investment: 'Une position d’investissement, en agrégat — jamais en payload provider brut.',
+  social_signal: 'Une tendance sociale agrégée issue des informations disponibles.',
+  investment: 'Une position d’investissement présentée sous forme agrégée.',
   asset: 'Un actif détenu ou observé, agrégé.',
-  financial_account: 'Un compte, en agrégat — soldes uniquement.',
-  transaction_cluster: 'Un cluster de transactions, jamais une liste raw exposée.',
+  financial_account: 'Un compte présenté sous forme agrégée.',
+  transaction_cluster: 'Un ensemble de dépenses regroupées par usage.',
 }
 
 const LINK_KIND_MEANING: Record<AdvisorGraphLink['kind'], string> = {
-  supports:
-    'Cette relation soutient l’affirmation cible. Plus la confiance est haute, plus elle compte.',
-  explains: 'Le concept de gauche explique la conclusion de droite — pédagogie ou raisonnement.',
-  contradicts:
-    'Une contradiction explicite. Ne supprime pas l’autre affirmation, mais la fragilise.',
-  weakens:
-    'Cette relation affaiblit la cible — sans la contredire frontalement, elle ajoute du doute.',
-  derived_from: 'Provenance ou dérivation : la cible vient de la source.',
-  related_to: 'Lien faible — utile à la navigation, pas une preuve.',
-  affects: 'Impact d’un signal sur une cible : suivi à surveiller.',
-  mentions: 'Mention sans engagement — utile pour la traçabilité.',
+  supports: 'Cette relation soutient l’affirmation cible avec les informations disponibles.',
+  explains: 'Le souvenir de gauche aide à expliquer la conclusion de droite.',
+  contradicts: 'Une contradiction explicite fragilise l’autre affirmation sans l’annuler.',
+  weakens: 'Cette relation ajoute du doute sans contredire directement la cible.',
+  derived_from: 'La cible provient de la source indiquée.',
+  related_to: 'Ce lien facilite la navigation mais ne constitue pas une preuve.',
+  affects: 'Un signal peut avoir un effet sur cette cible.',
+  mentions: 'Une mention utile pour retracer le contexte.',
   uses_assumption:
     'La cible repose sur une hypothèse explicite. À revisiter si l’hypothèse vieillit.',
-  belongs_to: 'Appartenance structurelle (compte → snapshot, etc.).',
+  belongs_to: 'Ce souvenir appartient à un ensemble plus large.',
 }

@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
+import { type QueryClient, infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import {
   fetchAdvisorDecisionJournal,
   fetchAdvisorPostMortems,
@@ -134,7 +134,10 @@ export const dashboardQueryKeys = {
     [...dashboardQueryKeys.all, 'advisor-manual-operation', 'latest'] as const,
   advisorManualOperation: (operationId: string) =>
     [...dashboardQueryKeys.all, 'advisor-manual-operation', operationId] as const,
-  advisorChat: (threadKey: string) => [...dashboardQueryKeys.all, 'advisor-chat', threadKey] as const,
+  advisorChat: (threadKey: string, mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'advisor-chat', threadKey, mode] as const)
+      : ([...dashboardQueryKeys.all, 'advisor-chat', threadKey] as const),
   advisorEvals: () => [...dashboardQueryKeys.all, 'advisor-evals'] as const,
   // PR9 — keep separate from advisorEvals so trends can be invalidated independently if needed.
   advisorEvalsTrends: (windowDays?: number) =>
@@ -147,8 +150,14 @@ export const dashboardQueryKeys = {
     windowDays !== undefined
       ? ([...dashboardQueryKeys.all, 'advisor-behavior-analytics', windowDays] as const)
       : ([...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const),
-  investmentStrategy: () => [...dashboardQueryKeys.all, 'investment-strategy'] as const,
-  investmentPlanLatest: () => [...dashboardQueryKeys.all, 'investment-plan-latest'] as const,
+  investmentStrategy: (mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'investment-strategy', mode] as const)
+      : ([...dashboardQueryKeys.all, 'investment-strategy'] as const),
+  investmentPlanLatest: (mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'investment-plan-latest', mode] as const)
+      : ([...dashboardQueryKeys.all, 'investment-plan-latest'] as const),
   investmentStatus: () => [...dashboardQueryKeys.all, 'investment-status'] as const,
   investmentHypotheses: () => [...dashboardQueryKeys.all, 'investment-hypotheses'] as const,
   investmentScorecard: () => [...dashboardQueryKeys.all, 'investment-scorecard'] as const,
@@ -158,15 +167,21 @@ export const dashboardQueryKeys = {
   advisorAssetWatchlist: () => [...dashboardQueryKeys.all, 'advisor-asset-watchlist'] as const,
   manualAssets: () => [...dashboardQueryKeys.all, 'manual-assets'] as const,
   // PR5 — Learning Loop surface query keys.
-  advisorJournal: (params?: {
-    limit?: number
-    recommendationId?: number
-    runId?: number
-    decision?: 'accepted' | 'rejected' | 'deferred' | 'ignored'
-  }) =>
+  advisorJournalScope: (mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'advisor-journal', mode] as const)
+      : ([...dashboardQueryKeys.all, 'advisor-journal'] as const),
+  advisorJournal: (
+    params?: {
+      limit?: number
+      recommendationId?: number
+      runId?: number
+      decision?: 'accepted' | 'rejected' | 'deferred' | 'ignored'
+    },
+    mode?: AuthMode
+  ) =>
     [
-      ...dashboardQueryKeys.all,
-      'advisor-journal',
+      ...dashboardQueryKeys.advisorJournalScope(mode),
       params?.limit ?? null,
       params?.recommendationId ?? null,
       params?.runId ?? null,
@@ -182,6 +197,12 @@ export const dashboardQueryKeys = {
     [...dashboardQueryKeys.all, 'trading-lab-strategy-scorecard', strategyId] as const,
   tradingLabHypothesis: (id: number) =>
     [...dashboardQueryKeys.all, 'trading-lab-hypothesis', id] as const,
+}
+
+export const removeDashboardQueriesForAuthTransition = (
+  queryClient: Pick<QueryClient, 'removeQueries'>
+) => {
+  queryClient.removeQueries({ queryKey: dashboardQueryKeys.all })
 }
 
 export const dashboardSummaryQueryOptions = (range: DashboardRange) =>
@@ -494,7 +515,7 @@ export const dashboardAdvisorChatQueryOptionsWithMode = ({
   threadKey?: string
 }) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.advisorChat(threadKey),
+    queryKey: dashboardQueryKeys.advisorChat(threadKey, mode),
     queryFn: () => {
       if (mode === 'demo') {
         return getDemoDashboardAdvisorChat(threadKey)
@@ -582,7 +603,7 @@ export const dashboardInvestmentStrategyQueryOptionsWithMode = ({
   mode?: AuthMode
 }) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.investmentStrategy(),
+    queryKey: dashboardQueryKeys.investmentStrategy(mode),
     queryFn: fetchDashboardInvestmentStrategy,
     enabled: mode !== undefined,
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
@@ -620,7 +641,7 @@ export const dashboardInvestmentPlanLatestQueryOptionsWithMode = ({
   mode?: AuthMode
 }) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.investmentPlanLatest(),
+    queryKey: dashboardQueryKeys.investmentPlanLatest(mode),
     queryFn: fetchDashboardInvestmentPlanLatest,
     enabled: mode !== undefined,
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
@@ -753,12 +774,15 @@ export const dashboardAdvisorJournalQueryOptionsWithMode = ({
   decision?: 'accepted' | 'rejected' | 'deferred' | 'ignored'
 }) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.advisorJournal({
-      ...(limit !== undefined ? { limit } : {}),
-      ...(recommendationId !== undefined ? { recommendationId } : {}),
-      ...(runId !== undefined ? { runId } : {}),
-      ...(decision ? { decision } : {}),
-    }),
+    queryKey: dashboardQueryKeys.advisorJournal(
+      {
+        ...(limit !== undefined ? { limit } : {}),
+        ...(recommendationId !== undefined ? { recommendationId } : {}),
+        ...(runId !== undefined ? { runId } : {}),
+        ...(decision ? { decision } : {}),
+      },
+      mode
+    ),
     queryFn: () => {
       if (mode === 'demo') {
         return getDemoAdvisorDecisionJournal()
@@ -863,14 +887,14 @@ export const dashboardTradingLabHypothesisQueryOptionsWithMode = ({
 // React Query's `invalidateQueries({ queryKey })` invalidates by prefix match, so these short
 // arrays cover every variant (with or without filters) of the matching query.
 export const LEARNING_LOOP_INVALIDATION_KEYS = {
-  afterDecisionJournal: () => [
-    [...dashboardQueryKeys.all, 'advisor-journal'] as const,
+  afterDecisionJournal: (mode?: AuthMode) => [
+    dashboardQueryKeys.advisorJournalScope(mode),
     [...dashboardQueryKeys.all, 'advisor-recommendations'] as const,
     // PR15A — new journal entries shift the analytics window aggregates.
     [...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const,
   ],
-  afterDecisionOutcome: () => [
-    [...dashboardQueryKeys.all, 'advisor-journal'] as const,
+  afterDecisionOutcome: (mode?: AuthMode) => [
+    dashboardQueryKeys.advisorJournalScope(mode),
     // PR15A — outcome creation can change reason-code aggregation + outcome coverage.
     [...dashboardQueryKeys.all, 'advisor-behavior-analytics'] as const,
   ],

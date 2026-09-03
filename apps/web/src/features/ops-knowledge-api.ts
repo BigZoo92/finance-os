@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
 import type { AuthMode } from './auth-types'
+import { knowledgeQueryKeys } from './knowledge-query-options'
 import type { EnrichmentStatusResponse, EnrichmentStorage } from './memory-readiness'
 
 export type EnsureStorageResponse = {
@@ -22,8 +23,11 @@ export const ensureOpsKnowledgeStorage = () =>
   })
 
 export const opsKnowledgeQueryKeys = {
-  all: ['ops-knowledge'] as const,
-  enrichmentStatus: () => [...opsKnowledgeQueryKeys.all, 'enrichment-status'] as const,
+  all: [...knowledgeQueryKeys.all, 'ops'] as const,
+  enrichmentStatus: (mode?: AuthMode) =>
+    mode === undefined
+      ? ([...opsKnowledgeQueryKeys.all, 'enrichment-status'] as const)
+      : ([...opsKnowledgeQueryKeys.all, 'enrichment-status', mode] as const),
 }
 
 const demoStatus = (): EnrichmentStatusResponse => ({
@@ -40,7 +44,7 @@ export const opsKnowledgeEnrichmentStatusQueryOptions = ({
   mode?: AuthMode | undefined
 }) =>
   queryOptions({
-    queryKey: opsKnowledgeQueryKeys.enrichmentStatus(),
+    queryKey: opsKnowledgeQueryKeys.enrichmentStatus(mode),
     queryFn: () =>
       mode === 'admin' ? fetchOpsKnowledgeEnrichmentStatus() : Promise.resolve(demoStatus()),
     enabled: mode !== undefined,

@@ -1,15 +1,16 @@
 import { Button, Input } from '@finance-os/ui/components'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
-import type { FormEvent } from 'react'
 import { motion } from 'motion/react'
+import type { FormEvent } from 'react'
+import { BrandMark } from '@/components/brand/brand-mark'
+import { PixelBlastBackdrop } from '@/components/brand/pixel-blast-backdrop'
 import { postAuthLogin } from '@/features/auth-api'
 import { authMeQueryOptions } from '@/features/auth-query-options'
-import { dashboardQueryKeys } from '@/features/dashboard-query-options'
+import { removeDashboardQueriesForAuthTransition } from '@/features/dashboard-query-options'
+import { removeKnowledgeQueriesForAuthTransition } from '@/features/knowledge-query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { pushToast } from '@/lib/toast-store'
-import { PixelBlastBackdrop } from '@/components/brand/pixel-blast-backdrop'
-import { BrandMark } from '@/components/brand/brand-mark'
 
 const toErrorMessage = (value: unknown) => {
   if (value instanceof Error) return value.message
@@ -40,7 +41,8 @@ function LoginPage() {
     mutationFn: postAuthLogin,
     onSuccess: async () => {
       await queryClient.fetchQuery(authMeQueryOptions())
-      queryClient.removeQueries({ queryKey: dashboardQueryKeys.all })
+      removeKnowledgeQueriesForAuthTransition(queryClient)
+      removeDashboardQueriesForAuthTransition(queryClient)
       queryClient.removeQueries({ queryKey: powensQueryKeys.all })
       pushToast({ title: 'Connexion réussie', description: 'Mode admin actif.', tone: 'success' })
       void navigate({ to: '/' })

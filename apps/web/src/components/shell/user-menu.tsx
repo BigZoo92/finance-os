@@ -12,8 +12,9 @@ import { useState } from 'react'
 import { postAuthLogout } from '@/features/auth-api'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { dashboardQueryKeys } from '@/features/dashboard-query-options'
+import { removeDashboardQueriesForAuthTransition } from '@/features/dashboard-query-options'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
+import { removeKnowledgeQueriesForAuthTransition } from '@/features/knowledge-query-options'
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { toErrorMessage } from '@/lib/format'
 import { useTheme } from '@/lib/theme'
@@ -40,6 +41,8 @@ export function UserMenu() {
   const logoutMutation = useMutation({
     mutationFn: postAuthLogout,
     onSuccess: async () => {
+      removeKnowledgeQueriesForAuthTransition(queryClient)
+      removeDashboardQueriesForAuthTransition(queryClient)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: authQueryKeys.me() }),
         queryClient.invalidateQueries({ queryKey: powensQueryKeys.status() }),
@@ -47,7 +50,6 @@ export function UserMenu() {
         queryClient.invalidateQueries({ queryKey: powensQueryKeys.syncBacklog() }),
         queryClient.invalidateQueries({ queryKey: powensQueryKeys.auditTrail() }),
         queryClient.invalidateQueries({ queryKey: powensQueryKeys.diagnostics() }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: financialGoalsQueryKeys.list() }),
       ])
       pushToast({ title: 'Session fermée', description: 'Retour en mode démo.', tone: 'info' })

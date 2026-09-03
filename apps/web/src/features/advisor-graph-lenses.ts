@@ -11,11 +11,7 @@
  * that activate a lens, optionally select a starter node, and surface
  * the right explainer copy. They never call the backend or the LLM.
  */
-import type {
-  AdvisorGraphNode,
-  AdvisorGraphNodeKind,
-  AdvisorGraph,
-} from './advisor-graph-data'
+import type { AdvisorGraph, AdvisorGraphNode, AdvisorGraphNodeKind } from './advisor-graph-data'
 
 // ─── lenses ───────────────────────────────────────────────────────────────
 
@@ -91,27 +87,22 @@ const pickHighestImportance = (
 export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
   {
     id: 'atlas',
-    eyebrow: '01 · vue d’ensemble',
+    eyebrow: '01 vue d’ensemble',
     label: 'Atlas mémoire',
     tagline: 'Tout ce que l’Advisor a en tête.',
     description:
-      'Vue panoramique. Toutes les couches coexistent — personnel, signaux, concepts, recommandations, sources. Idéal pour repérer un point d’entrée puis basculer sur une lentille plus spécifique.',
+      'Vue panoramique. Les souvenirs personnels, signaux, concepts, recommandations et sources coexistent. Choisis ensuite une vue plus précise.',
     tone: 'aurora',
     includedKinds: ALL_KINDS,
-    emphasizedKinds: [
-      'recommendation',
-      'personal_snapshot',
-      'risk',
-      'concept',
-    ],
+    emphasizedKinds: ['recommendation', 'personal_snapshot', 'risk', 'concept'],
   },
   {
     id: 'decision',
-    eyebrow: '02 · raisonnement',
+    eyebrow: '02 raisonnement',
     label: 'Trace de décision',
     tagline: 'Pourquoi l’Advisor pense ce qu’il pense.',
     description:
-      'Recommandations, hypothèses utilisées, evidence et risques associés. Sert à reconstituer le chemin entre une conclusion et ce qui la soutient ou la fragilise.',
+      'Recommandations, hypothèses, éléments disponibles et risques associés. Cette vue relie une conclusion à ce qui la soutient ou la fragilise.',
     tone: 'brand',
     includedKinds: [
       'recommendation',
@@ -131,11 +122,11 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
   },
   {
     id: 'personal',
-    eyebrow: '03 · toi',
+    eyebrow: '03 toi',
     label: 'Noyau personnel',
     tagline: 'Ce que l’Advisor sait de toi, sans le bruit externe.',
     description:
-      'Snapshot, comptes, objectifs, dépenses récurrentes, investissements, actifs. Aucun signal externe, aucune théorie. Pour vérifier la couverture de ta mémoire personnelle.',
+      'Profil, comptes, objectifs, dépenses récurrentes, investissements et actifs. Aucun signal externe. Cette vue montre la couverture de ta mémoire personnelle.',
     tone: 'positive',
     includedKinds: [
       'personal_snapshot',
@@ -151,43 +142,40 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
   },
   {
     id: 'market',
-    eyebrow: '04 · contexte',
+    eyebrow: '04 contexte',
     label: 'Météo des marchés',
     tagline: 'Ce qui bouge dehors et qui te touche.',
     description:
-      'Signaux de marché, actualités, signaux sociaux et leurs cibles (actifs / investissements). Permet de voir d’où vient une influence externe.',
+      'Signaux de marché, actualités, tendances et investissements concernés. Cette vue montre l’origine d’une influence externe.',
     tone: 'violet',
-    includedKinds: ['market_signal', 'news_signal', 'social_signal', 'asset', 'investment', 'source'],
+    includedKinds: [
+      'market_signal',
+      'news_signal',
+      'social_signal',
+      'asset',
+      'investment',
+      'source',
+    ],
     emphasizedKinds: ['market_signal', 'news_signal', 'social_signal'],
     pickStarter: graph =>
-      pickHighestImportance(
-        graph,
-        n => n.kind === 'market_signal' || n.kind === 'news_signal'
-      ),
+      pickHighestImportance(graph, n => n.kind === 'market_signal' || n.kind === 'news_signal'),
   },
   {
     id: 'risk',
-    eyebrow: '05 · fragilités',
+    eyebrow: '05 fragilités',
     label: 'Risques & contradictions',
-    tagline: 'Ce qui est fragile, stale ou faiblement étayé.',
+    tagline: 'Ce qui est fragile, ancien ou faiblement étayé.',
     description:
-      'Risques, contradictions, hypothèses datées et evidence faible. Un nœud ici ne signifie pas alarme — c’est l’endroit où challenger l’Advisor.',
+      'Risques, contradictions, hypothèses datées et éléments insuffisants. Cette vue montre les points à vérifier.',
     tone: 'warning',
-    includedKinds: [
-      'risk',
-      'contradiction',
-      'assumption',
-      'recommendation',
-      'investment',
-      'asset',
-    ],
+    includedKinds: ['risk', 'contradiction', 'assumption', 'recommendation', 'investment', 'asset'],
     emphasizedKinds: ['risk', 'contradiction'],
     pickStarter: graph =>
       pickHighestImportance(graph, n => n.kind === 'risk' || n.kind === 'contradiction'),
   },
   {
     id: 'knowledge',
-    eyebrow: '06 · théorie',
+    eyebrow: '06 théorie',
     label: 'Couche connaissance',
     tagline: 'Concepts financiers et formules mobilisés.',
     description:
@@ -195,12 +183,11 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     tone: 'violet',
     includedKinds: ['concept', 'formula', 'assumption', 'recommendation'],
     emphasizedKinds: ['concept', 'formula'],
-    pickStarter: graph =>
-      pickHighestImportance(graph, n => n.kind === 'concept'),
+    pickStarter: graph => pickHighestImportance(graph, n => n.kind === 'concept'),
   },
   {
     id: 'sources',
-    eyebrow: '07 · provenance',
+    eyebrow: '07 provenance',
     label: 'Sources & provenance',
     tagline: 'D’où vient chaque chose dans cette mémoire.',
     description:
@@ -208,8 +195,7 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     tone: 'plain',
     includedKinds: ['source', 'concept', 'formula', 'recommendation'],
     emphasizedKinds: ['source'],
-    pickStarter: graph =>
-      pickHighestImportance(graph, n => n.kind === 'source'),
+    pickStarter: graph => pickHighestImportance(graph, n => n.kind === 'source'),
   },
 ]
 
@@ -239,27 +225,27 @@ export const ADVISOR_GRAPH_TOURS: ReadonlyArray<AdvisorGraphTour> = [
   {
     id: 'why-this-reco',
     label: 'Pourquoi cette recommandation ?',
-    hint: 'Suit une recommandation jusqu’à ses hypothèses, evidence et risques.',
+    hint: 'Suit une recommandation jusqu’à ses hypothèses, ses éléments et ses risques.',
     lensId: 'decision',
     pickStarter: graph =>
       pickHighestImportance(graph, n => n.kind === 'recommendation' && !n.isExample),
     explainer:
-      'Trace de décision activée. La recommandation la plus saillante est sélectionnée — ses voisins immédiats sont ses hypothèses, ses sources et les risques qui la fragilisent.',
+      'La recommandation la plus importante est sélectionnée avec ses hypothèses, ses sources et les risques qui la fragilisent.',
   },
   {
     id: 'whats-uncertain',
     label: 'Qu’est-ce qui est incertain ?',
-    hint: 'Met en avant contradictions, evidence faible et hypothèses stale.',
+    hint: 'Met en avant les contradictions, les éléments insuffisants et les hypothèses anciennes.',
     lensId: 'risk',
     pickStarter: graph =>
       pickHighestImportance(graph, n => n.kind === 'contradiction' || n.kind === 'risk'),
     explainer:
-      'Lentille fragilités. Les nœuds gardés sont les zones où l’Advisor doit être challengé : contradictions, hypothèses datées, evidence faible.',
+      'Cette vue conserve les contradictions, les hypothèses datées et les points faiblement étayés.',
   },
   {
     id: 'from-me',
     label: 'Qu’est-ce qui vient de mes données ?',
-    hint: 'Isole le noyau personnel — comptes, objectifs, dépenses, investissements.',
+    hint: 'Isole les comptes, objectifs, dépenses et investissements personnels.',
     lensId: 'personal',
     pickStarter: graph =>
       pickHighestImportance(graph, n => n.kind === 'personal_snapshot' || n.isPersonal === true),
@@ -279,7 +265,7 @@ export const ADVISOR_GRAPH_TOURS: ReadonlyArray<AdvisorGraphTour> = [
   {
     id: 'unknowns',
     label: 'Qu’est-ce que l’Advisor ne sait pas encore ?',
-    hint: 'Met en avant hypothèses stale et nœuds peu étayés.',
+    hint: 'Met en avant les hypothèses anciennes et les souvenirs peu étayés.',
     lensId: 'risk',
     pickStarter: graph =>
       pickHighestImportance(
@@ -290,7 +276,7 @@ export const ADVISOR_GRAPH_TOURS: ReadonlyArray<AdvisorGraphTour> = [
           (typeof n.confidence === 'number' && n.confidence < 0.6)
       ),
     explainer:
-      'Le pli stale / faible confiance. Ces nœuds sont des candidats à enrichir : hypothèses datées, données peu fraîches, points peu étayés.',
+      'Cette vue rassemble les hypothèses datées, les informations anciennes et les points peu étayés.',
   },
 ]
 
@@ -312,21 +298,20 @@ export interface AdvisorGraphQuickFilter {
 export const ADVISOR_GRAPH_QUICK_FILTERS: ReadonlyArray<AdvisorGraphQuickFilter> = [
   {
     id: 'stale_only',
-    label: 'Stale uniquement',
-    shortLabel: 'stale',
+    label: 'À actualiser',
+    shortLabel: 'ancien',
     predicate: n => n.freshness === 'stale' || n.freshness === 'unknown',
   },
   {
     id: 'contradictions_only',
     label: 'Contradictions / risques',
     shortLabel: 'fragile',
-    predicate: n =>
-      n.kind === 'contradiction' || n.kind === 'risk' || n.isContradicted === true,
+    predicate: n => n.kind === 'contradiction' || n.kind === 'risk' || n.isContradicted === true,
   },
   {
     id: 'high_confidence_only',
-    label: 'Confiance haute',
-    shortLabel: '≥ 80%',
+    label: 'Fiabilité élevée',
+    shortLabel: 'fiable',
     predicate: n => typeof n.confidence === 'number' && n.confidence >= 0.8,
   },
   {
@@ -355,7 +340,10 @@ export interface AdvisorGraphRenderPreset {
   autoOrbit: boolean
 }
 
-export const RENDER_PRESETS: Record<'cinematic' | 'standard' | 'performance', AdvisorGraphRenderPreset> = {
+export const RENDER_PRESETS: Record<
+  'cinematic' | 'standard' | 'performance',
+  AdvisorGraphRenderPreset
+> = {
   cinematic: {
     particles: true,
     labels: 'selected',

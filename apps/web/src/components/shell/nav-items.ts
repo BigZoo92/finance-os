@@ -1,8 +1,6 @@
 import {
   BankPixelIcon,
   ChartLinePixelIcon,
-  ChartNetworkPixelIcon,
-  CheckListPixelIcon,
   CoinsPixelIcon,
   CommentPixelIcon,
   FlagPixelIcon,
@@ -217,20 +215,6 @@ export const SECONDARY_LINKS: NavLink[] = [
     keywords: 'macro watchlist regime taux inflation fred eodhd marches bourse admin',
   },
   {
-    to: '/ia/memoire/graph',
-    label: 'Mémoire 3D',
-    icon: ChartNetworkPixelIcon,
-    description: 'Carte des concepts',
-    keywords: 'carte memoire 3d graphe concepts relations',
-  },
-  {
-    to: '/ia/strategie-investissement',
-    label: "Plan d'action investissement",
-    icon: CheckListPixelIcon,
-    description: 'Stratégie et allocations',
-    keywords: 'investissement strategie allocation pea plan action advisor',
-  },
-  {
     to: '/ia/trading-lab',
     label: 'Trading Lab',
     icon: FlaskIcon,
@@ -275,9 +259,7 @@ export const getVisibleNavEntries = (authViewState: AuthViewState): NavEntry[] =
   )
 
 /** Visible mobile drawer sections for the Plus drawer. */
-export const getVisibleDrawerSections = (
-  authViewState: AuthViewState
-): MobileDrawerSection[] =>
+export const getVisibleDrawerSections = (authViewState: AuthViewState): MobileDrawerSection[] =>
   MOBILE_DRAWER_SECTIONS.map(section => ({
     ...section,
     items: section.items.filter(item => isNavLinkVisible(item, authViewState)),
@@ -285,12 +267,8 @@ export const getVisibleDrawerSections = (
 
 /** Every visible destination (primary + secondary) for the palette. */
 export const getPaletteLinks = (authViewState: AuthViewState): NavLink[] => {
-  const primary = NAV_ENTRIES.flatMap(entry =>
-    entry.kind === 'link' ? [entry.link] : entry.items
-  )
-  return [...primary, ...SECONDARY_LINKS].filter(link =>
-    isNavLinkVisible(link, authViewState)
-  )
+  const primary = NAV_ENTRIES.flatMap(entry => (entry.kind === 'link' ? [entry.link] : entry.items))
+  return [...primary, ...SECONDARY_LINKS].filter(link => isNavLinkVisible(link, authViewState))
 }
 
 /**

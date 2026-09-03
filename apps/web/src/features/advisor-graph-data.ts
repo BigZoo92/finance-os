@@ -142,23 +142,23 @@ export const NODE_KIND_COLOR: Record<AdvisorGraphNodeKind, string> = {
 }
 
 export const NODE_KIND_LABEL: Record<AdvisorGraphNodeKind, string> = {
-  personal_snapshot: 'Snapshot personnel',
+  personal_snapshot: 'Profil financier',
   financial_account: 'Compte',
-  transaction_cluster: 'Cluster transactions',
+  transaction_cluster: 'Dépenses',
   asset: 'Actif',
   investment: 'Investissement',
   goal: 'Objectif',
   recommendation: 'Recommandation',
   assumption: 'Hypothèse',
-  market_signal: 'Signal marché',
-  news_signal: 'Signal actu',
-  social_signal: 'Signal social',
+  market_signal: 'Marché',
+  news_signal: 'Actualité',
+  social_signal: 'Tendance',
   concept: 'Concept',
-  formula: 'Formule',
+  formula: 'Méthode',
   risk: 'Risque',
-  contradiction: 'Contradiction',
+  contradiction: 'Point à vérifier',
   source: 'Source',
-  unknown: 'Inconnu',
+  unknown: 'Souvenir',
 }
 
 export const LINK_KIND_LABEL: Record<AdvisorGraphLinkKind, string> = {
@@ -187,15 +187,9 @@ export const LINK_KIND_COLOR: Record<AdvisorGraphLinkKind, string> = {
   belongs_to: '#cbd5e1',
 }
 
-export const NEGATIVE_LINK_KINDS = new Set<AdvisorGraphLinkKind>([
-  'contradicts',
-  'weakens',
-])
+export const NEGATIVE_LINK_KINDS = new Set<AdvisorGraphLinkKind>(['contradicts', 'weakens'])
 
-export const POSITIVE_LINK_KINDS = new Set<AdvisorGraphLinkKind>([
-  'supports',
-  'explains',
-])
+export const POSITIVE_LINK_KINDS = new Set<AdvisorGraphLinkKind>(['supports', 'explains'])
 
 // ─── demo graph (deterministic, no provider calls) ────────────────────────
 
@@ -211,7 +205,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     // Personal snapshot
     {
       id: 'snapshot:me',
-      label: 'Toi · snapshot mensuel',
+      label: 'Toi, vue mensuelle',
       kind: 'personal_snapshot',
       summary: 'Vue agrégée et anonymisée de ton patrimoine et flux courants.',
       confidence: 1,
@@ -225,7 +219,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     // Goals
     {
       id: 'goal:retirement',
-      label: 'Retraite — 2055',
+      label: 'Retraite 2055',
       kind: 'goal',
       summary: 'Objectif long terme, allocation diversifiée mondiale.',
       confidence: 0.82,
@@ -245,7 +239,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     },
     {
       id: 'goal:real_estate',
-      label: 'Apport immobilier — 2028',
+      label: 'Apport immobilier 2028',
       kind: 'goal',
       summary: 'Cible court-moyen terme, sensibilité élevée à la volatilité.',
       confidence: 0.7,
@@ -311,7 +305,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
       id: 'tx:utilities',
       label: 'Charges récurrentes',
       kind: 'transaction_cluster',
-      summary: 'Loyers, énergie, télécom — peu volatil.',
+      summary: 'Loyers, énergie et télécom. Peu volatil.',
       confidence: 0.92,
       freshness: 'fresh',
       importance: 0.5,
@@ -354,7 +348,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
       id: 'asset:eur_cash',
       label: 'Liquidités EUR',
       kind: 'asset',
-      summary: 'Cash dispatch entre comptes, exposé à l’inflation.',
+      summary: 'Liquidités réparties entre comptes et exposées à l’inflation.',
       confidence: 0.95,
       freshness: 'fresh',
       importance: 0.6,
@@ -364,9 +358,9 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     // Concepts (educational nodes — non personal)
     {
       id: 'concept:cash_drag',
-      label: 'Cash drag',
+      label: 'Coût des liquidités',
       kind: 'concept',
-      summary: 'Manque à gagner dû à un cash excédentaire non alloué.',
+      summary: 'Manque à gagner dû à des liquidités excédentaires non allouées.',
       confidence: 0.86,
       freshness: 'fresh',
       importance: 0.7,
@@ -393,9 +387,9 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     },
     {
       id: 'concept:dca',
-      label: 'DCA — investissement programmé',
+      label: 'DCA, investissement programmé',
       kind: 'concept',
-      summary: 'Lissage du point d’entrée pour réduire le timing risk.',
+      summary: 'Lissage du point d’entrée pour réduire le risque de mauvais timing.',
       confidence: 0.82,
       freshness: 'fresh',
       importance: 0.6,
@@ -404,16 +398,16 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
       id: 'concept:risk_adjusted_return',
       label: 'Rendement ajusté du risque',
       kind: 'concept',
-      summary: 'Performance par unité de volatilité (Sharpe, Sortino).',
+      summary: 'Performance par unité de volatilité selon les ratios de Sharpe et de Sortino.',
       confidence: 0.84,
       freshness: 'fresh',
       importance: 0.7,
     },
     {
       id: 'formula:sharpe',
-      label: 'Sharpe ratio',
+      label: 'Ratio de Sharpe',
       kind: 'formula',
-      summary: '(R_p − R_f) / σ_p — compare excess return à la volatilité.',
+      summary: '(R_p − R_f) / σ_p. Compare le rendement excédentaire à la volatilité.',
       confidence: 0.92,
       freshness: 'fresh',
       importance: 0.5,
@@ -443,14 +437,14 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
       id: 'signal:btc_volatility',
       label: 'Volatilité BTC',
       kind: 'market_signal',
-      summary: 'Volatilité élevée et drawdowns asymétriques historiques.',
+      summary: 'Volatilité élevée et replis asymétriques historiques.',
       confidence: 0.78,
       freshness: 'fresh',
       importance: 0.55,
     },
     {
       id: 'news:ecb_rate',
-      label: 'Décision BCE — taux',
+      label: 'Décision BCE sur les taux',
       kind: 'news_signal',
       summary: 'Statu quo, biais accommodant si l’inflation poursuit sa baisse.',
       confidence: 0.74,
@@ -471,9 +465,9 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     // Recommendations
     {
       id: 'reco:reduce_cash_drag',
-      label: 'Réduire le cash drag',
+      label: 'Réduire le coût des liquidités',
       kind: 'recommendation',
-      summary: 'Allouer une partie du cash excédentaire vers le cœur diversifié.',
+      summary: 'Allouer une partie des liquidités excédentaires vers le cœur diversifié.',
       confidence: 0.84,
       freshness: 'fresh',
       importance: 0.9,
@@ -518,9 +512,9 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     },
     {
       id: 'risk:lookahead_bias',
-      label: 'Biais de lookahead',
+      label: 'Biais d’anticipation',
       kind: 'risk',
-      summary: 'Garde-fou pour toute affirmation issue de backtests.',
+      summary: 'Garde-fou pour toute affirmation issue de simulations historiques.',
       confidence: 0.9,
       freshness: 'fresh',
       importance: 0.6,
@@ -567,7 +561,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     // Sources
     {
       id: 'source:internal_engine',
-      label: 'Finance-engine déterministe',
+      label: 'Calculs Finance-OS',
       kind: 'source',
       summary: 'Source de vérité pour positions, soldes et flux.',
       confidence: 1,
@@ -576,7 +570,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     },
     {
       id: 'source:curated_seed',
-      label: 'Seed concepts curatés',
+      label: 'Référentiel Finance-OS',
       kind: 'source',
       summary: 'Concepts financiers de référence intégrés à la mémoire.',
       confidence: 0.95,
@@ -616,27 +610,87 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     { source: 'snapshot:me', target: 'tx:utilities', kind: 'belongs_to', confidence: 0.9 },
 
     // Recommendations supported by evidence/concepts
-    { source: 'reco:reduce_cash_drag', target: 'concept:cash_drag', kind: 'explains', confidence: 0.86 },
-    { source: 'reco:reduce_cash_drag', target: 'asset:eur_cash', kind: 'affects', confidence: 0.84 },
-    { source: 'reco:reduce_cash_drag', target: 'signal:eur_inflation', kind: 'supports', confidence: 0.78 },
-    { source: 'reco:reduce_cash_drag', target: 'concept:inflation_adjusted_returns', kind: 'supports', confidence: 0.82 },
+    {
+      source: 'reco:reduce_cash_drag',
+      target: 'concept:cash_drag',
+      kind: 'explains',
+      confidence: 0.86,
+    },
+    {
+      source: 'reco:reduce_cash_drag',
+      target: 'asset:eur_cash',
+      kind: 'affects',
+      confidence: 0.84,
+    },
+    {
+      source: 'reco:reduce_cash_drag',
+      target: 'signal:eur_inflation',
+      kind: 'supports',
+      confidence: 0.78,
+    },
+    {
+      source: 'reco:reduce_cash_drag',
+      target: 'concept:inflation_adjusted_returns',
+      kind: 'supports',
+      confidence: 0.82,
+    },
 
     { source: 'reco:rebalance', target: 'invest:us_tech', kind: 'affects', confidence: 0.85 },
     { source: 'reco:rebalance', target: 'risk:concentration', kind: 'supports', confidence: 0.84 },
-    { source: 'reco:rebalance', target: 'concept:diversification', kind: 'explains', confidence: 0.88 },
+    {
+      source: 'reco:rebalance',
+      target: 'concept:diversification',
+      kind: 'explains',
+      confidence: 0.88,
+    },
     { source: 'reco:rebalance', target: 'news:tech_earnings', kind: 'mentions', confidence: 0.6 },
 
-    { source: 'reco:emergency_topup', target: 'goal:emergency_fund', kind: 'affects', confidence: 0.92 },
+    {
+      source: 'reco:emergency_topup',
+      target: 'goal:emergency_fund',
+      kind: 'affects',
+      confidence: 0.92,
+    },
     { source: 'reco:emergency_topup', target: 'tx:dining', kind: 'mentions', confidence: 0.6 },
 
-    { source: 'reco:diversify_satellite', target: 'invest:crypto', kind: 'affects', confidence: 0.7 },
-    { source: 'reco:diversify_satellite', target: 'concept:diversification', kind: 'supports', confidence: 0.78 },
-    { source: 'reco:diversify_satellite', target: 'signal:btc_volatility', kind: 'mentions', confidence: 0.62 },
+    {
+      source: 'reco:diversify_satellite',
+      target: 'invest:crypto',
+      kind: 'affects',
+      confidence: 0.7,
+    },
+    {
+      source: 'reco:diversify_satellite',
+      target: 'concept:diversification',
+      kind: 'supports',
+      confidence: 0.78,
+    },
+    {
+      source: 'reco:diversify_satellite',
+      target: 'signal:btc_volatility',
+      kind: 'mentions',
+      confidence: 0.62,
+    },
 
     // Concept relations
-    { source: 'concept:risk_adjusted_return', target: 'formula:sharpe', kind: 'derived_from', confidence: 0.95 },
-    { source: 'concept:diversification', target: 'concept:risk_adjusted_return', kind: 'related_to', confidence: 0.7 },
-    { source: 'concept:dca', target: 'concept:diversification', kind: 'related_to', confidence: 0.55 },
+    {
+      source: 'concept:risk_adjusted_return',
+      target: 'formula:sharpe',
+      kind: 'derived_from',
+      confidence: 0.95,
+    },
+    {
+      source: 'concept:diversification',
+      target: 'concept:risk_adjusted_return',
+      kind: 'related_to',
+      confidence: 0.7,
+    },
+    {
+      source: 'concept:dca',
+      target: 'concept:diversification',
+      kind: 'related_to',
+      confidence: 0.55,
+    },
     { source: 'reco:reduce_cash_drag', target: 'concept:dca', kind: 'mentions', confidence: 0.5 },
 
     // Signals to assets
@@ -644,31 +698,106 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     { source: 'signal:sp500_trend', target: 'invest:etf_world', kind: 'affects', confidence: 0.62 },
     { source: 'signal:sp500_trend', target: 'invest:us_tech', kind: 'affects', confidence: 0.7 },
     { source: 'signal:btc_volatility', target: 'invest:crypto', kind: 'affects', confidence: 0.74 },
-    { source: 'news:ecb_rate', target: 'signal:eur_inflation', kind: 'related_to', confidence: 0.68 },
-    { source: 'news:tech_earnings', target: 'signal:sp500_trend', kind: 'mentions', confidence: 0.6 },
+    {
+      source: 'news:ecb_rate',
+      target: 'signal:eur_inflation',
+      kind: 'related_to',
+      confidence: 0.68,
+    },
+    {
+      source: 'news:tech_earnings',
+      target: 'signal:sp500_trend',
+      kind: 'mentions',
+      confidence: 0.6,
+    },
     { source: 'news:tech_earnings', target: 'invest:us_tech', kind: 'mentions', confidence: 0.66 },
 
     // Risks
     { source: 'risk:concentration', target: 'invest:us_tech', kind: 'affects', confidence: 0.86 },
-    { source: 'risk:currency_exposure', target: 'invest:etf_world', kind: 'affects', confidence: 0.7 },
-    { source: 'risk:lookahead_bias', target: 'concept:risk_adjusted_return', kind: 'weakens', confidence: 0.7 },
+    {
+      source: 'risk:currency_exposure',
+      target: 'invest:etf_world',
+      kind: 'affects',
+      confidence: 0.7,
+    },
+    {
+      source: 'risk:lookahead_bias',
+      target: 'concept:risk_adjusted_return',
+      kind: 'weakens',
+      confidence: 0.7,
+    },
 
     // Contradictions
-    { source: 'contradiction:market_timing', target: 'concept:dca', kind: 'contradicts', confidence: 0.6 },
-    { source: 'contradiction:market_timing', target: 'reco:rebalance', kind: 'weakens', confidence: 0.45 },
+    {
+      source: 'contradiction:market_timing',
+      target: 'concept:dca',
+      kind: 'contradicts',
+      confidence: 0.6,
+    },
+    {
+      source: 'contradiction:market_timing',
+      target: 'reco:rebalance',
+      kind: 'weakens',
+      confidence: 0.45,
+    },
 
     // Assumptions
-    { source: 'reco:reduce_cash_drag', target: 'assumption:inflation_3pct', kind: 'uses_assumption', confidence: 0.6 },
-    { source: 'reco:emergency_topup', target: 'assumption:inflation_3pct', kind: 'uses_assumption', confidence: 0.55 },
-    { source: 'reco:rebalance', target: 'assumption:equity_7pct', kind: 'uses_assumption', confidence: 0.6 },
-    { source: 'reco:diversify_satellite', target: 'assumption:equity_7pct', kind: 'uses_assumption', confidence: 0.5 },
+    {
+      source: 'reco:reduce_cash_drag',
+      target: 'assumption:inflation_3pct',
+      kind: 'uses_assumption',
+      confidence: 0.6,
+    },
+    {
+      source: 'reco:emergency_topup',
+      target: 'assumption:inflation_3pct',
+      kind: 'uses_assumption',
+      confidence: 0.55,
+    },
+    {
+      source: 'reco:rebalance',
+      target: 'assumption:equity_7pct',
+      kind: 'uses_assumption',
+      confidence: 0.6,
+    },
+    {
+      source: 'reco:diversify_satellite',
+      target: 'assumption:equity_7pct',
+      kind: 'uses_assumption',
+      confidence: 0.5,
+    },
 
     // Sources
-    { source: 'snapshot:me', target: 'source:internal_engine', kind: 'derived_from', confidence: 1 },
-    { source: 'concept:cash_drag', target: 'source:curated_seed', kind: 'derived_from', confidence: 0.95 },
-    { source: 'concept:inflation_adjusted_returns', target: 'source:curated_seed', kind: 'derived_from', confidence: 0.95 },
-    { source: 'concept:risk_adjusted_return', target: 'source:curated_seed', kind: 'derived_from', confidence: 0.9 },
-    { source: 'signal:eur_inflation', target: 'source:macro_feed', kind: 'derived_from', confidence: 0.85 },
+    {
+      source: 'snapshot:me',
+      target: 'source:internal_engine',
+      kind: 'derived_from',
+      confidence: 1,
+    },
+    {
+      source: 'concept:cash_drag',
+      target: 'source:curated_seed',
+      kind: 'derived_from',
+      confidence: 0.95,
+    },
+    {
+      source: 'concept:inflation_adjusted_returns',
+      target: 'source:curated_seed',
+      kind: 'derived_from',
+      confidence: 0.95,
+    },
+    {
+      source: 'concept:risk_adjusted_return',
+      target: 'source:curated_seed',
+      kind: 'derived_from',
+      confidence: 0.9,
+    },
+    {
+      source: 'signal:eur_inflation',
+      target: 'source:macro_feed',
+      kind: 'derived_from',
+      confidence: 0.85,
+    },
     { source: 'news:ecb_rate', target: 'source:macro_feed', kind: 'derived_from', confidence: 0.8 },
   ]
 
@@ -678,7 +807,7 @@ export function buildAdvisorDemoGraph(): AdvisorGraph {
     meta: {
       origin: 'demo',
       summary:
-        'Carte mémoire déterministe du démo Advisor — concepts, signaux, recommandations, risques et contradictions, sans appel fournisseur.',
+        'Carte mémoire déterministe de démonstration avec concepts, signaux, recommandations, risques et contradictions.',
       nodeCount: nodes.length,
       linkCount: links.length,
       realNodeCount: 0,
@@ -747,7 +876,10 @@ const RELATION_TO_KIND_RULES: Array<{ test: RegExp; kind: AdvisorGraphLinkKind }
   { test: /weakens/i, kind: 'weakens' },
   { test: /derived_from|defines|uses_formula/i, kind: 'derived_from' },
   { test: /requires_assumption/i, kind: 'uses_assumption' },
-  { test: /affects|impacts|increases_risk|decreases_risk|affects_asset|affects_sector|affects_goal|mitigates/i, kind: 'affects' },
+  {
+    test: /affects|impacts|increases_risk|decreases_risk|affects_asset|affects_sector|affects_goal|mitigates/i,
+    kind: 'affects',
+  },
   { test: /observed_in|mentions|triggered_by/i, kind: 'mentions' },
   { test: /belongs|part_of/i, kind: 'belongs_to' },
   { test: /correlates_with|similar_to|leads_to|causes/i, kind: 'related_to' },
@@ -809,13 +941,7 @@ interface BuildArgs {
  * - NEVER silently mixes example data — this is a trust requirement.
  */
 export function buildAdvisorGraphFromKnowledge(args: BuildArgs): AdvisorGraph {
-  const {
-    bundle,
-    query,
-    stats,
-    preview = false,
-    minRealNodes = MIN_REAL_NODES_FOR_RENDER,
-  } = args
+  const { bundle, query, stats, preview = false, minRealNodes = MIN_REAL_NODES_FOR_RENDER } = args
 
   const nodeMap = new Map<string, AdvisorGraphNode>()
   const linkBag: AdvisorGraphLink[] = []
@@ -852,7 +978,15 @@ export function buildAdvisorGraphFromKnowledge(args: BuildArgs): AdvisorGraph {
   }
 
   const fromContextItem = (
-    item: { id: string; type: string; title: string; summary: string; confidence: number; recency: number; provenanceRefs: string[] },
+    item: {
+      id: string
+      type: string
+      title: string
+      summary: string
+      confidence: number
+      recency: number
+      provenanceRefs: string[]
+    },
     importanceScale: number,
     forceKind?: AdvisorGraphNodeKind
   ): AdvisorGraphNode => {
@@ -965,8 +1099,8 @@ export function buildAdvisorGraphFromKnowledge(args: BuildArgs): AdvisorGraph {
         origin: 'mixed',
         summary:
           realCount > 0
-            ? `Aperçu enrichi — ${realCount} nœud(s) réels combinés à ${example.nodes.length} exemples curés. Les exemples sont marqués « exemple ».`
-            : `Aperçu enrichi — uniquement des exemples curés (mémoire réelle vide). Aucun nœud réel n'est affiché.`,
+            ? `Aperçu enrichi. ${realCount} nœud(s) réels combinés à ${example.nodes.length} exemples. Les exemples restent signalés.`
+            : `Aperçu enrichi avec uniquement des exemples. Aucun souvenir réel n'est affiché.`,
         nodeCount: mergedNodes.length,
         linkCount: mergedLinks.length,
         realNodeCount: realCount,
@@ -1003,7 +1137,7 @@ export function buildAdvisorGraphFromKnowledge(args: BuildArgs): AdvisorGraph {
     links,
     meta: {
       origin: 'real',
-      summary: `Mémoire Advisor réelle — ${realCount} nœuds, ${links.length} relations dérivées du bundle et des hits.`,
+      summary: `Mémoire Advisor réelle avec ${realCount} nœuds et ${links.length} relations.`,
       nodeCount: realCount,
       linkCount: links.length,
       realNodeCount: realCount,
@@ -1104,11 +1238,7 @@ export function findShortestPath(
  * Set of node ids reachable within `depth` BFS steps from `seedId`,
  * inclusive. Used to "isolate this neighborhood" in the renderer.
  */
-export function getNeighborhood(
-  graph: AdvisorGraph,
-  seedId: string,
-  depth: number
-): Set<string> {
+export function getNeighborhood(graph: AdvisorGraph, seedId: string, depth: number): Set<string> {
   const adj = buildAdjacency(graph.links)
   const visited = new Set<string>([seedId])
   let frontier: string[] = [seedId]

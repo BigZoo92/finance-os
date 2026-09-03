@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { CommandPalette } from '@/components/shell/command-palette'
 import { MobileNav, MobileTopBar } from '@/components/shell/mobile-nav'
 import { TopNavbar } from '@/components/shell/top-navbar'
+import { usePrefersReducedMotion } from '@/lib/use-prefers-reduced-motion'
 
 export const Route = createFileRoute('/_app')({
   component: AppLayout,
@@ -16,9 +17,9 @@ export const Route = createFileRoute('/_app')({
  * five-tab bottom navigation. Page content is centered at the canonical
  * standard width.
  */
-function AppLayout() {
+export function AppLayout() {
   const locationKey = useRouterState({ select: state => state.location.pathname })
-  const prefersReducedMotion = useReducedMotion()
+  const prefersReducedMotion = usePrefersReducedMotion()
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">

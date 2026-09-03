@@ -15,6 +15,7 @@ import type {
   AdvisorGraphNode,
   AdvisorGraphNodeKind,
 } from './advisor-graph-data'
+import { toHumanAdvisorMemoryLink, toHumanAdvisorMemoryNode } from './advisor-memory-view-model'
 
 // ─── DTO types (mirror of backend) ────────────────────────────────────────
 
@@ -54,12 +55,7 @@ export interface AdvisorGraphLinkDto {
   metadata?: Record<string, unknown>
 }
 
-export type AdvisorKnowledgeGraphMetaOriginDto =
-  | 'real'
-  | 'demo'
-  | 'mixed'
-  | 'empty'
-  | 'degraded'
+export type AdvisorKnowledgeGraphMetaOriginDto = 'real' | 'demo' | 'mixed' | 'empty' | 'degraded'
 
 export interface AdvisorKnowledgeGraphDto {
   nodes: AdvisorGraphNodeDto[]
@@ -115,7 +111,7 @@ export const mapAdvisorKnowledgeGraphDtoToViewModel = (
     if (node.isSensitive === true) view.isSensitive = true
     if (node.isContradicted === true) view.isContradicted = true
     if (node.origin === 'example') view.isExample = true
-    return view
+    return toHumanAdvisorMemoryNode(view)
   })
 
   const links: AdvisorGraphLink[] = dto.links.map(link => {
@@ -129,7 +125,7 @@ export const mapAdvisorKnowledgeGraphDtoToViewModel = (
     if (link.strength !== undefined) view.strength = link.strength
     if (link.observedAt !== undefined) view.observedAt = link.observedAt
     if (link.summary !== undefined) view.summary = link.summary
-    return view
+    return toHumanAdvisorMemoryLink(view)
   })
 
   const realNodeCount = nodes.filter(n => !n.isExample).length
@@ -137,9 +133,7 @@ export const mapAdvisorKnowledgeGraphDtoToViewModel = (
 
   // Translate the DTO meta.origin to the view-model's narrower union.
   const origin: AdvisorGraph['meta']['origin'] =
-    dto.meta.origin === 'degraded'
-      ? 'empty'
-      : dto.meta.origin
+    dto.meta.origin === 'degraded' ? 'empty' : dto.meta.origin
 
   return {
     nodes,
@@ -147,8 +141,11 @@ export const mapAdvisorKnowledgeGraphDtoToViewModel = (
     meta: {
       origin,
       summary:
-        dto.meta.reason ??
-        `Mémoire Advisor — ${nodes.length} nœuds, ${links.length} relations.`,
+        dto.meta.degraded === true || dto.meta.origin === 'degraded'
+          ? 'La mémoire est momentanément indisponible.'
+          : dto.meta.origin === 'empty'
+            ? 'Aucun souvenir exploitable pour cette vue.'
+            : `Mémoire Advisor avec ${nodes.length} nœuds et ${links.length} relations.`,
       nodeCount: nodes.length,
       linkCount: links.length,
       realNodeCount,

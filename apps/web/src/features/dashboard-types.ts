@@ -996,6 +996,14 @@ export type DashboardInvestmentStrategyProfile = {
   updatedAt: string
 }
 
+export type DashboardInvestmentStrategyUpdateInput = {
+  description?: string
+  horizonYears?: number
+  riskProfile?: DashboardInvestmentStrategyProfile['riskProfile']
+  monthlyContributionTarget?: number | null
+  rebalanceThresholdPct?: number
+}
+
 export type DashboardInvestmentStrategyBucket = {
   id: number
   strategyId: number
