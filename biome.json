@@ -20,6 +20,7 @@
       "!**/.turbo",
       "!**/.next",
       "!**/.output",
+      "!**/.design",
       "!**/routeTree.gen.ts",
       "!**/routeTree.gen.tsx",
       "!apps/web/src/components/reactbits/antigravity.tsx",

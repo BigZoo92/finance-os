@@ -22,4 +22,30 @@ describe('external investment browser surface', () => {
       expect(browserSource).not.toContain(fragment)
     }
   })
+
+  it('keeps canonical Integrations free of credential labels and secret controls', () => {
+    const sourceFiles = [
+      resolve(import.meta.dirname, '../../routes/_app/integrations.tsx'),
+      resolve(import.meta.dirname, '../integrations-view-model.ts'),
+    ]
+    const browserSource = sourceFiles
+      .map(file => readFileSync(file, 'utf8'))
+      .join('\n')
+      .toLowerCase()
+    const forbiddenLabels = [
+      'binance api key',
+      'binance api secret',
+      'ibkr flex token',
+      'ibkr query id',
+      'ibkr query ids',
+      'credential reveal',
+      'secret editing',
+      'secret reveal',
+      'environment variable',
+    ]
+
+    for (const label of forbiddenLabels) {
+      expect(browserSource).not.toContain(label)
+    }
+  })
 })

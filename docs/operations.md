@@ -10,6 +10,10 @@
 
 ## Operational surfaces
 
+- `/couts`: human cost view with fixed estimates, measured usage, provenance, currency, and incomplete-coverage states.
+- `/sante`: provider health, data freshness, valuation coverage, unresolved assets, and recovery links without raw operational diagnostics.
+- `/integrations`: provider lifecycle and the single UI owner for Powens, IBKR, and Binance synchronization.
+- `/orchestration`: registered job status, global/manual runs, cancellation/recovery, recent results, valuation dry run, and confirmed Social/X maintenance actions.
 - `/dashboard/providers/diagnostics`: admin-only read-only provider health snapshot.
 - `/dashboard/data-quality`: local data-quality/readiness view; it does not trigger provider refresh.
 - `/dashboard/advisor/manual-refresh-and-run`: guarded, locked orchestration with operation status.
@@ -17,6 +21,8 @@
 - `infra/docker/ops-alerts`: 5xx probes, service health, heartbeat freshness, and disk capacity.
 
 Exact route prefixes are mounted by `apps/api/src/routes/dashboard/router.ts`; tests beside each route are the contract.
+
+Demo renders deterministic fixtures for the Ops routes and exposes no mutation controls. Admin actions preserve server locks, cooldowns, quotas, read-only provider boundaries, and explicit confirmations. UI feedback is intentionally human and safe; request IDs and raw errors remain available only to authorized operational tooling and structured logs.
 
 ## Degraded provider
 

@@ -1,18 +1,18 @@
 import {
-  Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  Freshness,
+  ProviderStatus,
 } from '@finance-os/ui/components'
-import { LinkPixelIcon, RefreshPixelIcon } from '@finance-os/ui/icons/pixel'
+import { LinkPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 import { useState } from 'react'
-import { ActionDock } from '@/components/surfaces/action-dock'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
@@ -25,6 +25,13 @@ import {
 } from '@/features/external-investments/query-options'
 import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
 import { financialGoalsQueryKeys } from '@/features/goals/query-options'
+import {
+  canRunIntegrationAction,
+  createIntegrationProviders,
+  getSafeIntegrationError,
+  type IntegrationPrimaryAction,
+  type IntegrationProviderId,
+} from '@/features/integrations-view-model'
 import {
   deletePowensConnection,
   fetchPowensConnectUrl,
@@ -39,14 +46,9 @@ import {
   startPowensManualSyncCooldown,
 } from '@/features/powens/manual-sync-cooldown'
 import { powensQueryKeys, powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
-import { getPowensConnectionSyncBadgeModel } from '@/features/powens/sync-status'
-import { formatDateTime, toErrorMessage } from '@/lib/format'
+import type { PowensConnectionStatus } from '@/features/powens/types'
 import { pushToast } from '@/lib/toast-store'
-
-const EXTERNAL_PROVIDERS: ExternalInvestmentProvider[] = ['ibkr', 'binance']
-
-const providerLabel = (provider: ExternalInvestmentProvider) =>
-  provider === 'ibkr' ? 'IBKR Flex' : 'Binance Spot'
+import { useIsMobile } from '@/lib/use-is-mobile'
 
 export const Route = createFileRoute('/_app/integrations')({
   loader: async ({ context }) => {
@@ -54,11 +56,9 @@ export const Route = createFileRoute('/_app/integrations')({
     const mode: AuthMode | undefined =
       auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
-
-    const opts = { mode }
-    await Promise.all([
-      context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode(opts)),
+    await Promise.allSettled([
+      context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode({ mode })),
+      context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode({ mode })),
     ])
   },
   component: IntegrationsPage,
@@ -66,440 +66,376 @@ export const Route = createFileRoute('/_app/integrations')({
 
 function IntegrationsPage() {
   const queryClient = useQueryClient()
-  const [pendingDisconnectConnectionId, setPendingDisconnectConnectionId] = useState<string | null>(
-    null
-  )
-  const manualSyncCooldownUiConfig = getPowensManualSyncCooldownUiConfig()
-  const manualSyncCooldownState = useStore(powensManualSyncCooldownStore)
-  const manualSyncCooldownSnapshot = getPowensManualSyncCooldownSnapshot(manualSyncCooldownState)
-
+  const isMobile = useIsMobile()
+  const [selectedProvider, setSelectedProvider] = useState<IntegrationProviderId | null>(null)
+  const [pendingDisconnectId, setPendingDisconnectId] = useState<string | null>(null)
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
-  const isDemo = authViewState === 'demo'
   const isAdmin = authViewState === 'admin'
-  const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
-
-  const statusQuery = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const externalStatusQuery = useQuery(
-    externalInvestmentsStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-
-  const statusConnections = statusQuery.data?.connections ?? []
-  const externalConnections = externalStatusQuery.data?.connections ?? []
-  const externalHealth = externalStatusQuery.data?.health ?? []
-  const isIntegrationsSafeMode = statusQuery.data?.safeModeActive ?? false
-  const isExternalSafeMode = externalStatusQuery.data?.safeModeActive ?? false
-  const syncStatusPersistenceEnabled = statusQuery.data?.syncStatusPersistenceEnabled ?? false
-
-  const manualSyncUiState = getPowensManualSyncUiState({
-    cooldownUiEnabled: manualSyncCooldownUiConfig.enabled,
-    cooldownSnapshot: manualSyncCooldownSnapshot,
-    isIntegrationsSafeMode,
-    isSyncPending: false,
-    mode: authMode,
+  const mode: AuthMode | undefined = isAdmin
+    ? 'admin'
+    : authViewState === 'demo'
+      ? 'demo'
+      : undefined
+  const modeOptions = mode ? { mode } : {}
+  const powensQuery = useQuery(powensStatusQueryOptionsWithMode(modeOptions))
+  const externalQuery = useQuery(externalInvestmentsStatusQueryOptionsWithMode(modeOptions))
+  const providers = createIntegrationProviders({
+    powens: powensQuery.data,
+    external: externalQuery.data,
   })
+  const selected = providers.find(provider => provider.id === selectedProvider) ?? null
+  const cooldownConfig = getPowensManualSyncCooldownUiConfig()
+  const cooldownState = useStore(powensManualSyncCooldownStore)
+  const cooldownSnapshot = getPowensManualSyncCooldownSnapshot(cooldownState)
+
+  const invalidatePowens = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: powensQueryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: financialGoalsQueryKeys.list() }),
+    ])
 
   const connectMutation = useMutation({
-    mutationFn: async () => {
-      if (!isAdmin) throw new Error('Admin session required')
-      return fetchPowensConnectUrl({})
+    mutationFn: async (action: Extract<IntegrationPrimaryAction, 'connect' | 'reconnect'>) => {
+      if (!isAdmin) throw new Error('ADMIN_REQUIRED')
+      const payload = await fetchPowensConnectUrl({})
+      return { ...payload, action }
     },
-    onSuccess: payload => {
-      window.location.assign(payload.url)
-    },
-    onError: error => {
+    onSuccess: payload => window.location.assign(payload.url),
+    onError: (_error, action) => {
       pushToast({
-        title: 'Connexion impossible',
-        description: toErrorMessage(error),
+        title: action === 'reconnect' ? 'Reconnexion impossible' : 'Connexion impossible',
+        description: getSafeIntegrationError(action),
         tone: 'error',
       })
     },
   })
 
-  const syncMutation = useMutation({
-    mutationFn: async ({ connectionId }: { connectionId?: string } = {}) => {
-      if (!isAdmin) throw new Error('Admin session required')
-      return postPowensSync(connectionId ? { connectionId } : {})
+  const powensSyncMutation = useMutation({
+    mutationFn: async () => {
+      if (!isAdmin) throw new Error('ADMIN_REQUIRED')
+      return postPowensSync()
     },
     onSuccess: async () => {
-      if (manualSyncCooldownUiConfig.enabled) {
-        startPowensManualSyncCooldown(manualSyncCooldownUiConfig.durationSeconds)
-      }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: powensQueryKeys.status() }),
-        queryClient.invalidateQueries({ queryKey: powensQueryKeys.syncRuns() }),
-        queryClient.invalidateQueries({ queryKey: powensQueryKeys.diagnostics() }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: financialGoalsQueryKeys.list() }),
-      ])
+      if (cooldownConfig.enabled) startPowensManualSyncCooldown(cooldownConfig.durationSeconds)
+      await invalidatePowens()
       pushToast({
-        title: 'Sync enfilée',
-        description: 'Le worker va traiter la synchronisation.',
+        title: 'Synchronisation démarrée',
+        description: 'Les nouvelles données apparaîtront après leur traitement.',
         tone: 'success',
       })
     },
-    onError: error => {
-      pushToast({ title: 'Sync refusée', description: toErrorMessage(error), tone: 'error' })
+    onError: () => {
+      pushToast({
+        title: 'Synchronisation impossible',
+        description: getSafeIntegrationError('sync'),
+        tone: 'error',
+      })
+    },
+  })
+
+  const externalSyncMutation = useMutation({
+    mutationFn: async (provider: ExternalInvestmentProvider) => {
+      if (!isAdmin) throw new Error('ADMIN_REQUIRED')
+      return postExternalInvestmentSync(provider)
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: externalInvestmentsQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+      ])
+      pushToast({
+        title: 'Synchronisation démarrée',
+        description: 'Le portefeuille sera actualisé après son traitement.',
+        tone: 'success',
+      })
+    },
+    onError: () => {
+      pushToast({
+        title: 'Synchronisation impossible',
+        description: getSafeIntegrationError('sync'),
+        tone: 'error',
+      })
     },
   })
 
   const disconnectMutation = useMutation({
-    mutationFn: async ({ connectionId }: { connectionId: string }) => {
-      if (!isAdmin) throw new Error('Admin session required')
+    mutationFn: async (connectionId: string) => {
+      if (!isAdmin) throw new Error('ADMIN_REQUIRED')
       return deletePowensConnection(connectionId)
     },
-    onSuccess: async payload => {
-      setPendingDisconnectConnectionId(null)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: powensQueryKeys.status() }),
-        queryClient.invalidateQueries({ queryKey: powensQueryKeys.syncRuns() }),
-        queryClient.invalidateQueries({ queryKey: powensQueryKeys.diagnostics() }),
-        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: financialGoalsQueryKeys.list() }),
-      ])
+    onSuccess: async () => {
+      setPendingDisconnectId(null)
+      await invalidatePowens()
       pushToast({
-        title: payload.disconnected ? 'Connexion retiree' : 'Connexion deja retiree',
-        description: 'Les comptes lies sont caches des vues actives.',
+        title: 'Connexion retirée',
+        description: 'Les comptes associés ne sont plus affichés dans les vues actives.',
         tone: 'success',
       })
     },
-    onError: error => {
-      pushToast({ title: 'Retrait refuse', description: toErrorMessage(error), tone: 'error' })
+    onError: () => {
+      pushToast({
+        title: 'Retrait impossible',
+        description: getSafeIntegrationError('disconnect'),
+        tone: 'error',
+      })
     },
   })
 
-  const invalidateExternalInvestments = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: externalInvestmentsQueryKeys.all }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
-    ])
+  const powensSyncState = getPowensManualSyncUiState({
+    cooldownUiEnabled: cooldownConfig.enabled,
+    cooldownSnapshot,
+    isIntegrationsSafeMode: providers[0]?.safeMode ?? false,
+    isSyncPending: powensSyncMutation.isPending,
+    mode,
+  })
+
+  const runPrimaryAction = (
+    providerId: IntegrationProviderId,
+    action: IntegrationPrimaryAction
+  ) => {
+    if (providerId === 'powens') {
+      if (action === 'connect' || action === 'reconnect') connectMutation.mutate(action)
+      if (action === 'sync') powensSyncMutation.mutate()
+      return
+    }
+    if (action === 'sync') externalSyncMutation.mutate(providerId)
   }
 
-  const externalSyncMutation = useMutation({
-    mutationFn: async ({ provider }: { provider?: ExternalInvestmentProvider } = {}) => {
-      if (!isAdmin) throw new Error('Admin session required')
-      return postExternalInvestmentSync(provider)
-    },
-    onSuccess: async payload => {
-      await invalidateExternalInvestments()
-      pushToast({
-        title: 'Sync investissements enfilee',
-        description: `${payload.enqueued.length} provider${payload.enqueued.length !== 1 ? 's' : ''} en file worker.`,
-        tone: 'success',
-      })
-    },
-    onError: error => {
-      pushToast({ title: 'Sync refusee', description: toErrorMessage(error), tone: 'error' })
-    },
-  })
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <PageHeader
-        eyebrow="Intelligence & Admin"
+        eyebrow="Ops"
         icon={<LinkPixelIcon size={12} />}
         title="Intégrations"
-        description="Connexions, synchronisations et diagnostics provider. Le cockpit reste utilisable si une source est dégradée."
-        actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => syncMutation.mutate({})}
-              disabled={manualSyncUiState.blocked || syncMutation.isPending}
-            >
-              <span aria-hidden="true">⟳</span>
-              {syncMutation.isPending ? 'Sync…' : 'Lancer une sync'}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="aurora"
-              onClick={() => connectMutation.mutate()}
-              disabled={!isAdmin || isIntegrationsSafeMode || connectMutation.isPending}
-            >
-              {connectMutation.isPending ? 'Ouverture…' : 'Connecter une banque'}
-            </Button>
-          </>
-        }
+        description="Les connexions financières externes de Finance-OS."
       />
 
-      {isIntegrationsSafeMode && (
-        <Card className="border-warning/40 bg-warning/5">
-          <CardContent className="p-4 text-sm text-warning">
-            Safe mode actif : connexions et synchronisations Powens temporairement bloquées.
-          </CardContent>
-        </Card>
-      )}
+      {authViewState === 'demo' ? (
+        <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
+          Lecture seule avec données de démonstration. Les actions de connexion sont réservées à
+          l’Admin.
+        </div>
+      ) : null}
 
-      {isExternalSafeMode && (
-        <Card className="border-warning/40 bg-warning/5">
-          <CardContent className="p-4 text-sm text-warning">
-            Safe mode investissements actif : IBKR et Binance ne seront pas appeles par le worker.
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-base">Investissements externes</CardTitle>
-              <CardDescription>
-                IBKR Flex et Binance Spot sont configurés côté serveur et restent strictement en
-                lecture seule.
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={
-                !isAdmin ||
-                isExternalSafeMode ||
-                externalSyncMutation.isPending ||
-                !EXTERNAL_PROVIDERS.some(
-                  provider => externalStatusQuery.data?.providerConfigured?.[provider]
-                )
-              }
-              onClick={() => externalSyncMutation.mutate({})}
+      <section className="grid gap-4 lg:grid-cols-3" aria-label="Fournisseurs connectés">
+        {providers.map(provider => {
+          const pending =
+            provider.id === 'powens'
+              ? connectMutation.isPending || powensSyncMutation.isPending
+              : externalSyncMutation.isPending && externalSyncMutation.variables === provider.id
+          const actionAllowed =
+            canRunIntegrationAction({
+              isAdmin,
+              pending,
+              safeMode: provider.safeMode,
+              action: provider.primaryAction,
+            }) &&
+            !(
+              provider.id === 'powens' &&
+              provider.primaryAction === 'sync' &&
+              powensSyncState.blocked
+            )
+          return (
+            <article
+              key={provider.id}
+              className="flex min-h-64 flex-col rounded-surface border border-border/70 bg-card p-5 shadow-surface"
             >
-              <RefreshPixelIcon size={14} />
-              {externalSyncMutation.isPending && !externalSyncMutation.variables?.provider
-                ? 'Sync...'
-                : 'Sync IBKR + Binance'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid gap-3 lg:grid-cols-2">
-            {EXTERNAL_PROVIDERS.map(provider => {
-              const connection = externalConnections.find(item => item.provider === provider)
-              const health = externalHealth.find(item => item.provider === provider)
-              const configured = externalStatusQuery.data?.providerConfigured?.[provider] ?? false
-              const isProviderSyncPending =
-                externalSyncMutation.isPending &&
-                externalSyncMutation.variables?.provider === provider
-              return (
-                <div key={provider} className="rounded-lg border border-border/50 bg-surface-1 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold">{providerLabel(provider)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {provider === 'ibkr'
-                          ? 'Flex Web Service reporting; aucun endpoint trading.'
-                          : 'Spot USER_DATA / Wallet GET; trading, transfert et retrait interdits.'}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Dernier succes :{' '}
-                        {formatDateTime(health?.lastSuccessAt ?? connection?.lastSuccessAt ?? null)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <Badge variant={configured ? 'positive' : 'outline'}>
-                        {configured ? 'Configuré via l’environnement' : 'Non configuré'}
-                      </Badge>
-                      <Badge
-                        variant={
-                          health?.status === 'healthy'
-                            ? 'positive'
-                            : health?.status === 'failing'
-                              ? 'destructive'
-                              : health?.status === 'degraded'
-                                ? 'warning'
-                                : 'outline'
-                        }
-                      >
-                        {health?.status ?? 'idle'}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs"
-                      disabled={
-                        !isAdmin || !configured || isExternalSafeMode || isProviderSyncPending
-                      }
-                      onClick={() => externalSyncMutation.mutate({ provider })}
-                    >
-                      {isProviderSyncPending ? 'Sync...' : 'Synchroniser'}
-                    </Button>
-                  </div>
-                  {connection?.lastErrorMessage && (
-                    <p className="mt-2 text-xs text-destructive">{connection.lastErrorMessage}</p>
-                  )}
-                  {health?.lastRequestId && (
-                    <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">
-                      request {health.lastRequestId}
-                    </p>
-                  )}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-pixel text-[10px] uppercase tracking-[0.14em] text-primary">
+                    {provider.label}
+                  </p>
+                  <h2 className="mt-3 text-base font-semibold">{provider.role}</h2>
                 </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Connections */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Connexions</CardTitle>
-          <CardDescription>
-            {statusConnections.length} connexion{statusConnections.length !== 1 ? 's' : ''}{' '}
-            enregistrée{statusConnections.length !== 1 ? 's' : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {statusQuery.isPending ? (
-            <div className="space-y-3">
-              {Array.from(
-                { length: 2 },
-                (_, index) => `integration-status-skeleton-${index + 1}`
-              ).map(key => (
-                <div key={key} className="h-20 animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : statusConnections.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Aucune connexion Powens.
-            </p>
-          ) : (
-            statusConnections.map(connection => {
-              const syncBadge = getPowensConnectionSyncBadgeModel({
-                connection,
-                persistenceEnabled: syncStatusPersistenceEnabled,
-              })
-              const isConfirmingDisconnect =
-                pendingDisconnectConnectionId === connection.powensConnectionId
-              const isDisconnectPending =
-                disconnectMutation.isPending &&
-                disconnectMutation.variables?.connectionId === connection.powensConnectionId
-              const disconnectAction = getPowensDisconnectActionState({
-                isAdmin,
-                isConfirming: isConfirmingDisconnect,
-                isPending: isDisconnectPending,
-              })
-              return (
-                <div
-                  key={connection.id}
-                  className="rounded-lg border border-border/50 bg-surface-1 p-4 transition-colors hover:bg-surface-2"
-                  style={{ transitionDuration: 'var(--duration-fast)' }}
+                <ProviderStatus status={provider.state} />
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground">{provider.detail}</p>
+              <div className="mt-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  Dernière synchronisation
+                </p>
+                <Freshness asOf={provider.lastSyncAt} className="mt-2" />
+              </div>
+              <div className="mt-auto flex items-center justify-between gap-2 pt-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedProvider(provider.id)}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm">
-                        {connection.providerInstitutionName ??
-                          `Connexion #${connection.powensConnectionId}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {connection.provider} · ref {connection.providerConnectionId}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Dernière sync : {formatDateTime(connection.lastSyncAt)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={syncBadge.badgeVariant}
-                        className={syncBadge.badgeClassName}
-                        title={syncBadge.tooltipLabel}
-                      >
-                        {syncBadge.badgeLabel}
-                      </Badge>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs"
-                        disabled={
-                          manualSyncUiState.blocked || syncMutation.isPending || isDisconnectPending
-                        }
-                        onClick={() =>
-                          syncMutation.mutate({ connectionId: connection.powensConnectionId })
-                        }
-                      >
-                        Sync
-                      </Button>
-                      {disconnectAction.showConfirmation ? (
-                        <>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs"
-                            disabled={!disconnectAction.canCancel}
-                            onClick={() => setPendingDisconnectConnectionId(null)}
-                          >
-                            Annuler
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            className="text-xs"
-                            disabled={!disconnectAction.canConfirm}
-                            onClick={() =>
-                              disconnectMutation.mutate({
-                                connectionId: connection.powensConnectionId,
-                              })
-                            }
-                          >
-                            {isDisconnectPending ? 'Retrait...' : 'Confirmer'}
-                          </Button>
-                        </>
-                      ) : (
+                  Détails
+                </Button>
+                {isAdmin && provider.primaryAction !== 'none' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!actionAllowed}
+                    onClick={() => runPrimaryAction(provider.id, provider.primaryAction)}
+                  >
+                    {pending ? 'En cours' : provider.primaryActionLabel}
+                  </Button>
+                ) : null}
+              </div>
+            </article>
+          )
+        })}
+      </section>
+
+      <Drawer
+        open={selected !== null}
+        onOpenChange={open => {
+          if (!open) {
+            setSelectedProvider(null)
+            setPendingDisconnectId(null)
+          }
+        }}
+      >
+        <DrawerContent side={isMobile ? 'bottom' : 'right'}>
+          {selected ? (
+            <>
+              <DrawerHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <DrawerTitle>{selected.label}</DrawerTitle>
+                  <ProviderStatus status={selected.state} />
+                </div>
+                <DrawerDescription>{selected.role}</DrawerDescription>
+              </DrawerHeader>
+              <div className="space-y-5 px-5 pb-6">
+                <div className="border-y border-border/60 py-4">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Dernière synchronisation réussie
+                  </p>
+                  <Freshness asOf={selected.lastSyncAt} className="mt-2" />
+                </div>
+                {selected.id === 'powens' ? (
+                  <PowensConnections
+                    connections={powensQuery.data?.connections ?? []}
+                    isAdmin={isAdmin}
+                    pendingDisconnectId={pendingDisconnectId}
+                    disconnectPending={disconnectMutation.isPending}
+                    onStartDisconnect={setPendingDisconnectId}
+                    onCancelDisconnect={() => setPendingDisconnectId(null)}
+                    onConfirmDisconnect={connectionId => disconnectMutation.mutate(connectionId)}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    La connexion est gérée côté serveur et reste strictement en lecture seule.
+                  </p>
+                )}
+              </div>
+            </>
+          ) : null}
+        </DrawerContent>
+      </Drawer>
+    </div>
+  )
+}
+
+function PowensConnections({
+  connections,
+  isAdmin,
+  pendingDisconnectId,
+  disconnectPending,
+  onStartDisconnect,
+  onCancelDisconnect,
+  onConfirmDisconnect,
+}: {
+  connections: PowensConnectionStatus[]
+  isAdmin: boolean
+  pendingDisconnectId: string | null
+  disconnectPending: boolean
+  onStartDisconnect: (connectionId: string) => void
+  onCancelDisconnect: () => void
+  onConfirmDisconnect: (connectionId: string) => void
+}) {
+  if (connections.length === 0) {
+    return <p className="text-sm text-muted-foreground">Aucune banque connectée</p>
+  }
+  return (
+    <section aria-labelledby="powens-banks-title">
+      <h3
+        id="powens-banks-title"
+        className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+      >
+        Banques
+      </h3>
+      <div className="mt-2 border-y border-border/60">
+        {connections.map(connection => {
+          const confirming = pendingDisconnectId === connection.powensConnectionId
+          const action = getPowensDisconnectActionState({
+            isAdmin,
+            isConfirming: confirming,
+            isPending: disconnectPending && confirming,
+          })
+          const providerState =
+            connection.status === 'connected'
+              ? 'connected'
+              : connection.status === 'syncing'
+                ? 'syncing'
+                : connection.status === 'reconnect_required'
+                  ? 'reconnect_required'
+                  : 'error'
+          return (
+            <div key={connection.id} className="border-b border-border/50 py-4 last:border-b-0">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium">
+                  {connection.providerInstitutionName ?? 'Banque connectée'}
+                </p>
+                <ProviderStatus status={providerState} />
+              </div>
+              {isAdmin ? (
+                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                  {action.showConfirmation ? (
+                    <div
+                      className="w-full rounded-control border border-negative/30 p-3"
+                      role="alertdialog"
+                      aria-label="Confirmer le retrait de la connexion"
+                    >
+                      <p className="text-sm">Retirer cette connexion bancaire&nbsp;?</p>
+                      <div className="mt-3 flex justify-end gap-2">
                         <Button
                           type="button"
+                          variant="ghost"
                           size="sm"
-                          variant="outline"
-                          className="text-xs"
-                          disabled={!disconnectAction.canStart}
-                          onClick={() =>
-                            setPendingDisconnectConnectionId(connection.powensConnectionId)
-                          }
+                          disabled={!action.canCancel}
+                          onClick={onCancelDisconnect}
                         >
-                          Retirer
+                          Annuler
                         </Button>
-                      )}
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          disabled={!action.canConfirm}
+                          onClick={() => onConfirmDisconnect(connection.powensConnectionId)}
+                        >
+                          {disconnectPending ? 'Retrait en cours' : 'Confirmer le retrait'}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  {connection.lastError && (
-                    <p className="mt-2 text-xs text-destructive">{connection.lastError}</p>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={!action.canStart}
+                      onClick={() => onStartDisconnect(connection.powensConnectionId)}
+                    >
+                      Retirer
+                    </Button>
                   )}
                 </div>
-              )
-            })
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Action dock */}
-      <ActionDock
-        items={[
-          {
-            icon: <LinkPixelIcon size={16} />,
-            label: 'Connecter banque',
-            tone: 'brand',
-            disabled: !isAdmin || isIntegrationsSafeMode || connectMutation.isPending,
-            onClick: () => connectMutation.mutate(),
-          },
-          {
-            icon: <span aria-hidden="true">⟳</span>,
-            label: 'Sync immédiate',
-            tone: 'violet',
-            disabled: manualSyncUiState.blocked || syncMutation.isPending,
-            onClick: () => syncMutation.mutate({}),
-          },
-        ]}
-        className="mt-6"
-      />
-    </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }

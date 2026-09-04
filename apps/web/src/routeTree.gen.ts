@@ -28,6 +28,7 @@ import { Route as AppMarchesRouteImport } from './routes/_app/marches'
 import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
 import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
 import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
+import { Route as AppCoutsRouteImport } from './routes/_app/couts'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
 import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
 import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
@@ -135,6 +136,11 @@ const AppDepensesRoute = AppDepensesRouteImport.update({
   path: '/depenses',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCoutsRoute = AppCoutsRouteImport.update({
+  id: '/couts',
+  path: '/couts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppActualitesRoute = AppActualitesRouteImport.update({
   id: '/actualites',
   path: '/actualites',
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/transactions': typeof TransactionsRoute
   '/version': typeof VersionRoute
   '/actualites': typeof AppActualitesRoute
+  '/couts': typeof AppCoutsRoute
   '/depenses': typeof AppDepensesRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/transactions': typeof TransactionsRoute
   '/version': typeof VersionRoute
   '/actualites': typeof AppActualitesRoute
+  '/couts': typeof AppCoutsRoute
   '/depenses': typeof AppDepensesRoute
   '/integrations': typeof AppIntegrationsRoute
   '/investissements': typeof AppInvestissementsRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/transactions': typeof TransactionsRoute
   '/version': typeof VersionRoute
   '/_app/actualites': typeof AppActualitesRoute
+  '/_app/couts': typeof AppCoutsRoute
   '/_app/depenses': typeof AppDepensesRoute
   '/_app/integrations': typeof AppIntegrationsRoute
   '/_app/investissements': typeof AppInvestissementsRoute
@@ -305,6 +314,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/version'
     | '/actualites'
+    | '/couts'
     | '/depenses'
     | '/integrations'
     | '/investissements'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/version'
     | '/actualites'
+    | '/couts'
     | '/depenses'
     | '/integrations'
     | '/investissements'
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/version'
     | '/_app/actualites'
+    | '/_app/couts'
     | '/_app/depenses'
     | '/_app/integrations'
     | '/_app/investissements'
@@ -540,6 +552,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDepensesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/couts': {
+      id: '/_app/couts'
+      path: '/couts'
+      fullPath: '/couts'
+      preLoaderRoute: typeof AppCoutsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/actualites': {
       id: '/_app/actualites'
       path: '/actualites'
@@ -629,6 +648,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppActualitesRoute: typeof AppActualitesRoute
+  AppCoutsRoute: typeof AppCoutsRoute
   AppDepensesRoute: typeof AppDepensesRoute
   AppIntegrationsRoute: typeof AppIntegrationsRoute
   AppInvestissementsRoute: typeof AppInvestissementsRoute
@@ -656,6 +676,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppActualitesRoute: AppActualitesRoute,
+  AppCoutsRoute: AppCoutsRoute,
   AppDepensesRoute: AppDepensesRoute,
   AppIntegrationsRoute: AppIntegrationsRoute,
   AppInvestissementsRoute: AppInvestissementsRoute,

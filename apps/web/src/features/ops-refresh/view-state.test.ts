@@ -33,7 +33,7 @@ describe('ops refresh view state', () => {
           backgroundRecoveredCount: 2,
         })
       )
-    ).toContain('Recovery reussie')
+    ).toBe('2 exécutions ont été récupérées.')
   })
 
   it('reports skipped candidates as controlled recovery rather than generic failure', () => {
@@ -44,6 +44,6 @@ describe('ops refresh view state', () => {
           warning: 'recoverStaleAdvisorManualOperations use case is not wired.',
         })
       )
-    ).toContain('Recovery controlee')
+    ).toBe('Aucune exécution n’a été modifiée. 1 est restée active.')
   })
 })

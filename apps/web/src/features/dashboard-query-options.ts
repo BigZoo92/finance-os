@@ -73,7 +73,10 @@ export type DemoTransactionsScenario =
 export const dashboardQueryKeys = {
   all: ['dashboard'] as const,
   summary: (range: DashboardRange) => [...dashboardQueryKeys.all, 'summary', range] as const,
-  derivedRecomputeStatus: () => [...dashboardQueryKeys.all, 'derived-recompute'] as const,
+  derivedRecomputeStatus: (mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'derived-recompute', mode] as const)
+      : ([...dashboardQueryKeys.all, 'derived-recompute'] as const),
   news: (params?: {
     topic?: string
     source?: string
@@ -126,8 +129,14 @@ export const dashboardQueryKeys = {
   advisorAssumptions: (limit: number) =>
     [...dashboardQueryKeys.all, 'advisor-assumptions', limit] as const,
   advisorSignals: (limit: number) => [...dashboardQueryKeys.all, 'advisor-signals', limit] as const,
-  advisorSpend: () => [...dashboardQueryKeys.all, 'advisor-spend'] as const,
-  costOverview: () => [...dashboardQueryKeys.all, 'cost-overview'] as const,
+  advisorSpend: (mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'advisor-spend', mode] as const)
+      : ([...dashboardQueryKeys.all, 'advisor-spend'] as const),
+  costOverview: (mode?: AuthMode) =>
+    mode
+      ? ([...dashboardQueryKeys.all, 'cost-overview', mode] as const)
+      : ([...dashboardQueryKeys.all, 'cost-overview'] as const),
   advisorRuns: (limit: number) => [...dashboardQueryKeys.all, 'advisor-runs', limit] as const,
   advisorKnowledgeTopics: () => [...dashboardQueryKeys.all, 'advisor-knowledge-topics'] as const,
   advisorManualOperationLatest: () =>
@@ -298,7 +307,7 @@ export const dashboardDerivedRecomputeStatusQueryOptionsWithMode = ({
   mode?: AuthMode
 } = {}) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.derivedRecomputeStatus(),
+    queryKey: dashboardQueryKeys.derivedRecomputeStatus(mode),
     queryFn: () => {
       if (mode === 'demo') {
         return getDemoDashboardDerivedRecomputeStatus()
@@ -311,7 +320,6 @@ export const dashboardDerivedRecomputeStatusQueryOptionsWithMode = ({
     refetchInterval: query =>
       mode === 'admin' && query.state.data?.state === 'running' ? 3_000 : false,
   })
-
 
 export const dashboardAdvisorQueryOptionsWithMode = ({
   range,
@@ -395,13 +403,9 @@ export const dashboardAdvisorSignalsQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
-export const dashboardAdvisorSpendQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardAdvisorSpendQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.advisorSpend(),
+    queryKey: dashboardQueryKeys.advisorSpend(mode),
     queryFn: () => {
       if (mode === 'demo') {
         return getDemoDashboardAdvisorSpend()
@@ -413,13 +417,9 @@ export const dashboardAdvisorSpendQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
-export const dashboardCostOverviewQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardCostOverviewQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
-    queryKey: dashboardQueryKeys.costOverview(),
+    queryKey: dashboardQueryKeys.costOverview(mode),
     queryFn: () => {
       if (mode === 'demo') {
         return getDemoDashboardCostOverview()
@@ -527,11 +527,7 @@ export const dashboardAdvisorChatQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 5_000,
   })
 
-export const dashboardAdvisorEvalsQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardAdvisorEvalsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.advisorEvals(),
     queryFn: () => {
@@ -597,11 +593,7 @@ export const dashboardAdvisorBehaviorAnalyticsQueryOptionsWithMode = ({
     retry: 1,
   })
 
-export const dashboardInvestmentStrategyQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardInvestmentStrategyQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.investmentStrategy(mode),
     queryFn: fetchDashboardInvestmentStrategy,
@@ -623,11 +615,7 @@ export const dashboardAdvisorAssetsSearchQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 20_000,
   })
 
-export const dashboardAdvisorAssetWatchlistQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardAdvisorAssetWatchlistQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.advisorAssetWatchlist(),
     queryFn: fetchDashboardAdvisorAssetWatchlist,
@@ -635,11 +623,7 @@ export const dashboardAdvisorAssetWatchlistQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
-export const dashboardInvestmentPlanLatestQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardInvestmentPlanLatestQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.investmentPlanLatest(mode),
     queryFn: fetchDashboardInvestmentPlanLatest,
@@ -647,11 +631,7 @@ export const dashboardInvestmentPlanLatestQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
-export const dashboardInvestmentStatusQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardInvestmentStatusQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.investmentStatus(),
     queryFn: fetchDashboardInvestmentStatus,
@@ -659,11 +639,7 @@ export const dashboardInvestmentStatusQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 15_000,
   })
 
-export const dashboardInvestmentHypothesesQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardInvestmentHypothesesQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.investmentHypotheses(),
     queryFn: fetchDashboardInvestmentHypotheses,
@@ -671,11 +647,7 @@ export const dashboardInvestmentHypothesesQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
-export const dashboardInvestmentScorecardQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardInvestmentScorecardQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.investmentScorecard(),
     queryFn: fetchDashboardInvestmentScorecard,
@@ -683,11 +655,7 @@ export const dashboardInvestmentScorecardQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
-export const dashboardInvestmentLessonsQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardInvestmentLessonsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.investmentLessons(),
     queryFn: fetchDashboardInvestmentLessons,
@@ -695,11 +663,7 @@ export const dashboardInvestmentLessonsQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
-export const dashboardManualAssetsQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardManualAssetsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.manualAssets(),
     queryFn: () => {
@@ -744,7 +708,9 @@ export const dashboardTransactionsInfiniteQueryOptionsWithMode = (params: {
         ...(params.mode === 'demo' && params.demoScenario
           ? { demoScenario: params.demoScenario }
           : {}),
-        ...(params.mode === 'demo' && params.demoProfile ? { demoProfile: params.demoProfile } : {}),
+        ...(params.mode === 'demo' && params.demoProfile
+          ? { demoProfile: params.demoProfile }
+          : {}),
       })
     },
     enabled: params.mode !== undefined,
@@ -798,11 +764,7 @@ export const dashboardAdvisorJournalQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
   })
 
-export const dashboardAdvisorPostMortemsQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardAdvisorPostMortemsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.advisorPostMortems(),
     queryFn: () => {
@@ -815,11 +777,7 @@ export const dashboardAdvisorPostMortemsQueryOptionsWithMode = ({
     staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 30_000,
   })
 
-export const dashboardTradingLabHypothesesQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode?: AuthMode
-}) =>
+export const dashboardTradingLabHypothesesQueryOptionsWithMode = ({ mode }: { mode?: AuthMode }) =>
   queryOptions({
     queryKey: dashboardQueryKeys.tradingLabHypotheses(),
     queryFn: () => {

@@ -13,17 +13,13 @@ import {
   DrawerDescription,
   DrawerTitle,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Status,
 } from '@finance-os/ui/components'
-import { EllipsesHorizontalPixelIcon, SearchPixelIcon } from '@finance-os/ui/icons/pixel'
+import { SearchPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { AddSourceDialog } from '@/components/social/add-source-dialog'
-import { ManualImportDialog } from '@/components/social/manual-import-dialog'
 import { SourceCard } from '@/components/social/source-card'
 import { SourceDetail } from '@/components/social/source-detail'
 import { SourceFilters } from '@/components/social/source-filters'
@@ -72,8 +68,6 @@ function SocialIntelligencePage() {
   const triggerRef = useRef<HTMLElement | null>(null)
   const [query, setQuery] = useState(search.q ?? '')
   const [addOpen, setAddOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false)
 
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
@@ -180,42 +174,15 @@ function SocialIntelligencePage() {
               onApply={next => updateSearch({ ...next, q: filters.q }, undefined)}
             />
             {isAdmin ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="min-h-9"
-                  onClick={() => setAddOpen(true)}
-                >
-                  Ajouter une source
-                </Button>
-                <Popover open={adminMenuOpen} onOpenChange={setAdminMenuOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      className="min-h-9"
-                      aria-label="Autres actions"
-                    >
-                      <EllipsesHorizontalPixelIcon size={14} />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-52 p-1.5">
-                    <button
-                      type="button"
-                      className="flex min-h-9 w-full items-center rounded-tile px-2.5 text-left text-sm text-foreground outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring/70"
-                      onClick={() => {
-                        setAdminMenuOpen(false)
-                        setImportOpen(true)
-                      }}
-                    >
-                      Import manuel
-                    </button>
-                  </PopoverContent>
-                </Popover>
-              </>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-9"
+                onClick={() => setAddOpen(true)}
+              >
+                Ajouter une source
+              </Button>
             ) : null}
           </div>
         }
@@ -352,16 +319,6 @@ function SocialIntelligencePage() {
           onOpenChange={setAddOpen}
           defaultGroup={filters.group ?? 'finance'}
           onCreated={() => void invalidateSources()}
-        />
-      ) : null}
-      {isAdmin && importOpen ? (
-        <ManualImportDialog
-          open
-          onOpenChange={setImportOpen}
-          onImported={() => {
-            void queryClient.invalidateQueries({ queryKey: ['signal-items'] })
-            void queryClient.invalidateQueries({ queryKey: ['signal-runs'] })
-          }}
         />
       ) : null}
     </div>

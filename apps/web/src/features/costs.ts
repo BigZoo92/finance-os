@@ -15,10 +15,10 @@ export type CostBasisDescriptor = {
 export const describeCostBasis = (basis: CostBasis): CostBasisDescriptor => {
   switch (basis) {
     case 'actual':
-      return { label: 'réel (facturé)', isEstimate: false }
+      return { label: 'Réel', isEstimate: false }
     case 'mixed':
-      return { label: 'réel + estimé', isEstimate: true }
+      return { label: 'Réel et estimé', isEstimate: true }
     default:
-      return { label: 'estimé', isEstimate: true }
+      return { label: 'Estimé', isEstimate: true }
   }
 }

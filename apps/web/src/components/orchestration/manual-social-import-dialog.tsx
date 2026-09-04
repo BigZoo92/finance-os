@@ -1,9 +1,3 @@
-/**
- * ManualImportDialog — Admin-only secondary tool, out of the gallery.
- *
- * Keeps the manual ingestion capability (one signal per line, structured
- * lists accepted) without exposing any JSON tooling to normal users.
- */
 import {
   Button,
   Dialog,
@@ -27,7 +21,7 @@ type ManualImportDialogProps = {
 
 type ManualItem = { text: string; author?: string; url?: string }
 
-const parseManualItems = (raw: string): ManualItem[] => {
+export const parseManualSocialItems = (raw: string): ManualItem[] => {
   const trimmed = raw.trim()
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
     try {
@@ -39,7 +33,7 @@ const parseManualItems = (raw: string): ManualItem[] => {
           : []
       )
     } catch {
-      // Not structured input: fall through to one signal per line.
+      // Plain text remains a supported input.
     }
   }
   return trimmed
@@ -49,13 +43,15 @@ const parseManualItems = (raw: string): ManualItem[] => {
     .map(line => ({ text: line }))
 }
 
-/** Mounted only while open, so the textarea starts empty on every opening. */
-export function ManualImportDialog({ open, onOpenChange, onImported }: ManualImportDialogProps) {
+export function ManualSocialImportDialog({
+  open,
+  onOpenChange,
+  onImported,
+}: ManualImportDialogProps) {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
-
   const mutation = useMutation({
-    mutationFn: () => postManualImport(parseManualItems(text)),
+    mutationFn: () => postManualImport(parseManualSocialItems(text)),
     onSuccess: data => {
       if (!data.ok) {
         setError('Import impossible pour le moment')
@@ -74,23 +70,24 @@ export function ManualImportDialog({ open, onOpenChange, onImported }: ManualImp
     },
     onError: () => setError('Import impossible pour le moment'),
   })
-
-  const items = parseManualItems(text)
+  const items = parseManualSocialItems(text)
 
   return (
     <Dialog open={open} onOpenChange={next => !mutation.isPending && onOpenChange(next)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Import manuel</DialogTitle>
-          <DialogDescription>Un signal par ligne.</DialogDescription>
+          <DialogTitle>Import manuel Social</DialogTitle>
+          <DialogDescription>
+            Ajoutez un signal par ligne ou une liste structurée.
+          </DialogDescription>
         </DialogHeader>
         <label
           className="space-y-1.5 text-xs font-medium text-foreground"
-          htmlFor="manual-import-text"
+          htmlFor="manual-social-import-text"
         >
           <span className="sr-only">Signaux à importer</span>
           <textarea
-            id="manual-import-text"
+            id="manual-social-import-text"
             rows={6}
             value={text}
             onChange={event => setText(event.target.value)}
@@ -117,7 +114,7 @@ export function ManualImportDialog({ open, onOpenChange, onImported }: ManualImp
             }}
           >
             {mutation.isPending
-              ? 'Import'
+              ? 'Import en cours'
               : `Importer${items.length > 0 ? ` (${items.length})` : ''}`}
           </Button>
         </DialogFooter>

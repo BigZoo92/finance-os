@@ -5,27 +5,22 @@ export const isRefreshStatusActive = (status: string | null | undefined) =>
 
 export const getRecoveryFeedbackMessage = (result: RecoverStaleRunsResponse) => {
   if (!result.ok) {
-    return 'Recovery refusee par le serveur. Voir logs admin.'
+    return 'La récupération n’a pas abouti. Réessayez dans quelques instants.'
   }
 
   const recoveredCount = result.recoveredCount
   const skippedCount = result.skippedCount
-  const backgroundRecoveredCount = result.backgroundRecoveredCount ?? 0
-  const manualRecoveredCount =
-    result.manualRecoveredCount ?? Math.max(0, recoveredCount - backgroundRecoveredCount)
-  const warning = result.warning ? ` ${result.warning}` : ''
-
   if (recoveredCount > 0 && skippedCount > 0) {
-    return `Recovery partielle: ${recoveredCount} run(s) recupere(s), ${skippedCount} ignore(s).${warning}`
+    return `${recoveredCount} exécution${recoveredCount > 1 ? 's' : ''} récupérée${recoveredCount > 1 ? 's' : ''}. ${skippedCount} autre${skippedCount > 1 ? 's' : ''} est restée inchangée.`
   }
 
   if (recoveredCount > 0) {
-    return `Recovery reussie: ${recoveredCount} run(s) recupere(s) (${manualRecoveredCount} advisor, ${backgroundRecoveredCount} background).${warning}`
+    return `${recoveredCount} exécution${recoveredCount > 1 ? 's ont' : ' a'} été récupérée${recoveredCount > 1 ? 's' : ''}.`
   }
 
   if (skippedCount > 0) {
-    return `Recovery controlee: aucun run modifie, ${skippedCount} candidat(s) laisse(s) intact(s).${warning}`
+    return `Aucune exécution n’a été modifiée. ${skippedCount} est restée active.`
   }
 
-  return `Recovery terminee: aucun run stale a reprendre.${warning}`
+  return 'Aucune exécution bloquée à récupérer.'
 }

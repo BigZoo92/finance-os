@@ -157,7 +157,7 @@ const ORCHESTRATION: NavLink = {
 }
 
 const COUTS: NavLink = {
-  to: '/ia/couts',
+  to: '/couts',
   label: 'Coûts',
   icon: CoinsPixelIcon,
   description: "Coûts d'exploitation",

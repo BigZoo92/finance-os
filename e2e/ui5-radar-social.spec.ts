@@ -265,10 +265,8 @@ test.describe('Social Intelligence desktop dark', () => {
     await expect(confirm).toHaveCount(0)
     await page.keyboard.press('Escape')
 
-    await page.getByRole('button', { name: 'Autres actions' }).click()
-    await page.getByRole('button', { name: 'Import manuel' }).click()
-    await expect(page.getByRole('dialog', { name: 'Import manuel' })).toBeVisible()
-    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name: 'Autres actions' })).toHaveCount(0)
+    await expect(page.getByText('Import manuel')).toHaveCount(0)
   })
 })
 

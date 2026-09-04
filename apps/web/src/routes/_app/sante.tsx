@@ -1,75 +1,35 @@
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@finance-os/ui/components'
 import {
-  CheckPixelIcon,
-  ExclamationTrianglePixelIcon,
-  QuestionPixelIcon,
-  TimesPixelIcon,
-} from '@finance-os/ui/icons/pixel'
+  Button,
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  Freshness,
+  Progress,
+  ProviderStatus,
+  Status,
+  ValuationState,
+} from '@finance-os/ui/components'
 import { HeartbeatIcon } from '@phosphor-icons/react/dist/csr/Heartbeat'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
-import { motion } from 'motion/react'
-import { getLatestSyncStatus } from '@/components/dashboard/latest-sync-status'
+import { Link, createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
+import { dashboardDerivedRecomputeStatusQueryOptionsWithMode } from '@/features/dashboard-query-options'
+import { externalInvestmentsStatusQueryOptionsWithMode } from '@/features/external-investments/query-options'
+import { createHealthViewModel } from '@/features/health-view-model'
+import { powensStatusQueryOptionsWithMode } from '@/features/powens/query-options'
 import {
-  dashboardDerivedRecomputeStatusQueryOptionsWithMode,
-  dashboardSummaryQueryOptionsWithMode,
-} from '@/features/dashboard-query-options'
-import {
-  externalInvestmentsStatusQueryOptionsWithMode,
-  externalInvestmentsSyncRunsQueryOptionsWithMode,
-} from '@/features/external-investments/query-options'
-import type { ExternalInvestmentProvider } from '@/features/external-investments/types'
-import { pushSettingsQueryOptionsWithMode } from '@/features/notifications/query-options'
-import {
-  powensDiagnosticsQueryOptionsWithMode,
-  powensStatusQueryOptionsWithMode,
-  powensSyncRunsQueryOptionsWithMode,
-} from '@/features/powens/query-options'
-import { formatDateTime, formatDuration } from '@/lib/format'
-
-type SignalStatus = 'ok' | 'warning' | 'error' | 'unknown'
-
-const STATUS_ICON = {
-  ok: CheckPixelIcon,
-  warning: ExclamationTrianglePixelIcon,
-  error: TimesPixelIcon,
-  unknown: QuestionPixelIcon,
-} as const
-
-/** Status is never conveyed by icon or colour alone: each one carries a text alternative. */
-const STATUS_LABEL = {
-  ok: 'OK',
-  warning: 'Attention',
-  error: 'Erreur',
-  unknown: 'Inconnu',
-} as const
-
-const STATUS_COLOR = {
-  ok: 'text-positive',
-  warning: 'text-warning',
-  error: 'text-negative',
-  unknown: 'text-muted-foreground',
-} as const
-
-function SignalStatusIcon({ status, className }: { status: SignalStatus; className?: string }) {
-  const Icon = STATUS_ICON[status]
-  return (
-    <span
-      role="img"
-      aria-label={STATUS_LABEL[status]}
-      className={`mt-0.5 flex shrink-0 items-center ${className ?? ''}`}
-    >
-      <Icon size={18} />
-    </span>
-  )
-}
-
-const providerLabel = (provider: ExternalInvestmentProvider) =>
-  provider === 'ibkr' ? 'IBKR' : 'Binance'
+  valuationStatusQueryOptionsWithMode,
+  valuationUnresolvedQueryOptionsWithMode,
+} from '@/features/valuation/query-options'
+import type { ValuationUnresolvedItem } from '@/features/valuation/types'
+import { xHealthQueryOptionsWithMode } from '@/features/x-health-query-options'
+import { useIsMobile } from '@/lib/use-is-mobile'
 
 export const Route = createFileRoute('/_app/sante')({
   loader: async ({ context }) => {
@@ -77,395 +37,253 @@ export const Route = createFileRoute('/_app/sante')({
     const mode: AuthMode | undefined =
       auth.mode === 'admin' ? 'admin' : auth.mode === 'demo' ? 'demo' : undefined
     if (!mode) return
-    const opts = { mode }
-    await Promise.all([
-      context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(powensSyncRunsQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(powensDiagnosticsQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode(opts)),
-      context.queryClient.ensureQueryData(externalInvestmentsSyncRunsQueryOptionsWithMode(opts)),
+    const options = { mode }
+    await Promise.allSettled([
+      context.queryClient.ensureQueryData(powensStatusQueryOptionsWithMode(options)),
+      context.queryClient.ensureQueryData(externalInvestmentsStatusQueryOptionsWithMode(options)),
       context.queryClient.ensureQueryData(
-        dashboardDerivedRecomputeStatusQueryOptionsWithMode(opts)
+        dashboardDerivedRecomputeStatusQueryOptionsWithMode(options)
       ),
-      context.queryClient.ensureQueryData(
-        dashboardSummaryQueryOptionsWithMode({ range: '30d', ...opts })
-      ),
-      context.queryClient.ensureQueryData(pushSettingsQueryOptionsWithMode(opts)),
+      context.queryClient.ensureQueryData(valuationStatusQueryOptionsWithMode(options)),
+      context.queryClient.ensureQueryData(valuationUnresolvedQueryOptionsWithMode(options)),
+      context.queryClient.ensureQueryData(xHealthQueryOptionsWithMode(options)),
     ])
   },
-  component: SantePage,
+  component: HealthPage,
 })
 
-type HealthSignal = {
-  label: string
-  status: 'ok' | 'warning' | 'error' | 'unknown'
-  detail: string
-}
+const valuationStates = [
+  'priced',
+  'derived',
+  'estimated',
+  'manual',
+  'stale',
+  'unresolved',
+  'unavailable',
+] as const
 
-function SantePage() {
+function HealthPage() {
+  const [unresolvedOpen, setUnresolvedOpen] = useState(false)
+  const isMobile = useIsMobile()
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
     isPending: authQuery.isPending,
     ...(authQuery.data?.mode ? { mode: authQuery.data.mode } : {}),
   })
-  const isDemo = authViewState === 'demo'
-  const isAdmin = authViewState === 'admin'
-  const authMode: AuthMode | undefined = isAdmin ? 'admin' : isDemo ? 'demo' : undefined
-
-  const statusQuery = useQuery(powensStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-  const syncRunsQuery = useQuery(
-    powensSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const diagnosticsQuery = useQuery(
-    powensDiagnosticsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const externalStatusQuery = useQuery(
-    externalInvestmentsStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const externalSyncRunsQuery = useQuery(
-    externalInvestmentsSyncRunsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const derivedQuery = useQuery(
-    dashboardDerivedRecomputeStatusQueryOptionsWithMode(authMode ? { mode: authMode } : {})
-  )
-  const summaryQuery = useQuery(
-    dashboardSummaryQueryOptionsWithMode({ range: '30d', ...(authMode ? { mode: authMode } : {}) })
-  )
-  const pushQuery = useQuery(pushSettingsQueryOptionsWithMode(authMode ? { mode: authMode } : {}))
-
-  const connections = statusQuery.data?.connections ?? []
-  const syncRuns = syncRunsQuery.data?.runs ?? []
-  const diagnostics = diagnosticsQuery.data
-  const externalHealth = externalStatusQuery.data?.health ?? []
-  const externalConfiguredProviderCount = Object.values(
-    externalStatusQuery.data?.providerConfigured ?? {}
-  ).filter(Boolean).length
-  const externalSyncRuns = externalSyncRunsQuery.data?.items ?? []
-  const externalSafeModeActive = externalStatusQuery.data?.safeModeActive ?? false
-  const derived = derivedQuery.data
-  const latestSync = getLatestSyncStatus(syncRuns)
-  const safeModeActive = statusQuery.data?.safeModeActive ?? false
-
-  // Build health signals
-  const signals: HealthSignal[] = [
-    {
-      label: 'Connexions Powens',
-      status: connections.some(c => c.status === 'error' || c.status === 'reconnect_required')
-        ? 'error'
-        : connections.length > 0
-          ? 'ok'
-          : 'unknown',
-      detail: `${connections.filter(c => c.status === 'connected').length}/${connections.length} connectées`,
-    },
-    {
-      label: 'Dernière sync',
-      status:
-        latestSync.badgeVariant === 'destructive'
-          ? 'error'
-          : latestSync.badgeVariant === 'outline'
-            ? 'warning'
-            : 'ok',
-      detail: latestSync.summary,
-    },
-    {
-      label: 'Diagnostic provider',
-      status: !diagnostics
-        ? 'unknown'
-        : diagnostics.outcome === 'ok'
-          ? 'ok'
-          : diagnostics.outcome === 'degraded'
-            ? 'warning'
-            : 'error',
-      detail: diagnostics?.guidance ?? 'Chargement…',
-    },
-    {
-      label: 'Derived recompute',
-      status: !derived
-        ? 'unknown'
-        : derived.state === 'completed'
-          ? 'ok'
-          : derived.state === 'failed'
-            ? 'error'
-            : 'warning',
-      detail: derived?.latestRun ? formatDateTime(derived.latestRun.finishedAt) : 'Aucun run',
-    },
-    {
-      label: 'Safe mode',
-      status: safeModeActive ? 'warning' : 'ok',
-      detail: safeModeActive ? 'Actif — intégrations bloquées' : 'Inactif',
-    },
-    {
-      label: 'Investissements externes',
-      status: externalHealth.some(item => item.status === 'failing')
-        ? 'error'
-        : externalHealth.some(item => item.status === 'degraded')
-          ? 'warning'
-          : externalConfiguredProviderCount > 0
-            ? 'ok'
-            : 'unknown',
-      detail: `${externalConfiguredProviderCount}/2 providers configurés via l’environnement`,
-    },
-    {
-      label: 'Safe mode investissements',
-      status: externalSafeModeActive ? 'warning' : 'ok',
-      detail: externalSafeModeActive ? 'Actif - providers non appeles' : 'Inactif',
-    },
-    {
-      label: 'Notifications push',
-      status: pushQuery.data?.featureEnabled ? 'ok' : 'warning',
-      detail: pushQuery.data?.optIn ? 'Opt-in actif' : 'Non activées',
-    },
-    {
-      label: 'Données summary',
-      status: summaryQuery.isError ? 'error' : summaryQuery.data ? 'ok' : 'unknown',
-      detail: summaryQuery.isError
-        ? 'Erreur de chargement'
-        : summaryQuery.data
-          ? 'Disponible'
-          : 'Chargement…',
-    },
-  ]
-
-  const overallStatus = signals.some(s => s.status === 'error')
-    ? 'error'
-    : signals.some(s => s.status === 'warning')
-      ? 'warning'
-      : 'ok'
-
-  const OverallStatusIcon = STATUS_ICON[overallStatus]
+  const mode: AuthMode | undefined =
+    authViewState === 'admin' ? 'admin' : authViewState === 'demo' ? 'demo' : undefined
+  const options = mode ? { mode } : {}
+  const powensQuery = useQuery(powensStatusQueryOptionsWithMode(options))
+  const externalQuery = useQuery(externalInvestmentsStatusQueryOptionsWithMode(options))
+  const derivedQuery = useQuery(dashboardDerivedRecomputeStatusQueryOptionsWithMode(options))
+  const valuationQuery = useQuery(valuationStatusQueryOptionsWithMode(options))
+  const unresolvedQuery = useQuery(valuationUnresolvedQueryOptionsWithMode(options))
+  const xHealthQuery = useQuery(xHealthQueryOptionsWithMode(options))
+  const model = createHealthViewModel({
+    powens: powensQuery.data,
+    external: externalQuery.data,
+    derived: derivedQuery.data,
+    valuation: valuationQuery.data,
+    unresolved: unresolvedQuery.data,
+    xHealth: xHealthQuery.data,
+  })
+  const unresolvedItems = unresolvedQuery.data?.items ?? []
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <PageHeader
-        eyebrow="Intelligence & Admin"
+        eyebrow="Ops"
         icon={<HeartbeatIcon size={12} />}
         title="Santé"
-        description="Diagnostics système, synchronisation et pipelines dérivés. Utile pour vérifier les sources, pas nécessaire au quotidien."
+        description="L’état des connexions, des données et de la valorisation."
       />
 
-      {/* Overall status summary */}
-      <Card
-        className={`relative overflow-hidden ${
-          overallStatus === 'error'
-            ? 'border-negative/30 bg-negative/5'
-            : overallStatus === 'warning'
-              ? 'border-warning/30 bg-warning/5'
-              : 'border-positive/30 bg-positive/5'
-        }`}
-      >
-        <CardContent className="relative flex items-center gap-4 p-6">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', bounce: 0.4, duration: 0.5 }}
-            className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl font-bold ${STATUS_COLOR[overallStatus]} bg-background shadow-sm`}
-          >
-            <OverallStatusIcon size={26} />
-          </motion.div>
-          <div>
-            <p className="text-lg font-semibold">
-              {overallStatus === 'ok'
-                ? 'Système opérationnel'
-                : overallStatus === 'warning'
-                  ? 'Attention requise'
-                  : 'Problème détecté'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {signals.filter(s => s.status === 'ok').length}/{signals.length} sous-systèmes OK
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {authViewState === 'demo' ? (
+        <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
+          Lecture seule avec données de démonstration. Aucun diagnostic réel n’est lancé.
+        </div>
+      ) : null}
 
-      {/* Signal grid */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {signals.map((signal, i) => (
-          <motion.div
-            key={signal.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <Card className="h-full">
-              <CardContent className="flex items-start gap-3 p-5">
-                <SignalStatusIcon status={signal.status} className={STATUS_COLOR[signal.status]} />
+      <section
+        className={`border-y py-6 ${
+          model.state === 'healthy'
+            ? 'border-positive/30'
+            : model.state === 'degraded'
+              ? 'border-warning/40'
+              : 'border-border/60'
+        }`}
+        aria-live="polite"
+      >
+        <Status
+          tone={
+            model.state === 'healthy'
+              ? 'positive'
+              : model.state === 'degraded'
+                ? 'attention'
+                : 'neutral'
+          }
+          label={
+            model.state === 'healthy'
+              ? 'À jour'
+              : model.state === 'degraded'
+                ? 'Attention'
+                : 'Indisponible'
+          }
+          className="font-mono text-[10px] uppercase tracking-[0.14em]"
+        />
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight">{model.headline}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{model.summary}</p>
+      </section>
+
+      {model.problems.length > 0 ? (
+        <section aria-labelledby="health-problems-title">
+          <h2 id="health-problems-title" className="text-sm font-semibold">
+            À examiner
+          </h2>
+          <div className="mt-2 border-y border-border/60">
+            {model.problems.map(problem => (
+              <div
+                key={problem.id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 py-4 last:border-b-0"
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{signal.label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground truncate">{signal.detail}</p>
+                  <p className="text-sm font-medium">{problem.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{problem.detail}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                {problem.destination ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={problem.destination}>Ouvrir</Link>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUnresolvedOpen(true)}
+                  >
+                    Voir les actifs
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="grid gap-7 lg:grid-cols-2">
+        <section aria-labelledby="provider-health-title">
+          <h2 id="provider-health-title" className="text-sm font-semibold">
+            Connexions
+          </h2>
+          <div className="mt-2 border-y border-border/60">
+            {model.providers.map(provider => (
+              <div
+                key={provider.id}
+                className="flex items-center justify-between gap-4 border-b border-border/50 py-4 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{provider.label}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{provider.detail}</p>
+                </div>
+                <ProviderStatus status={provider.state} className="shrink-0" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="freshness-title">
+          <h2 id="freshness-title" className="text-sm font-semibold">
+            Fraîcheur
+          </h2>
+          <div className="mt-2 border-y border-border/60">
+            {model.freshness.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-4 border-b border-border/50 py-4 last:border-b-0"
+              >
+                <p className="text-sm font-medium">{item.label}</p>
+                <Freshness asOf={item.asOf} className="shrink-0" />
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
-      {/* Recent sync runs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Dernières synchronisations</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {syncRuns.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Aucun run récent.</p>
-          ) : (
-            syncRuns.slice(0, 8).map(run => (
-              <div
-                key={run.id}
-                className="flex items-center justify-between rounded-lg border border-border/40 bg-surface-1 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-2"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm">
-                    <span className="font-medium">#{run.connectionId}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {formatDateTime(run.startedAt)}
-                    </span>
-                    {formatDuration(run.startedAt, run.endedAt) && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        · {formatDuration(run.startedAt, run.endedAt)}
-                      </span>
-                    )}
-                  </p>
-                  {run.errorMessage && (
-                    <p className="text-xs text-negative truncate">{run.errorMessage}</p>
-                  )}
-                </div>
-                <Badge
-                  variant={
-                    run.result === 'success'
-                      ? 'positive'
-                      : run.result === 'running'
-                        ? 'outline'
-                        : 'destructive'
-                  }
-                  className="text-xs"
-                >
-                  {run.result}
-                </Badge>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Synchronisations investissements</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {externalSyncRuns.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Aucun run IBKR/Binance recent.
+      <section aria-labelledby="valuation-health-title" className="border-y border-border/60 py-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 id="valuation-health-title" className="text-sm font-semibold">
+              Valorisation des actifs
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {model.valuation.resolvedItems === null || model.valuation.totalItems === null
+                ? 'Couverture indisponible'
+                : `${model.valuation.resolvedItems} actifs résolus sur ${model.valuation.totalItems}`}
             </p>
-          ) : (
-            externalSyncRuns.slice(0, 8).map(run => (
-              <div
-                key={run.id}
-                className="rounded-lg border border-border/40 bg-surface-1 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-2"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm">
-                      <span className="font-medium">{providerLabel(run.provider)}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {formatDateTime(run.startedAt)}
-                      </span>
-                      {formatDuration(run.startedAt, run.finishedAt) && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          · {formatDuration(run.startedAt, run.finishedAt)}
-                        </span>
-                      )}
-                    </p>
-                    <p className="truncate font-mono text-[11px] text-muted-foreground">
-                      request {run.requestId ?? '-'}
-                    </p>
-                    {run.errorMessage && (
-                      <p className="truncate text-xs text-negative">{run.errorMessage}</p>
-                    )}
-                    {run.degradedReasons.length > 0 && (
-                      <p className="truncate text-xs text-warning">
-                        {run.degradedReasons.join(', ')}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Badge
-                      variant={
-                        run.status === 'success'
-                          ? 'positive'
-                          : run.status === 'running'
-                            ? 'outline'
-                            : run.status === 'degraded'
-                              ? 'warning'
-                              : 'destructive'
-                      }
-                      className="text-xs"
-                    >
-                      {run.status}
-                    </Badge>
-                    {run.rowCounts && (
-                      <span className="text-[11px] text-muted-foreground">
-                        {Object.entries(run.rowCounts)
-                          .map(([key, value]) => `${key}:${value}`)
-                          .join(' · ')}
-                      </span>
-                    )}
-                  </div>
+          </div>
+          <span className="font-financial text-2xl font-semibold">
+            {model.valuation.coveragePercent === null
+              ? 'Indisponible'
+              : `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(model.valuation.coveragePercent)} %`}
+          </span>
+        </div>
+        <Progress
+          value={model.valuation.coveragePercent}
+          tone={model.valuation.unresolvedItems ? 'warning' : 'positive'}
+          label="Couverture de valorisation"
+          className="mt-4"
+        />
+        {model.valuation.statusCounts ? (
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+            {valuationStates.map(state =>
+              model.valuation.statusCounts?.[state] ? (
+                <div key={state} className="flex items-center gap-2">
+                  <ValuationState state={state} />
+                  <span className="font-financial text-xs">
+                    {model.valuation.statusCounts[state]}
+                  </span>
                 </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              ) : null
+            )}
+          </div>
+        ) : null}
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Health providers investissements</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {externalHealth.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Aucun diagnostic IBKR/Binance disponible.
-            </p>
-          ) : (
-            externalHealth.map(item => (
-              <div
-                key={item.provider}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-surface-1 px-4 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{providerLabel(item.provider)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Dernier appel {formatDateTime(item.lastAttemptAt)} · succes{' '}
-                    {formatDateTime(item.lastSuccessAt)}
-                  </p>
-                  {item.lastErrorMessage && (
-                    <p className="truncate text-xs text-negative">{item.lastErrorMessage}</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <Badge
-                    variant={
-                      item.status === 'healthy'
-                        ? 'positive'
-                        : item.status === 'failing'
-                          ? 'destructive'
-                          : item.status === 'degraded'
-                            ? 'warning'
-                            : 'outline'
-                    }
-                    className="text-xs"
-                  >
-                    {item.status}
-                  </Badge>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    raw {item.lastRawImportCount} · rows {item.lastNormalizedRowCount}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <Drawer open={unresolvedOpen} onOpenChange={setUnresolvedOpen}>
+        <DrawerContent side={isMobile ? 'bottom' : 'right'}>
+          <DrawerHeader>
+            <DrawerTitle>Actifs non résolus</DrawerTitle>
+            <DrawerDescription>Actifs sans valorisation suffisamment fiable.</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-3 px-5 pb-6">
+            {unresolvedItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun actif non résolu</p>
+            ) : (
+              unresolvedItems.map(item => <UnresolvedAsset key={item.itemKey} item={item} />)
+            )}
+            <Button asChild variant="outline" className="mt-3 w-full">
+              <Link to="/orchestration">Ouvrir Asset Valuation</Link>
+            </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
+  )
+}
+
+function UnresolvedAsset({ item }: { item: ValuationUnresolvedItem }) {
+  const provider =
+    item.provider === 'manual-import' || item.provider === 'manual'
+      ? 'Saisie manuelle'
+      : (item.provider ?? 'Source inconnue')
+  return (
+    <article className="border-t border-border/60 pt-4 first:border-t-0 first:pt-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-medium">{item.name}</h3>
+        <ValuationState state="unresolved" />
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Source {provider}</p>
+      <p className="mt-2 text-sm">Vérifier l’identité de l’actif ou compléter sa valorisation.</p>
+    </article>
   )
 }

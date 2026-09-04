@@ -1,10 +1,10 @@
 /**
- * Free Firehose client API — kept for the future Orchestration integration.
+ * Free Firehose client API used by the Social job detail in Orchestration.
  *
  * The standalone /signaux/free-firehose page was removed in
  * RESET-AUDIT-CLEANUP-0; the backend endpoints, orchestrator, table and env
- * flags are all still live. These fetchers/types are the reusable primitives
- * to wire the manual estimate/run actions into the Orchestration page.
+ * flags are all still live. These fetchers/types keep those manual actions
+ * behind the existing authenticated server contracts.
  */
 import { apiFetch } from '@/lib/api'
 

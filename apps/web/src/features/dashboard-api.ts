@@ -1,5 +1,9 @@
-import { apiFetch, apiRequest, ApiRequestError } from '@/lib/api'
-import { getDemoDashboardNews, getDemoDashboardSummary, getDemoDashboardTransactions } from './demo-data'
+import { apiFetch, ApiRequestError } from '@/lib/api'
+import {
+  getDemoDashboardNews,
+  getDemoDashboardSummary,
+  getDemoDashboardTransactions,
+} from './demo-data'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorAssetDetailsResponse,
@@ -191,7 +195,6 @@ export const fetchDashboardTransactions = async (params: {
   }
 }
 
-
 const DEMO_ADVISOR_GENERATED_AT = '2026-04-14T08:00:00.000Z'
 const DEMO_KNOWLEDGE_GUARDRAIL =
   'Contenu educatif uniquement. Pas de recommandation personnalisee, fiscale, juridique ou de signal achat/vente.'
@@ -275,7 +278,9 @@ const pickDemoKnowledgeTopic = (question: string) => {
   return null
 }
 
-export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisorOverviewResponse => {
+export const getDemoDashboardAdvisor = (
+  range: DashboardRange
+): DashboardAdvisorOverviewResponse => {
   const summary = getDemoDashboardSummary(range)
   const net = summary.totals.incomes - summary.totals.expenses
 
@@ -299,7 +304,10 @@ export const getDemoDashboardAdvisor = (range: DashboardRange): DashboardAdvisor
         `Cashflow net estime: ${Math.round(net)} EUR`,
         `Depenses periode: ${Math.round(summary.totals.expenses)} EUR`,
       ],
-      opportunities: ['Automatiser une allocation mensuelle', 'Revoir le poste de depense principal'],
+      opportunities: [
+        'Automatiser une allocation mensuelle',
+        'Revoir le poste de depense principal',
+      ],
       risks: ['Cash drag si trop de liquidites', 'Marge insuffisante si les depenses remontent'],
       watchItems: ['Mettre a jour le snapshot admin pour artefacts reels'],
       recommendationNotes: [],
@@ -600,14 +608,15 @@ export const getDemoDashboardAdvisorEvalsTrends = (
     delta: 0,
     status: 'stable',
   }
-  const recommendation: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
-    category: 'recommendation_quality',
-    totalRuns: 1,
-    latest: mkLatest(0, 0),
-    previous: null,
-    delta: null,
-    status: 'insufficient_data',
-  }
+  const recommendation: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] =
+    {
+      category: 'recommendation_quality',
+      totalRuns: 1,
+      latest: mkLatest(0, 0),
+      previous: null,
+      delta: null,
+      status: 'insufficient_data',
+    }
   const challenger: DashboardAdvisorEvalTrendsResponse['groups'][number]['categories'][number] = {
     category: 'challenger',
     totalRuns: 1,
@@ -677,14 +686,15 @@ export const getDemoDashboardAdvisorEvalsTrends = (
   }
 }
 
-export const getDemoDashboardAdvisorKnowledgeTopics = (): DashboardAdvisorKnowledgeTopicsResponse => ({
-  mode: 'demo',
-  requestId: 'demo-advisor-request',
-  generatedAt: DEMO_ADVISOR_GENERATED_AT,
-  retrievalEnabled: true,
-  browseOnlyReason: null,
-  topics: DEMO_ADVISOR_KNOWLEDGE_TOPICS,
-})
+export const getDemoDashboardAdvisorKnowledgeTopics =
+  (): DashboardAdvisorKnowledgeTopicsResponse => ({
+    mode: 'demo',
+    requestId: 'demo-advisor-request',
+    generatedAt: DEMO_ADVISOR_GENERATED_AT,
+    retrievalEnabled: true,
+    browseOnlyReason: null,
+    topics: DEMO_ADVISOR_KNOWLEDGE_TOPICS,
+  })
 
 export const getDemoDashboardAdvisorKnowledgeAnswer = (
   question: string
@@ -817,7 +827,8 @@ export const getDemoDashboardAdvisorKnowledgeAnswer = (
         `Point cle: ${topic.summary}`,
         'Le mode demo reste deterministe et purement educatif.',
       ],
-      nextStep: 'Parcourez le sujet puis basculez en admin pour la meme experience avec observabilite live.',
+      nextStep:
+        'Parcourez le sujet puis basculez en admin pour la meme experience avec observabilite live.',
       guardrail: DEMO_KNOWLEDGE_GUARDRAIL,
     },
     confidenceScore: 0.78,
@@ -990,9 +1001,7 @@ export const putDashboardInvestmentStrategy = async (
 
 export const fetchDashboardAdvisorAssetsSearch = async (query: string) => {
   const search = toSearchParams({ q: query })
-  return apiFetch<DashboardAdvisorAssetSearchResponse>(
-    `/dashboard/advisor/assets/search?${search}`
-  )
+  return apiFetch<DashboardAdvisorAssetSearchResponse>(`/dashboard/advisor/assets/search?${search}`)
 }
 
 export const fetchDashboardAdvisorAssetDetails = async (assetId: string) => {
@@ -1050,9 +1059,7 @@ export const fetchDashboardInvestmentStatus = async () => {
 }
 
 export const fetchDashboardInvestmentHypotheses = async () => {
-  return apiFetch<DashboardInvestmentHypothesesResponse>(
-    '/dashboard/advisor/investment-hypotheses'
-  )
+  return apiFetch<DashboardInvestmentHypothesesResponse>('/dashboard/advisor/investment-hypotheses')
 }
 
 export const fetchDashboardInvestmentScorecard = async () => {
@@ -1096,17 +1103,72 @@ export const getDemoDashboardAdvisorBehaviorAnalytics = (
     ignoredRate: 0.1,
   },
   decisionBreakdown: [
-    { decision: 'accepted', count: 9, rate: 0.45, outcomeMix: { positive: 4, negative: 2, neutral: 1, mixed: 0, unknown: 2 } },
-    { decision: 'rejected', count: 5, rate: 0.25, outcomeMix: { positive: 1, negative: 2, neutral: 0, mixed: 0, unknown: 2 } },
-    { decision: 'deferred', count: 4, rate: 0.2, outcomeMix: { positive: 0, negative: 0, neutral: 0, mixed: 0, unknown: 4 } },
-    { decision: 'ignored', count: 2, rate: 0.1, outcomeMix: { positive: 0, negative: 0, neutral: 0, mixed: 0, unknown: 2 } },
+    {
+      decision: 'accepted',
+      count: 9,
+      rate: 0.45,
+      outcomeMix: { positive: 4, negative: 2, neutral: 1, mixed: 0, unknown: 2 },
+    },
+    {
+      decision: 'rejected',
+      count: 5,
+      rate: 0.25,
+      outcomeMix: { positive: 1, negative: 2, neutral: 0, mixed: 0, unknown: 2 },
+    },
+    {
+      decision: 'deferred',
+      count: 4,
+      rate: 0.2,
+      outcomeMix: { positive: 0, negative: 0, neutral: 0, mixed: 0, unknown: 4 },
+    },
+    {
+      decision: 'ignored',
+      count: 2,
+      rate: 0.1,
+      outcomeMix: { positive: 0, negative: 0, neutral: 0, mixed: 0, unknown: 2 },
+    },
   ],
   reasonCodeBreakdown: [
-    { reasonCode: 'accepted', count: 9, positiveOutcomes: 4, negativeOutcomes: 2, unknownOutcomes: 3, caution: null },
-    { reasonCode: 'rejected_low_confidence', count: 3, positiveOutcomes: 1, negativeOutcomes: 1, unknownOutcomes: 1, caution: null },
-    { reasonCode: 'deferred_need_more_data', count: 4, positiveOutcomes: 0, negativeOutcomes: 0, unknownOutcomes: 4, caution: null },
-    { reasonCode: 'rejected_disagree_thesis', count: 2, positiveOutcomes: 0, negativeOutcomes: 1, unknownOutcomes: 1, caution: null },
-    { reasonCode: 'ignored_no_action', count: 2, positiveOutcomes: 0, negativeOutcomes: 0, unknownOutcomes: 2, caution: null },
+    {
+      reasonCode: 'accepted',
+      count: 9,
+      positiveOutcomes: 4,
+      negativeOutcomes: 2,
+      unknownOutcomes: 3,
+      caution: null,
+    },
+    {
+      reasonCode: 'rejected_low_confidence',
+      count: 3,
+      positiveOutcomes: 1,
+      negativeOutcomes: 1,
+      unknownOutcomes: 1,
+      caution: null,
+    },
+    {
+      reasonCode: 'deferred_need_more_data',
+      count: 4,
+      positiveOutcomes: 0,
+      negativeOutcomes: 0,
+      unknownOutcomes: 4,
+      caution: null,
+    },
+    {
+      reasonCode: 'rejected_disagree_thesis',
+      count: 2,
+      positiveOutcomes: 0,
+      negativeOutcomes: 1,
+      unknownOutcomes: 1,
+      caution: null,
+    },
+    {
+      reasonCode: 'ignored_no_action',
+      count: 2,
+      positiveOutcomes: 0,
+      negativeOutcomes: 0,
+      unknownOutcomes: 2,
+      caution: null,
+    },
   ],
   learningSignals: [
     {
@@ -1116,9 +1178,9 @@ export const getDemoDashboardAdvisorBehaviorAnalytics = (
     },
   ],
   caveats: [
-    "Analyse rétrospective basée sur le journal de décisions. Ne constitue pas une recommandation.",
+    'Analyse rétrospective basée sur le journal de décisions. Ne constitue pas une recommandation.',
     "Aucune causalité inférée : un schéma observé n'est pas une preuve d'effet.",
-    "Les notes libres ne sont jamais incluses dans cette analyse.",
+    'Les notes libres ne sont jamais incluses dans cette analyse.',
   ],
 })
 
@@ -1157,10 +1219,7 @@ export const postDashboardAdvisorManualRefreshAndRun = async () => {
   )
 }
 
-export const postDashboardAdvisorChat = async (params: {
-  threadKey?: string
-  message: string
-}) => {
+export const postDashboardAdvisorChat = async (params: { threadKey?: string; message: string }) => {
   return apiFetch<DashboardAdvisorChatPostResponse>('/dashboard/advisor/chat', {
     method: 'POST',
     headers: {
@@ -1303,31 +1362,8 @@ export const normalizeDashboardDerivedRecomputeActionError = (
   }
 }
 
-const createDashboardDerivedRecomputeRequestId = () => {
-  return `derived-recompute-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-}
-
 export const fetchDashboardDerivedRecomputeStatus = async () => {
   return apiFetch<DashboardDerivedRecomputeStatusResponse>('/dashboard/derived-recompute')
-}
-
-export const postDashboardDerivedRecompute = async () => {
-  const requestId = createDashboardDerivedRecomputeRequestId()
-  const result = await apiRequest<DashboardDerivedRecomputeStatusResponse>(
-    '/dashboard/derived-recompute',
-    {
-      method: 'POST',
-      headers: {
-        'x-request-id': requestId,
-      },
-    }
-  )
-
-  if (!result.ok) {
-    throw result.error
-  }
-
-  return result.data
 }
 
 // ----------------------------------------------------------------------------------------------
@@ -1376,9 +1412,7 @@ export const fetchAdvisorDecisionJournal = async (params?: {
     ...(params?.runId !== undefined ? { runId: String(params.runId) } : {}),
     ...(params?.decision ? { decision: params.decision } : {}),
   })
-  const path = query
-    ? `/dashboard/advisor/journal?${query}`
-    : '/dashboard/advisor/journal'
+  const path = query ? `/dashboard/advisor/journal?${query}` : '/dashboard/advisor/journal'
   return apiFetch<DashboardAdvisorDecisionJournalListResponse>(path)
 }
 
@@ -1409,9 +1443,7 @@ export const postAdvisorDecisionOutcome = async (params: {
 // --- Trading Lab Hypothesis Lab (PR3) ---------------------------------------------------------
 
 export const fetchTradingLabHypotheses = async () => {
-  return apiFetch<DashboardTradingLabHypothesisListResponse>(
-    '/dashboard/trading-lab/hypotheses'
-  )
+  return apiFetch<DashboardTradingLabHypothesisListResponse>('/dashboard/trading-lab/hypotheses')
 }
 
 export const fetchTradingLabHypothesisById = async (id: number) => {
@@ -1420,9 +1452,7 @@ export const fetchTradingLabHypothesisById = async (id: number) => {
   )
 }
 
-export const postTradingLabHypothesis = async (
-  input: DashboardTradingLabHypothesisCreateInput
-) => {
+export const postTradingLabHypothesis = async (input: DashboardTradingLabHypothesisCreateInput) => {
   return apiFetch<{ ok: boolean; hypothesis: DashboardTradingLabHypothesis }>(
     '/dashboard/trading-lab/hypotheses',
     {
@@ -1553,10 +1583,7 @@ export const getDemoTradingLabPatternDetection = (
       candleCount,
       hasVolume: input.candles.some(c => typeof c.volume === 'number' && c.volume > 0),
       sufficient: candleCount >= 60,
-      warnings:
-        candleCount < 60
-          ? ['Demo fixture: candle count below recommended threshold.']
-          : [],
+      warnings: candleCount < 60 ? ['Demo fixture: candle count below recommended threshold.'] : [],
     },
     detections,
     caveats: [
@@ -1644,9 +1671,7 @@ export const getDemoTradingLabStrategyScorecard = (
       varConfidence: 0.95 as const,
       rollingWindow: 30,
     },
-    warnings: [
-      "Mode démo : métriques déterministes, non issues d'une session réelle.",
-    ],
+    warnings: ["Mode démo : métriques déterministes, non issues d'une session réelle."],
   },
   qualityFlags: [
     {
@@ -1712,18 +1737,13 @@ export const fetchAdvisorPostMortems = async () => {
 }
 
 export const fetchAdvisorPostMortemById = async (postMortemId: number) => {
-  return apiFetch<DashboardAdvisorPostMortemRow>(
-    `/dashboard/advisor/post-mortem/${postMortemId}`
-  )
+  return apiFetch<DashboardAdvisorPostMortemRow>(`/dashboard/advisor/post-mortem/${postMortemId}`)
 }
 
 export const postAdvisorPostMortemRun = async (trigger: 'manual' | 'scheduled' = 'manual') => {
-  return apiFetch<DashboardAdvisorPostMortemRunResponse>(
-    '/dashboard/advisor/post-mortem/run',
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ trigger }),
-    }
-  )
+  return apiFetch<DashboardAdvisorPostMortemRunResponse>('/dashboard/advisor/post-mortem/run', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ trigger }),
+  })
 }

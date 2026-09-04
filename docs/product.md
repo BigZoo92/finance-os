@@ -11,12 +11,14 @@ Finance-OS is an advisory, read-only personal cockpit. It organizes financial da
 | Assets | Asset/position views, valuation, external investment snapshots |
 | Goals | Personal financial goals and progress |
 | Radar | Monitored markets, deterministic market signals, dated events, and freshness around the D3 Signal Field. Radar observes and never recommends |
-| Social Intelligence | Source library: who Finance-OS listens to (identity, tags, light status). Source management and manual import are Admin-only |
-| Integrations | Powens connection lifecycle plus read-only IBKR/Binance status and sync |
+| Social Intelligence | Source library: who Finance-OS listens to (identity, tags, light status). Source management is Admin-only |
+| Integrations | Powens connection lifecycle plus read-only IBKR/Binance status and provider-owned sync |
 | Advisor | Monthly investment plan, allocation guidance, risk framing, and investment profile |
 | Chat | Focused financial conversation with evidence, assumptions, caveats, and hypothetical simulations |
 | Mémoire | Immersive temporal memory map for concepts, evidence, and relationships |
-| Orchestration/health | Manual refresh, provider diagnostics, data quality, operation progress |
+| Coûts | Fixed infrastructure estimates plus measured Social/X and Advisor spend, with provenance and partial coverage |
+| Santé | Human provider health, freshness, valuation coverage, and actionable recovery links |
+| Orchestration | Manual job runs, operation progress, recent results, and Social/X maintenance tools |
 | Trading Lab | Research scenarios and backtests only |
 
 The route tree under `apps/web/src/routes/` is the routing source of truth; `apps/web/src/components/shell/nav-items.ts` defines visible navigation.
@@ -24,6 +26,8 @@ The route tree under `apps/web/src/routes/` is the routing source of truth; `app
 Primary navigation follows the canonical Command Pixel route map: Cockpit, Argent (Dépenses, Patrimoine, Investissements, Objectifs), IA (Advisor, Chat, Mémoire), Radar, and Ops (Orchestration, Coûts, Intégrations, Santé, Admin mode only). Mobile uses Cockpit, Dépenses, Patrimoine, Advisor, and Plus (secondary destinations and Admin Ops entries). Nav visibility is not a security boundary; pages keep their own demo/admin handling.
 
 Radar lives at `/radar` and Social Intelligence at `/social-intelligence`, a separate canonical screen of the Radar product area reached from Radar, the command palette, and the mobile Plus drawer; both are normal product destinations available in demo and admin. The legacy `/signaux`, `/signaux/marches`, `/marches`, and `/actualites` routes redirect permanently to `/radar`; `/signaux/social` and `/signaux/x-twitter` redirect to `/social-intelligence`.
+
+Ops uses four distinct canonical routes: `/couts` for cost visibility, `/sante` for system health, `/integrations` for provider lifecycle and provider-owned synchronization, and `/orchestration` for registered jobs and maintenance actions. The legacy `/ia/couts` route redirects permanently to `/couts`. Demo keeps all four routes deterministic and read-only.
 
 ## Sources of truth
 

@@ -41,7 +41,9 @@ Worker/admin ingestion writes normalized cache/state tables. Dashboard routes re
 
 Social and news content is untrusted input. Sanitize metadata, bound fetches, enforce destination allowlists, and keep it out of execution decisions. A provider outage degrades its surface only.
 
-The web surfaces are `/radar` (markets overview, deterministic market signals, persisted signal items shown as dated events, freshness; Admin-only manual market refresh) and `/social-intelligence` (followed sources; Admin-only create, enable/disable, delete, X lookup, and manual import). Ingestion runs, provider diagnostics, and raw statuses are not shown on either page and belong to the Ops surfaces.
+The web surfaces are `/radar` (markets overview, deterministic market signals, persisted signal items shown as dated events, freshness; Admin-only manual market refresh) and `/social-intelligence` (followed sources; Admin-only create, enable/disable, delete, and X lookup). Manual Social import, Free Firehose estimate/run, X daily sync, and X source resolution live in the Social job detail on `/orchestration`; they reuse the existing guarded admin contracts and require explicit confirmation for live work. Ingestion runs, provider diagnostics, and raw statuses are not shown on Radar or Social Intelligence.
+
+Provider lifecycle ownership stays on `/integrations`: Powens connect/reconnect, cooldown-aware sync, and disconnect confirmation; IBKR and Binance server-managed read-only sync. The UI never exposes credentials, provider references, raw payloads, request IDs, or raw provider errors. `/sante` consumes only normalized human health, freshness, and coverage states, while `/orchestration` links back to Integrations instead of duplicating provider sync actions.
 
 When news fetching, ingestion, cache, fallback, fixtures, schema, or UI wiring changes, update this document in the same change.
 
