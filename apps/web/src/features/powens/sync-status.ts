@@ -46,7 +46,7 @@ const toTooltipLabel = ({
   const formattedAttempt = formatAttemptTime(attemptAt)
   const attemptLabel = formattedAttempt ? `Dernier essai a ${formattedAttempt}` : 'Dernier essai inconnu'
 
-  return `${attemptLabel} · ${toSnapshotFreshnessLabel(snapshotAt)}`
+  return `${attemptLabel}. ${toSnapshotFreshnessLabel(snapshotAt)}`
 }
 
 export const getPowensConnectionSyncBadgeModel = ({
@@ -66,7 +66,7 @@ export const getPowensConnectionSyncBadgeModel = ({
     return {
       badgeLabel: 'En cours',
       badgeVariant: 'outline',
-      badgeClassName: 'border-sky-500/60 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+      badgeClassName: 'border-teal/60 bg-teal/10 text-teal',
       reasonLabel: 'Synchronisation en cours',
       tooltipLabel,
     }
@@ -78,11 +78,11 @@ export const getPowensConnectionSyncBadgeModel = ({
       badgeVariant: connection.lastSyncStatus === 'OK' ? 'secondary' : 'destructive',
       reasonLabel: connection.lastSyncReasonCode
         ? connection.lastSyncStatus === 'KO'
-          ? `${REASON_LABEL[connection.lastSyncReasonCode]} · lecture seule sur dernier snapshot`
+          ? `${REASON_LABEL[connection.lastSyncReasonCode]}. Lecture seule sur le dernier instantané.`
           : REASON_LABEL[connection.lastSyncReasonCode]
         : connection.lastSyncStatus === 'OK'
           ? 'Synchronisation complete'
-          : 'Echec de synchronisation · lecture seule sur dernier snapshot',
+          : 'Échec de synchronisation. Dernier instantané disponible en lecture seule.',
       tooltipLabel,
     }
   }

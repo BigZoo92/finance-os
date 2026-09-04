@@ -36,12 +36,12 @@ const monthsAgoIso = (months: number) => {
 
 const formatPct = (value: unknown, digits = 1) => {
   const n = Number(value)
-  if (!Number.isFinite(n)) return '—'
+  if (!Number.isFinite(n)) return 'Indisponible'
   return `${(n * 100).toFixed(digits)}%`
 }
 const formatNum = (value: unknown, digits = 2) => {
   const n = Number(value)
-  if (!Number.isFinite(n)) return '—'
+  if (!Number.isFinite(n)) return 'Indisponible'
   return n.toFixed(digits)
 }
 
@@ -129,7 +129,7 @@ export function BacktestRunner({
           ? 'Lecture seule en mode démo. Les exécutions sont réservées au mode admin.'
           : 'Recherche papier uniquement. Backtests ≠ prédictions. Les stratégies techniques restent expérimentales.'
       }
-      tone="violet"
+      tone="ai"
       actions={
         <button
           type="button"
@@ -147,8 +147,8 @@ export function BacktestRunner({
       ) : (
         <div className="space-y-3">
           {isDemo ? (
-            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-              Mode démo — les boutons sont visibles mais désactivés. Connecte-toi en admin pour
+            <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              Mode démo. Les boutons sont visibles mais désactivés. Connecte-toi en admin pour
               exécuter.
             </div>
           ) : null}
@@ -283,7 +283,7 @@ export function BacktestRunner({
               type="button"
               disabled={formDisabled || strategyId === null || walkForwardMutation.isPending}
               onClick={() => walkForwardMutation.mutate()}
-              className="rounded-md border border-accent-2/40 bg-accent-2/15 px-3 py-1.5 text-xs font-medium text-accent-2 hover:bg-accent-2/25 disabled:opacity-50"
+              className="rounded-md border border-ai/40 bg-ai/15 px-3 py-1.5 text-xs font-medium text-ai hover:bg-ai/25 disabled:opacity-50"
             >
               {walkForwardMutation.isPending ? 'Walk-forward…' : 'Walk-forward'}
             </button>
@@ -313,7 +313,7 @@ function PreviewResultPanel({
 }) {
   if (error) {
     return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-300">
+      <div className="rounded-md border border-negative/30 bg-negative/10 p-2 text-xs text-negative">
         Échec de la prévisualisation : {(error as Error).message}
       </div>
     )
@@ -321,7 +321,7 @@ function PreviewResultPanel({
   if (!data || !data.ok) {
     if (data?.message) {
       return (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
+        <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning">
           {data.message}
         </div>
       )
@@ -338,13 +338,15 @@ function PreviewResultPanel({
           fallbackUsed={data.fallbackUsed}
         />
         <span className="text-muted-foreground">
-          {data.barsCount ?? 0} bougies · {data.firstBarDate ?? '—'} → {data.lastBarDate ?? '—'}
+          {data.barsCount ?? 'Nombre indisponible'} bougies, du{' '}
+          {data.firstBarDate ?? 'début indisponible'} au{' '}
+          {data.lastBarDate ?? 'terme indisponible'}
         </span>
       </div>
       {data.dataWarnings && data.dataWarnings.length > 0 ? (
-        <ul className="space-y-0.5 text-amber-300/70">
+        <ul className="space-y-0.5 text-warning/70">
           {data.dataWarnings.map(warning => (
-            <li key={warning}>· {warning}</li>
+            <li key={warning}>{warning}</li>
           ))}
         </ul>
       ) : null}
@@ -361,7 +363,7 @@ function BacktestResultPanel({
 }) {
   if (error) {
     return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-300">
+      <div className="rounded-md border border-negative/30 bg-negative/10 p-2 text-xs text-negative">
         Échec du backtest : {(error as Error).message}
       </div>
     )
@@ -369,16 +371,16 @@ function BacktestResultPanel({
   if (!data) return null
   if (!data.ok) {
     return (
-      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
+      <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning">
         {data.message ?? 'Backtest impossible.'}
       </div>
     )
   }
   const m = (data.metrics ?? {}) as Record<string, unknown>
   return (
-    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-xs">
+    <div className="rounded-md border border-positive/30 bg-positive/5 p-2 text-xs">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="font-medium text-emerald-300">Backtest #{data.runId} terminé.</span>
+        <span className="font-medium text-positive">Backtest #{data.runId} terminé.</span>
         <DataSourceBadge
           resolvedMarketDataSource={data.resolvedMarketDataSource}
           dataProvider={data.dataProvider}
@@ -386,7 +388,9 @@ function BacktestResultPanel({
           fallbackUsed={data.fallbackUsed}
         />
         <span className="text-muted-foreground">
-          {data.barsCount ?? 0} bougies · {data.firstBarDate ?? '—'} → {data.lastBarDate ?? '—'}
+          {data.barsCount ?? 'Nombre indisponible'} bougies, du{' '}
+          {data.firstBarDate ?? 'début indisponible'} au{' '}
+          {data.lastBarDate ?? 'terme indisponible'}
         </span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -396,7 +400,7 @@ function BacktestResultPanel({
         <Metric label="Win rate" value={formatPct(m.win_rate, 0)} />
       </div>
       {data.fallbackUsed ? (
-        <div className="mt-2 text-amber-300/80">
+        <div className="mt-2 text-warning/80">
           <ExclamationTrianglePixelIcon size={12} className="mr-1 inline-block align-[-1px]" />
           Fallback utilisé ({data.fallbackReason ?? 'inconnu'}). Les chiffres ne reflètent pas un
           marché réel.
@@ -405,11 +409,11 @@ function BacktestResultPanel({
       {data.dataWarnings && data.dataWarnings.length > 0 ? (
         <ul className="mt-1 space-y-0.5 text-muted-foreground">
           {data.dataWarnings.map(warning => (
-            <li key={warning}>· {warning}</li>
+            <li key={warning}>{warning}</li>
           ))}
         </ul>
       ) : null}
-      <div className="mt-2 text-[10px] text-amber-400/70">
+      <div className="mt-2 text-[10px] text-warning/70">
         Backtest = simulation, pas une prédiction. Stratégies techniques expérimentales.
       </div>
     </div>
@@ -425,7 +429,7 @@ function WalkForwardResultPanel({
 }) {
   if (error) {
     return (
-      <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-300">
+      <div className="rounded-md border border-negative/30 bg-negative/10 p-2 text-xs text-negative">
         Échec du walk-forward : {(error as Error).message}
       </div>
     )
@@ -433,7 +437,7 @@ function WalkForwardResultPanel({
   if (!data) return null
   if (!data.ok) {
     return (
-      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-300">
+      <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning">
         {data.message ?? 'Walk-forward impossible.'}
       </div>
     )
@@ -449,9 +453,9 @@ function WalkForwardResultPanel({
           ? 'insufficient'
           : 'stable'
   const TONE_BADGE: Record<typeof tone, string> = {
-    stable: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-    fragile: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-    overfit: 'bg-red-500/15 text-red-300 border-red-500/30',
+    stable: 'bg-positive/15 text-positive border-positive/30',
+    fragile: 'bg-warning/15 text-warning border-warning/30',
+    overfit: 'bg-negative/15 text-negative border-negative/30',
     insufficient: 'bg-surface-2 text-muted-foreground border-border',
   }
   const TONE_LABEL: Record<typeof tone, string> = {
@@ -462,9 +466,9 @@ function WalkForwardResultPanel({
   }
 
   return (
-    <div className="rounded-md border border-accent-2/30 bg-accent-2/5 p-2 text-xs">
+    <div className="rounded-md border border-ai/30 bg-ai/5 p-2 text-xs">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="font-medium text-accent-2">Walk-forward</span>
+        <span className="font-medium text-ai">Walk-forward</span>
         <span
           className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${TONE_BADGE[tone]}`}
         >
@@ -481,16 +485,18 @@ function WalkForwardResultPanel({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Metric
           label="Stabilité OOS"
-          value={data.stabilityScore != null ? formatNum(data.stabilityScore) : '—'}
+          value={data.stabilityScore != null ? formatNum(data.stabilityScore) : 'Indisponible'}
         />
         <Metric
           label="Dégradation"
           value={
-            data.degradationRatio != null ? `${(data.degradationRatio * 100).toFixed(0)}%` : '—'
+            data.degradationRatio != null
+              ? `${(data.degradationRatio * 100).toFixed(0)}%`
+              : 'Indisponible'
           }
         />
         <Metric label="Fenêtres" value={String(windows.length)} />
-        <Metric label="Warning" value={data.overfitWarning ?? '—'} />
+        <Metric label="Alerte" value={data.overfitWarning ?? 'Indisponible'} />
       </div>
       {windows.length > 0 ? (
         <div className="mt-2 max-h-40 overflow-auto rounded border border-border/60 bg-surface-1">
@@ -518,7 +524,7 @@ function WalkForwardResultPanel({
           </table>
         </div>
       ) : null}
-      <div className="mt-2 text-[10px] text-amber-400/70">
+      <div className="mt-2 text-[10px] text-warning/70">
         La validation walk-forward réduit le risque d'overfitting mais n'est pas une preuve de
         performance future.
       </div>

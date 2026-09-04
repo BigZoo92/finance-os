@@ -345,12 +345,12 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                   ) : null}
                   {hypothesis.assumptions.length > 0 ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Hypothèses : {hypothesis.assumptions.join(' · ')}
+                      Hypothèses : {hypothesis.assumptions.join(', ')}
                     </p>
                   ) : null}
                   {hypothesis.caveats.length > 0 ? (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Caveats : {hypothesis.caveats.join(' · ')}
+                      Caveats : {hypothesis.caveats.join(', ')}
                     </p>
                   ) : null}
                   {isAdmin && hypothesis.status !== 'archived' ? (

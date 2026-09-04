@@ -145,9 +145,9 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
         ) : null}
 
         {pathPeerLabel ? (
-          <div className="rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[11.5px] text-amber-200">
+          <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[11.5px] text-warning">
             <p className="font-medium">Chemin actif</p>
-            <p className="mt-0.5 text-amber-100/80">Trace en cours vers {pathPeerLabel}</p>
+            <p className="mt-0.5 text-warning/80">Trace en cours vers {pathPeerLabel}</p>
           </div>
         ) : null}
 
@@ -184,13 +184,13 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
         />
         <NeighborGroup
           title="Hypothèses utilisées"
-          tone="violet"
+          tone="ai"
           items={assumptions}
           onSelect={onSelectNeighbor}
         />
         <NeighborGroup
           title="Concepts liés"
-          tone="violet"
+          tone="ai"
           items={concepts}
           onSelect={onSelectNeighbor}
         />
@@ -233,7 +233,7 @@ export function AdvisorGraphLinkDetails({ link, source, target }: LinkDetailsPro
   return (
     <Panel
       title={LINK_KIND_LABEL[link.kind]}
-      tone="violet"
+      tone="ai"
       icon={
         <span
           aria-hidden="true"
@@ -316,7 +316,7 @@ function NeighborGroup({
   onSelect,
 }: {
   title: string
-  tone: 'primary' | 'warning' | 'violet' | 'muted'
+  tone: 'primary' | 'warning' | 'ai' | 'muted'
   items: ReadonlyArray<AdvisorGraphNeighbor>
   onSelect: (id: string) => void
 }) {
@@ -324,7 +324,7 @@ function NeighborGroup({
   const styles: Record<typeof tone, string> = {
     primary: 'border-primary/25 bg-primary/8 text-primary',
     warning: 'border-warning/30 bg-warning/8 text-warning',
-    violet: 'border-accent-2/30 bg-accent-2/8 text-accent-2',
+    ai: 'border-ai/30 bg-ai/8 text-ai',
     muted: 'border-border/40 bg-surface-1 text-muted-foreground',
   }
   return (

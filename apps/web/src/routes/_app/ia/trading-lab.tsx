@@ -1,4 +1,4 @@
-import { ChevronDownPixelIcon } from '@finance-os/ui/icons/pixel'
+import { ChevronDownPixelIcon, ExclamationTrianglePixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { KpiTile } from '@/components/surfaces/kpi-tile'
@@ -45,37 +45,54 @@ export const Route = createFileRoute('/_app/ia/trading-lab')({
 
 function SeverityBadge({ severity }: { severity: string }) {
   const colorMap: Record<string, string> = {
-    critical: 'bg-red-500/20 text-red-400 border-red-500/30',
-    important: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    watch: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    critical: 'bg-negative/20 text-negative border-negative/30',
+    important: 'bg-warning/20 text-warning border-warning/30',
+    watch: 'bg-teal/20 text-teal border-teal/30',
     info: 'bg-surface-2 text-muted-foreground border-border',
+  }
+  const labelMap: Record<string, string> = {
+    critical: 'Critique',
+    important: 'Important',
+    watch: 'À surveiller',
+    info: 'Information',
   }
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorMap[severity] ?? colorMap.info}`}
     >
-      {severity}
+      {labelMap[severity] ?? 'Information'}
     </span>
   )
 }
 
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    'active-paper': 'bg-green-500/20 text-green-400 border-green-500/30',
+    'active-paper': 'bg-positive/20 text-positive border-positive/30',
     draft: 'bg-surface-2 text-muted-foreground border-border',
     archived: 'bg-surface-1 text-muted-foreground/60 border-border/50',
-    completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-    running: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    failed: 'bg-red-500/20 text-red-400 border-red-500/30',
+    completed: 'bg-positive/20 text-positive border-positive/30',
+    running: 'bg-warning/20 text-warning border-warning/30',
+    failed: 'bg-negative/20 text-negative border-negative/30',
     pending: 'bg-surface-2 text-muted-foreground border-border',
-    open: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    tracking: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    open: 'bg-teal/20 text-teal border-teal/30',
+    tracking: 'bg-warning/20 text-warning border-warning/30',
+  }
+  const labelMap: Record<string, string> = {
+    'active-paper': 'Simulation active',
+    archived: 'Archivé',
+    completed: 'Terminé',
+    draft: 'Brouillon',
+    failed: 'Échec',
+    open: 'Ouvert',
+    pending: 'En attente',
+    running: 'En cours',
+    tracking: 'Suivi',
   }
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorMap[status] ?? colorMap.draft}`}
     >
-      {status}
+      {labelMap[status] ?? 'État inconnu'}
     </span>
   )
 }
@@ -85,7 +102,7 @@ function MetricCard({ label, value }: { label: string; value: string | number | 
     <div className="rounded-lg border border-border bg-surface-1 p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-financial text-lg font-semibold text-foreground">
-        {value !== null && value !== undefined ? String(value) : '--'}
+        {value !== null && value !== undefined ? String(value) : 'Indisponible'}
       </div>
     </div>
   )
@@ -117,20 +134,20 @@ function TradingLabPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Expert · Recherche papier"
+        eyebrow="Expert en recherche papier"
         title="Trading Lab"
         description="Espace expert pour simulation et backtests. Aucun capital réel, aucun ordre, aucune exécution."
       />
 
       {/* Paper-only warning */}
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+      <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
         <div className="flex items-start gap-2">
-          <span className="text-amber-400 text-lg leading-none mt-0.5">&#9888;</span>
+          <ExclamationTrianglePixelIcon className="mt-0.5 shrink-0 text-warning" size={18} />
           <div>
-            <div className="font-medium text-amber-300 text-sm">
-              Paper Trading Only · Backtest ≠ prédiction
+            <div className="text-sm font-medium text-warning">
+              Simulation uniquement. Un backtest n’est pas une prédiction.
             </div>
-            <div className="text-xs text-amber-400/80 mt-0.5">
+            <div className="mt-0.5 text-xs text-warning/80">
               Environnement de recherche et simulation. Aucun capital réel, aucune connexion broker,
               aucune exécution d'ordre. Les stratégies techniques sont expérimentales sauf marquées
               comme benchmark. Les signaux sociaux seuls sont une preuve faible.
@@ -219,12 +236,12 @@ function TradingLabPage() {
                     <span className="text-sm font-medium text-foreground">{s.name}</span>
                     <StatusBadge status={s.status} />
                     {s.strategyType === 'experimental' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                      <span className="rounded border border-warning/20 bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning">
                         expérimentale
                       </span>
                     )}
                     {s.strategyType === 'benchmark' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/20">
+                      <span className="rounded border border-positive/20 bg-positive/15 px-1.5 py-0.5 text-[10px] text-positive">
                         benchmark
                       </span>
                     )}
@@ -395,12 +412,18 @@ function TradingLabPage() {
                           <tbody className="font-financial">
                             {b.trades.slice(0, 50).map(t => {
                               const tr = t as Record<string, unknown>
-                              const pnl = Number(tr.pnl ?? 0)
-                              const pnlPct = Number(tr.pnl_pct ?? tr.pnlPct ?? 0)
+                              const pnlValue = tr.pnl == null ? null : Number(tr.pnl)
+                              const pnl = pnlValue !== null && Number.isFinite(pnlValue) ? pnlValue : null
+                              const pnlPctValue = tr.pnl_pct ?? tr.pnlPct
+                              const pnlPctNumber = pnlPctValue == null ? null : Number(pnlPctValue)
+                              const pnlPct =
+                                pnlPctNumber !== null && Number.isFinite(pnlPctNumber)
+                                  ? pnlPctNumber
+                                  : null
                               const tradeKey = [
                                 String(tr.entry_date ?? tr.entryDate ?? ''),
                                 String(tr.exit_date ?? tr.exitDate ?? ''),
-                                String(tr.side ?? 'long'),
+                                String(tr.side ?? ''),
                                 String(tr.pnl ?? ''),
                               ].join(':')
                               return (
@@ -412,19 +435,23 @@ function TradingLabPage() {
                                     {String(tr.exit_date ?? tr.exitDate ?? '')}
                                   </td>
                                   <td className="px-2 py-1 text-right">
-                                    {String(tr.side ?? 'long')}
+                                    {tr.side === 'long'
+                                      ? 'Achat'
+                                      : tr.side === 'short'
+                                        ? 'Vente'
+                                        : 'Indisponible'}
                                   </td>
                                   <td
-                                    className={`px-2 py-1 text-right ${pnl >= 0 ? 'text-positive' : 'text-negative'}`}
+                                    className={`px-2 py-1 text-right ${pnl === null ? 'text-muted-foreground' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}
                                   >
-                                    {pnl >= 0 ? '+' : ''}
-                                    {pnl.toFixed(2)}
+                                    {pnl === null ? 'Indisponible' : `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`}
                                   </td>
                                   <td
-                                    className={`px-2 py-1 text-right ${pnlPct >= 0 ? 'text-positive' : 'text-negative'}`}
+                                    className={`px-2 py-1 text-right ${pnlPct === null ? 'text-muted-foreground' : pnlPct >= 0 ? 'text-positive' : 'text-negative'}`}
                                   >
-                                    {pnlPct >= 0 ? '+' : ''}
-                                    {(pnlPct * 100).toFixed(2)}%
+                                    {pnlPct === null
+                                      ? 'Indisponible'
+                                      : `${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%`}
                                   </td>
                                 </tr>
                               )
@@ -435,11 +462,13 @@ function TradingLabPage() {
                     </details>
                   ) : null}
 
-                  {b.runStatus === 'failed' && b.errorSummary ? (
-                    <div className="mt-2 text-xs text-red-400">{b.errorSummary}</div>
+                  {b.runStatus === 'failed' ? (
+                    <div className="mt-2 text-xs text-negative">
+                      Simulation interrompue. Vérifiez les paramètres et réessayez.
+                    </div>
                   ) : null}
 
-                  <div className="mt-3 text-[10px] text-amber-400/70">
+                  <div className="mt-3 text-[10px] text-warning/70">
                     Backtest = simulation, pas une prédiction. Stratégies techniques expérimentales.
                     Signaux sociaux seuls = preuve faible.
                   </div>
@@ -490,7 +519,7 @@ function TradingLabPage() {
                   <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.thesis}</div>
                 ) : null}
                 {s.invalidationCriteria ? (
-                  <div className="text-xs text-red-400/70 mt-1">
+                  <div className="mt-1 text-xs text-negative/70">
                     Invalidation : {s.invalidationCriteria}
                   </div>
                 ) : null}
@@ -506,7 +535,7 @@ function TradingLabPage() {
           <ul className="space-y-1">
             {capabilities.caveats.map((c: string) => (
               <li key={c} className="text-xs text-muted-foreground flex items-start gap-2">
-                <span className="text-amber-400 mt-0.5">&#9679;</span>
+                <span aria-hidden className="mt-1.5 size-1.5 shrink-0 bg-warning" />
                 {c}
               </li>
             ))}

@@ -31,25 +31,25 @@ interface StrategyScorecardCardProps {
 }
 
 const formatPct = (value: number | null): string => {
-  if (value === null || !Number.isFinite(value)) return '—'
+  if (value === null || !Number.isFinite(value)) return 'Indisponible'
   return `${(value * 100).toFixed(1)} %`
 }
 
 const formatRatio = (value: number | null): string => {
-  if (value === null || !Number.isFinite(value)) return '—'
+  if (value === null || !Number.isFinite(value)) return 'Indisponible'
   return value.toFixed(2)
 }
 
 const gradeToneClass = (grade: DashboardTradingLabStrategyScorecardResponse['evidenceGrade']) => {
   switch (SCORECARD_GRADE_TONE[grade]) {
     case 'success':
-      return 'text-emerald-500'
+      return 'text-positive'
     case 'warning':
-      return 'text-amber-500'
+      return 'text-warning'
     case 'danger':
       return 'text-destructive'
     case 'info':
-      return 'text-sky-500'
+      return 'text-teal'
     case 'muted':
       return 'text-muted-foreground'
   }
@@ -60,9 +60,9 @@ const flagToneClass = (
 ): string => {
   switch (SCORECARD_FLAG_TONE[severity]) {
     case 'info':
-      return 'text-sky-500'
+      return 'text-teal'
     case 'warning':
-      return 'text-amber-500'
+      return 'text-warning'
     case 'danger':
       return 'text-destructive'
   }
@@ -72,15 +72,15 @@ const PERMANENT_BADGES = ['Paper only', 'Qualité de preuve', 'Recherche']
 
 // PR14 — formatting helpers for advanced metrics. Keep them local and side-effect-free.
 const formatNumber = (value: number | null, digits = 2): string => {
-  if (value === null || !Number.isFinite(value)) return '—'
+  if (value === null || !Number.isFinite(value)) return 'Indisponible'
   return value.toFixed(digits)
 }
 const formatPercent = (value: number | null, digits = 2): string => {
-  if (value === null || !Number.isFinite(value)) return '—'
+  if (value === null || !Number.isFinite(value)) return 'Indisponible'
   return `${(value * 100).toFixed(digits)} %`
 }
 const formatCurrency = (value: number | null): string => {
-  if (value === null || !Number.isFinite(value)) return '—'
+  if (value === null || !Number.isFinite(value)) return 'Indisponible'
   return value.toFixed(2)
 }
 
@@ -120,7 +120,7 @@ function AdvancedMetricsSection({ data }: AdvancedMetricsSectionProps) {
           {open ? 'Masquer les métriques avancées' : 'Afficher les métriques avancées'}
         </Button>
         <span className="text-[11px] text-muted-foreground">
-          Métriques rétrospectives — ne prédit pas les résultats futurs.
+          Métriques rétrospectives. Elles ne prédisent pas les résultats futurs.
         </span>
       </div>
       {open ? (
@@ -202,9 +202,9 @@ function AdvancedMetricsSection({ data }: AdvancedMetricsSectionProps) {
                   {data.assumptions.annualizationPeriods === null
                     ? 'inconnue'
                     : `${data.assumptions.annualizationPeriods} périodes/an`}
-                  ; taux sans risque ={' '}
-                  {(data.assumptions.riskFreeRate * 100).toFixed(2)}% ; VaR confiance ={' '}
-                  {Math.round(data.assumptions.varConfidence * 100)}% ; fenêtre glissante ={' '}
+                  , taux sans risque ={' '}
+                  {(data.assumptions.riskFreeRate * 100).toFixed(2)}%, VaR confiance ={' '}
+                  {Math.round(data.assumptions.varConfidence * 100)}%, fenêtre glissante ={' '}
                   {data.assumptions.rollingWindow ?? 'n/a'}.
                 </p>
                 <p className="mt-1">
@@ -213,9 +213,9 @@ function AdvancedMetricsSection({ data }: AdvancedMetricsSectionProps) {
               </div>
 
               {data.warnings.length > 0 ? (
-                <ul className="space-y-1 text-[11px] text-amber-500">
+                <ul className="space-y-1 text-[11px] text-warning">
                   {data.warnings.map(warning => (
-                    <li key={warning}>· {warning}</li>
+                    <li key={warning}>{warning}</li>
                   ))}
                 </ul>
               ) : null}
@@ -293,7 +293,7 @@ export function StrategyScorecardCard({
           ) : null}
 
           {isError ? (
-            <p className="text-xs text-amber-500">
+            <p className="text-xs text-warning">
               Scorecard indisponible : {toErrorMessage(query.error)}
             </p>
           ) : null}
@@ -379,7 +379,7 @@ export function StrategyScorecardCard({
                 <ul className="space-y-1 text-xs">
                   {data.qualityFlags.map((flag, idx) => (
                     <li key={`${flag.kind}-${idx}`} className={flagToneClass(flag.severity)}>
-                      · {flag.message}
+                      {flag.message}
                     </li>
                   ))}
                 </ul>
@@ -388,7 +388,7 @@ export function StrategyScorecardCard({
               {data.caveats.length > 0 ? (
                 <ul className="space-y-1 text-[11px] text-muted-foreground">
                   {data.caveats.map(caveat => (
-                    <li key={caveat}>· {caveat}</li>
+                    <li key={caveat}>{caveat}</li>
                   ))}
                 </ul>
               ) : null}

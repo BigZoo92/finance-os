@@ -64,7 +64,7 @@ export const getDemoAdvisorPostMortems = (): DashboardAdvisorPostMortemListRespo
       inputSummary: { itemCount: 1 },
       findings: {
         summary:
-          "Réduction du cash globalement tenue ; l'incertitude reste sur le rôle réel du contexte macro.",
+          "Réduction du cash globalement tenue. L'incertitude reste sur le rôle réel du contexte macro.",
         overallOutcome: 'mixed',
         evidenceReview: {
           supportedSignals: ["L'allocation de cash s'est rapprochée de la cible"],

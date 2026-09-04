@@ -144,7 +144,7 @@ export const mapAdvisorKnowledgeGraphDtoToViewModel = (
         dto.meta.degraded === true || dto.meta.origin === 'degraded'
           ? 'La mémoire est momentanément indisponible.'
           : dto.meta.origin === 'empty'
-            ? 'Aucun souvenir exploitable pour cette vue.'
+            ? 'Aucun souvenir exploitable avec ces filtres.'
             : `Mémoire Advisor avec ${nodes.length} nœuds et ${links.length} relations.`,
       nodeCount: nodes.length,
       linkCount: links.length,

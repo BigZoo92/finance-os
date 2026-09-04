@@ -5,6 +5,7 @@ import {
   ErrorComponent,
   type ErrorComponentProps,
   HeadContent,
+  Link,
   Scripts,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
@@ -38,14 +39,12 @@ function RootNotFound() {
 export function RouteError({ error }: ErrorComponentProps) {
   const isProduction = import.meta.env.PROD
   const message = isProduction
-    ? 'Erreur interne. Reessaie dans quelques secondes.'
+    ? 'Un problème est survenu. Réessayez dans quelques instants.'
     : String((error as unknown as { message?: string })?.message ?? error)
   const requestContext =
     typeof window === 'undefined'
       ? (getGlobalStartContext() as { requestPath?: string; requestId?: string } | undefined)
       : undefined
-  const requestId = requestContext?.requestId ?? 'n/a'
-
   if (typeof window === 'undefined') {
     logSsrError({
       source: 'route-error',
@@ -55,12 +54,23 @@ export function RouteError({ error }: ErrorComponentProps) {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Erreur interne</h2>
-      <p>Request ID: {requestId}</p>
-      <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
-      {!isProduction ? <ErrorComponent error={error} /> : null}
-    </div>
+    <main
+      id="main-content"
+      className="grid min-h-screen place-items-center bg-background p-6 text-foreground"
+    >
+      <section className="w-full max-w-md rounded-frame border border-border/60 bg-card p-6 shadow-surface">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-negative">Erreur</p>
+        <h1 className="mt-2 text-lg font-semibold">Impossible d’afficher cette page</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
+        <Link
+          to="/"
+          className="mt-5 inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Revenir au Cockpit
+        </Link>
+        {!isProduction ? <ErrorComponent error={error} /> : null}
+      </section>
+    </main>
   )
 }
 

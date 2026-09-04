@@ -29,6 +29,8 @@ Radar lives at `/radar` and Social Intelligence at `/social-intelligence`, a sep
 
 Ops uses four distinct canonical routes: `/couts` for cost visibility, `/sante` for system health, `/integrations` for provider lifecycle and provider-owned synchronization, and `/orchestration` for registered jobs and maintenance actions. The legacy `/ia/couts` route redirects permanently to `/couts`. Demo keeps all four routes deterministic and read-only.
 
+Compatibility routes remain deliberately small and permanent for existing bookmarks: `/transactions` redirects to `/depenses`, `/memoire` and `/ia/memoire/graph` redirect to `/ia/memoire`, and `/ia/strategie-investissement` redirects to `/investissements`. `/ia/trading-lab` is an Admin-only expert research route available through the command palette, not a primary navigation destination. `/health`, `/healthz`, `/version`, and `/powens/callback` are service or integration routes rather than product navigation.
+
 ## Sources of truth
 
 | Domain | Admin source | Demo source |

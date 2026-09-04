@@ -436,7 +436,7 @@ function AdvisorActionRow({
     row.bucket === 'asymmetric'
       ? 'text-warning'
       : row.bucket === 'growth'
-        ? 'text-accent-2'
+        ? 'text-ai'
         : 'text-foreground'
 
   return (

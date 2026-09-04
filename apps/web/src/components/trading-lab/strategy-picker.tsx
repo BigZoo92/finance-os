@@ -26,8 +26,8 @@ export function StrategyPicker({ strategies, value, onChange, disabled }: Props)
         {strategies.map(strategy => (
           <option key={strategy.id} value={strategy.id}>
             {strategy.name}
-            {strategy.strategyType === 'experimental' ? ' · expérimentale' : ''}
-            {strategy.strategyType === 'benchmark' ? ' · benchmark' : ''}
+            {strategy.strategyType === 'experimental' ? ' (expérimentale)' : ''}
+            {strategy.strategyType === 'benchmark' ? ' (benchmark)' : ''}
           </option>
         ))}
       </select>

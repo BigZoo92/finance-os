@@ -10,10 +10,6 @@ import {
   knowledgeStatsQueryOptionsWithMode,
   removeKnowledgeQueriesForAuthTransition,
 } from './knowledge-query-options'
-import {
-  opsKnowledgeEnrichmentStatusQueryOptions,
-  opsKnowledgeQueryKeys,
-} from './ops-knowledge-api'
 
 const queryKeysForMode = (mode: AuthMode) => [
   knowledgeStatsQueryOptionsWithMode({ mode }).queryKey,
@@ -34,7 +30,6 @@ const queryKeysForMode = (mode: AuthMode) => [
     includeExamples: false,
     limit: 120,
   }).queryKey,
-  opsKnowledgeEnrichmentStatusQueryOptions({ mode }).queryKey,
 ]
 
 describe('knowledge query keys', () => {
@@ -76,19 +71,10 @@ describe('knowledge query keys', () => {
     ).not.toEqual(options.queryKey)
   })
 
-  it('keeps ops readiness inside the removable knowledge namespace', () => {
-    expect(opsKnowledgeQueryKeys.all).toEqual(['knowledge', 'ops'])
-    expect(opsKnowledgeQueryKeys.enrichmentStatus('demo')).toEqual([
-      'knowledge',
-      'ops',
-      'enrichment-status',
-      'demo',
-    ])
-  })
 })
 
 describe('removeKnowledgeQueriesForAuthTransition', () => {
-  it('removes demo, admin, graph, context, and ops entries without clearing unrelated data', () => {
+  it('removes demo, admin, graph, and context entries without clearing unrelated data', () => {
     const queryClient = new QueryClient()
     const demoKeys = queryKeysForMode('demo')
     const adminKeys = queryKeysForMode('admin')

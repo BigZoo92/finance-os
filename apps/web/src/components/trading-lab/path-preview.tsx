@@ -28,12 +28,28 @@ type PathStep = {
   href?: string | undefined
 }
 
+const HUMAN_LABELS: Record<string, string> = {
+  active: 'Active',
+  archived: 'Archivée',
+  benchmark: 'Référence',
+  completed: 'Terminé',
+  draft: 'Brouillon',
+  experimental: 'Expérimentale',
+  failed: 'Échec',
+  flagged: 'Repéré',
+  pending: 'En attente',
+  running: 'En cours',
+}
+
+const toHumanLabel = (value: string) =>
+  HUMAN_LABELS[value] ?? value.replaceAll('_', ' ').replace(/^./, letter => letter.toUpperCase())
+
 const KIND_TINT: Record<PathStep['kind'], string> = {
-  signal: 'border-sky-500/40 bg-sky-500/10 text-sky-200',
-  scenario: 'border-violet-500/40 bg-violet-500/10 text-violet-200',
-  strategy: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
-  backtest: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200',
-  caveat: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+  signal: 'border-teal/40 bg-teal/10 text-teal',
+  scenario: 'border-ai/40 bg-ai/10 text-ai',
+  strategy: 'border-positive/40 bg-positive/10 text-positive',
+  backtest: 'border-teal/40 bg-teal/10 text-teal',
+  caveat: 'border-warning/40 bg-warning/10 text-warning',
 }
 
 const KIND_LABEL: Record<PathStep['kind'], string> = {
@@ -70,7 +86,7 @@ const buildPaths = ({
         id: `signal:${scenario.linkedSignalItemId}`,
         kind: 'signal',
         title: `Signal #${scenario.linkedSignalItemId}`,
-        subtitle: 'flagged',
+        subtitle: 'Repéré',
         href: '/radar',
       })
     }
@@ -78,14 +94,14 @@ const buildPaths = ({
       id: `scenario:${scenario.id}`,
       kind: 'scenario',
       title: scenario.name,
-      subtitle: scenario.thesis ? scenario.thesis.slice(0, 90) : scenario.status,
+      subtitle: scenario.thesis ? scenario.thesis.slice(0, 90) : toHumanLabel(scenario.status),
     })
     if (strategy) {
       steps.push({
         id: `strategy:${strategy.id}`,
         kind: 'strategy',
         title: strategy.name,
-        subtitle: strategy.strategyType,
+        subtitle: toHumanLabel(strategy.strategyType),
       })
     }
     if (linkedBacktest) {
@@ -96,14 +112,14 @@ const buildPaths = ({
         kind: 'backtest',
         title: `Backtest #${linkedBacktest.id}`,
         subtitle: Number.isFinite(cagr)
-          ? `CAGR ${(cagr * 100).toFixed(1)}% · ${linkedBacktest.runStatus}`
-          : linkedBacktest.runStatus,
+          ? `CAGR ${(cagr * 100).toFixed(1)}%, ${toHumanLabel(linkedBacktest.runStatus)}`
+          : toHumanLabel(linkedBacktest.runStatus),
       })
     }
     steps.push({
       id: `caveat:${scenario.id}`,
       kind: 'caveat',
-      title: 'Caveats',
+      title: 'Limites',
       subtitle: scenario.invalidationCriteria
         ? scenario.invalidationCriteria.slice(0, 80)
         : 'Backtest ≠ prédiction',
@@ -129,7 +145,7 @@ const buildPaths = ({
             id: `caveat:${item.id}`,
             kind: 'caveat',
             title: 'Aucun scénario lié',
-            subtitle: 'Crée un scénario papier pour structurer la thèse.',
+            subtitle: 'Crée un scénario simulé pour structurer la thèse.',
           },
         ],
       })
@@ -144,13 +160,13 @@ export function GraphPathPreview(props: Props) {
 
   return (
     <Panel
-      title="Chemins de raisonnement"
-      description="Signal → Scénario → Stratégie → Backtest → Caveats. Mémoire dérivée, pas un graphe complet."
-      tone="violet"
+      title="Parcours"
+      description="Du signal aux limites de la simulation."
+      tone="ai"
     >
       {paths.length === 0 ? (
         <div className="text-xs text-muted-foreground">
-          Aucun chemin pour le moment. Crée un scénario depuis un signal pour voir une trace structurée ici.
+          Aucun parcours enregistré. Crée un scénario depuis Radar.
         </div>
       ) : (
         <ul className="space-y-3">

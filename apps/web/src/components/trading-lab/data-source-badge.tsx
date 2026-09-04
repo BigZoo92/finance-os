@@ -9,10 +9,10 @@ type Props = {
 }
 
 const TONE_BG: Record<Tone, string> = {
-  real: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  'real-cached': 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-  'real-overlay': 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-  synthetic: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  real: 'bg-positive/15 text-positive border-positive/30',
+  'real-cached': 'bg-teal/15 text-teal border-teal/30',
+  'real-overlay': 'bg-teal/15 text-teal border-teal/30',
+  synthetic: 'bg-warning/15 text-warning border-warning/30',
   unknown: 'bg-surface-2 text-muted-foreground border-border',
 }
 
@@ -51,15 +51,15 @@ export function DataSourceBadge({
   const tone = normalizeTone(dataQuality, fallbackUsed)
   const sourceLabel = resolvedMarketDataSource
     ? FRENCH_SOURCE[resolvedMarketDataSource] ?? resolvedMarketDataSource.replace(/_/g, ' ')
-    : '—'
-  const providerLabel = dataProvider && dataProvider !== 'fixture' ? ` · ${dataProvider}` : ''
-  const fallbackHint = fallbackUsed ? ' · fallback' : ''
+    : 'Indisponible'
+  const providerLabel = dataProvider && dataProvider !== 'fixture' ? ` (${dataProvider})` : ''
+  const fallbackHint = fallbackUsed ? ' (secours)' : ''
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${TONE_BG[tone]} ${className ?? ''}`}
       title={`source: ${sourceLabel}${providerLabel}${fallbackHint}`}
     >
-      <span aria-hidden>●</span>
+      <span aria-hidden className="size-1.5 bg-current" />
       <span>
         {sourceLabel}
         {providerLabel}

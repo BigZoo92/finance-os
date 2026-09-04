@@ -11,7 +11,7 @@ type PanelProps = {
   title?: ReactNode
   description?: ReactNode
   icon?: ReactNode
-  tone?: 'plain' | 'brand' | 'violet' | 'positive' | 'negative' | 'warning'
+  tone?: 'plain' | 'brand' | 'ai' | 'positive' | 'negative' | 'warning'
   /** Optional trailing actions (buttons, filters, badges). */
   actions?: ReactNode
   /** Reduce default padding — useful when the body is a full-bleed table. */
@@ -25,7 +25,7 @@ type PanelProps = {
 const TONE_RAIL: Record<NonNullable<PanelProps['tone']>, string> = {
   plain: 'before:bg-border/0',
   brand: 'before:bg-[linear-gradient(180deg,oklch(from_var(--primary)_l_c_h/80%),oklch(from_var(--primary)_l_c_h/10%))]',
-  violet: 'before:bg-[linear-gradient(180deg,oklch(from_var(--accent-2)_l_c_h/80%),oklch(from_var(--accent-2)_l_c_h/10%))]',
+  ai: 'before:bg-[linear-gradient(180deg,oklch(from_var(--ai)_l_c_h/80%),oklch(from_var(--ai)_l_c_h/10%))]',
   positive: 'before:bg-[linear-gradient(180deg,oklch(from_var(--positive)_l_c_h/80%),oklch(from_var(--positive)_l_c_h/10%))]',
   negative: 'before:bg-[linear-gradient(180deg,oklch(from_var(--negative)_l_c_h/80%),oklch(from_var(--negative)_l_c_h/10%))]',
   warning: 'before:bg-[linear-gradient(180deg,oklch(from_var(--warning)_l_c_h/80%),oklch(from_var(--warning)_l_c_h/10%))]',
@@ -34,7 +34,7 @@ const TONE_RAIL: Record<NonNullable<PanelProps['tone']>, string> = {
 const TONE_ICON: Record<NonNullable<PanelProps['tone']>, string> = {
   plain: 'text-muted-foreground',
   brand: 'text-primary',
-  violet: 'text-accent-2',
+  ai: 'text-ai',
   positive: 'text-positive',
   negative: 'text-negative',
   warning: 'text-warning',
@@ -58,7 +58,7 @@ export function Panel({
       className={[
         'relative overflow-hidden rounded-surface border border-border/60 bg-card shadow-surface',
         tone !== 'plain' &&
-          `before:content-[''] before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-full ${TONE_RAIL[tone]}`,
+          `before:content-[''] before:absolute before:inset-y-3 before:left-0 before:w-px ${TONE_RAIL[tone]}`,
         className,
       ]
         .filter(Boolean)

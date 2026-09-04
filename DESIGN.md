@@ -4,6 +4,8 @@
 
 Finance-OS Command Pixel V1 is the locked and canonical product design.
 
+Design status: **FINAL**. Implementation status: **IMPLEMENTED**.
+
 Do not reopen the visual direction during implementation.
 
 The detailed design handoff lives in:

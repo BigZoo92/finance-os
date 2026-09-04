@@ -121,7 +121,7 @@ export const MEMORY_ORIGIN_COPY: Readonly<
   },
   empty: {
     label: 'Mémoire vide',
-    description: 'Aucun souvenir exploitable pour cette vue.',
+    description: 'Aucun souvenir exploitable avec ces filtres.',
   },
 }
 

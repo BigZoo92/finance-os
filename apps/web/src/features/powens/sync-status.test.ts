@@ -91,7 +91,7 @@ describe('getPowensConnectionSyncBadgeModel', () => {
     ).toEqual(
       expect.objectContaining({
         badgeLabel: 'KO',
-        reasonLabel: 'Echec de synchronisation · lecture seule sur dernier snapshot',
+        reasonLabel: 'Echec de synchronisation. Lecture seule sur le dernier instantané.',
       })
     )
   })

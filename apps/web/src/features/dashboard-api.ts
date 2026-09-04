@@ -681,7 +681,7 @@ export const getDemoDashboardAdvisorEvalsTrends = (
     ],
     caveats: [
       'Mode démo : données déterministes, non issues d’une exécution réelle.',
-      'Tendances basées sur les evals déterministes ; aucune affirmation de profitabilité ou de prédictivité.',
+      'Tendances basées sur les evals déterministes. Aucune affirmation de profitabilité ou de prédictivité.',
     ],
   }
 }
@@ -1526,8 +1526,8 @@ export const getDemoTradingLabPatternDetection = (
       },
       limitations: [
         'Demo fixture: numbers are illustrative. Run an admin session for real detections.',
-        'Detection is heuristic; SMC/ICT concepts are interpretive and subjective.',
-        'Pattern is observational; it does NOT predict price direction.',
+        'La détection est heuristique. Les concepts SMC et ICT restent interprétatifs.',
+        'Le motif est une observation. Il ne prédit pas la direction du marché.',
       ],
     })
   }
@@ -1548,7 +1548,7 @@ export const getDemoTradingLabPatternDetection = (
       metrics: { level: 100, ema20: 100.05, retestCount: 4, candlesUsed: candleCount },
       limitations: [
         'Demo fixture: numbers are illustrative. Run an admin session for real detections.',
-        'Pattern is observational; it does NOT predict price direction.',
+        'Le motif est une observation. Il ne prédit pas la direction du marché.',
       ],
     })
   }
@@ -1589,7 +1589,7 @@ export const getDemoTradingLabPatternDetection = (
     caveats: [
       'Mode démo : données déterministes, non issues d’une session réelle.',
       'Patterns are deterministic research observations only. Not financial advice.',
-      'Research-only output; no order routing. Paper-only research layer.',
+      'Résultat de recherche uniquement. Aucun ordre réel.',
     ],
   }
 }
@@ -1682,7 +1682,7 @@ export const getDemoTradingLabStrategyScorecard = (
     {
       kind: 'no_walk_forward',
       severity: 'warning',
-      message: 'Aucun walk-forward exécuté — robustesse hors-échantillon non vérifiée.',
+      message: 'Aucun walk-forward exécuté. Robustesse hors-échantillon non vérifiée.',
     },
   ],
   caveats: [

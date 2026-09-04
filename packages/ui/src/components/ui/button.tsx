@@ -5,7 +5,7 @@ import { Slot } from "radix-ui"
 import { cn } from "@finance-os/ui/lib/utils"
 
 const buttonVariants = cva(
-  // base — relative for shine overlay, slight scale-on-press, premium focus ring
+  // Shared control geometry, interaction, and keyboard focus treatment.
   [
     "group/btn relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium select-none cursor-pointer",
     "transition-[transform,box-shadow,background,color,border-color] duration-150 ease-out",
@@ -18,27 +18,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: [
-          // rose signature with subtle brand shadow + inner highlight
+          // Signal-orange primary action.
           "bg-primary text-primary-foreground",
           "shadow-[0_1px_2px_oklch(0_0_0/18%),inset_0_1px_0_oklch(1_0_0/18%)]",
           "hover:shadow-[0_6px_18px_-4px_oklch(from_var(--primary)_l_c_h/45%),inset_0_1px_0_oklch(1_0_0/22%)]",
           "hover:brightness-[1.06]",
-        ].join(" "),
-        aurora: [
-          // brand hero CTA — aurora gradient with soft glow
-          "text-primary-foreground",
-          "bg-[linear-gradient(92deg,var(--aurora-a)_0%,var(--aurora-b)_50%,var(--aurora-c)_100%)]",
-          "shadow-[0_10px_30px_-8px_oklch(from_var(--primary)_l_c_h/45%),inset_0_1px_0_oklch(1_0_0/25%)]",
-          "bg-[length:200%_100%] bg-[position:0%_50%]",
-          "hover:bg-[position:100%_50%]",
-          "transition-[background-position,box-shadow,transform] duration-500",
         ].join(" "),
         destructive:
           "bg-destructive text-white shadow-[0_1px_2px_oklch(0_0_0/16%)] hover:brightness-[1.06] focus-visible:ring-destructive/50",
         outline:
           "border border-border bg-transparent shadow-xs hover:bg-accent/60 hover:border-primary/30 hover:text-primary hover:shadow-sm",
         soft:
-          // subtle brand-tinted surface — for secondary CTAs that should still feel on-brand
+          // Quiet brand-tinted secondary action.
           "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 hover:border-primary/30",
         secondary:
           "bg-secondary text-secondary-foreground border border-border/40 hover:bg-secondary/70 hover:shadow-xs",

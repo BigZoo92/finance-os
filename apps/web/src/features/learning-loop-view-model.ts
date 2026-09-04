@@ -447,7 +447,7 @@ export const describePostMortemRunStatus = (
       return {
         tone: 'info',
         label: 'Désactivé',
-        detail: 'AI_POST_MORTEM_ENABLED est sur false côté serveur — aucune analyse n\'a tourné.',
+        detail: 'L’analyse rétrospective est désactivée. Aucune analyse n’a été lancée.',
       }
     case 'skipped_budget_blocked':
       return {
@@ -682,7 +682,7 @@ export const buildHypothesisDraftFromDetection = (
   const titleSegments = [label]
   if (symbolPart) titleSegments.push(symbolPart)
   if (timeframePart) titleSegments.push(timeframePart)
-  const name = `Hypothèse paper · ${titleSegments.join(' · ')}`
+  const name = `Hypothèse papier ${titleSegments.join(', ')}`
   const slug = slugify(
     [
       detection.patternType,
@@ -697,15 +697,16 @@ export const buildHypothesisDraftFromDetection = (
     `Détection ${label}`,
     symbolPart ? `sur ${symbolPart}` : null,
     timeframePart ? `(${timeframePart})` : null,
-    `— direction observée: ${detection.direction}, confiance: ${detection.confidence}.`,
-    'Hypothèse à tester en paper trading uniquement.',
+    `Direction observée : ${TREND_PATTERN_DIRECTION_LABEL_FR[detection.direction]}.`,
+    `${PATTERN_CONFIDENCE_LABEL_FR[detection.confidence]}.`,
+    'Hypothèse à tester uniquement en simulation.',
   ].filter((s): s is string => typeof s === 'string')
   const thesis = thesisSegments.join(' ')
 
   const invalidationCriteria =
     detection.invalidationHints.length > 0
       ? [...detection.invalidationHints]
-      : ['À définir avant tout suivi paper.']
+      : ['À définir avant tout suivi simulé.']
 
   const evidenceNotes = detection.evidence.length > 0 ? [...detection.evidence] : undefined
   const caveats = [

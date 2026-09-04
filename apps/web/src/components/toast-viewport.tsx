@@ -1,9 +1,10 @@
 import { Button } from '@finance-os/ui/components'
+import { TimesPixelIcon } from '@finance-os/ui/icons/pixel/times'
 import { useStore } from '@tanstack/react-store'
 import { dismissToast, toastStore, type ToastTone } from '@/lib/toast-store'
 
 const TONE_CLASS: Record<ToastTone, string> = {
-  success: 'border-emerald-500/60',
+  success: 'border-positive/60',
   error: 'border-destructive/60',
   info: 'border-border',
 }
@@ -39,7 +40,7 @@ export function ToastViewport() {
               className="h-6 px-2"
               onClick={() => dismissToast(toast.id)}
             >
-              x
+              <TimesPixelIcon size={12} />
             </Button>
           </div>
         </div>

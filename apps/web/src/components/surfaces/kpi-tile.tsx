@@ -8,7 +8,7 @@
 import { UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
 import { motion, useReducedMotion } from 'motion/react'
 
-type Tone = 'plain' | 'brand' | 'violet' | 'positive' | 'negative' | 'warning'
+type Tone = 'plain' | 'brand' | 'ai' | 'positive' | 'negative' | 'warning'
 
 type KpiTileProps = {
   label: string
@@ -30,7 +30,7 @@ type KpiTileProps = {
 const TONE_ACCENT: Record<Tone, string> = {
   plain: 'text-foreground',
   brand: 'text-primary',
-  violet: 'text-accent-2',
+  ai: 'text-ai',
   positive: 'text-positive',
   negative: 'text-negative',
   warning: 'text-warning',

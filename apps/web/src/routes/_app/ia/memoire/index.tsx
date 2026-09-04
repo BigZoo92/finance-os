@@ -738,7 +738,7 @@ function AdvisorMemoryPage() {
 
           {missingSelection ? (
             <output className="absolute left-1/2 top-32 z-20 flex -translate-x-1/2 items-center gap-3 rounded-control border border-warning/35 bg-card/95 px-3 py-2 text-xs text-warning shadow-floating backdrop-blur lg:top-20">
-              <span>Ce souvenir n’est pas visible dans cette vue.</span>
+              <span>Ce souvenir n’est pas visible avec ces filtres.</span>
               <button type="button" className="underline" onClick={resetExploration}>
                 Tout afficher
               </button>
@@ -1193,7 +1193,7 @@ function MemoryPathStatus({
     ? 'Sélectionne un second souvenir.'
     : path
       ? `Chemin trouvé avec ${path.nodeIds.size} souvenirs.`
-      : 'Aucun chemin dans cette vue.'
+      : 'Aucun chemin avec ces filtres.'
 
   return (
     <output className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-control border border-primary/30 bg-card/90 px-3 py-2 text-xs text-foreground shadow-floating backdrop-blur">
@@ -1577,7 +1577,7 @@ function MemoryEmptyState({
           <ChartNetworkPixelIcon size={18} />
         </span>
         <h1 className="mt-4 text-lg font-semibold text-foreground">
-          {pending ? 'Chargement de la mémoire' : 'Aucun souvenir dans cette vue'}
+          {pending ? 'Chargement de la mémoire' : 'Aucun souvenir avec ces filtres'}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
         {!pending ? (

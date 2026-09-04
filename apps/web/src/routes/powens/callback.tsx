@@ -43,7 +43,7 @@ const toErrorState = (value: unknown) => {
     }
 
     return {
-      message: value.message,
+      message: "Impossible de finaliser la connexion pour le moment.",
       requestId: value.requestId,
       canRetryAsAdmin: false,
     } as const;
@@ -51,7 +51,7 @@ const toErrorState = (value: unknown) => {
 
   if (value instanceof Error) {
     return {
-      message: value.message,
+      message: "Impossible de finaliser la connexion pour le moment.",
       canRetryAsAdmin: false,
     } as const;
   }
@@ -175,11 +175,6 @@ function PowensCallbackPage() {
     return renderLayout(
       <div className="space-y-3">
         <p className="text-destructive">Erreur: {state.message}</p>
-        {state.requestId ? (
-          <p className="text-xs text-muted-foreground">
-            Request ID: {state.requestId}
-          </p>
-        ) : null}
         {state.canRetryAsAdmin ? (
           <Button asChild type="button">
             <Link to="/login" search={{ reason: undefined }}>
@@ -196,7 +191,7 @@ function PowensCallbackPage() {
 
   return renderLayout(
     <>
-      <p className="text-emerald-600 dark:text-emerald-400">Connexion OK.</p>
+      <p className="text-positive">Connexion OK.</p>
       {syncMutation.isError ? (
         <p className="text-destructive">
           Erreur: {toErrorState(syncMutation.error).message}

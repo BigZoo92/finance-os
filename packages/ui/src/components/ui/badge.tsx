@@ -28,12 +28,7 @@ const badgeVariants = cva(
           "bg-positive/12 text-positive border-positive/25",
         warning:
           "bg-warning/14 text-warning border-warning/28",
-        violet:
-          "bg-accent-2/12 text-accent-2 border-accent-2/25",
-        solid:
-          "bg-primary text-primary-foreground border-transparent shadow-[0_0_0_1px_oklch(from_var(--primary)_l_c_h/30%),0_6px_14px_-6px_oklch(from_var(--primary)_l_c_h/40%)]",
-        glass:
-          "glass-surface text-foreground border-transparent",
+        ai: "bg-ai/12 text-ai border-ai/25",
       },
     },
     defaultVariants: {

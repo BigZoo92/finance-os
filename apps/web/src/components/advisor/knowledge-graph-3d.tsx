@@ -331,7 +331,7 @@ export function KnowledgeGraph3D({
       role="img"
       aria-label={'Carte interactive de la m\u00e9moire financi\u00e8re'}
       data-render-state={renderState}
-      className="relative h-full w-full overflow-hidden rounded-2xl border border-border/60 bg-surface-0"
+      className="relative h-full w-full overflow-hidden rounded-frame border border-border/60 bg-surface-0"
       style={{
         backgroundImage:
           'radial-gradient(ellipse at center, var(--surface-1) 0%, var(--surface-0) 72%)',

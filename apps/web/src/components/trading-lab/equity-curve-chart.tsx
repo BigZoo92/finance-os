@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { getTradingChartColors } from './chart-colors'
 
 export type EquityPoint = { date: string; equity: number }
 
@@ -34,20 +35,21 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
       try {
         const mod = await import('lightweight-charts')
         if (cancelled || !containerRef.current) return
+        const colors = getTradingChartColors()
         const created = mod.createChart(containerRef.current, {
           height,
           autoSize: true,
           layout: {
             background: { color: 'transparent' },
-            textColor: 'rgb(180,180,200)',
+            textColor: colors.text,
             fontSize: 11,
             attributionLogo: false,
           },
-          rightPriceScale: { borderColor: 'rgba(255,255,255,0.06)' },
-          timeScale: { borderColor: 'rgba(255,255,255,0.06)' },
+          rightPriceScale: { borderColor: colors.border },
+          timeScale: { borderColor: colors.border },
           grid: {
-            horzLines: { color: 'rgba(255,255,255,0.04)' },
-            vertLines: { color: 'rgba(255,255,255,0.04)' },
+            horzLines: { color: colors.grid },
+            vertLines: { color: colors.grid },
           },
           crosshair: { mode: 1 },
           handleScroll: false,
@@ -59,9 +61,9 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
             setData: (d: Array<{ time: string; value: number }>) => void
           }
         }).addAreaSeries({
-          lineColor: 'rgb(232,121,249)',
-          topColor: 'rgba(232,121,249,0.35)',
-          bottomColor: 'rgba(232,121,249,0.02)',
+          lineColor: colors.teal,
+          topColor: colors.tealSoft,
+          bottomColor: colors.tealFaint,
           lineWidth: 2,
           priceLineVisible: false,
         })
@@ -103,7 +105,7 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
         aria-label="Equity curve chart loading"
       >
         <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
-          chart loading…
+          Chargement du graphique…
         </div>
       </div>
     )
@@ -114,8 +116,8 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
     const last = data[data.length - 1]
     const summary =
       first && last
-        ? `Equity from ${first.equity.toFixed(2)} ${currency} to ${last.equity.toFixed(2)} ${currency} over ${data.length} points`
-        : 'No equity data available'
+        ? `Capital de ${first.equity.toFixed(2)} ${currency} à ${last.equity.toFixed(2)} ${currency} sur ${data.length} points`
+        : 'Données de capital indisponibles'
     return (
       <div
         className={`relative w-full rounded-md border border-dashed border-border/40 bg-surface-1 ${className ?? ''}`}
@@ -124,7 +126,7 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
         aria-label={summary}
       >
         <div className="absolute inset-0 grid place-items-center px-3 text-center text-xs text-muted-foreground">
-          {error ? `Chart unavailable: ${error}` : summary}
+          {error ? 'Graphique indisponible' : summary}
         </div>
       </div>
     )
@@ -136,7 +138,7 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
       className={`relative w-full ${className ?? ''}`}
       style={{ height }}
       role="img"
-      aria-label={`Equity curve with ${data.length} data points`}
+      aria-label={`Courbe de capital sur ${data.length} points`}
     />
   )
 }

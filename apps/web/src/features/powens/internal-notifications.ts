@@ -34,7 +34,7 @@ const toConnectionDetail = (connection: PowensConnectionStatus) => {
     fragments.push(errorMessage)
   }
 
-  return fragments.join(' · ')
+  return fragments.join(', ')
 }
 
 export const getPowensInternalNotifications = ({

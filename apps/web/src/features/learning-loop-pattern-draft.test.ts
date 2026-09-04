@@ -29,7 +29,7 @@ describe('buildHypothesisDraftFromDetection', () => {
       symbol: 'AAPL',
       timeframe: '4h',
     })
-    expect(draft.name).toContain('Hypothèse paper')
+    expect(draft.name).toContain('Hypothèse papier')
     expect(draft.name).toContain('EMA20 + niveau horizontal')
     expect(draft.name).toContain('AAPL')
     expect(draft.name).toContain('4h')
@@ -58,7 +58,7 @@ describe('buildHypothesisDraftFromDetection', () => {
       expect(wb(term).test(draft.thesis ?? '')).toBe(false)
     }
     // Cautious framing must be present.
-    expect((draft.thesis ?? '').toLowerCase()).toContain('paper')
+    expect((draft.thesis ?? '').toLowerCase()).toContain('simulation')
   })
 
   it('maps invalidationHints into invalidationCriteria 1:1', () => {

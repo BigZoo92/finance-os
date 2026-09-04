@@ -32,7 +32,7 @@ const PRESETS = {
   buy_and_hold: {
     name: 'Buy & Hold',
     slug: 'buy-and-hold',
-    description: 'Benchmark long-only — achat à l\'ouverture, conservation jusqu\'à la fin.',
+    description: 'Benchmark long-only. Achat à l\'ouverture et conservation jusqu\'à la fin.',
     strategyType: 'benchmark',
     tags: ['benchmark', 'long-only'],
     parameters: { strategy_type: 'buy_and_hold' },
@@ -122,6 +122,20 @@ type PresetKey = keyof typeof PRESETS
 const DEFAULT_PRESET_KEY = 'ema_crossover' satisfies PresetKey
 const DEFAULT_PRESET = PRESETS[DEFAULT_PRESET_KEY]
 
+const STRATEGY_TYPE_LABEL: Record<Preset['strategyType'], string> = {
+  benchmark: 'Référence',
+  experimental: 'Expérimentale',
+}
+
+const strategyStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    'active-paper': 'Simulation active',
+    archived: 'Archivée',
+    draft: 'Brouillon',
+  }
+  return labels[status] ?? 'État inconnu'
+}
+
 export function StrategyEditor({ strategies, isAdmin }: Props) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -146,8 +160,8 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
       setFeedback(`Stratégie #${result.strategy.id} créée.`)
       void queryClient.invalidateQueries({ queryKey: ['tradingLab', 'strategies'] })
     },
-    onError: error => {
-      setFeedback(`Erreur : ${(error as Error).message}`)
+    onError: () => {
+      setFeedback('Création impossible. Réessayez.')
     },
   })
 
@@ -168,7 +182,7 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
     }
     const preset = PRESETS[presetKey]
     if (!preset) {
-      setFeedback('Preset invalide.')
+      setFeedback('Modèle indisponible.')
       return
     }
     const trimmedDescription = description.trim()
@@ -192,10 +206,10 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
 
   return (
     <Panel
-      title="Builder de stratégie"
+      title="Création de stratégie"
       description={
         isAdmin
-          ? 'Crée des stratégies papier depuis des presets. Les règles, indicateurs et caveats sont préremplis.'
+          ? 'Crée une stratégie simulée à partir d’un modèle.'
           : 'Lecture seule en démo.'
       }
       tone="brand"
@@ -217,7 +231,7 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Preset</span>
+              <span className="text-muted-foreground">Modèle</span>
               <select
                 className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
                 value={presetKey}
@@ -226,7 +240,7 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
               >
                 {Object.entries(PRESETS).map(([key, preset]) => (
                   <option key={key} value={key}>
-                    {preset.name} · {preset.strategyType}
+                    {preset.name} ({STRATEGY_TYPE_LABEL[preset.strategyType]})
                   </option>
                 ))}
               </select>
@@ -265,7 +279,7 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
           </label>
 
           <div className="rounded-md border border-border/60 bg-surface-1 p-2 text-[11px]">
-            <div className="mb-1 text-muted-foreground">Règles & caveats du preset</div>
+            <div className="mb-1 text-muted-foreground">Règles et limites du modèle</div>
             <PresetSummary preset={PRESETS[presetKey] ?? DEFAULT_PRESET} />
           </div>
 
@@ -279,8 +293,8 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
               {createMutation.isPending ? 'Création…' : 'Créer la stratégie'}
             </button>
             {feedback ? <span className="text-xs text-muted-foreground">{feedback}</span> : null}
-            <span className="ml-auto text-[10px] text-amber-400/70">
-              Aucune exécution réelle, aucun broker, aucune levier.
+            <span className="ml-auto text-[10px] text-warning/70">
+              Simulation uniquement.
             </span>
           </div>
 
@@ -302,16 +316,22 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
                     {strategy.slug}
                   </span>
                   <span className="rounded-full border border-border/60 px-1.5 text-[10px] text-muted-foreground">
-                    {strategy.strategyType}
+                    {strategy.strategyType === 'benchmark'
+                      ? 'Référence'
+                      : strategy.strategyType === 'experimental'
+                        ? 'Expérimentale'
+                        : 'Autre'}
                   </span>
-                  <span className="ml-auto text-[10px] text-muted-foreground">{strategy.status}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground">
+                    {strategyStatusLabel(strategy.status)}
+                  </span>
                   {isAdmin && strategy.status !== 'archived' ? (
                     <button
                       type="button"
                       onClick={() => archiveMutation.mutate(strategy.id)}
-                      className="text-[10px] text-muted-foreground hover:text-red-400"
+                      className="text-[10px] text-muted-foreground hover:text-negative"
                     >
-                      archiver
+                      Archiver
                     </button>
                   ) : null}
                 </li>
@@ -337,15 +357,15 @@ function PresetSummary({ preset }: { preset: Preset }) {
       </div>
       <div>
         <span className="text-foreground/80">Entrée : </span>
-        {preset.entryRules.map(rule => rule.description).join(' · ')}
+        {preset.entryRules.map(rule => rule.description).join(', ')}
       </div>
       <div>
         <span className="text-foreground/80">Sortie : </span>
-        {preset.exitRules.map(rule => rule.description).join(' · ')}
+        {preset.exitRules.map(rule => rule.description).join(', ')}
       </div>
       <div>
         <span className="text-foreground/80">Caveats : </span>
-        {preset.caveats.join(' · ')}
+        {preset.caveats.join(', ')}
       </div>
     </div>
   )

@@ -57,15 +57,6 @@
   --color-warm-accent: var(--warm-accent);
   --color-ai: var(--ai);
 
-  /* MIGRATION COMPAT — legacy brand accents (ex rose/violet).
-   * Tamed toward the canonical palette. Do not build new UI on
-   * these tokens; their removal belongs to later phases. */
-  --color-accent-2: var(--accent-2);
-  --color-accent-2-foreground: var(--accent-2-foreground);
-  --color-aurora-a: var(--aurora-a);
-  --color-aurora-b: var(--aurora-b);
-  --color-aurora-c: var(--aurora-c);
-
   /* Chart palette — Soft Orange Cream data viz.
    * Orange → teal → warm accent → green → amber → coral → AI violet (rare) */
   --color-chart-1: var(--chart-1);
@@ -93,30 +84,16 @@
   --radius-surface: 12px;
   --radius-frame: 14px;
 
-  /* MIGRATION COMPAT — legacy sidebar tokens (the permanent sidebar
-   * is scheduled for replacement by the floating navbar). */
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
   /* Typography — Geist only. Pixel is reserved for rare
    * micro-signature states, never body copy. */
   --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
   --font-pixel: "Geist Pixel", "Geist Mono Variable", ui-monospace, monospace;
-  --font-display: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
 
   /* Motion — easing curves */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-aurora: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Motion — durations (canonical functional range 120 à 180 ms) */
   --duration-fast: 120ms;
@@ -139,16 +116,6 @@
   --shadow-floating: 0 12px 28px oklch(0 0 0 / 10%), 0 4px 8px oklch(0 0 0 / 4%);
   --shadow-overlay: 0 24px 48px oklch(0 0 0 / 14%), 0 8px 16px oklch(0 0 0 / 6%);
 
-  /* MIGRATION COMPAT — legacy brand shadows, tamed. Orange never
-   * becomes a generic glow: keyline + neutral depth only. */
-  --shadow-brand:
-    0 0 0 1px oklch(from var(--primary) l c h / 10%), 0 10px 30px -12px oklch(0 0 0 / 30%);
-  --shadow-glow:
-    0 0 0 1px oklch(from var(--primary) l c h / 14%),
-    0 0 10px oklch(from var(--primary) l c h / 10%);
-  --shadow-glow-violet:
-    0 0 0 1px oklch(from var(--accent-2) l c h / 14%),
-    0 0 10px oklch(from var(--accent-2) l c h / 10%);
 }
 
 @layer base {
@@ -226,20 +193,17 @@
   --warm-accent: #9c8557;
   --ai: #6c5bd4;
 
+  /* Login uses a deeper signature canvas than the application shell. */
+  --login-canvas-center: #fcf7eb;
+  --login-canvas-mid: #f5efe3;
+  --login-canvas-edge: #eae0cc;
+  --login-panel: #f7f0e4;
+  --login-field: #eee4d3;
+
   /* Signature surface — Radar immersive canvas (warm cream wash) */
   --radar-canvas-center: #fcf7eb;
   --radar-canvas-mid: #f5efe3;
   --radar-canvas-edge: #ede4d2;
-
-  /* MIGRATION COMPAT — legacy secondary accent (ex violet), tamed
-   * to the restrained teal. Do not build new UI on it. */
-  --accent-2: #3e8578;
-  --accent-2-foreground: #f5faf8;
-
-  /* MIGRATION COMPAT — legacy aurora triad, tamed to warm tones */
-  --aurora-a: #de5e1e;
-  --aurora-b: #9c8557;
-  --aurora-c: #3e8578;
 
   /* Destructive — coral, genuine error states only */
   --destructive: #b23e2c;
@@ -264,15 +228,6 @@
   --chart-6: #b23e2c;
   --chart-7: #6c5bd4;
 
-  /* MIGRATION COMPAT — legacy sidebar tokens */
-  --sidebar: #fcfaf4;
-  --sidebar-foreground: #221e17;
-  --sidebar-primary: #de5e1e;
-  --sidebar-primary-foreground: #fff9f0;
-  --sidebar-accent: #f3e3d0;
-  --sidebar-accent-foreground: #3a2a1a;
-  --sidebar-border: #221e1726;
-  --sidebar-ring: #de5e1e;
 }
 
 /* ─── Dark theme — warm graphite, cream text, signal orange ────── */
@@ -315,20 +270,17 @@
   --warm-accent: #dccba6;
   --ai: #9b8ce8;
 
+  /* Login uses a deeper signature canvas than the application shell. */
+  --login-canvas-center: #1e1810;
+  --login-canvas-mid: #141109;
+  --login-canvas-edge: #0e0b07;
+  --login-panel: #26211a;
+  --login-field: #1c1710;
+
   /* Signature surface — Radar immersive canvas (deep warm graphite) */
   --radar-canvas-center: #211b12;
   --radar-canvas-mid: #17130e;
   --radar-canvas-edge: #110e09;
-
-  /* MIGRATION COMPAT — legacy secondary accent (ex violet), tamed
-   * to the restrained teal. Do not build new UI on it. */
-  --accent-2: #6fb5aa;
-  --accent-2-foreground: #182220;
-
-  /* MIGRATION COMPAT — legacy aurora triad, tamed to warm tones */
-  --aurora-a: #f97a3c;
-  --aurora-b: #dccba6;
-  --aurora-c: #6fb5aa;
 
   /* Destructive — coral, genuine error states only */
   --destructive: #e0685a;
@@ -353,15 +305,6 @@
   --chart-6: #e0685a;
   --chart-7: #9b8ce8;
 
-  /* MIGRATION COMPAT — legacy sidebar tokens */
-  --sidebar: #2c2720;
-  --sidebar-foreground: #f6f1e6;
-  --sidebar-primary: #f97a3c;
-  --sidebar-primary-foreground: #241c10;
-  --sidebar-accent: #3a2f22;
-  --sidebar-accent-foreground: #f6f1e6;
-  --sidebar-border: #f6f1e624;
-  --sidebar-ring: #f97a3c;
 }
 
 /* ─── Utility classes ─────────────────────────────────────────── */
@@ -378,6 +321,151 @@
   font-feature-settings: "tnum", "zero";
 }
 
+/* Login signature composition. Static layers stay immediately usable and cheap to render. */
+.login-canvas {
+  background: radial-gradient(
+    1200px 760px at 42% 46%,
+    var(--login-canvas-center) 0%,
+    var(--login-canvas-mid) 55%,
+    var(--login-canvas-edge) 100%
+  );
+}
+
+.login-ledger-grid {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      oklch(from var(--foreground) l c h / 3%) 0,
+      oklch(from var(--foreground) l c h / 3%) 1px,
+      transparent 1px,
+      transparent 73px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      oklch(from var(--foreground) l c h / 3%) 0,
+      oklch(from var(--foreground) l c h / 3%) 1px,
+      transparent 1px,
+      transparent 73px
+    );
+}
+
+.login-signal-glow {
+  background: radial-gradient(ellipse, oklch(from var(--primary) l c h / 16%) 0%, transparent 70%);
+}
+
+.login-signal-blade {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    oklch(from var(--primary) l c h / 85%) 18%,
+    oklch(from var(--primary) l c h / 85%) 82%,
+    transparent 100%
+  );
+}
+
+.login-signal-line {
+  position: relative;
+  display: block;
+  height: 1.5px;
+  background: oklch(from var(--foreground) l c h / 24%);
+}
+
+.login-signal-line.is-active {
+  background: oklch(from var(--primary) l c h / 75%);
+}
+
+.login-signal-line.is-active > span {
+  position: absolute;
+  top: -1.25px;
+  right: -6px;
+  width: 4px;
+  height: 4px;
+  background: oklch(from var(--primary) l c h / 90%);
+}
+
+.login-wordmark-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px oklch(from var(--foreground) l c h / 55%);
+}
+
+.login-activity {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.login-activity > span {
+  width: 5px;
+  height: 5px;
+  background: var(--primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes login-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes login-activity {
+    0%,
+    100% {
+      opacity: 0.28;
+      transform: scaleY(0.7);
+    }
+    50% {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+  }
+
+  .login-reveal-brand,
+  .login-reveal-title,
+  .login-reveal-panel {
+    animation: login-reveal 420ms var(--ease-out-expo) both;
+  }
+
+  .login-reveal-title {
+    animation-delay: 60ms;
+  }
+
+  .login-reveal-panel {
+    animation-delay: 120ms;
+  }
+
+  .login-activity > span {
+    animation: login-activity 700ms ease-in-out infinite;
+  }
+
+  .login-activity > span:nth-child(2),
+  .login-activity > span:nth-child(4) {
+    animation-delay: 90ms;
+  }
+
+  .login-activity > span:nth-child(3) {
+    animation-delay: 180ms;
+  }
+}
+
+@media (max-width: 767px) {
+  .login-canvas {
+    background: radial-gradient(
+      500px 420px at 30% 32%,
+      var(--login-canvas-center) 0%,
+      var(--login-canvas-mid) 60%,
+      var(--login-canvas-edge) 100%
+    );
+  }
+
+  .login-ledger-grid {
+    background-size: 65px 65px;
+  }
+}
+
 /* Radar immersive canvas — the only full-frame signature wash outside
  * Mémoire. Static gradient, no motion. */
 .bg-radar-canvas {
@@ -387,89 +475,6 @@
     var(--radar-canvas-mid) 58%,
     var(--radar-canvas-edge) 100%
   );
-}
-
-/* MIGRATION COMPAT — legacy glow utilities, tamed to restrained
- * keylines. Do not use in new UI. */
-.glow-primary {
-  box-shadow: var(--shadow-glow);
-}
-.glow-violet {
-  box-shadow: var(--shadow-glow-violet);
-}
-
-/* Surface gradient for premium card feel */
-.surface-elevated {
-  background: linear-gradient(
-    160deg,
-    oklch(from var(--card) calc(l + 0.012) c h) 0%,
-    var(--card) 60%,
-    oklch(from var(--card) calc(l - 0.006) c h) 100%
-  );
-}
-
-/* MIGRATION COMPAT — legacy aurora mesh, now a warm tonal wash.
- * Scheduled for removal with the surfaces that consume it. */
-.bg-aurora-mesh {
-  background-image:
-    radial-gradient(60% 80% at 20% 15%, oklch(from var(--aurora-a) l c h / 10%) 0%, transparent 55%),
-    radial-gradient(50% 70% at 85% 25%, oklch(from var(--aurora-b) l c h / 8%) 0%, transparent 60%),
-    radial-gradient(
-      70% 80% at 60% 110%,
-      oklch(from var(--aurora-c) l c h / 10%) 0%,
-      transparent 55%
-    );
-  background-attachment: local;
-}
-.bg-aurora-mesh-soft {
-  background-image:
-    radial-gradient(55% 70% at 15% 10%, oklch(from var(--aurora-a) l c h / 6%) 0%, transparent 60%),
-    radial-gradient(60% 70% at 95% 0%, oklch(from var(--aurora-b) l c h / 5%) 0%, transparent 60%),
-    radial-gradient(70% 80% at 50% 120%, oklch(from var(--aurora-c) l c h / 6%) 0%, transparent 60%);
-}
-
-/* Dotted grid background — for hero sections */
-.bg-grid-dots {
-  background-image: radial-gradient(
-    circle,
-    oklch(from var(--foreground) l c h / 8%) 1px,
-    transparent 1px
-  );
-  background-size: 22px 22px;
-}
-
-/* Diagonal line pattern — for admin/demo mode strips */
-.bg-stripe-pattern {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    oklch(from var(--primary) l c h / 8%) 0,
-    oklch(from var(--primary) l c h / 8%) 1px,
-    transparent 1px,
-    transparent 8px
-  );
-}
-
-/* Subtle scanline texture — retro-cockpit accent */
-.texture-scanlines {
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 3px,
-    oklch(0 0 0 / 2%) 3px,
-    oklch(0 0 0 / 2%) 4px
-  );
-}
-
-/* Grain noise overlay */
-.texture-grain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.04;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  mix-blend-mode: overlay;
 }
 
 /* Shimmer loading — more premium than pulse */
@@ -492,111 +497,10 @@
   animation: shimmer 1.8s ease-in-out infinite;
 }
 
-/* Pulse glow — subtle attention on alerts / sync-in-progress */
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 35%);
-  }
-  50% {
-    box-shadow: 0 0 0 8px oklch(from var(--primary) l c h / 0%);
-  }
-}
-.animate-pulse-glow {
-  animation: pulse-glow 2.2s ease-out infinite;
-}
-
-/* MIGRATION COMPAT — legacy aurora drift animation */
-@keyframes aurora-drift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-.animate-aurora {
-  background-size: 220% 220%;
-  animation: aurora-drift 18s ease-in-out infinite;
-}
-
-/* MIGRATION COMPAT — legacy glass surface. Glassmorphism is not
- * part of Command Pixel; remove with its consumers. */
-.glass-surface {
-  background: linear-gradient(
-    135deg,
-    oklch(from var(--card) l c h / 72%) 0%,
-    oklch(from var(--card) l c h / 58%) 100%
-  );
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid oklch(from var(--foreground) l c h / 8%);
-}
-
-/* Hair separator — subtle gradient line */
-.hair-rule {
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    oklch(from var(--foreground) l c h / 14%) 50%,
-    transparent 100%
-  );
-}
-
-/* Focus ring — visible, restrained */
-.focus-glow:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px oklch(from var(--primary) l c h / 45%);
-}
-
-/* MIGRATION COMPAT — legacy gradient text, now warm tonal */
-.text-aurora {
-  background-image: linear-gradient(
-    92deg,
-    var(--aurora-a) 0%,
-    var(--aurora-b) 48%,
-    var(--aurora-c) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  background-size: 200% 100%;
-}
-
-/* Conic rotating halo — for brand marks */
-@keyframes halo-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.halo-spin {
-  animation: halo-spin 12s linear infinite;
-}
-
 /* Safe-area insets for PWA */
 .safe-area-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 .safe-area-top {
   padding-top: max(0.5rem, env(safe-area-inset-top));
-}
-
-/* Numeric diff animation helper */
-@keyframes number-flip {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-number-flip {
-  animation: number-flip 320ms var(--ease-out-expo);
 }

@@ -67,13 +67,13 @@ const DEFAULT_TIMEFRAME = '1d'
 
 const CONFIDENCE_TONE: Record<DashboardTradingLabPatternDetection['confidence'], string> = {
   low: 'text-muted-foreground',
-  medium: 'text-sky-500',
-  high: 'text-emerald-500',
+  medium: 'text-teal',
+  high: 'text-positive',
 }
 
 const DIRECTION_TONE: Record<DashboardTradingLabPatternDetection['direction'], string> = {
-  bullish: 'text-emerald-500',
-  bearish: 'text-amber-500',
+  bullish: 'text-positive',
+  bearish: 'text-warning',
   neutral: 'text-muted-foreground',
   unknown: 'text-muted-foreground',
 }
@@ -91,8 +91,8 @@ const parseCandlesJson = (
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
-  } catch (error) {
-    return { ok: false, error: `JSON invalide : ${toErrorMessage(error)}` }
+  } catch {
+    return { ok: false, error: 'JSON invalide. Vérifiez la structure des données.' }
   }
   if (!Array.isArray(parsed)) {
     return { ok: false, error: 'Le JSON doit être un tableau de candles.' }
@@ -339,10 +339,10 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
                 <span className="font-medium text-foreground">
                   {result.dataQuality.candleCount}
                 </span>
-                <span className="text-muted-foreground">·</span>
+                <span className="text-muted-foreground">/</span>
                 <span className="text-muted-foreground">Données suffisantes :</span>
                 <span
-                  className={result.dataQuality.sufficient ? 'text-emerald-500' : 'text-amber-500'}
+                  className={result.dataQuality.sufficient ? 'text-positive' : 'text-warning'}
                 >
                   {result.dataQuality.sufficient ? 'oui' : 'non'}
                 </span>
@@ -351,9 +351,9 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
             </div>
 
             {result.dataQuality.warnings.length > 0 ? (
-              <ul className="space-y-1 text-[11px] text-amber-500">
+              <ul className="space-y-1 text-[11px] text-warning">
                 {result.dataQuality.warnings.map(warning => (
-                  <li key={warning}>· {warning}</li>
+                  <li key={warning}>{warning}</li>
                 ))}
               </ul>
             ) : null}
@@ -379,7 +379,7 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
                         </p>
                         {SMC_ICT_KEYS.has(detection.patternType) ? (
                           <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                            Candidate structure · Not a signal · Paper only
+                            Structure candidate. Pas un signal. Simulation uniquement.
                           </p>
                         ) : null}
                       </div>
@@ -460,14 +460,14 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
             {result.caveats && result.caveats.length > 0 ? (
               <ul className="space-y-1 text-[11px] text-muted-foreground">
                 {result.caveats.map(caveat => (
-                  <li key={caveat}>· {caveat}</li>
+                  <li key={caveat}>{caveat}</li>
                 ))}
               </ul>
             ) : null}
           </div>
         ) : null}
 
-        {createdMessage ? <p className="text-xs text-emerald-500">{createdMessage}</p> : null}
+        {createdMessage ? <p className="text-xs text-positive">{createdMessage}</p> : null}
         {createHypothesisMutation.isError ? (
           <p className="text-xs text-destructive">
             Échec de la création d&apos;hypothèse : {toErrorMessage(createHypothesisMutation.error)}

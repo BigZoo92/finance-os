@@ -41,7 +41,7 @@ export function MarketDataSourcePicker({
         >
           {SOURCE_OPTIONS.map(option => (
             <option key={option.value} value={option.value}>
-              {option.label} — {option.hint}
+              {option.label} ({option.hint})
             </option>
           ))}
         </select>

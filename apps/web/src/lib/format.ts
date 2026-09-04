@@ -8,6 +8,7 @@
  * `formatAmount` directly.
  */
 import { formatAmount } from '@finance-os/ui/lib/format'
+import { ApiRequestError } from './api'
 
 export const formatMoney = (value: number, currency = 'EUR') =>
   formatAmount(value, { currency }) ?? ''
@@ -111,6 +112,11 @@ export const formatCompactNumber = (value: number) => {
 }
 
 export const toErrorMessage = (value: unknown) => {
+  if (value instanceof ApiRequestError) {
+    if (value.status === 401 || value.status === 403) return 'Action réservée au mode admin.'
+    if (value.status === 429) return 'Trop de demandes. Réessayez dans un instant.'
+    return 'Action impossible pour le moment. Réessayez dans un instant.'
+  }
   if (value instanceof Error) {
     return value.message
   }

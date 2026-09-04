@@ -24,7 +24,7 @@ export type AdvisorGraphLensId =
   | 'knowledge'
   | 'sources'
 
-export type AdvisorGraphLensTone = 'aurora' | 'brand' | 'positive' | 'warning' | 'violet' | 'plain'
+export type AdvisorGraphLensTone = 'brand' | 'positive' | 'warning' | 'ai' | 'plain'
 
 export interface AdvisorGraphLens {
   id: AdvisorGraphLensId
@@ -89,10 +89,9 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'atlas',
     eyebrow: '01 vue d’ensemble',
     label: 'Atlas mémoire',
-    tagline: 'Tout ce que l’Advisor a en tête.',
-    description:
-      'Vue panoramique. Les souvenirs personnels, signaux, concepts, recommandations et sources coexistent. Choisis ensuite une vue plus précise.',
-    tone: 'aurora',
+    tagline: 'Vue complète.',
+    description: 'Souvenirs personnels, signaux, concepts, recommandations et sources.',
+    tone: 'brand',
     includedKinds: ALL_KINDS,
     emphasizedKinds: ['recommendation', 'personal_snapshot', 'risk', 'concept'],
   },
@@ -100,9 +99,8 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'decision',
     eyebrow: '02 raisonnement',
     label: 'Trace de décision',
-    tagline: 'Pourquoi l’Advisor pense ce qu’il pense.',
-    description:
-      'Recommandations, hypothèses, éléments disponibles et risques associés. Cette vue relie une conclusion à ce qui la soutient ou la fragilise.',
+    tagline: 'Origine des recommandations.',
+    description: 'Conclusions, éléments de soutien, hypothèses et risques.',
     tone: 'brand',
     includedKinds: [
       'recommendation',
@@ -124,9 +122,8 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'personal',
     eyebrow: '03 toi',
     label: 'Noyau personnel',
-    tagline: 'Ce que l’Advisor sait de toi, sans le bruit externe.',
-    description:
-      'Profil, comptes, objectifs, dépenses récurrentes, investissements et actifs. Aucun signal externe. Cette vue montre la couverture de ta mémoire personnelle.',
+    tagline: 'Données personnelles.',
+    description: 'Profil, comptes, objectifs, dépenses, investissements et actifs.',
     tone: 'positive',
     includedKinds: [
       'personal_snapshot',
@@ -144,10 +141,9 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'market',
     eyebrow: '04 contexte',
     label: 'Météo des marchés',
-    tagline: 'Ce qui bouge dehors et qui te touche.',
-    description:
-      'Signaux de marché, actualités, tendances et investissements concernés. Cette vue montre l’origine d’une influence externe.',
-    tone: 'violet',
+    tagline: 'Contexte externe.',
+    description: 'Signaux de marché, actualités, tendances et investissements concernés.',
+    tone: 'ai',
     includedKinds: [
       'market_signal',
       'news_signal',
@@ -164,9 +160,8 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'risk',
     eyebrow: '05 fragilités',
     label: 'Risques & contradictions',
-    tagline: 'Ce qui est fragile, ancien ou faiblement étayé.',
-    description:
-      'Risques, contradictions, hypothèses datées et éléments insuffisants. Cette vue montre les points à vérifier.',
+    tagline: 'Points à vérifier.',
+    description: 'Risques, contradictions, hypothèses datées et éléments insuffisants.',
     tone: 'warning',
     includedKinds: ['risk', 'contradiction', 'assumption', 'recommendation', 'investment', 'asset'],
     emphasizedKinds: ['risk', 'contradiction'],
@@ -177,10 +172,9 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'knowledge',
     eyebrow: '06 théorie',
     label: 'Couche connaissance',
-    tagline: 'Concepts financiers et formules mobilisés.',
-    description:
-      'Concepts, formules, hypothèses long terme. Utile pour comprendre la grammaire financière qu’utilise l’Advisor, indépendamment de tes données.',
-    tone: 'violet',
+    tagline: 'Concepts et formules.',
+    description: 'Concepts, formules et hypothèses de long terme.',
+    tone: 'ai',
     includedKinds: ['concept', 'formula', 'assumption', 'recommendation'],
     emphasizedKinds: ['concept', 'formula'],
     pickStarter: graph => pickHighestImportance(graph, n => n.kind === 'concept'),
@@ -189,9 +183,8 @@ export const ADVISOR_GRAPH_LENSES: ReadonlyArray<AdvisorGraphLens> = [
     id: 'sources',
     eyebrow: '07 provenance',
     label: 'Sources & provenance',
-    tagline: 'D’où vient chaque chose dans cette mémoire.',
-    description:
-      'Sources internes et externes, fraîcheur, couverture. Toute conclusion devrait pouvoir remonter à au moins une source identifiable.',
+    tagline: 'Origine des informations.',
+    description: 'Sources internes et externes, fraîcheur et couverture.',
     tone: 'plain',
     includedKinds: ['source', 'concept', 'formula', 'recommendation'],
     emphasizedKinds: ['source'],
@@ -239,8 +232,7 @@ export const ADVISOR_GRAPH_TOURS: ReadonlyArray<AdvisorGraphTour> = [
     lensId: 'risk',
     pickStarter: graph =>
       pickHighestImportance(graph, n => n.kind === 'contradiction' || n.kind === 'risk'),
-    explainer:
-      'Cette vue conserve les contradictions, les hypothèses datées et les points faiblement étayés.',
+    explainer: 'Contradictions, hypothèses datées et points faiblement étayés.',
   },
   {
     id: 'from-me',
@@ -275,8 +267,7 @@ export const ADVISOR_GRAPH_TOURS: ReadonlyArray<AdvisorGraphTour> = [
           n.freshness === 'unknown' ||
           (typeof n.confidence === 'number' && n.confidence < 0.6)
       ),
-    explainer:
-      'Cette vue rassemble les hypothèses datées, les informations anciennes et les points peu étayés.',
+    explainer: 'Hypothèses datées, informations anciennes et points peu étayés.',
   },
 ]
 
