@@ -21,9 +21,11 @@ const loadRootEnv = () => {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
 
+  // The root .env is a local convenience only: an already supplied process
+  // environment (CI, Compose, Dokploy, a test harness) always wins.
   config({
     path: resolve(__dirname, '../../../.env'),
-    override: true,
+    override: false,
   })
 
   rootEnvLoaded = true
@@ -165,7 +167,6 @@ const authSessionSecretSchema = z
 
 const AUTH_PASSWORD_HASH_PREFIX_ARGON2 = '$argon2'
 const AUTH_PASSWORD_HASH_PREFIX_PBKDF2 = 'pbkdf2$'
-const AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH = 24
 
 type ResolvedAuthPasswordHashSource =
   | 'AUTH_ADMIN_PASSWORD_HASH'
@@ -359,6 +360,20 @@ const resolveAuthPasswordHash = (values: {
   return parsed.data
 }
 
+/**
+ * Debug-only diagnostic. Deliberately limited to the variable that supplied
+ * the hash and its algorithm family: no fragment, length, or encoding of the
+ * hash material may ever reach a log line.
+ */
+export const describeResolvedAuthPasswordHash = (
+  resolvedAuthPasswordHash: ResolvedAuthPasswordHash
+): { source: ResolvedAuthPasswordHashSource; algorithm: 'argon2' | 'pbkdf2' } => ({
+  source: resolvedAuthPasswordHash.source,
+  algorithm: resolvedAuthPasswordHash.hash.startsWith(AUTH_PASSWORD_HASH_PREFIX_ARGON2)
+    ? 'argon2'
+    : 'pbkdf2',
+})
+
 const logResolvedAuthPasswordHash = ({
   logLevel,
   resolvedAuthPasswordHash,
@@ -370,11 +385,10 @@ const logResolvedAuthPasswordHash = ({
     return
   }
 
-  console.info('[api:env] auth password hash resolved', {
-    source: resolvedAuthPasswordHash.source,
-    hashLength: resolvedAuthPasswordHash.hash.length,
-    hashPrefix: resolvedAuthPasswordHash.hash.slice(0, AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH),
-  })
+  console.info(
+    '[api:env] auth password hash resolved',
+    describeResolvedAuthPasswordHash(resolvedAuthPasswordHash)
+  )
 }
 
 const powensShape = {
@@ -449,10 +463,13 @@ const externalInvestmentsShape = {
     .transform(value => (value === undefined ? true : toBooleanEnv(value))),
 } satisfies z.ZodRawShape
 
-const assertProductionApiEnv = (values: {
+export const assertProductionApiEnv = (values: {
   NODE_ENV: 'development' | 'test' | 'production'
   POWENS_REDIRECT_URI_PROD?: string | undefined
   API_ALLOW_IN_MEMORY_REDIS: boolean
+  INTERNAL_SERVICE_TOKEN?: string | undefined
+  KNOWLEDGE_SERVICE_ENABLED: boolean
+  QUANT_SERVICE_ENABLED: boolean
 }) => {
   if (values.NODE_ENV !== 'production') {
     return
@@ -467,6 +484,15 @@ const assertProductionApiEnv = (values: {
   if (!values.POWENS_REDIRECT_URI_PROD) {
     throw new Error(
       'Invalid environment variables:\nPOWENS_REDIRECT_URI_PROD is required in production'
+    )
+  }
+
+  if (
+    (values.KNOWLEDGE_SERVICE_ENABLED || values.QUANT_SERVICE_ENABLED) &&
+    !values.INTERNAL_SERVICE_TOKEN
+  ) {
+    throw new Error(
+      'Invalid environment variables:\nINTERNAL_SERVICE_TOKEN is required in production when an internal Python service is enabled'
     )
   }
 }
@@ -491,6 +517,8 @@ export const getApiEnv = () => {
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
+    // Shared secret presented to the internal Python services (knowledge, quant).
+    INTERNAL_SERVICE_TOKEN: z.string().trim().min(16).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
     SYNC_STATUS_PERSISTENCE_ENABLED: z
       .string()

@@ -12,6 +12,7 @@
     "zod": "^3.25.76"
   },
   "scripts": {
+    "test": "bun test src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }
