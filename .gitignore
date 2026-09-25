@@ -35,3 +35,7 @@ apps/desktop/src-tauri/icons/icon.ico
 
 # Agent skill import temp
 .tmp/
+
+# Local artifacts that must never be tracked
+cookies.txt
+.knowledge/
