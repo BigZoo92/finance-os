@@ -46,7 +46,14 @@ pnpm test:e2e               deterministic browser smoke suite
 pnpm env:check:parity       compare runtime and Compose environment contracts
 pnpm agent:skills:check     detect missing, drifted, or extra skill files
 pnpm docs:check             validate local Markdown links
+pnpm check:client-bundle    fail if the web client bundle carries server-only code
+pnpm moon:projects          print the Moon project graph (JSON)
+pnpm moon:parity            compare Moon's affected selection with the custom script
 ```
+
+## Repository task graph
+
+[Moon](https://moonrepo.dev) (`.moon/`) represents every project, its workspace relationships, and its tasks: JavaScript projects inherit their `package.json` scripts, the Python services declare their `uv` tasks in `moon.yml`. Moon runs the installed runtimes and never installs or switches them. `pnpm moon:typecheck`, `pnpm moon:test`, and `pnpm moon:build` route the canonical scripts through the graph. Affected selection and caching are not yet Moon's responsibility: `pnpm affected:*` stays canonical until the graph models exact inputs and outputs.
 
 ## Documentation
 

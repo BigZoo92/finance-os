@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/toolchains.json
+# Moon invokes the installed runtimes (Node 24 from .node-version, Bun from
+# .bun-version, pnpm from packageManager); it never installs or switches them,
+# so no toolchain declares a `version`.
+javascript:
+  packageManager: 'pnpm'
+  # pnpm owns dependency installation (pnpm install --frozen-lockfile).
+  installDependencies: false
+  # Stage A mirrors package.json scripts as tasks. Explicit tasks come in Stage B.
+  inferTasksFromScripts: true
+  # Moon must not rewrite manifests: package.json and the packageManager field
+  # stay hand-owned.
+  syncProjectWorkspaceDependencies: false
+  syncPackageManagerField: false
+  dedupeOnLockfileChange: false
+
+node: {}
+
+pnpm: {}
+
+bun: {}

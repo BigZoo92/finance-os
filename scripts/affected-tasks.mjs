@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
 const ROOT = dirname(fileURLToPath(new URL('../package.json', import.meta.url)))
-const command = process.argv[2] ?? 'print'
 
 const run = (cmd, args, options = {}) => {
   const result = spawnSync(cmd, args, {
@@ -24,11 +23,11 @@ const run = (cmd, args, options = {}) => {
 
 const readJson = path => JSON.parse(readFileSync(path, 'utf-8'))
 
-const discoverWorkspaces = () => {
+export const discoverWorkspaces = (root = ROOT) => {
   const workspaces = []
 
   for (const group of ['apps', 'packages']) {
-    const groupDir = join(ROOT, group)
+    const groupDir = join(root, group)
     if (!existsSync(groupDir)) continue
 
     for (const entry of readdirSync(groupDir, { withFileTypes: true })) {
@@ -41,7 +40,7 @@ const discoverWorkspaces = () => {
       const packageJson = readJson(packageJsonPath)
       workspaces.push({
         name: packageJson.name,
-        dir: relative(ROOT, dir).replaceAll('\\', '/'),
+        dir: relative(root, dir).replaceAll('\\', '/'),
         packageJson,
       })
     }
@@ -62,7 +61,11 @@ const getWorkspaceDeps = (workspace, workspaceNames) => {
   for (const block of dependencyBlocks) {
     if (!block) continue
     for (const [name, version] of Object.entries(block)) {
-      if (workspaceNames.has(name) && typeof version === 'string' && version.startsWith('workspace:')) {
+      if (
+        workspaceNames.has(name) &&
+        typeof version === 'string' &&
+        version.startsWith('workspace:')
+      ) {
         deps.add(name)
       }
     }
@@ -133,8 +136,9 @@ const listChangedFiles = baseRef => {
   return { fullRun: false, reason: null, files: [...changed].sort() }
 }
 
-const rootFullRunPatterns = [
+export const rootFullRunPatterns = [
   /^\.github\//,
+  /^\.moon\//,
   /^infra\/docker\//,
   /^scripts\/check-ci\.mjs$/,
   /^scripts\/affected-tasks\.mjs$/,
@@ -145,40 +149,35 @@ const rootFullRunPatterns = [
   /^tsconfig/,
 ]
 
-const computeAffected = () => {
-  const workspaces = discoverWorkspaces()
-  const workspaceNames = new Set(workspaces.map(workspace => workspace.name))
-  const byName = new Map(workspaces.map(workspace => [workspace.name, workspace]))
-  const baseRef = resolveBaseRef()
-  const changed = listChangedFiles(baseRef)
-
-  if (changed.fullRun) {
-    return { fullRun: true, reason: changed.reason, baseRef, files: changed.files, workspaces: [] }
+/**
+ * Pure selection: maps changed files to workspaces and expands through the
+ * reverse workspace-dependency graph. Exported so the Moon parity check can
+ * compare the same file lists against Moon's project graph.
+ */
+export const computeAffectedWorkspaces = ({ files, workspaces }) => {
+  if (files.length === 0) {
+    return { fullRun: false, reason: null, workspaces: [] }
   }
 
-  if (changed.files.length === 0) {
-    return { fullRun: false, reason: null, baseRef, files: [], workspaces: [] }
-  }
-
-  if (changed.files.some(file => rootFullRunPatterns.some(pattern => pattern.test(file)))) {
+  if (files.some(file => rootFullRunPatterns.some(pattern => pattern.test(file)))) {
     return {
       fullRun: true,
       reason: 'Root orchestration, CI, Docker, lockfile, or tool configuration changed.',
-      baseRef,
-      files: changed.files,
       workspaces: [],
     }
   }
 
+  const workspaceNames = new Set(workspaces.map(workspace => workspace.name))
+  const byName = new Map(workspaces.map(workspace => [workspace.name, workspace]))
   const directlyAffected = new Set()
-  for (const file of changed.files) {
-    const owner = workspaces.find(workspace => file === workspace.dir || file.startsWith(`${workspace.dir}/`))
+  for (const file of files) {
+    const owner = workspaces.find(
+      workspace => file === workspace.dir || file.startsWith(`${workspace.dir}/`)
+    )
     if (!owner) {
       return {
         fullRun: true,
         reason: `Changed file is outside a known workspace: ${file}`,
-        baseRef,
-        files: changed.files,
         workspaces: [],
       }
     }
@@ -204,17 +203,33 @@ const computeAffected = () => {
     }
   }
 
-  const affectedWorkspaces = [...affected]
-    .map(name => byName.get(name))
-    .filter(Boolean)
-    .sort((left, right) => left.dir.localeCompare(right.dir))
-
   return {
     fullRun: false,
     reason: null,
+    workspaces: [...affected]
+      .map(name => byName.get(name))
+      .filter(Boolean)
+      .sort((left, right) => left.dir.localeCompare(right.dir)),
+  }
+}
+
+const computeAffected = () => {
+  const workspaces = discoverWorkspaces()
+  const baseRef = resolveBaseRef()
+  const changed = listChangedFiles(baseRef)
+
+  if (changed.fullRun) {
+    return { fullRun: true, reason: changed.reason, baseRef, files: changed.files, workspaces: [] }
+  }
+
+  const selection = computeAffectedWorkspaces({ files: changed.files, workspaces })
+
+  return {
+    fullRun: selection.fullRun,
+    reason: selection.reason,
     baseRef,
     files: changed.files,
-    workspaces: affectedWorkspaces.map(workspace => ({
+    workspaces: selection.workspaces.map(workspace => ({
       name: workspace.name,
       dir: workspace.dir,
       scripts: workspace.packageJson.scripts ?? {},
@@ -276,13 +291,18 @@ const runWorkspaceScript = (scriptName, affected) => {
   return exitCode
 }
 
-const affected = computeAffected()
+const main = () => {
+  const command = process.argv[2] ?? 'print'
+  const affected = computeAffected()
 
-if (command === 'print') {
-  printAffected(affected)
-} else if (['lint', 'typecheck', 'test', 'build'].includes(command)) {
-  process.exit(runWorkspaceScript(command, affected))
-} else {
-  console.error('Usage: node scripts/affected-tasks.mjs <print|lint|typecheck|test|build>')
-  process.exit(1)
+  if (command === 'print') {
+    printAffected(affected)
+  } else if (['lint', 'typecheck', 'test', 'build'].includes(command)) {
+    process.exit(runWorkspaceScript(command, affected))
+  } else {
+    console.error('Usage: node scripts/affected-tasks.mjs <print|lint|typecheck|test|build>')
+    process.exit(1)
+  }
 }
+
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) main()

@@ -90,6 +90,9 @@ jobs:
       - name: Docker workspace manifest drift check
         run: pnpm docker:check
 
+      - name: Moon graph parity
+        run: pnpm moon:parity
+
       - name: Workspace lint
         run: pnpm -r --if-present lint
 

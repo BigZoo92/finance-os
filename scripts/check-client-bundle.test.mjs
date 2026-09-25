@@ -12,7 +12,10 @@ import {
 test('findForbiddenClientTokens reports every server-only token with its file', () => {
   const findings = findForbiddenClientTokens([
     { path: 'a.js', content: 'const x = 1' },
-    { path: 'b.js', content: 'import { createDbClient } from "@finance-os/db"; process.env.DATABASE_URL' },
+    {
+      path: 'b.js',
+      content: 'import { createDbClient } from "@finance-os/db"; process.env.DATABASE_URL',
+    },
   ])
 
   assert.deepEqual(

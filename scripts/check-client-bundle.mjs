@@ -108,7 +108,9 @@ const main = () => {
   const { fileCount, findings } = checkClientBundle(clientDir)
 
   if (findings.length > 0) {
-    console.error(`Client bundle denylist failed (${findings.length} finding(s) in ${fileCount} files):`)
+    console.error(
+      `Client bundle denylist failed (${findings.length} finding(s) in ${fileCount} files):`
+    )
     for (const finding of findings) {
       console.error(`- ${finding.path}: contains "${finding.token}" at offset ${finding.offset}`)
     }

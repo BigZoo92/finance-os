@@ -39,3 +39,6 @@ apps/desktop/src-tauri/icons/icon.ico
 # Local artifacts that must never be tracked
 cookies.txt
 .knowledge/
+
+# Moon local state (derived, machine-specific)
+.moon/cache/

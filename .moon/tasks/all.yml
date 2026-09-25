@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/tasks.json
+# Stage A: Moon represents tasks but has no cache authority. Task outputs are
+# never replayed from cache until Stage B models exact inputs and outputs.
+taskOptions:
+  cache: false

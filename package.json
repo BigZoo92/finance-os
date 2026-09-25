@@ -37,7 +37,7 @@
     "python:check": "pnpm python:lint && pnpm python:format:check && pnpm python:test",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
-    "test": "node --test scripts/check-ci.test.mjs scripts/check-client-bundle.test.mjs scripts/desktop-scope.test.mjs scripts/gitnexus-refresh.test.mjs scripts/sync-skills.test.mjs",
+    "test": "node --test scripts/check-ci.test.mjs scripts/check-client-bundle.test.mjs scripts/desktop-scope.test.mjs scripts/gitnexus-refresh.test.mjs scripts/moon-parity.test.mjs scripts/sync-skills.test.mjs",
     "evals:run": "bun scripts/run-evals.ts",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome lint .",
@@ -85,10 +85,18 @@
     "agent:skills:sync": "node scripts/sync-skills.mjs sync",
     "agent:skills:check": "node scripts/sync-skills.mjs check",
     "agent:skills:list": "node scripts/sync-skills.mjs list",
-    "check:client-bundle": "node scripts/check-client-bundle.mjs"
+    "check:client-bundle": "node scripts/check-client-bundle.mjs",
+    "moon": "moon",
+    "moon:projects": "moon query projects",
+    "moon:tasks": "moon query tasks",
+    "moon:typecheck": "moon run :typecheck",
+    "moon:test": "moon run :test",
+    "moon:build": "moon run :build",
+    "moon:parity": "node scripts/moon-parity.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
+    "@moonrepo/cli": "2.5.5",
     "@playwright/test": "1.63.0",
     "@types/node": "24.13.6",
     "concurrently": "^9.2.1",

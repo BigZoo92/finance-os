@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/workspace.json
+# Moon Stage A: representation only. The graph describes the repository; it
+# does not own caching, affected selection, or architecture enforcement yet.
+projects:
+  globs:
+    - 'apps/*'
+    - 'packages/*'
+  sources:
+    root: '.'
+
+vcs:
+  client: 'git'
+  provider: 'github'
+  defaultBranch: 'main'
+
+constraints:
+  enforceLayerRelationships: false
