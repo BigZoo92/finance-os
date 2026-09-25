@@ -15,7 +15,7 @@ Do not maintain a second exhaustive variable table in Markdown. When an environm
 
 ## Local setup
 
-Create `.env` from `.env.example` only when it does not already exist. Validate without printing values:
+Create `.env` from `.env.example` only when it does not already exist. The root `.env` is a local convenience: it never overrides a variable that the process already received from the shell, CI, Compose, or Dokploy. Validate without printing values:
 
 ```text
 pnpm env:check
