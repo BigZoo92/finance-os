@@ -867,7 +867,8 @@ const dataQualityFromJson = (
       ? value.status
       : 'degraded',
   confidence: toNumberOrNull(value.confidence) ?? 0,
-  unknownValue: toNumberOrNull(value.unknownValue) ?? 0,
+  // Null stays null: the value of unvalued positions is unknown, never 0.
+  unknownValue: toNumberOrNull(value.unknownValue),
   unknownPositionCount: toNumberOrNull(value.unknownPositionCount) ?? 0,
   stalePositionCount: toNumberOrNull(value.stalePositionCount) ?? 0,
   missingPriceSymbols: toStringArray(value.missingPriceSymbols),

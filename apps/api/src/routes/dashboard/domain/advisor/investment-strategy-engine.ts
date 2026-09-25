@@ -177,7 +177,12 @@ export type DriftDto = {
 export type DataQualityDto = {
   status: 'ready' | 'degraded' | 'insufficient_data'
   confidence: number
-  unknownValue: number
+  /**
+   * Value of the positions without a valuation. It is by definition unknown
+   * (null) as soon as one such position exists; 0 only when every position is
+   * valued. Use `unknownPositionCount` to size the gap.
+   */
+  unknownValue: number | null
   unknownPositionCount: number
   stalePositionCount: number
   missingPriceSymbols: string[]
@@ -755,10 +760,7 @@ export const classifyDataQuality = ({
           ? 'degraded'
           : 'ready',
     confidence: round(confidence, 2),
-    unknownValue: round(
-      unknownPositions.reduce((sum, holding) => sum + (holding.value ?? 0), 0),
-      2
-    ),
+    unknownValue: unknownPositions.length > 0 ? null : 0,
     unknownPositionCount: unknownPositions.length,
     stalePositionCount: stalePositions.length,
     missingPriceSymbols: [...new Set(priceWarnings.missing)].slice(0, 20),
@@ -786,12 +788,17 @@ export const computePortfolioAllocation = ({
   let growthValue = 0
   let asymmetricValue = 0
   let cashValue = 0
+  // Known value held in positions that cannot be classified into a bucket.
+  // Positions without a value are excluded from every total: unknown is not 0.
   let unknownValue = 0
   for (const holding of holdings) {
     const value = holding.value
+    if (value === null) {
+      continue
+    }
     const bucket = classifyHoldingBucket(holding, candidates)
-    if (value === null || bucket === 'unknown') {
-      unknownValue += value ?? 0
+    if (bucket === 'unknown') {
+      unknownValue += value
       continue
     }
     if (bucket === 'cash') cashValue += value
@@ -800,24 +807,29 @@ export const computePortfolioAllocation = ({
     if (bucket === 'asymmetric') asymmetricValue += value
   }
   const totalValue = coreValue + growthValue + asymmetricValue + cashValue + unknownValue
+  const dataQuality = classifyDataQuality({
+    holdings,
+    totalKnownValue: totalValue - unknownValue,
+    priceWarnings: { missing: [], stale: [] },
+  })
   const pct = (value: number) => (totalValue > 0 ? round((value / totalValue) * 100, 2) : 0)
   const actualPct = {
     core: pct(coreValue),
     growth: pct(growthValue),
     asymmetric: pct(asymmetricValue),
   }
-  const drift = computeStrategyDrift({
-    buckets,
-    actualPct,
-    monthlyContributionTarget: strategy.monthlyContributionTarget,
-    thresholdPct: strategy.rebalanceThresholdPct,
-    currency: strategy.baseCurrency,
-  })
-  const dataQuality = classifyDataQuality({
-    holdings,
-    totalKnownValue: totalValue - unknownValue,
-    priceWarnings: { missing: [], stale: [] },
-  })
+  // Without a classified, valued portfolio there is no drift to report: an
+  // all-unknown allocation must not read as "every bucket underweight".
+  const drift =
+    dataQuality.status === 'insufficient_data'
+      ? []
+      : computeStrategyDrift({
+          buckets,
+          actualPct,
+          monthlyContributionTarget: strategy.monthlyContributionTarget,
+          thresholdPct: strategy.rebalanceThresholdPct,
+          currency: strategy.baseCurrency,
+        })
   return {
     strategyId: strategy.id,
     snapshotAt: now.toISOString(),
@@ -856,7 +868,10 @@ export const allocateContribution = ({
         bucket: 'core',
         amount: round(contribution, 2),
         currency: allocation.baseCurrency,
-        reason: 'Aucune poche sous-ponderee: apport par defaut vers Core pour limiter le risque.',
+        reason:
+          allocation.dataQuality.status === 'insufficient_data'
+            ? 'Allocation actuelle inconnue: apport par defaut vers Core, sans rebalancing deduit de donnees manquantes.'
+            : 'Aucune poche sous-ponderee: apport par defaut vers Core pour limiter le risque.',
       },
     ]
   }
@@ -995,7 +1010,11 @@ export const enforceRiskPolicy = ({
       reasons.push('Crypto interdite dans la politique PEA.')
     }
   }
-  if (policy.accountType === 'crypto' && allocation.asymmetricPct >= 10) {
+  if (policy.accountType === 'crypto' && allocation.dataQuality.status === 'insufficient_data') {
+    // An unknown allocation cannot prove the cap is respected: no buy.
+    allowed = false
+    reasons.push('Allocation actuelle inconnue: cap crypto/asymmetric non verifiable, achat interdit.')
+  } else if (policy.accountType === 'crypto' && allocation.asymmetricPct >= 10) {
     allowed = false
     reasons.push('Poche crypto/asymmetric deja au cap global de 10%.')
   }

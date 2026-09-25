@@ -5,7 +5,7 @@ import type { DashboardSummaryResponse } from '../types'
 const summaryFixture: DashboardSummaryResponse = {
   range: '30d',
   valuation: null,
-  totals: { balance: 1000, incomes: 2000, expenses: 800 },
+  totals: { balance: 1000, unknownValuationAssetCount: 0, incomes: 2000, expenses: 800 },
   connections: [],
   accounts: [],
   assets: [],

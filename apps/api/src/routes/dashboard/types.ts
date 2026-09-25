@@ -400,9 +400,12 @@ export interface DashboardSummaryResponse {
   totals: {
     /**
      * Legacy naive sum of enabled asset valuations in their native currencies
-     * (no FX). Kept for compatibility; prefer `valuation.totalValueBase`.
+     * (no FX). Null when at least one enabled asset has no valuation: a partial
+     * sum is unknown, never a smaller number. Prefer `valuation.totalValueBase`.
      */
-    balance: number
+    balance: number | null
+    /** Enabled assets without a persisted valuation (explains a null balance). */
+    unknownValuationAssetCount: number
     incomes: number
     expenses: number
   }
@@ -435,7 +438,8 @@ export interface DashboardSummaryResponse {
     lastFailedAt: string | null
     lastError: string | null
     syncMetadata: Record<string, unknown> | null
-    balance: number
+    /** Native-currency sum of the connection's account balances; null when any balance is unknown. */
+    balance: number | null
     accountCount: number
   }>
   accounts: Array<{
@@ -446,7 +450,8 @@ export interface DashboardSummaryResponse {
     type: string | null
     metadata: Record<string, unknown> | null
     enabled: boolean
-    balance: number
+    /** Provider-reported balance; null when the provider did not report one. */
+    balance: number | null
   }>
   assets: Array<{
     assetId: number
@@ -460,7 +465,8 @@ export interface DashboardSummaryResponse {
     powensAccountId: string | null
     name: string
     currency: string
-    valuation: number
+    /** Native-currency valuation; null when no valuation is persisted (never 0). */
+    valuation: number | null
     valuationAsOf: string | null
     /** Canonical EUR value; null when unknown/unconvertible (never 0). */
     valueBase: number | null
@@ -590,7 +596,8 @@ export interface DashboardManualAssetResponse {
   source: string
   name: string
   currency: string
-  valuation: number
+  /** Null when no valuation is persisted; never 0. */
+  valuation: number | null
   valuationAsOf: string | null
   enabled: boolean
   note: string | null
@@ -841,7 +848,8 @@ export interface DashboardMarketsRepository {
       marketOpen: boolean | null
       isDelayed: boolean
       freshnessMinutes: number | null
-      price: number
+      /** Null when the persisted price is missing or unparseable; never 0. */
+      price: number | null
       previousClose: number | null
       dayChangePct: number | null
       weekChangePct: number | null
@@ -855,7 +863,8 @@ export interface DashboardMarketsRepository {
     Array<{
       seriesId: string
       observationDate: string
-      value: number
+      /** Null when the persisted observation has no numeric value. */
+      value: number | null
     }>
   >
   upsertMacroObservations: (observations: MarketMacroObservationPersistInput[]) => Promise<void>

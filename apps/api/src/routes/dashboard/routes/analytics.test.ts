@@ -11,6 +11,7 @@ const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => 
   valuation: null,
   totals: {
     balance: 100,
+    unknownValuationAssetCount: 0,
     incomes: 80,
     expenses: 20,
   },

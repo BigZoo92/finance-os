@@ -26,10 +26,16 @@ export type DashboardSummaryValuation = {
 export type DashboardSummaryResponse = {
   range: DashboardRange
   totals: {
-    /** Legacy naive sum (native currencies, no FX). Prefer valuation.totalValueBase. */
-    balance: number
-    incomes: number
-    expenses: number
+    /**
+     * Legacy naive sum (native currencies, no FX). Null when an enabled asset
+     * has no valuation: unknown, never 0. Prefer valuation.totalValueBase.
+     */
+    balance: number | null
+    /** Enabled assets without a persisted valuation (explains a null balance). */
+    unknownValuationAssetCount: number
+    /** Period flow sums; null only when the summary payload is degraded. */
+    incomes: number | null
+    expenses: number | null
   }
   /** Canonical valuation summary; null/absent = unknown, never zero. */
   valuation?: DashboardSummaryValuation | null
@@ -47,7 +53,8 @@ export type DashboardSummaryResponse = {
     lastFailedAt: string | null
     lastError: string | null
     syncMetadata: Record<string, unknown> | null
-    balance: number
+    /** Null when any account balance of the connection is unknown. */
+    balance: number | null
     accountCount: number
   }>
   accounts: Array<{
@@ -56,8 +63,10 @@ export type DashboardSummaryResponse = {
     name: string
     currency: string
     type: string | null
+    metadata: Record<string, unknown> | null
     enabled: boolean
-    balance: number
+    /** Provider-reported balance; null when not reported. */
+    balance: number | null
   }>
   assets: Array<{
     assetId: number
@@ -71,7 +80,8 @@ export type DashboardSummaryResponse = {
     powensAccountId: string | null
     name: string
     currency: string
-    valuation: number
+    /** Native-currency valuation; null when none is persisted (never 0). */
+    valuation: number | null
     valuationAsOf: string | null
     valueBase?: number | null
     valuationStatus?: DashboardValuationStatus | null
@@ -1142,7 +1152,8 @@ export type DashboardInvestmentDrift = {
 export type DashboardInvestmentDataQuality = {
   status: 'ready' | 'degraded' | 'insufficient_data'
   confidence: number
-  unknownValue: number
+  /** Null as soon as one position is unvalued (its value is unknown, not 0). */
+  unknownValue: number | null
   unknownPositionCount: number
   stalePositionCount: number
   missingPriceSymbols: string[]
@@ -1624,7 +1635,8 @@ export type DashboardManualAssetResponse = {
   source: string
   name: string
   currency: string
-  valuation: number
+  /** Null when no valuation is persisted; never 0. */
+  valuation: number | null
   valuationAsOf: string | null
   enabled: boolean
   note: string | null

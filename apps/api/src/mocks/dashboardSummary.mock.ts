@@ -62,6 +62,7 @@ export const getDashboardSummaryMock = (range: DashboardRange): DashboardSummary
     range,
     totals: {
       balance: 67070.44,
+      unknownValuationAssetCount: 0,
       incomes: 4120,
       expenses: 1924.67,
     },

@@ -7,22 +7,12 @@ import type {
   ManualAssetRow,
 } from '../types'
 
-const toNumber = (value: string | number | null | undefined) => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-
-  return 0
+// A missing or malformed persisted valuation is unknown, never 0.
+const toMoneyOrNull = (value: string | number | null | undefined): number | null => {
+  const parsed =
+    typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : Number.NaN
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : null
 }
-
-const toMoney = (value: number) => Math.round(value * 100) / 100
 
 const toIsoString = (value: Date | null) => value?.toISOString() ?? null
 
@@ -38,7 +28,7 @@ const toManualAssetResponse = (row: ManualAssetRow): DashboardManualAssetRespons
   source: row.source,
   name: row.name,
   currency: row.currency,
-  valuation: toMoney(toNumber(row.valuation)),
+  valuation: toMoneyOrNull(row.valuation),
   valuationAsOf: toIsoString(row.valuationAsOf),
   enabled: row.enabled,
   note: readMetadataString(row.metadata, 'note'),

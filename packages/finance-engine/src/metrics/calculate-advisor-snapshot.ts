@@ -269,8 +269,13 @@ const buildScenarioResults = ({
 export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnapshot => {
   const positions = input.positions.filter(position => position.value > 0)
   const totalValue = round(sum(positions.map(position => position.value)))
+  const portfolioValued = totalValue > 0
+  // A null liquid cash input means part of the cash is unvalued: the known
+  // portion still informs allocation weights, but liquidity coverage metrics
+  // stay unavailable rather than being computed from a truncated total.
+  const liquidCashKnown = input.liquidCashValue !== null
   const liquidCashValue =
-    input.liquidCashValue > 0
+    input.liquidCashValue !== null && input.liquidCashValue > 0
       ? round(input.liquidCashValue)
       : round(
           sum(
@@ -403,10 +408,14 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
   const topPositionSharePct = round(Math.max(...positionWeights, 0) * 100)
 
   const allocationBuckets = buildAllocationBuckets(positions, totalValue)
-  const driftSignals = buildDriftSignals({
-    buckets: allocationBuckets,
-    riskProfile,
-  })
+  // Without a single valued position there is no allocation to compare with
+  // the target bands: an empty portfolio is unknown, not "0% everywhere".
+  const driftSignals = portfolioValued
+    ? buildDriftSignals({
+        buckets: allocationBuckets,
+        riskProfile,
+      })
+    : []
 
   const assetClassAllocations: AssetClassAllocation[] = weightedAssetClasses.map(item => ({
     assetClass: item.assetClass,
@@ -441,9 +450,9 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
   const savingsRatePct =
     monthlyIncome > 0 ? round((netMonthlyCashflow / monthlyIncome) * 100) : null
   const emergencyFundMonths =
-    monthlyExpenses > 0 ? round(liquidCashValue / monthlyExpenses, 2) : null
+    liquidCashKnown && monthlyExpenses > 0 ? round(liquidCashValue / monthlyExpenses, 2) : null
   const runwayMonths =
-    monthlyExpenses > 0
+    liquidCashKnown && monthlyExpenses > 0
       ? round((liquidCashValue + Math.max(netMonthlyCashflow, 0)) / monthlyExpenses, 2)
       : null
 
@@ -531,6 +540,28 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
       justification:
         'Le drawdown est observe sur les snapshots de richesse disponibles, et non extrapole depuis des prix absents.',
     },
+    ...(portfolioValued
+      ? []
+      : [
+          {
+            key: 'portfolio_valuation_scope',
+            value: 'no_valued_positions',
+            source: 'observed' as const,
+            justification:
+              'Aucune position valorisee: les poids d allocation, la derive et la concentration ne sont pas calcules et ne doivent pas etre lus comme 0%.',
+          },
+        ]),
+    ...(liquidCashKnown
+      ? []
+      : [
+          {
+            key: 'liquid_cash_scope',
+            value: 'partially_unknown',
+            source: 'observed' as const,
+            justification:
+              'Une partie du cash n est pas valorisee: fonds d urgence et runway restent indisponibles plutot que calcules sur un total tronque.',
+          },
+        ]),
     ...(input.contextAssumptions ?? []),
   ]
 

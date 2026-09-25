@@ -18,7 +18,7 @@ import type {
 type MacroObservationRow = {
   seriesId: string
   observationDate: string
-  value: number
+  value: number | null
 }
 
 const findMacroSeriesValue = (
@@ -47,7 +47,7 @@ const classifyDirection = (value: number | null, threshold = 0.01) => {
 const computeYoY = (observations: MacroObservationRow[], index: number) => {
   const current = observations[index]
   const lag = observations[index - 12]
-  if (!current || !lag || lag.value === 0) {
+  if (!current || !lag || current.value === null || lag.value === null || lag.value === 0) {
     return null
   }
 
@@ -106,10 +106,9 @@ export const buildMacroSeriesSnapshots = ({
             ? formatPercent(change)
             : formatNumber(change),
       observationDate: latestRow?.observationDate ?? null,
-      history: history.map(row => ({
-        date: row.observationDate,
-        value: row.value,
-      })),
+      history: history.flatMap(row =>
+        row.value === null ? [] : [{ date: row.observationDate, value: row.value }]
+      ),
       source: {
         provider: 'fred',
         freshnessLabel: latestRow

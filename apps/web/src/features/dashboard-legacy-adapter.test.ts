@@ -12,9 +12,10 @@ describe('adaptDashboardSummaryLegacy', () => {
 
     expect(adapted.range).toBe('30d')
     expect(adapted.totals).toEqual({
-      balance: 0,
-      incomes: 0,
-      expenses: 0,
+      balance: null,
+      unknownValuationAssetCount: 0,
+      incomes: null,
+      expenses: null,
     })
     expect(adapted.connections).toEqual([])
     expect(adapted.assets).toEqual([])

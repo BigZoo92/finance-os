@@ -27,7 +27,8 @@ export interface DashboardMarketQuote {
   currency: string
   proxyLabel: string | null
   tags: string[]
-  price: number
+  /** Null when the quote could not be priced; never 0. */
+  price: number | null
   previousClose: number | null
   dayChangePct: number | null
   weekChangePct: number | null

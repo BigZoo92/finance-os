@@ -55,7 +55,8 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
             overlayProvider: row.overlayProvider as 'eodhd' | 'fred' | 'twelve_data' | null,
             sourceMode: row.sourceMode as 'eod' | 'delayed' | 'intraday',
             marketState: row.marketState as 'open' | 'closed',
-            price: safeNumber(row.price) ?? 0,
+            // An unparseable persisted price is unknown, not a 0 quote.
+            price: safeNumber(row.price),
             previousClose: safeNumber(row.previousClose),
             dayChangePct: safeNumber(row.dayChangePct),
             weekChangePct: safeNumber(row.weekChangePct),
@@ -174,7 +175,8 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
         .then(rows =>
           rows.map(row => ({
             ...row,
-            value: safeNumber(row.value) ?? 0,
+            // A macro observation without a numeric value is unknown, not 0.
+            value: safeNumber(row.value),
           }))
         )
     },

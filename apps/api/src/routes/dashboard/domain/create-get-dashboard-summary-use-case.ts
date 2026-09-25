@@ -93,7 +93,8 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
   now?: () => Date
 }
 
-const toNumber = (value: string | number | null | undefined) => {
+// A missing or malformed persisted amount is unknown, never 0.
+const toNumberOrNull = (value: string | number | null | undefined): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
   }
@@ -105,11 +106,16 @@ const toNumber = (value: string | number | null | undefined) => {
     }
   }
 
-  return 0
+  return null
 }
 
 const toMoney = (value: number) => {
   return Math.round(value * 100) / 100
+}
+
+const toMoneyOrNull = (value: string | number | null | undefined): number | null => {
+  const parsed = toNumberOrNull(value)
+  return parsed === null ? null : toMoney(parsed)
 }
 
 const toIsoString = (value: Date | null) => value?.toISOString() ?? null
@@ -155,7 +161,10 @@ const buildDailyWealthSnapshots = ({
 }): DashboardSummaryResponse['dailyWealthSnapshots'] => {
   const dates = listDatesInRange({ fromDate, toDate })
   const netFlowByDate = new Map(
-    dailyNetFlows.map(flow => [flow.bookingDate, toMoney(toNumber(flow.netAmount))])
+    dailyNetFlows.flatMap(flow => {
+      const netAmount = toMoneyOrNull(flow.netAmount)
+      return netAmount === null ? [] : [[flow.bookingDate, netAmount] as const]
+    })
   )
 
   let runningBalance = totalBalance
@@ -219,7 +228,7 @@ export const createGetDashboardSummaryUseCase = ({
         lastFailedAt: string | null
         lastError: string | null
         syncMetadata: Record<string, unknown> | null
-        balance: number
+        balance: number | null
         accountCount: number
       }
     >()
@@ -247,7 +256,7 @@ export const createGetDashboardSummaryUseCase = ({
           powensAccountId: asset.powensAccountId,
           name: asset.name,
           currency: asset.currency,
-          valuation: toMoney(toNumber(asset.valuation)),
+          valuation: toMoneyOrNull(asset.valuation),
           valuationAsOf: toIsoString(asset.valuationAsOf),
           valueBase: itemValuation?.valueBase ?? null,
           valuationStatus: itemValuation?.status ?? null,
@@ -272,12 +281,11 @@ export const createGetDashboardSummaryUseCase = ({
       accountName: position.accountName,
       name: position.name,
       currency: position.currency,
-      quantity: position.quantity === null ? null : toNumber(position.quantity),
-      costBasis: position.costBasis === null ? null : toMoney(toNumber(position.costBasis)),
+      quantity: toNumberOrNull(position.quantity),
+      costBasis: toMoneyOrNull(position.costBasis),
       costBasisSource: position.costBasisSource,
-      currentValue: position.currentValue === null ? null : toMoney(toNumber(position.currentValue)),
-      lastKnownValue:
-        position.lastKnownValue === null ? null : toMoney(toNumber(position.lastKnownValue)),
+      currentValue: toMoneyOrNull(position.currentValue),
+      lastKnownValue: toMoneyOrNull(position.lastKnownValue),
       openedAt: toIsoString(position.openedAt),
       closedAt: toIsoString(position.closedAt),
       valuedAt: toIsoString(position.valuedAt),
@@ -294,7 +302,7 @@ export const createGetDashboardSummaryUseCase = ({
         continue
       }
 
-      const balance = toMoney(toNumber(account.accountBalance))
+      const balance = toMoneyOrNull(account.accountBalance)
 
       accountSummaries.push({
         powensAccountId: account.powensAccountId,
@@ -309,7 +317,12 @@ export const createGetDashboardSummaryUseCase = ({
 
       const existing = perConnection.get(account.powensConnectionId)
       if (existing) {
-        existing.balance = toMoney(existing.balance + balance)
+        // One unknown account balance makes the connection total unknown: a
+        // partial sum would read as a precise total.
+        existing.balance =
+          existing.balance === null || balance === null
+            ? null
+            : toMoney(existing.balance + balance)
         existing.accountCount += 1
         continue
       }
@@ -333,13 +346,24 @@ export const createGetDashboardSummaryUseCase = ({
       })
     }
 
-    const totalBalance = assetSummaries.reduce((sum, asset) => toMoney(sum + asset.valuation), 0)
-    const dailyWealthSnapshots = buildDailyWealthSnapshots({
-      fromDate,
-      toDate,
-      totalBalance,
-      dailyNetFlows,
-    })
+    // The legacy total is only meaningful when every enabled asset is valued.
+    // Unvalued assets are counted, and the total becomes unknown, not smaller.
+    const unknownValuationAssetCount = assetSummaries.filter(
+      asset => asset.valuation === null
+    ).length
+    const totalBalance =
+      unknownValuationAssetCount > 0
+        ? null
+        : assetSummaries.reduce((sum, asset) => toMoney(sum + (asset.valuation ?? 0)), 0)
+    const dailyWealthSnapshots =
+      totalBalance === null
+        ? []
+        : buildDailyWealthSnapshots({
+            fromDate,
+            toDate,
+            totalBalance,
+            dailyNetFlows,
+          })
 
     const valuationBlock: DashboardSummaryResponse['valuation'] = overlay
       ? (() => {
@@ -366,8 +390,11 @@ export const createGetDashboardSummaryUseCase = ({
       range,
       totals: {
         balance: totalBalance,
-        incomes: toMoney(toNumber(flowTotals.income)),
-        expenses: toMoney(toNumber(flowTotals.expenses)),
+        unknownValuationAssetCount,
+        // Period flow sums are SQL aggregates coalesced to 0: an empty period
+        // is a true zero, unlike a missing valuation.
+        incomes: toMoneyOrNull(flowTotals.income) ?? 0,
+        expenses: toMoneyOrNull(flowTotals.expenses) ?? 0,
       },
       valuation: valuationBlock,
       connections: Array.from(perConnection.values()),
@@ -375,13 +402,23 @@ export const createGetDashboardSummaryUseCase = ({
       assets: assetSummaries,
       positions: positionSummaries,
       dailyWealthSnapshots,
-      topExpenseGroups: topExpenseGroups.map(group => ({
-        label: makeGroupLabel(group.category, group.merchant),
-        category: group.category,
-        merchant: group.merchant,
-        total: toMoney(toNumber(group.total)),
-        count: group.count,
-      })),
+      // A group whose SQL total cannot be parsed is dropped, not shown as 0.
+      topExpenseGroups: topExpenseGroups.flatMap(group => {
+        const total = toMoneyOrNull(group.total)
+        if (total === null) {
+          return []
+        }
+
+        return [
+          {
+            label: makeGroupLabel(group.category, group.merchant),
+            category: group.category,
+            merchant: group.merchant,
+            total,
+            count: group.count,
+          },
+        ]
+      }),
     }
   }
 }

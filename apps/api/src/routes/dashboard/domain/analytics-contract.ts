@@ -8,7 +8,8 @@ export interface DashboardAnalyticsResponse {
   source: 'demoAdapter' | 'adminAdapter'
   generatedAt: string
   summaryCards: {
-    netWorth: { value: number; state: DashboardAnalyticsWidgetState }
+    /** Net worth is null (not 0) when an enabled asset has no valuation. */
+    netWorth: { value: number | null; state: DashboardAnalyticsWidgetState }
     incomes: { value: number; state: DashboardAnalyticsWidgetState }
     expenses: { value: number; state: DashboardAnalyticsWidgetState }
   }
@@ -201,7 +202,7 @@ export const mapSummaryToAnalyticsContract = ({
   }))
   const portfolioTotals = summary.assets.reduce(
     (acc, asset) => {
-      if (!asset.enabled || !Number.isFinite(asset.valuation) || asset.valuation <= 0) {
+      if (!asset.enabled || asset.valuation === null || asset.valuation <= 0) {
         return acc
       }
 
@@ -357,7 +358,7 @@ export const mapSummaryToAnalyticsContract = ({
     summaryCards: {
       netWorth: {
         value: summary.totals.balance,
-        state: toState(availability.summaryCards, Number.isFinite(summary.totals.balance)),
+        state: toState(availability.summaryCards, summary.totals.balance !== null),
       },
       incomes: {
         value: summary.totals.incomes,

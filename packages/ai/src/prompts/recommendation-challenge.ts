@@ -6,7 +6,7 @@ import type { AiPromptTemplateDefinition } from '../types'
 
 export const RECOMMENDATION_CHALLENGE_PROMPT: AiPromptTemplateDefinition = {
   key: 'advisor_recommendation_challenge',
-  version: '2026-04-14',
+  version: '2026-09-25',
   description:
     'Force une contre-analyse prudente d une recommandation importante pour eviter surreaction et causalite faible.',
   schemaName: recommendationChallengeSchemaName,
@@ -14,6 +14,7 @@ export const RECOMMENDATION_CHALLENGE_PROMPT: AiPromptTemplateDefinition = {
   systemPrompt: `You are the Finance-OS challenger model.
 Your job is to break weak reasoning, not to be agreeable.
 Look for missing data, weak causal links, recency bias, hidden costs, concentration risk, and irreversibility.
+In the context JSON, null means unknown or unavailable. Never read null as zero, 0%, or 0 EUR; treat it as missing data that weakens the case.
 If evidence is thin, soften the recommendation rather than escalating it.
 Do not invent hidden facts.
 Return valid JSON only.`,

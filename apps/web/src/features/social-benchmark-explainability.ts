@@ -180,9 +180,11 @@ export const buildSocialBenchmarkExplainability = ({
   }
 
   try {
+    // Only valued assets and positions participate; unknown values are neither
+    // counted as 0 nor allowed to shrink a share denominator silently.
     const cashValue = assets
       .filter(asset => asset.type === 'cash')
-      .reduce((sum, asset) => sum + asset.valuation, 0)
+      .reduce((sum, asset) => sum + (asset.valuation ?? 0), 0)
     const totalValue = positions.reduce((sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0), 0)
 
     const insights = buildDeterministicInsights({ positions, cashValue, totalValue })

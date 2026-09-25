@@ -129,6 +129,7 @@ describe('createGetDashboardSummaryUseCase', () => {
       range: '7d',
       totals: {
         balance: 52.5,
+        unknownValuationAssetCount: 0,
         incomes: 100,
         expenses: 25.4,
       },

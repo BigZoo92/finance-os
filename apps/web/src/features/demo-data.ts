@@ -79,11 +79,20 @@ const buildDailyWealthSnapshots = (
   return snapshotsDescending.reverse()
 }
 
-export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummaryResponse => {
+/**
+ * The demo fixture is deterministic and fully valued: its totals are always
+ * numbers, unlike a live summary where an unvalued asset makes them unknown.
+ */
+export type DemoDashboardSummary = DashboardSummaryResponse & {
+  totals: DashboardSummaryResponse['totals'] & { balance: number; incomes: number; expenses: number }
+}
+
+export const getDemoDashboardSummary = (range: DashboardRange): DemoDashboardSummary => {
   return {
     range,
     totals: {
       balance: 67070.44,
+      unknownValuationAssetCount: 0,
       incomes: 4120,
       expenses: 1924.67,
     },
@@ -156,6 +165,7 @@ export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummary
         name: 'Fortuneo Courant',
         currency: 'EUR',
         type: 'checking',
+        metadata: null,
         enabled: true,
         balance: 6210.44,
       },
@@ -165,6 +175,7 @@ export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummary
         name: 'Fortuneo Livret',
         currency: 'EUR',
         type: 'savings',
+        metadata: null,
         enabled: true,
         balance: 27000,
       },
@@ -174,6 +185,7 @@ export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummary
         name: 'Revolut Main',
         currency: 'EUR',
         type: 'checking',
+        metadata: null,
         enabled: true,
         balance: 15110,
       },

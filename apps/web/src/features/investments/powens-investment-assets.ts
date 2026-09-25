@@ -28,9 +28,10 @@ export const getUnpositionedPowensInvestmentAssets = ({
   )
 }
 
+/** Sum of the known valuations only; an unvalued asset contributes nothing, not 0. */
 export const sumPowensInvestmentAssetValuations = (assets: PowensInvestmentAsset[]) =>
   assets.reduce((sum, asset) => {
-    if (!Number.isFinite(asset.valuation)) {
+    if (asset.valuation === null || !Number.isFinite(asset.valuation)) {
       return sum
     }
 

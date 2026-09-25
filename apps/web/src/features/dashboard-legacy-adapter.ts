@@ -101,10 +101,12 @@ const toTotalsWithFallback = (
   }
 
   diagnostics.fallbackFields.push('totals')
+  // A degraded payload has no totals: they are unknown and stay unknown.
   return {
-    balance: 0,
-    incomes: 0,
-    expenses: 0,
+    balance: null,
+    unknownValuationAssetCount: 0,
+    incomes: null,
+    expenses: null,
   }
 }
 
