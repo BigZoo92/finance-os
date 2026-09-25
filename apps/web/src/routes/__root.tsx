@@ -1,4 +1,3 @@
-import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
@@ -8,8 +7,8 @@ import {
   Link,
   Scripts,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { getGlobalStartContext } from '@tanstack/react-start'
+import { lazy, Suspense } from 'react'
 import { PwaInstallPrompt } from '@/components/pwa-install-prompt'
 import { ToastViewport } from '@/components/toast-viewport'
 import { authMeQueryOptions, authQueryKeys } from '@/features/auth-query-options'
@@ -17,12 +16,17 @@ import { fetchAuthMeFromSsr } from '@/features/auth-ssr'
 import { getPublicRuntimeEnvScript, readPublicRuntimeEnv } from '@/lib/public-runtime-env'
 import { logSsrError } from '@/lib/ssr-logger'
 import { themeBootstrapScript } from '@/lib/theme'
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
 interface MyRouterContext {
   queryClient: QueryClient
 }
+
+// Devtools never enter production bundles: the branch is resolved at build time and
+// the dev-only module is loaded lazily, so its packages are unreachable in PROD.
+const AppDevtools = import.meta.env.PROD
+  ? () => null
+  : lazy(() => import('../integrations/devtools/app-devtools'))
 
 function RootNotFound() {
   return (
@@ -144,18 +148,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {children}
         <PwaInstallPrompt />
         <ToastViewport />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
+        <Suspense fallback={null}>
+          <AppDevtools />
+        </Suspense>
         <Scripts />
       </body>
     </html>
