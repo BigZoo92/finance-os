@@ -1,9 +1,9 @@
+import type { KnowledgeContextBundle } from '@finance-os/ai'
 import {
   createAnthropicMessagesClient,
   createOpenAiResponsesClient,
-  type KnowledgeContextBundle,
-} from '@finance-os/ai'
-import { createExternalInvestmentsRepository } from '@finance-os/external-investments'
+} from '@finance-os/ai/providers'
+import { createExternalInvestmentsRepository } from '@finance-os/external-investments/repository'
 import { buildAdvisorKnowledgeContextQuery } from '@finance-os/finance-engine'
 import { computeProviderDiagnostics } from '@finance-os/provider-runtime'
 import { getAdvisorPostMortemListMock } from '../../mocks/advisorPostMortem.mock'

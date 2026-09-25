@@ -1,4 +1,4 @@
-import { buildRuntimeHealthWithFlags } from '../../../../packages/prelude/src/runtime'
+import { buildRuntimeHealthWithFlags } from '@finance-os/prelude/runtime'
 import { createFileRoute } from '@tanstack/react-router'
 
 const HEALTH_HEADERS = {
@@ -21,8 +21,8 @@ export const Route = createFileRoute('/health')({
             })
           ),
           {
-          status: 200,
-          headers: HEALTH_HEADERS,
+            status: 200,
+            headers: HEALTH_HEADERS,
           }
         ),
     },

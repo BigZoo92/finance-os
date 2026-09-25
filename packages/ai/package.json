@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts",
     "./run-status": "./src/run-status.ts",
     "./manual-operation-recovery": "./src/manual-operation-recovery.ts"
   },

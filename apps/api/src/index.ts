@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
-import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments'
+import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments/server-config'
 import { resolveRuntimeVersion } from '@finance-os/prelude'
 import { createInMemoryRedisClient, createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'

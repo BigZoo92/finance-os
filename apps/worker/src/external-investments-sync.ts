@@ -2,15 +2,8 @@ import { randomUUID } from 'node:crypto'
 import { type createDbClient, schema } from '@finance-os/db'
 import type { getWorkerEnv } from '@finance-os/env'
 import {
-  type BinanceCashFlow,
-  type BinanceCoinInfo,
-  type BinanceTrade,
-  createBinanceReadonlyClient,
   createBinanceUsdEurFxFetcher,
-  createExternalInvestmentsRepository,
-  createIbkrFlexClient,
   createSnapshotFxFetcher,
-  type ExternalInvestmentConnectionRecord,
   type ExternalInvestmentCredentialPayload,
   type ExternalInvestmentProvider,
   type ExternalInvestmentsJob,
@@ -18,12 +11,25 @@ import {
   enrichMarketQuotedValuations,
   isSoftExternalInvestmentError,
   type MarketQuoteLookup,
-  normalizeBinanceSnapshot,
-  normalizeIbkrFlexStatement,
-  resolveExternalInvestmentServerConfig,
   toExternalInvestmentErrorCode,
   toSafeExternalInvestmentErrorMessage,
 } from '@finance-os/external-investments'
+import {
+  type BinanceCashFlow,
+  type BinanceCoinInfo,
+  type BinanceTrade,
+  createBinanceReadonlyClient,
+} from '@finance-os/external-investments/binance'
+import { createIbkrFlexClient } from '@finance-os/external-investments/ibkr'
+import {
+  normalizeBinanceSnapshot,
+  normalizeIbkrFlexStatement,
+} from '@finance-os/external-investments/normalizer'
+import {
+  createExternalInvestmentsRepository,
+  type ExternalInvestmentConnectionRecord,
+} from '@finance-os/external-investments/repository'
+import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments/server-config'
 import { acquireRedisLock, type RedisLockClient } from '@finance-os/redis'
 import { eq, or } from 'drizzle-orm'
 

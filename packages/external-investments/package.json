@@ -7,7 +7,10 @@
     ".": "./src/index.ts",
     "./binance": "./src/binance-readonly-client.ts",
     "./ibkr": "./src/ibkr-flex-client.ts",
-    "./jobs": "./src/jobs.ts"
+    "./jobs": "./src/jobs.ts",
+    "./normalizer": "./src/normalizer.ts",
+    "./repository": "./src/repository.ts",
+    "./server-config": "./src/server-config.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",

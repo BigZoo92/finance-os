@@ -1,6 +1,7 @@
-import type { ExternalInvestmentProvider, createExternalInvestmentsRepository } from '@finance-os/external-investments'
 import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
+import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
+import type { createExternalInvestmentsRepository } from '@finance-os/external-investments/repository'
 import type { createRedisClient } from '@finance-os/redis'
 
 export type ExternalInvestmentsApiDb = ReturnType<typeof createDbClient>['db']
