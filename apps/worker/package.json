@@ -16,7 +16,7 @@
     "@finance-os/prelude": "workspace:*",
     "@finance-os/redis": "workspace:*",
     "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "0.45.3",
     "zod": "^3.25.76"
   }
 }

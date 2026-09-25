@@ -24,7 +24,7 @@
     "@finance-os/redis": "workspace:*",
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "0.45.3",
     "elysia": "latest",
     "fast-xml-parser": "^5.5.11",
     "zod": "^4.3.6"
