@@ -65,8 +65,17 @@ describe('createGetDashboardTransactionsUseCase', () => {
         ruleId: null,
       },
       {
-        source: 'merchant_rules',
+        source: 'user_rule',
         rank: 2,
+        matched: false,
+        reason: 'no_user_rules',
+        category: null,
+        subcategory: null,
+        ruleId: null,
+      },
+      {
+        source: 'merchant_rules',
+        rank: 3,
         matched: true,
         reason: 'matched_merchant_rule',
         category: 'Courses',
