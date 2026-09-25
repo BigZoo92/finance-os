@@ -182,6 +182,36 @@ describe('createKnowledgeContextBundleProvider', () => {
     }
   })
 
+  it('sends x-internal-service-token only when configured and never logs it', async () => {
+    const seenHeaders: Array<Record<string, string>> = []
+    const fetchImpl = async (_input: string, init?: RequestInit) => {
+      seenHeaders.push({ ...(init?.headers as Record<string, string>) })
+      return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+    }
+
+    const withToken = captureLogs()
+    const authed = createKnowledgeContextBundleProvider({
+      config: { ...baseConfig, internalServiceToken: 'internal-secret-token-value' },
+      logTarget: withToken.target,
+      fetchImpl,
+    })
+    expect((await authed.call({ query: 'q', mode: 'admin' }, ctx({ mode: 'admin' }))).ok).toBe(true)
+    expect(seenHeaders[0]?.['x-internal-service-token']).toBe('internal-secret-token-value')
+    expect(seenHeaders[0]?.['x-request-id']).toBe('req-test')
+    for (const line of withToken.lines) {
+      expect(JSON.stringify(line)).not.toContain('internal-secret-token-value')
+    }
+
+    const withoutToken = captureLogs()
+    const open = createKnowledgeContextBundleProvider({
+      config: baseConfig,
+      logTarget: withoutToken.target,
+      fetchImpl,
+    })
+    expect((await open.call({ query: 'q', mode: 'admin' }, ctx({ mode: 'admin' }))).ok).toBe(true)
+    expect(seenHeaders[1]).not.toHaveProperty('x-internal-service-token')
+  })
+
   it('maps thrown network errors to provider_unavailable', async () => {
     const { target, lines } = captureLogs()
     const provider = createKnowledgeContextBundleProvider({

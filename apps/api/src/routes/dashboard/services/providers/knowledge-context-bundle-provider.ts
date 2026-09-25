@@ -31,6 +31,7 @@ import {
   providerErr,
   providerOk,
 } from '@finance-os/provider-runtime'
+import { internalServiceHeaders } from '../../../../services/internal-service-auth'
 import {
   type KnowledgeContextBundleInput,
   type KnowledgeServiceClientConfig,
@@ -187,6 +188,7 @@ export const createKnowledgeContextBundleProvider = (
               accept: 'application/json',
               'content-type': 'application/json',
               'x-request-id': ctx.requestId,
+              ...internalServiceHeaders(config.internalServiceToken),
             },
             body: JSON.stringify(body),
             signal: controller.signal,

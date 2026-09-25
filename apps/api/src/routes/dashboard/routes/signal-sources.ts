@@ -14,8 +14,8 @@ import { createDashboardSignalItemsRepository } from '../repositories/dashboard-
 import {
   type CreateSignalSourceInput,
   createDashboardSignalSourcesRepository,
-  type SignalSourceRow,
   type SignalSourceGroup,
+  type SignalSourceRow,
   type UpdateSignalSourceInput,
 } from '../repositories/dashboard-signal-sources-repository'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
@@ -216,7 +216,13 @@ const canonicalizeSignalSourceInput = (
   return { value: { ...input, handle: trimmed } }
 }
 
-export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
+export const createSignalSourcesRoute = ({
+  db,
+  internalServiceToken,
+}: {
+  db: ApiDb
+  internalServiceToken: string | undefined
+}) => {
   const repository = createDashboardSignalSourcesRepository({ db })
   const itemsRepo = createDashboardSignalItemsRepository({ db })
 
@@ -307,10 +313,7 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                   const providerSources = await repository.listSourcesByProvider('x_twitter')
                   const matchingSources = providerSources.filter(source => {
                     const normalized = normalizeXHandle(source.handle)
-                    return (
-                      normalized.ok &&
-                      normalized.handle === canonicalInput.value.handle
-                    )
+                    return normalized.ok && normalized.handle === canonicalInput.value.handle
                   })
                   const existing =
                     matchingSources.length > 0
@@ -321,7 +324,10 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                       ...sourceInput,
                       enabled: true,
                     }
-                    source = await repository.updateSourceFromCanonicalCreate(existing.id, updateInput)
+                    source = await repository.updateSourceFromCanonicalCreate(
+                      existing.id,
+                      updateInput
+                    )
                     sourceAction = 'updated_existing'
                   }
                 }
@@ -535,6 +541,7 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                       const graphResult = await sendSignalsToKnowledgeGraph({
                         items: topItems,
                         knowledgeServiceUrl: knowledgeUrl,
+                        ...(internalServiceToken !== undefined ? { internalServiceToken } : {}),
                         requestId,
                       })
                       await itemsRepo.markGraphIngested(graphResult.sentIds, 'sent')

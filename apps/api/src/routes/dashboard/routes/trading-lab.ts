@@ -3,6 +3,7 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import { internalServiceHeaders } from '../../../services/internal-service-auth'
 import {
   createHypothesisUseCases,
   isHypothesisValidationError,
@@ -273,6 +274,7 @@ export const createTradingLabRoute = ({
   quantServiceTimeoutMs,
   knowledgeServiceEnabled,
   knowledgeServiceUrl,
+  internalServiceToken,
   graphIngestEnabled,
   marketDataDeps,
 }: {
@@ -282,6 +284,7 @@ export const createTradingLabRoute = ({
   quantServiceTimeoutMs: number
   knowledgeServiceEnabled: boolean
   knowledgeServiceUrl: string
+  internalServiceToken: string | undefined
   graphIngestEnabled: boolean
   marketDataDeps: {
     eodhdApiKey: string | undefined
@@ -337,11 +340,15 @@ export const createTradingLabRoute = ({
   // The `/patterns/detect` admin handler is rewired to call `quantPatternsDetectProvider`
   // below. The other quant-service endpoints (capabilities, backtest, walk-forward) keep
   // using the inline helper for now; broader migration is intentionally deferred.
+  // Omit the key when unset so `exactOptionalPropertyTypes` stays satisfied downstream.
+  const internalAuth = internalServiceToken !== undefined ? { internalServiceToken } : {}
+
   const quantPatternsDetectProvider = createQuantPatternsDetectProvider({
     config: {
       enabled: quantServiceEnabled,
       url: quantServiceUrl,
       timeoutMs: quantServiceTimeoutMs,
+      ...internalAuth,
     },
     logTarget: { logEvent: logApiEvent },
   })
@@ -366,6 +373,7 @@ export const createTradingLabRoute = ({
         headers: {
           'Content-Type': 'application/json',
           'x-request-id': requestId,
+          ...internalServiceHeaders(internalServiceToken),
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -1206,6 +1214,7 @@ export const createTradingLabRoute = ({
             const graphResult = await sendBacktestToKnowledgeGraph({
               knowledgeServiceUrl,
               knowledgeServiceEnabled,
+              ...internalAuth,
               ingestEnabled: graphIngestEnabled,
               requestId,
               input: {

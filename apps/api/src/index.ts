@@ -405,6 +405,7 @@ const registerAppRoutes = (app: Elysia) => {
         knowledgeGraphRetrievalMode: env.KNOWLEDGE_GRAPH_RETRIEVAL_MODE,
         knowledgeGraphMaxPathDepth: env.KNOWLEDGE_GRAPH_MAX_PATH_DEPTH,
         knowledgeGraphMinConfidence: env.KNOWLEDGE_GRAPH_MIN_CONFIDENCE,
+        internalServiceToken: env.INTERNAL_SERVICE_TOKEN,
         quantServiceEnabled: env.QUANT_SERVICE_ENABLED,
         quantServiceUrl: env.QUANT_SERVICE_URL,
         quantServiceTimeoutMs: env.QUANT_SERVICE_TIMEOUT_MS,

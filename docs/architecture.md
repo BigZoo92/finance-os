@@ -46,7 +46,7 @@ Only `apps/web` receives public traffic. The API, worker, knowledge service, qua
 
 ## Demo and admin
 
-`demo` is resolved when no valid admin session exists. Routes use deterministic fixtures and never reach database/provider/write branches. `admin` may access live state after the appropriate session; explicitly guarded server-to-server routes may instead accept the static `PRIVATE_ACCESS_TOKEN`. Powens callback state is HMAC-signed and is not an internal API token. The web root auth flow uses `/auth/me`; SSR uses `API_INTERNAL_URL`, while browsers stay on the `/api` proxy.
+`demo` is resolved when no valid admin session exists. Routes use deterministic fixtures and never reach database/provider/write branches. `admin` may access live state after the appropriate session; explicitly guarded server-to-server routes may instead accept the static `PRIVATE_ACCESS_TOKEN`. The API authenticates to the knowledge and quant services with the separate server-only `INTERNAL_SERVICE_TOKEN` (`x-internal-service-token`), which those services enforce on all routes except `/health` and `/version` and which production requires at startup. Powens callback state is HMAC-signed and is not an internal API token. The web root auth flow uses `/auth/me`; SSR uses `API_INTERNAL_URL`, while browsers stay on the `/api` proxy.
 
 Mode separation is an execution boundary, not merely a UI flag. Tests must prove the forbidden calls are absent in demo.
 

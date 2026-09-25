@@ -1,3 +1,4 @@
+import { internalServiceHeaders } from '../../../services/internal-service-auth'
 import type { SignalItemRow } from '../repositories/dashboard-signal-items-repository'
 
 interface GraphIngestResult {
@@ -15,10 +16,12 @@ interface GraphIngestResult {
 export const sendSignalsToKnowledgeGraph = async ({
   items,
   knowledgeServiceUrl,
+  internalServiceToken,
   requestId,
 }: {
   items: SignalItemRow[]
   knowledgeServiceUrl: string
+  internalServiceToken?: string
   requestId: string
 }): Promise<GraphIngestResult> => {
   if (items.length === 0) {
@@ -56,6 +59,7 @@ export const sendSignalsToKnowledgeGraph = async ({
       headers: {
         'content-type': 'application/json',
         'x-request-id': requestId,
+        ...internalServiceHeaders(internalServiceToken),
       },
       body: JSON.stringify(payload),
     })

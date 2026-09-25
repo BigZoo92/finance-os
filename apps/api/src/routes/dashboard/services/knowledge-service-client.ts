@@ -1,4 +1,5 @@
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import { internalServiceHeaders } from '../../../services/internal-service-auth'
 
 export type KnowledgeRetrievalMode = 'hybrid' | 'graph' | 'vector' | 'fulltext'
 export type KnowledgeScope = 'demo' | 'admin' | 'internal'
@@ -11,6 +12,8 @@ export interface KnowledgeServiceClientConfig {
   retrievalMode: KnowledgeRetrievalMode
   maxPathDepth: number
   minConfidence: number
+  /** Server-only `INTERNAL_SERVICE_TOKEN`; sent as `x-internal-service-token` when set. */
+  internalServiceToken?: string
 }
 
 export interface KnowledgeQueryInput {
@@ -130,6 +133,7 @@ export const createKnowledgeServiceClient = (config: KnowledgeServiceClientConfi
           headers: {
             accept: 'application/json',
             'x-request-id': requestId,
+            ...internalServiceHeaders(config.internalServiceToken),
             ...(body === undefined ? {} : { 'content-type': 'application/json' }),
           },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),

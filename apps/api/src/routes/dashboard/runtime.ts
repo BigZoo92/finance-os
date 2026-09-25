@@ -11,16 +11,17 @@ import { logApiEvent, toErrorLogFields } from '../../observability/logger'
 import { createExternalInvestmentsJobQueueRepository } from '../integrations/external-investments/repositories/external-investments-job-queue-repository'
 import { createPowensConnectionRepository } from '../integrations/powens/repositories/powens-connection-repository'
 import { createPowensJobQueueRepository } from '../integrations/powens/repositories/powens-job-queue-repository'
+import { recoverStaleBackgroundRuns as recoverStaleBackgroundRunRecords } from '../ops/recover-stale-background-runs'
 import {
   type AdvisorKnowledgeContextFetcher,
   createDashboardAdvisorUseCases,
 } from './domain/advisor/create-dashboard-advisor-use-cases'
 import { createDecisionJournalUseCases } from './domain/advisor/create-decision-journal-use-cases'
 import { createAdvisorManualRefreshAndRunUseCases } from './domain/advisor/create-manual-refresh-and-run-use-case'
+import { createFineTuningReadinessUseCase } from './domain/advisor/fine-tuning/create-fine-tuning-readiness-use-case'
 import { createAdvisorBehaviorAnalyticsUseCase } from './domain/advisor/get-advisor-behavior-analytics'
 import { createAdvisorEvalTrendsUseCase } from './domain/advisor/get-advisor-eval-trends'
 import { createInvestmentStrategyUseCases } from './domain/advisor/investment-strategy-use-cases'
-import { createFineTuningReadinessUseCase } from './domain/advisor/fine-tuning/create-fine-tuning-readiness-use-case'
 import { createPostMortemUseCases } from './domain/advisor/post-mortem/create-post-mortem-use-cases'
 import { createAdvisorReplayUseCase } from './domain/advisor/replay/create-replay-use-case'
 import { createAdvisorV2UseCases } from './domain/advisor/v2/create-advisor-v2-use-cases'
@@ -50,8 +51,8 @@ import { createDashboardDerivedRecomputeRepository } from './repositories/dashbo
 import { createDashboardMarketsRepository } from './repositories/dashboard-markets-repository'
 import { createDashboardNewsRepository } from './repositories/dashboard-news-repository'
 import { createDashboardReadRepository } from './repositories/dashboard-read-repository'
-import { createUserCategorizationRuleRepository } from './repositories/user-categorization-rule-repository'
 import { createInvestmentStrategyRepository } from './repositories/investment-strategy-repository'
+import { createUserCategorizationRuleRepository } from './repositories/user-categorization-rule-repository'
 import {
   createAssetValuationRepository,
   createAssetValuationRunRepository,
@@ -80,7 +81,6 @@ import { createInternalProviderRegistry } from './services/providers/internal-pr
 import { createSecEdgarNewsProvider } from './services/providers/sec-edgar-news-provider'
 import { createXTwitterNewsProvider } from './services/providers/x-twitter-news-provider'
 import type { ApiDb, DashboardRouteRuntime, RedisClient } from './types'
-import { recoverStaleBackgroundRuns as recoverStaleBackgroundRunRecords } from '../ops/recover-stale-background-runs'
 
 export const createDashboardRouteRuntime = ({
   db,
@@ -159,6 +159,7 @@ export const createDashboardRouteRuntime = ({
   aiPostMortemModel,
   advisorXSignalsMode,
   knowledgeConfig,
+  internalServiceToken,
   quantServiceEnabled,
   quantServiceUrl,
   quantServiceTimeoutMs,
@@ -250,6 +251,7 @@ export const createDashboardRouteRuntime = ({
   aiPostMortemModel: string
   advisorXSignalsMode: 'off' | 'shadow' | 'enforced'
   knowledgeConfig: KnowledgeServiceClientConfig
+  internalServiceToken: string | undefined
   quantServiceEnabled: boolean
   quantServiceUrl: string
   quantServiceTimeoutMs: number
@@ -265,6 +267,9 @@ export const createDashboardRouteRuntime = ({
   fxRatesEcbUrl: string
   fxRatesStaleAfterSeconds: number
 }): DashboardRouteRuntime => {
+  // Shared secret for knowledge/quant calls; omitted (not `undefined`) when unset so
+  // `exactOptionalPropertyTypes` stays satisfied at every config spread below.
+  const internalAuth = internalServiceToken !== undefined ? { internalServiceToken } : {}
   const readModel = createDashboardReadRepository({ db })
   const newsRepository = createDashboardNewsRepository({ db })
   const marketsRepository = createDashboardMarketsRepository({ db })
@@ -294,6 +299,7 @@ export const createDashboardRouteRuntime = ({
       enabled: knowledgeConfig.enabled,
       url: knowledgeConfig.url,
       timeoutMs: knowledgeConfig.timeoutMs,
+      ...internalAuth,
     },
     advisorGraphIngestEnabled,
   })
@@ -495,6 +501,7 @@ export const createDashboardRouteRuntime = ({
         enabled: quantServiceEnabled,
         url: quantServiceUrl,
         timeoutMs: quantServiceTimeoutMs,
+        ...internalAuth,
       },
     },
     news: {
@@ -656,6 +663,7 @@ export const createDashboardRouteRuntime = ({
         const result = await sendDecisionPointToKnowledgeGraph({
           knowledgeServiceUrl: knowledgeConfig.url,
           knowledgeServiceEnabled: knowledgeConfig.enabled,
+          ...internalAuth,
           ingestEnabled: advisorGraphIngestEnabled,
           requestId,
           input: {
@@ -776,6 +784,7 @@ export const createDashboardRouteRuntime = ({
         const result = await sendPostMortemToKnowledgeGraph({
           knowledgeServiceUrl: knowledgeConfig.url,
           knowledgeServiceEnabled: knowledgeConfig.enabled,
+          ...internalAuth,
           ingestEnabled: advisorGraphIngestEnabled,
           requestId,
           actions: parsed.learningActions.map((action, index) => ({

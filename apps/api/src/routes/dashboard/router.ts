@@ -4,6 +4,7 @@ import { createOpsKnowledgeEnrichmentStatusRoute } from '../ops/knowledge-enrich
 import { createOpsRefreshRoute } from '../ops/refresh'
 import { createOpsSchedulerRoute } from '../ops/scheduler'
 import type { FailsoftSource } from './domain/failsoft-policy'
+import { createDashboardOpsRefreshConfig } from './ops-refresh-config'
 import { createDashboardRuntimePlugin } from './plugin'
 import { createAdvisorRoute } from './routes/advisor'
 import { createAdvisorFineTuningReadinessRoute } from './routes/advisor-fine-tuning-readiness'
@@ -14,8 +15,8 @@ import { createAnalyticsRoute } from './routes/analytics'
 import { createCostsOverviewRoute } from './routes/costs-overview'
 import { createDataQualityRoute } from './routes/data-quality'
 import { createDerivedRecomputeRoute } from './routes/derived-recompute'
-import { createValuationRoute } from './routes/valuation'
 import { createExternalInvestmentsDashboardRoute } from './routes/external-investments'
+import { createFreeFirehoseAdminRoute } from './routes/free-firehose'
 import { createGoalsRoute } from './routes/goals'
 import { createInvestmentStrategyRoute } from './routes/investment-strategy'
 import { createManualAssetsRoute } from './routes/manual-assets'
@@ -25,15 +26,14 @@ import { createProvidersDiagnosticsRoute } from './routes/providers-diagnostics'
 import { createSignalSourcesRoute } from './routes/signal-sources'
 import { createSummaryRoute } from './routes/summary'
 import { createTradingLabRoute } from './routes/trading-lab'
-import { createFreeFirehoseAdminRoute } from './routes/free-firehose'
 import { createTransactionCategorizationBackfillRoute } from './routes/transaction-categorization-backfill'
-import { createXTwitterDailySyncRoute } from './routes/x-twitter-daily-sync-route'
-import { createXTwitterHealthRoute } from './routes/x-twitter-health'
-import { createXTwitterLookupRoute } from './routes/x-twitter-lookup'
 import { createTransactionClassificationRoute } from './routes/transaction-classification'
 import { createTransactionsRoute } from './routes/transactions'
 import { createUserCategorizationRulesRoute } from './routes/user-categorization-rules'
-import { createDashboardOpsRefreshConfig } from './ops-refresh-config'
+import { createValuationRoute } from './routes/valuation'
+import { createXTwitterDailySyncRoute } from './routes/x-twitter-daily-sync-route'
+import { createXTwitterHealthRoute } from './routes/x-twitter-health'
+import { createXTwitterLookupRoute } from './routes/x-twitter-lookup'
 import { createDashboardRouteRuntime } from './runtime'
 import type { ApiDb, RedisClient } from './types'
 
@@ -147,6 +147,7 @@ export const createDashboardRoutes = ({
   knowledgeGraphRetrievalMode,
   knowledgeGraphMaxPathDepth,
   knowledgeGraphMinConfidence,
+  internalServiceToken,
   quantServiceEnabled,
   quantServiceUrl,
   quantServiceTimeoutMs,
@@ -272,6 +273,7 @@ export const createDashboardRoutes = ({
   knowledgeGraphRetrievalMode: 'hybrid' | 'graph' | 'vector' | 'fulltext'
   knowledgeGraphMaxPathDepth: number
   knowledgeGraphMinConfidence: number
+  internalServiceToken: string | undefined
   quantServiceEnabled: boolean
   quantServiceUrl: string
   quantServiceTimeoutMs: number
@@ -288,6 +290,17 @@ export const createDashboardRoutes = ({
   fxRatesEcbUrl: string
   fxRatesStaleAfterSeconds: number
 }) => {
+  const knowledgeConfig = {
+    enabled: knowledgeServiceEnabled,
+    url: knowledgeServiceUrl,
+    timeoutMs: knowledgeServiceTimeoutMs,
+    maxContextTokens: knowledgeGraphMaxContextTokens,
+    retrievalMode: knowledgeGraphRetrievalMode,
+    maxPathDepth: knowledgeGraphMaxPathDepth,
+    minConfidence: knowledgeGraphMinConfidence,
+    ...(internalServiceToken !== undefined ? { internalServiceToken } : {}),
+  }
+
   const runtime = createDashboardRouteRuntime({
     db,
     redisClient,
@@ -364,15 +377,8 @@ export const createDashboardRoutes = ({
     aiPostMortemBatchLimit,
     aiPostMortemModel,
     advisorXSignalsMode,
-    knowledgeConfig: {
-      enabled: knowledgeServiceEnabled,
-      url: knowledgeServiceUrl,
-      timeoutMs: knowledgeServiceTimeoutMs,
-      maxContextTokens: knowledgeGraphMaxContextTokens,
-      retrievalMode: knowledgeGraphRetrievalMode,
-      maxPathDepth: knowledgeGraphMaxPathDepth,
-      minConfidence: knowledgeGraphMinConfidence,
-    },
+    knowledgeConfig,
+    internalServiceToken,
     quantServiceEnabled,
     quantServiceUrl,
     quantServiceTimeoutMs,
@@ -415,15 +421,7 @@ export const createDashboardRoutes = ({
           createAdvisorKnowledgeRoute({
             advisorEnabled: aiAdvisorEnabled,
             adminOnly: aiAdvisorAdminOnly,
-            knowledgeConfig: {
-              enabled: knowledgeServiceEnabled,
-              url: knowledgeServiceUrl,
-              timeoutMs: knowledgeServiceTimeoutMs,
-              maxContextTokens: knowledgeGraphMaxContextTokens,
-              retrievalMode: knowledgeGraphRetrievalMode,
-              maxPathDepth: knowledgeGraphMaxPathDepth,
-              minConfidence: knowledgeGraphMinConfidence,
-            },
+            knowledgeConfig,
           })
         )
         .use(createDerivedRecomputeRoute())
@@ -498,7 +496,7 @@ export const createDashboardRoutes = ({
             },
           })
         )
-        .use(createSignalSourcesRoute({ db }))
+        .use(createSignalSourcesRoute({ db, internalServiceToken }))
         .use(createProvidersDiagnosticsRoute())
         .use(createDataQualityRoute())
         .use(createAdvisorV2Route({ v2Enabled: aiAdvisorV2Enabled }))
@@ -512,6 +510,7 @@ export const createDashboardRoutes = ({
             quantServiceTimeoutMs,
             knowledgeServiceEnabled,
             knowledgeServiceUrl,
+            internalServiceToken,
             graphIngestEnabled: tradingLabGraphIngestEnabled,
             marketDataDeps: {
               eodhdApiKey,
@@ -560,6 +559,7 @@ export const createDashboardRoutes = ({
         knowledgeServiceEnabled,
         knowledgeServiceUrl,
         knowledgeServiceTimeoutMs,
+        internalServiceToken,
         advisorGraphIngestEnabled,
       })
     )

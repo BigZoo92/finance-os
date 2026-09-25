@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+import hmac
 import json
 import logging
 import os
@@ -13,7 +14,7 @@ from fastapi.responses import ORJSONResponse
 from . import __version__
 from .backends.factory import select_backend
 from .backends.production_store import ProductionKnowledgeStore
-from .config import get_settings
+from .config import KnowledgeSettings, get_settings
 from .ingest import (
     AdvisorIngestRequest,
     CostLedgerIngestRequest,
@@ -40,6 +41,15 @@ from .schema import NODE_TYPES, RELATION_TYPES, RELATION_WEIGHTS, SCHEMA_VERSION
 
 logger = logging.getLogger("finance_os_knowledge")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+INTERNAL_SERVICE_TOKEN_HEADER = "x-internal-service-token"
+# Probe routes stay open so Compose healthchecks and ops status never need the secret.
+PUBLIC_PATHS = frozenset({"/health", "/version"})
+
+
+def _configured_internal_service_token(settings: KnowledgeSettings) -> str | None:
+    token = (settings.internal_service_token or "").strip()
+    return token or None
 
 
 def _request_id(request: Request) -> str:
@@ -188,12 +198,48 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    internal_service_token = _configured_internal_service_token(settings)
+    if internal_service_token is None:
+        if settings.internal_service_auth_required:
+            raise RuntimeError(
+                "INTERNAL_SERVICE_AUTH_REQUIRED is true but INTERNAL_SERVICE_TOKEN is not configured"
+            )
+        _log("warn", "internal service auth disabled")
+
     app = FastAPI(
         title="Finance-OS Knowledge Service",
         version=__version__,
         default_response_class=ORJSONResponse,
         lifespan=lifespan,
     )
+
+    # Registered before the request-id middleware so it runs inside it: rejected
+    # requests still get the completion log line. Never logs the token or its shape.
+    @app.middleware("http")
+    async def internal_service_auth_middleware(request: Request, call_next):
+        if internal_service_token is None or request.url.path in PUBLIC_PATHS:
+            return await call_next(request)
+
+        provided = request.headers.get(INTERNAL_SERVICE_TOKEN_HEADER, "")
+        if not provided:
+            code, message = "INTERNAL_AUTH_REQUIRED", "Internal service token required."
+        elif not hmac.compare_digest(
+            provided.encode("utf-8"), internal_service_token.encode("utf-8")
+        ):
+            code, message = "INTERNAL_AUTH_INVALID", "Internal service token invalid."
+        else:
+            return await call_next(request)
+
+        request_id = _request_id(request)
+        _log(
+            "warn",
+            "internal service auth rejected",
+            requestId=request_id,
+            route=request.url.path,
+            method=request.method,
+            code=code,
+        )
+        return _safe_error(request_id, 401, code, message)
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):

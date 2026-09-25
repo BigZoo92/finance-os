@@ -3,6 +3,7 @@ import { desc, sql } from 'drizzle-orm'
 import { Elysia } from 'elysia'
 import { getAuth, getRequestMeta } from '../../auth/context'
 import { requireAdmin } from '../../auth/guard'
+import { internalServiceHeaders } from '../../services/internal-service-auth'
 import type { ApiDb } from '../dashboard/types'
 
 type KnowledgeServiceDeps = {
@@ -10,8 +11,14 @@ type KnowledgeServiceDeps = {
   knowledgeServiceEnabled: boolean
   knowledgeServiceUrl: string
   knowledgeServiceTimeoutMs: number
+  internalServiceToken: string | undefined
   advisorGraphIngestEnabled: boolean
 }
+
+type KnowledgeServiceCallConfig = Pick<
+  KnowledgeServiceDeps,
+  'knowledgeServiceUrl' | 'knowledgeServiceTimeoutMs' | 'internalServiceToken'
+>
 
 type KnowledgeStorageStatus = {
   backend?: string
@@ -46,7 +53,8 @@ const callKnowledgeService = async (
   {
     knowledgeServiceUrl,
     knowledgeServiceTimeoutMs,
-  }: { knowledgeServiceUrl: string; knowledgeServiceTimeoutMs: number },
+    internalServiceToken,
+  }: KnowledgeServiceCallConfig,
   path: string,
   requestId: string,
   method: 'GET' | 'POST' = 'GET'
@@ -56,7 +64,7 @@ const callKnowledgeService = async (
   try {
     const response = await fetch(`${knowledgeServiceUrl.replace(/\/$/, '')}${path}`, {
       method,
-      headers: { 'x-request-id': requestId },
+      headers: { 'x-request-id': requestId, ...internalServiceHeaders(internalServiceToken) },
       signal: controller.signal,
     })
     let payload: unknown = null
@@ -122,9 +130,16 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
   knowledgeServiceEnabled,
   knowledgeServiceUrl,
   knowledgeServiceTimeoutMs,
+  internalServiceToken,
   advisorGraphIngestEnabled,
-}: KnowledgeServiceDeps) =>
-  new Elysia({ prefix: '/ops/knowledge/enrichment' })
+}: KnowledgeServiceDeps) => {
+  const serviceConfig: KnowledgeServiceCallConfig = {
+    knowledgeServiceUrl,
+    knowledgeServiceTimeoutMs,
+    internalServiceToken,
+  }
+
+  return new Elysia({ prefix: '/ops/knowledge/enrichment' })
     .get('/status', async context => {
       const requestId = getRequestMeta(context).requestId
       const mode = getAuth(context).mode
@@ -170,30 +185,20 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
           })
           .from(schema.advisorMemoryEvent)
 
-        let serviceHealth:
-          | {
-              status: 'ok' | 'degraded' | 'unavailable'
-              backend: string | null
-              productionConfigured: boolean | null
-              productionActive: boolean | null
-              backends: unknown
-              lastError: string | null
-            }
-          | null = null
+        let serviceHealth: {
+          status: 'ok' | 'degraded' | 'unavailable'
+          backend: string | null
+          productionConfigured: boolean | null
+          productionActive: boolean | null
+          backends: unknown
+          lastError: string | null
+        } | null = null
         let storage = buildStorageBlock(null, false)
 
         if (knowledgeServiceEnabled) {
           const [healthResult, storageResult] = await Promise.all([
-            callKnowledgeService(
-              { knowledgeServiceUrl, knowledgeServiceTimeoutMs },
-              '/health',
-              requestId
-            ),
-            callKnowledgeService(
-              { knowledgeServiceUrl, knowledgeServiceTimeoutMs },
-              '/knowledge/storage/status',
-              requestId
-            ),
+            callKnowledgeService(serviceConfig, '/health', requestId),
+            callKnowledgeService(serviceConfig, '/knowledge/storage/status', requestId),
           ])
 
           const healthPayload = (healthResult.payload ?? {}) as {
@@ -292,7 +297,7 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
       // Idempotent, non-destructive: ensures the Qdrant collection + Neo4j
       // schema exist and reports counts. Never resets or deletes data.
       const result = await callKnowledgeService(
-        { knowledgeServiceUrl, knowledgeServiceTimeoutMs },
+        serviceConfig,
         '/knowledge/storage/ensure',
         requestId,
         'POST'
@@ -316,3 +321,4 @@ export const createOpsKnowledgeEnrichmentStatusRoute = ({
         storage: { ...buildStorageBlock(extractStorage(result.payload), true) },
       }
     })
+}
