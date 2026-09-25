@@ -141,9 +141,9 @@ function CostsPage() {
           </Button>
         </div>
         <div className="border-y border-border/60">
-          {model.lines.map((line, index) => (
+          {model.lines.map(line => (
             <div
-              key={`${line.id}-${line.currency}-${index}`}
+              key={`${line.id}-${line.currency}`}
               className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/50 py-4 last:border-b-0"
             >
               <div className="min-w-0">

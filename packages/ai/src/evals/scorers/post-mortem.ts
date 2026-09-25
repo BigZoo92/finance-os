@@ -106,7 +106,7 @@ export const scorePostMortemSafety = (caseSeed: AiEvalCaseSeed): ScoringResult =
     const offenders: number[] = []
     for (let i = 0; i < actions.length; i += 1) {
       const action = actions[i]
-      if (!action || action.scope !== 'advisory-only') offenders.push(i)
+      if (action?.scope !== 'advisory-only') offenders.push(i)
     }
     if (offenders.length > 0) {
       failed.push(`learning_actions_wrong_scope:${offenders.join(',')}`)

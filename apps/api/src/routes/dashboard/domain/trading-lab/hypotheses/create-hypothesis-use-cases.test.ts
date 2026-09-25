@@ -327,7 +327,7 @@ describe('createHypothesisUseCases', () => {
     expect(updated?.caveats.every((c: string) => !c.startsWith('invalidation: '))).toBe(true)
     expect(updated?.caveats).toEqual(['Replaced caveat'])
 
-    const hypothesis = (updated?.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = ((updated?.parameters ?? {}) as Record<string, unknown>).hypothesis as {
       thesis: string | null
       invalidationCriteria: string[]
     }
@@ -348,7 +348,7 @@ describe('createHypothesisUseCases', () => {
         'EUR/USD realized vol > 2.0x baseline',
       ],
     })
-    const hypothesis = (updated?.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = ((updated?.parameters ?? {}) as Record<string, unknown>).hypothesis as {
       invalidationCriteria: string[]
     }
     expect(hypothesis.invalidationCriteria).toEqual([
@@ -392,7 +392,7 @@ describe('createHypothesisUseCases', () => {
       // A caller trying to overwrite hypothesis via parameters must not succeed.
       parameters: { hypothesis: { thesis: 'malicious override', invalidationCriteria: [] } },
     })
-    const hypothesis = (updated?.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = ((updated?.parameters ?? {}) as Record<string, unknown>).hypothesis as {
       thesis: string | null
       invalidationCriteria: string[]
     }

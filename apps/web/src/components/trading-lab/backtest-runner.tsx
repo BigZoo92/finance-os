@@ -318,7 +318,7 @@ function PreviewResultPanel({
       </div>
     )
   }
-  if (!data || !data.ok) {
+  if (!data?.ok) {
     if (data?.message) {
       return (
         <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-xs text-warning">

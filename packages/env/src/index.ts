@@ -251,7 +251,7 @@ const authPasswordHashInputsSchema = z
     ]
 
     const selected = hashInputsByPriority.find(item => item.value)
-    if (!selected || !selected.value) {
+    if (!selected?.value) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['AUTH_ADMIN_PASSWORD_HASH'],
@@ -320,7 +320,7 @@ const authPasswordHashInputsSchema = z
     ]
 
     const selected = hashInputsByPriority.find(item => item.value)
-    if (!selected || !selected.value) {
+    if (!selected?.value) {
       throw new Error(
         'AUTH_ADMIN_PASSWORD_HASH_B64, AUTH_ADMIN_PASSWORD_HASH, AUTH_PASSWORD_HASH_B64 or AUTH_PASSWORD_HASH is required'
       )

@@ -363,6 +363,17 @@
   );
 }
 
+.login-activity {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.login-activity > span {
+  width: 5px;
+  height: 5px;
+  background: var(--primary);
+}
+
 .login-signal-line {
   position: relative;
   display: block;
@@ -388,16 +399,6 @@
   -webkit-text-stroke: 1.5px oklch(from var(--foreground) l c h / 55%);
 }
 
-.login-activity {
-  display: inline-flex;
-  gap: 3px;
-}
-
-.login-activity > span {
-  width: 5px;
-  height: 5px;
-  background: var(--primary);
-}
 
 @media (prefers-reduced-motion: no-preference) {
   @keyframes login-reveal {

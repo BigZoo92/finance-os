@@ -377,8 +377,8 @@ export function StrategyScorecardCard({
 
               {data.qualityFlags.length > 0 ? (
                 <ul className="space-y-1 text-xs">
-                  {data.qualityFlags.map((flag, idx) => (
-                    <li key={`${flag.kind}-${idx}`} className={flagToneClass(flag.severity)}>
+                  {data.qualityFlags.map(flag => (
+                    <li key={`${flag.kind}-${flag.message}`} className={flagToneClass(flag.severity)}>
                       {flag.message}
                     </li>
                   ))}

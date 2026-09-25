@@ -346,11 +346,11 @@ function OrchestrationPage() {
                     <p className="mt-3 text-sm text-muted-foreground">Aucun résultat connu</p>
                   ) : (
                     <div className="mt-2 border-y border-border/60">
-                      {selectedJob.history.slice(0, 4).map((run, index) => {
+                      {selectedJob.history.slice(0, 4).map(run => {
                         const described = describeOrchestrationStatus(run.status, true)
                         return (
                           <div
-                            key={`${run.jobId}-${run.finishedAt}-${index}`}
+                            key={`${run.jobId}-${run.finishedAt}-${run.durationMs}`}
                             className="flex items-center justify-between gap-3 border-b border-border/50 py-3 last:border-b-0"
                           >
                             <div>
