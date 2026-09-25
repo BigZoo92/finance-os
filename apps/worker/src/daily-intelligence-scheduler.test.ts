@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'bun:test'
+import { createInMemoryRedisClient } from '@finance-os/redis'
 import {
-  buildDailyIntelligenceSchedulerStatus,
   buildDailyIntelligenceRequest,
+  buildDailyIntelligenceSchedulerStatus,
+  DAILY_INTELLIGENCE_LOCK_KEY,
   getNextDailyIntelligenceRun,
   shouldTriggerDailyIntelligenceRun,
   shouldTriggerDailyIntelligenceScheduledRun,
+  triggerDailyIntelligenceRun,
 } from './daily-intelligence-scheduler'
 
 describe('daily intelligence scheduler', () => {
@@ -93,5 +96,76 @@ describe('daily intelligence scheduler', () => {
 
     expect(status.nextMorningRun).toBe('2026-05-04T05:30:00.000Z')
     expect(status.nextNightRun).toBe('2026-05-04T21:15:00.000Z')
+  })
+})
+
+describe('triggerDailyIntelligenceRun', () => {
+  const nightLockKey = `${DAILY_INTELLIGENCE_LOCK_KEY}:night`
+
+  it('skips when another run of the same kind owns the lock and leaves that lock intact', async () => {
+    const redis = createInMemoryRedisClient()
+    await redis.client.set(nightLockKey, 'foreign-token', { NX: true, EX: 60 })
+    const events: Array<Record<string, unknown>> = []
+    let fetchCalled = false
+
+    const result = await triggerDailyIntelligenceRun({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: event => {
+        events.push(event)
+      },
+      fetchImpl: async () => {
+        fetchCalled = true
+        return new Response(null, { status: 200 })
+      },
+      requestId: 'req-daily-skip',
+      runKind: 'night',
+    })
+
+    expect(result).toEqual({ status: 'skipped', requestId: 'req-daily-skip', runKind: 'night' })
+    expect(fetchCalled).toBe(false)
+    expect(events[0]).toMatchObject({
+      msg: 'worker daily intelligence skipped because another run is active',
+      lockKey: nightLockKey,
+    })
+    expect(await redis.client.get(nightLockKey)).toBe('foreign-token')
+  })
+
+  it('posts with the lease signal and releases the run-kind lock on success', async () => {
+    const redis = createInMemoryRedisClient()
+    const signals: Array<boolean | null> = []
+
+    const result = await triggerDailyIntelligenceRun({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: () => {},
+      fetchImpl: async (_url, init) => {
+        signals.push(init?.signal instanceof AbortSignal ? init.signal.aborted : null)
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      },
+      requestId: 'req-daily-ok',
+      runKind: 'night',
+      lockTtlSeconds: 120,
+    })
+
+    expect(result).toEqual({ status: 'triggered', requestId: 'req-daily-ok', runKind: 'night' })
+    expect(signals).toEqual([false])
+    expect(await redis.client.get(nightLockKey)).toBeNull()
+  })
+
+  it('releases the lock when the trigger fails', async () => {
+    const redis = createInMemoryRedisClient()
+
+    const result = await triggerDailyIntelligenceRun({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: () => {},
+      fetchImpl: async () => new Response('boom', { status: 500 }),
+      requestId: 'req-daily-fail',
+      runKind: 'night',
+    })
+
+    expect(result.status).toBe('failed')
+    expect(await redis.client.get(nightLockKey)).toBeNull()
   })
 })

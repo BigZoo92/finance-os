@@ -8,21 +8,10 @@
  * - fail-soft: errors are logged but never crash the worker loop.
  */
 import { randomUUID } from 'node:crypto'
+import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
 
 export const ATTENTION_REBUILD_LOCK_KEY = 'attention:rebuild:lock'
 export const ATTENTION_REBUILD_LOCK_TTL_SECONDS = 5 * 60
-
-type RedisLockClient = {
-  set: (
-    key: string,
-    value: string,
-    options: {
-      NX: true
-      EX: number
-    }
-  ) => Promise<string | null>
-  del: (key: string) => Promise<number>
-}
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -73,12 +62,48 @@ export const triggerAttentionRebuild = async ({
   fetchImpl?: typeof fetch
   requestId?: string
 }) => {
-  const lock = await redisClient.set(ATTENTION_REBUILD_LOCK_KEY, requestId, {
-    NX: true,
-    EX: ATTENTION_REBUILD_LOCK_TTL_SECONDS,
-  })
+  const outcome = await withRedisLock(
+    {
+      client: redisClient,
+      key: ATTENTION_REBUILD_LOCK_KEY,
+      ttlSeconds: ATTENTION_REBUILD_LOCK_TTL_SECONDS,
+      log,
+    },
+    async ({ signal }) => {
+      try {
+        const request = buildAttentionRebuildRequest({
+          apiInternalUrl,
+          requestId,
+          ...(privateAccessToken ? { privateAccessToken } : {}),
+        })
+        const response = await fetchImpl(request.url, { ...request.init, signal })
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`ATTENTION_REBUILD_HTTP_${response.status}:${text.slice(0, 200)}`)
+        }
+        log({
+          level: 'info',
+          msg: 'worker attention rebuild triggered',
+          requestId,
+        })
+        return { status: 'triggered' as const, requestId }
+      } catch (error) {
+        log({
+          level: 'error',
+          msg: 'worker attention rebuild trigger failed',
+          requestId,
+          errMessage: toSafeErrorMessage(error),
+        })
+        return {
+          status: 'failed' as const,
+          requestId,
+          errorMessage: toSafeErrorMessage(error),
+        }
+      }
+    }
+  )
 
-  if (lock !== 'OK') {
+  if (outcome.status === 'skipped') {
     log({
       level: 'warn',
       msg: 'worker attention rebuild skipped because another run is active',
@@ -87,38 +112,7 @@ export const triggerAttentionRebuild = async ({
     return { status: 'skipped' as const, requestId }
   }
 
-  try {
-    const request = buildAttentionRebuildRequest({
-      apiInternalUrl,
-      requestId,
-      ...(privateAccessToken ? { privateAccessToken } : {}),
-    })
-    const response = await fetchImpl(request.url, request.init)
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`ATTENTION_REBUILD_HTTP_${response.status}:${text.slice(0, 200)}`)
-    }
-    log({
-      level: 'info',
-      msg: 'worker attention rebuild triggered',
-      requestId,
-    })
-    return { status: 'triggered' as const, requestId }
-  } catch (error) {
-    log({
-      level: 'error',
-      msg: 'worker attention rebuild trigger failed',
-      requestId,
-      errMessage: toSafeErrorMessage(error),
-    })
-    return {
-      status: 'failed' as const,
-      requestId,
-      errorMessage: toSafeErrorMessage(error),
-    }
-  } finally {
-    await redisClient.del(ATTENTION_REBUILD_LOCK_KEY)
-  }
+  return outcome.value
 }
 
 export const startAttentionRebuildScheduler = ({

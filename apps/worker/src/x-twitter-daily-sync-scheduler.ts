@@ -10,17 +10,9 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
 
 export const X_DAILY_PREVIOUS_DAY_LOCK_KEY = 'x-twitter-daily-previous-day:run:lock'
-
-type RedisLockClient = {
-  set: (
-    key: string,
-    value: string,
-    options: { NX: true; EX: number }
-  ) => Promise<string | null>
-  del: (key: string) => Promise<number>
-}
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -123,11 +115,49 @@ export const triggerXDailySync = async ({
   requestId?: string
   lockTtlSeconds?: number
 }) => {
-  const lock = await redisClient.set(X_DAILY_PREVIOUS_DAY_LOCK_KEY, requestId, {
-    NX: true,
-    EX: lockTtlSeconds,
-  })
-  if (lock !== 'OK') {
+  const outcome = await withRedisLock(
+    {
+      client: redisClient,
+      key: X_DAILY_PREVIOUS_DAY_LOCK_KEY,
+      ttlSeconds: lockTtlSeconds,
+      log,
+    },
+    async ({ signal }) => {
+      try {
+        const request = buildXDailySyncRequest({
+          apiInternalUrl,
+          requestId,
+          ...(privateAccessToken ? { privateAccessToken } : {}),
+        })
+        const response = await fetchImpl(request.url, { ...request.init, signal })
+        if (!response.ok) {
+          const text = await response.text().catch(() => '')
+          throw new Error(`X_DAILY_HTTP_${response.status}:${text.slice(0, 200)}`)
+        }
+        log({
+          level: 'info',
+          msg: 'worker x daily sync triggered',
+          requestId,
+          apiInternalUrl,
+        })
+        return { status: 'triggered' as const, requestId }
+      } catch (error) {
+        log({
+          level: 'error',
+          msg: 'worker x daily sync trigger failed',
+          requestId,
+          errMessage: toSafeErrorMessage(error),
+        })
+        return {
+          status: 'failed' as const,
+          requestId,
+          errorMessage: toSafeErrorMessage(error),
+        }
+      }
+    }
+  )
+
+  if (outcome.status === 'skipped') {
     log({
       level: 'warn',
       msg: 'worker x daily sync skipped because another run is active',
@@ -135,39 +165,8 @@ export const triggerXDailySync = async ({
     })
     return { status: 'skipped' as const, requestId }
   }
-  try {
-    const request = buildXDailySyncRequest({
-      apiInternalUrl,
-      requestId,
-      ...(privateAccessToken ? { privateAccessToken } : {}),
-    })
-    const response = await fetchImpl(request.url, request.init)
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`X_DAILY_HTTP_${response.status}:${text.slice(0, 200)}`)
-    }
-    log({
-      level: 'info',
-      msg: 'worker x daily sync triggered',
-      requestId,
-      apiInternalUrl,
-    })
-    return { status: 'triggered' as const, requestId }
-  } catch (error) {
-    log({
-      level: 'error',
-      msg: 'worker x daily sync trigger failed',
-      requestId,
-      errMessage: toSafeErrorMessage(error),
-    })
-    return {
-      status: 'failed' as const,
-      requestId,
-      errorMessage: toSafeErrorMessage(error),
-    }
-  } finally {
-    await redisClient.del(X_DAILY_PREVIOUS_DAY_LOCK_KEY)
-  }
+
+  return outcome.value
 }
 
 export const startXDailySyncScheduler = ({

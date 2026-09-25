@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
+import { createInMemoryRedisClient } from '@finance-os/redis'
 import {
   buildDashboardMarketsRefreshRequest,
+  MARKET_REFRESH_LOCK_KEY,
   startDashboardMarketsScheduler,
   triggerDashboardMarketsRefresh,
 } from './market-refresh-scheduler'
@@ -16,21 +18,24 @@ describe('buildDashboardMarketsRefreshRequest', () => {
     expect(request.url).toBe('http://api.internal.local/dashboard/markets/refresh')
     expect(request.init.method).toBe('POST')
     expect(request.init.body).toBe(JSON.stringify({ trigger: 'scheduled' }))
-    expect((request.init.headers as Record<string, string>)['x-request-id']).toBe('req-markets-build')
-    expect((request.init.headers as Record<string, string>)['x-internal-token']).toBe('secret-token')
+    expect((request.init.headers as Record<string, string>)['x-request-id']).toBe(
+      'req-markets-build'
+    )
+    expect((request.init.headers as Record<string, string>)['x-internal-token']).toBe(
+      'secret-token'
+    )
   })
 })
 
 describe('triggerDashboardMarketsRefresh', () => {
-  it('skips when another refresh run already owns the lock', async () => {
+  it('skips when another refresh run already owns the lock and leaves that lock intact', async () => {
+    const redis = createInMemoryRedisClient()
+    await redis.client.set(MARKET_REFRESH_LOCK_KEY, 'foreign-token', { NX: true, EX: 60 })
     const events: Array<Record<string, unknown>> = []
     let fetchCalled = false
 
     const result = await triggerDashboardMarketsRefresh({
-      redisClient: {
-        set: async () => null,
-        del: async () => 0,
-      },
+      redisClient: redis.client,
       apiInternalUrl: 'http://api.internal.local',
       log: event => {
         events.push(event)
@@ -42,24 +47,23 @@ describe('triggerDashboardMarketsRefresh', () => {
       requestId: 'req-markets-skip',
     })
 
-    expect(result.status).toBe('skipped')
+    expect(result).toEqual({ status: 'skipped', requestId: 'req-markets-skip' })
     expect(fetchCalled).toBe(false)
     expect(events[0]?.msg).toBe('worker market refresh skipped because another run is active')
+    expect(await redis.client.get(MARKET_REFRESH_LOCK_KEY)).toBe('foreign-token')
   })
 
-  it('posts to the dashboard refresh route and releases the lock on success', async () => {
+  it('posts to the dashboard refresh route with the lease signal and releases the lock on success', async () => {
+    const redis = createInMemoryRedisClient()
     const events: Array<Record<string, unknown>> = []
-    const deletedKeys: string[] = []
-    const requests: Array<{ url: string; headers: Record<string, string> }> = []
+    const requests: Array<{
+      url: string
+      headers: Record<string, string>
+      signalAborted: boolean | null
+    }> = []
 
     const result = await triggerDashboardMarketsRefresh({
-      redisClient: {
-        set: async () => 'OK',
-        del: async key => {
-          deletedKeys.push(key)
-          return 1
-        },
-      },
+      redisClient: redis.client,
       apiInternalUrl: 'http://api.internal.local/',
       privateAccessToken: 'internal-token',
       log: event => {
@@ -69,6 +73,7 @@ describe('triggerDashboardMarketsRefresh', () => {
         requests.push({
           url: String(url),
           headers: (init?.headers as Record<string, string>) ?? {},
+          signalAborted: init?.signal instanceof AbortSignal ? init.signal.aborted : null,
         })
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       },
@@ -87,10 +92,26 @@ describe('triggerDashboardMarketsRefresh', () => {
           'x-internal-token': 'internal-token',
           'x-request-id': 'req-markets-success',
         },
+        signalAborted: false,
       },
     ])
-    expect(deletedKeys).toEqual(['markets:dashboard:refresh:lock'])
+    expect(await redis.client.get(MARKET_REFRESH_LOCK_KEY)).toBeNull()
     expect(events.at(-1)?.msg).toBe('worker market refresh triggered')
+  })
+
+  it('releases the lock when the trigger fails', async () => {
+    const redis = createInMemoryRedisClient()
+
+    const result = await triggerDashboardMarketsRefresh({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: () => {},
+      fetchImpl: async () => new Response('boom', { status: 500 }),
+      requestId: 'req-markets-fail',
+    })
+
+    expect(result.status).toBe('failed')
+    expect(await redis.client.get(MARKET_REFRESH_LOCK_KEY)).toBeNull()
   })
 })
 

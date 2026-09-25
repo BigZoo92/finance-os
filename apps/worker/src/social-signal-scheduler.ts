@@ -1,12 +1,8 @@
 import { randomUUID } from 'node:crypto'
+import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
 
 export const SOCIAL_SIGNAL_LOCK_KEY = 'signals:social:ingest:lock'
 export const SOCIAL_SIGNAL_LOCK_TTL_SECONDS = 10 * 60
-
-type RedisLockClient = {
-  set: (key: string, value: string, options: { NX: true; EX: number }) => Promise<string | null>
-  del: (key: string) => Promise<number>
-}
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -79,12 +75,64 @@ export const triggerSocialSignalIngest = async ({
   fetchImpl?: typeof fetch
   requestId?: string
 }) => {
-  const lock = await redisClient.set(SOCIAL_SIGNAL_LOCK_KEY, requestId, {
-    NX: true,
-    EX: SOCIAL_SIGNAL_LOCK_TTL_SECONDS,
-  })
+  const outcome = await withRedisLock(
+    {
+      client: redisClient,
+      key: SOCIAL_SIGNAL_LOCK_KEY,
+      ttlSeconds: SOCIAL_SIGNAL_LOCK_TTL_SECONDS,
+      log,
+    },
+    async ({ signal }) => {
+      try {
+        // Reuse the news ingest endpoint — it already handles all providers
+        const request = buildSocialSignalIngestRequest({
+          apiInternalUrl,
+          requestId,
+          ...(privateAccessToken ? { privateAccessToken } : {}),
+        })
+        const response = await fetchImpl(request.url, { ...request.init, signal })
 
-  if (lock !== 'OK') {
+        if (!response.ok) {
+          const text = await response.text()
+          log({
+            level: 'error',
+            msg: 'worker social signal ingest http error',
+            scheduler: 'social',
+            endpoint: request.url,
+            requestId,
+            httpStatus: response.status,
+            validationBody: response.status === 422 ? toSafeValidationBody(text) : null,
+          })
+          throw new Error(`SOCIAL_SIGNAL_HTTP_${response.status}:${text.slice(0, 200)}`)
+        }
+
+        log({
+          level: 'info',
+          msg: 'worker social signal ingest triggered',
+          scheduler: 'social',
+          requestId,
+        })
+
+        return { status: 'triggered' as const, requestId }
+      } catch (error) {
+        log({
+          level: 'error',
+          msg: 'worker social signal ingest trigger failed',
+          scheduler: 'social',
+          requestId,
+          errMessage: toSafeErrorMessage(error),
+        })
+
+        return {
+          status: 'failed' as const,
+          requestId,
+          errorMessage: toSafeErrorMessage(error),
+        }
+      }
+    }
+  )
+
+  if (outcome.status === 'skipped') {
     log({
       level: 'warn',
       msg: 'worker social signal ingest skipped because another run is active',
@@ -93,54 +141,7 @@ export const triggerSocialSignalIngest = async ({
     return { status: 'skipped' as const, requestId }
   }
 
-  try {
-    // Reuse the news ingest endpoint — it already handles all providers
-    const request = buildSocialSignalIngestRequest({
-      apiInternalUrl,
-      requestId,
-      ...(privateAccessToken ? { privateAccessToken } : {}),
-    })
-    const response = await fetchImpl(request.url, request.init)
-
-    if (!response.ok) {
-      const text = await response.text()
-      log({
-        level: 'error',
-        msg: 'worker social signal ingest http error',
-        scheduler: 'social',
-        endpoint: request.url,
-        requestId,
-        httpStatus: response.status,
-        validationBody: response.status === 422 ? toSafeValidationBody(text) : null,
-      })
-      throw new Error(`SOCIAL_SIGNAL_HTTP_${response.status}:${text.slice(0, 200)}`)
-    }
-
-    log({
-      level: 'info',
-      msg: 'worker social signal ingest triggered',
-      scheduler: 'social',
-      requestId,
-    })
-
-    return { status: 'triggered' as const, requestId }
-  } catch (error) {
-    log({
-      level: 'error',
-      msg: 'worker social signal ingest trigger failed',
-      scheduler: 'social',
-      requestId,
-      errMessage: toSafeErrorMessage(error),
-    })
-
-    return {
-      status: 'failed' as const,
-      requestId,
-      errorMessage: toSafeErrorMessage(error),
-    }
-  } finally {
-    await redisClient.del(SOCIAL_SIGNAL_LOCK_KEY)
-  }
+  return outcome.value
 }
 
 export const startSocialSignalScheduler = ({

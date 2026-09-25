@@ -1,5 +1,16 @@
 import { createClient } from 'redis'
 
+export {
+  acquireRedisLock,
+  REDIS_LOCK_RELEASE_SCRIPT,
+  type RedisLockClient,
+  type RedisLockHandle,
+  type RedisLockLogger,
+  type RedisLockOutcome,
+  type RedisLockReleaseStatus,
+  withRedisLock,
+} from './lock'
+
 export const createRedisClient = (redisUrl: string) => {
   if (!redisUrl) {
     throw new Error('redisUrl is required')
@@ -153,9 +164,7 @@ export const createInMemoryRedisClient = (): FinanceOsRedisClient => {
     },
     async del(key: string) {
       const removed =
-        (strings.delete(key) ? 1 : 0) +
-        (hashes.delete(key) ? 1 : 0) +
-        (lists.delete(key) ? 1 : 0)
+        (strings.delete(key) ? 1 : 0) + (hashes.delete(key) ? 1 : 0) + (lists.delete(key) ? 1 : 0)
       return removed
     },
     async mGet(keys: string[]) {
