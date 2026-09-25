@@ -30,7 +30,7 @@ Use `.env.production.local` only for local production-like validation; productio
 | Configuration | Consumers | Notes |
 |---|---|---|
 | URLs, auth, encryption, database, Redis | API/worker/server-side web | never expose secrets to client code |
-| `API_INTERNAL_URL` | web SSR and worker | internal service URL; browser uses `/api` |
+| `API_INTERNAL_URL` | web SSR, web `/api` proxy, worker | internal service URL read at request time (never baked into the web build); browser uses `/api` |
 | `PRIVATE_ACCESS_TOKEN` | API, server-side web, and worker | static server-only token accepted only by explicitly guarded API routes |
 | `AUTH_SESSION_SECRET` | API | HMAC-signs the admin session cookie and the distinct Powens callback state |
 | Powens credentials/config | API and worker as declared in schemas | codes/tokens never logged |

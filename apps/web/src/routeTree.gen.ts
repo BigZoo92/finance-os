@@ -9,57 +9,42 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VersionRouteImport } from './routes/version'
-import { Route as TransactionsRouteImport } from './routes/transactions'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as HealthzRouteImport } from './routes/healthz'
-import { Route as HealthRouteImport } from './routes/health'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as HealthRouteImport } from './routes/health'
+import { Route as HealthzRouteImport } from './routes/healthz'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as VersionRouteImport } from './routes/version'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
-import { Route as AppSocialIntelligenceRouteImport } from './routes/_app/social-intelligence'
-import { Route as AppSanteRouteImport } from './routes/_app/sante'
-import { Route as AppRadarRouteImport } from './routes/_app/radar'
-import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
-import { Route as AppOrchestrationRouteImport } from './routes/_app/orchestration'
-import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
-import { Route as AppMemoireRouteImport } from './routes/_app/memoire'
-import { Route as AppMarchesRouteImport } from './routes/_app/marches'
-import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
-import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
-import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
-import { Route as AppCoutsRouteImport } from './routes/_app/couts'
 import { Route as AppActualitesRouteImport } from './routes/_app/actualites'
-import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
+import { Route as AppCoutsRouteImport } from './routes/_app/couts'
+import { Route as AppDepensesRouteImport } from './routes/_app/depenses'
+import { Route as AppIntegrationsRouteImport } from './routes/_app/integrations'
+import { Route as AppInvestissementsRouteImport } from './routes/_app/investissements'
+import { Route as AppMarchesRouteImport } from './routes/_app/marches'
+import { Route as AppMemoireRouteImport } from './routes/_app/memoire'
+import { Route as AppObjectifsRouteImport } from './routes/_app/objectifs'
+import { Route as AppOrchestrationRouteImport } from './routes/_app/orchestration'
+import { Route as AppPatrimoineRouteImport } from './routes/_app/patrimoine'
+import { Route as AppRadarRouteImport } from './routes/_app/radar'
+import { Route as AppSanteRouteImport } from './routes/_app/sante'
+import { Route as AppSocialIntelligenceRouteImport } from './routes/_app/social-intelligence'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as PowensCallbackRouteImport } from './routes/powens/callback'
 import { Route as AppIaIndexRouteImport } from './routes/_app/ia/index'
-import { Route as AppSignauxXTwitterRouteImport } from './routes/_app/signaux/x-twitter'
-import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
-import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
-import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
-import { Route as AppIaStrategieInvestissementRouteImport } from './routes/_app/ia/strategie-investissement'
-import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
 import { Route as AppIaChatRouteImport } from './routes/_app/ia/chat'
+import { Route as AppIaCoutsRouteImport } from './routes/_app/ia/couts'
+import { Route as AppIaStrategieInvestissementRouteImport } from './routes/_app/ia/strategie-investissement'
+import { Route as AppIaTradingLabRouteImport } from './routes/_app/ia/trading-lab'
+import { Route as AppSignauxIndexRouteImport } from './routes/_app/signaux/index'
+import { Route as AppSignauxMarchesRouteImport } from './routes/_app/signaux/marches'
+import { Route as AppSignauxSocialRouteImport } from './routes/_app/signaux/social'
+import { Route as AppSignauxXTwitterRouteImport } from './routes/_app/signaux/x-twitter'
 import { Route as AppIaMemoireIndexRouteImport } from './routes/_app/ia/memoire/index'
 import { Route as AppIaMemoireGraphRouteImport } from './routes/_app/ia/memoire/graph'
 
-const VersionRoute = VersionRouteImport.update({
-  id: '/version',
-  path: '/version',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TransactionsRoute = TransactionsRouteImport.update({
-  id: '/transactions',
-  path: '/transactions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HealthzRoute = HealthzRouteImport.update({
-  id: '/healthz',
-  path: '/healthz',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
@@ -67,8 +52,24 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const HealthzRoute = HealthzRouteImport.update({
+  id: '/healthz',
+  path: '/healthz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransactionsRoute = TransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VersionRoute = VersionRouteImport.update({
+  id: '/version',
+  path: '/version',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -76,64 +77,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const PowensCallbackRoute = PowensCallbackRouteImport.update({
-  id: '/powens/callback',
-  path: '/powens/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppSocialIntelligenceRoute = AppSocialIntelligenceRouteImport.update({
-  id: '/social-intelligence',
-  path: '/social-intelligence',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSanteRoute = AppSanteRouteImport.update({
-  id: '/sante',
-  path: '/sante',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppRadarRoute = AppRadarRouteImport.update({
-  id: '/radar',
-  path: '/radar',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPatrimoineRoute = AppPatrimoineRouteImport.update({
-  id: '/patrimoine',
-  path: '/patrimoine',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppOrchestrationRoute = AppOrchestrationRouteImport.update({
-  id: '/orchestration',
-  path: '/orchestration',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppObjectifsRoute = AppObjectifsRouteImport.update({
-  id: '/objectifs',
-  path: '/objectifs',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMemoireRoute = AppMemoireRouteImport.update({
-  id: '/memoire',
-  path: '/memoire',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMarchesRoute = AppMarchesRouteImport.update({
-  id: '/marches',
-  path: '/marches',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppInvestissementsRoute = AppInvestissementsRouteImport.update({
-  id: '/investissements',
-  path: '/investissements',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
-  id: '/integrations',
-  path: '/integrations',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDepensesRoute = AppDepensesRouteImport.update({
-  id: '/depenses',
-  path: '/depenses',
+const AppActualitesRoute = AppActualitesRouteImport.update({
+  id: '/actualites',
+  path: '/actualites',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCoutsRoute = AppCoutsRouteImport.update({
@@ -141,39 +87,84 @@ const AppCoutsRoute = AppCoutsRouteImport.update({
   path: '/couts',
   getParentRoute: () => AppRoute,
 } as any)
-const AppActualitesRoute = AppActualitesRouteImport.update({
-  id: '/actualites',
-  path: '/actualites',
+const AppDepensesRoute = AppDepensesRouteImport.update({
+  id: '/depenses',
+  path: '/depenses',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSignauxIndexRoute = AppSignauxIndexRouteImport.update({
-  id: '/signaux/',
-  path: '/signaux/',
+const AppIntegrationsRoute = AppIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => AppRoute,
+} as any)
+const AppInvestissementsRoute = AppInvestissementsRouteImport.update({
+  id: '/investissements',
+  path: '/investissements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMarchesRoute = AppMarchesRouteImport.update({
+  id: '/marches',
+  path: '/marches',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMemoireRoute = AppMemoireRouteImport.update({
+  id: '/memoire',
+  path: '/memoire',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppObjectifsRoute = AppObjectifsRouteImport.update({
+  id: '/objectifs',
+  path: '/objectifs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrchestrationRoute = AppOrchestrationRouteImport.update({
+  id: '/orchestration',
+  path: '/orchestration',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPatrimoineRoute = AppPatrimoineRouteImport.update({
+  id: '/patrimoine',
+  path: '/patrimoine',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRadarRoute = AppRadarRouteImport.update({
+  id: '/radar',
+  path: '/radar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSanteRoute = AppSanteRouteImport.update({
+  id: '/sante',
+  path: '/sante',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSocialIntelligenceRoute = AppSocialIntelligenceRouteImport.update({
+  id: '/social-intelligence',
+  path: '/social-intelligence',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PowensCallbackRoute = PowensCallbackRouteImport.update({
+  id: '/powens/callback',
+  path: '/powens/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppIaIndexRoute = AppIaIndexRouteImport.update({
   id: '/ia/',
   path: '/ia/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSignauxXTwitterRoute = AppSignauxXTwitterRouteImport.update({
-  id: '/signaux/x-twitter',
-  path: '/signaux/x-twitter',
+const AppIaChatRoute = AppIaChatRouteImport.update({
+  id: '/ia/chat',
+  path: '/ia/chat',
   getParentRoute: () => AppRoute,
 } as any)
-const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
-  id: '/signaux/social',
-  path: '/signaux/social',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSignauxMarchesRoute = AppSignauxMarchesRouteImport.update({
-  id: '/signaux/marches',
-  path: '/signaux/marches',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
-  id: '/ia/trading-lab',
-  path: '/ia/trading-lab',
+const AppIaCoutsRoute = AppIaCoutsRouteImport.update({
+  id: '/ia/couts',
+  path: '/ia/couts',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIaStrategieInvestissementRoute =
@@ -182,14 +173,29 @@ const AppIaStrategieInvestissementRoute =
     path: '/ia/strategie-investissement',
     getParentRoute: () => AppRoute,
   } as any)
-const AppIaCoutsRoute = AppIaCoutsRouteImport.update({
-  id: '/ia/couts',
-  path: '/ia/couts',
+const AppIaTradingLabRoute = AppIaTradingLabRouteImport.update({
+  id: '/ia/trading-lab',
+  path: '/ia/trading-lab',
   getParentRoute: () => AppRoute,
 } as any)
-const AppIaChatRoute = AppIaChatRouteImport.update({
-  id: '/ia/chat',
-  path: '/ia/chat',
+const AppSignauxIndexRoute = AppSignauxIndexRouteImport.update({
+  id: '/signaux/',
+  path: '/signaux/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSignauxMarchesRoute = AppSignauxMarchesRouteImport.update({
+  id: '/signaux/marches',
+  path: '/signaux/marches',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSignauxSocialRoute = AppSignauxSocialRouteImport.update({
+  id: '/signaux/social',
+  path: '/signaux/social',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSignauxXTwitterRoute = AppSignauxXTwitterRouteImport.update({
+  id: '/signaux/x-twitter',
+  path: '/signaux/x-twitter',
   getParentRoute: () => AppRoute,
 } as any)
 const AppIaMemoireIndexRoute = AppIaMemoireIndexRouteImport.update({
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/radar': typeof AppRadarRoute
   '/sante': typeof AppSanteRoute
   '/social-intelligence': typeof AppSocialIntelligenceRoute
+  '/api/$': typeof ApiSplatRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/ia/chat': typeof AppIaChatRoute
   '/ia/couts': typeof AppIaCoutsRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/radar': typeof AppRadarRoute
   '/sante': typeof AppSanteRoute
   '/social-intelligence': typeof AppSocialIntelligenceRoute
+  '/api/$': typeof ApiSplatRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/': typeof AppIndexRoute
   '/ia/chat': typeof AppIaChatRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/_app/radar': typeof AppRadarRoute
   '/_app/sante': typeof AppSanteRoute
   '/_app/social-intelligence': typeof AppSocialIntelligenceRoute
+  '/api/$': typeof ApiSplatRoute
   '/powens/callback': typeof PowensCallbackRoute
   '/_app/': typeof AppIndexRoute
   '/_app/ia/chat': typeof AppIaChatRoute
@@ -326,6 +335,7 @@ export interface FileRouteTypes {
     | '/radar'
     | '/sante'
     | '/social-intelligence'
+    | '/api/$'
     | '/powens/callback'
     | '/ia/chat'
     | '/ia/couts'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/radar'
     | '/sante'
     | '/social-intelligence'
+    | '/api/$'
     | '/powens/callback'
     | '/'
     | '/ia/chat'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/_app/radar'
     | '/_app/sante'
     | '/_app/social-intelligence'
+    | '/api/$'
     | '/powens/callback'
     | '/_app/'
     | '/_app/ia/chat'
@@ -414,37 +426,17 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   TransactionsRoute: typeof TransactionsRoute
   VersionRoute: typeof VersionRoute
+  ApiSplatRoute: typeof ApiSplatRoute
   PowensCallbackRoute: typeof PowensCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/version': {
-      id: '/version'
-      path: '/version'
-      fullPath: '/version'
-      preLoaderRoute: typeof VersionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/transactions': {
-      id: '/transactions'
-      path: '/transactions'
-      fullPath: '/transactions'
-      preLoaderRoute: typeof TransactionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/healthz': {
-      id: '/healthz'
-      path: '/healthz'
-      fullPath: '/healthz'
-      preLoaderRoute: typeof HealthzRouteImport
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/health': {
@@ -454,11 +446,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app': {
-      id: '/_app'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
+    '/healthz': {
+      id: '/healthz'
+      path: '/healthz'
+      fullPath: '/healthz'
+      preLoaderRoute: typeof HealthzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transactions': {
+      id: '/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/version': {
+      id: '/version'
+      path: '/version'
+      fullPath: '/version'
+      preLoaderRoute: typeof VersionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -468,88 +481,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/powens/callback': {
-      id: '/powens/callback'
-      path: '/powens/callback'
-      fullPath: '/powens/callback'
-      preLoaderRoute: typeof PowensCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/social-intelligence': {
-      id: '/_app/social-intelligence'
-      path: '/social-intelligence'
-      fullPath: '/social-intelligence'
-      preLoaderRoute: typeof AppSocialIntelligenceRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/sante': {
-      id: '/_app/sante'
-      path: '/sante'
-      fullPath: '/sante'
-      preLoaderRoute: typeof AppSanteRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/radar': {
-      id: '/_app/radar'
-      path: '/radar'
-      fullPath: '/radar'
-      preLoaderRoute: typeof AppRadarRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/patrimoine': {
-      id: '/_app/patrimoine'
-      path: '/patrimoine'
-      fullPath: '/patrimoine'
-      preLoaderRoute: typeof AppPatrimoineRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/orchestration': {
-      id: '/_app/orchestration'
-      path: '/orchestration'
-      fullPath: '/orchestration'
-      preLoaderRoute: typeof AppOrchestrationRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/objectifs': {
-      id: '/_app/objectifs'
-      path: '/objectifs'
-      fullPath: '/objectifs'
-      preLoaderRoute: typeof AppObjectifsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/memoire': {
-      id: '/_app/memoire'
-      path: '/memoire'
-      fullPath: '/memoire'
-      preLoaderRoute: typeof AppMemoireRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/marches': {
-      id: '/_app/marches'
-      path: '/marches'
-      fullPath: '/marches'
-      preLoaderRoute: typeof AppMarchesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/investissements': {
-      id: '/_app/investissements'
-      path: '/investissements'
-      fullPath: '/investissements'
-      preLoaderRoute: typeof AppInvestissementsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/integrations': {
-      id: '/_app/integrations'
-      path: '/integrations'
-      fullPath: '/integrations'
-      preLoaderRoute: typeof AppIntegrationsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/depenses': {
-      id: '/_app/depenses'
-      path: '/depenses'
-      fullPath: '/depenses'
-      preLoaderRoute: typeof AppDepensesRouteImport
+    '/_app/actualites': {
+      id: '/_app/actualites'
+      path: '/actualites'
+      fullPath: '/actualites'
+      preLoaderRoute: typeof AppActualitesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/couts': {
@@ -559,19 +495,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCoutsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/actualites': {
-      id: '/_app/actualites'
-      path: '/actualites'
-      fullPath: '/actualites'
-      preLoaderRoute: typeof AppActualitesRouteImport
+    '/_app/depenses': {
+      id: '/_app/depenses'
+      path: '/depenses'
+      fullPath: '/depenses'
+      preLoaderRoute: typeof AppDepensesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/signaux/': {
-      id: '/_app/signaux/'
-      path: '/signaux'
-      fullPath: '/signaux/'
-      preLoaderRoute: typeof AppSignauxIndexRouteImport
+    '/_app/integrations': {
+      id: '/_app/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AppIntegrationsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/investissements': {
+      id: '/_app/investissements'
+      path: '/investissements'
+      fullPath: '/investissements'
+      preLoaderRoute: typeof AppInvestissementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/marches': {
+      id: '/_app/marches'
+      path: '/marches'
+      fullPath: '/marches'
+      preLoaderRoute: typeof AppMarchesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/memoire': {
+      id: '/_app/memoire'
+      path: '/memoire'
+      fullPath: '/memoire'
+      preLoaderRoute: typeof AppMemoireRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/objectifs': {
+      id: '/_app/objectifs'
+      path: '/objectifs'
+      fullPath: '/objectifs'
+      preLoaderRoute: typeof AppObjectifsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orchestration': {
+      id: '/_app/orchestration'
+      path: '/orchestration'
+      fullPath: '/orchestration'
+      preLoaderRoute: typeof AppOrchestrationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/patrimoine': {
+      id: '/_app/patrimoine'
+      path: '/patrimoine'
+      fullPath: '/patrimoine'
+      preLoaderRoute: typeof AppPatrimoineRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/radar': {
+      id: '/_app/radar'
+      path: '/radar'
+      fullPath: '/radar'
+      preLoaderRoute: typeof AppRadarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/sante': {
+      id: '/_app/sante'
+      path: '/sante'
+      fullPath: '/sante'
+      preLoaderRoute: typeof AppSanteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/social-intelligence': {
+      id: '/_app/social-intelligence'
+      path: '/social-intelligence'
+      fullPath: '/social-intelligence'
+      preLoaderRoute: typeof AppSocialIntelligenceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/powens/callback': {
+      id: '/powens/callback'
+      path: '/powens/callback'
+      fullPath: '/powens/callback'
+      preLoaderRoute: typeof PowensCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/ia/': {
       id: '/_app/ia/'
@@ -580,39 +593,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/signaux/x-twitter': {
-      id: '/_app/signaux/x-twitter'
-      path: '/signaux/x-twitter'
-      fullPath: '/signaux/x-twitter'
-      preLoaderRoute: typeof AppSignauxXTwitterRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/signaux/social': {
-      id: '/_app/signaux/social'
-      path: '/signaux/social'
-      fullPath: '/signaux/social'
-      preLoaderRoute: typeof AppSignauxSocialRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/signaux/marches': {
-      id: '/_app/signaux/marches'
-      path: '/signaux/marches'
-      fullPath: '/signaux/marches'
-      preLoaderRoute: typeof AppSignauxMarchesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/ia/trading-lab': {
-      id: '/_app/ia/trading-lab'
-      path: '/ia/trading-lab'
-      fullPath: '/ia/trading-lab'
-      preLoaderRoute: typeof AppIaTradingLabRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/ia/strategie-investissement': {
-      id: '/_app/ia/strategie-investissement'
-      path: '/ia/strategie-investissement'
-      fullPath: '/ia/strategie-investissement'
-      preLoaderRoute: typeof AppIaStrategieInvestissementRouteImport
+    '/_app/ia/chat': {
+      id: '/_app/ia/chat'
+      path: '/ia/chat'
+      fullPath: '/ia/chat'
+      preLoaderRoute: typeof AppIaChatRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/ia/couts': {
@@ -622,11 +607,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaCoutsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/ia/chat': {
-      id: '/_app/ia/chat'
-      path: '/ia/chat'
-      fullPath: '/ia/chat'
-      preLoaderRoute: typeof AppIaChatRouteImport
+    '/_app/ia/strategie-investissement': {
+      id: '/_app/ia/strategie-investissement'
+      path: '/ia/strategie-investissement'
+      fullPath: '/ia/strategie-investissement'
+      preLoaderRoute: typeof AppIaStrategieInvestissementRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ia/trading-lab': {
+      id: '/_app/ia/trading-lab'
+      path: '/ia/trading-lab'
+      fullPath: '/ia/trading-lab'
+      preLoaderRoute: typeof AppIaTradingLabRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/': {
+      id: '/_app/signaux/'
+      path: '/signaux'
+      fullPath: '/signaux/'
+      preLoaderRoute: typeof AppSignauxIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/marches': {
+      id: '/_app/signaux/marches'
+      path: '/signaux/marches'
+      fullPath: '/signaux/marches'
+      preLoaderRoute: typeof AppSignauxMarchesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/social': {
+      id: '/_app/signaux/social'
+      path: '/signaux/social'
+      fullPath: '/signaux/social'
+      preLoaderRoute: typeof AppSignauxSocialRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/signaux/x-twitter': {
+      id: '/_app/signaux/x-twitter'
+      path: '/signaux/x-twitter'
+      fullPath: '/signaux/x-twitter'
+      preLoaderRoute: typeof AppSignauxXTwitterRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/ia/memoire/': {
@@ -711,6 +731,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   TransactionsRoute: TransactionsRoute,
   VersionRoute: VersionRoute,
+  ApiSplatRoute: ApiSplatRoute,
   PowensCallbackRoute: PowensCallbackRoute,
 }
 export const routeTree = rootRouteImport
