@@ -29,6 +29,8 @@ allowBuilds:
   # GitNexus (dev-only code intelligence) native dependencies: prebuilt binaries
   # are bundled or resolved at runtime, so their install scripts are not needed.
   "@ladybugdb/core": false
+  # msw ships a postinstall notice only (pulled in transitively by the web test tooling).
+  msw: false
   onnxruntime-node: false
   sharp: false
   tree-sitter: false

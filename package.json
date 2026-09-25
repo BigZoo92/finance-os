@@ -102,7 +102,7 @@
     "concurrently": "^9.2.1",
     "gitnexus": "1.4.10",
     "js-yaml": "^4.1.1",
-    "typescript": "^5.9.3",
+    "typescript": "7.0.2",
     "bun-types": "catalog:"
   }
 }
