@@ -18,6 +18,8 @@ type SsrRequestContext = {
   requestOrigin?: string;
   requestCookieHeader?: string | null;
   requestId?: string;
+  /** Internal API token resolved server-side by the Start request middleware. */
+  internalToken?: string;
 };
 
 type ApiRequestErrorStatus = number | "network_error";
@@ -277,13 +279,6 @@ const toHintFromStatus = ({
   return undefined;
 };
 
-const resolveServerInternalToken = () => {
-  return (
-    readServerRuntimeEnv("PRIVATE_ACCESS_TOKEN") ??
-    readServerRuntimeEnv("API_INTERNAL_TOKEN")
-  );
-};
-
 const createRequestHeaders = ({
   init,
   requestContext,
@@ -322,9 +317,8 @@ const createRequestHeaders = ({
     headers.set("Origin", requestContext.requestOrigin);
   }
 
-  const internalToken = resolveServerInternalToken();
-  if (internalToken) {
-    headers.set("x-internal-token", internalToken);
+  if (requestContext.internalToken) {
+    headers.set("x-internal-token", requestContext.internalToken);
     internalTokenForwarded = true;
   }
 

@@ -109,11 +109,14 @@ describe('apiFetch', () => {
   })
 
   it('forwards SSR cookie, request id and internal token headers on server requests', async () => {
-    process.env.PRIVATE_ACCESS_TOKEN = 'test-private-access-token'
+    // The token is resolved by the server request middleware, never from
+    // process.env inside this isomorphic module.
+    process.env.PRIVATE_ACCESS_TOKEN = 'env-token-must-be-ignored'
     getGlobalStartContextMock.mockReturnValue({
       requestOrigin: 'http://127.0.0.1:3000',
       requestCookieHeader: 'finance_os_session=session-token',
       requestId: 'req-test-1',
+      internalToken: 'test-private-access-token',
     })
 
     fetchMock.mockResolvedValue(

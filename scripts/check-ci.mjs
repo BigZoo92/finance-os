@@ -74,6 +74,10 @@ export const coreSteps = [
     name: 'Build',
     args: ['-r', '--if-present', 'build'],
   },
+  {
+    name: 'Client bundle denylist',
+    args: ['check:client-bundle'],
+  },
 ]
 
 export const desktopSteps = [

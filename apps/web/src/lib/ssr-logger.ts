@@ -11,9 +11,10 @@ const DEBUG_ENV_KEYS = [
   'VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED',
   'VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED',
   'VITE_UI_RECONNECT_BANNER_ENABLED',
-  'PRIVATE_ACCESS_TOKEN',
 ] as const
 
+// Secret-bearing names never appear in this isomorphic module: presence of the
+// internal token is reported by `logSsrApiCall` as `internalTokenForwarded`.
 const SENSITIVE_ENV_KEY_PATTERN = /TOKEN|SECRET|PASSWORD|KEY/i
 
 const toOptionalEnv = (value: string | undefined) => {

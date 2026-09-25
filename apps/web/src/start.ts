@@ -32,11 +32,20 @@ const shouldSetNoStore = ({
   return contentType.includes('text/html')
 }
 
+// Server-only: the internal API token is read here, inside the request
+// middleware, so its name and value never enter an isomorphic module or the
+// client bundle. SSR fetches read it from the request context.
+const resolveInternalToken = () => {
+  const value = process.env.PRIVATE_ACCESS_TOKEN?.trim() || process.env.API_INTERNAL_TOKEN?.trim()
+  return value && value.length > 0 ? value : undefined
+}
+
 const requestAuthContextMiddleware = createMiddleware({ type: 'request' }).server(
   async ({ request, next }) => {
     const requestUrl = new URL(request.url)
     const requestPath = `${requestUrl.pathname}${requestUrl.search}`
     const requestId = resolveRequestId(request)
+    const internalToken = resolveInternalToken()
 
     try {
       const response = await next({
@@ -45,6 +54,7 @@ const requestAuthContextMiddleware = createMiddleware({ type: 'request' }).serve
           requestPath,
           requestCookieHeader: request.headers.get('cookie'),
           requestId,
+          ...(internalToken ? { internalToken } : {}),
         },
       })
 

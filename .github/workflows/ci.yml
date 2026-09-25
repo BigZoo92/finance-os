@@ -106,6 +106,9 @@ jobs:
       - name: Build
         run: pnpm -r --if-present build
 
+      - name: Client bundle denylist
+        run: pnpm check:client-bundle
+
   e2e-smoke:
     name: E2E Smoke
     runs-on: ubuntu-latest

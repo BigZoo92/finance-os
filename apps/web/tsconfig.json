@@ -15,7 +15,11 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    /* TanStack Start: verbatimModuleSyntax keeps unused (server-only) imports in
+       client modules and can leak server bundles into the browser build. The
+       web app deliberately overrides the shared policy; Biome still enforces
+       `import type` style. See scripts/check-client-bundle.mjs. */
+    "verbatimModuleSyntax": false,
     "noEmit": true,
 
     /* Linting */
