@@ -107,10 +107,17 @@ export type ReconcilableManualOperationStep = {
  * presented as auto-closed so it can never render a false "en cours". Existing
  * error codes/messages are preserved when already set.
  */
+/** A reconciled step keeps every field of the input; only its status may have been closed. */
+export type ReconciledManualOperationStep<T extends ReconcilableManualOperationStep> = Omit<
+  T,
+  'status' | 'errorCode' | 'errorMessage'
+> &
+  Pick<ReconcilableManualOperationStep, 'status' | 'errorCode' | 'errorMessage'>
+
 export const reconcileManualOperationStepForDisplay = <T extends ReconcilableManualOperationStep>(
   step: T,
   parentStatus: string
-): T => {
+): ReconciledManualOperationStep<T> => {
   if (!shouldCloseOrphanedStep(step.status, parentStatus)) {
     return step
   }

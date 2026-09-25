@@ -3,15 +3,17 @@ import { asProviderId, type Provider, type ProviderHealth } from '@finance-os/pr
 import { createProviderRegistry } from './registry'
 import { providerOk } from './result'
 
-const makeFakeProvider = ({
+type FakeCapability = 'market.quotes.read' | 'news.items.read' | 'quant.metrics.compute'
+
+const makeFakeProvider = <C extends FakeCapability>({
   id,
   capability,
   status = 'ok',
 }: {
   id: string
-  capability: 'market.quotes.read' | 'news.items.read' | 'quant.metrics.compute'
+  capability: C
   status?: ProviderHealth['status']
-}): Provider => {
+}): Provider<C> => {
   const pid = asProviderId(id)
   return {
     id: pid,

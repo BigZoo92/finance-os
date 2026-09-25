@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const MARKET_REFRESH_LOCK_KEY = 'markets:dashboard:refresh:lock'
 export const MARKET_REFRESH_LOCK_TTL_SECONDS = 20 * 60
@@ -52,7 +53,7 @@ export const triggerDashboardMarketsRefresh = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
 }) => {
   const outcome = await withRedisLock(
@@ -133,7 +134,7 @@ export const startDashboardMarketsScheduler = ({
   intervalMs: number
   trigger: () => Promise<unknown>
   log: SchedulerLogger
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

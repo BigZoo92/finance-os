@@ -173,14 +173,14 @@ describe('startDashboardAdvisorScheduler', () => {
       log: event => {
         events.push(event)
       },
-      setIntervalFn: ((handler: TimerHandler, timeout?: number) => {
+      setIntervalFn: ((handler: () => void, timeout?: number) => {
         intervals.push(timeout ?? 0)
         void handler()
         return 123 as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      }),
     })
 
-    expect(timer).toBe(123)
+    expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
     expect(triggerCalls).toEqual(['called'])
     expect(intervals).toEqual([900000])
     expect(events.at(-1)?.msg).toBe('worker advisor scheduler started')
@@ -208,15 +208,15 @@ describe('startDashboardAdvisorScheduler', () => {
       },
       nowFn: () => ticks.shift() ?? new Date('2026-04-22T13:25:00.000Z'),
       log: () => undefined,
-      setIntervalFn: ((handler: TimerHandler) => {
+      setIntervalFn: ((handler: () => void) => {
         void handler()
         void handler()
         void handler()
         return 123 as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      }),
     })
 
-    expect(timer).toBe(123)
+    expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
     expect(triggerCalls).toEqual(['called', 'called'])
   })
 })

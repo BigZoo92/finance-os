@@ -123,7 +123,7 @@ describe('providerErrorToSafeJson', () => {
       'retryable',
       'safeDetails',
     ])
-    expect((json as Record<string, unknown>).stack).toBeUndefined()
+    expect((json as unknown as Record<string, unknown>).stack).toBeUndefined()
     expect(json.code).toBe('tos_blocked')
     expect(json.capability).toBe('market.quotes.read')
   })

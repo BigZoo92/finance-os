@@ -5,7 +5,7 @@
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
-    "baseUrl": ".",
+    /* TS7 removed baseUrl: paths resolve relative to this tsconfig's directory. */
     "paths": {
       "@/*": ["./src/*"]
     },

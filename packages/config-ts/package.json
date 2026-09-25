@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "exports": {
     "./base": "./base.json",
+    "./isomorphic": "./isomorphic.json",
     "./web": "./web.json",
-    "./server": "./server.json"
+    "./server": "./server.json",
+    "./test": "./test.json"
   }
 }

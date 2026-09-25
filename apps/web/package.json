@@ -3,9 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "imports": {
-    "#/*": "./src/*"
-  },
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
@@ -41,11 +38,11 @@
     "lightweight-charts": "^5.2.0",
     "motion": "^12.38.0",
     "nitro": "3.0.260903-beta",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "tailwindcss": "^4.1.18",
     "three": "^0.183.2",
-    "zod": "^4.1.11"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.3.11",
@@ -54,9 +51,9 @@
     "@types/d3-array": "^3.2.2",
     "@types/d3-scale": "^4.0.9",
     "@types/d3-shape": "^3.1.8",
-    "@types/node": "24.13.6",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^5.0.4",
     "babel-plugin-react-compiler": "^1.0.0",

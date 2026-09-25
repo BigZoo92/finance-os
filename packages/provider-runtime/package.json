@@ -15,7 +15,7 @@
     "./test-harness": "./src/test-harness.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "bun test src"
   },
   "dependencies": {

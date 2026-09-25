@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const SOCIAL_SIGNAL_LOCK_KEY = 'signals:social:ingest:lock'
 export const SOCIAL_SIGNAL_LOCK_TTL_SECONDS = 10 * 60
@@ -72,7 +73,7 @@ export const triggerSocialSignalIngest = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
 }) => {
   const outcome = await withRedisLock(
@@ -157,7 +158,7 @@ export const startSocialSignalScheduler = ({
   intervalMs: number
   trigger: () => Promise<unknown>
   log: SchedulerLogger
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

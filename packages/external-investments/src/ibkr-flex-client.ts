@@ -1,3 +1,4 @@
+import type { ExternalInvestmentFetch } from './types'
 import { XMLParser } from 'fast-xml-parser'
 import { ExternalInvestmentProviderError } from './errors'
 
@@ -103,7 +104,7 @@ export type IbkrFlexClientConfig = {
   timeoutMs: number
   statementMaxAttempts?: number
   statementRetryDelayMs?: number
-  fetchImpl?: typeof fetch
+  fetchImpl?: ExternalInvestmentFetch
 }
 
 type IbkrFlexEndpoint = 'SendRequest' | 'GetStatement'

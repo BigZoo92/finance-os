@@ -113,7 +113,7 @@ describe('startAttentionRebuildScheduler', () => {
       log: e => events.push(e),
       setIntervalFn: (() => {
         throw new Error('should not be called')
-      }) as typeof setInterval,
+      }),
     })
     expect(timer).toBeNull()
     expect(events[0]?.reason).toBe('ATTENTION_SYSTEM_ENABLED=false')
@@ -130,7 +130,7 @@ describe('startAttentionRebuildScheduler', () => {
       log: e => events.push(e),
       setIntervalFn: (() => {
         throw new Error('should not be called')
-      }) as typeof setInterval,
+      }),
     })
     expect(timer).toBeNull()
     expect(events[0]?.reason).toBe('ATTENTION_REBUILD_AUTO_ENABLED=false')
@@ -147,7 +147,7 @@ describe('startAttentionRebuildScheduler', () => {
       log: e => events.push(e),
       setIntervalFn: (() => {
         throw new Error('should not be called')
-      }) as typeof setInterval,
+      }),
     })
     expect(timer).toBeNull()
     expect(events[0]?.reason).toBe('EXTERNAL_INTEGRATIONS_SAFE_MODE=true')
@@ -167,7 +167,7 @@ describe('startAttentionRebuildScheduler', () => {
         expect(ms).toBe(1000)
         scheduled = true
         return 'fake-timer' as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      }),
     })
     expect(scheduled).toBe(true)
     expect(timer).toBe('fake-timer' as unknown as ReturnType<typeof setInterval>)

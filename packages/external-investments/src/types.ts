@@ -291,3 +291,9 @@ export type ExternalInvestmentBundle = {
   confidence: ExternalInvestmentSourceConfidence
   provenance: Array<{ provider: ExternalInvestmentProvider; connectionId: string; positionCount: number }>
 }
+
+/** Narrow fetch contract for provider clients; production passes the platform fetch. */
+export type ExternalInvestmentFetch = (
+  input: string | URL | Request,
+  init?: RequestInit
+) => Promise<Response>

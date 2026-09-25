@@ -24,13 +24,13 @@
     "@finance-os/provider-runtime": "workspace:*",
     "@finance-os/redis": "workspace:*",
     "cheerio": "^1.2.0",
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "catalog:",
     "elysia": "1.4.30",
     "fast-xml-parser": "^5.5.11",
-    "zod": "^4.3.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "bun-types": "1.4.2"
+    "bun-types": "catalog:"
   },
   "module": "src/index.js"
 }

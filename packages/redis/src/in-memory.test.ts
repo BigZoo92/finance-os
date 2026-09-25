@@ -7,7 +7,7 @@ describe('createInMemoryRedisClient', () => {
 
     expect(await redis.client.incr('login:demo')).toBe(1)
     expect(await redis.client.incr('login:demo')).toBe(2)
-    expect(await redis.client.expire('login:demo', 60)).toBe(true)
+    expect(await redis.client.expire('login:demo', 60)).toBe(1)
     expect(await redis.client.ttl('login:demo')).toBeGreaterThan(0)
 
     await redis.close()

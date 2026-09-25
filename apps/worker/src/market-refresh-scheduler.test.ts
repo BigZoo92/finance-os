@@ -145,14 +145,14 @@ describe('startDashboardMarketsScheduler', () => {
       log: event => {
         events.push(event)
       },
-      setIntervalFn: ((handler: TimerHandler, timeout?: number) => {
+      setIntervalFn: ((handler: () => void, timeout?: number) => {
         void handler
         intervals.push(timeout ?? 0)
         return 123 as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      }),
     })
 
-    expect(timer).toBe(123)
+    expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
     expect(intervals).toEqual([900000])
     expect(events.at(-1)?.msg).toBe('worker market scheduler started')
   })

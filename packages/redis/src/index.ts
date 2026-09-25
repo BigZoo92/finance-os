@@ -130,18 +130,19 @@ export const createInMemoryRedisClient = (): FinanceOsRedisClient => {
       setString(key, String(next))
       return next
     },
+    // Mirrors the real client: EXPIRE replies 1 when a timeout was set, 0 otherwise.
     async expire(key: string, seconds: number) {
       purgeExpired(key)
       const entry = strings.get(key)
       if (!entry) {
-        return false
+        return 0
       }
 
       strings.set(key, {
         ...entry,
         expiresAtMs: nowMs() + seconds * 1000,
       })
-      return true
+      return 1
     },
     async ttl(key: string) {
       purgeExpired(key)

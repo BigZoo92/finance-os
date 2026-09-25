@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const DAILY_INTELLIGENCE_LOCK_KEY = 'daily-intelligence:run:lock'
 export const DAILY_INTELLIGENCE_LOCK_TTL_SECONDS = 30 * 60
@@ -339,7 +340,7 @@ export const triggerDailyIntelligenceRun = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
   runKind?: DailyIntelligenceRunKind
   dryRun?: boolean
@@ -452,7 +453,7 @@ export const startDailyIntelligenceScheduler = ({
   }) => Promise<unknown>
   log: SchedulerLogger
   nowFn?: () => Date
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

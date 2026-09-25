@@ -16,10 +16,10 @@
     "@finance-os/powens": "workspace:*",
     "@finance-os/prelude": "workspace:*",
     "@finance-os/redis": "workspace:*",
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "catalog:",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "bun-types": "1.4.2"
+    "bun-types": "catalog:"
   }
 }

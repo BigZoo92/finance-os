@@ -13,10 +13,10 @@
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.cjs",
     "db:studio": "drizzle-kit studio --config=drizzle.config.cjs",
     "db:seed:recurring-costs": "bun src/seeds/recurring-provider-cost.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "catalog:",
     "postgres": "^3.4.8"
   },
   "devDependencies": {

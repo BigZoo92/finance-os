@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const ADVISOR_DAILY_LOCK_KEY = 'advisor:dashboard:daily:lock'
 export const ADVISOR_DAILY_LOCK_TTL_SECONDS = 30 * 60
@@ -129,7 +130,7 @@ export const triggerDashboardAdvisorDailyRun = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
 }) => {
   const outcome = await withRedisLock(
@@ -226,7 +227,7 @@ export const startDashboardAdvisorScheduler = ({
   trigger: () => Promise<unknown>
   log: SchedulerLogger
   nowFn?: () => Date
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

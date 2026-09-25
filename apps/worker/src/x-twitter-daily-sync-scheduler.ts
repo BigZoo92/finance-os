@@ -11,6 +11,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl } from './scheduler-types'
 
 export const X_DAILY_PREVIOUS_DAY_LOCK_KEY = 'x-twitter-daily-previous-day:run:lock'
 
@@ -111,7 +112,7 @@ export const triggerXDailySync = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
   lockTtlSeconds?: number
 }) => {

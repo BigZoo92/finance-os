@@ -98,10 +98,11 @@
     "@biomejs/biome": "2.5.14",
     "@moonrepo/cli": "2.5.5",
     "@playwright/test": "1.63.0",
-    "@types/node": "24.13.6",
+    "@types/node": "catalog:",
     "concurrently": "^9.2.1",
     "gitnexus": "1.4.10",
     "js-yaml": "^4.1.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "bun-types": "catalog:"
   }
 }

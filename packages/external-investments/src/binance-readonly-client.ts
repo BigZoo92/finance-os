@@ -1,3 +1,4 @@
+import type { ExternalInvestmentFetch } from './types'
 import { createHmac } from 'node:crypto'
 import { ExternalInvestmentProviderError } from './errors'
 
@@ -79,7 +80,7 @@ export type BinanceReadonlyClientConfig = {
   recvWindowMs: number
   timeoutMs: number
   now?: () => number
-  fetchImpl?: typeof fetch
+  fetchImpl?: ExternalInvestmentFetch
 }
 
 export type BinanceAccountInfo = {

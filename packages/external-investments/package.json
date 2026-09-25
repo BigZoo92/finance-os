@@ -10,12 +10,12 @@
     "./jobs": "./src/jobs.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "bun test src"
   },
   "dependencies": {
     "@finance-os/db": "workspace:*",
-    "drizzle-orm": "0.45.3",
+    "drizzle-orm": "catalog:",
     "effect": "^3.21.2",
     "fast-xml-parser": "^5.5.11"
   }

@@ -24,11 +24,10 @@ import {
   toExternalInvestmentErrorCode,
   toSafeExternalInvestmentErrorMessage,
 } from '@finance-os/external-investments'
-import { acquireRedisLock, type createRedisClient } from '@finance-os/redis'
+import { acquireRedisLock, type RedisLockClient } from '@finance-os/redis'
 import { eq, or } from 'drizzle-orm'
 
 type WorkerDb = ReturnType<typeof createDbClient>['db']
-type WorkerRedisClient = ReturnType<typeof createRedisClient>['client']
 type WorkerEnv = ReturnType<typeof getWorkerEnv>
 type ExternalInvestmentWorkerEnvConfig = Pick<
   WorkerEnv,
@@ -139,7 +138,7 @@ export const claimExternalInvestmentRequestSync = async ({
   requestId,
   providerConnectionId,
 }: {
-  redisClient: Pick<WorkerRedisClient, 'set'>
+  redisClient: Pick<RedisLockClient, 'set'>
   requestId: string
   providerConnectionId: string
 }) => {
@@ -207,7 +206,7 @@ export const createExternalInvestmentsSyncWorker = ({
   log,
 }: {
   db: WorkerDb
-  redisClient: WorkerRedisClient
+  redisClient: RedisLockClient
   env: WorkerEnv
   log: WorkerLog
 }) => {

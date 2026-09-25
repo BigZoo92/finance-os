@@ -7,6 +7,7 @@ import {
 import { buildExternalInvestmentContextBundle } from './context-bundle'
 import { createIbkrFlexClient, parseIbkrFlexXml } from './ibkr-flex-client'
 import { normalizeBinanceSnapshot, normalizeIbkrFlexStatement } from './normalizer'
+import type { ExternalInvestmentFetch } from './types'
 
 const GENERATED_AT = '2026-05-01T08:00:00.000Z'
 
@@ -102,7 +103,7 @@ describe('IBKR Flex XML parsing', () => {
 
   it('uses the current AccountManagement Flex Web Service endpoints by default', async () => {
     const urls: string[] = []
-    const fetchImpl: typeof fetch = async input => {
+    const fetchImpl: ExternalInvestmentFetch = async input => {
       urls.push(String(input))
       if (urls.length === 1) {
         return new Response(`
@@ -145,7 +146,7 @@ describe('IBKR Flex XML parsing', () => {
 
   it('retries GetStatement while IBKR is still generating the report', async () => {
     const urls: string[] = []
-    const fetchImpl: typeof fetch = async input => {
+    const fetchImpl: ExternalInvestmentFetch = async input => {
       urls.push(String(input))
       if (urls.length === 1) {
         return new Response(`
@@ -194,7 +195,7 @@ describe('IBKR Flex XML parsing', () => {
 
   it('preserves legacy Universal servlet endpoint compatibility', async () => {
     const urls: string[] = []
-    const fetchImpl: typeof fetch = async input => {
+    const fetchImpl: ExternalInvestmentFetch = async input => {
       urls.push(String(input))
       return new Response(
         urls.length === 1

@@ -77,7 +77,7 @@ describe('external investment provider operation effect boundary', () => {
         retryable: true,
       },
     })
-    expect(result.error.message).not.toContain('super-secret')
+    expect('error' in result && result.error.message).not.toContain('super-secret')
   })
 
   it('redacts common provider credential patterns from error messages', () => {

@@ -16,6 +16,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { acquireRedisLock, type RedisLockClient } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const POST_MORTEM_SCHEDULER_LOCK_KEY = 'finance-os:post-mortem:scheduler-lock'
 export const POST_MORTEM_SCHEDULER_LOCK_TTL_SECONDS_DEFAULT = 30 * 60
@@ -186,7 +187,7 @@ export const triggerAdvisorPostMortemRun = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
   lockTtlSeconds?: number
   triggerTimeoutMs?: number
@@ -350,7 +351,7 @@ export const startPostMortemScheduler = ({
   trigger: () => Promise<unknown>
   log: SchedulerLogger
   nowFn?: () => Date
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

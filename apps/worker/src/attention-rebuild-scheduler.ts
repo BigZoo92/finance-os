@@ -9,6 +9,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const ATTENTION_REBUILD_LOCK_KEY = 'attention:rebuild:lock'
 export const ATTENTION_REBUILD_LOCK_TTL_SECONDS = 5 * 60
@@ -59,7 +60,7 @@ export const triggerAttentionRebuild = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
 }) => {
   const outcome = await withRedisLock(
@@ -130,7 +131,7 @@ export const startAttentionRebuildScheduler = ({
   intervalMs: number
   trigger: () => Promise<unknown>
   log: SchedulerLogger
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

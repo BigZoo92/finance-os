@@ -141,7 +141,7 @@ describe('computeProviderDiagnostics', () => {
     const out1 = computeProviderDiagnostics({ registry: reg1, context: baseContext('admin') })
     const out2 = computeProviderDiagnostics({ registry: reg2, context: baseContext('admin') })
     expect(out1.providers.map(p => p.providerId)).toEqual(out2.providers.map(p => p.providerId))
-    expect(out1.providers.map(p => p.providerId)).toEqual(['binance', 'ibkr', 'powens'])
+    expect(out1.providers.map(p => String(p.providerId))).toEqual(['binance', 'ibkr', 'powens'])
   })
 
   it('does NOT report `unconfigured` providers as `down` and surfaces a caveat', () => {
