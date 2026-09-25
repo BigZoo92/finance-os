@@ -14,12 +14,21 @@ const config = defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Rolldown resolves the `node` import condition of tslib to an ESM wrapper over
+      // its `__esModule`-flagged CommonJS build and then reads `.default` (undefined),
+      // which crashes the SSR bundle at boot (`react-remove-scroll-bar` via Radix).
+      // Pointing every consumer at the pure ESM build removes the interop entirely.
+      tslib: 'tslib/tslib.es6.mjs',
     },
   },
   plugins: [
     devtools(),
     nitro({
       rollupConfig: { external: [/^@sentry\//] },
+      // Bundle tslib (pure ESM via the alias above) instead of tracing it: Nitro
+      // otherwise re-emits a bare `tslib` import that Node resolves to the
+      // untraced `modules/index.js` wrapper at boot.
+      noExternals: ['tslib'],
     }),
     tailwindcss(),
     tanstackStart(),
