@@ -1,4 +1,37 @@
 packages:
   - "apps/*"
   - "packages/*"
-dangerouslyAllowAllBuilds: true
+
+# Supply-chain policy: pnpm 11 defaults (minimumReleaseAge, strictDepBuilds) are
+# kept. The single documented exception: the dev-only GitNexus code-intelligence
+# CLI pulls `tree-sitter-dart` from a git repository, which blockExoticSubdeps
+# would refuse. Revisit when GitNexus ships without git subdependencies.
+blockExoticSubdeps: false
+
+# Dependency lifecycle policy (pnpm 11, strictDepBuilds): every dependency that
+# ships install scripts must be listed explicitly. `false` means the script is
+# skipped (the package works through prebuilt optional binaries); `true` is
+# granted only after a clean install and runtime validation. Never re-enable
+# unrestricted builds.
+allowBuilds:
+  # GitNexus (dev-only code intelligence) native dependencies: prebuilt binaries
+  # are bundled or resolved at runtime, so their install scripts are not needed.
+  "@ladybugdb/core": false
+  onnxruntime-node: false
+  sharp: false
+  tree-sitter: false
+  tree-sitter-cli: false
+  tree-sitter-c: false
+  tree-sitter-c-sharp: false
+  tree-sitter-cpp: false
+  tree-sitter-dart: false
+  tree-sitter-go: false
+  tree-sitter-java: false
+  tree-sitter-javascript: false
+  tree-sitter-kotlin: false
+  tree-sitter-php: false
+  tree-sitter-python: false
+  tree-sitter-ruby: false
+  tree-sitter-rust: false
+  tree-sitter-swift: false
+  tree-sitter-typescript: false

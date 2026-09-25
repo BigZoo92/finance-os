@@ -24,10 +24,9 @@ Dependency failures degrade individual surfaces; they do not make the cockpit un
 
 ## Local setup
 
-Prerequisites: Node.js 22.15.0, pnpm 10.15.0, Bun, Docker Compose, and Python 3.12 with `uv` for the Python services.
+Runtimes are pinned in one place each: Node.js in `.node-version` (24 LTS, also `.nvmrc`), pnpm in the `packageManager` field of `package.json` (pnpm 11 manages its own version from that field), Bun in `.bun-version` (1.4, runs the API, worker, and Bun-native tests), Python in `.python-version` (3.12, frozen with `uv`), and Rust through the Tauri toolchain. CI and the Docker images read the same files and arguments. Docker Compose is required for local infrastructure.
 
 ```powershell
-corepack enable
 pnpm install --frozen-lockfile
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 pnpm env:check

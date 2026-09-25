@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-ARG NODE_VERSION=22.15.0
-ARG BUN_VERSION=1.2.22
-ARG PNPM_VERSION=10.15.0
+ARG NODE_VERSION=24.21.0
+ARG BUN_VERSION=1.4.2
+ARG PNPM_VERSION=11.28.0
 ARG GIT_SHA=unknown
 ARG GIT_TAG=unknown
 ARG BUILD_TIME=unknown
@@ -12,7 +12,9 @@ ARG PNPM_VERSION
 ENV PNPM_HOME=/pnpm
 ENV PATH=${PNPM_HOME}:${PATH}
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+# pnpm is installed from its npm package at the exact pinned version (corepack is
+# deprecated in Node 24 and removed later).
+RUN npm install -g pnpm@${PNPM_VERSION} && pnpm --version
 
 FROM pnpm-base AS manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

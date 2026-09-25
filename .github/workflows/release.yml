@@ -131,9 +131,9 @@ jobs:
           cache-from: type=gha,scope=release-${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=release-${{ matrix.target }}
           build-args: |
-            NODE_VERSION=${{ vars.NODE_VERSION || '22.15.0' }}
-            BUN_VERSION=${{ vars.BUN_VERSION || '1.2.22' }}
-            PNPM_VERSION=${{ vars.PNPM_VERSION || '10.15.0' }}
+            NODE_VERSION=${{ vars.NODE_VERSION || '24.21.0' }}
+            BUN_VERSION=${{ vars.BUN_VERSION || '1.4.2' }}
+            PNPM_VERSION=${{ vars.PNPM_VERSION || '11.28.0' }}
             API_INTERNAL_URL=${{ vars.API_INTERNAL_URL || 'http://api:3001' }}
             VITE_APP_TITLE=${{ vars.VITE_APP_TITLE || 'finance-os' }}
             VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL || '/api' }}
@@ -477,13 +477,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.15.0
           run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 

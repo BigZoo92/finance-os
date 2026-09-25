@@ -6,7 +6,11 @@
   "keywords": [],
   "author": "BigZoo",
   "license": "ISC",
-  "packageManager": "pnpm@10.15.0",
+  "packageManager": "pnpm@11.28.0",
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "pnpm": ">=11.28.0 <12"
+  },
   "scripts": {
     "dev:apps": "concurrently -k -n api,worker,web \"pnpm api:dev\" \"pnpm worker:dev\" \"pnpm web:dev\"",
     "dev:all": "pnpm infra:up && pnpm dev:apps",
@@ -84,9 +88,9 @@
     "check:client-bundle": "node scripts/check-client-bundle.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
-    "@playwright/test": "^1.59.1",
-    "@types/node": "^25.3.0",
+    "@biomejs/biome": "2.5.14",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.6",
     "concurrently": "^9.2.1",
     "gitnexus": "1.4.10",
     "js-yaml": "^4.1.1",
