@@ -22,6 +22,7 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY packages/ai/package.json packages/ai/package.json
+COPY packages/api-contract/package.json packages/api-contract/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
 COPY packages/external-investments/package.json packages/external-investments/package.json
@@ -61,6 +62,7 @@ RUN pnpm install --frozen-lockfile --prod --filter @finance-os/api...
 FROM deps-api AS bundle-api
 COPY apps/api apps/api
 COPY packages/ai packages/ai
+COPY packages/api-contract packages/api-contract
 COPY packages/db packages/db
 COPY packages/env packages/env
 COPY packages/external-investments packages/external-investments
@@ -90,6 +92,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=bundle-api --chown=app:app /app/node_modules ./node_modules
 COPY --from=bundle-api --chown=app:app /app/apps/api ./apps/api
 COPY --from=bundle-api --chown=app:app /app/packages/ai ./packages/ai
+COPY --from=bundle-api --chown=app:app /app/packages/api-contract ./packages/api-contract
 COPY --from=bundle-api --chown=app:app /app/packages/db ./packages/db
 COPY --from=bundle-api --chown=app:app /app/packages/env ./packages/env
 COPY --from=bundle-api --chown=app:app /app/packages/external-investments ./packages/external-investments

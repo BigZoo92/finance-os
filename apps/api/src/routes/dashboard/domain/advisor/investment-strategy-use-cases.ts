@@ -32,70 +32,27 @@ import {
   validateStrategy,
 } from './investment-strategy-engine'
 
+import type {
+  AssetSearchInput,
+  GenerateActionPlanInput,
+  InvestmentStrategyUpdateInput,
+  ReviewDueInput,
+  WatchlistAssetInput,
+  WatchlistAssetPatchInput,
+} from './investment-strategy-inputs'
+
+export type {
+  AssetSearchInput,
+  GenerateActionPlanInput,
+  InvestmentStrategyUpdateInput,
+  ReviewDueInput,
+  WatchlistAssetInput,
+  WatchlistAssetPatchInput,
+}
+
 type Mode = 'demo' | 'admin'
 
 type ExternalPositionRow = Record<string, unknown>
-
-export type InvestmentStrategyUpdateInput = {
-  monthlyContributionTarget?: number | null
-  rebalanceThresholdPct?: number
-  horizonYears?: number
-  riskProfile?: 'conservative' | 'balanced' | 'growth' | 'aggressive' | 'custom'
-  description?: string
-}
-
-export type GenerateActionPlanInput = {
-  mode: Mode
-  requestId: string
-  triggerSource: string
-  dryRun?: boolean
-}
-
-export type AssetSearchInput = {
-  mode: Mode
-  requestId: string
-  query: string
-}
-
-export type WatchlistAssetInput = {
-  symbol: string
-  name: string
-  assetClass: string
-  providerSymbols?: Record<string, string>
-  iconUrl?: string | null
-  logoUrl?: string | null
-  isin?: string | null
-  exchange?: string | null
-  currency: string
-  userInterestLevel?: 'none' | 'watching' | 'interested' | 'high_interest'
-  userIntent?: 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
-  note?: string | null
-}
-
-export type WatchlistAssetPatchInput = Partial<
-  Pick<
-    WatchlistAssetInput,
-    | 'name'
-    | 'assetClass'
-    | 'providerSymbols'
-    | 'iconUrl'
-    | 'logoUrl'
-    | 'isin'
-    | 'exchange'
-    | 'currency'
-    | 'userInterestLevel'
-    | 'userIntent'
-    | 'note'
-  >
->
-
-export type ReviewDueInput = {
-  mode: Mode
-  requestId: string
-  triggerSource: string
-  dryRun?: boolean
-  limit?: number
-}
 
 export type InvestmentStrategyUseCaseDeps = {
   repository: InvestmentStrategyRepository

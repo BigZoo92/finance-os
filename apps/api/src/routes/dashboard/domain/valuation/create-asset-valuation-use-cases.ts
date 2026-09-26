@@ -1,11 +1,17 @@
+import type {
+  ValuationProviderFailure,
+  ValuationRunSummary,
+  ValuationStatusResponse,
+  ValuationUnresolvedItem,
+} from '@finance-os/api-contract/valuation'
+import type { schema } from '@finance-os/db'
 import {
   buildValuationCoverageReport,
-  valuateItems,
   type FxRateInput,
   type ItemValuation,
   type ValuationCoverageReport,
+  valuateItems,
 } from '@finance-os/finance-engine'
-import type { schema } from '@finance-os/db'
 import { logApiEvent, toErrorLogFields } from '../../../../observability/logger'
 import type { EcbFxRate } from '../../services/fetch-ecb-fx-rates'
 import {
@@ -49,53 +55,10 @@ export class AssetValuationFailedError extends Error {
   }
 }
 
-export interface AssetValuationProviderFailure {
-  provider: string
-  errorCode: string
-  safeErrorMessage: string
-}
-
-export interface AssetValuationRunSummary {
-  runId: number
-  dryRun: boolean
-  status: 'completed' | 'failed' | 'running'
-  triggerSource: 'admin' | 'internal'
-  startedAt: string
-  finishedAt: string | null
-  durationMs: number | null
-  coverage: ValuationCoverageReport | null
-  itemCount: number | null
-  snapshotCount: number | null
-  wouldCreateSnapshots: number | null
-  providerFailures: AssetValuationProviderFailure[]
-  safeErrorCode: string | null
-  safeErrorMessage: string | null
-}
-
-export interface AssetValuationStatusResponse {
-  featureEnabled: boolean
-  fxEnabled: boolean
-  state: 'idle' | 'running' | 'completed' | 'failed'
-  latestRun: AssetValuationRunSummary | null
-  fx: {
-    baseCurrency: 'EUR'
-    ratesAvailable: number
-    staleRates: number
-    latestRateTimestamp: string | null
-  }
-}
-
-export interface AssetValuationUnresolvedItem {
-  itemKey: string
-  name: string
-  provider: string | null
-  assetClass: string
-  status: string
-  identityStatus: string
-  errorCode: string | null
-  safeErrorMessage: string | null
-  asOf: string | null
-}
+export type AssetValuationProviderFailure = ValuationProviderFailure
+export type AssetValuationRunSummary = ValuationRunSummary
+export type AssetValuationStatusResponse = ValuationStatusResponse
+export type AssetValuationUnresolvedItem = ValuationUnresolvedItem
 
 interface FxRateRepositoryLike {
   upsertMany: (rows: Array<typeof schema.fxRateSnapshot.$inferInsert>) => Promise<number>
@@ -159,9 +122,7 @@ export interface CreateAssetValuationUseCasesDependencies {
 
 const toDecimalString = (value: number | null) => (value === null ? null : value.toString())
 
-const mapFxRowToInput = (
-  row: typeof schema.fxRateSnapshot.$inferSelect
-): FxRateInput => ({
+const mapFxRowToInput = (row: typeof schema.fxRateSnapshot.$inferSelect): FxRateInput => ({
   baseCurrency: row.baseCurrency,
   quoteCurrency: row.quoteCurrency,
   rate: Number(row.rate),
@@ -296,7 +257,8 @@ export const createAssetValuationUseCases = ({
       return {
         provider: 'ecb',
         errorCode: 'FX_REFRESH_FAILED',
-        safeErrorMessage: 'Rafraichissement des taux FX indisponible; derniers taux connus utilises.',
+        safeErrorMessage:
+          'Rafraichissement des taux FX indisponible; derniers taux connus utilises.',
       }
     }
   }
@@ -304,11 +266,7 @@ export const createAssetValuationUseCases = ({
   const loadInputsFailSoft = async ({ requestId }: { requestId: string }) => {
     const providerFailures: AssetValuationProviderFailure[] = []
 
-    const guard = async <T>(
-      provider: string,
-      fallback: T,
-      load: () => Promise<T>
-    ): Promise<T> => {
+    const guard = async <T>(provider: string, fallback: T, load: () => Promise<T>): Promise<T> => {
       try {
         return await load()
       } catch (error) {
@@ -343,7 +301,14 @@ export const createAssetValuationUseCases = ({
         ),
       ])
 
-    return { assets, externalPositions, internalPositions, instrumentIdentities, fxRows, providerFailures }
+    return {
+      assets,
+      externalPositions,
+      internalPositions,
+      instrumentIdentities,
+      fxRows,
+      providerFailures,
+    }
   }
 
   const computeValuations = async ({ requestId }: { requestId: string }) => {
@@ -392,7 +357,6 @@ export const createAssetValuationUseCases = ({
     const runId: number = run.id
 
     try {
-
       logApiEvent({
         level: 'info',
         msg: 'asset valuation refresh started',

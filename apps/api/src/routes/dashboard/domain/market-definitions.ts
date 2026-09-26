@@ -1,8 +1,12 @@
-export type MarketProviderId = 'eodhd' | 'fred' | 'twelve_data'
+import type {
+  MarketAssetClass,
+  MarketMacroSeriesGroup,
+  MarketMacroSeriesUnit,
+  MarketProviderId,
+  MarketRegion,
+} from '@finance-os/api-contract/markets'
 
-export type MarketAssetClass = 'etf' | 'equity' | 'bond' | 'commodity'
-
-export type MarketRegion = 'us' | 'europe' | 'world' | 'asia' | 'emerging' | 'africa'
+export type { MarketAssetClass, MarketProviderId, MarketRegion }
 
 export interface MarketInstrumentDefinition {
   id: string
@@ -28,8 +32,8 @@ export interface MarketMacroSeriesDefinition {
   id: string
   label: string
   shortLabel: string
-  group: 'rates' | 'inflation' | 'labor'
-  unit: 'percent' | 'spread' | 'index'
+  group: MarketMacroSeriesGroup
+  unit: MarketMacroSeriesUnit
   transform: 'level' | 'yoy' | 'delta'
   description: string
 }

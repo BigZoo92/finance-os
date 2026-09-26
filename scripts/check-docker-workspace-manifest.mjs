@@ -10,6 +10,7 @@ const workspacePackagePaths = [
   'apps/web',
   'apps/worker',
   'packages/ai',
+  'packages/api-contract',
   'packages/db',
   'packages/env',
   'packages/external-investments',

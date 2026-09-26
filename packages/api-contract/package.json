@@ -1,0 +1,22 @@
+{
+  "name": "@finance-os/api-contract",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./dashboard": "./src/dashboard.ts",
+    "./analytics": "./src/analytics.ts",
+    "./investments": "./src/investments.ts",
+    "./markets": "./src/markets.ts",
+    "./valuation": "./src/valuation.ts",
+    "./goals": "./src/goals.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  }
+}

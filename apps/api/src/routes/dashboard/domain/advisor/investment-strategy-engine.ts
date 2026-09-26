@@ -1,17 +1,26 @@
 import type {
+  InvestmentAccountPolicy,
+  InvestmentActionableStep,
+  InvestmentAllocationSnapshot,
+  InvestmentAssetCandidate,
+  InvestmentDataQuality,
+  InvestmentDrift,
+  InvestmentHolding,
+  InvestmentPriceFreshness,
+  InvestmentStrategyBucket,
+  InvestmentStrategyProfile,
+} from '@finance-os/api-contract/investments'
+import type {
   AccountStrategyType,
+  AdvisorActionPlanItemAction,
   AssetPriceabilityStatus,
+  AssetRecommendabilityStatus,
   AssetRecommendationMode,
   AssetRecommendationTier,
-  AssetRecommendabilityStatus,
-  AdvisorActionPlanItemAction,
-  AssetUniverseEligibilityStatus,
   InvestmentBucketKey,
   InvestmentRiskLevel,
-  InvestmentRiskProfile,
-  PeaEligibilityStatus,
-  UserAssetInterestLevel,
   UserAssetIntent,
+  UserAssetInterestLevel,
 } from '@finance-os/db/schema'
 import type { PriceSnapshotContract } from '../../services/valuation-foundation'
 import { resolvePriceStaleness } from '../../services/valuation-foundation'
@@ -20,121 +29,23 @@ export const DEFAULT_STRATEGY_NAME = 'bigzoo_growth_60_30_10_v1'
 export const DEFAULT_STRATEGY_VERSION = 'v1'
 export const MIN_BUY_CONFIDENCE = 0.58
 
-export type StrategyProfileDto = {
-  id: number
-  name: string
-  version: string
-  status: 'active' | 'draft' | 'archived'
-  description: string
-  riskProfile: InvestmentRiskProfile
-  horizonYears: number
-  baseCurrency: string
-  monthlyContributionTarget: number | null
-  rebalanceThresholdPct: number
-  reviewFrequency: string
-  noAutoTrade: boolean
-  humanValidationRequired: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export type StrategyBucketDto = {
-  id: number
-  strategyId: number
-  bucketKey: InvestmentBucketKey
-  targetPct: number
-  minPct: number
-  maxPct: number
-  riskLevel: InvestmentRiskLevel
-  description: string
-  defaultHorizon: string
-  rules: Record<string, unknown>
-}
-
-export type AccountPolicyDto = {
-  id: number
-  strategyId: number
-  accountId: string | null
-  provider: string
-  accountType: AccountStrategyType
-  label: string
-  allowedBuckets: InvestmentBucketKey[]
-  preferredBucket: InvestmentBucketKey | null
-  maxAllocationPct: number
-  maxSingleAssetPct: number
-  minOrderAmount: number | null
-  tradingCurrency: string
-  taxWrapper: string | null
-  eligibilityRules: Record<string, unknown>
-  restrictedAssets: string[]
-  humanReadablePolicy: string
-  noAutoTrade: boolean
-  humanValidationRequired: boolean
-}
-
-export type AssetCandidateDto = {
-  id: number
-  symbol: string
-  name: string
-  assetClass: string
-  bucket: InvestmentBucketKey
-  accountTypesAllowed: AccountStrategyType[]
-  providerSymbols: Record<string, string>
-  isin: string | null
-  exchange: string | null
-  currency: string
-  eligibilityStatus: AssetUniverseEligibilityStatus
-  peaEligibilityStatus: PeaEligibilityStatus
-  riskLevel: InvestmentRiskLevel
-  liquidityScore: number | null
-  notes: string | null
-  source: string
-  userInterestLevel: UserAssetInterestLevel
-  userIntent: UserAssetIntent
-  iconUrl: string | null
-  logoUrl: string | null
-}
+// Transport DTOs live in @finance-os/api-contract; the engine keeps its historical names.
+export type StrategyProfileDto = InvestmentStrategyProfile
+export type StrategyBucketDto = InvestmentStrategyBucket
+export type AccountPolicyDto = InvestmentAccountPolicy
+export type AssetCandidateDto = InvestmentAssetCandidate
+export type HoldingInput = InvestmentHolding
+export type PriceFreshness = InvestmentPriceFreshness
+export type AllocationSnapshotDto = InvestmentAllocationSnapshot
+export type DriftDto = InvestmentDrift
+export type DataQualityDto = InvestmentDataQuality
+export type { InvestmentActionableStep }
 
 export type StrategyBundle = {
   strategy: StrategyProfileDto
   buckets: StrategyBucketDto[]
   accountPolicies: AccountPolicyDto[]
   candidates: AssetCandidateDto[]
-}
-
-export type HoldingInput = {
-  provider: string
-  accountId: string | null
-  accountLabel: string | null
-  accountType: AccountStrategyType
-  symbol: string | null
-  name: string
-  assetClass: string
-  value: number | null
-  currency: string | null
-  valueAsOf: string | null
-  quantity: number | null
-  bucket?: InvestmentBucketKey | 'cash' | 'unknown'
-  valueSource?: string
-  confidence?: 'high' | 'medium' | 'low' | 'unknown' | number | null
-  degradedReasons: string[]
-  assumptions: string[]
-}
-
-export type PriceFreshness = {
-  provider: string | null
-  sourceType: string | null
-  marketTimestamp: string | null
-  fetchedAt: string | null
-  delaySeconds: number | null
-  ageSeconds: number | null
-  isStale: boolean
-  confidence: number
-  currency: string | null
-  price: number | null
-  staleReason: string | null
-  providerHealth: string | null
-  fallbackReason: string | null
 }
 
 export type ReliablePriceResult = {
@@ -145,76 +56,11 @@ export type ReliablePriceResult = {
   warnings: string[]
 }
 
-export type AllocationSnapshotDto = {
-  id?: number
-  strategyId: number
-  snapshotAt: string
-  baseCurrency: string
-  totalValue: number
-  coreValue: number
-  growthValue: number
-  asymmetricValue: number
-  cashValue: number
-  unknownValue: number
-  corePct: number
-  growthPct: number
-  asymmetricPct: number
-  drift: DriftDto[]
-  dataQuality: DataQualityDto
-  holdings: HoldingInput[]
-}
-
-export type DriftDto = {
-  bucket: InvestmentBucketKey
-  targetPct: number
-  actualPct: number
-  driftPct: number
-  severity: 'ok' | 'watch' | 'alert' | 'hard_limit'
-  recommendedContribution: number | null
-  recommendedAction: string
-}
-
-export type DataQualityDto = {
-  status: 'ready' | 'degraded' | 'insufficient_data'
-  confidence: number
-  /**
-   * Value of the positions without a valuation. It is by definition unknown
-   * (null) as soon as one such position exists; 0 only when every position is
-   * valued. Use `unknownPositionCount` to size the gap.
-   */
-  unknownValue: number | null
-  unknownPositionCount: number
-  stalePositionCount: number
-  missingPriceSymbols: string[]
-  stalePriceSymbols: string[]
-  providerWarnings: string[]
-  fxWarnings: string[]
-  graphWarnings: string[]
-}
-
 export type ContributionRecommendation = {
   bucket: InvestmentBucketKey
   amount: number
   currency: string
   reason: string
-}
-
-export type InvestmentActionableStep = {
-  type:
-    | 'no_trade_today'
-    | 'allocate_contribution'
-    | 'connect_price_source'
-    | 'resolve_asset_eligibility'
-    | 'review_user_watchlist'
-    | 'do_not_reinforce_overweight_bucket'
-  priority: 'high' | 'medium' | 'low'
-  accountLabel?: string
-  bucket?: InvestmentBucketKey
-  amountValue?: number
-  amountCurrency?: string
-  message: string
-  reason: string
-  blockingReasons?: string[]
 }
 
 export type RiskDecision = {
@@ -597,8 +443,7 @@ export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
     peaEligibilityStatus: 'not_applicable',
     riskLevel: 'very_high',
     liquidityScore: 0.8,
-    notes:
-      'Major crypto candidate. Buy bloque si prix non frais ou poche crypto proche du cap.',
+    notes: 'Major crypto candidate. Buy bloque si prix non frais ou poche crypto proche du cap.',
     source: 'default_seed_needs_review',
     userInterestLevel: 'none',
     userIntent: 'analyze',
@@ -619,8 +464,7 @@ export const defaultCandidateUniverse = (): Omit<AssetCandidateDto, 'id'>[] => [
     peaEligibilityStatus: 'not_applicable',
     riskLevel: 'very_high',
     liquidityScore: 0.75,
-    notes:
-      'Major crypto candidate. Buy bloque si prix non frais ou poche crypto proche du cap.',
+    notes: 'Major crypto candidate. Buy bloque si prix non frais ou poche crypto proche du cap.',
     source: 'default_seed_needs_review',
     userInterestLevel: 'none',
     userIntent: 'analyze',
@@ -1013,7 +857,9 @@ export const enforceRiskPolicy = ({
   if (policy.accountType === 'crypto' && allocation.dataQuality.status === 'insufficient_data') {
     // An unknown allocation cannot prove the cap is respected: no buy.
     allowed = false
-    reasons.push('Allocation actuelle inconnue: cap crypto/asymmetric non verifiable, achat interdit.')
+    reasons.push(
+      'Allocation actuelle inconnue: cap crypto/asymmetric non verifiable, achat interdit.'
+    )
   } else if (policy.accountType === 'crypto' && allocation.asymmetricPct >= 10) {
     allowed = false
     reasons.push('Poche crypto/asymmetric deja au cap global de 10%.')
@@ -1030,14 +876,13 @@ export const enforceRiskPolicy = ({
   }
   return {
     allowed,
-    action:
-      allowed
-        ? 'buy'
-        : candidate?.eligibilityStatus === 'rejected' || candidate?.userIntent === 'exclude'
-          ? 'avoid'
-          : candidate
-            ? 'watch'
-            : 'insufficient_data',
+    action: allowed
+      ? 'buy'
+      : candidate?.eligibilityStatus === 'rejected' || candidate?.userIntent === 'exclude'
+        ? 'avoid'
+        : candidate
+          ? 'watch'
+          : 'insufficient_data',
     confidenceAdjustment,
     reasons,
   }
@@ -1068,7 +913,8 @@ export const recommendabilityFromDecision = ({
   }
   if (price.status === 'missing') return 'blocked_missing_price'
   if (price.status === 'stale' || price.status === 'low_confidence') return 'blocked_stale_price'
-  if (!candidate.accountTypesAllowed.includes(policy.accountType)) return 'blocked_ineligible_account'
+  if (!candidate.accountTypesAllowed.includes(policy.accountType))
+    return 'blocked_ineligible_account'
   if (policy.accountType === 'pea' && candidate.peaEligibilityStatus === 'unknown') {
     return 'blocked_unknown_pea_eligibility'
   }
@@ -1092,7 +938,8 @@ const recommendationTierForCandidate = (
     if (bucket === 'growth') return 'growth_candidate'
     return 'speculative_watch'
   }
-  if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude') return 'avoid'
+  if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude')
+    return 'avoid'
   if (candidate.source === 'user_watchlist') return 'user_watchlist'
   if (candidate.riskLevel === 'very_high' && bucket === 'asymmetric') return 'speculative_watch'
   if (bucket === 'core') return 'core_candidate'
@@ -1137,13 +984,19 @@ const scorePlanItem = ({
   const strategyFit = candidate ? 12 : 0
   const dataQuality = confidence * 20
   const priceFreshness = priceability === 'priceable' ? 12 : priceability === 'stale' ? -8 : -14
-  const interest = candidate ? userInterestBoost(candidate.userInterestLevel, candidate.userIntent) : 0
+  const interest = candidate
+    ? userInterestBoost(candidate.userInterestLevel, candidate.userIntent)
+    : 0
   const opportunityScore =
     candidate?.riskLevel === 'very_high' ? 5 : candidate?.riskLevel === 'high' ? 7 : 9
   const diversificationBenefit =
     candidate?.bucket === 'core' ? 8 : candidate?.bucket === 'growth' ? 6 : 3
   const concentrationPenalty =
-    recommendabilityStatus === 'blocked_strategy_cap' ? 18 : candidate?.riskLevel === 'very_high' ? 8 : 0
+    recommendabilityStatus === 'blocked_strategy_cap'
+      ? 18
+      : candidate?.riskLevel === 'very_high'
+        ? 8
+        : 0
   const riskPenalty =
     candidate?.riskLevel === 'very_high' ? 10 : candidate?.riskLevel === 'high' ? 6 : 2
   const uncertaintyPenalty = blockedReasons.length * 5
@@ -1207,7 +1060,8 @@ const buildCreativeIdeaItems = ({
     .filter(candidate => {
       const symbol = normalizeAssetSymbol(candidate.symbol)
       if (selectedSymbols.has(symbol)) return false
-      if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude') return true
+      if (candidate.eligibilityStatus === 'rejected' || candidate.userIntent === 'exclude')
+        return true
       return (
         candidate.source === 'user_watchlist' ||
         candidate.riskLevel === 'very_high' ||
@@ -1217,8 +1071,9 @@ const buildCreativeIdeaItems = ({
     .map((candidate): ActionPlanItemDraft => {
       const policy = selectPolicyForCandidate({ candidate, policies: bundle.accountPolicies })
       const targetBucket = candidate.bucket
-      const priceSymbol =
-        policy ? (candidate.providerSymbols[policy.provider] ?? candidate.symbol) : candidate.symbol
+      const priceSymbol = policy
+        ? (candidate.providerSymbols[policy.provider] ?? candidate.symbol)
+        : candidate.symbol
       const price = getReliablePriceForRecommendation({
         snapshot: latestPrices[priceSymbol] ?? latestPrices[candidate.symbol] ?? null,
         providerHealth: policy ? (providerHealthByProvider[policy.provider] ?? null) : null,
@@ -1394,8 +1249,7 @@ export const selectCandidateForPolicy = ({
     userInterestBoost(candidate.userInterestLevel, candidate.userIntent) -
     (candidate.riskLevel === 'very_high' ? 2 : candidate.riskLevel === 'high' ? 1 : 0)
   const eligible = compatible.filter(
-    candidate =>
-      policy.accountType !== 'pea' || candidate.peaEligibilityStatus === 'eligible'
+    candidate => policy.accountType !== 'pea' || candidate.peaEligibilityStatus === 'eligible'
   )
   if (eligible.length > 0) {
     return eligible.sort((left, right) => rank(right) - rank(left))[0] ?? null
@@ -1566,7 +1420,9 @@ export const buildActionPlanDraft = ({
       Math.max(
         0.18,
         allocation.dataQuality.confidence * 0.86 +
-          (candidate ? userInterestBoost(candidate.userInterestLevel, candidate.userIntent) / 100 : 0)
+          (candidate
+            ? userInterestBoost(candidate.userInterestLevel, candidate.userIntent) / 100
+            : 0)
       )
     )
     const confidence = round(
@@ -1606,8 +1462,7 @@ export const buildActionPlanDraft = ({
       action: action === 'buy' && confidence < MIN_BUY_CONFIDENCE ? 'watch' : action,
       amountValue: action === 'buy' ? amount : null,
       amountCurrency: policy.tradingCurrency,
-      targetWeightPct:
-        targetWeightPct,
+      targetWeightPct: targetWeightPct,
       currentWeightPct,
       confidence,
       riskLevel: candidate?.riskLevel ?? (targetBucket === 'asymmetric' ? 'very_high' : 'medium'),

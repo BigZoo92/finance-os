@@ -1,45 +1,20 @@
-export type FinancialGoalType =
-  | 'emergency_fund'
-  | 'travel'
-  | 'home'
-  | 'education'
-  | 'retirement'
-  | 'custom'
+import type {
+  DashboardGoalProgressSnapshot,
+  DashboardGoalResponse,
+  DashboardGoalsResponse,
+  DashboardGoalType,
+  DashboardGoalWriteInput,
+} from '@finance-os/api-contract/goals'
 
-export type FinancialGoalProgressSnapshot = {
-  recordedAt: string
-  amount: number
-  note: string | null
-}
+export type FinancialGoalType = DashboardGoalType
 
-export type FinancialGoal = {
-  id: number
-  name: string
-  goalType: FinancialGoalType
-  currency: string
-  targetAmount: number
-  currentAmount: number
-  targetDate: string | null
-  note: string | null
-  progressSnapshots: FinancialGoalProgressSnapshot[]
-  archivedAt: string | null
-  createdAt: string
-  updatedAt: string
-}
+export type FinancialGoalProgressSnapshot = DashboardGoalProgressSnapshot
 
-export type FinancialGoalsResponse = {
-  items: FinancialGoal[]
-}
+export type FinancialGoal = DashboardGoalResponse
 
-export type FinancialGoalWriteInput = {
-  name: string
-  goalType: FinancialGoalType
-  currency: string
-  targetAmount: number
-  currentAmount: number
-  targetDate: string | null
-  note: string | null
-}
+export type FinancialGoalsResponse = DashboardGoalsResponse
+
+export type FinancialGoalWriteInput = DashboardGoalWriteInput
 
 export type FinancialGoalAction = 'create' | 'update' | 'archive'
 

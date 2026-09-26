@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { deriveAnalyticsPageState } from './analytics-view-state'
 import type { DashboardAnalyticsResponse } from './analytics-types'
+import { deriveAnalyticsPageState } from './analytics-view-state'
 
-const buildPayload = (overrides?: Partial<DashboardAnalyticsResponse>): DashboardAnalyticsResponse => ({
+const buildPayload = (
+  overrides?: Partial<DashboardAnalyticsResponse>
+): DashboardAnalyticsResponse => ({
   schemaVersion: '2026-04-06',
   range: '30d',
   source: 'demoAdapter',
@@ -28,31 +30,56 @@ const buildPayload = (overrides?: Partial<DashboardAnalyticsResponse>): Dashboar
     points: [{ date: '2026-04-01', total: 100, cash: 0, investment: 100, manual: 0 }],
     state: 'ready',
   },
+  recurringSpend: {
+    fixedCharges: {
+      items: [{ label: 'loyer', monthlyAmount: 900, occurrences: 3 }],
+      totalMonthly: 900,
+      state: 'ready',
+    },
+    subscriptions: { items: [], totalMonthly: 0, state: 'empty' },
+  },
+  spendConcentration: {
+    topMerchantShare: 1,
+    top3Share: 1,
+    hhi: 1,
+    dominantMerchantLabel: 'Housing',
+    state: 'ready',
+  },
   availability: {
     summaryCards: true,
     timeseries: true,
     categorySplit: true,
     portfolioAllocation: true,
     allocationEvolution: true,
+    recurringSpend: true,
+    spendConcentration: true,
   },
   ...overrides,
 })
 
 describe('deriveAnalyticsPageState', () => {
   it('returns loading while query is pending', () => {
-    expect(deriveAnalyticsPageState({ isLoading: true, isError: false, data: undefined })).toBe('loading')
+    expect(deriveAnalyticsPageState({ isLoading: true, isError: false, data: undefined })).toBe(
+      'loading'
+    )
   })
 
   it('returns ready while query is pending with existing analytics data', () => {
-    expect(deriveAnalyticsPageState({ isLoading: true, isError: false, data: buildPayload() })).toBe('ready')
+    expect(
+      deriveAnalyticsPageState({ isLoading: true, isError: false, data: buildPayload() })
+    ).toBe('ready')
   })
 
   it('returns error when query fails', () => {
-    expect(deriveAnalyticsPageState({ isLoading: false, isError: true, data: undefined })).toBe('error')
+    expect(deriveAnalyticsPageState({ isLoading: false, isError: true, data: undefined })).toBe(
+      'error'
+    )
   })
 
   it('returns degraded when query fails with existing analytics data', () => {
-    expect(deriveAnalyticsPageState({ isLoading: false, isError: true, data: buildPayload() })).toBe('degraded')
+    expect(
+      deriveAnalyticsPageState({ isLoading: false, isError: true, data: buildPayload() })
+    ).toBe('degraded')
   })
 
   it('returns empty when every widget is empty', () => {
@@ -68,7 +95,9 @@ describe('deriveAnalyticsPageState', () => {
       allocationEvolution: { points: [], state: 'empty' },
     })
 
-    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: empty })).toBe('empty')
+    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: empty })).toBe(
+      'empty'
+    )
   })
 
   it('returns degraded when any widget is degraded', () => {
@@ -80,10 +109,14 @@ describe('deriveAnalyticsPageState', () => {
         categorySplit: true,
         portfolioAllocation: true,
         allocationEvolution: true,
+        recurringSpend: true,
+        spendConcentration: true,
       },
     })
 
-    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: degraded })).toBe('degraded')
+    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: degraded })).toBe(
+      'degraded'
+    )
   })
 
   it('returns degraded when widget states are mixed instead of fully ready', () => {
@@ -95,13 +128,19 @@ describe('deriveAnalyticsPageState', () => {
         categorySplit: false,
         portfolioAllocation: true,
         allocationEvolution: true,
+        recurringSpend: true,
+        spendConcentration: true,
       },
     })
 
-    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: partial })).toBe('degraded')
+    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: partial })).toBe(
+      'degraded'
+    )
   })
 
   it('returns ready when data has no degraded widgets', () => {
-    expect(deriveAnalyticsPageState({ isLoading: false, isError: false, data: buildPayload() })).toBe('ready')
+    expect(
+      deriveAnalyticsPageState({ isLoading: false, isError: false, data: buildPayload() })
+    ).toBe('ready')
   })
 })
