@@ -1,3 +1,4 @@
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Card,
@@ -5,94 +6,93 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@finance-os/ui/components";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { dashboardQueryKeys } from "@/features/dashboard-query-options";
-import { postPowensCallback, postPowensSync } from "@/features/powens/api";
-import { powensQueryKeys } from "@/features/powens/query-options";
-import { sanitizePowensConnectionId } from "@/features/powens/sanitize-connection-id";
-import { ApiRequestError } from "@/lib/api";
+} from '@finance-os/ui/components'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
+import { dashboardQueryKeys } from '@/features/dashboard-query-options'
+import { postPowensCallback, postPowensSync } from '@/features/powens/api'
+import { powensQueryKeys } from '@/features/powens/query-options'
+import { sanitizePowensConnectionId } from '@/features/powens/sanitize-connection-id'
+import { ApiRequestError } from '@/lib/api'
 
 type CallbackLoaderState =
-  | { status: "success"; connectionId: string }
+  | { status: 'success'; connectionId: string }
   | {
-      status: "error";
-      message: string;
-      requestId?: string;
-      canRetryAsAdmin?: boolean;
-    };
+      status: 'error'
+      message: string
+      requestId?: string
+      canRetryAsAdmin?: boolean
+    }
 
 const toErrorState = (value: unknown) => {
   if (value instanceof ApiRequestError) {
-    if (value.code === "DEMO_MODE_FORBIDDEN") {
+    if (value.code === 'DEMO_MODE_FORBIDDEN') {
       return {
-        message: "Connecte-toi en admin pour finaliser la connexion Powens.",
+        message: 'Connecte-toi en admin pour finaliser la connexion Powens.',
         requestId: value.requestId,
         canRetryAsAdmin: true,
-      } as const;
+      } as const
     }
 
     if (value.status === 401 || value.status === 403) {
       return {
-        message: "Session admin requise pour finaliser la connexion Powens.",
+        message: 'Session admin requise pour finaliser la connexion Powens.',
         requestId: value.requestId,
         canRetryAsAdmin: true,
-      } as const;
+      } as const
     }
 
     return {
-      message: "Impossible de finaliser la connexion pour le moment.",
+      message: 'Impossible de finaliser la connexion pour le moment.',
       requestId: value.requestId,
       canRetryAsAdmin: false,
-    } as const;
+    } as const
   }
 
   if (value instanceof Error) {
     return {
-      message: "Impossible de finaliser la connexion pour le moment.",
+      message: 'Impossible de finaliser la connexion pour le moment.',
       canRetryAsAdmin: false,
-    } as const;
+    } as const
   }
 
   return {
     message: String(value),
     canRetryAsAdmin: false,
-  } as const;
-};
+  } as const
+}
 
 const renderLayout = (content: ReactNode) => {
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 md:p-10">
-      <div className="mx-auto w-full max-w-xl">
+    <styled.div minH="100vh" bg="background" color="foreground" p="6" md={{ p: '10' }}>
+      <styled.div mx="auto" w="full" maxW="xl">
         <Card>
           <CardHeader>
             <CardTitle>Callback Powens</CardTitle>
-            <CardDescription>
-              Finalisation de la connexion bancaire.
-            </CardDescription>
+            <CardDescription>Finalisation de la connexion bancaire.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm">{content}</CardContent>
+          <CardContent spaceY="4" textStyle="sm">
+            {content}
+          </CardContent>
         </Card>
-      </div>
-    </div>
-  );
-};
-
-function PowensCallbackPendingPage() {
-  return renderLayout(<p>Connexion en cours...</p>);
+      </styled.div>
+    </styled.div>
+  )
 }
 
-export const Route = createFileRoute("/powens/callback")({
-  validateSearch: (search) => ({
+function PowensCallbackPendingPage() {
+  return renderLayout(<p>Connexion en cours...</p>)
+}
+
+export const Route = createFileRoute('/powens/callback')({
+  validateSearch: search => ({
     connection_id:
-      typeof search.connection_id === "string" ||
-      typeof search.connection_id === "number"
+      typeof search.connection_id === 'string' || typeof search.connection_id === 'number'
         ? sanitizePowensConnectionId(String(search.connection_id))
-        : "",
-    code: typeof search.code === "string" ? search.code : "",
-    state: typeof search.state === "string" ? search.state : "",
+        : '',
+    code: typeof search.code === 'string' ? search.code : '',
+    state: typeof search.state === 'string' ? search.state : '',
   }),
   loaderDeps: ({ search }) => ({
     connectionId: search.connection_id,
@@ -103,10 +103,10 @@ export const Route = createFileRoute("/powens/callback")({
   loader: async ({ deps }): Promise<CallbackLoaderState> => {
     if (!deps.connectionId || !deps.code) {
       return {
-        status: "error",
-        message: "Parametres manquants dans l URL de callback Powens.",
+        status: 'error',
+        message: 'Parametres manquants dans l URL de callback Powens.',
         canRetryAsAdmin: false,
-      };
+      }
     }
 
     try {
@@ -114,50 +114,48 @@ export const Route = createFileRoute("/powens/callback")({
         connectionId: deps.connectionId,
         code: deps.code,
         ...(deps.state ? { state: deps.state } : {}),
-      });
+      })
 
       return {
-        status: "success",
+        status: 'success',
         connectionId: deps.connectionId,
-      };
+      }
     } catch (error) {
-      const normalizedError = toErrorState(error);
+      const normalizedError = toErrorState(error)
       if (normalizedError.canRetryAsAdmin) {
         throw redirect({
-          to: "/login",
+          to: '/login',
           search: {
-            reason: "powens_admin_required",
+            reason: 'powens_admin_required',
           },
-        });
+        })
       }
 
       return {
-        status: "error",
+        status: 'error',
         message: normalizedError.message,
-        ...(normalizedError.requestId
-          ? { requestId: normalizedError.requestId }
-          : {}),
+        ...(normalizedError.requestId ? { requestId: normalizedError.requestId } : {}),
         canRetryAsAdmin: false,
-      };
+      }
     }
   },
   pendingComponent: PowensCallbackPendingPage,
   component: PowensCallbackPage,
-});
+})
 
 function PowensCallbackPage() {
-  const state = Route.useLoaderData();
-  const queryClient = useQueryClient();
+  const state = Route.useLoaderData()
+  const queryClient = useQueryClient()
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      if (state.status !== "success") {
-        return;
+      if (state.status !== 'success') {
+        return
       }
 
       await postPowensSync({
         connectionId: state.connectionId,
-      });
+      })
     },
     onSuccess: async () => {
       await Promise.all([
@@ -167,14 +165,14 @@ function PowensCallbackPage() {
         queryClient.invalidateQueries({
           queryKey: dashboardQueryKeys.all,
         }),
-      ]);
+      ])
     },
-  });
+  })
 
-  if (state.status === "error") {
+  if (state.status === 'error') {
     return renderLayout(
-      <div className="space-y-3">
-        <p className="text-destructive">Erreur: {state.message}</p>
+      <styled.div spaceY="3">
+        <styled.p color="destructive">Erreur: {state.message}</styled.p>
         {state.canRetryAsAdmin ? (
           <Button asChild type="button">
             <Link to="/login" search={{ reason: undefined }}>
@@ -185,30 +183,28 @@ function PowensCallbackPage() {
         <Button asChild type="button" variant="outline">
           <Link to="/">Retour dashboard</Link>
         </Button>
-      </div>,
-    );
+      </styled.div>
+    )
   }
 
   return renderLayout(
     <>
-      <p className="text-positive">Connexion OK.</p>
+      <styled.p color="positive">Connexion OK.</styled.p>
       {syncMutation.isError ? (
-        <p className="text-destructive">
-          Erreur: {toErrorState(syncMutation.error).message}
-        </p>
+        <styled.p color="destructive">Erreur: {toErrorState(syncMutation.error).message}</styled.p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <styled.div display="flex" flexWrap="wrap" gap="2">
         <Button
           type="button"
           onClick={() => syncMutation.mutate()}
           disabled={syncMutation.isPending}
         >
-          {syncMutation.isPending ? "Sync..." : "Lancer sync"}
+          {syncMutation.isPending ? 'Sync...' : 'Lancer sync'}
         </Button>
         <Button asChild type="button" variant="outline">
           <Link to="/">Retour dashboard</Link>
         </Button>
-      </div>
-    </>,
-  );
+      </styled.div>
+    </>
+  )
 }

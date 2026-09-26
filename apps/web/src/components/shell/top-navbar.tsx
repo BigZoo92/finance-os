@@ -6,6 +6,8 @@
  * with framed icon tiles. Hover and persistent active states stay
  * visually distinct (active = inset signal orange underline).
  */
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@finance-os/ui/components'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
@@ -14,6 +16,7 @@ import { BrandMark } from '@/components/brand/brand-mark'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
 import { CommandPaletteTrigger } from './command-palette'
+import { NavIconTile } from './nav-icon-tile'
 import {
   getVisibleNavEntries,
   isGroupActive,
@@ -22,18 +25,56 @@ import {
   type NavEntry,
   type NavLink,
 } from './nav-items'
-import { NavIconTile } from './nav-icon-tile'
 import { UserMenu } from './user-menu'
 
-const NAV_ITEM_BASE =
-  'relative flex h-full items-center gap-1.5 px-0.5 text-sm transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-card'
+const navItem = cva({
+  base: {
+    position: 'relative',
+    display: 'flex',
+    h: 'full',
+    alignItems: 'center',
+    gap: '1.5',
+    px: '0.5',
+    textStyle: 'sm',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    outlineStyle: 'none',
+    _focusVisible: {
+      boxShadow:
+        '0 0 0 2px {colors.card}, 0 0 0 4px color-mix(in srgb, {colors.ring} 70%, transparent)',
+    },
+  },
+  variants: {
+    active: {
+      true: {
+        fontWeight: 'medium',
+        color: 'foreground',
+        boxShadow: 'inset 0 -2px 0 {colors.primary}',
+        _focusVisible: {
+          boxShadow:
+            '0 0 0 2px {colors.card}, 0 0 0 4px color-mix(in srgb, {colors.ring} 70%, transparent), inset 0 -2px 0 {colors.primary}',
+        },
+      },
+      false: {
+        color: 'foreground/55',
+        _hover: { color: 'foreground' },
+      },
+    },
+  },
+})
 
-const navItemClass = (active: boolean) =>
-  `${NAV_ITEM_BASE} ${
-    active
-      ? 'font-medium text-foreground shadow-[inset_0_-2px_0_var(--primary)]'
-      : 'text-foreground/55 hover:text-foreground'
-  }`
+const brandLink = css({
+  display: 'flex',
+  flexShrink: '0',
+  alignItems: 'center',
+  gap: '2.5',
+  outlineStyle: 'none',
+  _focusVisible: {
+    boxShadow:
+      '0 0 0 2px {colors.card}, 0 0 0 4px color-mix(in srgb, {colors.ring} 70%, transparent)',
+  },
+})
 
 export function TopNavbar() {
   const pathname = useRouterState({ select: state => state.location.pathname })
@@ -45,41 +86,73 @@ export function TopNavbar() {
   const entries = getVisibleNavEntries(authViewState)
 
   return (
-    <header className="sticky top-4 z-[var(--z-navbar)] mx-auto mt-4 hidden w-[min(1240px,calc(100%-2.5rem))] lg:block">
-      <div className="flex h-[58px] items-center gap-7 rounded-dropdown border border-border/60 bg-card px-5 shadow-floating">
-        <Link
-          to="/"
-          className="flex shrink-0 items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-        >
+    <styled.header
+      position="sticky"
+      top="4"
+      zIndex="navbar"
+      mx="auto"
+      mt="4"
+      display="none"
+      w="min(1240px, calc(100% - 2.5rem))"
+      lg={{ display: 'block' }}
+    >
+      <styled.div
+        display="flex"
+        h="58px"
+        alignItems="center"
+        gap="7"
+        rounded="dropdown"
+        borderWidth="1px"
+        borderColor="border/60"
+        bg="card"
+        px="5"
+        shadow="floating"
+      >
+        <Link to="/" className={brandLink}>
           <BrandMark size="md" />
-          <span className="text-[15px] font-semibold tracking-tight text-foreground">
+          <styled.span
+            fontSize="15px"
+            fontWeight="semibold"
+            letterSpacing="tight"
+            color="foreground"
+          >
             Finance-OS
-          </span>
+          </styled.span>
         </Link>
 
-        <nav aria-label="Navigation principale" className="flex h-full items-center gap-6">
-          {entries.map(entry =>
-            entry.kind === 'link' ? (
-              <Link
-                key={entry.link.to}
-                to={entry.link.to}
-                className={navItemClass(isNavLinkActive(pathname, entry.link))}
-              >
-                {entry.link.label}
-              </Link>
-            ) : (
-              <NavDropdown key={entry.id} entry={entry} pathname={pathname} />
-            )
-          )}
-        </nav>
+        <styled.nav
+          aria-label="Navigation principale"
+          display="flex"
+          h="full"
+          alignItems="center"
+          gap="6"
+        >
+          {entries.map(entry => {
+            if (entry.kind === 'link') {
+              const active = isNavLinkActive(pathname, entry.link)
+              return (
+                <Link
+                  key={entry.link.to}
+                  to={entry.link.to}
+                  className={navItem({ active })}
+                  data-active={active ? 'true' : undefined}
+                  {...(active ? { 'aria-current': 'page' as const } : {})}
+                >
+                  {entry.link.label}
+                </Link>
+              )
+            }
+            return <NavDropdown key={entry.id} entry={entry} pathname={pathname} />
+          })}
+        </styled.nav>
 
-        <div className="ml-auto flex items-center gap-3.5">
-          <CommandPaletteTrigger className="w-[180px]" />
+        <styled.div ml="auto" display="flex" alignItems="center" gap="3.5">
+          <CommandPaletteTrigger className={css({ w: '180px' })} />
           <ModeBadge authViewState={authViewState} />
           <UserMenu />
-        </div>
-      </div>
-    </header>
+        </styled.div>
+      </styled.div>
+    </styled.header>
   )
 }
 
@@ -95,22 +168,44 @@ function NavDropdown({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className={navItemClass(active)}>
+      <PopoverTrigger className={navItem({ active })} data-active={active ? 'true' : undefined}>
         {entry.label}
-        <span aria-hidden="true" className="text-[10px] leading-none text-foreground/45">
+        <styled.span aria-hidden="true" fontSize="10px" lineHeight="none" color="foreground/45">
           {open ? '▴' : '▾'}
-        </span>
+        </styled.span>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={18} className="w-[560px] rounded-dropdown p-2.5">
-        <div className="flex items-center justify-between border-b border-border/60 px-3 pb-2.5 pt-1.5">
-          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+      <PopoverContent align="start" sideOffset={18} w="560px" p="2.5">
+        <styled.div
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          borderBottomWidth="1px"
+          borderBottomColor="border/60"
+          px="3"
+          pb="2.5"
+          pt="1.5"
+        >
+          <styled.span
+            fontFamily="mono"
+            fontSize="10px"
+            fontWeight="medium"
+            textTransform="uppercase"
+            letterSpacing="0.16em"
+            color="muted.foreground"
+          >
             {entry.label}
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground/60">
+          </styled.span>
+          <styled.span
+            fontFamily="mono"
+            fontSize="10px"
+            textTransform="uppercase"
+            letterSpacing="0.08em"
+            color="muted.foreground/60"
+          >
             {entry.items.length} modules
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5 pt-2">
+          </styled.span>
+        </styled.div>
+        <styled.div display="grid" gridTemplateColumns="repeat(2, minmax(0, 1fr))" gap="1.5" pt="2">
           {entry.items.map(item => (
             <NavDropdownItem
               key={item.to}
@@ -119,11 +214,33 @@ function NavDropdown({
               onNavigate={() => setOpen(false)}
             />
           ))}
-        </div>
+        </styled.div>
       </PopoverContent>
     </Popover>
   )
 }
+
+const dropdownItem = cva({
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3',
+    rounded: 'control',
+    borderWidth: '1px',
+    p: '3',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    outlineStyle: 'none',
+    _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+  },
+  variants: {
+    active: {
+      true: { borderColor: 'foreground/16', bg: 'primary/12' },
+      false: { borderColor: 'transparent', _hover: { bg: 'accent/50' } },
+    },
+  },
+})
 
 function NavDropdownItem({
   item,
@@ -135,38 +252,56 @@ function NavDropdownItem({
   onNavigate: () => void
 }) {
   return (
-    <Link
-      to={item.to}
-      onClick={onNavigate}
-      className={`flex items-center gap-3 rounded-control border p-3 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/70 ${
-        active ? 'border-foreground/16 bg-primary/12' : 'border-transparent hover:bg-accent/50'
-      }`}
-    >
+    <Link to={item.to} onClick={onNavigate} className={dropdownItem({ active })}>
       <NavIconTile icon={item.icon} />
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-medium text-foreground">{item.label}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+      <styled.span minW="0">
+        <styled.span display="block" truncate textStyle="sm" fontWeight="medium" color="foreground">
+          {item.label}
+        </styled.span>
+        <styled.span mt="0.5" display="block" truncate textStyle="xs" color="muted.foreground">
           {item.description}
-        </span>
-      </span>
+        </styled.span>
+      </styled.span>
     </Link>
   )
 }
 
+const shimmer = css({
+  bgImage:
+    'linear-gradient(90deg, {colors.muted} 0%, oklch(from {colors.muted} calc(l + 0.05) c h) 50%, {colors.muted} 100%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.8s ease-in-out infinite',
+})
+
+const modeBadge = cva({
+  base: {
+    rounded: 'tile',
+    borderWidth: '1px',
+    px: '2',
+    py: '1',
+    fontFamily: 'mono',
+    fontSize: '11px',
+    letterSpacing: '0.08em',
+  },
+  variants: {
+    mode: {
+      admin: { borderColor: 'primary/40', fontWeight: 'medium', color: 'primary' },
+      demo: { borderColor: 'foreground/16', color: 'foreground/55' },
+    },
+  },
+})
+
 function ModeBadge({ authViewState }: { authViewState: 'pending' | 'demo' | 'admin' }) {
   if (authViewState === 'pending') {
-    return <div aria-hidden="true" className="h-[26px] w-14 animate-shimmer rounded-tile" />
-  }
-  if (authViewState === 'admin') {
     return (
-      <span className="rounded-tile border border-primary/40 px-2 py-1 font-mono text-[11px] font-medium tracking-[0.08em] text-primary">
-        ADMIN
-      </span>
+      <div
+        aria-hidden="true"
+        className={cx(shimmer, css({ h: '26px', w: '14', rounded: 'tile' }))}
+      />
     )
   }
-  return (
-    <span className="rounded-tile border border-foreground/16 px-2 py-1 font-mono text-[11px] tracking-[0.08em] text-foreground/55">
-      DÉMO
-    </span>
-  )
+  if (authViewState === 'admin') {
+    return <span className={modeBadge({ mode: 'admin' })}>ADMIN</span>
+  }
+  return <span className={modeBadge({ mode: 'demo' })}>DÉMO</span>
 }

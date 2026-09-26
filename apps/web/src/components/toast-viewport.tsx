@@ -1,13 +1,27 @@
+import { cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Button } from '@finance-os/ui/components'
 import { TimesPixelIcon } from '@finance-os/ui/icons/pixel/times'
 import { useStore } from '@tanstack/react-store'
-import { dismissToast, toastStore, type ToastTone } from '@/lib/toast-store'
+import { dismissToast, toastStore } from '@/lib/toast-store'
 
-const TONE_CLASS: Record<ToastTone, string> = {
-  success: 'border-positive/60',
-  error: 'border-destructive/60',
-  info: 'border-border',
-}
+const toastCard = cva({
+  base: {
+    pointerEvents: 'auto',
+    rounded: 'md',
+    borderWidth: '1px',
+    bg: 'card',
+    p: '3',
+    shadow: 'sm',
+  },
+  variants: {
+    tone: {
+      success: { borderColor: 'positive/60' },
+      error: { borderColor: 'destructive/60' },
+      info: { borderColor: 'border' },
+    },
+  },
+})
 
 export function ToastViewport() {
   const toasts = useStore(toastStore)
@@ -17,34 +31,46 @@ export function ToastViewport() {
   }
 
   return (
-    <div
+    <styled.div
       aria-live="polite"
-      className="pointer-events-none fixed bottom-24 right-4 z-[var(--z-toast)] flex w-full max-w-sm flex-col gap-2 lg:bottom-4"
+      pointerEvents="none"
+      position="fixed"
+      bottom="24"
+      right="4"
+      zIndex="toast"
+      display="flex"
+      w="full"
+      maxW="sm"
+      flexDirection="column"
+      gap="2"
+      lg={{ bottom: '4' }}
     >
       {toasts.map(toast => (
-        <div
-          key={toast.id}
-          className={`pointer-events-auto rounded-md border bg-card p-3 shadow-sm ${TONE_CLASS[toast.tone]}`}
-        >
-          <div className="flex items-start justify-between gap-2">
+        <div key={toast.id} className={toastCard({ tone: toast.tone })}>
+          <styled.div display="flex" alignItems="flex-start" justifyContent="space-between" gap="2">
             <div>
-              <p className="text-sm font-medium">{toast.title}</p>
+              <styled.p textStyle="sm" fontWeight="medium">
+                {toast.title}
+              </styled.p>
               {toast.description ? (
-                <p className="mt-1 text-xs text-muted-foreground">{toast.description}</p>
+                <styled.p mt="1" textStyle="xs" color="muted.foreground">
+                  {toast.description}
+                </styled.p>
               ) : null}
             </div>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              className="h-6 px-2"
+              h="6"
+              px="2"
               onClick={() => dismissToast(toast.id)}
             >
               <TimesPixelIcon size={12} />
             </Button>
-          </div>
+          </styled.div>
         </div>
       ))}
-    </div>
+    </styled.div>
   )
 }

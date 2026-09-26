@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { CommandPalette } from '@/components/shell/command-palette'
@@ -22,13 +24,19 @@ export function AppLayout() {
   const prefersReducedMotion = usePrefersReducedMotion()
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
+    <styled.div position="relative" minH="100vh" bg="background" color="foreground">
       <TopNavbar />
       <MobileTopBar />
 
-      <main
+      <styled.main
         id="main-content"
-        className="mx-auto w-full max-w-[calc(1240px+2.5rem)] px-5 pb-28 pt-5 lg:pt-9 lg:pb-14"
+        mx="auto"
+        w="full"
+        maxW="calc(1240px + 2.5rem)"
+        px="5"
+        pb="28"
+        pt="5"
+        lg={{ pt: '9', pb: '14' }}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -37,15 +45,15 @@ export function AppLayout() {
             animate={{ opacity: 1, y: 0 }}
             {...(prefersReducedMotion ? {} : { exit: { opacity: 0, y: -4 } })}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full"
+            className={css({ w: 'full' })}
           >
             <Outlet />
           </motion.div>
         </AnimatePresence>
-      </main>
+      </styled.main>
 
       <MobileNav />
       <CommandPalette />
-    </div>
+    </styled.div>
   )
 }

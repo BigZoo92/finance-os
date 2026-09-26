@@ -5,6 +5,8 @@
  * an optional brand-tinted header rail, and a clean spacing rhythm so
  * tables, charts, and lists compose consistently.
  */
+import { cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import type { ReactNode } from 'react'
 
 type PanelProps = {
@@ -22,23 +24,102 @@ type PanelProps = {
   children: ReactNode
 }
 
-const TONE_RAIL: Record<NonNullable<PanelProps['tone']>, string> = {
-  plain: 'before:bg-border/0',
-  brand: 'before:bg-[linear-gradient(180deg,oklch(from_var(--primary)_l_c_h/80%),oklch(from_var(--primary)_l_c_h/10%))]',
-  ai: 'before:bg-[linear-gradient(180deg,oklch(from_var(--ai)_l_c_h/80%),oklch(from_var(--ai)_l_c_h/10%))]',
-  positive: 'before:bg-[linear-gradient(180deg,oklch(from_var(--positive)_l_c_h/80%),oklch(from_var(--positive)_l_c_h/10%))]',
-  negative: 'before:bg-[linear-gradient(180deg,oklch(from_var(--negative)_l_c_h/80%),oklch(from_var(--negative)_l_c_h/10%))]',
-  warning: 'before:bg-[linear-gradient(180deg,oklch(from_var(--warning)_l_c_h/80%),oklch(from_var(--warning)_l_c_h/10%))]',
-}
+const panelRoot = cva({
+  base: {
+    position: 'relative',
+    overflow: 'hidden',
+    rounded: 'surface',
+    borderWidth: '1px',
+    borderColor: 'border/60',
+    bg: 'card',
+    shadow: 'surface',
+  },
+  variants: {
+    // Toned panels get a 1px vertical rail fading from 80% to 10% of the tone.
+    rail: {
+      true: {
+        _before: { content: '""', position: 'absolute', insetY: '3', left: '0', w: '1px' },
+      },
+      false: {},
+    },
+    tone: {
+      plain: {},
+      brand: {
+        _before: {
+          bgImage:
+            'linear-gradient(180deg, oklch(from {colors.primary} l c h / 80%), oklch(from {colors.primary} l c h / 10%))',
+        },
+      },
+      ai: {
+        _before: {
+          bgImage:
+            'linear-gradient(180deg, oklch(from {colors.ai} l c h / 80%), oklch(from {colors.ai} l c h / 10%))',
+        },
+      },
+      positive: {
+        _before: {
+          bgImage:
+            'linear-gradient(180deg, oklch(from {colors.positive} l c h / 80%), oklch(from {colors.positive} l c h / 10%))',
+        },
+      },
+      negative: {
+        _before: {
+          bgImage:
+            'linear-gradient(180deg, oklch(from {colors.negative} l c h / 80%), oklch(from {colors.negative} l c h / 10%))',
+        },
+      },
+      warning: {
+        _before: {
+          bgImage:
+            'linear-gradient(180deg, oklch(from {colors.warning} l c h / 80%), oklch(from {colors.warning} l c h / 10%))',
+        },
+      },
+    },
+  },
+})
 
-const TONE_ICON: Record<NonNullable<PanelProps['tone']>, string> = {
-  plain: 'text-muted-foreground',
-  brand: 'text-primary',
-  ai: 'text-ai',
-  positive: 'text-positive',
-  negative: 'text-negative',
-  warning: 'text-warning',
-}
+const panelHeader = cva({
+  base: { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '3', px: '5', pb: '3' },
+  variants: {
+    bleed: {
+      true: { pt: '4' },
+      false: { pt: '5', md: { px: '6', pt: '6' } },
+    },
+  },
+})
+
+const panelIcon = cva({
+  base: {
+    display: 'flex',
+    h: '8',
+    w: '8',
+    flexShrink: '0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    rounded: 'lg',
+    bg: 'surface.1',
+  },
+  variants: {
+    tone: {
+      plain: { color: 'muted.foreground' },
+      brand: { color: 'primary' },
+      ai: { color: 'ai' },
+      positive: { color: 'positive' },
+      negative: { color: 'negative' },
+      warning: { color: 'warning' },
+    },
+  },
+})
+
+const panelBody = cva({
+  base: {},
+  variants: {
+    bleed: {
+      true: {},
+      false: { px: '5', pb: '5', md: { px: '6', pb: '6' } },
+    },
+  },
+})
 
 export function Panel({
   title,
@@ -47,49 +128,47 @@ export function Panel({
   tone = 'plain',
   actions,
   bleed,
-  className = '',
-  headerClassName = '',
-  bodyClassName = '',
+  className,
+  headerClassName,
+  bodyClassName,
   children,
 }: PanelProps) {
   const hasHeader = Boolean(title || description || actions || icon)
   return (
-    <section
-      className={[
-        'relative overflow-hidden rounded-surface border border-border/60 bg-card shadow-surface',
-        tone !== 'plain' &&
-          `before:content-[''] before:absolute before:inset-y-3 before:left-0 before:w-px ${TONE_RAIL[tone]}`,
-        className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
+    <section className={cx(panelRoot({ tone, rail: tone !== 'plain' }), className)}>
       {hasHeader && (
-        <header
-          className={`flex flex-wrap items-start gap-3 ${
-            bleed ? 'px-5 pt-4' : 'px-5 pt-5 md:px-6 md:pt-6'
-          } pb-3 ${headerClassName}`}
-        >
+        <header className={cx(panelHeader({ bleed: Boolean(bleed) }), headerClassName)}>
           {icon && (
-            <span
-              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-surface-1 ${TONE_ICON[tone]}`}
-              aria-hidden="true"
-            >
+            <span className={panelIcon({ tone })} aria-hidden="true">
               {icon}
             </span>
           )}
-          <div className="min-w-0 flex-1">
+          <styled.div minW="0" flex="1">
             {title && (
-              <h3 className="text-sm font-semibold tracking-tight text-foreground leading-tight">{title}</h3>
+              <styled.h3
+                textStyle="sm"
+                fontWeight="semibold"
+                letterSpacing="tight"
+                color="foreground"
+                lineHeight="tight"
+              >
+                {title}
+              </styled.h3>
             )}
             {description && (
-              <p className="mt-0.5 text-[12.5px] text-muted-foreground leading-relaxed">{description}</p>
+              <styled.p mt="0.5" fontSize="12.5px" color="muted.foreground" lineHeight="relaxed">
+                {description}
+              </styled.p>
             )}
-          </div>
-          {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+          </styled.div>
+          {actions && (
+            <styled.div ml="auto" display="flex" alignItems="center" gap="2">
+              {actions}
+            </styled.div>
+          )}
         </header>
       )}
-      <div className={`${bleed ? '' : 'px-5 pb-5 md:px-6 md:pb-6'} ${bodyClassName}`}>{children}</div>
+      <div className={cx(panelBody({ bleed: Boolean(bleed) }), bodyClassName)}>{children}</div>
     </section>
   )
 }

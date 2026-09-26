@@ -5,6 +5,8 @@
  * fake zero and never an em-dash glyph. Canonical Command Pixel numeric
  * treatment: Geist Mono, tabular figures, medium weight.
  */
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
 import { motion, useReducedMotion } from 'motion/react'
 
@@ -12,9 +14,11 @@ type Tone = 'plain' | 'brand' | 'ai' | 'positive' | 'negative' | 'warning'
 
 type KpiTileProps = {
   label: string
-  /** Numeric value. Use `display` for the formatted string (e.g. "4 200 €").
-   *  Optional when only `display` is passed (non-numeric labels). */
+  /** Numeric value. Use `displayValue` for the formatted string (e.g. "4 200 €").
+   *  Optional when only `displayValue` is passed (non-numeric labels). */
   value?: number | null | undefined
+  displayValue?: string
+  /** @deprecated Use `displayValue`; kept so pre-migration callers still compile. */
   display?: string
   hint?: string
   tone?: Tone
@@ -27,20 +31,68 @@ type KpiTileProps = {
   animate?: boolean
 }
 
-const TONE_ACCENT: Record<Tone, string> = {
-  plain: 'text-foreground',
-  brand: 'text-primary',
-  ai: 'text-ai',
-  positive: 'text-positive',
-  negative: 'text-negative',
-  warning: 'text-warning',
-}
-
 const NUMBER_FORMAT = new Intl.NumberFormat('fr-FR')
+
+const kpiRoot = css({
+  h: 'full',
+  rounded: 'surface',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'card',
+  px: '4',
+  py: '3.5',
+  md: { px: '5', py: '4' },
+})
+
+const kpiSkeleton = cva({
+  base: {
+    mt: '2',
+    rounded: 'md',
+    bgImage:
+      'linear-gradient(90deg, {colors.muted} 0%, oklch(from {colors.muted} calc(l + 0.05) c h) 50%, {colors.muted} 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'shimmer 1.8s ease-in-out infinite',
+  },
+  variants: {
+    size: {
+      default: { h: '6', w: '24' },
+      lg: { h: '9', w: '36' },
+    },
+  },
+})
+
+// The financial text style owns the letter spacing (-0.01em): the former
+// unlayered `font-financial` rule beat the `tracking-tight` utility.
+const kpiValue = cva({
+  base: {
+    mt: '1.5',
+    textStyle: 'financial',
+    fontWeight: 'medium',
+    lineHeight: 'none',
+    fontVariantNumeric: 'tabular-nums',
+  },
+  variants: {
+    size: {
+      default: { fontSize: 'xl' },
+      lg: { fontSize: '28px', md: { fontSize: '34px' } },
+    },
+    tone: {
+      plain: { color: 'foreground' },
+      brand: { color: 'primary' },
+      ai: { color: 'ai' },
+      positive: { color: 'positive' },
+      negative: { color: 'negative' },
+      warning: { color: 'warning' },
+    },
+  },
+})
+
+const kpiUnavailable = css({ mt: '2', textStyle: 'sm', color: 'muted.foreground' })
 
 export function KpiTile({
   label,
   value,
+  displayValue: displayValueProp,
   display,
   hint,
   tone = 'plain',
@@ -48,49 +100,51 @@ export function KpiTile({
   loading,
   icon,
   trailing,
-  className = '',
+  className,
 }: KpiTileProps) {
   const prefersReducedMotion = useReducedMotion()
-  const valueClass =
-    size === 'lg'
-      ? 'mt-1.5 font-financial text-[28px] md:text-[34px] font-medium tracking-tight leading-none'
-      : 'mt-1.5 font-financial text-xl font-medium tracking-tight leading-none'
+  const displayValue = displayValueProp ?? display
 
-  const unavailable = display === undefined && typeof value !== 'number' && !value
+  const unavailable = displayValue === undefined && typeof value !== 'number' && !value
 
   return (
-    <div
-      className={`h-full rounded-surface border border-border/60 bg-card px-4 py-3.5 md:px-5 md:py-4 ${className}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+    <div className={cx(kpiRoot, className)}>
+      <styled.div display="flex" alignItems="flex-start" justifyContent="space-between" gap="3">
+        <styled.p
+          fontFamily="mono"
+          fontSize="10px"
+          fontWeight="medium"
+          textTransform="uppercase"
+          letterSpacing="0.16em"
+          color="muted.foreground"
+        >
           {icon && (
-            <span className="mr-1.5 inline-flex translate-y-[1px] align-middle opacity-70">
+            <styled.span
+              mr="1.5"
+              display="inline-flex"
+              translate="0 1px"
+              verticalAlign="middle"
+              opacity="0.7"
+            >
               {icon}
-            </span>
+            </styled.span>
           )}
           {label}
-        </p>
+        </styled.p>
         {trailing}
-      </div>
+      </styled.div>
 
       {loading ? (
-        <div
-          className={`${size === 'lg' ? 'mt-2 h-9 w-36' : 'mt-2 h-6 w-24'} animate-shimmer rounded-md`}
-        />
+        <div className={kpiSkeleton({ size })} />
       ) : (
         <motion.div
           initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          className={
-            unavailable
-              ? 'mt-2 text-sm text-muted-foreground'
-              : `${valueClass} tabular-nums ${TONE_ACCENT[tone]}`
-          }
+          className={unavailable ? kpiUnavailable : kpiValue({ size, tone })}
         >
-          {display !== undefined ? (
-            <span>{display}</span>
+          {displayValue !== undefined ? (
+            <span>{displayValue}</span>
           ) : typeof value === 'number' ? (
             <span>{NUMBER_FORMAT.format(value)}</span>
           ) : (
@@ -100,7 +154,9 @@ export function KpiTile({
       )}
 
       {hint && (
-        <p className="mt-1.5 text-[11px] text-muted-foreground/70 leading-relaxed">{hint}</p>
+        <styled.p mt="1.5" fontSize="11px" color="muted.foreground/70" lineHeight="relaxed">
+          {hint}
+        </styled.p>
       )}
     </div>
   )

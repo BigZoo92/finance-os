@@ -191,7 +191,10 @@ test.describe('Social Intelligence desktop dark', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Social Intelligence' })).toBeVisible()
     const navbar = page.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(navbar.getByRole('link', { name: 'Radar' })).toHaveClass(/text-foreground/)
+    await expect(navbar.getByRole('link', { name: 'Radar' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
     const gallery = page.getByRole('list', { name: 'Sources suivies' }).first()
     const cards = gallery.getByRole('button')
     await expect(cards).toHaveCount(4)

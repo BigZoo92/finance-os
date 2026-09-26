@@ -3,6 +3,7 @@
  * the legacy topbar into the UserMenu. Shows only when the browser
  * supports installation and the app is not already installed.
  */
+import { styled } from '@finance-os/styled-system/jsx'
 import { DownloadPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useEffect, useState } from 'react'
 import type { AuthMode } from '@/features/auth-types'
@@ -136,9 +137,15 @@ export function PwaInstallMenuItem({ mode, className }: { mode: AuthMode; classN
       title={decision.disabledReason}
       className={className}
     >
-      <span aria-hidden="true" className="flex w-4 items-center justify-center">
+      <styled.span
+        aria-hidden="true"
+        display="flex"
+        w="4"
+        alignItems="center"
+        justifyContent="center"
+      >
         <DownloadPixelIcon size={14} />
-      </span>
+      </styled.span>
       {decision.state === 'disabled' ? 'Installation indisponible' : "Installer l'application"}
     </button>
   )

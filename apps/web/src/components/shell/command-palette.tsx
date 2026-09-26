@@ -5,6 +5,8 @@
  * dialog semantics (focus trap, Escape, scroll lock, focus restoration).
  * The keyboard shortcut never fires while typing in an editable field.
  */
+import { css, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@finance-os/ui/components'
 import { SearchPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
@@ -60,6 +62,69 @@ const buildSections = (visible: NavLink[]): PaletteSection[] => {
   return sections
 }
 
+const paletteInput = css({
+  w: 'full',
+  bg: 'transparent',
+  py: '3',
+  textStyle: 'sm',
+  color: 'foreground',
+  outlineStyle: 'none',
+  _placeholder: { color: 'muted.foreground/60' },
+})
+
+const paletteList = css({ maxH: '340px', overflowY: 'auto', px: '2', pb: '2' })
+
+const paletteEmpty = css({
+  px: '4',
+  py: '10',
+  textAlign: 'center',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const paletteGroup = css({
+  px: '1',
+  pt: '3',
+  pb: '1',
+  fontFamily: 'mono',
+  fontSize: '10px',
+  fontWeight: 'medium',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+  '& [cmdk-group-items]': { mt: '1.5', spaceY: '0.5' },
+})
+
+const paletteItem = css({
+  display: 'flex',
+  cursor: 'pointer',
+  alignItems: 'center',
+  gap: '3',
+  rounded: 'control',
+  px: '2',
+  py: '2',
+  fontFamily: 'sans',
+  textStyle: 'sm',
+  textTransform: 'none',
+  letterSpacing: 'normal',
+  color: 'foreground/80',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  '&[data-selected=true]': { bg: 'primary/12', color: 'foreground' },
+})
+
+const enterHint = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  color: 'muted.foreground/50',
+  opacity: '0',
+  transitionProperty: 'opacity',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  '[data-group=palette-item][data-selected=true] &': { opacity: '1' },
+})
+
 export function CommandPalette() {
   const open = useStore(paletteOpenStore)
   const navigate = useNavigate()
@@ -90,49 +155,59 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={next => paletteOpenStore.setState(() => next)}>
       <DialogContent top="18%" maxW="560px" translate="-50% 0" gap="0" p="0">
-        <DialogTitle className="sr-only">Recherche</DialogTitle>
-        <DialogDescription className="sr-only">
-          Rechercher une page et naviguer au clavier
-        </DialogDescription>
+        <DialogTitle srOnly>Recherche</DialogTitle>
+        <DialogDescription srOnly>Rechercher une page et naviguer au clavier</DialogDescription>
         <Command loop>
-          <div className="flex items-center gap-3 border-b border-border/60 px-4">
-            <span aria-hidden="true" className="flex items-center text-muted-foreground">
+          <styled.div
+            display="flex"
+            alignItems="center"
+            gap="3"
+            borderBottomWidth="1px"
+            borderBottomColor="border/60"
+            px="4"
+          >
+            <styled.span
+              aria-hidden="true"
+              display="flex"
+              alignItems="center"
+              color="muted.foreground"
+            >
               <SearchPixelIcon size={14} />
-            </span>
-            <Command.Input
-              placeholder="Rechercher une page"
-              className="w-full bg-transparent py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
-              autoFocus
-            />
-            <kbd className="rounded-tile border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/70">
+            </styled.span>
+            <Command.Input placeholder="Rechercher une page" className={paletteInput} autoFocus />
+            <styled.kbd
+              rounded="tile"
+              borderWidth="1px"
+              borderColor="border/60"
+              bg="background"
+              px="1.5"
+              py="0.5"
+              fontFamily="mono"
+              fontSize="10px"
+              color="muted.foreground/70"
+            >
               esc
-            </kbd>
-          </div>
+            </styled.kbd>
+          </styled.div>
 
-          <Command.List className="max-h-[340px] overflow-y-auto px-2 pb-2">
-            <Command.Empty className="px-4 py-10 text-center text-sm text-muted-foreground">
-              Aucune page trouvée.
-            </Command.Empty>
+          <Command.List className={paletteList}>
+            <Command.Empty className={paletteEmpty}>Aucune page trouvée.</Command.Empty>
 
             {sections.map(section => (
-              <Command.Group
-                key={section.id}
-                heading={section.label}
-                className="px-1 pt-3 pb-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground [&_[cmdk-group-items]]:mt-1.5 [&_[cmdk-group-items]]:space-y-0.5"
-              >
+              <Command.Group key={section.id} heading={section.label} className={paletteGroup}>
                 {section.links.map(link => (
                   <Command.Item
                     key={link.to}
                     value={`${link.label} ${link.keywords ?? ''}`}
                     onSelect={() => handleSelect(link.to)}
-                    className="group/item flex cursor-pointer items-center gap-3 rounded-control px-2 py-2 font-sans text-sm normal-case tracking-normal text-foreground/80 transition-colors data-[selected=true]:bg-primary/12 data-[selected=true]:text-foreground"
+                    data-group="palette-item"
+                    className={paletteItem}
                   >
-                    <NavIconTile icon={link.icon} className="h-7 w-7" />
-                    <span className="flex-1 font-medium">{link.label}</span>
-                    <span
-                      aria-hidden="true"
-                      className="font-mono text-[11px] text-muted-foreground/50 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100"
-                    >
+                    <NavIconTile icon={link.icon} />
+                    <styled.span flex="1" fontWeight="medium">
+                      {link.label}
+                    </styled.span>
+                    <span aria-hidden="true" className={enterHint}>
                       ↵
                     </span>
                   </Command.Item>
@@ -146,20 +221,45 @@ export function CommandPalette() {
   )
 }
 
-export function CommandPaletteTrigger({ className = '' }: { className?: string }) {
+const paletteTrigger = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'background',
+  px: '3',
+  py: '1.5',
+  fontFamily: 'mono',
+  textStyle: 'xs',
+  color: 'muted.foreground/70',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { borderColor: 'primary/30', color: 'foreground' },
+})
+
+export function CommandPaletteTrigger({ className }: { className?: string }) {
   return (
-    <button
-      type="button"
-      onClick={openCommandPalette}
-      className={`group flex items-center gap-2 rounded-control border border-border/60 bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground/70 transition-colors duration-150 hover:border-primary/30 hover:text-foreground ${className}`}
-    >
-      <span aria-hidden="true" className="flex items-center">
+    <button type="button" onClick={openCommandPalette} className={cx(paletteTrigger, className)}>
+      <styled.span aria-hidden="true" display="flex" alignItems="center">
         <SearchPixelIcon size={13} />
-      </span>
+      </styled.span>
       <span>Rechercher</span>
-      <kbd className="ml-auto rounded-[4px] border border-foreground/16 px-1.5 py-px font-mono text-[10px] text-muted-foreground/60">
+      <styled.kbd
+        ml="auto"
+        rounded="4px"
+        borderWidth="1px"
+        borderColor="foreground/16"
+        px="1.5"
+        py="1px"
+        fontFamily="mono"
+        fontSize="10px"
+        color="muted.foreground/60"
+      >
         ⌘K
-      </kbd>
+      </styled.kbd>
     </button>
   )
 }
