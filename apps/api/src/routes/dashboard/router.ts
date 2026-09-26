@@ -430,8 +430,17 @@ export const createDashboardRoutes = ({
         .use(createExternalInvestmentsDashboardRoute())
         .use(createTransactionsRoute())
         .use(createTransactionClassificationRoute())
-        .use(createUserCategorizationRulesRoute({ db }))
-        .use(createTransactionCategorizationBackfillRoute({ db }))
+        .use(
+          createUserCategorizationRulesRoute({
+            repository: runtime.repositories.userCategorizationRules,
+          })
+        )
+        .use(
+          createTransactionCategorizationBackfillRoute({
+            db,
+            userCategorizationRules: runtime.repositories.userCategorizationRules,
+          })
+        )
         .use(createCostsOverviewRoute({ db }))
         .use(
           createXTwitterLookupRoute({
@@ -496,7 +505,7 @@ export const createDashboardRoutes = ({
             },
           })
         )
-        .use(createSignalSourcesRoute({ db, internalServiceToken }))
+        .use(createSignalSourcesRoute({ repositories: runtime.repositories, internalServiceToken }))
         .use(createProvidersDiagnosticsRoute())
         .use(createDataQualityRoute())
         .use(createAdvisorV2Route({ v2Enabled: aiAdvisorV2Enabled }))
@@ -505,6 +514,7 @@ export const createDashboardRoutes = ({
         .use(
           createTradingLabRoute({
             db,
+            repositories: runtime.repositories,
             quantServiceEnabled,
             quantServiceUrl,
             quantServiceTimeoutMs,

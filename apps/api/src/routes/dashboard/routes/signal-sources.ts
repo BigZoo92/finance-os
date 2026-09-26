@@ -10,19 +10,17 @@ import {
   computeBlueskyProviderHealth,
   computeXTwitterProviderHealth,
 } from '../domain/signal-provider-health'
-import { createDashboardSignalItemsRepository } from '../repositories/dashboard-signal-items-repository'
-import {
-  type CreateSignalSourceInput,
-  createDashboardSignalSourcesRepository,
-  type SignalSourceGroup,
-  type SignalSourceRow,
-  type UpdateSignalSourceInput,
+import type {
+  CreateSignalSourceInput,
+  SignalSourceGroup,
+  SignalSourceRow,
+  UpdateSignalSourceInput,
 } from '../repositories/dashboard-signal-sources-repository'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
 import { normalizeXHandle } from '../services/providers/x-twitter-profile-client'
 import { dedupeXSignalSources } from '../services/providers/x-twitter-signal-source-dedupe'
 import { sendSignalsToKnowledgeGraph } from '../services/signal-graph-ingest'
-import type { ApiDb } from '../types'
+import type { DashboardRouteRuntime } from '../types'
 
 // Demo fixtures for signal sources
 const DEMO_FINANCE_SOURCES = [
@@ -217,14 +215,14 @@ const canonicalizeSignalSourceInput = (
 }
 
 export const createSignalSourcesRoute = ({
-  db,
+  repositories,
   internalServiceToken,
 }: {
-  db: ApiDb
+  repositories: Pick<DashboardRouteRuntime['repositories'], 'signalSources' | 'signalItems'>
   internalServiceToken: string | undefined
 }) => {
-  const repository = createDashboardSignalSourcesRepository({ db })
-  const itemsRepo = createDashboardSignalItemsRepository({ db })
+  const repository = repositories.signalSources
+  const itemsRepo = repositories.signalItems
 
   return (
     new Elysia()

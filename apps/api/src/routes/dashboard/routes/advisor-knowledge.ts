@@ -2,27 +2,23 @@ import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { requireAdminOrInternalToken } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import type {
+  AdvisorKnowledgeGraphDto,
+  AdvisorKnowledgeGraphScope,
+  KnowledgeBundleShape,
+  KnowledgeQueryShape,
+} from '../domain/advisor'
 import {
+  buildAdminKnowledgeGraphDto,
+  buildDemoKnowledgeGraphDto,
+  buildExampleOverlay,
   getDemoKnowledgeContextBundle,
   getDemoKnowledgeExplain,
   getDemoKnowledgeQuery,
   getDemoKnowledgeSchema,
   getDemoKnowledgeStats,
-} from '../domain/advisor/knowledge-graph-demo'
-import {
-  buildAdminKnowledgeGraphDto,
-  type KnowledgeBundleShape,
-  type KnowledgeQueryShape,
-} from '../domain/advisor/knowledge-graph-dto-admin'
-import {
-  buildDemoKnowledgeGraphDto,
-  buildExampleOverlay,
-} from '../domain/advisor/knowledge-graph-dto-demo'
-import type {
-  AdvisorKnowledgeGraphDto,
-  AdvisorKnowledgeGraphScope,
-} from '../domain/advisor/knowledge-graph-dto'
-import { hardenGraphDto } from '../domain/advisor/knowledge-graph-dto'
+  hardenGraphDto,
+} from '../domain/advisor'
 import {
   dashboardAdvisorKnowledgeContextBundleBodySchema,
   dashboardAdvisorKnowledgeExplainBodySchema,
@@ -428,7 +424,8 @@ export const createAdvisorKnowledgeRoute = ({
               ...dto.meta,
               origin: 'degraded',
               degraded: true,
-              reason: 'Knowledge service unavailable; deterministic finance-engine remains primary.',
+              reason:
+                'Knowledge service unavailable; deterministic finance-engine remains primary.',
               source: 'fallback',
             },
           }

@@ -50,21 +50,19 @@ import type {
   DashboardAdvisorSpendAnalyticsResponse,
   DashboardAdvisorTransactionLabelSuggestionResponse,
 } from './advisor-contract'
-import type { AdvisorFineTuningReadinessResponse } from './domain/advisor/fine-tuning/fine-tuning-types'
 import type {
+  AdvisorFineTuningReadinessResponse,
+  AdvisorReplayResponse,
+  AdvisorV2CapabilitiesResponse,
+  AdvisorV2PreviewResponse,
   AssetSearchInput,
   GenerateActionPlanInput,
   InvestmentStrategyUpdateInput,
   ReviewDueInput,
   WatchlistAssetInput,
   WatchlistAssetPatchInput,
-} from './domain/advisor/investment-strategy-inputs'
-import type { AdvisorReplayResponse } from './domain/advisor/replay/replay-types'
-import type {
-  AdvisorV2CapabilitiesResponse,
-  AdvisorV2PreviewResponse,
-} from './domain/advisor/v2/committee-types'
-import type { DataQualityResponse } from './domain/data-quality/data-quality-types'
+} from './domain/advisor'
+import type { DataQualityResponse } from './domain/data-quality'
 import type {
   DashboardMarketsContextBundleResponse,
   DashboardMarketsMacroResponse,
@@ -84,10 +82,11 @@ import type {
   NewsProviderHealth,
   NewsProviderRunResult,
 } from './domain/news-types'
-import type {
-  AssetValuationStatusResponse,
-  AssetValuationUnresolvedItem,
-} from './domain/valuation/create-asset-valuation-use-cases'
+import type { AssetValuationStatusResponse, AssetValuationUnresolvedItem } from './domain/valuation'
+import type { createDashboardSignalItemsRepository } from './repositories/dashboard-signal-items-repository'
+import type { createDashboardSignalSourcesRepository } from './repositories/dashboard-signal-sources-repository'
+import type { createDashboardTradingLabRepository } from './repositories/dashboard-trading-lab-repository'
+import type { createUserCategorizationRuleRepository } from './repositories/user-categorization-rule-repository'
 
 export type ApiDb = ReturnType<typeof createDbClient>['db']
 export type ApiEnv = ReturnType<typeof getApiEnv>
@@ -1091,7 +1090,12 @@ export interface DashboardDerivedRecomputeRepository {
   }>
 }
 
-export interface DashboardUseCases {
+/**
+ * Bounded use-case modules. Each slice is owned by one domain module; the
+ * route runtime composes them and HTTP routes only see the composed contract.
+ */
+/** Summary, transactions, goals, manual assets and derived recompute. */
+export interface DashboardCoreUseCases {
   getSummary: (range: DashboardRange) => Promise<DashboardSummaryResponse>
   getManualAssets?: (input: { mode: 'demo' | 'admin' }) => Promise<DashboardManualAssetsResponse>
   createManualAsset?: (
@@ -1127,6 +1131,24 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource: 'admin' | 'internal'
   }) => Promise<DashboardDerivedRecomputeStatusResponse>
+  recoverStaleBackgroundRuns?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    staleAfterMs: number
+  }) => Promise<{
+    recovered: DashboardBackgroundRunRecoveryResponse[]
+    skipped: DashboardBackgroundRunRecoveryResponse[]
+  }>
+  /**
+   * Cancel a specific manual operation by id. Returns the operation in its
+   * post-cancel state (status='failed' with errorCode='CANCELLED').
+   *
+   * Wired into POST /ops/refresh/runs/:runId/cancel.
+   */
+}
+
+/** Asset valuation runs and coverage (domain/valuation). */
+export interface DashboardValuationUseCases {
   getAssetValuationStatus?: () => Promise<AssetValuationStatusResponse>
   runAssetValuationRefresh?: (input: {
     requestId: string
@@ -1136,6 +1158,10 @@ export interface DashboardUseCases {
   listAssetValuationUnresolved?: (input: {
     requestId: string
   }) => Promise<{ items: AssetValuationUnresolvedItem[]; totalItems: number }>
+}
+
+/** News feed, context bundle and ingestion. */
+export interface DashboardNewsUseCaseSlice {
   getNews?: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
   getNewsContextBundle?: (input: {
     requestId: string
@@ -1147,6 +1173,10 @@ export interface DashboardUseCases {
     mergedCount: number
     dedupeDropCount: number
   }>
+}
+
+/** Markets overview, watchlist, macro and refresh. */
+export interface DashboardMarketsUseCaseSlice {
   getMarketsOverview?: (input: { requestId: string }) => Promise<DashboardMarketsOverviewResponse>
   getMarketsWatchlist?: (input: { requestId: string }) => Promise<DashboardMarketsWatchlistResponse>
   getMarketsMacro?: (input: { requestId: string }) => Promise<DashboardMarketsMacroResponse>
@@ -1161,6 +1191,10 @@ export interface DashboardUseCases {
     signalCount: number
     providerResults: MarketProviderRunResult[]
   }>
+}
+
+/** IBKR/Binance read-only summaries and sync triggers. */
+export interface DashboardExternalInvestmentsUseCases {
   getExternalInvestmentsSummary?: (input: { requestId: string }) => Promise<unknown>
   getExternalInvestmentsAccounts?: (input: { requestId: string }) => Promise<unknown>
   getExternalInvestmentsPositions?: (input: { requestId: string }) => Promise<unknown>
@@ -1175,6 +1209,10 @@ export interface DashboardUseCases {
     requestId: string
   }) => Promise<void>
   generateExternalInvestmentContextBundle?: (input: { requestId: string }) => Promise<unknown>
+}
+
+/** Advisor runs, briefs, signals, chat, evals, manual operations and post-mortems (domain/advisor). */
+export interface DashboardAdvisorUseCases {
   getAdvisorOverview?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1251,20 +1289,6 @@ export interface DashboardUseCases {
     recovered: DashboardAdvisorManualOperationResponse[]
     skipped: DashboardAdvisorManualOperationResponse[]
   }>
-  recoverStaleBackgroundRuns?: (input: {
-    mode: 'demo' | 'admin'
-    requestId: string
-    staleAfterMs: number
-  }) => Promise<{
-    recovered: DashboardBackgroundRunRecoveryResponse[]
-    skipped: DashboardBackgroundRunRecoveryResponse[]
-  }>
-  /**
-   * Cancel a specific manual operation by id. Returns the operation in its
-   * post-cancel state (status='failed' with errorCode='CANCELLED').
-   *
-   * Wired into POST /ops/refresh/runs/:runId/cancel.
-   */
   cancelAdvisorManualOperation?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1322,6 +1346,10 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource?: string
   }) => Promise<DashboardAdvisorPostMortemRunResponse>
+}
+
+/** Investment strategy, watchlist, plans, hypotheses and lessons (domain/advisor investment strategy). */
+export interface DashboardInvestmentUseCases {
   getInvestmentStrategy?: (input: { mode: 'demo' | 'admin'; requestId: string }) => Promise<unknown>
   updateInvestmentStrategy?: (input: {
     mode: 'demo' | 'admin'
@@ -1380,6 +1408,10 @@ export interface DashboardUseCases {
     status: 'approved' | 'rejected'
   }) => Promise<unknown>
   getInvestmentStatus?: (input: { mode: 'demo' | 'admin'; requestId: string }) => Promise<unknown>
+}
+
+/** Decision journal entries and outcomes. */
+export interface DashboardDecisionJournalUseCases {
   listAdvisorDecisionJournal?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1406,6 +1438,10 @@ export interface DashboardUseCases {
       decisionId: number
     } & DashboardAdvisorDecisionOutcomeCreateInput
   ) => Promise<DashboardAdvisorDecisionOutcomeResponse>
+}
+
+/** Data quality scoring and advisor readiness reviews (domain/data-quality, advisor replay and fine-tuning gates). */
+export interface DashboardReadinessUseCases {
   // Macro Prompt 5 — Data quality + advisor readiness scoring. Read-only,
   // deterministic, no provider/LLM/graph IO. Demo returns a fixture.
   getDataQuality?: (input: {
@@ -1438,6 +1474,16 @@ export interface DashboardUseCases {
   }) => Promise<AdvisorFineTuningReadinessResponse>
 }
 
+export type DashboardUseCases = DashboardCoreUseCases &
+  DashboardValuationUseCases &
+  DashboardNewsUseCaseSlice &
+  DashboardMarketsUseCaseSlice &
+  DashboardExternalInvestmentsUseCases &
+  DashboardAdvisorUseCases &
+  DashboardInvestmentUseCases &
+  DashboardDecisionJournalUseCases &
+  DashboardReadinessUseCases
+
 export interface DashboardNewsUseCases {
   getNews: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
   getNewsContextBundle: (input: {
@@ -1468,12 +1514,17 @@ export interface DashboardMarketsUseCases {
 }
 
 export interface DashboardRouteRuntime {
+  /** Composition root for persistence: HTTP routes receive repositories from here and never build them. */
   repositories: {
     readModel: DashboardReadRepository
     news?: DashboardNewsRepository
     markets?: DashboardMarketsRepository
     advisor?: DashboardAdvisorRepository
     derivedRecompute: DashboardDerivedRecomputeRepository
+    signalSources: ReturnType<typeof createDashboardSignalSourcesRepository>
+    signalItems: ReturnType<typeof createDashboardSignalItemsRepository>
+    tradingLab: ReturnType<typeof createDashboardTradingLabRepository>
+    userCategorizationRules: ReturnType<typeof createUserCategorizationRuleRepository>
   }
   useCases: DashboardUseCases
   providerRegistry: ProviderRegistry

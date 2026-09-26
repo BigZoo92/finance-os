@@ -26,7 +26,7 @@ Only `apps/web` receives public traffic. The API, worker, knowledge service, qua
 | Application | Contract |
 |---|---|
 | `web` | TanStack Start SSR, route loaders, query cache, responsive Command Pixel UI, `/api` proxy |
-| `api` | Elysia routes, admin/internal auth, normalized errors, domain use cases, repositories |
+| `api` | Elysia routes, admin/internal auth, normalized errors, bounded domain modules with public barrels and an enforced import boundary test, use-case slices composed by the route runtime, repositories |
 | `worker` | Typed Redis queues, schedules, ingestion, derived recompute, heartbeat |
 | `knowledge-service` | Internal temporal graph ingestion/retrieval with provenance and contradiction history |
 | `quant-service` | Isolated read-only research/backtesting; no brokerage execution |

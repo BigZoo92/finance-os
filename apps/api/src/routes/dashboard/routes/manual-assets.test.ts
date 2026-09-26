@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import { createDashboardRuntimePlugin } from '../plugin'
+import { createRuntimeRepositoriesFixture } from '../test-support/runtime-repositories-fixture'
 import type { DashboardManualAssetResponse, DashboardRouteRuntime } from '../types'
 import { createManualAssetsRoute } from './manual-assets'
 
@@ -28,10 +29,7 @@ const sampleManualAsset: DashboardManualAssetResponse = {
 const createRuntime = (
   overrides?: Partial<DashboardRouteRuntime['useCases']>
 ): DashboardRouteRuntime => ({
-  repositories: {
-    readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
-    derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
-  },
+  repositories: createRuntimeRepositoriesFixture(),
   useCases: {
     getSummary: async () => {
       throw new Error('not used')

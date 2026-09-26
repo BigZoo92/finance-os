@@ -6,12 +6,12 @@ import {
   getDashboardValuationStatusMock,
   getDashboardValuationUnresolvedMock,
 } from '../../../mocks/dashboardValuation.mock'
+import { getDashboardRuntime } from '../context'
 import {
   AssetValuationAlreadyRunningError,
   AssetValuationDisabledError,
   AssetValuationFailedError,
-} from '../domain/valuation/create-asset-valuation-use-cases'
-import { getDashboardRuntime } from '../context'
+} from '../domain/valuation'
 
 const isValuationDemoMode = <TContext extends object>(context: TContext) => {
   return getAuth(context).mode !== 'admin' && !getInternalAuth(context).hasValidToken

@@ -11,21 +11,17 @@ import type {
   PostMortemListResponse,
   PostMortemRepositoryAdapter,
   PostMortemRunStatus,
-} from '../domain/advisor/post-mortem/create-post-mortem-use-cases'
+} from '../domain/advisor'
 import type { ApiDb } from '../types'
 
 const toIso = (value: Date | null | undefined): string | null => value?.toISOString() ?? null
 
-const toRiskLevel = (
-  raw: unknown
-): 'low' | 'medium' | 'high' | null => {
+const toRiskLevel = (raw: unknown): 'low' | 'medium' | 'high' | null => {
   if (raw === 'low' || raw === 'medium' || raw === 'high') return raw
   return null
 }
 
-const toDecisionKind = (
-  raw: unknown
-): 'accepted' | 'rejected' | 'deferred' | 'ignored' | null => {
+const toDecisionKind = (raw: unknown): 'accepted' | 'rejected' | 'deferred' | 'ignored' | null => {
   if (raw === 'accepted' || raw === 'rejected' || raw === 'deferred' || raw === 'ignored') {
     return raw
   }
@@ -121,7 +117,9 @@ export const createDashboardAdvisorPostMortemRepository = ({
 
       if (rows.length === 0) return []
 
-      const recommendationIds: number[] = rows.map((r: (typeof rows)[number]) => r.recommendation.id)
+      const recommendationIds: number[] = rows.map(
+        (r: (typeof rows)[number]) => r.recommendation.id
+      )
       const recommendationKeys: string[] = rows
         .map((r: (typeof rows)[number]) => r.recommendation.recommendationKey)
         .filter((v: string | null): v is string => typeof v === 'string')
@@ -141,10 +139,13 @@ export const createDashboardAdvisorPostMortemRepository = ({
               )
               .orderBy(desc(schema.advisorDecisionJournal.decidedAt))
 
-      const decisionByRecommendationId = new Map<number, typeof decisionRows[number]>()
-      const decisionByRecommendationKey = new Map<string, typeof decisionRows[number]>()
+      const decisionByRecommendationId = new Map<number, (typeof decisionRows)[number]>()
+      const decisionByRecommendationKey = new Map<string, (typeof decisionRows)[number]>()
       for (const row of decisionRows) {
-        if (row.recommendationId !== null && !decisionByRecommendationId.has(row.recommendationId)) {
+        if (
+          row.recommendationId !== null &&
+          !decisionByRecommendationId.has(row.recommendationId)
+        ) {
           decisionByRecommendationId.set(row.recommendationId, row)
         }
         if (
@@ -180,7 +181,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
             decisionByRecommendationKey.get(recommendation.recommendationKey)) ||
           null
         const decisionOutcomes =
-          decision !== null ? outcomesByDecisionId.get(decision.id) ?? [] : []
+          decision !== null ? (outcomesByDecisionId.get(decision.id) ?? []) : []
 
         const expiresAt = recommendation.expiresAt
         const horizonDays =
