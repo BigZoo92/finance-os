@@ -1,5 +1,7 @@
 import { css, cva, cx } from '@finance-os/styled-system/css'
+import type { Assign, JsxStyleProps } from '@finance-os/styled-system/types'
 import { UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import type * as React from 'react'
 
 /**
@@ -9,11 +11,13 @@ import type * as React from 'react'
  *
  * `value: null` renders an explicit unavailable state, never an empty bar
  * pretending to be 0 %.
+ *
+ * Accepts Panda style props on the root, merged into its own styles.
  */
 
 type ProgressTone = 'brand' | 'positive' | 'warning' | 'negative' | 'neutral'
 
-const progressRoot = css({ display: 'flex', alignItems: 'center', gap: '3' })
+const progressRoot = css.raw({ display: 'flex', alignItems: 'center', gap: '3' })
 
 const progressTrack = css({
   h: '1',
@@ -57,6 +61,8 @@ const progressValue = cva({
   },
 })
 
+type DivProps = Assign<Omit<React.ComponentProps<'div'>, 'children'>, JsxStyleProps>
+
 type ProgressProps = {
   /** Current value, in [0, max]. `null`/`undefined` = unknown. */
   value: number | null | undefined
@@ -67,7 +73,7 @@ type ProgressProps = {
   /** Render the percentage as visible Geist Mono text. */
   showValue?: boolean
   className?: string
-} & Omit<React.ComponentProps<'div'>, 'children'>
+} & DivProps
 
 function Progress({
   value,
@@ -85,9 +91,10 @@ function Progress({
     percent === null
       ? UNAVAILABLE_LABEL
       : `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(percent)} %`
+  const { className: styles, rest } = withStyleProps(props, progressRoot)
 
   return (
-    <div data-slot="progress" className={cx(progressRoot, className)} {...props}>
+    <div data-slot="progress" className={cx(styles, className)} {...rest}>
       <div
         role="progressbar"
         aria-valuemin={0}

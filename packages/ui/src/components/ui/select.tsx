@@ -2,11 +2,13 @@
 
 import { cva, cx } from '@finance-os/styled-system/css'
 import { styled } from '@finance-os/styled-system/jsx'
+import type { Assign, JsxStyleProps } from '@finance-os/styled-system/types'
 import {
   CheckPixelIcon,
   ChevronDownPixelIcon,
   ChevronUpPixelIcon,
 } from '@finance-os/ui/icons/pixel'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import { Select as SelectPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
@@ -173,20 +175,22 @@ function SelectValue({ ...props }: React.ComponentProps<typeof SelectPrimitive.V
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
-function SelectTrigger({
-  className,
-  size = 'default',
-  children,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
+/** The trigger accepts style props (`w="full"`), merged into its recipe. */
+type SelectTriggerProps = Assign<
+  React.ComponentProps<typeof SelectPrimitive.Trigger>,
+  JsxStyleProps
+> & {
   size?: 'sm' | 'default'
-}) {
+}
+
+function SelectTrigger({ className, size = 'default', children, ...props }: SelectTriggerProps) {
+  const { className: styles, rest } = withStyleProps(props, selectTrigger.raw({ size }))
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      className={cx(selectTrigger({ size }), className)}
-      {...props}
+      className={cx(styles, className)}
+      {...rest}
     >
       {children}
       <SelectPrimitive.Icon asChild>
@@ -196,6 +200,8 @@ function SelectTrigger({
   )
 }
 
+// No style props here: Radix's `position` prop shares its name with the CSS
+// property, so the extractor and the types would both misread it.
 function SelectContent({
   className,
   children,

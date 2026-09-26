@@ -7,8 +7,11 @@
  */
 import { cva, cx } from '@finance-os/styled-system/css'
 import { styled } from '@finance-os/styled-system/jsx'
+import type { JsxStyleProps } from '@finance-os/styled-system/types'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import type { ReactNode } from 'react'
 
+/** Root style props (`bg`, `mt`, `sm={{…}}`) merge into the panel's own styles. */
 type PanelProps = {
   title?: ReactNode
   description?: ReactNode
@@ -22,7 +25,7 @@ type PanelProps = {
   headerClassName?: string
   bodyClassName?: string
   children: ReactNode
-}
+} & JsxStyleProps
 
 const panelRoot = cva({
   base: {
@@ -132,10 +135,15 @@ export function Panel({
   headerClassName,
   bodyClassName,
   children,
+  ...styleProps
 }: PanelProps) {
   const hasHeader = Boolean(title || description || actions || icon)
+  const { className: rootStyles } = withStyleProps(
+    styleProps,
+    panelRoot.raw({ tone, rail: tone !== 'plain' })
+  )
   return (
-    <section className={cx(panelRoot({ tone, rail: tone !== 'plain' }), className)}>
+    <section className={cx(rootStyles, className)}>
       {hasHeader && (
         <header className={cx(panelHeader({ bleed: Boolean(bleed) }), headerClassName)}>
           {icon && (

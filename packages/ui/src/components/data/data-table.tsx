@@ -40,11 +40,19 @@ const dataTableHead = cva({
   },
 })
 
+// Financial figures as longhands (see `@finance-os/ui/lib/typography`): a
+// caller's `textStyle="xs"` must not erase the mono treatment.
 const dataTableCell = cva({
   base: { px: '4', py: '3', verticalAlign: 'middle', color: 'foreground' },
   variants: {
     numeric: {
-      true: { textAlign: 'right', textStyle: 'financial', fontVariantNumeric: 'tabular-nums' },
+      true: {
+        textAlign: 'right',
+        fontFamily: 'mono',
+        fontFeatureSettings: '"tnum", "zero", "ss01"',
+        letterSpacing: '-0.01em',
+        fontVariantNumeric: 'tabular-nums',
+      },
       false: {},
     },
   },

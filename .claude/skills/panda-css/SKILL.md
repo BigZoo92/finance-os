@@ -46,6 +46,7 @@ short and the styles static:
 | Layout scaffolding (rows, stacks, grids, centering) | patterns: `hstack`, `vstack`, `stack`, `grid`, `flex`, `center`, or `<HStack>` / `<Grid>` JSX |
 | A one-off element with a handful of static styles | `<styled.section px="4" py="3" bg="surface.1">` or `css({ ... })` |
 | Composition of existing classes | `cx(recipe(), css({ ... }), className)` |
+| A function component with its own logic (Amount, Status, Progress, Panel, KpiTile) that callers style | `withStyleProps(props, base.raw)` from `@finance-os/ui/lib/style-props`: accepts the same style props as `styled()` |
 
 Rules:
 
@@ -55,6 +56,8 @@ Rules:
 - Always use tokens: `bg: 'primary'`, `color: 'muted.foreground'`, `borderColor: 'border'`, `rounded: 'control'`, `shadow: 'floating'`, `fontFamily: 'mono'`, `zIndex: 'popover'`, `transitionDuration: 'normal'`, `transitionTimingFunction: 'outExpo'`. Opacity modifiers use `primary/10` style values.
 - `data-slot` attributes on shared components are part of the DOM contract (E2E and tests select them). Keep them; do not rename.
 - Recipes belong to the component that owns them; export the variant type with `StyledVariantProps<typeof Button>` when callers need it.
+- Override a shared component through its style props (`<Amount textStyle="sm" mt="2" />`, `<Panel bg="surface.2" />`, `<Status display="flex" />`), never through `className={css({ ... })}`. Style props are merged into the component's own styles at the object level (one atom per property), whereas two atoms for the same property are resolved by their order in the generated sheet, which follows first-seen extraction order and changes when unrelated files change. Function components get this merge from `withStyleProps`; `className` stays for non-style classes.
+- Because the merge is per property, a component whose callers choose the size through `textStyle` must not own `textStyle: 'financial'` itself (the caller's `textStyle: 'sm'` would replace it and drop the mono font). `Amount`, `PercentChange` and numeric table cells use the longhands from `@finance-os/ui/lib/typography` (`financialFigures`); `textStyle: 'financial'` stays for plain spans that never receive a size.
 - No `!important`, no arbitrary selectors reaching into other components. Target children through slot recipes or `&` selectors scoped to the component.
 
 ### Example: variant component

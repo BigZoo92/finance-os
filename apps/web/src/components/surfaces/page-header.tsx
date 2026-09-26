@@ -7,9 +7,12 @@
  */
 import { css, cva, cx } from '@finance-os/styled-system/css'
 import { styled } from '@finance-os/styled-system/jsx'
+import type { JsxStyleProps } from '@finance-os/styled-system/types'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import { motion, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 
+/** Root style props (`mb`, `pb`, `sm={{…}}`) merge into the header's own styles. */
 type PageHeaderProps = {
   eyebrow?: ReactNode
   title: ReactNode
@@ -20,9 +23,9 @@ type PageHeaderProps = {
   /** Tightens vertical rhythm — used for dense sub-pages. */
   compact?: boolean
   className?: string
-}
+} & JsxStyleProps
 
-const headerRoot = css({
+const headerRoot = css.raw({
   display: 'flex',
   flexDirection: 'column',
   gap: '4',
@@ -57,15 +60,17 @@ export function PageHeader({
   status,
   compact,
   className,
+  ...styleProps
 }: PageHeaderProps) {
   const prefersReducedMotion = useReducedMotion()
+  const { className: rootStyles } = withStyleProps(styleProps, headerRoot)
 
   return (
     <motion.header
       initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-      className={cx(headerRoot, className)}
+      className={cx(rootStyles, className)}
     >
       <styled.div minW="0" flex="1">
         {eyebrow && (

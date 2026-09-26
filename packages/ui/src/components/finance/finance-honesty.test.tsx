@@ -41,7 +41,7 @@ describe('Amount', () => {
   it('renders positive and negative amounts with tabular mono treatment', () => {
     const positive = render(<Amount value={67070.44} />)
     expect(positive).toContain('67 070,44 €')
-    expect(positive).toContain('textStyle_financial')
+    expect(positive).toContain('ff_mono')
     expect(positive).toContain('tabular-nums')
     expect(render(<Amount value={-1234.5} />)).toContain('-1 234,50 €')
   })

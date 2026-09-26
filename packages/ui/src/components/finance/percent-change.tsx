@@ -1,5 +1,8 @@
 import { css, cva, cx } from '@finance-os/styled-system/css'
+import type { Assign, JsxStyleProps } from '@finance-os/styled-system/types'
 import { formatPercent, UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
+import { financialFigures } from '@finance-os/ui/lib/typography'
 import type * as React from 'react'
 
 /**
@@ -8,6 +11,8 @@ import type * as React from 'react'
  * Value is expressed in percentage points (8.51 → `+8,51 %`). Unknown is
  * rendered as unavailable, never `0 %`. Meaning never relies on color
  * alone: the explicit +/− sign is always part of the text.
+ *
+ * Accepts Panda style props, merged into the component's own styles.
  */
 
 type Tone = 'positive' | 'negative' | 'neutral'
@@ -22,14 +27,14 @@ const toneColor = cva({
   },
 })
 
-const percentFigures = css({ textStyle: 'financial', fontVariantNumeric: 'tabular-nums' })
+type SpanProps = Assign<Omit<React.ComponentProps<'span'>, 'children'>, JsxStyleProps>
 
 type PercentChangeProps = {
   value: number | null | undefined
   decimals?: number
   unavailableLabel?: string
   className?: string
-} & Omit<React.ComponentProps<'span'>, 'children'>
+} & SpanProps
 
 function PercentChange({
   value,
@@ -41,12 +46,13 @@ function PercentChange({
   const formatted = formatPercent(value, { decimals, signed: true })
 
   if (formatted === null) {
+    const { className: styles, rest } = withStyleProps(props, toneColor.raw({ tone: 'neutral' }))
     return (
       <span
         data-slot="percent-change"
         data-unavailable="true"
-        className={cx(toneColor({ tone: 'neutral' }), className)}
-        {...props}
+        className={cx(styles, className)}
+        {...rest}
       >
         {unavailableLabel}
       </span>
@@ -55,13 +61,14 @@ function PercentChange({
 
   const numeric = value as number
   const tone: Tone = numeric > 0 ? 'positive' : numeric < 0 ? 'negative' : 'neutral'
+  const { className: styles, rest } = withStyleProps(
+    props,
+    financialFigures,
+    toneColor.raw({ tone })
+  )
 
   return (
-    <span
-      data-slot="percent-change"
-      className={cx(percentFigures, toneColor({ tone }), className)}
-      {...props}
-    >
+    <span data-slot="percent-change" className={cx(styles, className)} {...rest}>
       {formatted}
     </span>
   )

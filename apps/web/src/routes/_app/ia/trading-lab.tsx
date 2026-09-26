@@ -195,7 +195,7 @@ function TradingLabPage() {
         <KpiTile label="Scénarios" value={scenarioList.length} />
         <KpiTile
           label="Quant Service"
-          display={capabilities?.quantServiceAvailable ? 'Connecté' : 'Hors-ligne'}
+          displayValue={capabilities?.quantServiceAvailable ? 'Connecté' : 'Hors-ligne'}
         />
       </div>
 
@@ -413,7 +413,8 @@ function TradingLabPage() {
                             {b.trades.slice(0, 50).map(t => {
                               const tr = t as Record<string, unknown>
                               const pnlValue = tr.pnl == null ? null : Number(tr.pnl)
-                              const pnl = pnlValue !== null && Number.isFinite(pnlValue) ? pnlValue : null
+                              const pnl =
+                                pnlValue !== null && Number.isFinite(pnlValue) ? pnlValue : null
                               const pnlPctValue = tr.pnl_pct ?? tr.pnlPct
                               const pnlPctNumber = pnlPctValue == null ? null : Number(pnlPctValue)
                               const pnlPct =
@@ -444,7 +445,9 @@ function TradingLabPage() {
                                   <td
                                     className={`px-2 py-1 text-right ${pnl === null ? 'text-muted-foreground' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}
                                   >
-                                    {pnl === null ? 'Indisponible' : `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`}
+                                    {pnl === null
+                                      ? 'Indisponible'
+                                      : `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`}
                                   </td>
                                   <td
                                     className={`px-2 py-1 text-right ${pnlPct === null ? 'text-muted-foreground' : pnlPct >= 0 ? 'text-positive' : 'text-negative'}`}

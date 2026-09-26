@@ -7,6 +7,8 @@
     "./styles.css": "./src/styles/globals.css",
     "./lib/utils": "./src/lib/utils.ts",
     "./lib/format": "./src/lib/format.ts",
+    "./lib/style-props": "./src/lib/style-props.ts",
+    "./lib/typography": "./src/lib/typography.ts",
     "./components": "./src/components/index.ts",
     "./components/*": "./src/components/*",
     "./icons/types": "./src/icons/types.ts",

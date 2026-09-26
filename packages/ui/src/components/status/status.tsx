@@ -1,5 +1,7 @@
 import { cva, cx } from '@finance-os/styled-system/css'
+import type { Assign, JsxStyleProps } from '@finance-os/styled-system/types'
 import { assessFreshness, UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import type * as React from 'react'
 
 /**
@@ -9,6 +11,10 @@ import type * as React from 'react'
  * French label (color never carries the meaning alone). Backend enums are
  * mapped to the canonical vocabulary (À jour, Attention, En cours,
  * Connecté, Reconnexion requise, Indisponible…), never exposed directly.
+ *
+ * Accepts Panda style props, merged into the component's own styles so the
+ * consumer's values win (a `fontSize` override also needs
+ * `lineHeight: 'inherit'` to keep the `xs` text style's line box).
  */
 
 type StatusTone = 'positive' | 'attention' | 'negative' | 'progress' | 'neutral'
@@ -39,22 +45,20 @@ const statusDot = cva({
   },
 })
 
+type SpanProps = Assign<Omit<React.ComponentProps<'span'>, 'children'>, JsxStyleProps>
+
 type StatusProps = {
   tone: StatusTone
   label: React.ReactNode
   /** Hide the dot for pure-text contexts. */
   withDot?: boolean
   className?: string
-} & Omit<React.ComponentProps<'span'>, 'children'>
+} & SpanProps
 
 function Status({ tone, label, withDot = true, className, ...props }: StatusProps) {
+  const { className: styles, rest } = withStyleProps(props, statusText.raw({ tone }))
   return (
-    <span
-      data-slot="status"
-      data-tone={tone}
-      className={cx(statusText({ tone }), className)}
-      {...props}
-    >
+    <span data-slot="status" data-tone={tone} className={cx(styles, className)} {...rest}>
       {withDot && <span aria-hidden="true" className={statusDot({ tone })} />}
       {label}
     </span>
@@ -99,7 +103,7 @@ function ProviderStatus({
   /** Optional label override (keeps the semantic tone). */
   label?: string
   className?: string
-} & Omit<React.ComponentProps<'span'>, 'children'>) {
+} & SpanProps) {
   const mapped = PROVIDER_STATUS[status]
   return (
     <Status
@@ -125,7 +129,7 @@ function Freshness({
   asOf: string | Date | null | undefined
   staleAfterMinutes?: number
   className?: string
-} & Omit<React.ComponentProps<'span'>, 'children'>) {
+} & SpanProps) {
   const assessment = assessFreshness(asOf, {
     ...(staleAfterMinutes !== undefined ? { staleAfterMinutes } : {}),
   })

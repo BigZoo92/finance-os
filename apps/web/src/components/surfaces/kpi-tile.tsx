@@ -7,19 +7,24 @@
  */
 import { css, cva, cx } from '@finance-os/styled-system/css'
 import { styled } from '@finance-os/styled-system/jsx'
+import type { JsxStyleProps } from '@finance-os/styled-system/types'
 import { UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import { motion, useReducedMotion } from 'motion/react'
 
 type Tone = 'plain' | 'brand' | 'ai' | 'positive' | 'negative' | 'warning'
 
+/**
+ * Root style props (`minH`, `gridColumn`, `md={{…}}`) merge into the tile's
+ * own styles. Custom props deliberately avoid style-prop names (`display`
+ * is a style prop, hence `displayValue`).
+ */
 type KpiTileProps = {
   label: string
   /** Numeric value. Use `displayValue` for the formatted string (e.g. "4 200 €").
    *  Optional when only `displayValue` is passed (non-numeric labels). */
   value?: number | null | undefined
   displayValue?: string
-  /** @deprecated Use `displayValue`; kept so pre-migration callers still compile. */
-  display?: string
   hint?: string
   tone?: Tone
   size?: 'default' | 'lg'
@@ -29,11 +34,11 @@ type KpiTileProps = {
   className?: string
   /** Kept for API compatibility; numeric values render statically. */
   animate?: boolean
-}
+} & JsxStyleProps
 
 const NUMBER_FORMAT = new Intl.NumberFormat('fr-FR')
 
-const kpiRoot = css({
+const kpiRoot = css.raw({
   h: 'full',
   rounded: 'surface',
   borderWidth: '1px',
@@ -92,8 +97,7 @@ const kpiUnavailable = css({ mt: '2', textStyle: 'sm', color: 'muted.foreground'
 export function KpiTile({
   label,
   value,
-  displayValue: displayValueProp,
-  display,
+  displayValue,
   hint,
   tone = 'plain',
   size = 'default',
@@ -101,14 +105,16 @@ export function KpiTile({
   icon,
   trailing,
   className,
+  animate: _animate,
+  ...styleProps
 }: KpiTileProps) {
   const prefersReducedMotion = useReducedMotion()
-  const displayValue = displayValueProp ?? display
+  const { className: rootStyles } = withStyleProps(styleProps, kpiRoot)
 
   const unavailable = displayValue === undefined && typeof value !== 'number' && !value
 
   return (
-    <div className={cx(kpiRoot, className)}>
+    <div className={cx(rootStyles, className)}>
       <styled.div display="flex" alignItems="flex-start" justifyContent="space-between" gap="3">
         <styled.p
           fontFamily="mono"
