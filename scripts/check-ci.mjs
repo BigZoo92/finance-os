@@ -59,8 +59,8 @@ export const coreSteps = [
     args: ['docker:check'],
   },
   {
-    name: 'Moon graph parity',
-    args: ['moon:parity'],
+    name: 'Moon graph and constraints',
+    args: ['moon:validate'],
   },
   {
     name: 'Workspace lint',

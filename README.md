@@ -51,12 +51,14 @@ pnpm agent:skills:check     detect missing, drifted, or extra skill files
 pnpm docs:check             validate local Markdown links
 pnpm check:client-bundle    fail if the web client bundle carries server-only code
 pnpm moon:projects          print the Moon project graph (JSON)
-pnpm moon:parity            compare Moon's affected selection with the custom script
+pnpm moon:validate          load the Moon project graph and enforce layer/tag constraints
+pnpm moon:ci                run the affected project tasks through Moon (what CI runs)
+pnpm affected:test          run only the tests of projects touched since main
 ```
 
 ## Repository task graph
 
-[Moon](https://moonrepo.dev) (`.moon/`) represents every project, its workspace relationships, and its tasks: JavaScript projects inherit their `package.json` scripts, the Python services declare their `uv` tasks in `moon.yml`. Moon runs the installed runtimes and never installs or switches them. `pnpm moon:typecheck`, `pnpm moon:test`, and `pnpm moon:build` route the canonical scripts through the graph. Affected selection and caching are not yet Moon's responsibility: `pnpm affected:*` stays canonical until the graph models exact inputs and outputs.
+[Moon](https://moonrepo.dev) (`.moon/`) owns the project graph, task caching and affected selection. Every project declares explicit tasks in its `moon.yml` (`typecheck`, `test`, `build`, `codegen`, the Python services' `uv` tasks) with inputs and outputs; `package.json` scripts stay the single source of the commands (`pnpm run …`). Projects carry a `layer` (application, library, configuration) and a tag (`frontend`, `backend`, `shared`); `.moon/workspace.yml` enforces that applications depend on libraries only and that the browser graph never reaches a backend-only package. Moon runs the installed runtimes and never installs or switches them. `pnpm moon:ci` (what CI runs) executes the affected project tasks with cache replay; `pnpm affected:typecheck|test|build` do the same locally; `pnpm moon:validate` loads the graph and its constraints.
 
 ## Documentation
 

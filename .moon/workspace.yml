@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://moonrepo.dev/schemas/workspace.json
-# Moon Stage A: representation only. The graph describes the repository; it
-# does not own caching, affected selection, or architecture enforcement yet.
+# Moon Stage B: Moon owns task caching, affected selection (`moon run --affected`,
+# `moon ci`) and architecture constraints. Tasks are explicit per project.
 projects:
   globs:
     - 'apps/*'
@@ -14,4 +14,18 @@ vcs:
   defaultBranch: 'main'
 
 constraints:
-  enforceLayerRelationships: false
+  # application -> library/configuration, library -> library/configuration.
+  enforceLayerRelationships: true
+  # The browser app graph never reaches a backend-only package; backend projects
+  # reach backend and shared packages; shared packages stay shared.
+  tagRelationships:
+    frontend: ['frontend', 'shared']
+    backend: ['backend', 'shared']
+    shared: ['shared']
+
+hasher:
+  optimization: 'accuracy'
+  warnOnMissingInputs: false
+
+pipeline:
+  cacheLifetime: '7 days'

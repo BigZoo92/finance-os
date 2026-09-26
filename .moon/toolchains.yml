@@ -6,8 +6,8 @@ javascript:
   packageManager: 'pnpm'
   # pnpm owns dependency installation (pnpm install --frozen-lockfile).
   installDependencies: false
-  # Stage A mirrors package.json scripts as tasks. Explicit tasks come in Stage B.
-  inferTasksFromScripts: true
+  # Stage B: every project declares its tasks explicitly (moon.yml); nothing is inferred.
+  inferTasksFromScripts: false
   # Moon must not rewrite manifests: package.json and the packageManager field
   # stay hand-owned.
   syncProjectWorkspaceDependencies: false

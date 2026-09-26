@@ -25,11 +25,6 @@
     "env:check:compose": "bun scripts/env-check.ts --compose",
     "env:check:prod": "bun scripts/env-check.ts --compose --env-file=.env.production.local",
     "env:check:parity": "bun scripts/check-compose-env-parity.ts",
-    "affected:print": "node scripts/affected-tasks.mjs print",
-    "affected:lint": "node scripts/affected-tasks.mjs lint",
-    "affected:typecheck": "node scripts/affected-tasks.mjs typecheck",
-    "affected:test": "node scripts/affected-tasks.mjs test",
-    "affected:build": "node scripts/affected-tasks.mjs build",
     "python:lint": "node scripts/python-services.mjs lint",
     "python:format": "node scripts/python-services.mjs format",
     "python:format:check": "node scripts/python-services.mjs format-check",
@@ -38,7 +33,7 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:e2e:visual": "VISUAL_REGRESSION=1 playwright test e2e/visual-regression.spec.ts",
-    "test": "node --test scripts/check-ci.test.mjs scripts/check-client-bundle.test.mjs scripts/desktop-scope.test.mjs scripts/gitnexus-refresh.test.mjs scripts/moon-parity.test.mjs scripts/sync-skills.test.mjs",
+    "test": "node --test scripts/check-ci.test.mjs scripts/check-client-bundle.test.mjs scripts/desktop-scope.test.mjs scripts/gitnexus-refresh.test.mjs scripts/sync-skills.test.mjs",
     "evals:run": "bun scripts/run-evals.ts",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome lint .",
@@ -96,7 +91,11 @@
     "moon:typecheck": "moon run :typecheck",
     "moon:test": "moon run :test",
     "moon:build": "moon run :build",
-    "moon:parity": "node scripts/moon-parity.mjs"
+    "moon:ci": "moon ci",
+    "moon:validate": "moon query projects > /dev/null",
+    "affected:typecheck": "moon run :typecheck --affected --concurrency 2",
+    "affected:test": "moon run :test --affected --concurrency 2",
+    "affected:build": "moon run :build --affected --concurrency 2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

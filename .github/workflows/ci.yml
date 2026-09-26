@@ -46,6 +46,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -90,26 +92,20 @@ jobs:
       - name: Docker workspace manifest drift check
         run: pnpm docker:check
 
-      - name: Moon graph parity
-        run: pnpm moon:parity
-
-      - name: Workspace lint
-        run: pnpm -r --if-present lint
-
-      - name: Typecheck
-        run: pnpm -r --if-present typecheck
+      - name: Moon graph and constraints
+        run: pnpm moon:validate
 
       - name: Database schema check
         run: pnpm db:check
 
-      - name: Test
-        run: pnpm -r --if-present test
+      # Moon runs the project graph: typecheck, test, build and codegen tasks of
+      # every affected project (all of them on the default branch), with the
+      # Python services' lint/format/test tasks. Task hashes replay from cache.
+      - name: Moon CI (affected project tasks)
+        run: pnpm moon:ci
 
       - name: Python checks
         run: pnpm python:check
-
-      - name: Build
-        run: pnpm -r --if-present build
 
       - name: Client bundle denylist
         run: pnpm check:client-bundle

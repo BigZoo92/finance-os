@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+# Moon Stage B: explicit tasks with inputs/outputs; caching and affected selection are
+# owned by Moon. `pnpm run` keeps package.json as the single source of the commands.
+id: 'web'
+language: 'typescript'
+layer: 'application'
+tags: ['frontend']
+project:
+  title: 'Web'
+  description: 'TanStack Start web app (SSR on Node) with the runtime /api proxy.'
+tasks:
+  typecheck:
+    command: 'pnpm run typecheck'
+    deps: ['styled-system:codegen', '^:typecheck']
+    inputs: ['@group(sources)', '@group(tests)', '@group(configs)']
+  test:
+    command: 'pnpm run test'
+    deps: ['styled-system:codegen', '^:typecheck']
+    inputs: ['@group(sources)', '@group(tests)', '@group(configs)']
+  build:
+    command: 'pnpm run build'
+    deps: ['styled-system:codegen', '^:typecheck']
+    inputs: ['@group(sources)', '@group(configs)', 'public/**/*']
+    outputs: ['.output/**/*']
+  dev:
+    command: 'pnpm run dev'
+    deps: ['styled-system:codegen']
+    options:
+      cache: false
+      persistent: true
+      runInCI: false
+  start:
+    command: 'pnpm run start'
+    deps: ['build']
+    options:
+      cache: false
+      persistent: true
+      runInCI: false
