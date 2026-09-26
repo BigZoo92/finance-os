@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { CurrencyAmount, Progress, Status } from '@finance-os/ui/components'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -20,6 +22,17 @@ export const Route = createFileRoute('/_app/objectifs')({
   component: ObjectifsPage,
 })
 
+const progressTitle = css({
+  flexShrink: '0',
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const progressBar = css({ minW: '0', flex: '1' })
+
 function ObjectifsPage() {
   const authQuery = useQuery(authMeQueryOptions())
   const authViewState = resolveAuthViewState({
@@ -33,53 +46,60 @@ function ObjectifsPage() {
   const aggregate = buildActiveGoalsAggregate(goalsQuery.data?.items ?? [])
 
   return (
-    <div className="space-y-8 md:space-y-10">
+    <styled.div spaceY="8" md={{ spaceY: '10' }}>
       <PageHeader title="Objectifs" />
 
       {aggregate.activeGoals.length > 0 ? (
-        <section className="border-y border-border py-6" aria-labelledby="goals-progress-title">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-            <h2
-              id="goals-progress-title"
-              className="shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-            >
+        <styled.section
+          borderYWidth="1px"
+          borderColor="border"
+          py="6"
+          aria-labelledby="goals-progress-title"
+        >
+          <styled.div
+            display="flex"
+            flexDirection="column"
+            gap="4"
+            lg={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            <h2 id="goals-progress-title" className={progressTitle}>
               Progression globale
             </h2>
             <Progress
               value={aggregate.progress}
               label="Progression globale des objectifs actifs"
-              className="min-w-0 flex-1"
+              className={progressBar}
             />
-            <p className="shrink-0 font-mono text-xs text-foreground">
+            <styled.p flexShrink="0" fontFamily="mono" textStyle="xs" color="foreground">
               <CurrencyAmount
                 value={aggregate.currentAmount}
                 currency={aggregate.currency}
                 decimals={0}
               />{' '}
-              <span className="text-muted-foreground">sur</span>{' '}
+              <styled.span color="muted.foreground">sur</styled.span>{' '}
               <CurrencyAmount
                 value={aggregate.targetAmount}
                 currency={aggregate.currency}
                 decimals={0}
               />
               {aggregate.progress !== null ? (
-                <span className="text-muted-foreground">
+                <styled.span color="muted.foreground">
                   , {aggregate.progress.toLocaleString('fr-FR')} %
-                </span>
+                </styled.span>
               ) : null}
-            </p>
-          </div>
+            </styled.p>
+          </styled.div>
           {aggregate.currency === null ? (
             <Status
               tone="attention"
               label="Progression globale indisponible pour plusieurs devises"
-              className="mt-3"
+              mt="3"
             />
           ) : null}
-        </section>
+        </styled.section>
       ) : null}
 
       <PersonalFinancialGoalsCard authMode={authMode} isAdmin={isAdmin} isDemo={isDemo} />
-    </div>
+    </styled.div>
   )
 }

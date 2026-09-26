@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { token } from '@finance-os/styled-system/tokens'
 import { extent, sum } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
 import { area, curveMonotoneX, line } from 'd3-shape'
@@ -11,6 +13,51 @@ const formatUsd = (value: number) =>
     currency: 'USD',
     maximumFractionDigits: 4,
   }).format(value)
+
+const emptyState = css({
+  display: 'flex',
+  minH: '48',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderYWidth: '1px',
+  borderColor: 'border/50',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const chartFigure = css({ position: 'relative', minW: '0' })
+
+const chartSurface = css({ overflow: 'visible' })
+
+const pointTooltip = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  top: '0',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'border',
+  bg: 'card',
+  px: '2.5',
+  py: '2',
+  shadow: 'overlay',
+})
+
+const tooltipValue = css({ textStyle: 'financial', fontSize: 'xs', lineHeight: 'xs' })
+
+const tooltipDate = css({ fontFamily: 'mono', fontSize: '10px', color: 'muted.foreground' })
+
+const chartCaption = css({
+  mt: '2',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+  fontFamily: 'mono',
+  fontSize: '10px',
+  color: 'muted.foreground',
+})
+
+const visuallyHidden = css({ srOnly: true })
 
 export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeriesPointResponse[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -52,9 +99,7 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
   if (data.length < 2) {
     return (
       <figure ref={containerRef}>
-        <div className="flex min-h-48 items-center justify-center border-y border-border/50 text-sm text-muted-foreground">
-          Historique indisponible
-        </div>
+        <div className={emptyState}>Historique indisponible</div>
       </figure>
     )
   }
@@ -62,7 +107,7 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
   const active = chart && activeIndex !== null ? chart.points[activeIndex] : null
 
   return (
-    <figure ref={containerRef} className="relative min-w-0">
+    <figure ref={containerRef} className={chartFigure}>
       {chart ? (
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -70,7 +115,7 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
           height={height}
           role="img"
           aria-label="Évolution quotidienne des coûts Advisor en dollars"
-          className="overflow-visible"
+          className={chartSurface}
           onPointerLeave={() => setActiveIndex(null)}
           onPointerMove={event => {
             const bounds = event.currentTarget.getBoundingClientRect()
@@ -81,17 +126,23 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+              <stop offset="0%" stopColor={token('colors.primary')} stopOpacity="0.28" />
+              <stop offset="100%" stopColor={token('colors.primary')} stopOpacity="0" />
             </linearGradient>
           </defs>
           <g transform={`translate(${margin.left},${margin.top})`}>
-            <line x1="0" x2={innerWidth} y1={innerHeight} y2={innerHeight} stroke="var(--border)" />
+            <line
+              x1="0"
+              x2={innerWidth}
+              y1={innerHeight}
+              y2={innerHeight}
+              stroke={token('colors.border')}
+            />
             <path d={chart.areaPath ?? ''} fill={`url(#${gradientId})`} />
             <path
               d={chart.linePath ?? ''}
               fill="none"
-              stroke="var(--primary)"
+              stroke={token('colors.primary')}
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -103,7 +154,7 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
                   x2={active.x}
                   y1="0"
                   y2={innerHeight}
-                  stroke="var(--muted-foreground)"
+                  stroke={token('colors.muted.foreground')}
                   strokeDasharray="3 4"
                   opacity="0.5"
                 />
@@ -111,8 +162,8 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
                   cx={active.x}
                   cy={active.y}
                   r="4"
-                  fill="var(--card)"
-                  stroke="var(--primary)"
+                  fill={token('colors.card')}
+                  stroke={token('colors.primary')}
                   strokeWidth="2"
                 />
               </>
@@ -124,21 +175,21 @@ export function CostEvolutionChart({ data }: { data: DashboardAdvisorSpendSeries
       )}
       {active ? (
         <div
-          className="pointer-events-none absolute top-0 rounded-control border border-border bg-card px-2.5 py-2 shadow-overlay"
+          className={pointTooltip}
           style={{
             left: Math.min(Math.max(active.x + margin.left - 44, 0), Math.max(width - 112, 0)),
           }}
         >
-          <p className="font-financial text-xs">{formatUsd(active.usd)}</p>
-          <p className="font-mono text-[10px] text-muted-foreground">{active.date}</p>
+          <p className={tooltipValue}>{formatUsd(active.usd)}</p>
+          <p className={tooltipDate}>{active.date}</p>
         </div>
       ) : null}
-      <figcaption className="mt-2 flex items-center justify-between gap-3 font-mono text-[10px] text-muted-foreground">
+      <figcaption className={chartCaption}>
         <span>{data[0]?.date}</span>
         <span>{formatUsd(sum(data, point => point.usd))} mesurés</span>
         <span>{data.at(-1)?.date}</span>
       </figcaption>
-      <table className="sr-only">
+      <table className={visuallyHidden}>
         <caption>Coûts Advisor quotidiens</caption>
         <thead>
           <tr>

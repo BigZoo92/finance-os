@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Drawer,
@@ -62,6 +64,82 @@ const valuationStates = [
   'unavailable',
 ] as const
 
+const demoNotice = css({
+  borderYWidth: '1px',
+  borderColor: 'border/60',
+  py: '3',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const healthBanner = cva({
+  base: { borderYWidth: '1px', py: '6' },
+  variants: {
+    state: {
+      healthy: { borderColor: 'positive/30' },
+      degraded: { borderColor: 'warning/40' },
+      unknown: { borderColor: 'border/60' },
+    },
+  },
+})
+
+// `text-[10px]` on the Status chip: the recipe's `xs` text style keeps its line
+// height, so it is pinned to the inherited one like the former `leading-[inherit]`.
+const healthState = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  lineHeight: 'inherit',
+})
+
+const sectionTitle = css({ textStyle: 'sm', fontWeight: 'semibold' })
+
+const framedList = css({ mt: '2', borderYWidth: '1px', borderColor: 'border/60' })
+
+const listRow = cva({
+  base: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: '1px',
+    borderColor: 'border/50',
+    py: '4',
+    _last: { borderBottomWidth: '0' },
+  },
+  variants: {
+    wrap: {
+      true: { flexWrap: 'wrap', gap: '3' },
+      false: { gap: '4' },
+    },
+  },
+  defaultVariants: { wrap: false },
+})
+
+const itemTitle = css({ textStyle: 'sm', fontWeight: 'medium' })
+
+const itemMeta = css({ mt: '1', textStyle: 'xs', color: 'muted.foreground' })
+
+const coverageValue = css({
+  textStyle: 'financial',
+  fontSize: '2xl',
+  lineHeight: '2xl',
+  fontWeight: 'semibold',
+})
+
+const coverageCount = css({ textStyle: 'financial', fontSize: 'xs', lineHeight: 'xs' })
+
+// Tailwind's `space-y-3` put the margin on every child but the last; the
+// trailing inline-flex button keeps its own `mt-3` on top of it.
+const stackedList = css({ '& > :not(:last-child)': { marginBlockEnd: '3' } })
+
+const unresolvedItem = css({
+  borderTopWidth: '1px',
+  borderColor: 'border/60',
+  pt: '4',
+  _first: { borderTopWidth: '0', pt: '0' },
+})
+
 function HealthPage() {
   const [unresolvedOpen, setUnresolvedOpen] = useState(false)
   const isMobile = useIsMobile()
@@ -90,7 +168,7 @@ function HealthPage() {
   const unresolvedItems = unresolvedQuery.data?.items ?? []
 
   return (
-    <div className="space-y-7">
+    <styled.div spaceY="7">
       <PageHeader
         eyebrow="Ops"
         icon={<HeartbeatIcon size={12} />}
@@ -99,21 +177,12 @@ function HealthPage() {
       />
 
       {authViewState === 'demo' ? (
-        <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
+        <div className={demoNotice}>
           Lecture seule avec données de démonstration. Aucun diagnostic réel n’est lancé.
         </div>
       ) : null}
 
-      <section
-        className={`border-y py-6 ${
-          model.state === 'healthy'
-            ? 'border-positive/30'
-            : model.state === 'degraded'
-              ? 'border-warning/40'
-              : 'border-border/60'
-        }`}
-        aria-live="polite"
-      >
+      <section className={healthBanner({ state: model.state })} aria-live="polite">
         <Status
           tone={
             model.state === 'healthy'
@@ -129,27 +198,28 @@ function HealthPage() {
                 ? 'Attention'
                 : 'Indisponible'
           }
-          className="font-mono text-[10px] uppercase tracking-[0.14em] leading-[inherit]"
+          className={healthState}
         />
-        <h2 className="mt-3 text-2xl font-semibold tracking-tight">{model.headline}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{model.summary}</p>
+        <styled.h2 mt="3" textStyle="2xl" fontWeight="semibold" letterSpacing="tight">
+          {model.headline}
+        </styled.h2>
+        <styled.p mt="1" textStyle="sm" color="muted.foreground">
+          {model.summary}
+        </styled.p>
       </section>
 
       {model.problems.length > 0 ? (
         <section aria-labelledby="health-problems-title">
-          <h2 id="health-problems-title" className="text-sm font-semibold">
+          <h2 id="health-problems-title" className={sectionTitle}>
             À examiner
           </h2>
-          <div className="mt-2 border-y border-border/60">
+          <div className={framedList}>
             {model.problems.map(problem => (
-              <div
-                key={problem.id}
-                className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 py-4 last:border-b-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{problem.label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{problem.detail}</p>
-                </div>
+              <div key={problem.id} className={listRow({ wrap: true })}>
+                <styled.div minW="0">
+                  <p className={itemTitle}>{problem.label}</p>
+                  <p className={itemMeta}>{problem.detail}</p>
+                </styled.div>
                 {problem.destination ? (
                   <Button asChild variant="outline" size="sm">
                     <Link to={problem.destination}>Ouvrir</Link>
@@ -170,84 +240,87 @@ function HealthPage() {
         </section>
       ) : null}
 
-      <div className="grid gap-7 lg:grid-cols-2">
+      <styled.div display="grid" gap="7" lg={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         <section aria-labelledby="provider-health-title">
-          <h2 id="provider-health-title" className="text-sm font-semibold">
+          <h2 id="provider-health-title" className={sectionTitle}>
             Connexions
           </h2>
-          <div className="mt-2 border-y border-border/60">
+          <div className={framedList}>
             {model.providers.map(provider => (
-              <div
-                key={provider.id}
-                className="flex items-center justify-between gap-4 border-b border-border/50 py-4 last:border-b-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{provider.label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{provider.detail}</p>
-                </div>
-                <ProviderStatus status={provider.state} className="shrink-0" />
+              <div key={provider.id} className={listRow()}>
+                <styled.div minW="0">
+                  <p className={itemTitle}>{provider.label}</p>
+                  <p className={itemMeta}>{provider.detail}</p>
+                </styled.div>
+                <ProviderStatus status={provider.state} flexShrink="0" />
               </div>
             ))}
           </div>
         </section>
 
         <section aria-labelledby="freshness-title">
-          <h2 id="freshness-title" className="text-sm font-semibold">
+          <h2 id="freshness-title" className={sectionTitle}>
             Fraîcheur
           </h2>
-          <div className="mt-2 border-y border-border/60">
+          <div className={framedList}>
             {model.freshness.map(item => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between gap-4 border-b border-border/50 py-4 last:border-b-0"
-              >
-                <p className="text-sm font-medium">{item.label}</p>
-                <Freshness asOf={item.asOf} className="shrink-0" />
+              <div key={item.id} className={listRow()}>
+                <p className={itemTitle}>{item.label}</p>
+                <Freshness asOf={item.asOf} flexShrink="0" />
               </div>
             ))}
           </div>
         </section>
-      </div>
+      </styled.div>
 
-      <section aria-labelledby="valuation-health-title" className="border-y border-border/60 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <styled.section
+        aria-labelledby="valuation-health-title"
+        borderYWidth="1px"
+        borderColor="border/60"
+        py="5"
+      >
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          gap="4"
+        >
           <div>
-            <h2 id="valuation-health-title" className="text-sm font-semibold">
+            <h2 id="valuation-health-title" className={sectionTitle}>
               Valorisation des actifs
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className={itemMeta}>
               {model.valuation.resolvedItems === null || model.valuation.totalItems === null
                 ? 'Couverture indisponible'
                 : `${model.valuation.resolvedItems} actifs résolus sur ${model.valuation.totalItems}`}
             </p>
           </div>
-          <span className="font-financial text-2xl font-semibold">
+          <span className={coverageValue}>
             {model.valuation.coveragePercent === null
               ? 'Indisponible'
               : `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(model.valuation.coveragePercent)} %`}
           </span>
-        </div>
+        </styled.div>
         <Progress
           value={model.valuation.coveragePercent}
           tone={model.valuation.unresolvedItems ? 'warning' : 'positive'}
           label="Couverture de valorisation"
-          className="mt-4"
+          mt="4"
         />
         {model.valuation.statusCounts ? (
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+          <styled.div mt="4" display="flex" flexWrap="wrap" columnGap="5" rowGap="2">
             {valuationStates.map(state =>
               model.valuation.statusCounts?.[state] ? (
-                <div key={state} className="flex items-center gap-2">
+                <styled.div key={state} display="flex" alignItems="center" gap="2">
                   <ValuationState state={state} />
-                  <span className="font-financial text-xs">
-                    {model.valuation.statusCounts[state]}
-                  </span>
-                </div>
+                  <span className={coverageCount}>{model.valuation.statusCounts[state]}</span>
+                </styled.div>
               ) : null
             )}
-          </div>
+          </styled.div>
         ) : null}
-      </section>
+      </styled.section>
 
       <Drawer open={unresolvedOpen} onOpenChange={setUnresolvedOpen}>
         <DrawerContent side={isMobile ? 'bottom' : 'right'}>
@@ -255,19 +328,21 @@ function HealthPage() {
             <DrawerTitle>Actifs non résolus</DrawerTitle>
             <DrawerDescription>Actifs sans valorisation suffisamment fiable.</DrawerDescription>
           </DrawerHeader>
-          <div className="space-y-3 px-5 pb-6">
+          <styled.div px="5" pb="6" className={stackedList}>
             {unresolvedItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun actif non résolu</p>
+              <styled.p textStyle="sm" color="muted.foreground">
+                Aucun actif non résolu
+              </styled.p>
             ) : (
               unresolvedItems.map(item => <UnresolvedAsset key={item.itemKey} item={item} />)
             )}
-            <Button asChild variant="outline" className="mt-3 w-full">
+            <Button asChild variant="outline" mt="3" w="full">
               <Link to="/orchestration">Ouvrir Asset Valuation</Link>
             </Button>
-          </div>
+          </styled.div>
         </DrawerContent>
       </Drawer>
-    </div>
+    </styled.div>
   )
 }
 
@@ -277,13 +352,21 @@ function UnresolvedAsset({ item }: { item: ValuationUnresolvedItem }) {
       ? 'Saisie manuelle'
       : (item.provider ?? 'Source inconnue')
   return (
-    <article className="border-t border-border/60 pt-4 first:border-t-0 first:pt-0">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">{item.name}</h3>
+    <article className={unresolvedItem}>
+      <styled.div
+        display="flex"
+        flexWrap="wrap"
+        alignItems="center"
+        justifyContent="space-between"
+        gap="2"
+      >
+        <h3 className={itemTitle}>{item.name}</h3>
         <ValuationState state="unresolved" />
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">Source {provider}</p>
-      <p className="mt-2 text-sm">Vérifier l’identité de l’actif ou compléter sa valorisation.</p>
+      </styled.div>
+      <p className={itemMeta}>Source {provider}</p>
+      <styled.p mt="2" textStyle="sm">
+        Vérifier l’identité de l’actif ou compléter sa valorisation.
+      </styled.p>
     </article>
   )
 }

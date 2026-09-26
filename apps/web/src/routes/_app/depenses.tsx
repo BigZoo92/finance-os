@@ -1,3 +1,5 @@
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   CurrencyAmount,
@@ -17,9 +19,9 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
-import { TransactionsTable } from '@/components/data/transactions-table'
 import { ExpenseStructureCard } from '@/components/dashboard/expense-structure-card'
 import { MonthlyCategoryBudgetsCard } from '@/components/dashboard/monthly-category-budgets-card'
+import { TransactionsTable } from '@/components/data/transactions-table'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
@@ -68,6 +70,42 @@ const RANGE_OPTIONS: Array<{ label: string; value: DashboardRange }> = [
   { label: '30 j', value: '30d' },
   { label: '90 j', value: '90d' },
 ]
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const periodAmount = cva({
+  base: { mt: '2', display: 'block', textStyle: 'xl', fontWeight: 'medium' },
+  variants: {
+    tone: {
+      positive: { color: 'positive' },
+      negative: { color: 'negative' },
+    },
+  },
+})
+
+const emptyFrame = css({
+  borderWidth: '1px',
+  borderStyle: 'dashed',
+  borderColor: 'border',
+  p: '6',
+})
+
+const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
+
+const loadingStatus = css({ borderYWidth: '1px', borderColor: 'border', py: '8' })
+
+// Tailwind's `space-y-2` put the margin on every child but the last: the inline
+// <label> ignores it, so Panda's `spaceY` (a margin on the following control)
+// would add 8px that the screen never had.
+const fieldGroup = css({ '& > :not(:last-child)': { marginBlockEnd: '2' } })
+
+const fieldLabel = css({ textStyle: 'sm', fontWeight: 'medium' })
 
 function DepensesPage() {
   const { range: searchRange } = Route.useSearch()
@@ -136,11 +174,11 @@ function DepensesPage() {
   })
 
   return (
-    <div className="space-y-9 md:space-y-11">
+    <styled.div spaceY="9" md={{ spaceY: '11' }}>
       <PageHeader
         title="Dépenses"
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2">
             <Button
               type="button"
               variant="outline"
@@ -157,11 +195,18 @@ function DepensesPage() {
               onChange={next => navigate({ search: { range: next } })}
               aria-label="Période"
             />
-          </div>
+          </styled.div>
         }
       />
 
-      <section className="grid gap-6 border-y border-border py-6 sm:grid-cols-3">
+      <styled.section
+        display="grid"
+        gap="6"
+        borderYWidth="1px"
+        borderColor="border"
+        py="6"
+        sm={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+      >
         <PeriodValue
           label="Dépenses"
           value={period.expenses}
@@ -180,50 +225,56 @@ function DepensesPage() {
           currency={period.currency}
           tone={period.net !== null && period.net < 0 ? 'negative' : 'positive'}
         />
-      </section>
+      </styled.section>
       {period.currency === null && summaryQuery.data ? (
         <Status tone="attention" label="Totaux indisponibles pour plusieurs devises" />
       ) : summaryQuery.isError && !summaryQuery.data ? (
         <Status tone="negative" label="Totaux indisponibles" />
       ) : null}
 
-      <section className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:gap-14">
+      <styled.section
+        display="grid"
+        gap="10"
+        lg={{ gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, 0.9fr)', gap: '14' }}
+      >
         <ExpenseStructureCard model={period} />
         <MonthlyCategoryBudgetsCard isAdmin={isAdmin} isDemo={isDemo} />
-      </section>
+      </styled.section>
 
       <section aria-labelledby="transactions-title">
-        <div className="flex flex-wrap items-end justify-between gap-4 pb-4">
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="flex-end"
+          justifyContent="space-between"
+          gap="4"
+          pb="4"
+        >
           <div>
-            <h2
-              id="transactions-title"
-              className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-            >
+            <h2 id="transactions-title" className={eyebrow}>
               Transactions
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <styled.p mt="2" textStyle="sm" color="muted.foreground">
               {transactions.length} chargée{transactions.length > 1 ? 's' : ''}
               {transactionsQuery.hasNextPage ? ', liste partielle' : ''}
-            </p>
+            </styled.p>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
+          <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="4">
             {uncategorizedCount > 0 ? (
               <Status tone="attention" label={`${uncategorizedCount} à classer`} />
             ) : null}
             <Freshness asOf={firstPage?.freshness.lastSyncedAt} />
-          </div>
-        </div>
+          </styled.div>
+        </styled.div>
 
         {transactionsQuery.isPending ? (
-          <Status tone="progress" label="Chargement" className="border-y border-border py-8" />
+          <Status tone="progress" label="Chargement" className={loadingStatus} />
         ) : transactionsQuery.isError && transactions.length === 0 ? (
-          <div className="border border-dashed border-border p-6">
+          <div className={emptyFrame}>
             <Status tone="negative" label="Transactions indisponibles" />
           </div>
         ) : transactions.length === 0 ? (
-          <div className="border border-dashed border-border p-6 text-sm text-muted-foreground">
-            Aucune transaction pour cette période
-          </div>
+          <div className={cx(emptyFrame, mutedText)}>Aucune transaction pour cette période</div>
         ) : (
           <TransactionsTable
             transactions={transactions}
@@ -234,7 +285,7 @@ function DepensesPage() {
         )}
 
         {transactionsQuery.hasNextPage ? (
-          <div className="flex justify-center pt-5">
+          <styled.div display="flex" justifyContent="center" pt="5">
             <Button
               type="button"
               variant="outline"
@@ -243,7 +294,7 @@ function DepensesPage() {
             >
               {transactionsQuery.isFetchingNextPage ? 'Chargement' : 'Afficher plus'}
             </Button>
-          </div>
+          </styled.div>
         ) : null}
       </section>
 
@@ -255,7 +306,7 @@ function DepensesPage() {
           onSave={draft => classifyMutation.mutate({ transaction: editingTransaction, draft })}
         />
       ) : null}
-    </div>
+    </styled.div>
   )
 }
 
@@ -272,14 +323,8 @@ function PeriodValue({
 }) {
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </p>
-      <CurrencyAmount
-        value={value}
-        currency={currency}
-        className={`mt-2 block text-xl font-medium ${tone === 'negative' ? 'text-negative' : 'text-positive'}`}
-      />
+      <p className={eyebrow}>{label}</p>
+      <CurrencyAmount value={value} currency={currency} className={periodAmount({ tone })} />
     </div>
   )
 }
@@ -302,20 +347,32 @@ function TransactionCategoryEditor({
   })
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-w-md max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:rounded-t-frame">
+      <DialogContent
+        maxW="md"
+        smDown={{
+          bottom: '0',
+          left: '0',
+          top: 'auto',
+          w: 'full',
+          maxW: 'none',
+          translate: '0 0',
+          roundedBottom: '0',
+          roundedTop: 'frame',
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Modifier la catégorie</DialogTitle>
           <DialogDescription>{transaction.label}</DialogDescription>
         </DialogHeader>
-        <form
+        <styled.form
           onSubmit={event => {
             event.preventDefault()
             onSave(draft)
           }}
-          className="space-y-4"
+          spaceY="4"
         >
-          <div className="space-y-2">
-            <label htmlFor="transaction-category" className="text-sm font-medium">
+          <div className={fieldGroup}>
+            <label htmlFor="transaction-category" className={fieldLabel}>
               Catégorie
             </label>
             <Input
@@ -327,8 +384,8 @@ function TransactionCategoryEditor({
               autoFocus
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="transaction-subcategory" className="text-sm font-medium">
+          <div className={fieldGroup}>
+            <label htmlFor="transaction-subcategory" className={fieldLabel}>
               Sous-catégorie
             </label>
             <Input
@@ -339,8 +396,8 @@ function TransactionCategoryEditor({
               }
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="transaction-tags" className="text-sm font-medium">
+          <div className={fieldGroup}>
+            <label htmlFor="transaction-tags" className={fieldLabel}>
               Tags
             </label>
             <Input
@@ -358,7 +415,7 @@ function TransactionCategoryEditor({
               {pending ? 'Enregistrement' : 'Enregistrer'}
             </Button>
           </DialogFooter>
-        </form>
+        </styled.form>
       </DialogContent>
     </Dialog>
   )

@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Drawer,
@@ -9,7 +11,7 @@ import {
 } from '@finance-os/ui/components'
 import { RefreshPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SocialOperations } from '@/components/orchestration/social-operations'
 import { PageHeader } from '@/components/surfaces/page-header'
@@ -72,6 +74,74 @@ const formatRunTime = (value: string | null) => {
     minute: '2-digit',
   })
 }
+
+const demoNotice = css({
+  borderYWidth: '1px',
+  borderColor: 'border/60',
+  py: '3',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const feedbackBar = css({ borderYWidth: '1px', borderColor: 'border/60', py: '3' })
+
+const groupTitle = css({
+  mb: '2',
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  color: 'muted.foreground',
+})
+
+const jobRow = cva({
+  base: {
+    display: 'grid',
+    alignItems: 'center',
+    gap: '3',
+    borderBottomWidth: '1px',
+    borderColor: 'border/50',
+    py: '4',
+    _last: { borderBottomWidth: '0' },
+    sm: { gridTemplateColumns: 'minmax(0, 1fr) auto auto' },
+  },
+  variants: {
+    active: {
+      true: { bg: 'primary/4' },
+      false: {},
+    },
+  },
+})
+
+const jobTrigger = css({
+  minW: '0',
+  textAlign: 'left',
+  outlineStyle: 'none',
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const jobStatus = css({ sm: { justifySelf: 'flex-end' } })
+
+const durationValue = css({ mt: '2', textStyle: 'financial', fontSize: 'sm', lineHeight: 'sm' })
+
+const historyRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+  borderBottomWidth: '1px',
+  borderColor: 'border/50',
+  py: '3',
+  _last: { borderBottomWidth: '0' },
+})
 
 function OrchestrationPage() {
   const queryClient = useQueryClient()
@@ -157,7 +227,7 @@ function OrchestrationPage() {
   const selectedJob = jobs.find(job => job.id === selectedJobId) ?? null
 
   return (
-    <div className="space-y-7">
+    <styled.div spaceY="7">
       <PageHeader
         eyebrow="Ops"
         icon={<RefreshPixelIcon size={12} />}
@@ -165,7 +235,7 @@ function OrchestrationPage() {
         description="Lancez les jobs manuels et consultez leur dernier résultat."
         actions={
           isAdmin ? (
-            <div className="flex flex-wrap gap-2">
+            <styled.div display="flex" flexWrap="wrap" gap="2">
               {operationActive && latestOperationId ? (
                 <Button
                   type="button"
@@ -196,18 +266,18 @@ function OrchestrationPage() {
               >
                 {fullMutation.isPending ? 'En cours' : 'Tout lancer'}
               </Button>
-            </div>
+            </styled.div>
           ) : null
         }
       />
 
       {authViewState === 'demo' ? (
-        <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
+        <div className={demoNotice}>
           Lecture seule avec registre de démonstration. Aucun job réel ne peut être lancé.
         </div>
       ) : null}
       {feedback ? (
-        <div className="border-y border-border/60 py-3" aria-live="polite">
+        <div className={feedbackBar} aria-live="polite">
           <Status tone="neutral" label={feedback} />
         </div>
       ) : null}
@@ -217,13 +287,10 @@ function OrchestrationPage() {
         if (groupedJobs.length === 0) return null
         return (
           <section key={group} aria-labelledby={`orchestration-${group}`}>
-            <h2
-              id={`orchestration-${group}`}
-              className="mb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
-            >
+            <h2 id={`orchestration-${group}`} className={groupTitle}>
               {group}
             </h2>
-            <div className="border-y border-border/60">
+            <styled.div borderYWidth="1px" borderColor="border/60">
               {groupedJobs.map(job => {
                 const rowPending =
                   jobMutation.isPending &&
@@ -231,18 +298,26 @@ function OrchestrationPage() {
                 const state = rowPending ? 'active' : job.state
                 const label = rowPending ? 'En cours' : job.stateLabel
                 return (
-                  <div
-                    key={job.id}
-                    className={`grid items-center gap-3 border-b border-border/50 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] ${state === 'active' ? 'bg-primary/[0.04]' : ''}`}
-                  >
+                  <div key={job.id} className={jobRow({ active: state === 'active' })}>
                     <button
                       type="button"
-                      className="min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                      className={jobTrigger}
                       onClick={() => setSelectedJobId(job.id)}
                       aria-haspopup="dialog"
                     >
-                      <span className="text-sm font-medium">{job.label}</span>
-                      <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <styled.span textStyle="sm" fontWeight="medium">
+                        {job.label}
+                      </styled.span>
+                      <styled.span
+                        mt="1"
+                        display="flex"
+                        flexWrap="wrap"
+                        alignItems="center"
+                        columnGap="3"
+                        rowGap="1"
+                        textStyle="xs"
+                        color="muted.foreground"
+                      >
                         {job.lastRunAt || job.durationMs !== null ? (
                           <>
                             <span>{formatRunTime(job.lastRunAt)}</span>
@@ -251,25 +326,21 @@ function OrchestrationPage() {
                         ) : (
                           <span>Jamais exécuté</span>
                         )}
-                      </span>
+                      </styled.span>
                     </button>
-                    <Status
-                      tone={statusTone(state)}
-                      label={label}
-                      className="sm:justify-self-end"
-                    />
-                    <div className="sm:min-w-24 sm:justify-self-end">
+                    <Status tone={statusTone(state)} label={label} className={jobStatus} />
+                    <styled.div sm={{ minW: '24', justifySelf: 'flex-end' }}>
                       <JobAction
                         job={job}
                         disabled={rowPending || busy}
                         onRun={jobId => jobMutation.mutate(jobId)}
                         onDetails={() => setSelectedJobId(job.id)}
                       />
-                    </div>
+                    </styled.div>
                   </div>
                 )
               })}
-            </div>
+            </styled.div>
           </section>
         )
       })}
@@ -279,42 +350,52 @@ function OrchestrationPage() {
           {selectedJob ? (
             <>
               <DrawerHeader>
-                <div className="flex items-center justify-between gap-3">
+                <styled.div
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap="3"
+                >
                   <DrawerTitle>{selectedJob.label}</DrawerTitle>
                   <Status tone={statusTone(selectedJob.state)} label={selectedJob.stateLabel} />
-                </div>
+                </styled.div>
                 <DrawerDescription>{selectedJob.detail}</DrawerDescription>
               </DrawerHeader>
-              <div className="space-y-6 px-5 pb-6">
-                <div className="grid grid-cols-2 gap-4 border-y border-border/60 py-4">
+              <styled.div spaceY="6" px="5" pb="6">
+                <styled.div
+                  display="grid"
+                  gridTemplateColumns="repeat(2, minmax(0, 1fr))"
+                  gap="4"
+                  borderYWidth="1px"
+                  borderColor="border/60"
+                  py="4"
+                >
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                      Dernière exécution
-                    </p>
-                    <p className="mt-2 text-sm">{formatRunTime(selectedJob.lastRunAt)}</p>
+                    <p className={eyebrow}>Dernière exécution</p>
+                    <styled.p mt="2" textStyle="sm">
+                      {formatRunTime(selectedJob.lastRunAt)}
+                    </styled.p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                      Durée
-                    </p>
-                    <p className="mt-2 font-financial text-sm">
-                      {formatOpsDuration(selectedJob.durationMs)}
-                    </p>
+                    <p className={eyebrow}>Durée</p>
+                    <p className={durationValue}>{formatOpsDuration(selectedJob.durationMs)}</p>
                   </div>
-                </div>
+                </styled.div>
 
                 {selectedJob.id === 'social' && isAdmin ? <SocialOperations /> : null}
                 {selectedJob.id === 'asset-valuation' && isAdmin ? (
-                  <section className="border-t border-border/60 pt-4">
-                    <h3 className="text-sm font-semibold">Test de valorisation</h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                  <styled.section borderTopWidth="1px" borderColor="border/60" pt="4">
+                    <styled.h3 textStyle="sm" fontWeight="semibold">
+                      Test de valorisation
+                    </styled.h3>
+                    <styled.p mt="1" textStyle="xs" color="muted.foreground">
                       Calcule la couverture sans enregistrer d’instantané.
-                    </p>
+                    </styled.p>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="mt-3"
+                      mt="3"
                       disabled={valuationDryRunMutation.isPending || busy}
                       onClick={() => valuationDryRunMutation.mutate()}
                     >
@@ -322,7 +403,7 @@ function OrchestrationPage() {
                         ? 'Test en cours'
                         : 'Tester sans enregistrer'}
                     </Button>
-                  </section>
+                  </styled.section>
                 ) : null}
                 {selectedJob.id === 'asset-valuation' ? (
                   <Button asChild variant="ghost" size="sm">
@@ -336,42 +417,46 @@ function OrchestrationPage() {
                 ) : null}
 
                 <section aria-labelledby="job-history-title">
-                  <h3
-                    id="job-history-title"
-                    className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
-                  >
+                  <h3 id="job-history-title" className={eyebrow}>
                     Résultats récents
                   </h3>
                   {selectedJob.history.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted-foreground">Aucun résultat connu</p>
+                    <styled.p mt="3" textStyle="sm" color="muted.foreground">
+                      Aucun résultat connu
+                    </styled.p>
                   ) : (
-                    <div className="mt-2 border-y border-border/60">
+                    <styled.div mt="2" borderYWidth="1px" borderColor="border/60">
                       {selectedJob.history.slice(0, 4).map(run => {
                         const described = describeOrchestrationStatus(run.status, true)
                         return (
                           <div
                             key={`${run.jobId}-${run.finishedAt}-${run.durationMs}`}
-                            className="flex items-center justify-between gap-3 border-b border-border/50 py-3 last:border-b-0"
+                            className={historyRow}
                           >
                             <div>
-                              <p className="text-xs">{formatRunTime(run.finishedAt)}</p>
-                              <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                              <styled.p textStyle="xs">{formatRunTime(run.finishedAt)}</styled.p>
+                              <styled.p
+                                mt="1"
+                                fontFamily="mono"
+                                fontSize="10px"
+                                color="muted.foreground"
+                              >
                                 {formatOpsDuration(run.durationMs)}
-                              </p>
+                              </styled.p>
                             </div>
                             <Status tone={statusTone(described.state)} label={described.label} />
                           </div>
                         )
                       })}
-                    </div>
+                    </styled.div>
                   )}
                 </section>
-              </div>
+              </styled.div>
             </>
           ) : null}
         </DrawerContent>
       </Drawer>
-    </div>
+    </styled.div>
   )
 }
 
