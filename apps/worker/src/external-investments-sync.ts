@@ -275,8 +275,11 @@ export const createExternalInvestmentsSyncWorker = ({
     connection,
     payload,
     requestId,
+    signal,
   }: {
     connection: ExternalInvestmentConnectionRecord
+    /** The connection lease: expiring it cancels in-flight provider requests. */
+    signal?: AbortSignal
     payload: Extract<ExternalInvestmentCredentialPayload, { provider: 'ibkr' }>
     requestId?: string
   }) => {
@@ -286,6 +289,7 @@ export const createExternalInvestmentsSyncWorker = ({
       baseUrl: payload.baseUrl ?? env.IBKR_FLEX_BASE_URL,
       userAgent: payload.userAgent ?? env.IBKR_FLEX_USER_AGENT,
       timeoutMs: env.IBKR_FLEX_TIMEOUT_MS,
+      ...(signal ? { signal } : {}),
     })
     let rowCounts: Record<string, number> = {}
     const degradedReasons: string[] = []
@@ -466,8 +470,11 @@ export const createExternalInvestmentsSyncWorker = ({
     connection,
     payload,
     requestId,
+    signal,
   }: {
     connection: ExternalInvestmentConnectionRecord
+    /** The connection lease: expiring it cancels in-flight provider requests. */
+    signal?: AbortSignal
     payload: Extract<ExternalInvestmentCredentialPayload, { provider: 'binance' }>
     requestId?: string
   }) => {
@@ -478,6 +485,7 @@ export const createExternalInvestmentsSyncWorker = ({
       baseUrl: payload.baseUrl ?? env.BINANCE_SPOT_BASE_URL,
       recvWindowMs: env.BINANCE_SPOT_RECV_WINDOW_MS,
       timeoutMs: env.BINANCE_SPOT_TIMEOUT_MS,
+      ...(signal ? { signal } : {}),
     })
     const degradedReasons: string[] = []
     const accountInfo = await client.getAccountInfo()
@@ -673,11 +681,13 @@ export const createExternalInvestmentsSyncWorker = ({
           ? await syncIbkrConnection({
               connection,
               payload: record.payload,
+              signal: lock.signal,
               ...(requestId ? { requestId } : {}),
             })
           : await syncBinanceConnection({
               connection,
               payload: record.payload,
+              signal: lock.signal,
               ...(requestId ? { requestId } : {}),
             })
 

@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@finance-os/db": "workspace:*",
+    "@finance-os/provider-runtime": "workspace:*",
     "drizzle-orm": "catalog:",
-    "effect": "^3.21.2",
     "fast-xml-parser": "^5.5.11"
   }
 }

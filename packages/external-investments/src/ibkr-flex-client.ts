@@ -1,6 +1,11 @@
-import type { ExternalInvestmentFetch } from './types'
+import {
+  ProviderOperationError,
+  type ProviderRetryPolicy,
+  runProviderOperationOrThrow,
+} from '@finance-os/provider-runtime/policy'
 import { XMLParser } from 'fast-xml-parser'
 import { ExternalInvestmentProviderError } from './errors'
+import type { ExternalInvestmentFetch } from './types'
 
 const DEFAULT_IBKR_FLEX_BASE_URL = 'https://ndcdyn.interactivebrokers.com'
 const CURRENT_IBKR_FLEX_PATH = '/AccountManagement/FlexWebService'
@@ -105,6 +110,10 @@ export type IbkrFlexClientConfig = {
   statementMaxAttempts?: number
   statementRetryDelayMs?: number
   fetchImpl?: ExternalInvestmentFetch
+  /** Transport retry policy for each Flex request (the GetStatement readiness loop is separate). */
+  retry?: ProviderRetryPolicy
+  /** Caller cancellation, e.g. the sync lease; aborts the in-flight request and stops retries. */
+  signal?: AbortSignal
 }
 
 type IbkrFlexEndpoint = 'SendRequest' | 'GetStatement'
@@ -143,6 +152,29 @@ const buildIbkrUrl = ({
   return parsedBaseUrl
 }
 
+const toIbkrProviderError = (error: unknown) => {
+  if (error instanceof ExternalInvestmentProviderError) {
+    return error
+  }
+  if (error instanceof ProviderOperationError) {
+    return new ExternalInvestmentProviderError({
+      provider: 'ibkr',
+      code: 'PROVIDER_TIMEOUT',
+      message:
+        error.kind === 'cancelled'
+          ? 'IBKR Flex request was cancelled before completion.'
+          : 'IBKR Flex request timed out.',
+      retryable: error.kind !== 'cancelled',
+    })
+  }
+  return new ExternalInvestmentProviderError({
+    provider: 'ibkr',
+    code: 'PROVIDER_SCHEMA_CHANGED',
+    message: error instanceof Error ? error.message : String(error),
+    retryable: true,
+  })
+}
+
 export const createIbkrFlexClient = ({
   token,
   baseUrl = DEFAULT_IBKR_FLEX_BASE_URL,
@@ -151,6 +183,8 @@ export const createIbkrFlexClient = ({
   statementMaxAttempts = DEFAULT_GET_STATEMENT_MAX_ATTEMPTS,
   statementRetryDelayMs = DEFAULT_GET_STATEMENT_RETRY_DELAY_MS,
   fetchImpl = fetch,
+  retry,
+  signal,
 }: IbkrFlexClientConfig) => {
   if (!userAgent.trim()) {
     throw new ExternalInvestmentProviderError({
@@ -160,45 +194,41 @@ export const createIbkrFlexClient = ({
     })
   }
 
-  const fetchXml = async (url: URL) => {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    try {
-      const response = await fetchImpl(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/xml,text/xml',
-          'User-Agent': userAgent,
-        },
-        signal: controller.signal,
-      })
-      if (!response.ok) {
-        throw new ExternalInvestmentProviderError({
-          provider: 'ibkr',
-          code:
-            response.status === 401 || response.status === 403
-              ? 'PROVIDER_CREDENTIALS_INVALID'
-              : 'PROVIDER_SCHEMA_CHANGED',
-          message: `IBKR Flex endpoint failed with HTTP ${response.status}.`,
-          retryable: response.status === 429 || response.status >= 500,
-          statusCode: response.status,
+  const fetchXml = async (url: URL) =>
+    runProviderOperationOrThrow({
+      provider: 'ibkr',
+      operation: 'flex.fetch',
+      policy: { timeoutMs, ...(retry ? { retry } : {}) },
+      ...(signal ? { signal } : {}),
+      classify: error => ({
+        retryable: error instanceof ExternalInvestmentProviderError ? error.retryable : true,
+      }),
+      run: async attemptSignal => {
+        const response = await fetchImpl(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/xml,text/xml',
+            'User-Agent': userAgent,
+          },
+          signal: attemptSignal,
         })
-      }
-      return response.text()
-    } catch (error) {
-      if (error instanceof ExternalInvestmentProviderError) {
-        throw error
-      }
-      throw new ExternalInvestmentProviderError({
-        provider: 'ibkr',
-        code: error instanceof Error && error.name === 'AbortError' ? 'PROVIDER_TIMEOUT' : 'PROVIDER_SCHEMA_CHANGED',
-        message: error instanceof Error ? error.message : String(error),
-        retryable: true,
-      })
-    } finally {
-      clearTimeout(timeout)
-    }
-  }
+        if (!response.ok) {
+          throw new ExternalInvestmentProviderError({
+            provider: 'ibkr',
+            code:
+              response.status === 401 || response.status === 403
+                ? 'PROVIDER_CREDENTIALS_INVALID'
+                : 'PROVIDER_SCHEMA_CHANGED',
+            message: `IBKR Flex endpoint failed with HTTP ${response.status}.`,
+            retryable: response.status === 429 || response.status >= 500,
+            statusCode: response.status,
+          })
+        }
+        return response.text()
+      },
+    }).catch((error: unknown) => {
+      throw toIbkrProviderError(error)
+    })
 
   const requestReport = async (queryId: string) => {
     const xml = await fetchXml(

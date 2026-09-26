@@ -21,6 +21,9 @@ catalogs:
     drizzle-orm:
       specifier: 0.45.3
       version: 0.45.3
+    effect:
+      specifier: ^3.22.2
+      version: 3.22.2
     react:
       specifier: 19.2.8
       version: 19.2.8
@@ -354,19 +357,23 @@ importers:
       '@finance-os/db':
         specifier: workspace:*
         version: link:../db
+      '@finance-os/provider-runtime':
+        specifier: workspace:*
+        version: link:../provider-runtime
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.3(@types/pg@8.16.0)(bun-types@1.4.2)(pg@8.18.0)(postgres@3.4.8)
-      effect:
-        specifier: ^3.21.2
-        version: 3.21.2
       fast-xml-parser:
         specifier: ^5.5.11
         version: 5.5.11
 
   packages/finance-engine: {}
 
-  packages/powens: {}
+  packages/powens:
+    dependencies:
+      '@finance-os/provider-runtime':
+        specifier: workspace:*
+        version: link:../provider-runtime
 
   packages/prelude: {}
 
@@ -377,6 +384,9 @@ importers:
       '@finance-os/provider-contract':
         specifier: workspace:*
         version: link:../provider-contract
+      effect:
+        specifier: 'catalog:'
+        version: 3.22.2
 
   packages/redis:
     dependencies:
@@ -4538,8 +4548,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@3.21.2:
-    resolution: {integrity: sha512-rXd2FGDM8KdjSIrc+mqEELo7ScW7xTVxEf1iInmPSpIde9/nyGuFM710cjTo7/EreGXiUX2MOonPpprbz2XHCg==}
+  effect@3.22.2:
+    resolution: {integrity: sha512-fm1CQXCs7GTMwpadZxwU5rnAb2bN6mbQpknq/pXBGCzSKkosNYb9k0wsoL0TfB10rSa5xOEZJjo77u/KLXSANg==}
 
   electron-to-chromium@1.5.302:
     resolution: {integrity: sha512-sM6HAN2LyK82IyPBpznDRqlTQAtuSaO+ShzFiWTvoMJLHyZ+Y39r8VMfHzwbU8MVBzQ4Wdn85+wlZl2TLGIlwg==}
@@ -10850,7 +10860,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@3.21.2:
+  effect@3.22.2:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2

@@ -1,3 +1,8 @@
+import {
+  ProviderOperationError,
+  runProviderOperationOrThrow,
+} from '@finance-os/provider-runtime/policy'
+
 type PrimitiveQueryValue = string | number | boolean
 
 interface PowensRequestOptions {
@@ -15,6 +20,8 @@ export interface PowensClientConfig {
   userAgent: string
   timeoutMs?: number
   maxRetries?: number
+  /** Caller cancellation (request abort, job lease); stops retries and the in-flight request. */
+  signal?: AbortSignal
 }
 
 export interface PowensTokenResponse {
@@ -62,6 +69,8 @@ interface PowensAccountResponse {
 
 const DEFAULT_TIMEOUT_MS = 30_000
 const DEFAULT_MAX_RETRIES = 2
+const RETRY_BASE_DELAY_MS = 250
+const RETRY_MAX_DELAY_MS = 2_000
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504])
 
 const toUrl = (
@@ -99,8 +108,21 @@ const isRetryableError = (error: unknown) => {
   return error instanceof Error
 }
 
-const sleep = async (durationMs: number) => {
-  await new Promise(resolve => setTimeout(resolve, durationMs))
+const toPowensApiError = (error: unknown, timeoutMs: number) => {
+  if (error instanceof PowensApiError) {
+    return error
+  }
+  if (error instanceof ProviderOperationError) {
+    return new PowensApiError(
+      error.kind === 'cancelled'
+        ? 'Powens request cancelled'
+        : `Powens request timed out after ${timeoutMs}ms`,
+      null,
+      null
+    )
+  }
+  const message = error instanceof Error ? error.message : 'Unknown Powens network error'
+  return new PowensApiError(message, null, null)
 }
 
 const readResponseBody = async (response: Response) => {
@@ -160,7 +182,7 @@ export const createPowensClient = (config: PowensClientConfig) => {
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES
 
-  const requestJson = async <TResponse>({
+  const requestJson = <TResponse>({
     method = 'GET',
     pathOrUrl,
     accessToken,
@@ -168,12 +190,22 @@ export const createPowensClient = (config: PowensClientConfig) => {
     body,
   }: PowensRequestOptions): Promise<TResponse> => {
     const url = toUrl(config.baseUrl, pathOrUrl, query)
+    const operation = `${method} ${url.pathname}`
 
-    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), timeoutMs)
-
-      try {
+    return runProviderOperationOrThrow({
+      provider: 'powens',
+      operation,
+      policy: {
+        timeoutMs,
+        retry: {
+          maxAttempts: maxRetries + 1,
+          baseDelayMs: RETRY_BASE_DELAY_MS,
+          maxDelayMs: RETRY_MAX_DELAY_MS,
+        },
+      },
+      ...(config.signal ? { signal: config.signal } : {}),
+      classify: error => ({ retryable: isRetryableError(error) }),
+      run: async signal => {
         const requestInit: RequestInit = {
           method,
           headers: {
@@ -182,54 +214,25 @@ export const createPowensClient = (config: PowensClientConfig) => {
             'User-Agent': config.userAgent,
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
-          signal: controller.signal,
+          signal,
         }
-
         if (body !== undefined) {
           requestInit.body = JSON.stringify(body)
         }
 
         const response = await fetch(url, requestInit)
-
         if (!response.ok) {
-          const parsedBody = await readResponseBody(response)
-          const error = new PowensApiError(
+          throw new PowensApiError(
             `Powens request failed with status ${response.status}`,
             response.status,
-            parsedBody
+            await readResponseBody(response)
           )
-
-          if (attempt < maxRetries && RETRYABLE_STATUS.has(response.status)) {
-            await sleep(250 * (attempt + 1))
-            continue
-          }
-
-          throw error
         }
-
         return (await response.json()) as TResponse
-      } catch (error) {
-        if (attempt < maxRetries && isRetryableError(error)) {
-          await sleep(250 * (attempt + 1))
-          continue
-        }
-
-        if (error instanceof PowensApiError) {
-          throw error
-        }
-
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw new PowensApiError(`Powens request timed out after ${timeoutMs}ms`, null, null)
-        }
-
-        const message = error instanceof Error ? error.message : 'Unknown Powens network error'
-        throw new PowensApiError(message, null, null)
-      } finally {
-        clearTimeout(timeout)
-      }
-    }
-
-    throw new PowensApiError('Powens retry budget exhausted', null, null)
+      },
+    }).catch((error: unknown) => {
+      throw toPowensApiError(error, timeoutMs)
+    })
   }
 
   const exchangeCodeForToken = async (code: string) => {
@@ -246,7 +249,11 @@ export const createPowensClient = (config: PowensClientConfig) => {
     })
 
     if (!response.access_token || response.access_token.length === 0) {
-      throw new PowensApiError('Powens token exchange returned an empty access token', null, response)
+      throw new PowensApiError(
+        'Powens token exchange returned an empty access token',
+        null,
+        response
+      )
     }
 
     return response
@@ -281,8 +288,7 @@ export const createPowensClient = (config: PowensClientConfig) => {
       const request: PowensRequestOptions = {
         // Powens route alias for account transactions.
         pathOrUrl:
-          nextPageUrl ??
-          `/users/me/accounts/${encodeURIComponent(params.accountId)}/transactions`,
+          nextPageUrl ?? `/users/me/accounts/${encodeURIComponent(params.accountId)}/transactions`,
         accessToken: params.accessToken,
       }
 

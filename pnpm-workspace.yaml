@@ -5,6 +5,7 @@ packages:
 # Shared versions (pnpm catalog): one owner for dependencies used by several
 # workspace packages. Reference them as "catalog:" in package.json.
 catalog:
+  effect: ^3.22.2
   bun-types: "1.4.2"
   "@types/node": "24.13.6"
   drizzle-orm: "0.45.3"

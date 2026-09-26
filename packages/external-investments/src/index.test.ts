@@ -42,10 +42,6 @@ const ISOMORPHIC_EXPORTS: readonly string[] = [
   'serializeExternalInvestmentsJob',
   // market-quoted-valuation
   'enrichMarketQuotedValuations',
-  // provider-operation
-  'ExternalInvestmentProviderOperationError',
-  'redactExternalProviderErrorMessage',
-  'runExternalInvestmentProviderOperation',
   // types
   'isExternalInvestmentProvider',
 ]

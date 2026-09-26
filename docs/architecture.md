@@ -39,7 +39,7 @@ Only `apps/web` receives public traffic. The API, worker, knowledge service, qua
 - `db`: Drizzle schema and PostgreSQL client.
 - `env`: authoritative runtime schemas and diagnostics.
 - `powens` and `external-investments`: provider clients, jobs, and normalization boundaries.
-- `provider-contract` and `provider-runtime`: provider capability, health, redaction, and execution wrappers.
+- `provider-contract` and `provider-runtime`: provider capability, health, redaction, and the Effect 3 operation policy (`provider-runtime/policy`: bounded timeout, transient-only exponential retry, cancellation through the caller's AbortSignal) that every external client goes through.
 - `redis`: real and deterministic in-memory Redis contracts.
 - `prelude`: shared errors/logging-safe primitives.
 - `api-contract`: transport-only Zod schemas and inferred DTO types for the financial API responses shared by `api` and `web` (`null` means unknown, never 0).
