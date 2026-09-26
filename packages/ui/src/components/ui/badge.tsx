@@ -1,59 +1,94 @@
-import type * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { Slot } from "radix-ui"
+import { cva, type RecipeVariantProps } from '@finance-os/styled-system/css'
+import { type HTMLStyledProps, styled } from '@finance-os/styled-system/jsx'
+import { Slot } from 'radix-ui'
 
-import { cn } from "@finance-os/ui/lib/utils"
-
-const badgeVariants = cva(
-  [
-    "inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium w-fit whitespace-nowrap shrink-0",
-    "tracking-wide [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none",
-    "focus-visible:ring-2 focus-visible:ring-ring/50 transition-colors duration-150 overflow-hidden",
-  ].join(" "),
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-primary/12 text-primary border-primary/25 [a&]:hover:bg-primary/20",
-        secondary:
-          "bg-secondary text-secondary-foreground border-border/50 [a&]:hover:bg-secondary/80",
-        destructive:
-          "bg-destructive/12 text-destructive border-destructive/25 [a&]:hover:bg-destructive/20",
-        outline:
-          "border-border text-muted-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        ghost:
-          "border-transparent text-muted-foreground [a&]:hover:bg-accent [a&]:hover:text-foreground",
-        link: "border-transparent text-primary underline-offset-4 [a&]:hover:underline",
-        positive:
-          "bg-positive/12 text-positive border-positive/25",
-        warning:
-          "bg-warning/14 text-warning border-warning/28",
-        ai: "bg-ai/12 text-ai border-ai/25",
+const badgeRecipe = cva({
+  base: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1',
+    w: 'fit',
+    flexShrink: '0',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    rounded: 'full',
+    borderWidth: '1px',
+    borderColor: 'border',
+    px: '2.5',
+    py: '0.5',
+    fontSize: '11px',
+    fontWeight: 'medium',
+    letterSpacing: 'wide',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    outline: 'none',
+    '& > svg': { boxSize: '3', pointerEvents: 'none' },
+    _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 50%, transparent)' },
+  },
+  variants: {
+    variant: {
+      default: {
+        bg: 'primary/12',
+        color: 'primary',
+        borderColor: 'primary/25',
+        '&:is(a):hover': { bg: 'primary/20' },
       },
-    },
-    defaultVariants: {
-      variant: "default",
+      secondary: {
+        bg: 'secondary',
+        color: 'secondary.foreground',
+        borderColor: 'border/50',
+        '&:is(a):hover': { bg: 'secondary/80' },
+      },
+      destructive: {
+        bg: 'destructive/12',
+        color: 'destructive',
+        borderColor: 'destructive/25',
+        '&:is(a):hover': { bg: 'destructive/20' },
+      },
+      outline: {
+        borderColor: 'border',
+        color: 'muted.foreground',
+        '&:is(a):hover': { bg: 'accent', color: 'accent.foreground' },
+      },
+      ghost: {
+        borderColor: 'transparent',
+        color: 'muted.foreground',
+        '&:is(a):hover': { bg: 'accent', color: 'foreground' },
+      },
+      link: {
+        borderColor: 'transparent',
+        color: 'primary',
+        textUnderlineOffset: '4px',
+        '&:is(a):hover': { textDecoration: 'underline' },
+      },
+      positive: { bg: 'positive/12', color: 'positive', borderColor: 'positive/25' },
+      warning: { bg: 'warning/14', color: 'warning', borderColor: 'warning/28' },
+      ai: { bg: 'ai/12', color: 'ai', borderColor: 'ai/25' },
     },
   },
-)
+  defaultVariants: {
+    variant: 'default',
+  },
+})
 
-function Badge({
-  className,
-  variant = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot.Root : "span"
+type BadgeVariant = NonNullable<RecipeVariantProps<typeof badgeRecipe>>['variant']
 
-  return (
-    <Comp
-      data-slot="badge"
-      data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
-  )
+type BadgeProps = HTMLStyledProps<'span'> & {
+  variant?: BadgeVariant
+  asChild?: boolean
 }
 
-export { Badge, badgeVariants }
+const StyledBadge = styled('span', badgeRecipe)
+const StyledSlotBadge = styled(Slot.Root, badgeRecipe)
+
+function Badge({ variant = 'default', asChild = false, ...props }: BadgeProps) {
+  const Comp = asChild ? StyledSlotBadge : StyledBadge
+  return <Comp data-slot="badge" data-variant={variant} variant={variant} {...props} />
+}
+
+/** Class-string form of the badge recipe, for non-JSX call sites. */
+const badgeVariants = badgeRecipe
+
+export { Badge, type BadgeProps, type BadgeVariant, badgeVariants }

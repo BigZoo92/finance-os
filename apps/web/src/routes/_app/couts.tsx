@@ -106,7 +106,7 @@ function CostsPage() {
                     value={total.value}
                     currency={total.currency}
                     decimals={total.currency === 'USD' ? 4 : 2}
-                    className="text-3xl font-semibold tracking-tight"
+                    className="text-3xl font-semibold"
                   />
                 ))
               ) : (

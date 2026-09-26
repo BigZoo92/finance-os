@@ -258,7 +258,7 @@ function AdvisorPage() {
                   currency={allocation.plan.currency}
                   decimals={0}
                   unavailableLabel="Montant indisponible"
-                  className="text-3xl font-medium tracking-tight sm:text-4xl"
+                  className="text-3xl font-medium sm:text-4xl"
                 />
                 {allocation.plan.value !== null ? (
                   <span className="font-mono text-sm font-normal text-muted-foreground sm:text-base">

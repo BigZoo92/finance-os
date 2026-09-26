@@ -104,7 +104,7 @@ function PatrimoinePage() {
             <Amount
               value={model.totalValue}
               decimals={0}
-              className="mt-2 block text-4xl font-semibold tracking-tight sm:text-5xl"
+              className="mt-2 block text-4xl font-semibold sm:text-5xl"
             />
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
               <Freshness asOf={model.asOf} />

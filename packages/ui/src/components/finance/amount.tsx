@@ -1,7 +1,6 @@
-import type * as React from "react"
-
-import { cn } from "@finance-os/ui/lib/utils"
-import { formatAmount, UNAVAILABLE_LABEL } from "@finance-os/ui/lib/format"
+import { css, cx } from '@finance-os/styled-system/css'
+import { formatAmount, UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
+import type * as React from 'react'
 
 /**
  * Amount — canonical null-aware financial amount.
@@ -11,7 +10,11 @@ import { formatAmount, UNAVAILABLE_LABEL } from "@finance-os/ui/lib/format"
  * Geist Mono with tabular figures so comparable amounts align.
  */
 
-type UnavailableVariant = "text" | "dash"
+const financialFigures = css({ textStyle: 'financial', fontVariantNumeric: 'tabular-nums' })
+const unavailableText = css({ color: 'muted.foreground' })
+const visuallyHidden = css({ srOnly: true })
+
+type UnavailableVariant = 'text' | 'dash'
 
 type AmountBaseProps = {
   value: number | null | undefined
@@ -29,7 +32,7 @@ type AmountBaseProps = {
   unavailable?: UnavailableVariant
   unavailableLabel?: string
   className?: string
-} & Omit<React.ComponentProps<"span">, "children">
+} & Omit<React.ComponentProps<'span'>, 'children'>
 
 function UnavailableValue({
   variant,
@@ -37,19 +40,19 @@ function UnavailableValue({
   className,
   ...props
 }: { variant: UnavailableVariant; label: string; className?: string } & Omit<
-  React.ComponentProps<"span">,
-  "children"
+  React.ComponentProps<'span'>,
+  'children'
 >) {
-  if (variant === "dash") {
+  if (variant === 'dash') {
     return (
       <span
         data-slot="amount"
         data-unavailable="true"
-        className={cn("font-financial tabular-nums text-muted-foreground", className)}
+        className={cx(financialFigures, unavailableText, className)}
         {...props}
       >
         <span aria-hidden="true">-</span>
-        <span className="sr-only">{label}</span>
+        <span className={visuallyHidden}>{label}</span>
       </span>
     )
   }
@@ -57,7 +60,7 @@ function UnavailableValue({
     <span
       data-slot="amount"
       data-unavailable="true"
-      className={cn("text-muted-foreground", className)}
+      className={cx(unavailableText, className)}
       {...props}
     >
       {label}
@@ -71,7 +74,7 @@ function Amount({
   decimals,
   compact,
   signed,
-  unavailable = "text",
+  unavailable = 'text',
   unavailableLabel = UNAVAILABLE_LABEL,
   className,
   ...props
@@ -103,7 +106,7 @@ function CurrencyAmount({
   decimals,
   compact,
   signed,
-  unavailable = "text",
+  unavailable = 'text',
   unavailableLabel = UNAVAILABLE_LABEL,
   className,
   ...props
@@ -112,7 +115,7 @@ function CurrencyAmount({
     currency,
     ...(decimals !== undefined ? { decimals } : {}),
     ...(compact !== undefined ? { compact } : {}),
-    ...(signed ? { signDisplay: "exceptZero" as const } : {}),
+    ...(signed ? { signDisplay: 'exceptZero' as const } : {}),
   })
 
   if (formatted === null) {
@@ -127,11 +130,7 @@ function CurrencyAmount({
   }
 
   return (
-    <span
-      data-slot="amount"
-      className={cn("font-financial tabular-nums", className)}
-      {...props}
-    >
+    <span data-slot="amount" className={cx(financialFigures, className)} {...props}>
       {formatted}
     </span>
   )

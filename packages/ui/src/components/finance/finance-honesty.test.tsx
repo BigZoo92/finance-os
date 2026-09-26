@@ -6,15 +6,16 @@
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-
+import { Status } from '../status/status'
+import { ValuationState } from '../status/valuation-state'
 import { Amount, CurrencyAmount } from './amount'
 import { PercentChange, TrendIndicator } from './percent-change'
 import { Progress } from './progress'
-import { Status } from '../status/status'
-import { ValuationState } from '../status/valuation-state'
 
 const render = (node: React.ReactElement) =>
-  renderToStaticMarkup(node).replace(/[\u00A0\u202F\u2009\u2007]/g, " ").replace(/−/g, '-')
+  renderToStaticMarkup(node)
+    .replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')
+    .replace(/−/g, '-')
 
 describe('Amount', () => {
   it('renders Indisponible for null, never 0 €', () => {
@@ -40,7 +41,7 @@ describe('Amount', () => {
   it('renders positive and negative amounts with tabular mono treatment', () => {
     const positive = render(<Amount value={67070.44} />)
     expect(positive).toContain('67 070,44 €')
-    expect(positive).toContain('font-financial')
+    expect(positive).toContain('textStyle_financial')
     expect(positive).toContain('tabular-nums')
     expect(render(<Amount value={-1234.5} />)).toContain('-1 234,50 €')
   })
@@ -88,7 +89,13 @@ describe('PercentChange', () => {
 
 describe('TrendIndicator', () => {
   it('renders nothing for unknown deltas', () => {
-    expect(render(<span><TrendIndicator value={null} /></span>)).toBe('<span></span>')
+    expect(
+      render(
+        <span>
+          <TrendIndicator value={null} />
+        </span>
+      )
+    ).toBe('<span></span>')
   })
 
   it('pairs the glyph with a text equivalent', () => {
