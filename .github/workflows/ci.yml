@@ -99,6 +99,9 @@ jobs:
       - name: Typecheck
         run: pnpm -r --if-present typecheck
 
+      - name: Database schema check
+        run: pnpm db:check
+
       - name: Test
         run: pnpm -r --if-present test
 
@@ -110,6 +113,58 @@ jobs:
 
       - name: Client bundle denylist
         run: pnpm check:client-bundle
+
+  database:
+    name: Database migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TEST_DATABASE_URL: postgres://finance_os:finance_os@127.0.0.1:5432/finance_os_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: finance_os_test
+          POSTGRES_USER: finance_os
+          POSTGRES_PASSWORD: finance_os
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finance_os -d finance_os_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply the migration journal to a fresh PostgreSQL
+        run: DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
+
+      - name: Migration journal integration test
+        run: pnpm db:test:integration
 
   e2e-smoke:
     name: E2E Smoke

@@ -31,7 +31,8 @@ pnpm install --frozen-lockfile
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 pnpm env:check
 pnpm infra:up
-pnpm db:migrate
+pnpm db:migrate             # applies the journal with packages/db/src/migrate.ts (the API never migrates at startup)
+pnpm db:check               # journal consistency + schema drift, no database needed
 pnpm dev:apps
 ```
 

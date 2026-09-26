@@ -159,29 +159,30 @@ const toSnapshotRow = ({
   valuation: ItemValuation
   runId: number
   now: Date
-}): typeof schema.assetValuationSnapshot.$inferInsert | null => {
-  if (valuation.valueBase === null) {
-    return null
-  }
-
+}): typeof schema.assetValuationSnapshot.$inferInsert => {
+  // DATA-01: an item whose value could not be established is persisted with a
+  // NULL value and price, its status and error code explaining why. It is never
+  // dropped from the run (that would hide the gap) and never written as 0.
   const quantity = valuation.quantity ?? 1
   const unitPrice =
-    valuation.quantity !== null && valuation.quantity !== 0 && valuation.valueOriginal !== null
-      ? valuation.valueOriginal / valuation.quantity
-      : (valuation.valueOriginal ?? valuation.valueBase)
+    valuation.valueBase === null
+      ? null
+      : valuation.quantity !== null && valuation.quantity !== 0 && valuation.valueOriginal !== null
+        ? valuation.valueOriginal / valuation.quantity
+        : (valuation.valueOriginal ?? valuation.valueBase)
 
   return {
     assetId: valuation.itemKey,
     itemKey: valuation.itemKey,
     kind: valuation.kind,
     quantity: quantity.toString(),
-    price: unitPrice.toString(),
+    price: toDecimalString(unitPrice),
     priceCurrency: valuation.currency ?? valuation.baseCurrency,
     baseCurrency: valuation.baseCurrency,
     fxRate: toDecimalString(valuation.fxRate),
     fxRateSource: valuation.fxProvider,
     fxRateTimestamp: valuation.fxTimestamp ? new Date(valuation.fxTimestamp) : null,
-    valueBase: valuation.valueBase.toString(),
+    valueBase: toDecimalString(valuation.valueBase),
     valuationTimestamp: now,
     confidence: valuation.confidence,
     staleReason: valuation.status === 'stale' ? 'value_age_exceeds_policy' : null,
@@ -375,9 +376,9 @@ export const createAssetValuationUseCases = ({
       }
 
       const valuationTimestamp = now()
-      const snapshotRows = valuations
-        .map(valuation => toSnapshotRow({ valuation, runId: run.id, now: valuationTimestamp }))
-        .filter((row): row is NonNullable<typeof row> => row !== null)
+      const snapshotRows = valuations.map(valuation =>
+        toSnapshotRow({ valuation, runId: run.id, now: valuationTimestamp })
+      )
 
       let snapshotCount = snapshotRows.length
       if (!input.dryRun) {

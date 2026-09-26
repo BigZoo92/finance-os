@@ -27,7 +27,7 @@ Server-only credentials:
 - `BINANCE_SPOT_API_KEY`
 - `BINANCE_SPOT_API_SECRET`
 
-Never add browser credential forms or read/write the legacy `external_investment_credential` table. Forbidden capabilities include orders, withdrawal, transfer, convert, margin/futures, staking/earn mutation, rebalancing, and any hidden execution-ready path.
+Never add browser credential forms or reintroduce the legacy `external_investment_credential` table (dropped in migration 0038). Forbidden capabilities include orders, withdrawal, transfer, convert, margin/futures, staking/earn mutation, rebalancing, and any hidden execution-ready path.
 
 Jobs use the package key `external-investments:jobs`. Normalized snapshots and provider health feed valuation, the investments UI, diagnostics, and the Advisor. Missing FX/price/provider data must remain visible as partial or stale rather than fabricated.
 

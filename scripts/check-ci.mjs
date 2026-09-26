@@ -71,6 +71,10 @@ export const coreSteps = [
     args: ['-r', '--if-present', 'typecheck'],
   },
   {
+    name: 'Database schema check',
+    args: ['db:check'],
+  },
+  {
     name: 'Test',
     args: ['-r', '--if-present', 'test'],
   },

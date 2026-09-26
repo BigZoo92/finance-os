@@ -84,13 +84,15 @@ export const assetValuationSnapshot = pgTable(
     assetId: text('asset_id'),
     instrumentId: text('instrument_id'),
     quantity: numeric('quantity', { precision: 28, scale: 10 }).notNull(),
-    price: numeric('price', { precision: 24, scale: 10 }).notNull(),
+    // DATA-01: an unknown price or value is stored as NULL, never as 0; `status`
+    // (unresolved/unavailable) and `error_code` explain why.
+    price: numeric('price', { precision: 24, scale: 10 }),
     priceCurrency: text('price_currency').notNull(),
     baseCurrency: text('base_currency').notNull(),
     fxRate: numeric('fx_rate', { precision: 24, scale: 12 }),
     fxRateSource: text('fx_rate_source'),
     fxRateTimestamp: timestamp('fx_rate_timestamp', { withTimezone: true }),
-    valueBase: numeric('value_base', { precision: 28, scale: 10 }).notNull(),
+    valueBase: numeric('value_base', { precision: 28, scale: 10 }),
     priceSnapshotId: integer('price_snapshot_id').references(() => assetPriceSnapshot.id, {
       onDelete: 'set null',
     }),

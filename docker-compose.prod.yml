@@ -175,6 +175,29 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # One-shot schema migration. Runs the Drizzle journal against PostgreSQL and
+  # exits; the API only starts once it has completed successfully.
+  migrate:
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
+    restart: "no"
+    logging: *default-logging
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    command: ["bun", "packages/db/src/migrate.ts"]
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: ${DATABASE_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     <<: *resource-api
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
@@ -253,8 +276,6 @@ services:
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
-      RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
-      DRIZZLE_MIGRATIONS_FOLDER: packages/db/drizzle
       HEALTHCHECK_URL: http://127.0.0.1:3001/health
       # --- Runtime feature flags & provider credentials ----------------------
       # IMPORTANT: every flag/secret consumed by API routes at runtime MUST be
@@ -430,6 +451,8 @@ services:
       PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
       PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

@@ -82,8 +82,6 @@ ARG BUILD_TIME
 ENV NODE_ENV=production \
     API_HOST=0.0.0.0 \
     API_PORT=3001 \
-    RUN_DB_MIGRATIONS=true \
-    DRIZZLE_MIGRATIONS_FOLDER=packages/db/drizzle \
     HEALTHCHECK_URL=http://127.0.0.1:3001/health \
     GIT_SHA=${GIT_SHA} \
     GIT_TAG=${GIT_TAG} \

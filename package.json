@@ -58,6 +58,8 @@
     "infra:ps": "docker compose --env-file .env -f infra/docker/docker-compose.dev.yml ps",
     "db:generate": "pnpm --filter @finance-os/db db:generate",
     "db:migrate": "pnpm --filter @finance-os/db db:migrate",
+    "db:check": "node scripts/check-db-schema.mjs",
+    "db:test:integration": "pnpm --filter @finance-os/db test",
     "db:studio": "pnpm --filter @finance-os/db db:studio",
     "db:seed:recurring-costs": "pnpm --filter @finance-os/db db:seed:recurring-costs",
     "auth:hash": "pnpm --filter @finance-os/api auth:hash",

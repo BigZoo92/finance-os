@@ -41,6 +41,18 @@ import type {
   WatchlistAssetPatchInput,
 } from './investment-strategy-inputs'
 
+/**
+ * Allocation snapshot amounts are NOT NULL decimals written by this module; a
+ * value that does not parse is corrupt data and must surface, never read as 0.
+ */
+const toStoredAmount = (value: string, column: string): number => {
+  const parsed = toNumberOrNull(value)
+  if (parsed === null) {
+    throw new Error(`ALLOCATION_SNAPSHOT_INVALID_${column.toUpperCase()}`)
+  }
+  return parsed
+}
+
 export type {
   AssetSearchInput,
   GenerateActionPlanInput,
@@ -898,12 +910,12 @@ const mapPersistedAllocation = (latest: {
   strategyId: latest.snapshot.strategyId,
   snapshotAt: latest.snapshot.snapshotAt.toISOString(),
   baseCurrency: latest.snapshot.baseCurrency,
-  totalValue: toNumberOrNull(latest.snapshot.totalValue) ?? 0,
-  coreValue: toNumberOrNull(latest.snapshot.coreValue) ?? 0,
-  growthValue: toNumberOrNull(latest.snapshot.growthValue) ?? 0,
-  asymmetricValue: toNumberOrNull(latest.snapshot.asymmetricValue) ?? 0,
-  cashValue: toNumberOrNull(latest.snapshot.cashValue) ?? 0,
-  unknownValue: toNumberOrNull(latest.snapshot.unknownValue) ?? 0,
+  totalValue: toStoredAmount(latest.snapshot.totalValue, 'total_value'),
+  coreValue: toStoredAmount(latest.snapshot.coreValue, 'core_value'),
+  growthValue: toStoredAmount(latest.snapshot.growthValue, 'growth_value'),
+  asymmetricValue: toStoredAmount(latest.snapshot.asymmetricValue, 'asymmetric_value'),
+  cashValue: toStoredAmount(latest.snapshot.cashValue, 'cash_value'),
+  unknownValue: toStoredAmount(latest.snapshot.unknownValue, 'unknown_value'),
   corePct: latest.snapshot.corePct,
   growthPct: latest.snapshot.growthPct,
   asymmetricPct: latest.snapshot.asymmetricPct,
