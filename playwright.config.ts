@@ -69,6 +69,7 @@ const apiDemoEnv = {
 
 export default defineConfig({
   testDir: './e2e',
+  snapshotPathTemplate: '{testDir}/__visual__/{arg}{ext}',
   fullyParallel: false,
   timeout: 60_000,
   expect: {

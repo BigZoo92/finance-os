@@ -35,6 +35,10 @@ export const coreSteps = [
     args: ['install', '--frozen-lockfile'],
   },
   {
+    name: 'Panda codegen',
+    args: ['panda:codegen'],
+  },
+  {
     name: 'Root tooling tests',
     args: ['test'],
   },

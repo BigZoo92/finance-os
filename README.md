@@ -43,6 +43,8 @@ Useful commands:
 pnpm dev:all                start infrastructure and app runtimes
 pnpm check:ci               canonical repository verification
 pnpm test:e2e               deterministic browser smoke suite
+pnpm test:e2e:visual        local Command Pixel screenshot regression (add --update-snapshots to record)
+pnpm panda:codegen          regenerate the Panda CSS runtime after token or config changes
 pnpm env:check:parity       compare runtime and Compose environment contracts
 pnpm agent:skills:check     detect missing, drifted, or extra skill files
 pnpm docs:check             validate local Markdown links

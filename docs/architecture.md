@@ -42,7 +42,9 @@ Only `apps/web` receives public traffic. The API, worker, knowledge service, qua
 - `provider-contract` and `provider-runtime`: provider capability, health, redaction, and execution wrappers.
 - `redis`: real and deterministic in-memory Redis contracts.
 - `prelude`: shared errors/logging-safe primitives.
-- `ui`: global design tokens and shared styles.
+- `api-contract`: transport-only Zod schemas and inferred DTO types for the financial API responses shared by `api` and `web` (`null` means unknown, never 0).
+- `styled-system`: Command Pixel design tokens as a Panda CSS preset, the single Panda config, and the generated (gitignored) styling runtime.
+- `ui`: shared components built on the styled-system.
 
 ## Demo and admin
 

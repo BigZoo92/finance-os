@@ -32,6 +32,7 @@ COPY packages/prelude/package.json packages/prelude/package.json
 COPY packages/provider-contract/package.json packages/provider-contract/package.json
 COPY packages/provider-runtime/package.json packages/provider-runtime/package.json
 COPY packages/redis/package.json packages/redis/package.json
+COPY packages/styled-system/package.json packages/styled-system/package.json
 COPY packages/ui/package.json packages/ui/package.json
 
 FROM manifests AS deps

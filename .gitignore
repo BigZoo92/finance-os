@@ -42,3 +42,9 @@ cookies.txt
 
 # Moon local state (derived, machine-specific)
 .moon/cache/
+
+# Panda CSS runtime, regenerated on install (pnpm panda:codegen)
+packages/styled-system/generated/
+
+# Local visual-regression baselines (machine specific)
+e2e/__visual__/

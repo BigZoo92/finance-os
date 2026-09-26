@@ -20,6 +20,7 @@ const workspacePackagePaths = [
   'packages/provider-contract',
   'packages/provider-runtime',
   'packages/redis',
+  'packages/styled-system',
   'packages/ui',
 ]
 

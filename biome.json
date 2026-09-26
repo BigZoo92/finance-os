@@ -22,7 +22,8 @@
       "!**/.output",
       "!**/.design",
       "!**/routeTree.gen.ts",
-      "!**/routeTree.gen.tsx"
+      "!**/routeTree.gen.tsx",
+      "!**/styled-system/generated"
     ]
   },
   "formatter": {
