@@ -14,8 +14,8 @@ import { Command } from 'cmdk'
 import { useEffect } from 'react'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { getPaletteLinks, NAV_ENTRIES, SECONDARY_LINKS, type NavLink } from './nav-items'
 import { NavIconTile } from './nav-icon-tile'
+import { getPaletteLinks, NAV_ENTRIES, type NavLink, SECONDARY_LINKS } from './nav-items'
 
 const paletteOpenStore = new Store(false)
 
@@ -89,7 +89,7 @@ export function CommandPalette() {
 
   return (
     <Dialog open={open} onOpenChange={next => paletteOpenStore.setState(() => next)}>
-      <DialogContent className="top-[18%] max-w-[560px] translate-y-0 gap-0 p-0">
+      <DialogContent top="18%" maxW="560px" translate="-50% 0" gap="0" p="0">
         <DialogTitle className="sr-only">Recherche</DialogTitle>
         <DialogDescription className="sr-only">
           Rechercher une page et naviguer au clavier

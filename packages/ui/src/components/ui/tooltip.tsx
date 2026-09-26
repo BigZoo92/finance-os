@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import type * as React from "react"
-import { Tooltip as TooltipPrimitive } from "radix-ui"
-
-import { cn } from "@finance-os/ui/lib/utils"
+import { cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+import { Tooltip as TooltipPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 /**
  * Tooltip — canonical Command Pixel floating hint.
@@ -31,38 +31,48 @@ function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
 }
 
+const tooltipContent = cva({
+  base: {
+    zIndex: 'popover',
+    maxW: '280px',
+    rounded: 'tile',
+    borderWidth: '1px',
+    borderColor: 'border',
+    bg: 'popover',
+    px: '2.5',
+    py: '1.5',
+    textStyle: 'xs',
+    color: 'popover.foreground',
+    shadow: 'floating',
+    transformOrigin: 'var(--radix-tooltip-content-transform-origin)',
+    '&[data-state=delayed-open]': { animation: 'scaleIn 150ms ease' },
+    '&[data-state=closed]': { animation: 'fadeOut 150ms ease' },
+  },
+})
+
+const StyledTooltipContent = styled(TooltipPrimitive.Content, tooltipContent)
+
 function TooltipContent({
-  className,
   sideOffset = 6,
   children,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+}: React.ComponentProps<typeof StyledTooltipContent>) {
   return (
     <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
+      <StyledTooltipContent
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         collisionPadding={8}
-        className={cn(
-          "z-[var(--z-popover)] max-w-[280px] rounded-tile border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-floating",
-          "origin-[var(--radix-tooltip-content-transform-origin)]",
-          "data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95",
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-          "duration-150",
-          className
-        )}
         {...props}
       >
         {children}
-      </TooltipPrimitive.Content>
+      </StyledTooltipContent>
     </TooltipPrimitive.Portal>
   )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger }

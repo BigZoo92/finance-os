@@ -52,7 +52,8 @@ test.describe('Login desktop', () => {
     await expect(page.getByText('Identifiants incorrects')).toBeVisible()
     await expect(page.locator('body')).not.toContainText(/raw error|request id/i)
     const after = await panel.boundingBox()
-    expect(after?.y).toBe(before?.y)
+    // The reveal animation leaves sub-pixel transform noise; the panel must not visibly move.
+    expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0))).toBeLessThan(0.5)
   })
 
   test('submits with Enter and transitions to the authenticated cockpit', async ({ page }) => {

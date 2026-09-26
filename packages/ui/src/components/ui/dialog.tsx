@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import type * as React from "react"
-import { Dialog as DialogPrimitive } from "radix-ui"
-
-import { cn } from "@finance-os/ui/lib/utils"
+import { cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+import { Dialog as DialogPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 /**
  * Dialog — canonical Command Pixel modal.
@@ -18,114 +18,103 @@ function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>)
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
-function DialogTrigger({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+function DialogTrigger({ ...props }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
 }
 
-function DialogPortal({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
 }
 
-function DialogClose({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Close>) {
+function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.Close>) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
-function DialogOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  return (
-    <DialogPrimitive.Overlay
-      data-slot="dialog-overlay"
-      className={cn(
-        "fixed inset-0 z-[var(--z-modal)] bg-black/55",
-        "data-[state=open]:animate-in data-[state=open]:fade-in-0",
-        "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-        "duration-150",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const dialogOverlay = cva({
+  base: {
+    position: 'fixed',
+    inset: '0',
+    zIndex: 'modal',
+    bg: 'black/55',
+    '&[data-state=open]': { animation: 'fadeIn 150ms ease' },
+    '&[data-state=closed]': { animation: 'fadeOut 150ms ease' },
+  },
+})
 
-function DialogContent({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+const dialogContent = cva({
+  base: {
+    position: 'fixed',
+    left: '50%',
+    top: '50%',
+    zIndex: 'modal',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4',
+    w: 'calc(100vw - 2rem)',
+    maxW: 'lg',
+    maxH: 'calc(100dvh - 4rem)',
+    translate: '-50% -50%',
+    overflowY: 'auto',
+    rounded: 'surface',
+    borderWidth: '1px',
+    borderColor: 'border',
+    bg: 'card',
+    color: 'card.foreground',
+    p: '5',
+    shadow: 'overlay',
+    outlineStyle: 'none',
+    '@media (forced-colors: active)': { outline: '2px solid transparent', outlineOffset: '2px' },
+    md: { p: '6' },
+    '&[data-state=open]': { animation: 'scaleIn 150ms ease' },
+    '&[data-state=closed]': { animation: 'scaleOut 150ms ease' },
+  },
+})
+
+const dialogHeader = cva({
+  base: { display: 'flex', flexDirection: 'column', gap: '1.5', textAlign: 'left' },
+})
+
+const dialogFooter = cva({
+  base: {
+    display: 'flex',
+    flexDirection: 'column-reverse',
+    gap: '2',
+    sm: { flexDirection: 'row', justifyContent: 'flex-end' },
+  },
+})
+
+const dialogTitle = cva({
+  base: { textStyle: 'md', fontWeight: 'semibold', letterSpacing: 'tight', color: 'foreground' },
+})
+
+const dialogDescription = cva({
+  base: { fontSize: '13px', color: 'muted.foreground' },
+})
+
+const DialogOverlay = styled(DialogPrimitive.Overlay, dialogOverlay, {
+  defaultProps: { 'data-slot': 'dialog-overlay' },
+})
+const StyledDialogContent = styled(DialogPrimitive.Content, dialogContent)
+
+function DialogContent({ children, ...props }: React.ComponentProps<typeof StyledDialogContent>) {
   return (
     <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        className={cn(
-          "fixed left-1/2 top-1/2 z-[var(--z-modal)] flex w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4",
-          "max-h-[calc(100dvh-4rem)] overflow-y-auto rounded-surface border border-border bg-card p-5 text-card-foreground shadow-overlay outline-hidden md:p-6",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-          "duration-150",
-          className
-        )}
-        {...props}
-      >
+      <StyledDialogContent data-slot="dialog-content" {...props}>
         {children}
-      </DialogPrimitive.Content>
+      </StyledDialogContent>
     </DialogPortal>
   )
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="dialog-header"
-      className={cn("flex flex-col gap-1.5 text-left", className)}
-      {...props}
-    />
-  )
-}
-
-function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="dialog-footer"
-      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
-      {...props}
-    />
-  )
-}
-
-function DialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return (
-    <DialogPrimitive.Title
-      data-slot="dialog-title"
-      className={cn("text-base font-semibold tracking-tight text-foreground", className)}
-      {...props}
-    />
-  )
-}
-
-function DialogDescription({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return (
-    <DialogPrimitive.Description
-      data-slot="dialog-description"
-      className={cn("text-[13px] text-muted-foreground", className)}
-      {...props}
-    />
-  )
-}
+const DialogHeader = styled('div', dialogHeader, { defaultProps: { 'data-slot': 'dialog-header' } })
+const DialogFooter = styled('div', dialogFooter, { defaultProps: { 'data-slot': 'dialog-footer' } })
+const DialogTitle = styled(DialogPrimitive.Title, dialogTitle, {
+  defaultProps: { 'data-slot': 'dialog-title' },
+})
+const DialogDescription = styled(DialogPrimitive.Description, dialogDescription, {
+  defaultProps: { 'data-slot': 'dialog-description' },
+})
 
 export {
   Dialog,
