@@ -1,3 +1,5 @@
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Amount,
   Badge,
@@ -70,12 +72,62 @@ const RANGES: Array<{ label: string; value: DashboardRange }> = [
   { label: '90 j', value: '90d' },
 ]
 
-const BREAKDOWN_TONE = {
-  available: 'bg-primary',
-  savings: 'bg-foreground/45',
-  investments: 'bg-warm-accent',
-  manual: 'bg-teal',
-} as const
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const breakdownSwatch = cva({
+  base: {},
+  variants: {
+    tone: {
+      available: { bg: 'primary' },
+      savings: { bg: 'foreground/45' },
+      investments: { bg: 'warmAccent' },
+      manual: { bg: 'teal' },
+    },
+    shape: {
+      bar: {},
+      dot: { boxSize: '2', rounded: 'tile' },
+    },
+  },
+})
+
+const ledgerRow = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  alignItems: 'center',
+  gap: '4',
+  borderBottomWidth: '1px',
+  borderColor: 'border',
+  py: '3',
+})
+
+const ledgerDetail = css({
+  mt: '1',
+  truncate: true,
+  fontFamily: 'mono',
+  fontSize: '11px',
+  color: 'muted.foreground',
+})
+
+const ledgerEmpty = css({
+  borderBottomWidth: '1px',
+  borderColor: 'border',
+  py: '5',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const panelColumn = css({
+  borderTopWidth: '1px',
+  borderColor: 'border',
+  pt: '8',
+  lg: { borderLeftWidth: '1px', borderTopWidth: '0', pl: '12', pt: '0' },
+})
 
 function CockpitPage() {
   const { range: searchRange } = Route.useSearch()
@@ -136,7 +188,7 @@ function CockpitPage() {
   const available = viewModel.breakdowns.find(breakdown => breakdown.key === 'available')
 
   return (
-    <div className="space-y-9 md:space-y-11">
+    <styled.div spaceY="9" md={{ spaceY: '11' }}>
       <PageHeader
         title="Cockpit"
         status={authViewState === 'demo' ? <Badge variant="outline">Mode démo</Badge> : undefined}
@@ -150,56 +202,75 @@ function CockpitPage() {
         }
       />
 
-      <section className="grid gap-8 border-b border-border pb-9 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)] lg:gap-12">
+      <styled.section
+        display="grid"
+        gap="8"
+        borderBottomWidth="1px"
+        borderColor="border"
+        pb="9"
+        lg={{ gridTemplateColumns: 'minmax(0, 1.45fr) minmax(280px, 0.75fr)', gap: '12' }}
+      >
         <div>
-          <p className="flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            <span className="size-2 rounded-tile bg-primary" aria-hidden="true" />
+          <p className={cx(eyebrow, css({ display: 'flex', alignItems: 'center', gap: '2.5' }))}>
+            <span
+              className={breakdownSwatch({ tone: 'available', shape: 'dot' })}
+              aria-hidden="true"
+            />
             Argent disponible
           </p>
           <Amount
             value={available?.value}
-            className="mt-3 block text-[clamp(2.25rem,7vw,3.5rem)] font-medium text-foreground"
+            mt="3"
+            display="block"
+            fontSize="clamp(2.25rem, 7vw, 3.5rem)"
+            fontWeight="medium"
+            color="foreground"
           />
-          <div className="mt-6 max-w-xl border-t border-border">
+          <styled.div mt="6" maxW="xl" borderTopWidth="1px" borderColor="border">
             {available?.items.length ? (
               available.items.map(item => (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{item.label}</p>
-                    {item.detail ? (
-                      <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
-                        {item.detail}
-                      </p>
-                    ) : null}
-                  </div>
-                  <Amount value={item.value} decimals={2} className="text-sm text-foreground" />
+                <div key={item.id} className={ledgerRow}>
+                  <styled.div minW="0">
+                    <styled.p truncate textStyle="sm" fontWeight="medium" color="foreground">
+                      {item.label}
+                    </styled.p>
+                    {item.detail ? <p className={ledgerDetail}>{item.detail}</p> : null}
+                  </styled.div>
+                  <Amount value={item.value} decimals={2} textStyle="sm" color="foreground" />
                 </div>
               ))
             ) : (
-              <p className="border-b border-border py-5 text-sm text-muted-foreground">
-                Données indisponibles
-              </p>
+              <p className={ledgerEmpty}>Données indisponibles</p>
             )}
-          </div>
+          </styled.div>
         </div>
 
-        <div className="space-y-6 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-1">
+        <styled.div
+          spaceY="6"
+          borderTopWidth="1px"
+          borderColor="border"
+          pt="6"
+          lg={{ borderLeftWidth: '1px', borderTopWidth: '0', pl: '12', pt: '1' }}
+        >
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Patrimoine total
-            </p>
-            <Amount value={viewModel.totalWealth} className="mt-2 block text-2xl font-medium" />
+            <p className={eyebrow}>Patrimoine total</p>
+            <Amount
+              value={viewModel.totalWealth}
+              mt="2"
+              display="block"
+              textStyle="2xl"
+              fontWeight="medium"
+            />
           </div>
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <p className={eyebrow}>
               Performance {range === '7d' ? '7 j' : range === '90d' ? '90 j' : '30 j'}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">Données insuffisantes</p>
+            <styled.p mt="2" textStyle="sm" color="muted.foreground">
+              Données insuffisantes
+            </styled.p>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
+          <styled.div display="flex" flexWrap="wrap" columnGap="5" rowGap="2">
             {summaryUnavailable ? (
               <Status tone="negative" label="Données indisponibles" />
             ) : staleSummary ? (
@@ -210,25 +281,37 @@ function CockpitPage() {
               <ValuationState state={viewModel.valuationState} />
             )}
             <Freshness asOf={viewModel.valuationAsOf} />
-          </div>
+          </styled.div>
           {viewModel.coveragePercent !== null ? (
             <div>
-              <div className="mb-2 flex items-center justify-between gap-3 font-mono text-[11px] text-muted-foreground">
+              <styled.div
+                mb="2"
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap="3"
+                fontFamily="mono"
+                fontSize="11px"
+                color="muted.foreground"
+              >
                 <span>Couverture</span>
                 <span>{viewModel.coveragePercent.toLocaleString('fr-FR')} %</span>
-              </div>
+              </styled.div>
               <Progress value={viewModel.coveragePercent} label="Couverture de valorisation" />
             </div>
           ) : null}
-        </div>
-      </section>
+        </styled.div>
+      </styled.section>
 
       <section aria-labelledby="wealth-breakdown-title">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2
-            id="wealth-breakdown-title"
-            className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-          >
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="baseline"
+          justifyContent="space-between"
+          gap="3"
+        >
+          <h2 id="wealth-breakdown-title" className={eyebrow}>
             Répartition du patrimoine
           </h2>
           {viewModel.unknownValueCount > 0 ? (
@@ -237,135 +320,188 @@ function CockpitPage() {
               label={`${viewModel.unknownValueCount} valeur${viewModel.unknownValueCount > 1 ? 's' : ''} à vérifier`}
             />
           ) : null}
-        </div>
+        </styled.div>
         {breakdownTotal > 0 ? (
-          <div
-            className="mt-4 flex h-1.5 gap-0.5 overflow-hidden rounded-[3px] bg-foreground/9"
+          <styled.div
+            mt="4"
+            display="flex"
+            h="1.5"
+            gap="0.5"
+            overflow="hidden"
+            rounded="3px"
+            bg="foreground/9"
             aria-hidden="true"
           >
             {knownBreakdowns.map(breakdown => (
               <span
                 key={breakdown.key}
-                className={BREAKDOWN_TONE[breakdown.key]}
+                className={breakdownSwatch({ tone: breakdown.key, shape: 'bar' })}
                 style={{ flexGrow: breakdown.value ?? 0 }}
               />
             ))}
-          </div>
+          </styled.div>
         ) : (
-          <div className="mt-4 border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+          <styled.div
+            mt="4"
+            borderWidth="1px"
+            borderStyle="dashed"
+            borderColor="border"
+            px="4"
+            py="5"
+            textStyle="sm"
+            color="muted.foreground"
+          >
             Répartition indisponible
-          </div>
+          </styled.div>
         )}
-        <div className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+        <styled.div
+          mt="4"
+          display="grid"
+          columnGap="8"
+          rowGap="3"
+          sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+          lg={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+        >
           {viewModel.breakdowns.map(breakdown => (
-            <div key={breakdown.key} className="flex items-center gap-2.5">
+            <styled.div key={breakdown.key} display="flex" alignItems="center" gap="2.5">
               <span
-                className={`size-2 rounded-tile ${BREAKDOWN_TONE[breakdown.key]}`}
+                className={breakdownSwatch({ tone: breakdown.key, shape: 'dot' })}
                 aria-hidden="true"
               />
-              <span className="text-sm text-foreground">{breakdown.label}</span>
-              <Amount value={breakdown.value} className="ml-auto text-xs text-muted-foreground" />
-            </div>
+              <styled.span textStyle="sm" color="foreground">
+                {breakdown.label}
+              </styled.span>
+              <Amount value={breakdown.value} ml="auto" textStyle="xs" color="muted.foreground" />
+            </styled.div>
           ))}
-        </div>
+        </styled.div>
       </section>
 
-      <section className="grid gap-9 border-t border-border pt-8 lg:grid-cols-2 lg:gap-12">
+      <styled.section
+        display="grid"
+        gap="9"
+        borderTopWidth="1px"
+        borderColor="border"
+        pt="8"
+        lg={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12' }}
+      >
         <BreakdownList title="Épargne" breakdown={savings} />
         <BreakdownList title="Investissements" breakdown={investments} />
-      </section>
+      </styled.section>
 
-      <Panel className="bg-surface-2" bodyClassName="grid gap-9 lg:grid-cols-2 lg:gap-12">
+      <Panel
+        bg="surface.2"
+        bodyClassName={css({
+          display: 'grid',
+          gap: '9',
+          lg: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12' },
+        })}
+      >
         <section aria-labelledby="top-expenses-title">
-          <h2
-            id="top-expenses-title"
-            className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-          >
+          <h2 id="top-expenses-title" className={eyebrow}>
             Top dépenses
           </h2>
-          <div className="mt-4 space-y-4">
+          <styled.div mt="4" spaceY="4">
             {summaryQuery.data?.topExpenseGroups.length ? (
               summaryQuery.data.topExpenseGroups.slice(0, 4).map(group => {
                 const max = summaryQuery.data?.topExpenseGroups[0]?.total ?? 0
                 return (
                   <div key={`${group.category}-${group.merchant}`}>
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <span className="truncate text-foreground">{group.label}</span>
+                    <styled.div
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      gap="4"
+                      textStyle="sm"
+                    >
+                      <styled.span truncate color="foreground">
+                        {group.label}
+                      </styled.span>
                       <CurrencyAmount
                         value={group.total}
                         currency="EUR"
-                        className="shrink-0 text-foreground"
+                        flexShrink="0"
+                        color="foreground"
                       />
-                    </div>
+                    </styled.div>
                     <Progress
                       value={max > 0 ? group.total : null}
                       max={max || 1}
                       tone="neutral"
                       label={`Dépenses ${group.label}`}
-                      className="mt-2"
+                      mt="2"
                     />
                   </div>
                 )
               })
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <styled.p textStyle="sm" color="muted.foreground">
                 {summaryQuery.isPending ? 'Chargement' : 'Aucune dépense'}
-              </p>
+              </styled.p>
             )}
-          </div>
+          </styled.div>
         </section>
 
-        <section
-          aria-labelledby="cockpit-goals-title"
-          className="border-t border-border pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0"
-        >
-          <h2
-            id="cockpit-goals-title"
-            className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-          >
+        <section aria-labelledby="cockpit-goals-title" className={panelColumn}>
+          <h2 id="cockpit-goals-title" className={eyebrow}>
             Objectifs
           </h2>
-          <div className="mt-4 space-y-5">
+          <styled.div mt="4" spaceY="5">
             {activeGoals.length ? (
               activeGoals.slice(0, 3).map(goal => {
                 const progress =
                   goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : null
                 return (
                   <div key={goal.id}>
-                    <div className="flex items-baseline justify-between gap-4">
-                      <span className="truncate text-sm text-foreground">{goal.name}</span>
-                      <span className="shrink-0 font-mono text-xs text-primary">
+                    <styled.div
+                      display="flex"
+                      alignItems="baseline"
+                      justifyContent="space-between"
+                      gap="4"
+                    >
+                      <styled.span truncate textStyle="sm" color="foreground">
+                        {goal.name}
+                      </styled.span>
+                      <styled.span flexShrink="0" fontFamily="mono" textStyle="xs" color="primary">
                         {progress === null
                           ? 'Indisponible'
                           : `${Math.min(100, Math.max(0, Math.round(progress)))} %`}
-                      </span>
-                    </div>
-                    <Progress value={progress} label={goal.name} className="mt-2" />
-                    <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                      </styled.span>
+                    </styled.div>
+                    <Progress value={progress} label={goal.name} mt="2" />
+                    <styled.p mt="2" fontFamily="mono" fontSize="11px" color="muted.foreground">
                       <Amount value={goal.currentAmount} decimals={0} /> sur{' '}
                       <Amount value={goal.targetAmount} decimals={0} />
-                    </p>
+                    </styled.p>
                   </div>
                 )
               })
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <styled.p textStyle="sm" color="muted.foreground">
                 {goalsQuery.isPending ? 'Chargement' : 'Aucun objectif actif'}
-              </p>
+              </styled.p>
             )}
-          </div>
+          </styled.div>
         </section>
       </Panel>
 
       {attentionTotal > 0 ? (
-        <div className="flex items-center justify-between gap-4 border-t border-border pt-5">
+        <styled.div
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          gap="4"
+          borderTopWidth="1px"
+          borderColor="border"
+          pt="5"
+        >
           <Status
             tone="attention"
             label={`${attentionTotal} élément${attentionTotal > 1 ? 's' : ''} à vérifier`}
           />
-        </div>
+        </styled.div>
       ) : null}
-    </div>
+    </styled.div>
   )
 }
 
@@ -378,36 +514,27 @@ function BreakdownList({
 }) {
   return (
     <section aria-label={title}>
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          {title}
-        </h2>
-        <Amount value={breakdown?.value} className="text-lg font-medium text-foreground" />
-      </div>
-      <div className="mt-4 border-t border-border">
+      <styled.div display="flex" alignItems="baseline" justifyContent="space-between" gap="4">
+        <h2 className={eyebrow}>{title}</h2>
+        <Amount value={breakdown?.value} textStyle="lg" fontWeight="medium" color="foreground" />
+      </styled.div>
+      <styled.div mt="4" borderTopWidth="1px" borderColor="border">
         {breakdown?.items.length ? (
           breakdown.items.slice(0, 5).map(item => (
-            <div
-              key={item.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm text-foreground">{item.label}</p>
-                {item.detail ? (
-                  <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
-                    {item.detail}
-                  </p>
-                ) : null}
-              </div>
-              <Amount value={item.value} className="text-sm text-foreground" />
+            <div key={item.id} className={ledgerRow}>
+              <styled.div minW="0">
+                <styled.p truncate textStyle="sm" color="foreground">
+                  {item.label}
+                </styled.p>
+                {item.detail ? <p className={ledgerDetail}>{item.detail}</p> : null}
+              </styled.div>
+              <Amount value={item.value} textStyle="sm" color="foreground" />
             </div>
           ))
         ) : (
-          <p className="border-b border-border py-5 text-sm text-muted-foreground">
-            Aucune donnée disponible
-          </p>
+          <p className={ledgerEmpty}>Aucune donnée disponible</p>
         )}
-      </div>
+      </styled.div>
     </section>
   )
 }

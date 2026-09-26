@@ -1,48 +1,84 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { CurrencyAmount, Progress, Status } from '@finance-os/ui/components'
 import type { ExpensePeriodViewModel } from '@/features/expenses-view-model'
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const emptyFrame = css({
+  mt: '4',
+  borderWidth: '1px',
+  borderStyle: 'dashed',
+  borderColor: 'border',
+  p: '5',
+})
 
 export function ExpenseStructureCard({ model }: { model: ExpensePeriodViewModel }) {
   return (
     <section aria-labelledby="expense-structure-title">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="expense-structure-title"
-          className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-        >
+      <styled.div
+        display="flex"
+        flexWrap="wrap"
+        alignItems="center"
+        justifyContent="space-between"
+        gap="3"
+      >
+        <h2 id="expense-structure-title" className={eyebrow}>
           Structure
         </h2>
         {model.structureIsPartial ? <Status tone="neutral" label="Principaux postes" /> : null}
-      </div>
+      </styled.div>
       {model.currency === null ? (
-        <div className="mt-4 border border-dashed border-border p-5">
+        <div className={emptyFrame}>
           <Status tone="attention" label="Structure indisponible pour plusieurs devises" />
         </div>
       ) : model.categories.length === 0 ? (
-        <div className="mt-4 border border-dashed border-border p-5 text-sm text-muted-foreground">
+        <styled.div className={emptyFrame} textStyle="sm" color="muted.foreground">
           Aucune dépense sur la période
-        </div>
+        </styled.div>
       ) : (
-        <div className="mt-4 space-y-4">
+        <styled.div mt="4" spaceY="4">
           {model.categories.slice(0, 7).map(category => (
             <div key={category.category}>
-              <div className="flex items-center justify-between gap-4 text-sm">
-                <span className="truncate text-foreground">{category.category}</span>
-                <div className="flex shrink-0 items-center gap-3 font-mono text-xs">
+              <styled.div
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap="4"
+                textStyle="sm"
+              >
+                <styled.span truncate color="foreground">
+                  {category.category}
+                </styled.span>
+                <styled.div
+                  display="flex"
+                  flexShrink="0"
+                  alignItems="center"
+                  gap="3"
+                  fontFamily="mono"
+                  textStyle="xs"
+                >
                   <CurrencyAmount value={category.total} currency={model.currency} />
-                  <span className="w-12 text-right text-muted-foreground">
+                  <styled.span w="12" textAlign="right" color="muted.foreground">
                     {category.ratio.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
-                  </span>
-                </div>
-              </div>
+                  </styled.span>
+                </styled.div>
+              </styled.div>
               <Progress
                 value={category.ratio}
                 label={`Part ${category.category}`}
                 tone="neutral"
-                className="mt-2"
+                mt="2"
               />
             </div>
           ))}
-        </div>
+        </styled.div>
       )}
     </section>
   )
