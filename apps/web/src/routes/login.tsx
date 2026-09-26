@@ -2,7 +2,7 @@ import { Button, Input } from '@finance-os/ui/components'
 import { EyePixelIcon } from '@finance-os/ui/icons/pixel/eye'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
-import { useState, type FormEvent } from 'react'
+import { type FormEvent, useState } from 'react'
 import { BrandMark } from '@/components/brand/brand-mark'
 import { postAuthLogin } from '@/features/auth-api'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -31,8 +31,7 @@ export const Route = createFileRoute('/login')({
 })
 
 const signalWidths = [
-  359, 116, 353, 142, 344, 167, 333, 191, 321, 214, 306, 236, 290, 257, 272, 276, 252,
-  294,
+  359, 116, 353, 142, 344, 167, 333, 191, 321, 214, 306, 236, 290, 257, 272, 276, 252, 294,
 ] as const
 
 function LoginSignalField() {
@@ -119,7 +118,10 @@ function LoginPage() {
       </header>
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100svh-4.25rem)] w-full max-w-[1220px] grid-rows-[minmax(13rem,0.75fr)_auto] gap-8 px-6 pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-12 md:min-h-[100dvh] md:grid-cols-[minmax(0,1fr)_380px] md:grid-rows-1 md:items-center md:gap-20 md:px-0 md:py-20">
-        <section className="login-reveal-title relative self-center pl-7 md:pl-0" aria-labelledby="login-title">
+        <section
+          className="login-reveal-title relative self-center pl-7 md:pl-0"
+          aria-labelledby="login-title"
+        >
           <div className="pointer-events-none absolute bottom-[-28%] left-0 top-[-30%] w-px bg-gradient-to-b from-transparent via-primary/80 to-transparent md:hidden">
             <span className="absolute -left-0.5 top-0 size-1 bg-primary" />
           </div>
@@ -139,7 +141,9 @@ function LoginPage() {
         </section>
 
         <section className="login-reveal-panel w-full self-end rounded-surface border border-foreground/13 bg-[var(--login-panel)] p-6 shadow-[0_30px_70px_oklch(0_0_0/32%)] md:self-center md:p-8 md:shadow-[0_40px_90px_oklch(0_0_0/34%)]">
-          <h2 className="text-base font-semibold tracking-[-0.01em] md:text-[17px]">Se connecter</h2>
+          <h2 className="text-base font-semibold tracking-[-0.01em] md:text-[17px]">
+            Se connecter
+          </h2>
 
           <div className="mt-3 min-h-5" aria-live="polite" aria-atomic="true">
             {formMessage ? (
@@ -175,7 +179,12 @@ function LoginPage() {
                 spellCheck={false}
                 autoComplete="email"
                 placeholder="votre@email.fr"
-                className="mt-2 h-11 bg-[var(--login-field)] px-3.5 text-sm shadow-none"
+                mt="2"
+                h="11"
+                bg="login.field"
+                px="3.5"
+                textStyle="sm"
+                boxShadow="none"
                 required
               />
             </div>
@@ -195,7 +204,12 @@ function LoginPage() {
                   autoComplete="current-password"
                   aria-invalid={isError}
                   aria-describedby={formMessage ? 'login-message' : undefined}
-                  className="h-11 bg-[var(--login-field)] px-3.5 pr-12 text-sm shadow-none"
+                  h="11"
+                  bg="login.field"
+                  pl="3.5"
+                  pr="12"
+                  textStyle="sm"
+                  boxShadow="none"
                   required
                 />
                 <button
@@ -214,7 +228,14 @@ function LoginPage() {
               type="submit"
               variant="secondary"
               size="lg"
-              className="mt-[26px] w-full rounded-control border-0 bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background"
+              mt="26px"
+              w="full"
+              rounded="control"
+              borderWidth="0"
+              bg="foreground"
+              color="background"
+              shadow="sm"
+              _hover={{ bg: 'foreground/90', color: 'background' }}
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? (
@@ -231,7 +252,12 @@ function LoginPage() {
               {loginMutation.isPending ? 'Connexion' : 'Se connecter'}
             </Button>
 
-            <Button asChild type="button" variant="ghost" className="mt-1.5 ml-auto flex min-h-10 w-fit px-0 text-xs">
+            <Button
+              asChild
+              type="button"
+              variant="ghost"
+              className="mt-1.5 ml-auto flex min-h-10 w-fit px-0 text-xs"
+            >
               <Link to="/">Continuer en démo</Link>
             </Button>
           </form>

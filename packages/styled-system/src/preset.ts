@@ -48,6 +48,19 @@ export const financeOsPreset = definePreset({
           surface: { value: '12px' },
           frame: { value: '14px' },
         },
+        // Tailwind 4 `text-*` line heights as unitless ratios. They stay CSS variables
+        // on purpose: the minifier folds a bare `calc(1 / 0.75)` into 1.33333, which
+        // makes a 12px line box 15.98px tall instead of 16px and shifts every screen.
+        lineHeights: {
+          xs: { value: 'calc(1 / 0.75)' },
+          sm: { value: 'calc(1.25 / 0.875)' },
+          md: { value: 'calc(1.5 / 1)' },
+          lg: { value: 'calc(1.75 / 1.125)' },
+          xl: { value: 'calc(1.75 / 1.25)' },
+          '2xl': { value: 'calc(2 / 1.5)' },
+          '3xl': { value: 'calc(2.25 / 1.875)' },
+          '4xl': { value: 'calc(2.5 / 2.25)' },
+        },
         easings: {
           outExpo: { value: 'cubic-bezier(0.16, 1, 0.3, 1)' },
           outQuart: { value: 'cubic-bezier(0.25, 1, 0.5, 1)' },
@@ -160,16 +173,17 @@ export const financeOsPreset = definePreset({
         },
       },
       // Text styles pair size and line height exactly like the Tailwind `text-*`
-      // utilities they replace, so migrated screens keep their metrics.
+      // utilities they replace (unitless ratios through the lineHeights tokens, so
+      // nested elements with another font size inherit a scaled line box).
       textStyles: {
-        xs: { value: { fontSize: '0.75rem', lineHeight: '1rem' } },
-        sm: { value: { fontSize: '0.875rem', lineHeight: '1.25rem' } },
-        md: { value: { fontSize: '1rem', lineHeight: '1.5rem' } },
-        lg: { value: { fontSize: '1.125rem', lineHeight: '1.75rem' } },
-        xl: { value: { fontSize: '1.25rem', lineHeight: '1.75rem' } },
-        '2xl': { value: { fontSize: '1.5rem', lineHeight: '2rem' } },
-        '3xl': { value: { fontSize: '1.875rem', lineHeight: '2.25rem' } },
-        '4xl': { value: { fontSize: '2.25rem', lineHeight: '2.5rem' } },
+        xs: { value: { fontSize: '0.75rem', lineHeight: '{lineHeights.xs}' } },
+        sm: { value: { fontSize: '0.875rem', lineHeight: '{lineHeights.sm}' } },
+        md: { value: { fontSize: '1rem', lineHeight: '{lineHeights.md}' } },
+        lg: { value: { fontSize: '1.125rem', lineHeight: '{lineHeights.lg}' } },
+        xl: { value: { fontSize: '1.25rem', lineHeight: '{lineHeights.xl}' } },
+        '2xl': { value: { fontSize: '1.5rem', lineHeight: '{lineHeights.2xl}' } },
+        '3xl': { value: { fontSize: '1.875rem', lineHeight: '{lineHeights.3xl}' } },
+        '4xl': { value: { fontSize: '2.25rem', lineHeight: '{lineHeights.4xl}' } },
         '5xl': { value: { fontSize: '3rem', lineHeight: '1' } },
         '6xl': { value: { fontSize: '3.75rem', lineHeight: '1' } },
         // Monetary amounts: mono, tabular, slashed zero.

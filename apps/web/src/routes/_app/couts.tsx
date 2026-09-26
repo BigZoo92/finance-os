@@ -19,7 +19,7 @@ import { Panel } from '@/components/surfaces/panel'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { COST_PERIODS, createCostsViewModel, type CostPeriod } from '@/features/costs-view-model'
+import { COST_PERIODS, type CostPeriod, createCostsViewModel } from '@/features/costs-view-model'
 import {
   dashboardAdvisorSpendQueryOptionsWithMode,
   dashboardCostOverviewQueryOptionsWithMode,
@@ -157,7 +157,7 @@ function CostsPage() {
                     }
                     label={line.provenanceLabel}
                     withDot={false}
-                    className="font-mono text-[10px] uppercase"
+                    className="font-mono text-[10px] uppercase leading-[inherit]"
                   />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">{line.detail}</p>

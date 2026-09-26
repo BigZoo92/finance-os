@@ -1,7 +1,6 @@
-import type * as React from "react"
-
-import { cn } from "@finance-os/ui/lib/utils"
-import { UNAVAILABLE_LABEL } from "@finance-os/ui/lib/format"
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { UNAVAILABLE_LABEL } from '@finance-os/ui/lib/format'
+import type * as React from 'react'
 
 /**
  * Progress — canonical accessible progress bar (goal progress, valuation
@@ -12,15 +11,51 @@ import { UNAVAILABLE_LABEL } from "@finance-os/ui/lib/format"
  * pretending to be 0 %.
  */
 
-type ProgressTone = "brand" | "positive" | "warning" | "negative" | "neutral"
+type ProgressTone = 'brand' | 'positive' | 'warning' | 'negative' | 'neutral'
 
-const FILL: Record<ProgressTone, string> = {
-  brand: "bg-primary",
-  positive: "bg-positive",
-  warning: "bg-warning",
-  negative: "bg-negative",
-  neutral: "bg-foreground/45",
-}
+const progressRoot = css({ display: 'flex', alignItems: 'center', gap: '3' })
+
+const progressTrack = css({
+  h: '1',
+  flex: '1',
+  overflow: 'hidden',
+  rounded: '2px',
+  bg: 'foreground/9',
+})
+
+const progressFill = cva({
+  base: {
+    h: 'full',
+    rounded: '2px',
+    transitionProperty: 'width',
+    transitionDuration: '200ms',
+    transitionTimingFunction: 'default',
+  },
+  variants: {
+    tone: {
+      brand: { bg: 'primary' },
+      positive: { bg: 'positive' },
+      warning: { bg: 'warning' },
+      negative: { bg: 'negative' },
+      neutral: { bg: 'foreground/45' },
+    },
+  },
+})
+
+const progressValue = cva({
+  base: {
+    flexShrink: '0',
+    fontFamily: 'mono',
+    fontSize: '11px',
+    fontVariantNumeric: 'tabular-nums',
+  },
+  variants: {
+    known: {
+      true: { color: 'foreground' },
+      false: { color: 'muted.foreground' },
+    },
+  },
+})
 
 type ProgressProps = {
   /** Current value, in [0, max]. `null`/`undefined` = unknown. */
@@ -32,55 +67,43 @@ type ProgressProps = {
   /** Render the percentage as visible Geist Mono text. */
   showValue?: boolean
   className?: string
-} & Omit<React.ComponentProps<"div">, "children">
+} & Omit<React.ComponentProps<'div'>, 'children'>
 
 function Progress({
   value,
   max = 100,
-  tone = "brand",
+  tone = 'brand',
   label,
   showValue = false,
   className,
   ...props
 }: ProgressProps) {
-  const known = typeof value === "number" && Number.isFinite(value) && max > 0
+  const known = typeof value === 'number' && Number.isFinite(value) && max > 0
   const clamped = known ? Math.min(Math.max(value, 0), max) : null
   const percent = clamped === null ? null : (clamped / max) * 100
   const percentText =
     percent === null
       ? UNAVAILABLE_LABEL
-      : `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(percent)} %`
+      : `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(percent)} %`
 
   return (
-    <div
-      data-slot="progress"
-      className={cn("flex items-center gap-3", className)}
-      {...props}
-    >
+    <div data-slot="progress" className={cx(progressRoot, className)} {...props}>
       <div
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={max}
-        {...(clamped === null ? { "aria-valuetext": UNAVAILABLE_LABEL } : { "aria-valuenow": clamped })}
-        {...(label ? { "aria-label": label } : {})}
-        className="h-1 flex-1 overflow-hidden rounded-[2px] bg-foreground/9"
+        {...(clamped === null
+          ? { 'aria-valuetext': UNAVAILABLE_LABEL }
+          : { 'aria-valuenow': clamped })}
+        {...(label ? { 'aria-label': label } : {})}
+        className={progressTrack}
       >
         {percent !== null && (
-          <div
-            className={cn("h-full rounded-[2px] transition-[width] duration-200", FILL[tone])}
-            style={{ width: `${percent}%` }}
-          />
+          <div className={progressFill({ tone })} style={{ width: `${percent}%` }} />
         )}
       </div>
       {showValue && (
-        <span
-          className={cn(
-            "shrink-0 font-mono text-[11px] tabular-nums",
-            percent === null ? "text-muted-foreground" : "text-foreground"
-          )}
-        >
-          {percentText}
-        </span>
+        <span className={progressValue({ known: percent !== null })}>{percentText}</span>
       )}
     </div>
   )

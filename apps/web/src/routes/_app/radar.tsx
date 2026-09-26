@@ -315,7 +315,7 @@ function RadarPage() {
           <Freshness
             asOf={vm.freshness.asOf}
             staleAfterMinutes={vm.freshness.staleAfterMinutes}
-            className="text-[10px]"
+            className="text-[10px] leading-[inherit]"
           />
           {updateMoment && vm.freshness.asOf ? (
             <time dateTime={vm.freshness.asOf}>{updateMoment}</time>
@@ -348,7 +348,7 @@ function RadarPage() {
             <Freshness
               asOf={vm.freshness.asOf}
               staleAfterMinutes={vm.freshness.staleAfterMinutes}
-              className="font-mono text-[11px]"
+              className="font-mono text-[11px] leading-[inherit]"
             />
             {updateMoment && vm.freshness.asOf ? (
               <time dateTime={vm.freshness.asOf}>{updateMoment}</time>

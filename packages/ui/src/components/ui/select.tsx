@@ -1,14 +1,14 @@
-"use client"
+'use client'
 
-import type * as React from "react"
-import { Select as SelectPrimitive } from "radix-ui"
-
+import { cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   CheckPixelIcon,
   ChevronDownPixelIcon,
   ChevronUpPixelIcon,
-} from "@finance-os/ui/icons/pixel"
-import { cn } from "@finance-os/ui/lib/utils"
+} from '@finance-os/ui/icons/pixel'
+import { Select as SelectPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 /**
  * Select — canonical accessible replacement for raw `<select>` usages.
@@ -17,6 +17,149 @@ import { cn } from "@finance-os/ui/lib/utils"
  * management, portal rendering and popper collision handling. Compact
  * low-radius Command Pixel styling.
  */
+
+const selectTrigger = cva({
+  base: {
+    display: 'flex',
+    w: 'fit',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '2',
+    rounded: 'control',
+    borderWidth: '1px',
+    borderColor: 'input',
+    bg: 'transparent',
+    px: '3',
+    textStyle: 'sm',
+    color: 'foreground',
+    whiteSpace: 'nowrap',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _hover: { borderColor: 'primary/30' },
+    outline: 'none',
+    _focusVisible: {
+      boxShadow:
+        '0 0 0 2px {colors.background}, 0 0 0 4px color-mix(in srgb, {colors.ring} 70%, transparent)',
+    },
+    _disabled: { pointerEvents: 'none', opacity: '0.4' },
+    '&[data-placeholder]': { color: 'muted.foreground' },
+    '& svg': { pointerEvents: 'none', flexShrink: '0' },
+  },
+  variants: {
+    size: {
+      default: { h: '9' },
+      sm: { h: '8', textStyle: 'xs' },
+    },
+  },
+  defaultVariants: { size: 'default' },
+})
+
+const selectContent = cva({
+  base: {
+    position: 'relative',
+    zIndex: 'popover',
+    minW: '8rem',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    rounded: 'dropdown',
+    borderWidth: '1px',
+    borderColor: 'border',
+    bg: 'popover',
+    color: 'popover.foreground',
+    shadow: 'overlay',
+    maxH: 'var(--radix-select-content-available-height)',
+    transformOrigin: 'var(--radix-select-content-transform-origin)',
+    '&[data-state=open]': { animation: 'scaleIn 150ms ease' },
+    '&[data-state=closed]': { animation: 'fadeOut 150ms ease' },
+    transitionDuration: '150ms',
+  },
+  variants: {
+    position: {
+      popper: {
+        '&[data-side=bottom]': { translate: '0 {spacing.1}' },
+        '&[data-side=top]': { translate: '0 calc({spacing.1} * -1)' },
+      },
+      'item-aligned': {},
+    },
+  },
+  defaultVariants: { position: 'popper' },
+})
+
+const selectViewport = cva({
+  base: { p: '1' },
+  variants: {
+    position: {
+      popper: {
+        h: 'var(--radix-select-trigger-height)',
+        w: 'full',
+        minW: 'var(--radix-select-trigger-width)',
+        scrollMarginY: '1',
+      },
+      'item-aligned': {},
+    },
+  },
+  defaultVariants: { position: 'popper' },
+})
+
+const selectLabel = cva({
+  base: {
+    px: '2',
+    py: '1.5',
+    fontFamily: 'mono',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.16em',
+    color: 'muted.foreground',
+  },
+})
+
+const selectItem = cva({
+  base: {
+    position: 'relative',
+    display: 'flex',
+    w: 'full',
+    cursor: 'default',
+    userSelect: 'none',
+    alignItems: 'center',
+    gap: '2',
+    rounded: 'tile',
+    py: '1.5',
+    pl: '2',
+    pr: '8',
+    textStyle: 'sm',
+    outlineStyle: 'none',
+    '@media (forced-colors: active)': { outline: '2px solid transparent', outlineOffset: '2px' },
+    _focus: { bg: 'accent', color: 'accent.foreground' },
+    '&[data-disabled]': { pointerEvents: 'none', opacity: '0.4' },
+  },
+})
+
+const selectItemIndicator = cva({
+  base: {
+    position: 'absolute',
+    right: '2',
+    display: 'flex',
+    boxSize: '3.5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'primary',
+  },
+})
+
+const selectSeparator = cva({
+  base: { pointerEvents: 'none', mx: '-1', my: '1', h: '1px', bg: 'border' },
+})
+
+const selectScrollButton = cva({
+  base: {
+    display: 'flex',
+    cursor: 'default',
+    alignItems: 'center',
+    justifyContent: 'center',
+    py: '1',
+  },
+})
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />
@@ -32,25 +175,17 @@ function SelectValue({ ...props }: React.ComponentProps<typeof SelectPrimitive.V
 
 function SelectTrigger({
   className,
-  size = "default",
+  size = 'default',
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
-  size?: "sm" | "default"
+  size?: 'sm' | 'default'
 }) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      className={cn(
-        "flex w-fit items-center justify-between gap-2 rounded-control border border-input bg-transparent px-3 text-sm text-foreground whitespace-nowrap",
-        "data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=sm]:text-xs",
-        "transition-colors duration-150 hover:border-primary/30",
-        "outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "disabled:pointer-events-none disabled:opacity-40",
-        "data-[placeholder]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
-        className
-      )}
+      className={cx(selectTrigger({ size }), className)}
       {...props}
     >
       {children}
@@ -64,7 +199,7 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "popper",
+  position = 'popper',
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -73,27 +208,11 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         collisionPadding={8}
-        className={cn(
-          "relative z-[var(--z-popover)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-dropdown border border-border bg-popover text-popover-foreground shadow-overlay",
-          "max-h-[var(--radix-select-content-available-height)]",
-          "origin-[var(--radix-select-content-transform-origin)]",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-          "duration-150",
-          position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
-          className
-        )}
+        className={cx(selectContent({ position }), className)}
         {...props}
       >
         <SelectScrollUpButton />
-        <SelectPrimitive.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
-          )}
-        >
+        <SelectPrimitive.Viewport className={selectViewport({ position })}>
           {children}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
@@ -102,21 +221,9 @@ function SelectContent({
   )
 }
 
-function SelectLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Label>) {
-  return (
-    <SelectPrimitive.Label
-      data-slot="select-label"
-      className={cn(
-        "px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const SelectLabel = styled(SelectPrimitive.Label, selectLabel, {
+  defaultProps: { 'data-slot': 'select-label' },
+})
 
 function SelectItem({
   className,
@@ -126,15 +233,10 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(
-        "relative flex w-full cursor-default select-none items-center gap-2 rounded-tile py-1.5 pl-2 pr-8 text-sm outline-hidden",
-        "focus:bg-accent focus:text-accent-foreground",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-        className
-      )}
+      className={cx(selectItem(), className)}
       {...props}
     >
-      <span className="absolute right-2 flex size-3.5 items-center justify-center text-primary">
+      <span className={selectItemIndicator()}>
         <SelectPrimitive.ItemIndicator>
           <CheckPixelIcon size={13} aria-hidden="true" />
         </SelectPrimitive.ItemIndicator>
@@ -144,18 +246,9 @@ function SelectItem({
   )
 }
 
-function SelectSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Separator>) {
-  return (
-    <SelectPrimitive.Separator
-      data-slot="select-separator"
-      className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
-      {...props}
-    />
-  )
-}
+const SelectSeparator = styled(SelectPrimitive.Separator, selectSeparator, {
+  defaultProps: { 'data-slot': 'select-separator' },
+})
 
 function SelectScrollUpButton({
   className,
@@ -164,7 +257,7 @@ function SelectScrollUpButton({
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
-      className={cn("flex cursor-default items-center justify-center py-1", className)}
+      className={cx(selectScrollButton(), className)}
       {...props}
     >
       <ChevronUpPixelIcon size={13} aria-hidden="true" />
@@ -179,7 +272,7 @@ function SelectScrollDownButton({
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
-      className={cn("flex cursor-default items-center justify-center py-1", className)}
+      className={cx(selectScrollButton(), className)}
       {...props}
     >
       <ChevronDownPixelIcon size={13} aria-hidden="true" />

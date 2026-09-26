@@ -1,9 +1,8 @@
-"use client"
+'use client'
 
-import type * as React from "react"
-import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
-
-import { cn } from "@finance-os/ui/lib/utils"
+import { cva, cx } from '@finance-os/styled-system/css'
+import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 /**
  * SegmentedControl — canonical Command Pixel period/filter switch.
@@ -15,6 +14,57 @@ import { cn } from "@finance-os/ui/lib/utils"
  * it selected.
  */
 
+const segmentedControlRoot = cva({
+  base: {
+    display: 'inline-flex',
+    w: 'fit',
+    maxW: 'full',
+    alignItems: 'center',
+    overflowX: 'auto',
+    rounded: 'control',
+    borderWidth: '1px',
+    borderColor: 'border',
+    bg: 'surface.1',
+    p: '3px',
+    fontFamily: 'mono',
+  },
+  variants: {
+    size: {
+      sm: { fontSize: '10px' },
+      md: { fontSize: '11px' },
+    },
+  },
+  defaultVariants: { size: 'md' },
+})
+
+const segmentedControlItem = cva({
+  base: {
+    flexShrink: '0',
+    whiteSpace: 'nowrap',
+    rounded: 'tile',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    color: 'muted.foreground',
+    _hover: { color: 'foreground' },
+    // The active tile keeps its brand color under hover (data-* beat hover in Tailwind).
+    '&[data-state=on]': { bg: 'primary/12', color: 'primary', _hover: { color: 'primary' } },
+    outline: 'none',
+    _focusVisible: {
+      boxShadow:
+        '0 0 0 1px {colors.background}, 0 0 0 3px color-mix(in srgb, {colors.ring} 70%, transparent)',
+    },
+    _disabled: { pointerEvents: 'none', opacity: '0.4' },
+  },
+  variants: {
+    size: {
+      sm: { px: '2.5', py: '1' },
+      md: { px: '3', py: '1.5' },
+    },
+  },
+  defaultVariants: { size: 'md' },
+})
+
 type SegmentedControlOption<T extends string> = {
   label: React.ReactNode
   value: T
@@ -25,17 +75,17 @@ type SegmentedControlProps<T extends string> = {
   options: Array<SegmentedControlOption<T>>
   value: T
   onChange: (next: T) => void
-  size?: "sm" | "md"
+  size?: 'sm' | 'md'
   className?: string
-  "aria-label"?: string
-  "aria-labelledby"?: string
+  'aria-label'?: string
+  'aria-labelledby'?: string
 }
 
 function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
-  size = "md",
+  size = 'md',
   className,
   ...aria
 }: SegmentedControlProps<T>) {
@@ -47,11 +97,7 @@ function SegmentedControl<T extends string>({
       onValueChange={next => {
         if (next) onChange(next as T)
       }}
-      className={cn(
-        "inline-flex w-fit max-w-full items-center overflow-x-auto rounded-control border border-border bg-surface-1 p-[3px] font-mono",
-        size === "sm" ? "text-[10px]" : "text-[11px]",
-        className
-      )}
+      className={cx(segmentedControlRoot({ size }), className)}
       {...aria}
     >
       {options.map(option => (
@@ -59,14 +105,7 @@ function SegmentedControl<T extends string>({
           key={option.value}
           value={option.value}
           disabled={option.disabled}
-          className={cn(
-            "shrink-0 whitespace-nowrap rounded-tile transition-colors duration-150",
-            size === "sm" ? "px-2.5 py-1" : "px-3 py-1.5",
-            "text-muted-foreground hover:text-foreground",
-            "data-[state=on]:bg-primary/12 data-[state=on]:text-primary",
-            "outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-            "disabled:pointer-events-none disabled:opacity-40"
-          )}
+          className={segmentedControlItem({ size })}
         >
           {option.label}
         </ToggleGroupPrimitive.Item>

@@ -180,7 +180,7 @@ export function SourceCard({ source, selected, variant, onSelect }: SourceCardPr
         <Status
           tone={status.tone}
           label={status.label}
-          className="shrink-0 font-mono text-[10px]"
+          className="shrink-0 font-mono text-[10px] leading-[inherit]"
         />
       </span>
       {source.bio ? (

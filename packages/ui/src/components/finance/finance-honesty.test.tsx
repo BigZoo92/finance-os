@@ -73,17 +73,17 @@ describe('PercentChange', () => {
   it('renders a real zero without fake sign or semantic color', () => {
     const html = render(<PercentChange value={0} />)
     expect(html).toContain('0,00 %')
-    expect(html).not.toContain('text-positive')
-    expect(html).not.toContain('text-negative')
+    expect(html).not.toContain('c_positive')
+    expect(html).not.toContain('c_negative')
   })
 
   it('keeps the sign in the text so color is never the only signal', () => {
     const up = render(<PercentChange value={8.51} />)
     expect(up).toContain('+8,51 %')
-    expect(up).toContain('text-positive')
+    expect(up).toContain('c_positive')
     const down = render(<PercentChange value={-3.2} />)
     expect(down).toContain('-3,20 %')
-    expect(down).toContain('text-negative')
+    expect(down).toContain('c_negative')
   })
 })
 

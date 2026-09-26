@@ -158,7 +158,7 @@ function CockpitPage() {
           </p>
           <Amount
             value={available?.value}
-            className="mt-3 block text-[clamp(2.25rem,7vw,3.5rem)] font-medium tracking-[-0.035em] text-foreground"
+            className="mt-3 block text-[clamp(2.25rem,7vw,3.5rem)] font-medium text-foreground"
           />
           <div className="mt-6 max-w-xl border-t border-border">
             {available?.items.length ? (

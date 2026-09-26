@@ -13,7 +13,7 @@ import {
 } from '@finance-os/ui/components'
 import { HeartbeatIcon } from '@phosphor-icons/react/dist/csr/Heartbeat'
 import { useQuery } from '@tanstack/react-query'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { PageHeader } from '@/components/surfaces/page-header'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -129,7 +129,7 @@ function HealthPage() {
                 ? 'Attention'
                 : 'Indisponible'
           }
-          className="font-mono text-[10px] uppercase tracking-[0.14em]"
+          className="font-mono text-[10px] uppercase tracking-[0.14em] leading-[inherit]"
         />
         <h2 className="mt-3 text-2xl font-semibold tracking-tight">{model.headline}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{model.summary}</p>

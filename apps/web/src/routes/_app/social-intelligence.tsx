@@ -40,8 +40,8 @@ import {
   filterSourceCards,
   filtersFromSearch,
   parseSocialSearch,
-  searchFromFilters,
   type SocialFilters,
+  searchFromFilters,
 } from '@/features/social/view-model'
 import { pushToast } from '@/lib/toast-store'
 import { useIsMobile } from '@/lib/use-is-mobile'
@@ -159,7 +159,8 @@ function SocialIntelligencePage() {
                 aria-label="Rechercher une source"
                 placeholder="Rechercher"
                 autoComplete="off"
-                className="h-9 pl-8"
+                h="9"
+                pl="8"
                 onChange={event => {
                   setQuery(event.target.value)
                   updateSearch({ ...filters, q: event.target.value }, search.selected)
