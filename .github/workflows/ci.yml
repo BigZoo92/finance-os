@@ -110,6 +110,9 @@ jobs:
       - name: Client bundle denylist
         run: pnpm check:client-bundle
 
+      - name: Client bundle budget
+        run: pnpm check:bundle-budget
+
   database:
     name: Database migrations
     runs-on: ubuntu-latest

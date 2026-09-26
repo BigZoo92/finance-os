@@ -90,6 +90,10 @@ export const coreSteps = [
     name: 'Client bundle denylist',
     args: ['check:client-bundle'],
   },
+  {
+    name: 'Client bundle budget',
+    args: ['check:bundle-budget'],
+  },
 ]
 
 export const desktopSteps = [

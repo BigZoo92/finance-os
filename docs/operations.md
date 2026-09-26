@@ -65,3 +65,9 @@ pnpm smoke:prod
 ```
 
 Release and rollback procedures are in [Deployment](deployment.md); provider boundaries are in [Integrations](integrations.md).
+
+## Measured guardrails
+
+- `pnpm check:bundle-budget` measures the built web client (gzip and raw bytes, largest chunk) against `apps/web/bundle-budget.json`; CI fails when a budget is exceeded. Raise a budget only in the change that explains the growth.
+- Every web response carries the baseline security headers (`apps/web/src/lib/security-headers.ts`: nosniff, no-referrer, restrictive permissions policy, `DENY` framing, `frame-ancestors 'none'`, no indexing, HSTS on HTTPS in production) and a `server-timing: app;dur=<ms>` header; requests slower than `WEB_SLOW_REQUEST_MS` (default 2000) are logged as `[web:ssr] slow request` without payloads.
+- The API logs `api request completed` with `durationMs`, `status` and `requestId` for every request; correlate with the web `x-request-id`, which the `/api` proxy forwards unchanged.
