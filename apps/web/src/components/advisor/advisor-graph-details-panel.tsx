@@ -9,6 +9,8 @@
  * No data fetching here — the page owns all state and passes pre-computed
  * props (neighbors, path, pinned ids, etc.).
  */
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Badge } from '@finance-os/ui/components'
 import { ChartNetworkPixelIcon, ThumbtackPixelIcon } from '@finance-os/ui/icons/pixel'
 import { Link } from '@tanstack/react-router'
@@ -51,6 +53,151 @@ interface LinkDetailsProps {
 interface EmptyDetailsProps {
   hasGraph: boolean
 }
+
+// ─── styles ───────────────────────────────────────────────────────────────
+
+// Kind swatch in the panel header; the color itself is graph data, not a token.
+const kindSwatch = css({ display: 'inline-block', boxSize: '3', rounded: 'full' })
+
+const notice = cva({
+  base: { rounded: 'lg', borderWidth: '1px', bg: 'warning/10', px: '3', py: '2', color: 'warning' },
+  variants: {
+    kind: {
+      example: { borderColor: 'warning/40', borderStyle: 'dashed', fontSize: '12px' },
+      path: { borderColor: 'warning/30', fontSize: '11.5px' },
+    },
+  },
+})
+
+const kindNote = css({
+  rounded: 'lg',
+  bg: 'surface.1',
+  px: '3',
+  py: '2',
+  fontSize: '11.5px',
+  fontStyle: 'italic',
+  lineHeight: 'relaxed',
+  color: 'muted.foreground',
+})
+
+const neighborsSummary = css({
+  cursor: 'pointer',
+  px: '3',
+  py: '2',
+  fontSize: '11px',
+  fontWeight: 'medium',
+  color: 'muted.foreground',
+  _hover: { color: 'foreground' },
+})
+
+const chatLink = css({ color: 'primary', _hover: { textDecorationLine: 'underline' } })
+
+// Tailwind's `space-y-3` put the margin on every child but the last; the last
+// child here is an inline-flex Badge, so the rule is kept verbatim.
+const linkBody = css({
+  fontSize: '12.5px',
+  '& > :not(:last-child)': { marginBlockEnd: '3' },
+})
+
+const actionButton = cva({
+  base: {
+    minH: '11',
+    rounded: 'lg',
+    borderWidth: '1px',
+    px: '2.5',
+    py: '1.5',
+    fontSize: '11px',
+    fontWeight: 'medium',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _disabled: { cursor: 'not-allowed', opacity: '0.4' },
+  },
+  variants: {
+    active: {
+      true: { borderColor: 'primary/40', bg: 'primary/12', color: 'primary' },
+      false: {
+        borderColor: 'border/60',
+        bg: 'surface.1',
+        color: 'muted.foreground',
+        _hover: { bg: 'surface.2', color: 'foreground' },
+      },
+    },
+  },
+  defaultVariants: { active: false },
+})
+
+const neighborGroup = cva({
+  base: { rounded: 'lg', borderWidth: '1px', p: '3' },
+  variants: {
+    tone: {
+      primary: { borderColor: 'primary/25', bg: 'primary/8', color: 'primary' },
+      warning: { borderColor: 'warning/30', bg: 'warning/8', color: 'warning' },
+      ai: { borderColor: 'ai/30', bg: 'ai/8', color: 'ai' },
+      muted: { borderColor: 'border/40', bg: 'surface.1', color: 'muted.foreground' },
+    },
+  },
+})
+
+const neighborLink = css({
+  minH: '11',
+  textAlign: 'left',
+  fontSize: '12px',
+  color: 'foreground',
+  _hover: { textDecorationLine: 'underline' },
+})
+
+// Bare `rounded` is Tailwind's inlined 0.25rem, not a radius token.
+const exampleTag = cva({
+  base: {
+    rounded: '0.25rem',
+    bg: 'warning/15',
+    px: '1',
+    py: '0.5',
+    fontSize: '9px',
+    textTransform: 'uppercase',
+    letterSpacing: 'wider',
+    color: 'warning',
+  },
+  variants: {
+    placement: {
+      inline: { ml: '1.5' },
+      row: { fontWeight: 'medium' },
+    },
+  },
+})
+
+const neighborRow = cva({
+  base: {
+    display: 'flex',
+    minH: '11',
+    w: 'full',
+    alignItems: 'center',
+    gap: '2',
+    rounded: 'md',
+    borderWidth: '1px',
+    px: '2',
+    py: '1.5',
+    textAlign: 'left',
+    fontSize: '11px',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+  },
+  variants: {
+    example: {
+      true: {
+        borderColor: 'warning/30',
+        borderStyle: 'dashed',
+        bg: 'warning/5',
+        _hover: { bg: 'warning/10' },
+      },
+      false: { borderColor: 'border/40', bg: 'surface.1', _hover: { bg: 'surface.2' } },
+    },
+  },
+})
+
+const neighborDot = css({ boxSize: '2', flexShrink: '0', rounded: 'full' })
 
 export const toMemoryFreshnessLabel = (freshness: 'fresh' | 'stale' | 'unknown'): string => {
   if (freshness === 'fresh') return 'Récente'
@@ -99,23 +246,23 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
       icon={
         <span
           aria-hidden="true"
-          className="inline-block h-3 w-3 rounded-full"
+          className={kindSwatch}
           style={{ backgroundColor: NODE_KIND_COLOR[node.kind] }}
         />
       }
     >
-      <div className="space-y-4">
+      <styled.div spaceY="4">
         {/* Provenance / origin row — most important trust signal first. */}
         {node.isExample ? (
-          <div className="rounded-lg border border-warning/40 border-dashed bg-warning/10 px-3 py-2 text-[12px] text-warning">
-            <p className="font-medium">Exemple, pas une donnée réelle</p>
-            <p className="mt-0.5 text-[11.5px] text-warning/85">
+          <div className={notice({ kind: 'example' })}>
+            <styled.p fontWeight="medium">Exemple, pas une donnée réelle</styled.p>
+            <styled.p mt="0.5" fontSize="11.5px" color="warning/85">
               Ajouté uniquement pour illustrer la carte. Aucune décision ne s’y appuie.
-            </p>
+            </styled.p>
           </div>
         ) : null}
 
-        <div className="flex flex-wrap gap-1.5">
+        <styled.div display="flex" flexWrap="wrap" gap="1.5">
           {node.isExample ? <Badge variant="destructive">exemple</Badge> : null}
           {reliabilityLabel ? <Badge variant="outline">{reliabilityLabel}</Badge> : null}
           {node.freshness ? (
@@ -125,39 +272,50 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           {node.isContradicted ? <Badge variant="destructive">contradiction</Badge> : null}
           {isPinned ? <Badge variant="secondary">épinglé</Badge> : null}
           {isIsolated ? <Badge variant="secondary">isolé</Badge> : null}
-        </div>
+        </styled.div>
 
-        {kindCopy ? (
-          <p className="rounded-lg bg-surface-1 px-3 py-2 text-[11.5px] italic leading-relaxed text-muted-foreground">
-            {kindCopy}
-          </p>
-        ) : null}
+        {kindCopy ? <p className={kindNote}>{kindCopy}</p> : null}
 
         {node.summary ? (
-          <p className="text-[12.5px] leading-relaxed text-muted-foreground">{node.summary}</p>
+          <styled.p fontSize="12.5px" lineHeight="relaxed" color="muted.foreground">
+            {node.summary}
+          </styled.p>
         ) : null}
 
         {nodeViewModel.sourceLabel ? (
-          <dl className="flex items-center justify-between gap-4 border-t border-border/45 pt-3 text-xs">
-            <dt className="text-muted-foreground">Source</dt>
-            <dd className="text-right text-foreground">{nodeViewModel.sourceLabel}</dd>
-          </dl>
+          <styled.dl
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap="4"
+            borderTopWidth="1px"
+            borderColor="border/45"
+            pt="3"
+            textStyle="xs"
+          >
+            <styled.dt color="muted.foreground">Source</styled.dt>
+            <styled.dd textAlign="right" color="foreground">
+              {nodeViewModel.sourceLabel}
+            </styled.dd>
+          </styled.dl>
         ) : null}
 
         {pathPeerLabel ? (
-          <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[11.5px] text-warning">
-            <p className="font-medium">Chemin actif</p>
-            <p className="mt-0.5 text-warning/80">Trace en cours vers {pathPeerLabel}</p>
+          <div className={notice({ kind: 'path' })}>
+            <styled.p fontWeight="medium">Chemin actif</styled.p>
+            <styled.p mt="0.5" color="warning/80">
+              Trace en cours vers {pathPeerLabel}
+            </styled.p>
           </div>
         ) : null}
 
         {/* Quick actions — terse, all functional. */}
-        <div className="grid grid-cols-2 gap-1.5">
+        <styled.div display="grid" gridTemplateColumns="repeat(2, minmax(0, 1fr))" gap="1.5">
           <ActionButton onClick={() => onTogglePin(node.id)} active={isPinned}>
-            <span className="inline-flex items-center gap-1.5">
+            <styled.span display="inline-flex" alignItems="center" gap="1.5">
               <ThumbtackPixelIcon size={12} />
               {isPinned ? 'Désépingler' : 'Épingler'}
-            </span>
+            </styled.span>
           </ActionButton>
           <ActionButton
             onClick={() => (isIsolated ? onClearIsolation() : onIsolate(node.id))}
@@ -167,7 +325,7 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
           </ActionButton>
           <ActionButton onClick={() => onTracePath(node.id)}>Tracer un chemin</ActionButton>
           <ActionButton onClick={() => onCopyLabel(node.label)}>Copier le nom</ActionButton>
-        </div>
+        </styled.div>
 
         {/* Kind-specific neighbor groupings, only shown when populated. */}
         <NeighborGroup
@@ -202,11 +360,9 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
         />
 
         {neighbors.length > 0 ? (
-          <details className="rounded-lg border border-border/40 bg-surface-1/60">
-            <summary className="cursor-pointer px-3 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground">
-              Tous les voisins ({neighbors.length})
-            </summary>
-            <div className="max-h-64 space-y-1 overflow-y-auto px-3 pb-3 pt-1">
+          <styled.details rounded="lg" borderWidth="1px" borderColor="border/40" bg="surface.1/60">
+            <summary className={neighborsSummary}>Tous les voisins ({neighbors.length})</summary>
+            <styled.div maxH="64" spaceY="1" overflowY="auto" px="3" pb="3" pt="1">
               {neighbors.map(({ link, other }) => (
                 <NeighborRow
                   key={`${link.source}::${link.kind}::${link.target}`}
@@ -214,16 +370,23 @@ export function AdvisorGraphNodeDetails(props: NodeDetailsProps) {
                   onSelect={onSelectNeighbor}
                 />
               ))}
-            </div>
-          </details>
+            </styled.div>
+          </styled.details>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px]">
-          <Link to="/ia/chat" className="text-primary hover:underline">
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="center"
+          gap="3"
+          pt="1"
+          fontSize="11px"
+        >
+          <Link to="/ia/chat" className={chatLink}>
             Poser une question dans Chat
           </Link>
-        </div>
-      </div>
+        </styled.div>
+      </styled.div>
     </Panel>
   )
 }
@@ -237,23 +400,19 @@ export function AdvisorGraphLinkDetails({ link, source, target }: LinkDetailsPro
       icon={
         <span
           aria-hidden="true"
-          className="inline-block h-3 w-3 rounded-full"
+          className={kindSwatch}
           style={{ backgroundColor: LINK_KIND_COLOR[link.kind] }}
         />
       }
     >
-      <div className="space-y-3 text-[12.5px]">
-        <p className="text-muted-foreground">
-          <span className="text-foreground">{source?.label ?? 'Souvenir indisponible'}</span>{' '}
-          <span className="text-muted-foreground/60">→</span>{' '}
-          <span className="text-foreground">{target?.label ?? 'Souvenir indisponible'}</span>
-        </p>
-        {meaning ? (
-          <p className="rounded-lg bg-surface-1 px-3 py-2 text-[11.5px] italic leading-relaxed text-muted-foreground">
-            {meaning}
-          </p>
-        ) : null}
-        {link.summary ? <p className="text-muted-foreground">{link.summary}</p> : null}
+      <div className={linkBody}>
+        <styled.p color="muted.foreground">
+          <styled.span color="foreground">{source?.label ?? 'Souvenir indisponible'}</styled.span>{' '}
+          <styled.span color="muted.foreground/60">→</styled.span>{' '}
+          <styled.span color="foreground">{target?.label ?? 'Souvenir indisponible'}</styled.span>
+        </styled.p>
+        {meaning ? <p className={kindNote}>{meaning}</p> : null}
+        {link.summary ? <styled.p color="muted.foreground">{link.summary}</styled.p> : null}
         {toMemoryReliabilityLabel(link.confidence) ? (
           <Badge variant="outline">{toMemoryReliabilityLabel(link.confidence)}</Badge>
         ) : null}
@@ -265,17 +424,17 @@ export function AdvisorGraphLinkDetails({ link, source, target }: LinkDetailsPro
 export function AdvisorGraphEmptyDetails({ hasGraph }: EmptyDetailsProps) {
   return (
     <Panel title="Sélectionne un nœud" tone="plain" icon={<ChartNetworkPixelIcon size={16} />}>
-      <p className="text-sm leading-relaxed text-muted-foreground">
+      <styled.p fontSize="sm" lineHeight="relaxed" color="muted.foreground">
         Sélectionne un souvenir pour afficher son résumé, sa fraîcheur et ses liens directs.
         {hasGraph ? ' Sélectionne une relation pour comprendre son rôle.' : null}
-      </p>
-      <ul className="mt-3 space-y-1 text-[11.5px] leading-relaxed text-muted-foreground">
+      </styled.p>
+      <styled.ul mt="3" spaceY="1" fontSize="11.5px" lineHeight="relaxed" color="muted.foreground">
         <li>Le survol met en relief le voisinage immédiat.</li>
         <li>Le clic ouvre la fiche détaillée.</li>
         <li>Une épingle garde un souvenir en référence.</li>
         <li>L’isolation réduit la carte au voisinage utile.</li>
         <li>Le tracé cherche un chemin entre deux souvenirs.</li>
-      </ul>
+      </styled.ul>
     </Panel>
   )
 }
@@ -298,11 +457,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`min-h-11 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        active
-          ? 'border-primary/40 bg-primary/12 text-primary'
-          : 'border-border/60 bg-surface-1 text-muted-foreground hover:bg-surface-2 hover:text-foreground'
-      }`}
+      className={actionButton({ active: Boolean(active) })}
     >
       {children}
     </button>
@@ -321,33 +476,23 @@ function NeighborGroup({
   onSelect: (id: string) => void
 }) {
   if (items.length === 0) return null
-  const styles: Record<typeof tone, string> = {
-    primary: 'border-primary/25 bg-primary/8 text-primary',
-    warning: 'border-warning/30 bg-warning/8 text-warning',
-    ai: 'border-ai/30 bg-ai/8 text-ai',
-    muted: 'border-border/40 bg-surface-1 text-muted-foreground',
-  }
   return (
-    <div className={`rounded-lg border p-3 ${styles[tone]}`}>
-      <p className="text-[11px] font-medium">{title}</p>
-      <ul className="mt-1.5 space-y-1">
+    <div className={neighborGroup({ tone })}>
+      <styled.p fontSize="11px" fontWeight="medium">
+        {title}
+      </styled.p>
+      <styled.ul mt="1.5" spaceY="1">
         {items.slice(0, 6).map(({ other }) => (
           <li key={other.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(other.id)}
-              className="min-h-11 text-left text-[12px] text-foreground hover:underline"
-            >
+            <button type="button" onClick={() => onSelect(other.id)} className={neighborLink}>
               {other.label}
               {other.isExample ? (
-                <span className="ml-1.5 rounded bg-warning/15 px-1 py-0.5 text-[9px] uppercase tracking-wider text-warning">
-                  ex
-                </span>
+                <span className={exampleTag({ placement: 'inline' })}>ex</span>
               ) : null}
             </button>
           </li>
         ))}
-      </ul>
+      </styled.ul>
     </div>
   )
 }
@@ -364,29 +509,23 @@ function NeighborRow({
     <button
       type="button"
       onClick={() => onSelect(other.id)}
-      className={`flex min-h-11 w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
-        other.isExample
-          ? 'border-warning/30 border-dashed bg-warning/5 hover:bg-warning/10'
-          : 'border-border/40 bg-surface-1 hover:bg-surface-2'
-      }`}
+      className={neighborRow({ example: Boolean(other.isExample) })}
     >
       <span
         aria-hidden="true"
-        className="h-2 w-2 flex-shrink-0 rounded-full"
+        className={neighborDot}
         style={{
           backgroundColor: NODE_KIND_COLOR[other.kind],
           opacity: other.isExample ? 0.5 : 1,
         }}
       />
-      <span className="truncate text-foreground">{other.label}</span>
-      {other.isExample ? (
-        <span className="rounded bg-warning/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-warning">
-          ex
-        </span>
-      ) : null}
-      <span className="ml-auto whitespace-nowrap text-[10px] text-muted-foreground">
+      <styled.span truncate color="foreground">
+        {other.label}
+      </styled.span>
+      {other.isExample ? <span className={exampleTag({ placement: 'row' })}>ex</span> : null}
+      <styled.span ml="auto" whiteSpace="nowrap" fontSize="10px" color="muted.foreground">
         {LINK_KIND_LABEL[link.kind]}
-      </span>
+      </styled.span>
     </button>
   )
 }

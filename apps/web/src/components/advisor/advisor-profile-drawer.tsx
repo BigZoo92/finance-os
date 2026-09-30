@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Drawer,
@@ -52,6 +54,62 @@ type AdvisorProfileDrawerProps = {
 
 const fieldErrorId = (field: keyof InvestmentProfileFormDraft) => `advisor-profile-${field}-error`
 
+const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
+
+// Tailwind's `space-y-6` put the margin on every child but the last; the
+// read-only Status chip is inline-flex, so the exact rule is kept.
+const drawerBody = css({
+  px: '5',
+  py: '5',
+  '& > :not(:last-child)': { marginBlockEnd: '6' },
+})
+
+const fieldHint = css({ fontSize: '11px', lineHeight: 'relaxed', color: 'muted.foreground' })
+
+const inputSuffix = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  insetY: '0',
+  right: '3',
+  display: 'flex',
+  alignItems: 'center',
+  textStyle: 'xs',
+  color: 'muted.foreground',
+})
+
+const profileTextarea = css({
+  w: 'full',
+  resize: 'vertical',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'input',
+  bg: 'transparent',
+  px: '3',
+  py: '2',
+  textStyle: 'sm',
+  color: 'foreground',
+  outlineStyle: 'none',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _placeholder: { color: 'muted.foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+  _disabled: { opacity: '0.5' },
+})
+
+// `font-financial` next to `text-base`: one element cannot hold two text
+// styles, so the size and line height are the `md` longhands.
+const targetValue = css({
+  textStyle: 'financial',
+  fontSize: 'md',
+  lineHeight: 'md',
+  fontVariantNumeric: 'tabular-nums',
+})
+
+// `space-y-1.5` on the field: the inline label ignores block margins, so the
+// gap comes from the control's bottom margin (every child but the last).
+const fieldRoot = css({ '& > :not(:last-child)': { marginBlockEnd: '1.5' } })
+
 export function AdvisorProfileDrawer({
   open,
   onOpenChange,
@@ -98,20 +156,30 @@ export function AdvisorProfileDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent side="right" aria-busy={isPending}>
-        <form className="flex min-h-full flex-col" onSubmit={handleSubmit} noValidate>
-          <DrawerHeader className="border-b border-border/60 pb-5">
+        <styled.form
+          display="flex"
+          minH="full"
+          flexDirection="column"
+          onSubmit={handleSubmit}
+          noValidate
+        >
+          <DrawerHeader borderBottomWidth="1px" borderColor="border/60" pb="5">
             <DrawerTitle>Profil d’investissement</DrawerTitle>
             <DrawerDescription>
               Les préférences enregistrées guident le prochain calcul. Aucun ordre n’est transmis.
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="space-y-6 px-5 py-5">
+          <div className={drawerBody}>
             {!profile ? (
-              <p className="text-sm text-muted-foreground">Profil momentanément indisponible.</p>
+              <p className={mutedText}>Profil momentanément indisponible.</p>
             ) : (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <styled.div
+                  display="grid"
+                  gap="4"
+                  sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+                >
                   <Field
                     field="monthlyContributionTarget"
                     label="Versement mensuel cible"
@@ -135,10 +203,7 @@ export function AdvisorProfileDrawer({
                           : 'advisor-profile-contribution-hint'
                       }
                     />
-                    <p
-                      id="advisor-profile-contribution-hint"
-                      className="text-[11px] leading-relaxed text-muted-foreground"
-                    >
+                    <p id="advisor-profile-contribution-hint" className={fieldHint}>
                       Laisser vide signifie qu’aucune cible mensuelle n’est définie.
                     </p>
                   </Field>
@@ -149,7 +214,7 @@ export function AdvisorProfileDrawer({
                     htmlFor="advisor-profile-horizon"
                     error={errors.horizonYears}
                   >
-                    <div className="relative">
+                    <styled.div position="relative">
                       <Input
                         id="advisor-profile-horizon"
                         type="number"
@@ -165,10 +230,8 @@ export function AdvisorProfileDrawer({
                           errors.horizonYears ? fieldErrorId('horizonYears') : undefined
                         }
                       />
-                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
-                        ans
-                      </span>
-                    </div>
+                      <span className={inputSuffix}>ans</span>
+                    </styled.div>
                   </Field>
 
                   <Field
@@ -184,7 +247,8 @@ export function AdvisorProfileDrawer({
                     >
                       <SelectTrigger
                         id="advisor-profile-risk"
-                        className="h-10 w-full"
+                        h="10"
+                        w="full"
                         aria-invalid={errors.riskProfile ? true : undefined}
                         aria-describedby={
                           errors.riskProfile ? fieldErrorId('riskProfile') : undefined
@@ -208,7 +272,7 @@ export function AdvisorProfileDrawer({
                     htmlFor="advisor-profile-rebalance"
                     error={errors.rebalanceThresholdPct}
                   >
-                    <div className="relative">
+                    <styled.div position="relative">
                       <Input
                         id="advisor-profile-rebalance"
                         type="number"
@@ -226,12 +290,10 @@ export function AdvisorProfileDrawer({
                             : undefined
                         }
                       />
-                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
-                        %
-                      </span>
-                    </div>
+                      <span className={inputSuffix}>%</span>
+                    </styled.div>
                   </Field>
-                </div>
+                </styled.div>
 
                 <Field
                   field="description"
@@ -248,40 +310,57 @@ export function AdvisorProfileDrawer({
                     disabled={!isAdmin || isPending}
                     aria-invalid={errors.description ? true : undefined}
                     aria-describedby={errors.description ? fieldErrorId('description') : undefined}
-                    className="w-full resize-y rounded-control border border-input bg-transparent px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/70 disabled:opacity-50"
+                    className={profileTextarea}
                   />
                 </Field>
 
-                <section
-                  className="space-y-3 border-t border-border/60 pt-5"
+                <styled.section
+                  spaceY="3"
+                  borderTopWidth="1px"
+                  borderColor="border/60"
+                  pt="5"
                   aria-labelledby="advisor-profile-target-title"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 id="advisor-profile-target-title" className="text-sm font-medium">
+                  <styled.div
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    gap="3"
+                  >
+                    <styled.h3 id="advisor-profile-target-title" textStyle="sm" fontWeight="medium">
                       Répartition cible
-                    </h3>
+                    </styled.h3>
                     <Status
                       tone={target.targetIsValid ? 'positive' : 'attention'}
                       label={target.targetIsValid ? 'Cible complète' : 'Cible à vérifier'}
                     />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  </styled.div>
+                  <styled.div
+                    display="grid"
+                    gridTemplateColumns="repeat(3, minmax(0, 1fr))"
+                    gap="2"
+                  >
                     {target.rows.map(row => (
-                      <div key={row.bucket} className="border-l border-border/70 pl-3">
-                        <p className="font-financial text-base tabular-nums">
+                      <styled.div
+                        key={row.bucket}
+                        borderLeftWidth="1px"
+                        borderColor="border/70"
+                        pl="3"
+                      >
+                        <p className={targetValue}>
                           {row.targetPct === null ? 'Indisponible' : `${row.targetPct} %`}
                         </p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">
+                        <styled.p mt="1" fontSize="11px" color="muted.foreground">
                           {INVESTMENT_BUCKET_LABEL[row.bucket]}
-                        </p>
-                      </div>
+                        </styled.p>
+                      </styled.div>
                     ))}
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  </styled.div>
+                  <p className={fieldHint}>
                     Ces pourcentages sont en lecture seule. Le profil de risque ne les modifie pas
                     automatiquement.
                   </p>
-                </section>
+                </styled.section>
               </>
             )}
 
@@ -289,13 +368,20 @@ export function AdvisorProfileDrawer({
               <Status tone="neutral" label="Mode démo en lecture seule" />
             ) : null}
             {mutationError ? (
-              <p role="alert" className="text-sm text-negative">
+              <styled.p role="alert" textStyle="sm" color="negative">
                 L’enregistrement n’a pas abouti. Le profil actuel est conservé.
-              </p>
+              </styled.p>
             ) : null}
           </div>
 
-          <DrawerFooter className="sticky bottom-0 border-t border-border/60 bg-card pt-4">
+          <DrawerFooter
+            position="sticky"
+            bottom="0"
+            borderTopWidth="1px"
+            borderColor="border/60"
+            bg="card"
+            pt="4"
+          >
             {isAdmin ? (
               <Button type="submit" size="lg" disabled={!profile || isPending}>
                 {isPending ? 'Enregistrement…' : 'Enregistrer le profil'}
@@ -311,7 +397,7 @@ export function AdvisorProfileDrawer({
               {isAdmin ? 'Annuler' : 'Fermer'}
             </Button>
           </DrawerFooter>
-        </form>
+        </styled.form>
       </DrawerContent>
     </Drawer>
   )
@@ -331,15 +417,15 @@ function Field({
   children: ReactNode
 }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="text-xs font-medium text-foreground">
+    <div className={fieldRoot}>
+      <styled.label htmlFor={htmlFor} textStyle="xs" fontWeight="medium" color="foreground">
         {label}
-      </label>
+      </styled.label>
       {children}
       {error ? (
-        <p id={fieldErrorId(field)} className="text-[11px] text-negative">
+        <styled.p id={fieldErrorId(field)} fontSize="11px" color="negative">
           {error}
-        </p>
+        </styled.p>
       ) : null}
     </div>
   )

@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { CommentPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -52,6 +54,86 @@ export const Route = createFileRoute('/_app/ia/chat')({
   },
   component: IaChatPage,
 })
+
+const visuallyHidden = css({ srOnly: true })
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const conversationStack = css({ spaceY: '8', sm: { spaceY: '10' } })
+
+const chatShell = css({
+  mx: 'auto',
+  display: 'flex',
+  h: 'calc(100dvh - 9.75rem)',
+  minH: '32rem',
+  w: 'full',
+  maxW: '780px',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  lg: { h: 'calc(100dvh - 9.25rem)' },
+})
+
+const chatHeader = css({
+  display: 'flex',
+  h: '12',
+  flexShrink: '0',
+  alignItems: 'center',
+  gap: '2.5',
+  borderBottomWidth: '1px',
+  borderColor: 'border/55',
+  px: '1',
+  sm: { px: '4' },
+})
+
+const chatIconTile = css({
+  display: 'grid',
+  boxSize: '7',
+  placeItems: 'center',
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'primary/35',
+  bg: 'primary/10',
+  color: 'primary',
+})
+
+const suggestionButton = css({
+  minH: '11',
+  rounded: 'lg',
+  borderWidth: '1px',
+  borderColor: 'border/65',
+  bg: 'card/35',
+  px: '4',
+  py: '2.5',
+  textAlign: 'left',
+  textStyle: 'sm',
+  color: 'foreground',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { borderColor: 'primary/35', bg: 'primary/5' },
+  _focusVisible: {
+    outlineStyle: 'none',
+    boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)',
+  },
+})
+
+const skeletonLine = cva({
+  base: {
+    h: '3',
+    rounded: 'sm',
+    bg: 'surface.2',
+    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+    _motionReduce: { animation: 'none' },
+  },
+})
+
+const SkeletonLine = styled('div', skeletonLine)
 
 function IaChatPage() {
   const queryClient = useQueryClient()
@@ -208,10 +290,16 @@ function IaChatPage() {
 
   return (
     <ChatShell>
-      <div
+      <styled.div
         ref={scrollRegionRef}
         onScroll={handleConversationScroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 py-5 sm:px-4 sm:py-7"
+        minH="0"
+        flex="1"
+        overflowY="auto"
+        overscrollBehavior="contain"
+        px="1"
+        py="5"
+        sm={{ px: '4', py: '7' }}
       >
         {isInitialLoading ? <ChatLoadingState /> : null}
 
@@ -242,27 +330,27 @@ function IaChatPage() {
         ) : null}
 
         {messages.length > 0 ? (
-          <ol aria-label="Conversation" className="space-y-8 sm:space-y-10">
+          <ol aria-label="Conversation" className={conversationStack}>
             {messages.map(message => (
               <li key={message.id}>
                 <AdvisorChatMessage message={message} />
               </li>
             ))}
             {pendingMessage ? (
-              <li className="space-y-8 sm:space-y-10">
+              <li className={conversationStack}>
                 <UserMessage content={pendingMessage} pending />
                 <ChatResponsePending />
               </li>
             ) : null}
           </ol>
         ) : pendingMessage ? (
-          <div className="space-y-8 sm:space-y-10">
+          <div className={conversationStack}>
             <UserMessage content={pendingMessage} pending />
             <ChatResponsePending />
           </div>
         ) : null}
         <div ref={conversationEndRef} aria-hidden="true" />
-      </div>
+      </styled.div>
 
       <AdvisorChatComposer
         ref={textareaRef}
@@ -282,12 +370,14 @@ function IaChatPage() {
 
 function ChatShell({ children }: { children: ReactNode }) {
   return (
-    <section className="mx-auto flex h-[calc(100dvh-9.75rem)] min-h-[32rem] w-full max-w-[780px] flex-col overflow-hidden lg:h-[calc(100dvh-9.25rem)]">
-      <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-border/55 px-1 sm:px-4">
-        <span className="grid size-7 place-items-center rounded-md border border-primary/35 bg-primary/10 text-primary">
+    <section className={chatShell}>
+      <header className={chatHeader}>
+        <span className={chatIconTile}>
           <CommentPixelIcon size={13} aria-hidden="true" />
         </span>
-        <h1 className="text-[15px] font-semibold tracking-tight text-foreground">Chat</h1>
+        <styled.h1 fontSize="15px" fontWeight="semibold" letterSpacing="tight" color="foreground">
+          Chat
+        </styled.h1>
       </header>
       {children}
     </section>
@@ -306,49 +396,69 @@ function ChatEmptyState({
   onSelectSuggestion?: (suggestion: string) => void
 }) {
   return (
-    <div className="flex min-h-full flex-col justify-end pb-6 sm:pb-10">
-      <div className="mx-auto w-full max-w-[520px]">
-        <h2 className="text-center text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+    <styled.div
+      display="flex"
+      minH="full"
+      flexDirection="column"
+      justifyContent="flex-end"
+      pb="6"
+      sm={{ pb: '10' }}
+    >
+      <styled.div mx="auto" w="full" maxW="520px">
+        <styled.h2
+          textAlign="center"
+          textStyle="xl"
+          fontWeight="semibold"
+          letterSpacing="tight"
+          color="foreground"
+          sm={{ textStyle: '2xl' }}
+        >
           {title}
-        </h2>
+        </styled.h2>
         {description ? (
-          <p className="mx-auto mt-2 max-w-md text-center text-sm leading-relaxed text-muted-foreground">
+          <styled.p
+            mx="auto"
+            mt="2"
+            maxW="md"
+            textAlign="center"
+            textStyle="sm"
+            lineHeight="relaxed"
+            color="muted.foreground"
+          >
             {description}
-          </p>
+          </styled.p>
         ) : null}
         {suggestions?.length && onSelectSuggestion ? (
-          <fieldset className="mt-6 grid gap-2">
-            <legend className="sr-only">Questions suggérées</legend>
+          <styled.fieldset mt="6" display="grid" gap="2">
+            <legend className={visuallyHidden}>Questions suggérées</legend>
             {suggestions.map(suggestion => (
               <button
                 key={suggestion}
                 type="button"
                 onClick={() => onSelectSuggestion(suggestion)}
-                className="min-h-11 rounded-lg border border-border/65 bg-card/35 px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:border-primary/35 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                className={suggestionButton}
               >
                 {suggestion}
               </button>
             ))}
-          </fieldset>
+          </styled.fieldset>
         ) : null}
-      </div>
-    </div>
+      </styled.div>
+    </styled.div>
   )
 }
 
 function ChatLoadingState() {
   return (
-    <output className="flex min-h-full items-center" aria-live="polite">
-      <div className="w-full max-w-[560px] space-y-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-          Réponse en cours
-        </p>
-        <div className="space-y-3" aria-hidden="true">
-          <div className="h-3 w-2/5 animate-pulse rounded-sm bg-surface-2 motion-reduce:animate-none" />
-          <div className="h-3 w-4/5 animate-pulse rounded-sm bg-surface-2 motion-reduce:animate-none" />
-          <div className="h-3 w-3/5 animate-pulse rounded-sm bg-surface-2 motion-reduce:animate-none" />
-        </div>
-      </div>
-    </output>
+    <styled.output display="flex" minH="full" alignItems="center" aria-live="polite">
+      <styled.div w="full" maxW="560px" spaceY="4">
+        <p className={eyebrow}>Réponse en cours</p>
+        <styled.div spaceY="3" aria-hidden="true">
+          <SkeletonLine w="2/5" />
+          <SkeletonLine w="4/5" />
+          <SkeletonLine w="3/5" />
+        </styled.div>
+      </styled.div>
+    </styled.output>
   )
 }

@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { ChevronDownPixelIcon } from '@finance-os/ui/icons/pixel'
 import type { ReactNode } from 'react'
 import {
@@ -5,6 +7,100 @@ import {
   toAdvisorChatMessageViewModel,
 } from '@/features/advisor-chat-view-model'
 import type { DashboardAdvisorChatMessageResponse } from '@/features/dashboard-types'
+
+const visuallyHidden = css({ srOnly: true })
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const noticeMessage = css({
+  mx: 'auto',
+  maxW: '620px',
+  borderLeftWidth: '2px',
+  borderColor: 'border',
+  px: '3',
+  py: '1',
+  textStyle: 'sm',
+  lineHeight: 'relaxed',
+  color: 'muted.foreground',
+})
+
+const userBubble = css({
+  ml: 'auto',
+  w: 'fit',
+  maxW: '88%',
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderColor: 'border/65',
+  bg: 'surface.1',
+  px: '4',
+  py: '3',
+  textStyle: 'sm',
+  lineHeight: 'relaxed',
+  color: 'foreground',
+  sm: { maxW: '72%' },
+})
+
+// Tailwind's `divide-y` drew the rule under every item but the last.
+const simulationList = css({
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border/45' },
+})
+
+const disclosureSummary = css({
+  display: 'flex',
+  minH: '11',
+  cursor: 'pointer',
+  listStyleType: 'none',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+  textStyle: 'xs',
+  fontWeight: 'medium',
+  color: 'muted.foreground',
+  outlineStyle: 'none',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { color: 'foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+  '&::-webkit-details-marker': { display: 'none' },
+})
+
+// The chevron follows the open state of its `<details>` group.
+const disclosureChevron = css({
+  transitionProperty: 'transform, translate, scale, rotate',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  '[data-group=disclosure][open] &': { rotate: '180deg' },
+  _motionReduce: { transitionProperty: 'none' },
+})
+
+const pendingDot = cva({
+  base: {
+    boxSize: '1.5',
+    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+    _motionReduce: { animation: 'none' },
+  },
+  variants: {
+    tone: {
+      muted: { bg: 'muted.foreground/35' },
+      primary: { bg: 'primary' },
+    },
+    delay: {
+      none: {},
+      short: { animationDelay: '120ms' },
+      long: { animationDelay: '240ms' },
+    },
+  },
+  defaultVariants: { tone: 'muted', delay: 'none' },
+})
+
+const PendingDot = styled('span', pendingDot)
 
 export function AdvisorChatMessage({ message }: { message: DashboardAdvisorChatMessageResponse }) {
   const viewModel = toAdvisorChatMessageViewModel(message)
@@ -15,8 +111,8 @@ export function AdvisorChatMessage({ message }: { message: DashboardAdvisorChatM
 
   if (viewModel.author.kind === 'notice') {
     return (
-      <div className="mx-auto max-w-[620px] border-l-2 border-border px-3 py-1 text-sm leading-relaxed text-muted-foreground">
-        <span className="sr-only">{viewModel.author.label} : </span>
+      <div className={noticeMessage}>
+        <span className={visuallyHidden}>{viewModel.author.label} : </span>
         {viewModel.content}
       </div>
     )
@@ -27,10 +123,10 @@ export function AdvisorChatMessage({ message }: { message: DashboardAdvisorChatM
 
 export function UserMessage({ content, pending = false }: { content: string; pending?: boolean }) {
   return (
-    <div className="ml-auto w-fit max-w-[88%] rounded-xl border border-border/65 bg-surface-1 px-4 py-3 text-sm leading-relaxed text-foreground sm:max-w-[72%]">
-      <span className="sr-only">Vous : </span>
-      <p className="whitespace-pre-wrap">{content}</p>
-      {pending ? <span className="sr-only">Envoi en cours</span> : null}
+    <div className={userBubble}>
+      <span className={visuallyHidden}>Vous : </span>
+      <styled.p whiteSpace="pre-wrap">{content}</styled.p>
+      {pending ? <span className={visuallyHidden}>Envoi en cours</span> : null}
     </div>
   )
 }
@@ -39,96 +135,127 @@ function FinanceOsResponse({ message }: { message: AdvisorChatMessageViewModel }
   const details = message.details
 
   return (
-    <article className="max-w-[620px] text-foreground">
-      <span className="sr-only">Finance-OS : </span>
-      <p className="whitespace-pre-wrap text-[15px] leading-7">{message.content}</p>
+    <styled.article maxW="620px" color="foreground">
+      <span className={visuallyHidden}>Finance-OS : </span>
+      <styled.p whiteSpace="pre-wrap" fontSize="15px" lineHeight="1.75rem">
+        {message.content}
+      </styled.p>
 
       {details?.simulations ? (
-        <section className="mt-5 border-y border-border/55 py-3" aria-label="Estimation">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h3 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              {details.simulations.stateLabel}
-            </h3>
-            <span className="text-[11px] text-warning">Hypothétique</span>
-          </div>
-          <dl className="divide-y divide-border/45">
+        <styled.section
+          mt="5"
+          borderYWidth="1px"
+          borderColor="border/55"
+          py="3"
+          aria-label="Estimation"
+        >
+          <styled.div
+            mb="2"
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap="3"
+          >
+            <h3 className={eyebrow}>{details.simulations.stateLabel}</h3>
+            <styled.span fontSize="11px" color="warning">
+              Hypothétique
+            </styled.span>
+          </styled.div>
+          <dl className={simulationList}>
             {details.simulations.items.map(item => (
-              <div key={`${item.label}-${item.value}`} className="flex gap-4 py-2 text-sm">
-                <dt className="min-w-0 flex-1 text-muted-foreground">{item.label}</dt>
-                <dd className="font-financial text-right text-foreground">{item.value}</dd>
-              </div>
+              <styled.div
+                key={`${item.label}-${item.value}`}
+                display="flex"
+                gap="4"
+                py="2"
+                textStyle="sm"
+              >
+                <styled.dt minW="0" flex="1" color="muted.foreground">
+                  {item.label}
+                </styled.dt>
+                <styled.dd textStyle="financial" textAlign="right" color="foreground">
+                  {item.value}
+                </styled.dd>
+              </styled.div>
             ))}
           </dl>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          <styled.p mt="2" textStyle="xs" lineHeight="relaxed" color="muted.foreground">
             {details.simulations.description}
-          </p>
-        </section>
+          </styled.p>
+        </styled.section>
       ) : null}
 
       {details?.caveats?.length ? (
-        <section
-          className="mt-4 border-l-2 border-warning/65 pl-3"
+        <styled.section
+          mt="4"
+          borderLeftWidth="2px"
+          borderColor="warning/65"
+          pl="3"
           aria-label="Points de vigilance"
         >
-          <h3 className="text-xs font-medium text-warning">À vérifier</h3>
-          <ul className="mt-1 space-y-1 text-sm leading-relaxed text-muted-foreground">
+          <styled.h3 textStyle="xs" fontWeight="medium" color="warning">
+            À vérifier
+          </styled.h3>
+          <styled.ul mt="1" spaceY="1" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
             {details.caveats.map(item => (
               <li key={item}>{item}</li>
             ))}
-          </ul>
-        </section>
+          </styled.ul>
+        </styled.section>
       ) : null}
 
       {details?.assumptions?.length ? (
         <MessageDetails label="Hypothèses">
-          <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
+          <styled.ul spaceY="1.5" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
             {details.assumptions.map(item => (
               <li key={item}>{item}</li>
             ))}
-          </ul>
+          </styled.ul>
         </MessageDetails>
       ) : null}
 
       {details?.citations?.length ? (
         <MessageDetails label="Références mentionnées">
-          <ul className="space-y-1.5 text-sm text-muted-foreground">
+          <styled.ul spaceY="1.5" textStyle="sm" color="muted.foreground">
             {details.citations.map(item => (
               <li key={item.label}>{item.label}</li>
             ))}
-          </ul>
+          </styled.ul>
         </MessageDetails>
       ) : null}
-    </article>
+    </styled.article>
   )
 }
 
 function MessageDetails({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <details className="group mt-3 border-t border-border/45 pt-3">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70 [&::-webkit-details-marker]:hidden">
+    <styled.details
+      data-group="disclosure"
+      mt="3"
+      borderTopWidth="1px"
+      borderColor="border/45"
+      pt="3"
+    >
+      <summary className={disclosureSummary}>
         {label}
-        <ChevronDownPixelIcon
-          size={12}
-          aria-hidden="true"
-          className="transition-transform group-open:rotate-180 motion-reduce:transition-none"
-        />
+        <ChevronDownPixelIcon size={12} aria-hidden="true" className={disclosureChevron} />
       </summary>
-      <div className="pb-1 pt-2">{children}</div>
-    </details>
+      <styled.div pb="1" pt="2">
+        {children}
+      </styled.div>
+    </styled.details>
   )
 }
 
 export function ChatResponsePending() {
   return (
-    <output className="block max-w-[620px]" aria-live="polite">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-        Réponse en cours
-      </p>
-      <span className="mt-3 flex gap-1" aria-hidden="true">
-        <span className="size-1.5 animate-pulse bg-muted-foreground/35 motion-reduce:animate-none" />
-        <span className="size-1.5 animate-pulse bg-primary motion-reduce:animate-none [animation-delay:120ms]" />
-        <span className="size-1.5 animate-pulse bg-muted-foreground/35 motion-reduce:animate-none [animation-delay:240ms]" />
-      </span>
-    </output>
+    <styled.output display="block" maxW="620px" aria-live="polite">
+      <p className={eyebrow}>Réponse en cours</p>
+      <styled.span mt="3" display="flex" gap="1" aria-hidden="true">
+        <PendingDot />
+        <PendingDot tone="primary" delay="short" />
+        <PendingDot delay="long" />
+      </styled.span>
+    </styled.output>
   )
 }

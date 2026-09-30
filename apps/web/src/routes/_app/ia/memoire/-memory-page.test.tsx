@@ -141,7 +141,7 @@ describe('Memory immersive and mobile chrome', () => {
 
     const touchExit = screen.getAllByRole('button', { name: 'Échap pour quitter' })[0]
     if (!touchExit) throw new Error('Missing immersive exit')
-    expect(touchExit.className).toContain('min-h-11')
+    expect(touchExit.className).toContain('min-h_11')
     fireEvent.click(touchExit)
     expect(onExitImmersive).toHaveBeenCalledTimes(1)
   })
@@ -194,7 +194,7 @@ describe('Memory immersive and mobile chrome', () => {
     expect(getMemoryControlsDrawerSide(false)).toBe('right')
 
     const originLabel = screen.getByText('Exemples de démonstration')
-    expect(originLabel.className).not.toContain('hidden')
+    expect(originLabel.className).not.toContain('d_none')
     expect(originLabel.parentElement?.getAttribute('title')).toBe('Ces souvenirs sont fictifs.')
     expect(screen.getByText('2 souvenirs')).toBeTruthy()
 

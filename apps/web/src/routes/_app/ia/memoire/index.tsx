@@ -1,3 +1,5 @@
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Drawer,
   DrawerContent,
@@ -135,6 +137,542 @@ const QUICK_FILTER_LABELS: Readonly<Record<AdvisorGraphQuickFilterId, string>> =
   high_confidence_only: 'Fiabilité élevée',
   personal_only: 'Souvenirs personnels',
 }
+
+// ─── styles ───────────────────────────────────────────────────────────────
+
+// Full-bleed canvas: fixed when immersive, otherwise bleeds out of the page gutters.
+const memoryShell = cva({
+  base: { overflow: 'hidden', bg: 'background', color: 'foreground' },
+  variants: {
+    immersive: {
+      true: { position: 'fixed', inset: '0', zIndex: '55' },
+      false: {
+        mx: '-5',
+        mt: '-5',
+        h: 'calc(100dvh - 6.5rem)',
+        minH: '34rem',
+        lg: {
+          mt: '-9',
+          h: 'calc(100dvh - 7.25rem)',
+          minH: '44rem',
+          rounded: 'frame',
+          borderWidth: '1px',
+          borderColor: 'border/60',
+        },
+      },
+    },
+  },
+})
+
+const listViewport = css({
+  position: 'absolute',
+  inset: '0',
+  overflowY: 'auto',
+  bg: 'background',
+  px: '3',
+  pb: '20',
+  pt: '32',
+  sm: { px: '5' },
+  lg: { px: '5.5rem', pb: '16', pt: '24' },
+})
+
+const listCard = css({
+  mx: 'auto',
+  maxW: '3xl',
+  overflow: 'hidden',
+  rounded: 'frame',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'card',
+})
+
+const listNotice = css({
+  borderBottomWidth: '1px',
+  borderColor: 'border/60',
+  px: '4',
+  py: '3',
+  textStyle: 'sm',
+  color: 'warning',
+})
+
+// Centered floating notices over the canvas (missing selection, active path).
+const floatingNotice = cva({
+  base: {
+    position: 'absolute',
+    left: '50%',
+    zIndex: '20',
+    display: 'flex',
+    translate: '-50% 0',
+    alignItems: 'center',
+    gap: '3',
+    rounded: 'control',
+    borderWidth: '1px',
+    px: '3',
+    py: '2',
+    textStyle: 'xs',
+    shadow: 'floating',
+    backdropFilter: 'blur(8px)',
+  },
+  variants: {
+    kind: {
+      missing: {
+        top: '32',
+        borderColor: 'warning/35',
+        bg: 'card/95',
+        color: 'warning',
+        lg: { top: '20' },
+      },
+      path: { bottom: '16', borderColor: 'primary/30', bg: 'card/90', color: 'foreground' },
+    },
+  },
+})
+
+const underlined = css({ textDecorationLine: 'underline' })
+
+const quietLink = css({ color: 'muted.foreground', _hover: { color: 'foreground' } })
+
+const detailsRail = css({
+  position: 'absolute',
+  right: '5',
+  top: '20',
+  zIndex: '20',
+  display: 'none',
+  maxH: 'calc(100% - 8.5rem)',
+  w: '320px',
+  overflowY: 'auto',
+  rounded: 'frame',
+  bg: 'card/96',
+  shadow: 'overlay',
+  backdropFilter: 'blur(8px)',
+  lg: { display: 'block' },
+})
+
+const iconButton = cva({
+  base: {
+    display: 'grid',
+    boxSize: '8',
+    placeItems: 'center',
+    rounded: 'control',
+    color: 'muted.foreground',
+    _hover: { bg: 'surface.2', color: 'foreground' },
+  },
+  variants: {
+    placement: {
+      rail: {
+        position: 'absolute',
+        right: '3',
+        top: '3',
+        zIndex: '10',
+        _focusVisible: {
+          outlineStyle: 'none',
+          boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)',
+        },
+      },
+      inline: {},
+    },
+  },
+})
+
+// Floating chrome over the canvas: a bordered, blurred card tint.
+const chip = cva({
+  base: {
+    rounded: 'control',
+    borderWidth: '1px',
+    borderColor: 'border/60',
+    px: '3',
+    backdropFilter: 'blur(8px)',
+  },
+  variants: {
+    tint: {
+      strong: { bg: 'card/88', shadow: 'floating' },
+      medium: { bg: 'card/84', shadow: 'floating' },
+      flat: { bg: 'card/82' },
+    },
+    target: {
+      compact: { minH: '9' },
+      regular: { minH: '10' },
+      touch: { minH: '11' },
+    },
+    inline: { true: { display: 'inline-flex', alignItems: 'center' } },
+    text: {
+      xs: { textStyle: 'xs' },
+      mono: {
+        fontFamily: 'mono',
+        fontSize: '10px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      },
+    },
+    quiet: { true: { color: 'muted.foreground', _hover: { color: 'foreground' } } },
+  },
+})
+
+const Chip = styled('div', chip)
+const ChipButton = styled('button', chip)
+
+const lensButton = cva({
+  base: {
+    minH: '9',
+    rounded: 'control',
+    borderWidth: '1px',
+    px: '3',
+    textStyle: 'xs',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+  },
+  variants: {
+    active: {
+      true: { borderColor: 'primary/45', bg: 'primary/14', color: 'primary' },
+      false: {
+        borderColor: 'border/60',
+        bg: 'card/82',
+        color: 'muted.foreground',
+        backdropFilter: 'blur(8px)',
+        _hover: { color: 'foreground' },
+      },
+    },
+  },
+})
+
+// Mono eyebrow labels; `tracking` mirrors the three letter spacings in use.
+const monoLabel = cva({
+  base: { fontFamily: 'mono', color: 'muted.foreground' },
+  variants: {
+    size: {
+      '9px': { fontSize: '9px' },
+      '10px': { fontSize: '10px' },
+    },
+    tracking: {
+      none: {},
+      snug: { textTransform: 'uppercase', letterSpacing: '0.08em' },
+      normal: { textTransform: 'uppercase', letterSpacing: '0.1em' },
+      wide: { textTransform: 'uppercase', letterSpacing: '0.12em' },
+    },
+  },
+  defaultVariants: { tracking: 'none' },
+})
+
+const topBar = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  insetX: '3',
+  top: '3',
+  zIndex: '30',
+  lg: { insetX: '5', top: '5' },
+})
+
+const mobileRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+  lg: { display: 'none' },
+})
+
+const searchRow = css({
+  mt: '2',
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '3',
+  lg: { mt: '0', justifyContent: 'space-between' },
+})
+
+const searchForm = css({
+  pointerEvents: 'auto',
+  position: 'relative',
+  w: 'full',
+  sm: { w: '320px' },
+})
+
+const searchIcon = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  left: '3',
+  top: '50%',
+  zIndex: '10',
+  translate: '0 -50%',
+  color: 'muted.foreground',
+})
+
+// Bare `rounded` is Tailwind's inlined 0.25rem, not a radius token.
+const searchKbd = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  right: '3',
+  top: '50%',
+  display: 'none',
+  translate: '0 -50%',
+  rounded: '0.25rem',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  px: '1.5',
+  py: '0.5',
+  fontFamily: 'mono',
+  fontSize: '9px',
+  color: 'muted.foreground',
+  sm: { display: 'block' },
+})
+
+const desktopRow = css({
+  pointerEvents: 'auto',
+  display: 'none',
+  alignItems: 'center',
+  gap: '1.5',
+  lg: { display: 'flex' },
+})
+
+const searchResults = css({
+  position: 'absolute',
+  left: '0',
+  right: '0',
+  top: 'calc(100% + 0.4rem)',
+  maxH: '72',
+  overflowY: 'auto',
+  rounded: 'frame',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'card',
+  p: '1.5',
+  shadow: 'overlay',
+})
+
+const searchEmpty = css({
+  px: '3',
+  py: '4',
+  textAlign: 'center',
+  textStyle: 'xs',
+  color: 'muted.foreground',
+})
+
+const searchOption = css({
+  display: 'flex',
+  minH: '11',
+  w: 'full',
+  alignItems: 'center',
+  gap: '3',
+  rounded: 'control',
+  px: '3',
+  py: '2',
+  textAlign: 'left',
+  _hover: { bg: 'surface.1' },
+  _focusVisible: {
+    outlineStyle: 'none',
+    boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)',
+  },
+})
+
+const searchDot = cva({
+  base: { boxSize: '1.5', flexShrink: '0', rounded: 'full' },
+  variants: {
+    first: {
+      true: { bg: 'primary' },
+      false: { bg: 'muted.foreground/45' },
+    },
+  },
+})
+
+const pinnedBar = css({
+  position: 'absolute',
+  bottom: '16',
+  left: '3',
+  zIndex: '20',
+  display: 'none',
+  maxW: '60%',
+  alignItems: 'center',
+  gap: '1.5',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'card/88',
+  p: '1.5',
+  shadow: 'floating',
+  backdropFilter: 'blur(8px)',
+  lg: { display: 'flex' },
+})
+
+const pinnedChip = css({
+  maxW: '40',
+  truncate: true,
+  rounded: 'control',
+  px: '2',
+  py: '1',
+  textStyle: 'xs',
+  color: 'muted.foreground',
+  _hover: { bg: 'surface.2', color: 'foreground' },
+})
+
+const pinnedTrace = css({
+  display: 'inline-flex',
+  minH: '8',
+  alignItems: 'center',
+  gap: '1.5',
+  rounded: 'control',
+  bg: 'primary/12',
+  px: '2',
+  textStyle: 'xs',
+  color: 'primary',
+})
+
+const bottomBar = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  insetX: '3',
+  bottom: '3',
+  zIndex: '20',
+  display: 'flex',
+  alignItems: 'flex-end',
+  justifyContent: 'space-between',
+  gap: '3',
+  lg: { insetX: '5', bottom: '5' },
+})
+
+const originBox = css({
+  pointerEvents: 'auto',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'border/50',
+  bg: 'card/80',
+  px: '2.5',
+  py: '1.5',
+  shadow: 'floating',
+  backdropFilter: 'blur(8px)',
+})
+
+const bottomActions = cva({
+  base: { pointerEvents: 'auto', alignItems: 'center', gap: '1.5' },
+  variants: {
+    immersive: {
+      true: { display: 'none' },
+      false: { display: 'flex' },
+    },
+  },
+})
+
+const twoColumnGrid = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: '2',
+})
+
+const threeColumnGrid = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: '2',
+})
+
+// Tailwind's `space-y-*` put the margin on every child but the last; the
+// children here are inline-block buttons, so the rule is kept verbatim.
+const stackedButtons = cva({
+  base: {},
+  variants: {
+    gap: {
+      '1': { '& > :not(:last-child)': { marginBlockEnd: '1' } },
+      '2': { '& > :not(:last-child)': { marginBlockEnd: '2' } },
+    },
+  },
+})
+
+const relationsSummary = css({
+  cursor: 'pointer',
+  textStyle: 'xs',
+  fontWeight: 'medium',
+  color: 'foreground',
+})
+
+const pinnedRow = css({
+  minH: '11',
+  w: 'full',
+  rounded: 'control',
+  px: '3',
+  textAlign: 'left',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+  _hover: { bg: 'surface.1', color: 'foreground' },
+})
+
+const sectionHeading = css({
+  mb: '2',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+})
+
+const toggleButton = cva({
+  base: {
+    minH: '11',
+    rounded: 'control',
+    borderWidth: '1px',
+    px: '3',
+    py: '2',
+    textStyle: 'xs',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _disabled: { cursor: 'not-allowed', opacity: '0.45' },
+  },
+  variants: {
+    active: {
+      true: { borderColor: 'primary/45', bg: 'primary/12', color: 'primary' },
+      false: {
+        borderColor: 'border/60',
+        bg: 'surface.1',
+        color: 'muted.foreground',
+        _hover: { color: 'foreground' },
+      },
+    },
+    full: { true: { w: 'full', textAlign: 'left' } },
+  },
+})
+
+// Canvas placeholders share the radial wash of the 3D scene.
+const canvasState = cva({
+  base: {
+    display: 'grid',
+    h: 'full',
+    placeItems: 'center',
+    bgImage: 'radial-gradient(circle at 50% 42%, {colors.surface.2}, {colors.background} 62%)',
+  },
+  variants: {
+    kind: {
+      empty: { px: '6', textAlign: 'center' },
+      loading: { textStyle: 'sm', color: 'muted.foreground' },
+    },
+  },
+})
+
+const canvasFallback = css({
+  display: 'grid',
+  h: 'full',
+  placeItems: 'center',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const emptyIcon = css({
+  mx: 'auto',
+  display: 'grid',
+  boxSize: '11',
+  placeItems: 'center',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'card',
+  color: 'primary',
+})
+
+const emptyAction = css({
+  mt: '4',
+  minH: '11',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'card',
+  px: '4',
+  textStyle: 'sm',
+  color: 'foreground',
+})
+
+const brandIcon = css({ color: 'primary' })
 
 type RenderPreset = 'cinematic' | 'standard' | 'performance'
 export type GraphRenderState = 'idle' | 'loading' | 'ready' | 'error'
@@ -661,20 +1199,13 @@ function AdvisorMemoryPage() {
 
   return (
     <>
-      <section
-        aria-label="Mémoire"
-        className={`overflow-hidden bg-background text-foreground ${
-          isImmersive
-            ? 'fixed inset-0 z-[55]'
-            : '-mx-5 -mt-5 h-[calc(100dvh-6.5rem)] min-h-[34rem] lg:-mt-9 lg:h-[calc(100dvh-7.25rem)] lg:min-h-[44rem] lg:rounded-frame lg:border lg:border-border/60'
-        }`}
-      >
-        <div className="relative h-full min-h-0 w-full overflow-hidden">
+      <section aria-label="Mémoire" className={memoryShell({ immersive: isImmersive })}>
+        <styled.div position="relative" h="full" minH="0" w="full" overflow="hidden">
           {view === 'list' ? (
-            <div className="absolute inset-0 overflow-y-auto bg-background px-3 pb-20 pt-32 sm:px-5 lg:px-[5.5rem] lg:pb-16 lg:pt-24">
-              <div className="mx-auto max-w-3xl overflow-hidden rounded-frame border border-border/60 bg-card">
+            <div className={listViewport}>
+              <div className={listCard}>
                 {renderState === 'error' ? (
-                  <output className="border-b border-border/60 px-4 py-3 text-sm text-warning">
+                  <output className={listNotice}>
                     La vue 3D est indisponible. La liste reste entièrement utilisable.
                   </output>
                 ) : null}
@@ -737,9 +1268,9 @@ function AdvisorMemoryPage() {
           />
 
           {missingSelection ? (
-            <output className="absolute left-1/2 top-32 z-20 flex -translate-x-1/2 items-center gap-3 rounded-control border border-warning/35 bg-card/95 px-3 py-2 text-xs text-warning shadow-floating backdrop-blur lg:top-20">
+            <output className={floatingNotice({ kind: 'missing' })}>
               <span>Ce souvenir n’est pas visible avec ces filtres.</span>
-              <button type="button" className="underline" onClick={resetExploration}>
+              <button type="button" className={underlined} onClick={resetExploration}>
                 Tout afficher
               </button>
             </output>
@@ -753,10 +1284,7 @@ function AdvisorMemoryPage() {
           />
 
           {hasSelection && detailsOpen ? (
-            <aside
-              aria-label="Souvenir sélectionné"
-              className="absolute right-5 top-20 z-20 hidden max-h-[calc(100%-8.5rem)] w-[320px] overflow-y-auto rounded-frame bg-card/96 shadow-overlay backdrop-blur lg:block"
-            >
+            <aside aria-label="Souvenir sélectionné" className={detailsRail}>
               <button
                 type="button"
                 aria-label="Fermer les détails"
@@ -765,7 +1293,7 @@ function AdvisorMemoryPage() {
                   setSelectedLink(null)
                   setDetailsOpen(false)
                 }}
-                className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-control text-muted-foreground hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                className={iconButton({ placement: 'rail' })}
               >
                 <TimesPixelIcon size={13} />
               </button>
@@ -793,7 +1321,7 @@ function AdvisorMemoryPage() {
             onResetView={() => cameraApiRef.current?.fitView()}
             onEnterImmersive={() => setIsImmersive(true)}
           />
-        </div>
+        </styled.div>
       </section>
 
       <MemoryControlsDrawer
@@ -868,12 +1396,14 @@ function AdvisorMemoryPage() {
           }
         }}
       >
-        <DrawerContent side="bottom" className="lg:hidden">
-          <DrawerHeader className="sr-only">
+        <DrawerContent side="bottom" lg={{ display: 'none' }}>
+          <DrawerHeader srOnly>
             <DrawerTitle>Souvenir sélectionné</DrawerTitle>
             <DrawerDescription>Détails et relations du souvenir.</DrawerDescription>
           </DrawerHeader>
-          <div className="max-h-[72dvh] overflow-y-auto px-3 pb-3">{selectionContent}</div>
+          <styled.div maxH="72dvh" overflowY="auto" px="3" pb="3">
+            {selectionContent}
+          </styled.div>
         </DrawerContent>
       </Drawer>
     </>
@@ -912,46 +1442,55 @@ export function MemoryTopControls({
   onExitImmersive: () => void
 }) {
   return (
-    <div className="pointer-events-none absolute inset-x-3 top-3 z-30 lg:inset-x-5 lg:top-5">
-      <div className="flex items-center gap-2 lg:hidden">
+    <div className={topBar}>
+      <div className={mobileRow}>
         {!isImmersive ? (
-          <div className="pointer-events-auto inline-flex min-h-10 items-center gap-2 rounded-control border border-border/60 bg-card/88 px-3 shadow-floating backdrop-blur">
-            <ChartNetworkPixelIcon size={14} className="text-primary" />
-            <span className="text-sm font-semibold">Mémoire</span>
-            <span className="font-mono text-[10px] text-muted-foreground">{visibleCount}</span>
-          </div>
+          <Chip tint="strong" target="regular" inline pointerEvents="auto" gap="2">
+            <ChartNetworkPixelIcon size={14} className={brandIcon} />
+            <styled.span textStyle="sm" fontWeight="semibold">
+              Mémoire
+            </styled.span>
+            <span className={monoLabel({ size: '10px' })}>{visibleCount}</span>
+          </Chip>
         ) : null}
         {isImmersive ? (
-          <button
+          <ChipButton
             type="button"
             onClick={onExitImmersive}
-            className="pointer-events-auto ml-auto inline-flex min-h-11 items-center rounded-control border border-border/60 bg-card/88 px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground shadow-floating backdrop-blur hover:text-foreground"
+            tint="strong"
+            target="touch"
+            inline
+            text="mono"
+            quiet
+            pointerEvents="auto"
+            ml="auto"
           >
             Échap pour quitter
-          </button>
+          </ChipButton>
         ) : (
-          <button
+          <ChipButton
             type="button"
             aria-haspopup="dialog"
             aria-expanded={false}
             onClick={onOpenControls}
-            className="pointer-events-auto ml-auto inline-flex min-h-11 items-center gap-2 rounded-control border border-border/60 bg-card/88 px-3 text-xs text-muted-foreground shadow-floating backdrop-blur hover:text-foreground"
+            tint="strong"
+            target="touch"
+            inline
+            text="xs"
+            quiet
+            pointerEvents="auto"
+            ml="auto"
+            gap="2"
           >
             <FilterPixelIcon size={13} />
             Filtres
-          </button>
+          </ChipButton>
         )}
       </div>
 
-      <div className="mt-2 flex items-start gap-3 lg:mt-0 lg:justify-between">
-        <form
-          onSubmit={onSearchSubmit}
-          className="pointer-events-auto relative w-full sm:w-[320px]"
-        >
-          <SearchPixelIcon
-            size={14}
-            className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-muted-foreground"
-          />
+      <div className={searchRow}>
+        <form onSubmit={onSearchSubmit} className={searchForm}>
+          <SearchPixelIcon size={14} className={searchIcon} />
           <Input
             ref={searchInputRef}
             value={searchTerm}
@@ -962,17 +1501,21 @@ export function MemoryTopControls({
             aria-expanded={searchOpen && searchTerm.trim().length > 0}
             aria-controls="memory-search-results"
             role="combobox"
-            className="h-11 bg-card/90 pl-9 pr-9 shadow-floating backdrop-blur"
+            h="11"
+            bg="card/90"
+            _dark={{ bg: 'card/90' }}
+            pl="9"
+            pr="9"
+            shadow="floating"
+            backdropFilter="blur(8px)"
           />
-          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border/60 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground sm:block">
-            /
-          </kbd>
+          <kbd className={searchKbd}>/</kbd>
           {searchOpen && searchTerm.trim() ? (
             <MemorySearchResults results={searchResults} onSelect={onSearchSelection} />
           ) : null}
         </form>
 
-        <div className="pointer-events-auto hidden items-center gap-1.5 lg:flex">
+        <div className={desktopRow}>
           {!isImmersive ? (
             <>
               {PRIMARY_LENSES.map(item => (
@@ -981,33 +1524,39 @@ export function MemoryTopControls({
                   type="button"
                   aria-pressed={item.id === lensId}
                   onClick={() => onLensChange(item.id)}
-                  className={`min-h-9 rounded-control border px-3 text-xs transition-colors ${
-                    item.id === lensId
-                      ? 'border-primary/45 bg-primary/14 text-primary'
-                      : 'border-border/60 bg-card/82 text-muted-foreground backdrop-blur hover:text-foreground'
-                  }`}
+                  className={lensButton({ active: item.id === lensId })}
                 >
                   {item.label}
                 </button>
               ))}
-              <button
+              <ChipButton
                 type="button"
                 aria-haspopup="dialog"
                 onClick={onOpenControls}
-                className="min-h-9 rounded-control border border-border/60 bg-card/82 px-3 text-xs text-muted-foreground backdrop-blur hover:text-foreground"
+                tint="flat"
+                target="compact"
+                text="xs"
+                quiet
               >
                 Plus
-              </button>
+              </ChipButton>
             </>
           ) : null}
           {isImmersive ? (
-            <button
+            <ChipButton
               type="button"
               onClick={onExitImmersive}
-              className="fixed right-3 top-3 min-h-11 rounded-control border border-border/60 bg-card/88 px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground shadow-floating backdrop-blur hover:text-foreground lg:static lg:ml-2 lg:min-h-9 lg:bg-card/82"
+              tint="strong"
+              target="touch"
+              text="mono"
+              quiet
+              position="fixed"
+              right="3"
+              top="3"
+              lg={{ position: 'static', ml: '2', minH: '9', bg: 'card/82' }}
             >
               Échap pour quitter
-            </button>
+            </ChipButton>
           ) : null}
         </div>
       </div>
@@ -1023,14 +1572,9 @@ function MemorySearchResults({
   onSelect: (node: AdvisorGraphNode) => void
 }) {
   return (
-    <div
-      id="memory-search-results"
-      className="absolute left-0 right-0 top-[calc(100%+0.4rem)] max-h-72 overflow-y-auto rounded-frame border border-border/60 bg-card p-1.5 shadow-overlay"
-    >
+    <div id="memory-search-results" className={searchResults}>
       {results.length === 0 ? (
-        <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-          Aucun souvenir trouvé.
-        </p>
+        <p className={searchEmpty}>Aucun souvenir trouvé.</p>
       ) : (
         <div role="listbox" aria-label="Résultats de la recherche">
           {results.slice(0, 8).map((node, index) => (
@@ -1040,14 +1584,13 @@ function MemorySearchResults({
               role="option"
               aria-selected={false}
               onClick={() => onSelect(node)}
-              className="flex min-h-11 w-full items-center gap-3 rounded-control px-3 py-2 text-left hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+              className={searchOption}
             >
-              <span
-                aria-hidden="true"
-                className={`size-1.5 shrink-0 rounded-full ${index === 0 ? 'bg-primary' : 'bg-muted-foreground/45'}`}
-              />
-              <span className="min-w-0 flex-1 truncate text-sm text-foreground">{node.label}</span>
-              <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+              <span aria-hidden="true" className={searchDot({ first: index === 0 })} />
+              <styled.span minW="0" flex="1" truncate textStyle="sm" color="foreground">
+                {node.label}
+              </styled.span>
+              <span className={monoLabel({ size: '9px', tracking: 'snug' })}>
                 {NODE_KIND_LABEL[node.kind]}
               </span>
             </button>
@@ -1096,23 +1639,19 @@ export function MemoryBottomControls({
   return (
     <>
       {pinnedNodes.length > 0 ? (
-        <div className="absolute bottom-16 left-3 z-20 hidden max-w-[60%] items-center gap-1.5 rounded-control border border-border/60 bg-card/88 p-1.5 shadow-floating backdrop-blur lg:flex">
+        <div className={pinnedBar}>
           {pinnedNodes.slice(0, 3).map(node => (
             <button
               key={node.id}
               type="button"
               onClick={() => onSelectPin(node.id)}
-              className="max-w-40 truncate rounded-control px-2 py-1 text-xs text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              className={pinnedChip}
             >
               {node.label}
             </button>
           ))}
           {pinnedNodes.length >= 2 ? (
-            <button
-              type="button"
-              onClick={onTracePins}
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-control bg-primary/12 px-2 text-xs text-primary"
-            >
+            <button type="button" onClick={onTracePins} className={pinnedTrace}>
               <BranchPixelIcon size={11} />
               Relier
             </button>
@@ -1121,54 +1660,67 @@ export function MemoryBottomControls({
             type="button"
             aria-label="Effacer les épingles"
             onClick={onClearPins}
-            className="grid size-8 place-items-center rounded-control text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+            className={iconButton({ placement: 'inline' })}
           >
             <TimesPixelIcon size={11} />
           </button>
         </div>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 flex items-end justify-between gap-3 lg:inset-x-5 lg:bottom-5">
-        <div
-          className="pointer-events-auto rounded-control border border-border/50 bg-card/80 px-2.5 py-1.5 shadow-floating backdrop-blur"
-          title={originDescription}
-        >
-          <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+      <div className={bottomBar}>
+        <div className={originBox} title={originDescription}>
+          <p className={monoLabel({ size: '9px', tracking: 'normal' })}>
             {visibleCount} {visibleCount === 1 ? 'souvenir' : 'souvenirs'}
           </p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">{originLabel}</p>
+          <styled.p mt="0.5" fontSize="10px" color="muted.foreground">
+            {originLabel}
+          </styled.p>
         </div>
 
-        <div
-          className={`pointer-events-auto items-center gap-1.5 ${isImmersive ? 'hidden' : 'flex'}`}
-        >
-          <button
+        <div className={bottomActions({ immersive: isImmersive })}>
+          <ChipButton
             type="button"
             onClick={onToggleView}
             disabled={view === 'list' && renderState === 'error'}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-control border border-border/60 bg-card/84 px-3 text-xs text-muted-foreground shadow-floating backdrop-blur hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            tint="medium"
+            target="regular"
+            inline
+            text="xs"
+            quiet
+            gap="1.5"
+            _disabled={{ cursor: 'not-allowed', opacity: '0.5' }}
           >
             {view === 'graph' ? <TablePixelIcon size={12} /> : <ChartNetworkPixelIcon size={12} />}
             {view === 'graph' ? 'Liste' : 'Carte 3D'}
-          </button>
+          </ChipButton>
           {view === 'graph' ? (
-            <button
+            <ChipButton
               type="button"
               onClick={onResetView}
-              className="hidden min-h-10 rounded-control border border-border/60 bg-card/84 px-3 text-xs text-muted-foreground shadow-floating backdrop-blur hover:text-foreground sm:block"
+              tint="medium"
+              target="regular"
+              text="xs"
+              quiet
+              display="none"
+              sm={{ display: 'block' }}
             >
               Ajuster la vue
-            </button>
+            </ChipButton>
           ) : null}
           {!isImmersive ? (
-            <button
+            <ChipButton
               ref={immersiveTriggerRef}
               type="button"
               onClick={onEnterImmersive}
-              className="hidden min-h-10 rounded-control border border-border/60 bg-card/84 px-3 text-xs text-muted-foreground shadow-floating backdrop-blur hover:text-foreground lg:block"
+              tint="medium"
+              target="regular"
+              text="xs"
+              quiet
+              display="none"
+              lg={{ display: 'block' }}
             >
               Immersif
-            </button>
+            </ChipButton>
           ) : null}
         </div>
       </div>
@@ -1196,14 +1748,10 @@ function MemoryPathStatus({
       : 'Aucun chemin avec ces filtres.'
 
   return (
-    <output className="absolute bottom-16 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-control border border-primary/30 bg-card/90 px-3 py-2 text-xs text-foreground shadow-floating backdrop-blur">
-      <BranchPixelIcon size={12} className="text-primary" />
+    <output className={floatingNotice({ kind: 'path' })}>
+      <BranchPixelIcon size={12} className={brandIcon} />
       <span>{message}</span>
-      <button
-        type="button"
-        onClick={onClear}
-        className="text-muted-foreground hover:text-foreground"
-      >
+      <button type="button" onClick={onClear} className={quietLink}>
         Effacer
       </button>
     </output>
@@ -1340,16 +1888,16 @@ function MemoryControlsDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent side={getMemoryControlsDrawerSide(isMobile)}>
-        <DrawerHeader className="border-b border-border/60">
+        <DrawerHeader borderBottomWidth="1px" borderColor="border/60">
           <DrawerTitle>Explorer la mémoire</DrawerTitle>
           <DrawerDescription>
             Choisis une vue ou réduis la carte aux souvenirs utiles.
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="space-y-6 px-5 pb-6 pt-3">
+        <styled.div spaceY="6" px="5" pb="6" pt="3">
           <ControlSection title="Vues" icon={<GridPixelIcon size={13} />}>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={twoColumnGrid}>
               {ADVISOR_GRAPH_LENSES.map(item => (
                 <ToggleButton
                   key={item.id}
@@ -1363,7 +1911,7 @@ function MemoryControlsDrawer({
           </ControlSection>
 
           <ControlSection title="Visites guidées" icon={<ChartNetworkPixelIcon size={13} />}>
-            <div className="space-y-2">
+            <div className={stackedButtons({ gap: '2' })}>
               {ADVISOR_GRAPH_TOURS.map(tour => (
                 <ToggleButton
                   key={tour.id}
@@ -1378,7 +1926,7 @@ function MemoryControlsDrawer({
           </ControlSection>
 
           <ControlSection title="Filtres" icon={<FilterPixelIcon size={13} />}>
-            <div className="grid grid-cols-2 gap-2">
+            <div className={twoColumnGrid}>
               {ADVISOR_GRAPH_QUICK_FILTERS.map(filter => (
                 <ToggleButton
                   key={filter.id}
@@ -1392,7 +1940,7 @@ function MemoryControlsDrawer({
           </ControlSection>
 
           <ControlSection title="Types de souvenirs">
-            <div className="flex flex-wrap gap-2">
+            <styled.div display="flex" flexWrap="wrap" gap="2">
               {ALL_NODE_KINDS.filter(kind => nodeKindsPresent.has(kind)).map(kind => (
                 <ToggleButton
                   key={kind}
@@ -1402,14 +1950,18 @@ function MemoryControlsDrawer({
                   {NODE_KIND_LABEL[kind]}
                 </ToggleButton>
               ))}
-            </div>
+            </styled.div>
           </ControlSection>
 
-          <details className="rounded-frame border border-border/60 bg-surface-1/55 p-3">
-            <summary className="cursor-pointer text-xs font-medium text-foreground">
-              Types de relations
-            </summary>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <styled.details
+            rounded="frame"
+            borderWidth="1px"
+            borderColor="border/60"
+            bg="surface.1/55"
+            p="3"
+          >
+            <summary className={relationsSummary}>Types de relations</summary>
+            <styled.div mt="3" display="flex" flexWrap="wrap" gap="2">
               {ALL_LINK_KINDS.filter(kind => linkKindsPresent.has(kind)).map(kind => (
                 <ToggleButton
                   key={kind}
@@ -1419,24 +1971,24 @@ function MemoryControlsDrawer({
                   {LINK_KIND_LABEL[kind]}
                 </ToggleButton>
               ))}
-            </div>
-          </details>
+            </styled.div>
+          </styled.details>
 
           {pinnedNodes.length > 0 ? (
             <ControlSection title="Épingles" icon={<BranchPixelIcon size={13} />}>
-              <div className="space-y-1">
+              <div className={stackedButtons({ gap: '1' })}>
                 {pinnedNodes.map(node => (
                   <button
                     key={node.id}
                     type="button"
                     onClick={() => onSelectPin(node.id)}
-                    className="min-h-11 w-full rounded-control px-3 text-left text-sm text-muted-foreground hover:bg-surface-1 hover:text-foreground"
+                    className={pinnedRow}
                   >
                     {node.label}
                   </button>
                 ))}
               </div>
-              <div className="mt-2 flex gap-2">
+              <styled.div mt="2" display="flex" gap="2">
                 <ToggleButton
                   active={false}
                   onClick={onTracePins}
@@ -1447,16 +1999,16 @@ function MemoryControlsDrawer({
                 <ToggleButton active={false} onClick={onClearPins}>
                   Effacer
                 </ToggleButton>
-              </div>
+              </styled.div>
             </ControlSection>
           ) : null}
 
           {isAdmin ? (
             <ControlSection title="Exemples de démonstration">
-              <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+              <styled.p mb="3" fontSize="xs" lineHeight="relaxed" color="muted.foreground">
                 Les exemples sont toujours signalés et ne deviennent jamais des souvenirs réels.
-              </p>
-              <div className="flex flex-wrap gap-2">
+              </styled.p>
+              <styled.div display="flex" flexWrap="wrap" gap="2">
                 <ToggleButton active={previewExamples} onClick={onTogglePreview}>
                   {previewExamples ? 'Masquer les exemples' : 'Ajouter des exemples'}
                 </ToggleButton>
@@ -1465,12 +2017,12 @@ function MemoryControlsDrawer({
                     Données personnelles seules
                   </ToggleButton>
                 ) : null}
-              </div>
+              </styled.div>
             </ControlSection>
           ) : null}
 
           <ControlSection title="Affichage" icon={<RefreshPixelIcon size={13} />}>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={threeColumnGrid}>
               {(['cinematic', 'standard', 'performance'] as const).map(value => (
                 <ToggleButton
                   key={value}
@@ -1487,11 +2039,11 @@ function MemoryControlsDrawer({
               ))}
             </div>
             {reducedMotion ? (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <styled.p mt="2" textStyle="xs" color="muted.foreground">
                 Le rendu léger est activé pour respecter le mouvement réduit.
-              </p>
+              </styled.p>
             ) : null}
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className={cx(threeColumnGrid, css({ mt: '3' }))}>
               <ToggleButton active={false} onClick={onFit}>
                 Ajuster
               </ToggleButton>
@@ -1503,7 +2055,7 @@ function MemoryControlsDrawer({
               </ToggleButton>
             </div>
           </ControlSection>
-        </div>
+        </styled.div>
       </DrawerContent>
     </Drawer>
   )
@@ -1520,7 +2072,7 @@ function ControlSection({
 }) {
   return (
     <section>
-      <h2 className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+      <h2 className={cx(sectionHeading, monoLabel({ size: '10px', tracking: 'wide' }))}>
         {icon}
         {title}
       </h2>
@@ -1548,13 +2100,7 @@ function ToggleButton({
       aria-pressed={active}
       disabled={disabled}
       onClick={onClick}
-      className={`min-h-11 rounded-control border px-3 py-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
-        full ? 'w-full text-left' : ''
-      } ${
-        active
-          ? 'border-primary/45 bg-primary/12 text-primary'
-          : 'border-border/60 bg-surface-1 text-muted-foreground hover:text-foreground'
-      }`}
+      className={toggleButton({ active, full })}
     >
       {children}
     </button>
@@ -1571,35 +2117,29 @@ function MemoryEmptyState({
   onOpenList: () => void
 }) {
   return (
-    <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_50%_42%,var(--surface-2),var(--background)_62%)] px-6 text-center">
-      <div className="max-w-sm">
-        <span className="mx-auto grid size-11 place-items-center rounded-control border border-border/60 bg-card text-primary">
+    <div className={canvasState({ kind: 'empty' })}>
+      <styled.div maxW="sm">
+        <span className={emptyIcon}>
           <ChartNetworkPixelIcon size={18} />
         </span>
-        <h1 className="mt-4 text-lg font-semibold text-foreground">
+        <styled.h1 mt="4" textStyle="lg" fontWeight="semibold" color="foreground">
           {pending ? 'Chargement de la mémoire' : 'Aucun souvenir avec ces filtres'}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
+        </styled.h1>
+        <styled.p mt="2" fontSize="sm" lineHeight="relaxed" color="muted.foreground">
+          {message}
+        </styled.p>
         {!pending ? (
-          <button
-            type="button"
-            onClick={onOpenList}
-            className="mt-4 min-h-11 rounded-control border border-border/60 bg-card px-4 text-sm text-foreground"
-          >
+          <button type="button" onClick={onOpenList} className={emptyAction}>
             Ouvrir la liste
           </button>
         ) : null}
-      </div>
+      </styled.div>
     </div>
   )
 }
 
 function MemoryGraphLoading() {
-  return (
-    <output className="grid h-full place-items-center bg-[radial-gradient(circle_at_50%_42%,var(--surface-2),var(--background)_62%)] text-sm text-muted-foreground">
-      Préparation de la carte 3D
-    </output>
-  )
+  return <output className={canvasState({ kind: 'loading' })}>Préparation de la carte 3D</output>
 }
 
 class GraphErrorBoundary extends Component<
@@ -1618,11 +2158,7 @@ class GraphErrorBoundary extends Component<
 
   override render() {
     if (this.state.failed) {
-      return (
-        <output className="grid h-full place-items-center text-sm text-muted-foreground">
-          La vue 3D est indisponible.
-        </output>
-      )
+      return <output className={canvasFallback}>La vue 3D est indisponible.</output>
     }
     return this.props.children
   }
