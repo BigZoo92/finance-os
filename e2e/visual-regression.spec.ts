@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { VISUAL_FIXED_TIME } from './support/visual-clock'
 
 /**
  * Command Pixel visual regression harness.
@@ -7,6 +8,8 @@ import { expect, test } from '@playwright/test'
  * (stored under e2e/__visual__, gitignored: fonts and antialiasing are machine
  * specific) and compared on the following runs. The suite is opt-in through
  * VISUAL_REGRESSION=1 so the CI matrix stays deterministic across platforms.
+ * The clock is pinned to VISUAL_FIXED_TIME in the browser and in the SSR
+ * process, so relative labels do not drift between runs.
  */
 const routes = [
   '/',
@@ -41,6 +44,7 @@ test.describe('Command Pixel visual regression', () => {
     test(`${scenario.name} route matrix`, async ({ page }) => {
       test.setTimeout(300_000)
       await page.setViewportSize({ width: scenario.width, height: scenario.height })
+      await page.clock.setFixedTime(new Date(VISUAL_FIXED_TIME))
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.addInitScript(
         theme => window.localStorage.setItem('finance-os-theme', theme),
