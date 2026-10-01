@@ -1,10 +1,10 @@
 import { fileURLToPath } from 'node:url'
-import babel from '@rolldown/plugin-babel'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
+import viteReact from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
+import { reactCompilerOptions } from './react-compiler.config'
 
 // `/api/*` is served by the runtime proxy in src/routes/api/$.ts (API_INTERNAL_URL is
 // read per request), so neither a dev-server proxy nor a build-time Nitro route
@@ -46,11 +46,10 @@ export default defineConfig(({ command }) => ({
     // Styles are Panda CSS, extracted at build time by its PostCSS plugin
     // (postcss.config.cjs); there is no CSS framework plugin in the Vite graph.
     tanstackStart(),
-    // Vite 8 handles JSX and Fast Refresh in Oxc; the React Compiler still runs
-    // through Babel (`babel-plugin-react-compiler` behind `@rolldown/plugin-babel`)
-    // so its output is identical to the Vite 7 line. Revisit the native
-    // `viteReact({ compiler })` path once it leaves experimental status.
-    viteReact(),
-    babel({ presets: [reactCompilerPreset()] }),
+    // Native React Compiler (experimental): `oxc-transform-react` runs the
+    // compiler, TypeScript/JSX and Fast Refresh in one Rust pass, without Babel.
+    // The plugin compiles the client environment only; SSR renders the same
+    // markup. Options live in react-compiler.config.ts (shared with Vitest).
+    viteReact({ compiler: reactCompilerOptions(command) }),
   ],
 }))
