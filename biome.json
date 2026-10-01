@@ -30,7 +30,18 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "zod/v3": "The workspace is on the Zod 4 API: import from 'zod'.",
+              "zod/v4": "Import Zod from 'zod' (the v4 API is the package root)."
+            }
+          }
+        }
+      }
     }
   },
   "assist": {

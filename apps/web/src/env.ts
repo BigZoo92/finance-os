@@ -4,8 +4,8 @@ import { z } from 'zod'
 const apiBaseUrlSchema = z
   .string()
   .min(1)
-  .refine(value => value.startsWith('/') || z.string().url().safeParse(value).success, {
-    message: 'VITE_API_BASE_URL must be an absolute URL or an absolute path (for example /api)',
+  .refine(value => value.startsWith('/') || z.url().safeParse(value).success, {
+    error: 'VITE_API_BASE_URL must be an absolute URL or an absolute path (for example /api)',
   })
 
 const createBooleanUiFlagSchema = (key: string) =>
@@ -27,7 +27,7 @@ const createBooleanUiFlagSchema = (key: string) =>
         )
       },
       {
-        message: `${key} must be a boolean-like string (true/false, 1/0, yes/no, on/off)`,
+        error: `${key} must be a boolean-like string (true/false, 1/0, yes/no, on/off)`,
       }
     )
 
@@ -40,13 +40,13 @@ const positiveIntegerStringSchema = z
       return Number.isInteger(parsed) && parsed > 0
     },
     {
-      message: 'VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS must be a positive integer',
+      error: 'VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS must be a positive integer',
     }
   )
 
 export const env = createEnv({
   server: {
-    SERVER_URL: z.string().url().optional(),
+    SERVER_URL: z.url().optional(),
   },
 
   /**
@@ -84,7 +84,9 @@ export const env = createEnv({
     VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED: createBooleanUiFlagSchema(
       'VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED'
     ).optional(),
-    VITE_CTA_POLICY_REGISTRY_V1: createBooleanUiFlagSchema('VITE_CTA_POLICY_REGISTRY_V1').optional(),
+    VITE_CTA_POLICY_REGISTRY_V1: createBooleanUiFlagSchema(
+      'VITE_CTA_POLICY_REGISTRY_V1'
+    ).optional(),
     VITE_CTA_ORCHESTRATION_OFF: createBooleanUiFlagSchema('VITE_CTA_ORCHESTRATION_OFF').optional(),
     VITE_CTA_EMERGENCY_DISABLE_LIST: z.string().min(1).optional(),
     // PR5 — Advisor Learning Loop UI flag. Off by default. Hides Decision Recorder,

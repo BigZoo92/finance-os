@@ -90,12 +90,18 @@ durable record; the pull request description summarizes it.
 - **Login E2E assertion.** The "panel does not move" assertion tolerates
   0.5px of transform noise from the reveal animation; it failed
   intermittently before the migration.
-- **Env schema on the Zod 3 API.** One zod (4.6.5) ships, but
-  `@finance-os/env` imports `zod/v3` from it: its 1,300-line schema relies
-  on Zod 3 `.default()` semantics (the default is parsed through the inner
-  schema), which Zod 4 short-circuits. Parsing the production environment
-  stays byte-for-byte the same; the v4 API migration of that schema is a
-  separate, reviewed change.
+- **Zod 4 everywhere, env schema verified differentially.** The env schema
+  moved last: first to `zod/v3` inside the single zod 4 dependency, then to
+  the v4 API (`z.url()`, `z.email()`, `z.flattenError()`, a transform with
+  `ctx.issues` and `z.NEVER` instead of `superRefine` plus a duplicate
+  transform). Before the switch, the Zod 3 schema was frozen and both
+  versions were run over 258 variables × 65 probe values (33,540 cases per
+  service). Every behavioural difference falls in one of three intended
+  Zod 4 tightenings: integers beyond 2^53 rejected, `Infinity` rejected (a
+  budget set to `Infinity` no longer removes its cap), padded URLs trimmed
+  (a padded `APP_URL` no longer yields `" https://…/api"`). Built-in error
+  messages changed wording; a required URL now says "is required" when
+  absent. `zod/v3` and `zod/v4` imports are forbidden by Biome.
 - **Visual baselines for the trading lab.** The route was not in the
   original matrix. Its pre-migration screenshots were recorded from a
   detached worktree of the last Tailwind commit (with the same chart repair
@@ -115,6 +121,7 @@ durable record; the pull request description summarizes it.
 | Worker image missed `provider-contract` and `provider-runtime` sources | Modernization (P15 made powens and the external-investment jobs import them) | Copied in the worker bundle and runtime stages; `pnpm docker:check` passes |
 | GitNexus (CLI and MCP) failed with `ERR_DLOPEN_FAILED` after a reinstall | Modernization (P6 build policy skipped `@ladybugdb/core`'s copy-only install script) | Script reviewed and allowed |
 | Two Zod majors shipped; the API and worker declared zod without importing it | Pre-existing | One zod, unused declarations removed |
+| A boot error echoed the first 18 characters of an invalid `AUTH_*PASSWORD_HASH` value (a misplaced plaintext password) | Pre-existing | The message names the variable only; test asserts the value never appears |
 
 ## Measurements
 
@@ -165,4 +172,3 @@ own so a failure would not hide the following ones.
   in `@media (hover: hover)`; on touch devices a tapped control can keep its
   hover style until the next tap elsewhere. A `hover` condition override in
   the preset would restore the old behavior.
-- `@finance-os/env` still uses the Zod 3 API (see the deviations).
