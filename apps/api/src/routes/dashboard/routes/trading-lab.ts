@@ -2088,11 +2088,8 @@ export const createTradingLabRoute = ({
             caveats: ['Demo mode: no live signal data'],
           }),
           real: async () => {
-            // Delegate to existing signal items repository for now
+            // Delegate to the injected signal items repository for now
             // Unified feed combines news_article + signal_item
-            const { createDashboardSignalItemsRepository } = await import(
-              '../repositories/dashboard-signal-items-repository'
-            )
             const itemsRepo = repositories.signalItems
             const limit = Number(q.limit) || 50
             const offset = Number(q.offset) || 0
