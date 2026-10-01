@@ -117,6 +117,8 @@ COPY packages/env packages/env
 COPY packages/external-investments packages/external-investments
 COPY packages/powens packages/powens
 COPY packages/prelude packages/prelude
+COPY packages/provider-contract packages/provider-contract
+COPY packages/provider-runtime packages/provider-runtime
 COPY packages/redis packages/redis
 COPY infra/docker infra/docker
 
@@ -142,6 +144,8 @@ COPY --from=bundle-worker --chown=app:app /app/packages/env ./packages/env
 COPY --from=bundle-worker --chown=app:app /app/packages/external-investments ./packages/external-investments
 COPY --from=bundle-worker --chown=app:app /app/packages/powens ./packages/powens
 COPY --from=bundle-worker --chown=app:app /app/packages/prelude ./packages/prelude
+COPY --from=bundle-worker --chown=app:app /app/packages/provider-contract ./packages/provider-contract
+COPY --from=bundle-worker --chown=app:app /app/packages/provider-runtime ./packages/provider-runtime
 COPY --from=bundle-worker --chown=app:app /app/packages/redis ./packages/redis
 COPY --from=bundle-worker --chown=app:app /app/infra/docker ./infra/docker
 RUN chmod +x ./infra/docker/entrypoints/worker-entrypoint.sh
