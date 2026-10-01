@@ -20,6 +20,7 @@ const routes = [
   '/ia',
   '/ia/chat',
   '/ia/memoire',
+  '/ia/trading-lab',
   '/radar',
   '/social-intelligence',
   '/orchestration',
@@ -53,11 +54,22 @@ test.describe('Command Pixel visual regression', () => {
       for (const route of routes) {
         await page.goto(route, { waitUntil: 'networkidle' })
         await expect(page.locator('#main-content')).toBeVisible()
-        await expect(page).toHaveScreenshot(`${scenario.name}-${slug(route)}.png`, {
+        // Lazy client-only charts settle after network idle: wait for each one
+        // to reach a terminal state (ready or unavailable) before capturing.
+        await expect(
+          page.locator('[data-chart-state="loading"], [data-chart-state="pending"]')
+        ).toHaveCount(0)
+        // Soft: one run reports every differing route of the scenario instead
+        // of stopping at the first one (the test still fails if any differs).
+        await expect.soft(page).toHaveScreenshot(`${scenario.name}-${slug(route)}.png`, {
           fullPage: true,
           animations: 'disabled',
           caret: 'hide',
           maxDiffPixels: 100,
+          // Lazy chart canvases resize asynchronously during the full-page
+          // capture; their containers are masked (layout still compared) and
+          // their rendering is asserted by the trading lab E2E test.
+          mask: [page.locator('[data-chart-state]')],
         })
       }
     })
