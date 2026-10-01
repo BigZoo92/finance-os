@@ -17,8 +17,8 @@
     "allowImportingTsExtensions": true,
     /* TanStack Start: verbatimModuleSyntax keeps unused (server-only) imports in
        client modules and can leak server bundles into the browser build. The
-       web app deliberately overrides the shared policy; Biome still enforces
-       `import type` style. See scripts/check-client-bundle.mjs. */
+       web app deliberately overrides the shared policy; oxlint still enforces
+       `import type` style (`typescript/consistent-type-imports`). See scripts/check-client-bundle.mjs. */
     "verbatimModuleSyntax": false,
     "noEmit": true,
 

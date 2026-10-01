@@ -56,7 +56,7 @@ describe('persistTweetsAsSignalItems', () => {
       db,
       runId: 'run-1',
       ingestionRunId: 42,
-      tweets: tweets as Parameters<typeof persistTweetsAsSignalItems>[0]['tweets'],
+      tweets: tweets,
       scope: 'admin',
     })
     expect(result.insertedCount).toBe(2)

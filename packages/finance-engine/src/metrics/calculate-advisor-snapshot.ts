@@ -174,13 +174,11 @@ const buildAllocationBuckets = (
     buckets[classifyBucket(position.assetClass)] += position.value
   }
 
-  return (Object.entries(buckets) as Array<[AllocationBucket['bucket'], number]>).map(
-    ([bucket, value]) => ({
-      bucket,
-      value: round(value),
-      weightPct: round(toWeight(value, totalValue) * 100),
-    })
-  )
+  return Object.entries(buckets).map(([bucket, value]) => ({
+    bucket,
+    value: round(value),
+    weightPct: round(toWeight(value, totalValue) * 100),
+  }))
 }
 
 const buildDriftSignals = ({

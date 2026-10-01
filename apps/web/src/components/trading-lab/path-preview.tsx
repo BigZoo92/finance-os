@@ -136,7 +136,7 @@ const buildPaths = ({
       })
     }
     if (linkedBacktest) {
-      const m = (linkedBacktest.metrics ?? {}) as Record<string, unknown>
+      const m = linkedBacktest.metrics ?? {}
       const cagr = Number(m.cagr)
       steps.push({
         id: `backtest:${linkedBacktest.id}`,

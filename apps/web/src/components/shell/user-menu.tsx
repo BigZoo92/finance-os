@@ -166,7 +166,7 @@ export function UserMenu() {
             className={MENU_ITEM_CLASS}
             onClick={() => {
               setOpen(false)
-              navigate({ to: '/login', search: { reason: undefined } })
+              void navigate({ to: '/login', search: { reason: undefined } })
             }}
           >
             Se connecter

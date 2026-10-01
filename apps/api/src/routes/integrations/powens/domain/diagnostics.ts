@@ -123,7 +123,7 @@ export const createDiagnosticsService = ({
       await incrementOutcome(mapped.outcome)
 
       return {
-        provider: (context.mode === 'admin' ? 'powens' : 'mock') as 'powens' | 'mock',
+        provider: context.mode === 'admin' ? 'powens' : 'mock',
         outcome: mapped.outcome,
         issueType: mapped.issueType,
         guidance: mapped.guidance,

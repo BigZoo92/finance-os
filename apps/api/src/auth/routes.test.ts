@@ -166,7 +166,7 @@ describe('createAuthRoutes /auth/me', () => {
       verifyPassword: async password => password === 'valid-password',
       envOverrides: {
         NODE_ENV: 'production',
-      } as Partial<AuthRoutesDependencies['env']>,
+      },
     })
 
     const response = await app.handle(
@@ -194,7 +194,7 @@ describe('createAuthRoutes /auth/me', () => {
       envOverrides: {
         NODE_ENV: 'production',
         AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: true,
-      } as Partial<AuthRoutesDependencies['env']>,
+      },
     })
 
     const response = await app.handle(

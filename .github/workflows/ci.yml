@@ -86,8 +86,11 @@ jobs:
       - name: Documentation link check
         run: pnpm docs:check
 
-      - name: Root lint
+      - name: Root lint (oxlint, type-aware)
         run: pnpm lint
+
+      - name: Format check (oxfmt)
+        run: pnpm format:check
 
       - name: Docker workspace manifest drift check
         run: pnpm docker:check

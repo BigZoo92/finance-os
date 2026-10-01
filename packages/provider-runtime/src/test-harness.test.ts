@@ -64,7 +64,7 @@ describe('assertProviderDoesNotExposeForbiddenCapabilities', () => {
   it('throws for a forbidden capability that somehow leaked in', () => {
     const bad: Provider = {
       ...makeProvider(),
-      // biome-ignore lint/suspicious/noExplicitAny: testing forbidden value
+      // testing forbidden value
       capability: 'trading.order.create' as any,
     }
     expect(() => {
@@ -84,7 +84,7 @@ describe('assertProviderErrorSafe', () => {
   it('rejects unknown error codes', () => {
     expect(() => {
       assertProviderErrorSafe({
-        // biome-ignore lint/suspicious/noExplicitAny: testing invalid value
+        // testing invalid value
         code: 'nope' as any,
         providerId: pid,
         retryable: false,

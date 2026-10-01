@@ -39,7 +39,7 @@ export const buildAdvisorChatFallback = ({
       label: `Snapshot ${snapshot.asOf}`,
     },
   ]
-  const assumptions = [...snapshot.assumptions.map(item => item.justification)]
+  const assumptions = snapshot.assumptions.map(item => item.justification)
   const caveats = ['Ce systeme ne predit pas le futur et travaille avec des hypotheses prudentes.']
   const simulations: Array<{ label: string; value: string }> = []
 

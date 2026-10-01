@@ -171,7 +171,7 @@ export const createKnowledgeContextBundleProvider = (
         retrievalMode: input.retrievalMode ?? config.retrievalMode,
         filters: {
           minConfidence: config.minConfidence,
-          ...(input.filters ?? {}),
+          ...input.filters,
         },
       }
 

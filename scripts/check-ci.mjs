@@ -51,8 +51,12 @@ export const coreSteps = [
     args: ['docs:check'],
   },
   {
-    name: 'Root lint',
+    name: 'Root lint (oxlint, type-aware)',
     args: ['lint'],
+  },
+  {
+    name: 'Format check (oxfmt)',
+    args: ['format:check'],
   },
   {
     name: 'Docker workspace manifest drift check',

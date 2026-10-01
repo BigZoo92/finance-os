@@ -418,7 +418,7 @@ describe('provider normalization', () => {
     expect(cashPositions.every(p => p.valueSource === 'provider_reported')).toBe(true)
 
     // Account metadata carries the cash report + NAV
-    const metadata = snapshot.accounts[0]?.metadata as Record<string, unknown> | null
+    const metadata = snapshot.accounts[0]?.metadata
     expect(metadata).toBeTruthy()
     expect(metadata?.cashBalances).toBeDefined()
     expect(metadata?.equitySummary).toBeDefined()

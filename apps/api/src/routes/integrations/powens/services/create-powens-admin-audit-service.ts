@@ -32,8 +32,7 @@ const bindRedisFunction = <TArgs extends unknown[], TResult>(
     throw new Error(`Redis client is missing ${name}`)
   }
 
-  return (...args: TArgs) =>
-    Reflect.apply(candidate as (...args: TArgs) => TResult, redisClient, args)
+  return (...args: TArgs) => Reflect.apply(candidate, redisClient, args)
 }
 
 export const createPowensAdminAuditService = (redisClient: RedisClient) => {

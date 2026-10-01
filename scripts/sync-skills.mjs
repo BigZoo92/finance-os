@@ -12,9 +12,7 @@ import {
 } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import yaml from 'js-yaml'
-
-const { CORE_SCHEMA, load: parseYaml } = yaml
+import { CORE_SCHEMA, load as parseYaml } from 'js-yaml'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const CANONICAL_SKILLS_ROOT = join(REPO_ROOT, '.agentic', 'source', 'skills')
@@ -153,7 +151,7 @@ const parseFrontmatter = ({ content, directoryName, path }) => {
   try {
     document = parseYaml(match[1], { schema: CORE_SCHEMA, json: false })
   } catch (error) {
-    throw new Error(`Invalid YAML frontmatter in ${path}: ${error.message}`)
+    throw new Error(`Invalid YAML frontmatter in ${path}: ${error.message}`, { cause: error })
   }
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
     throw new Error(`SKILL.md frontmatter must be a mapping: ${path}`)

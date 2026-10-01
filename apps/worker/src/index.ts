@@ -1594,6 +1594,7 @@ const startXDailySyncSchedulerInstance = () => {
 }
 
 const consumeJobs = async () => {
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- the SIGTERM and SIGINT handlers flip keepRunning.
   while (keepRunning) {
     try {
       const message = await redisClient.client.blPop(

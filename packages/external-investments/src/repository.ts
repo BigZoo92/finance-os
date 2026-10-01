@@ -1176,9 +1176,9 @@ export const createExternalInvestmentsRepository = ({
           schemaVersion: bundle.schemaVersion,
           generatedAt: new Date(bundle.generatedAt),
           ...(requestId ? { requestId } : {}),
-          bundle: bundle as unknown as Record<string, unknown>,
+          bundle: bundle,
           staleAfterMinutes,
-          providerCoverage: providerCoverage as unknown as Array<Record<string, unknown>>,
+          providerCoverage: providerCoverage,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -1187,9 +1187,9 @@ export const createExternalInvestmentsRepository = ({
             schemaVersion: bundle.schemaVersion,
             generatedAt: new Date(bundle.generatedAt),
             ...(requestId ? { requestId } : {}),
-            bundle: bundle as unknown as Record<string, unknown>,
+            bundle: bundle,
             staleAfterMinutes,
-            providerCoverage: providerCoverage as unknown as Array<Record<string, unknown>>,
+            providerCoverage: providerCoverage,
             updatedAt: now,
           },
         })

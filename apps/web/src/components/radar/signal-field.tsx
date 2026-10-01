@@ -169,7 +169,7 @@ export function SignalField({
   return (
     <div ref={containerRef} className={fieldFrame} {...(width > 0 ? { style: { height } } : {})}>
       {layout ? (
-        // biome-ignore lint/a11y/useKeyWithClickEvents: pointer shortcut only, the Signaux and Marchés lists next to the field are the keyboard path
+        // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut only, the Signaux and Marchés lists next to the field are the keyboard path
         <svg
           width="100%"
           height={height}

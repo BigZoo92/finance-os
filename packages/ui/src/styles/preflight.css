@@ -320,7 +320,7 @@
 
   /* Make elements with the HTML hidden attribute stay hidden by default. */
   [hidden]:where(:not([hidden="until-found"])) {
-    /* biome-ignore lint/complexity/noImportantStyles: upstream reset rule, must beat display utilities. */
+    /* Upstream reset rule: it must beat display utilities. */
     display: none !important;
   }
 }

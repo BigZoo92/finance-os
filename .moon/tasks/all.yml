@@ -25,7 +25,8 @@ implicitInputs:
   - '/pnpm-lock.yaml'
   - '/pnpm-workspace.yaml'
   - '/packages/config-ts/*.json'
-  - '/biome.json'
+  - '/.oxlintrc.json'
+  - '/.oxfmtrc.json'
   # Configuration only: `.moon/cache` must never be an input (self-invalidation).
   - '/.moon/*.yml'
   - '/.moon/tasks/**/*'

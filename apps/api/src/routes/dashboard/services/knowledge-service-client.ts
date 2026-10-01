@@ -200,7 +200,7 @@ export const createKnowledgeServiceClient = (config: KnowledgeServiceClientConfi
           retrievalMode: input.retrievalMode ?? config.retrievalMode,
           filters: {
             minConfidence: config.minConfidence,
-            ...(input.filters ?? {}),
+            ...input.filters,
           },
         },
       }),
@@ -215,7 +215,7 @@ export const createKnowledgeServiceClient = (config: KnowledgeServiceClientConfi
           retrievalMode: input.retrievalMode ?? config.retrievalMode,
           filters: {
             minConfidence: config.minConfidence,
-            ...(input.filters ?? {}),
+            ...input.filters,
           },
         },
       }),

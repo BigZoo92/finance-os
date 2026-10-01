@@ -234,6 +234,7 @@ function IaChatPage() {
     if (!textarea) return
     textarea.style.height = '0px'
     textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `draft` is the trigger: the textarea is resized after every edit or reset.
   }, [draft])
 
   const conversationVersion = `${messages.length}:${pendingMessage ?? ''}`
@@ -245,6 +246,7 @@ function IaChatPage() {
       block: 'end',
       behavior: prefersReducedMotion ? 'auto' : 'smooth',
     })
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the conversation version is the trigger: follow new and pending messages.
   }, [conversationVersion, prefersReducedMotion])
 
   const sendMessage = () => {

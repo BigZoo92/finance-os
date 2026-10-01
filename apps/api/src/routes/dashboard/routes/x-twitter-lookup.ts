@@ -41,12 +41,6 @@ const lookupBodySchema = t.Object({
   persist: t.Optional(t.Boolean()),
 })
 
-type LookupBody = {
-  handle: string
-  forceRefresh?: boolean
-  persist?: boolean
-}
-
 const CACHE_TTL_SECONDS = 24 * 60 * 60
 const cacheKey = (handle: string) => `x:profile:v1:${handle.replace(/^@/, '').toLowerCase()}`
 
@@ -164,7 +158,7 @@ export const createXTwitterLookupRoute = ({
           },
           real: async () => {
             requireAdmin(context)
-            const body = context.body as LookupBody
+            const body = context.body
             const normalized = normalizeXHandle(body.handle)
             if (!normalized.ok) {
               context.set.status = 400
@@ -320,7 +314,7 @@ export const createXTwitterLookupRoute = ({
           },
           real: async () => {
             requireAdmin(context)
-            const body = (context.body ?? {}) as { force?: boolean; sourceIds?: number[] }
+            const body = context.body ?? {}
             const force = body.force === true
             const filterIds =
               Array.isArray(body.sourceIds) && body.sourceIds.length > 0

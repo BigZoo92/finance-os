@@ -395,7 +395,7 @@ export const createHypothesisUseCases = ({
         ...(horizon !== null ? { horizon } : {}),
       }
       const persistedParameters: Record<string, unknown> = {
-        ...(input.parameters ?? {}),
+        ...input.parameters,
         [HYPOTHESIS_PARAMETERS_KEY]: hypothesisExtras,
       }
 
@@ -493,7 +493,7 @@ export const createHypothesisUseCases = ({
         input.horizon !== undefined
       if (input.parameters !== undefined || hypothesisFieldsTouched) {
         const baseParams: Record<string, unknown> = {
-          ...((existing.parameters as Record<string, unknown> | null | undefined) ?? {}),
+          ...existing.parameters,
         }
         if (input.parameters !== undefined) {
           // Shallow-merge user keys; protect the reserved hypothesis sub-object — hypothesis
@@ -504,9 +504,7 @@ export const createHypothesisUseCases = ({
           }
         }
         if (hypothesisFieldsTouched) {
-          const existingExtras = readHypothesisExtras(
-            existing.parameters as Record<string, unknown> | null | undefined
-          )
+          const existingExtras = readHypothesisExtras(existing.parameters)
           const nextThesis =
             input.thesis === undefined
               ? existingExtras.thesis
@@ -551,9 +549,7 @@ export const createHypothesisUseCases = ({
           baseParams[HYPOTHESIS_PARAMETERS_KEY] = merged
         } else {
           // No hypothesis-specific edits in this update — preserve existing hypothesis sub-object.
-          const existingExtras = readHypothesisExtras(
-            existing.parameters as Record<string, unknown> | null | undefined
-          )
+          const existingExtras = readHypothesisExtras(existing.parameters)
           baseParams[HYPOTHESIS_PARAMETERS_KEY] = {
             thesis: existingExtras.thesis,
             invalidationCriteria: existingExtras.invalidationCriteria,
@@ -635,9 +631,7 @@ export const createHypothesisUseCases = ({
           max: SCENARIO_INVALIDATION_MAX,
         })
       } else {
-        const inherited = readHypothesisExtras(
-          existing.parameters as Record<string, unknown> | null | undefined
-        ).invalidationCriteria
+        const inherited = readHypothesisExtras(existing.parameters).invalidationCriteria
         if (inherited.length === 0) {
           throw new HypothesisValidationError({
             code: 'INVALIDATION_CRITERIA_REQUIRED',

@@ -18,12 +18,7 @@ import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { getLearningLoopUiFlags } from '@/features/learning-loop-config'
 import { shouldShowHypothesisLabOnTradingLab } from '@/features/learning-loop-visibility'
-import type {
-  AttentionItem,
-  TradingLabBacktestRun,
-  TradingLabScenario,
-  TradingLabStrategy,
-} from '@/features/trading-lab-api'
+import type { AttentionItem } from '@/features/trading-lab-api'
 import {
   attentionItemsQueryOptions,
   tradingLabBacktestsQueryOptions,
@@ -112,6 +107,15 @@ const card = cva({
   },
   defaultVariants: { layout: 'block' },
 })
+
+// Text of a loosely typed trade field: strings as is, scalars stringified,
+// anything else blank instead of "[object Object]".
+const toCellText = (value: unknown): string =>
+  typeof value === 'string'
+    ? value
+    : typeof value === 'number' || typeof value === 'boolean'
+      ? String(value)
+      : ''
 
 const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
 
@@ -258,9 +262,9 @@ function TradingLabPage() {
 
   const attentionItems: AttentionItem[] = attentionData?.items ?? []
   const openCount = attentionData?.openCount ?? 0
-  const strategyList = strategies as TradingLabStrategy[]
-  const backtestList = backtests as TradingLabBacktestRun[]
-  const scenarioList = scenarios as TradingLabScenario[]
+  const strategyList = strategies
+  const backtestList = backtests
+  const scenarioList = scenarios
 
   return (
     <styled.div spaceY="6">
@@ -402,10 +406,10 @@ function TradingLabPage() {
         ) : (
           <styled.div spaceY="4">
             {backtestList.slice(0, 5).map(b => {
-              const m = (b.metrics ?? {}) as Record<string, unknown>
+              const m = b.metrics ?? {}
               const equity = (b.equityCurve ?? []) as EquityPoint[]
               const drawdowns = (b.drawdowns ?? []) as DrawdownPoint[]
-              const summary = (b.resultSummary ?? {}) as Record<string, unknown>
+              const summary = b.resultSummary ?? {}
               const dataQuality = (summary.dataQuality as string | undefined) ?? null
               const dataProvider = (summary.dataProvider as string | undefined) ?? null
               const fallbackUsed = Boolean(summary.fallbackUsed)
@@ -508,11 +512,12 @@ function TradingLabPage() {
                   ) : null}
 
                   {b.runStatus === 'completed' && equity.length > 0 ? (
-                    // minmax(0, …): a chart canvas mounted wider than its track
+                    // minmax(0, …) at every width: a chart canvas mounted wider than its track
                     // must not widen the column (autoSize never shrinks it back).
                     <styled.div
                       display="grid"
                       gap="3"
+                      gridTemplateColumns="minmax(0, 1fr)"
                       lg={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}
                     >
                       <div>
@@ -559,7 +564,7 @@ function TradingLabPage() {
                           </styled.thead>
                           <styled.tbody textStyle="financial">
                             {b.trades.slice(0, 50).map(t => {
-                              const tr = t as Record<string, unknown>
+                              const tr = t
                               const pnlValue = tr.pnl == null ? null : Number(tr.pnl)
                               const pnl =
                                 pnlValue !== null && Number.isFinite(pnlValue) ? pnlValue : null
@@ -570,10 +575,10 @@ function TradingLabPage() {
                                   ? pnlPctNumber
                                   : null
                               const tradeKey = [
-                                String(tr.entry_date ?? tr.entryDate ?? ''),
-                                String(tr.exit_date ?? tr.exitDate ?? ''),
-                                String(tr.side ?? ''),
-                                String(tr.pnl ?? ''),
+                                toCellText(tr.entry_date ?? tr.entryDate),
+                                toCellText(tr.exit_date ?? tr.exitDate),
+                                toCellText(tr.side),
+                                toCellText(tr.pnl),
                               ].join(':')
                               return (
                                 <styled.tr
@@ -582,10 +587,10 @@ function TradingLabPage() {
                                   borderColor="border/20"
                                 >
                                   <td className={cell()}>
-                                    {String(tr.entry_date ?? tr.entryDate ?? '')}
+                                    {toCellText(tr.entry_date ?? tr.entryDate)}
                                   </td>
                                   <td className={cell()}>
-                                    {String(tr.exit_date ?? tr.exitDate ?? '')}
+                                    {toCellText(tr.exit_date ?? tr.exitDate)}
                                   </td>
                                   <td className={cell({ align: 'right' })}>
                                     {tr.side === 'long'

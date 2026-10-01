@@ -95,7 +95,7 @@ describe('powens reconnect banner helpers', () => {
       __FINANCE_OS_PUBLIC_RUNTIME_ENV__: {
         VITE_UI_RECONNECT_BANNER_ENABLED: 'false',
       },
-    } as Window & typeof globalThis)
+    })
 
     expect(getPowensReconnectBannerUiEnabled()).toBe(false)
   })
@@ -113,7 +113,7 @@ describe('powens reconnect banner helpers', () => {
           storage.delete(key)
         },
       },
-    } as Window & typeof globalThis)
+    })
 
     clearReconnectBannerDeferredSnapshot()
 

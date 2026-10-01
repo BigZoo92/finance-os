@@ -9,7 +9,7 @@ import {
   setStoredPushOptIn,
   setStoredPushSubscription,
 } from '../services/push-store'
-import type { ApiEnv, PushPermissionState, RedisClient } from '../types'
+import type { ApiEnv, RedisClient } from '../types'
 
 const permissionSchema = t.Union([t.Literal('unknown'), t.Literal('denied'), t.Literal('granted')])
 
@@ -71,7 +71,7 @@ export const createPushNotificationsRoute = ({
         await setStoredPushOptIn({
           redis,
           optIn: context.body.optIn,
-          permission: context.body.permission as PushPermissionState,
+          permission: context.body.permission,
         })
 
         logApiEvent({

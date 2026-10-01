@@ -149,7 +149,7 @@ export function CommandPalette() {
 
   const handleSelect = (to: string) => {
     closeCommandPalette()
-    navigate({ to })
+    void navigate({ to })
   }
 
   return (
@@ -174,7 +174,12 @@ export function CommandPalette() {
             >
               <SearchPixelIcon size={14} />
             </styled.span>
-            <Command.Input placeholder="Rechercher une page" className={paletteInput} autoFocus />
+            <Command.Input
+              placeholder="Rechercher une page"
+              className={paletteInput}
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the palette dialog that just opened.
+              autoFocus
+            />
             <styled.kbd
               rounded="tile"
               borderWidth="1px"

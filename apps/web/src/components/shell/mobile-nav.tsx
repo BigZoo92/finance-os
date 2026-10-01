@@ -10,7 +10,6 @@ import { css, cva, cx } from '@finance-os/styled-system/css'
 import { styled } from '@finance-os/styled-system/jsx'
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@finance-os/ui/components'
 import { EllipsesHorizontalPixelIcon } from '@finance-os/ui/icons/pixel'
-import type { IconComponent } from '@finance-os/ui/icons/types'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -259,7 +258,7 @@ function MobileMoreDrawer({
               <ul>
                 {section.items.map(item => {
                   const active = isRouteActive(pathname, item.to)
-                  const Icon = item.icon as IconComponent
+                  const Icon = item.icon
                   return (
                     <li key={item.to}>
                       <Link

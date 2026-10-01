@@ -303,10 +303,10 @@ function InvestissementsPage() {
     dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) })
   )
   const externalSummaryQuery = useQuery(
-    externalInvestmentsSummaryQueryOptionsWithMode({ ...(authMode ? { mode: authMode } : {}) })
+    externalInvestmentsSummaryQueryOptionsWithMode(authMode ? { mode: authMode } : {})
   )
   const externalPositionsQuery = useQuery(
-    externalInvestmentsPositionsQueryOptionsWithMode({ ...(authMode ? { mode: authMode } : {}) })
+    externalInvestmentsPositionsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
   )
 
   const model = useMemo(

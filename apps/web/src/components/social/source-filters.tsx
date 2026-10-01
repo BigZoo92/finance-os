@@ -177,7 +177,7 @@ export function SourceFilters({
             onChange={value =>
               setDraft(current => ({
                 ...current,
-                platform: value === 'all' ? null : (value as NonNullable<FilterDraft['platform']>),
+                platform: value === 'all' ? null : value,
               }))
             }
             options={[
@@ -200,7 +200,7 @@ export function SourceFilters({
             onChange={value =>
               setDraft(current => ({
                 ...current,
-                group: value === 'all' ? null : (value as NonNullable<FilterDraft['group']>),
+                group: value === 'all' ? null : value,
               }))
             }
             options={[
@@ -240,7 +240,7 @@ export function SourceFilters({
           onChange={value =>
             setDraft(current => ({
               ...current,
-              status: value === 'all' ? null : (value as NonNullable<FilterDraft['status']>),
+              status: value === 'all' ? null : value,
             }))
           }
           options={[

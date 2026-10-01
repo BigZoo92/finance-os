@@ -191,6 +191,7 @@ function SocialIntelligencePage() {
   })
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- the search box follows the URL when it changes outside the input (back, forward, shared link).
     setQuery(search.q ?? '')
   }, [search.q])
 

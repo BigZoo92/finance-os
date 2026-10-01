@@ -3,7 +3,6 @@ import {
   isManualOperationTerminalStatus,
   reconcileManualOperationStepForDisplay,
   resolveOrphanStepClosure,
-  type ManualOperationTerminalStatus,
 } from '@finance-os/ai/manual-operation-recovery'
 import { isAiRunTerminalStatus } from '@finance-os/ai/run-status'
 import { schema } from '@finance-os/db'
@@ -316,7 +315,7 @@ const getManualOperationByPredicate = async ({
   whereClause,
 }: {
   db: ApiDb
-  whereClause: SQL<unknown>
+  whereClause: SQL
 }) => {
   const [row] = await db
     .select({
@@ -1307,7 +1306,7 @@ export const createDashboardAdvisorRepository = ({
       // `advisor_run` stuck-`running` incident), this closes the orphan so the
       // Ops UI never shows a phantom "en cours" under a failed operation.
       if (input.status !== undefined && isManualOperationTerminalStatus(input.status)) {
-        const closure = resolveOrphanStepClosure(input.status as ManualOperationTerminalStatus)
+        const closure = resolveOrphanStepClosure(input.status)
         await db
           .update(schema.aiManualOperationStep)
           .set({

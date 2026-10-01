@@ -180,7 +180,7 @@ export const createTransactionCategorizationBackfillRoute = ({
         real: async () => {
           requireAdmin(context)
           const startedAt = Date.now()
-          const body = context.body as BackfillBody
+          const body = context.body
           // Respect persisted user categorization rules in backfill too, so it
           // stays consistent with the live transaction list (which already
           // applies enabled user rules by priority).

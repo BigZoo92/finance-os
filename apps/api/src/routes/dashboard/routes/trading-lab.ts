@@ -379,8 +379,8 @@ export const createTradingLabRoute = ({
           runStatus: row.runStatus,
           feesBps: row.feesBps,
           slippageBps: row.slippageBps,
-          metrics: (row.metrics ?? null) as Record<string, unknown> | null,
-          resultSummary: (row.resultSummary ?? null) as Record<string, unknown> | null,
+          metrics: row.metrics ?? null,
+          resultSummary: row.resultSummary ?? null,
           createdAt: row.createdAt,
           trades: row.trades,
           // PR14 — pass the equity curve through so the scorecard's advanced-metrics helper
@@ -488,15 +488,12 @@ export const createTradingLabRoute = ({
             context,
             demo: () => buildDemoPatternDetectionResponse(context.body),
             real: async () => {
-              const result = await quantPatternsDetectProvider.call(
-                context.body as Parameters<typeof quantPatternsDetectProvider.call>[0],
-                {
-                  mode: 'admin',
-                  requestId,
-                  now: new Date(),
-                  reason: 'route:trading-lab.patterns.detect',
-                }
-              )
+              const result = await quantPatternsDetectProvider.call(context.body, {
+                mode: 'admin',
+                requestId,
+                now: new Date(),
+                reason: 'route:trading-lab.patterns.detect',
+              })
               if (result.ok) {
                 return { ok: true, ...(result.data.response as object) }
               }
@@ -1346,7 +1343,7 @@ export const createTradingLabRoute = ({
 
               // Call quant service
               const startedAt = new Date()
-              const strategyParams = (strategy.parameters ?? {}) as Record<string, unknown>
+              const strategyParams = strategy.parameters ?? {}
               const strategyTypeForQuant =
                 (strategyParams.strategy_type as string | undefined) ??
                 (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')
@@ -1410,8 +1407,8 @@ export const createTradingLabRoute = ({
                 runStartedAt: startedAt,
                 runFinishedAt: new Date(),
                 durationMs: Date.now() - startedAt.getTime(),
-                paramsHash: qd.params_hash as string,
-                dataHash: qd.data_hash as string,
+                paramsHash: qd.params_hash,
+                dataHash: qd.data_hash,
                 resultSummary: {
                   strategy_type: qd.strategy_type,
                   dataSource,
@@ -1425,9 +1422,9 @@ export const createTradingLabRoute = ({
                   dataPoints: ohlcv.length,
                 },
                 metrics: metrics ?? {},
-                equityCurve: qd.equity_curve as Array<{ date: string; equity: number }>,
-                trades: qd.trades as Array<Record<string, unknown>>,
-                drawdowns: qd.drawdowns as Array<{ date: string; drawdown: number }>,
+                equityCurve: qd.equity_curve,
+                trades: qd.trades,
+                drawdowns: qd.drawdowns,
               })
 
               // Auto-trigger graph ingest (fail-soft)
@@ -1445,14 +1442,10 @@ export const createTradingLabRoute = ({
                     strategyType: strategy.strategyType,
                     status: strategy.status,
                     description: strategy.description ?? null,
-                    tags: strategy.tags as string[],
-                    assumptions: (strategy.assumptions as string[]) ?? [],
-                    caveats: (strategy.caveats as string[]) ?? [],
-                    indicators:
-                      (strategy.indicators as Array<{
-                        name: string
-                        params: Record<string, unknown>
-                      }>) ?? [],
+                    tags: strategy.tags,
+                    assumptions: strategy.assumptions ?? [],
+                    caveats: strategy.caveats ?? [],
+                    indicators: strategy.indicators ?? [],
                   },
                   backtest: {
                     id: run.id,
@@ -1608,7 +1601,7 @@ export const createTradingLabRoute = ({
                 }
               }
 
-              const strategyParams = (strategy.parameters ?? {}) as Record<string, unknown>
+              const strategyParams = strategy.parameters ?? {}
               const strategyTypeForQuant =
                 (strategyParams.strategy_type as string | undefined) ??
                 (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')

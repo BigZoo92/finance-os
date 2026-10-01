@@ -393,7 +393,7 @@ export const startPostMortemScheduler = ({
           typeof result === 'object' &&
           result !== null &&
           'status' in result &&
-          typeof (result as { status: unknown }).status === 'string' &&
+          typeof result.status === 'string' &&
           (result as { status: string }).status.startsWith('triggered_')
         ) {
           lastTriggeredDay = decision.dayKey

@@ -61,7 +61,7 @@ const mountApp = (deps: MountInput) => {
       if (deps.mode === 'demo') {
         return buildDemoPatternDetectionResponse(context.body)
       }
-      const result = await provider.call(context.body as Parameters<typeof provider.call>[0], {
+      const result = await provider.call(context.body, {
         mode: 'admin',
         requestId: deps.requestId,
         now: new Date(),

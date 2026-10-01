@@ -14,7 +14,6 @@ import type {
   CreateSignalSourceInput,
   SignalSourceGroup,
   SignalSourceRow,
-  UpdateSignalSourceInput,
 } from '../repositories/dashboard-signal-sources-repository'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
 import { normalizeXHandle } from '../services/providers/x-twitter-profile-client'
@@ -379,10 +378,7 @@ export const createSignalSourcesRoute = ({
             },
             real: async () => {
               requireAdmin(context)
-              const source = await repository.updateSource(
-                id,
-                context.body as UpdateSignalSourceInput
-              )
+              const source = await repository.updateSource(id, context.body)
               if (!source) {
                 context.set.status = 404
                 return {

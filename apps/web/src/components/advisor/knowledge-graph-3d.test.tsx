@@ -52,10 +52,7 @@ class ResizeObserverMock {
   }
 
   observe() {
-    this.callback(
-      [{ contentRect: { width: 820, height: 560 } } as ResizeObserverEntry],
-      this as unknown as ResizeObserver
-    )
+    this.callback([{ contentRect: { width: 820, height: 560 } } as ResizeObserverEntry], this)
   }
 
   disconnect() {}

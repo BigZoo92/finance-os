@@ -727,7 +727,7 @@ const app = new Elysia()
       requestId,
     })
   })
-  .use(registerAppRoutes(new Elysia() as unknown as Elysia))
+  .use(registerAppRoutes(new Elysia()))
   .use(registerAppRoutes(new Elysia({ prefix: '/api' }) as unknown as Elysia))
   .get('/__routes', ({ request, set }) => {
     if (!canAccessRoutesDebug(request)) {

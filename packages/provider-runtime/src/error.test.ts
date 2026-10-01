@@ -26,7 +26,7 @@ describe('createProviderError', () => {
   it('rejects unknown codes', () => {
     expect(() => {
       createProviderError({
-        // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
+        // testing invalid input
         code: 'not_a_real_code' as any,
         providerId: pid,
         message: 'x',

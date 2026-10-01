@@ -322,7 +322,7 @@ const buildHistoryAdapter = ({ db }: { db: ApiDb }) => ({
         dedupedCount: input.counts.deduped,
         skippedCount: input.counts.skipped,
         failedCount: input.counts.failed,
-        providerBreakdown: input.providerBreakdown as Record<string, unknown>,
+        providerBreakdown: input.providerBreakdown,
         errorSummary: input.errorSummary,
       })
       .where(eq(schema.freeFirehoseRun.runId, input.runId))

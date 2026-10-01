@@ -80,7 +80,7 @@ export const createXTwitterHttpTimelineFetcher = ({
           'User-Agent': 'Finance-OS X Daily Sync/1.0',
         },
       })
-    } catch (_error) {
+    } catch {
       const errorCode: XTwitterTimelinePage['errorCode'] = 'NETWORK_ERROR'
       if (onUsage) {
         try {

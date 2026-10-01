@@ -46,6 +46,13 @@ const mergeUniqueByJson = <T>(values: T[]) => {
   return output
 }
 
+// Dedupe reasons arrive as a string list; stored as the comma-joined text the
+// provenance field has always held (`String(array)`), never "[object Object]".
+const formatDedupeReasons = (reasons: unknown): string | null => {
+  if (Array.isArray(reasons)) return reasons.join(',')
+  return typeof reasons === 'string' ? reasons : null
+}
+
 const jsonbArrayContains = (column: unknown, value: string) => {
   return sql<boolean>`${column} @> ${JSON.stringify([value])}::jsonb`
 }
@@ -568,7 +575,7 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
               sourceDomains: Array.from(sourceDomainSet),
               primaryReason:
                 useIncomingPrimary && params.dedupeEvidence?.reasons
-                  ? String(params.dedupeEvidence.reasons)
+                  ? formatDedupeReasons(params.dedupeEvidence.reasons)
                   : (existing.provenance?.primaryReason ?? null),
             },
             lastEnrichedAt: params.signal.lastEnrichedAt,

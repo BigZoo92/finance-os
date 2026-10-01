@@ -493,16 +493,12 @@ export const buildMarketContextBundle = ({
               : 'stable',
     },
     riskFlags: signals.filter(signal => signal.tone === 'risk').map(signal => signal.title),
-    anomalies: [
-      ...quotes
-        .filter(quote => quote.history.length < 10)
-        .map(quote => `Historique court pour ${quote.shortLabel}.`),
-    ],
-    warnings: [
-      ...providers
-        .filter(provider => provider.status === 'degraded' || provider.status === 'failing')
-        .map(provider => `${provider.label}: ${provider.status}.`),
-    ],
+    anomalies: quotes
+      .filter(quote => quote.history.length < 10)
+      .map(quote => `Historique court pour ${quote.shortLabel}.`),
+    warnings: providers
+      .filter(provider => provider.status === 'degraded' || provider.status === 'failing')
+      .map(provider => `${provider.label}: ${provider.status}.`),
     watchlistHighlights: [...gainers, ...losers].slice(0, 4).map(item => ({
       instrumentId: item.instrumentId,
       label: item.label,

@@ -130,9 +130,10 @@ function Freshness({
   staleAfterMinutes?: number
   className?: string
 } & SpanProps) {
-  const assessment = assessFreshness(asOf, {
-    ...(staleAfterMinutes !== undefined ? { staleAfterMinutes } : {}),
-  })
+  const assessment = assessFreshness(
+    asOf,
+    staleAfterMinutes !== undefined ? { staleAfterMinutes } : {}
+  )
 
   const tone: StatusTone =
     assessment.state === 'fresh'

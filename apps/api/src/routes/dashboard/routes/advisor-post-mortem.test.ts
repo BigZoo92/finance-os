@@ -572,8 +572,8 @@ describe('createAdvisorRoute · post-mortem', () => {
     }
     const runtime = createPostMortemRuntime({ calls })
     // Stub a couple of pre-existing use-cases so we can hit them without 503.
-    ;(runtime.useCases as DashboardUseCases).getAdvisorRuns = async () => ({ items: [] })
-    ;(runtime.useCases as DashboardUseCases).listAdvisorDecisionJournal = async () => ({
+    runtime.useCases.getAdvisorRuns = async () => ({ items: [] })
+    runtime.useCases.listAdvisorDecisionJournal = async () => ({
       items: [],
     })
 

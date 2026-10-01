@@ -27,6 +27,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -707,7 +708,11 @@ export function getMemoryControlsDrawerSide(isMobile: boolean): 'bottom' | 'righ
 export function useMemoryCameraRegistration(selectedNodeId: string | null) {
   const cameraApiRef = useRef<CameraApi | null>(null)
   const selectedNodeIdRef = useRef<string | null>(selectedNodeId)
-  selectedNodeIdRef.current = selectedNodeId
+  // Latest selection for the camera registration callback, refreshed after
+  // every commit (never written during render).
+  useLayoutEffect(() => {
+    selectedNodeIdRef.current = selectedNodeId
+  })
 
   const focusCameraNode = useCallback((nodeId: string) => {
     cameraApiRef.current?.focusNode(nodeId)
@@ -1034,12 +1039,14 @@ function AdvisorMemoryPage() {
     const persisted = readPersistedPins(pinStorageKey)
     const nodeIds = new Set(graph.nodes.map(node => node.id))
     const { kept } = reconcilePinsAgainstGraph(persisted, nodeIds)
+    // oxlint-disable-next-line react/set-state-in-effect -- pins live in localStorage (browser-only) and are reloaded when the graph or the storage scope changes.
     setPinnedIds(new Set(kept))
     if (kept.length !== persisted.length) writePersistedPins(pinStorageKey, kept)
   }, [graph.nodes, pinStorageKey])
 
   useEffect(() => {
     if (pathFromId && !pathToId && selectedNodeId && selectedNodeId !== pathFromId) {
+      // oxlint-disable-next-line react/set-state-in-effect -- the next selection completes a path started from another node, whichever control selected it.
       setPathToId(selectedNodeId)
     }
   }, [pathFromId, pathToId, selectedNodeId])
@@ -1050,6 +1057,7 @@ function AdvisorMemoryPage() {
   }, [focusCameraNode, selectedNode, selectedNodeId])
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- a selected link that leaves the visible graph is cleared for good, not just hidden.
     setSelectedLink(current => reconcileMemorySelectedLink(current, visibleGraph.links))
   }, [visibleGraph.links])
 

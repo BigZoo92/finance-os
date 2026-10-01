@@ -276,7 +276,7 @@ describe('computeStrategyScorecard', () => {
       runs: [
         completedRun({
           metrics: { win_rate: 0.55, profit_factor: 1.4, max_drawdown: 0.15, sharpe: 1.1 },
-          trades: new Array(40).fill({}),
+          trades: Array.from({ length: 40 }, () => ({})),
         }),
       ],
       generatedAt: NOW,

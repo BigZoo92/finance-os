@@ -99,7 +99,7 @@ const extractStorage = (payload: unknown): KnowledgeStorageStatus | null => {
   if (!storage || typeof storage !== 'object') {
     return null
   }
-  return storage as KnowledgeStorageStatus
+  return storage
 }
 
 /**

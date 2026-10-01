@@ -39,7 +39,7 @@ describe('toApiUrl', () => {
   })
 
   it('uses browser relative API base when window is available', () => {
-    vi.stubGlobal('window', {} as Window & typeof globalThis)
+    vi.stubGlobal('window', {})
 
     expect(toApiUrl('/auth/me')).toBe('/api/auth/me')
   })
@@ -69,7 +69,7 @@ describe('apiFetch', () => {
     delete process.env.PRIVATE_ACCESS_TOKEN
     fetchMock.mockReset()
     getGlobalStartContextMock.mockReset()
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+    vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {

@@ -872,9 +872,7 @@ export const createExternalInvestmentsSyncWorker = ({
 
   const generateBundle = async (requestId?: string) => {
     try {
-      const bundle = await repository.generateContextBundle({
-        ...(requestId ? { requestId } : {}),
-      })
+      const bundle = await repository.generateContextBundle(requestId ? { requestId } : {})
       log({
         level: 'info',
         msg: 'external investments advisor bundle generated',

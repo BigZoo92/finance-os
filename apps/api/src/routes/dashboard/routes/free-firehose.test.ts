@@ -78,7 +78,7 @@ describe('buildHistoryAdapter.countLastNDays (regression: PG Date binding)', () 
             captured.params = (sqlExpr.queryChunks ?? [])
               .map(chunk => {
                 if (chunk && typeof chunk === 'object' && 'value' in chunk) {
-                  return (chunk as { value: unknown }).value
+                  return chunk.value
                 }
                 return null
               })

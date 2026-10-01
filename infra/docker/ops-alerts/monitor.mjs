@@ -36,7 +36,7 @@ const parseHeaderEntries = raw => {
     )
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`ALERTS_WEBHOOK_HEADERS_JSON is invalid: ${message}`)
+    throw new Error(`ALERTS_WEBHOOK_HEADERS_JSON is invalid: ${message}`, { cause: error })
   }
 }
 
@@ -407,7 +407,6 @@ const idleForever = async () => {
     msg: 'ops alerting disabled; monitor is idling',
   })
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     await sleep(60_000)
   }
@@ -427,7 +426,6 @@ logEvent('info', {
   workerStaleAfterMs: config.workerStaleAfterMs,
 })
 
-// eslint-disable-next-line no-constant-condition
 while (true) {
   try {
     await runOnce()

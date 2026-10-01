@@ -96,7 +96,7 @@ const readNumber = (value: unknown): number | undefined =>
 
 const readEntityShape = (raw: unknown): KnowledgeBundleEntityShape | null => {
   if (!raw || typeof raw !== 'object') return null
-  return raw as KnowledgeBundleEntityShape
+  return raw
 }
 
 interface NodeAccumulator {
@@ -246,7 +246,7 @@ export const buildAdminKnowledgeGraphDto = ({
       if (shape) ingestEntity(acc, shape, { importanceScale: 0.7 })
     }
     for (const raw of asArray(bundle.relations)) {
-      if (raw && typeof raw === 'object') ingestRelation(links, raw as KnowledgeBundleRelationShape)
+      if (raw && typeof raw === 'object') ingestRelation(links, raw)
     }
     for (const rawPath of asArray(bundle.graphPaths)) {
       if (!rawPath || typeof rawPath !== 'object') continue
@@ -256,7 +256,7 @@ export const buildAdminKnowledgeGraphDto = ({
         const step = rawStep as KnowledgePathStepShape
         ingestPathEntity(acc, step.entity)
         if (step.viaRelation && typeof step.viaRelation === 'object') {
-          ingestRelation(links, step.viaRelation as KnowledgeBundleRelationShape)
+          ingestRelation(links, step.viaRelation)
         }
       }
     }
@@ -270,8 +270,7 @@ export const buildAdminKnowledgeGraphDto = ({
         ingestPathEntity(acc, hit.entity)
       }
       for (const rel of asArray(hit.relations)) {
-        if (rel && typeof rel === 'object')
-          ingestRelation(links, rel as KnowledgeBundleRelationShape)
+        if (rel && typeof rel === 'object') ingestRelation(links, rel)
       }
       for (const ev of asArray(hit.evidence)) {
         const shape = readEntityShape(ev)

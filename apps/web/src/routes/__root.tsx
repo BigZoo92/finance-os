@@ -85,7 +85,7 @@ export function RouteError({ error }: ErrorComponentProps) {
   const isProduction = import.meta.env.PROD
   const message = isProduction
     ? 'Un problème est survenu. Réessayez dans quelques instants.'
-    : String((error as unknown as { message?: string })?.message ?? error)
+    : String((error as { message?: string })?.message ?? error)
   const requestContext =
     typeof window === 'undefined'
       ? (getGlobalStartContext() as { requestPath?: string; requestId?: string } | undefined)

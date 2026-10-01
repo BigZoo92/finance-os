@@ -381,6 +381,7 @@ function TransactionCategoryEditor({
               onChange={event =>
                 setDraft(current => ({ ...current, category: event.target.value }))
               }
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- focus moves into the category dialog that just opened.
               autoFocus
             />
           </div>

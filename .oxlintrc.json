@@ -1,0 +1,141 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Oxc toolchain lint (replaces Biome). Correctness and suspicious rules are
+  // errors; style-only, perf micro-advice and rules that contradict the React
+  // Compiler (manual memoization) are off. Type-aware rules run through
+  // tsgolint on TypeScript 7. Every disable directive must stay justified:
+  // unused ones fail the run.
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "jsx-a11y",
+    "import",
+    "vitest",
+    "promise",
+    "node"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error",
+    "denyWarnings": true
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.2"
+    }
+  },
+  "rules": {
+    // The workspace is on one Zod API (see packages/env).
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          { "name": "zod/v3", "message": "The workspace is on the Zod 4 API: import from 'zod'." },
+          { "name": "zod/v4", "message": "Import Zod from 'zod' (the v4 API is the package root)." }
+        ]
+      }
+    ],
+    // Biome parity: untrusted boundaries use `unknown`, never `any`.
+    "typescript/no-explicit-any": "error",
+    // Biome parity, load-bearing for the web app (no `verbatimModuleSyntax`
+    // there): type-only imports are erased, so they can never pull a
+    // server-only module into the client bundle.
+    "typescript/consistent-type-imports": ["error", { "disallowTypeAnnotations": false }],
+    // Automatic JSX runtime: React is never in scope by design.
+    "react/react-in-jsx-scope": "off",
+    // Charts, the knowledge graph and custom comboboxes use ARIA roles on
+    // containers on purpose (`role="img"` with children, Radix-style listbox,
+    // styled progressbar); the native tag cannot replace them.
+    "jsx-a11y/prefer-tag-over-role": "off",
+    // Style-only or covered elsewhere: TypeScript reports shadowing problems,
+    // `_`-prefixed bindings are the repo's convention for intentionally unused
+    // values, in-place sorts run on fresh arrays.
+    "eslint/no-shadow": "off",
+    "eslint/no-underscore-dangle": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "oxc/no-map-spread": "off",
+    "promise/always-return": "off",
+    // Mock types are inferred from usage in the test suites.
+    "vitest/require-mock-type-parameters": "off",
+    // Sequential provider calls are deliberate (rate limits, ordered writes).
+    "eslint/no-await-in-loop": "off",
+    // Type-aware rules kept off on purpose:
+    // - every `as` is reviewed in code review; a blanket ban is noise here;
+    "typescript/no-unsafe-type-assertion": "off",
+    // - repositories and use cases are closure-based factory objects that never
+    //   use `this`, so passing their methods around is safe;
+    "typescript/unbound-method": "off",
+    // - style-level typed rules;
+    "typescript/consistent-return": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    // - `'literal' | string` unions are kept for editor completion;
+    "typescript/no-redundant-type-constituents": "off",
+    // - conversions and `=== true` guards that look redundant to the type
+    //   checker sit on boundaries where the type lies (Postgres aggregates
+    //   arrive as strings while Drizzle types them `number`; safety contracts
+    //   compare to `true` explicitly), so "unnecessary" is wrong there;
+    "typescript/no-unnecessary-type-conversion": "off",
+    "typescript/no-unnecessary-boolean-literal-compare": "off",
+    // - `String(unknown)` on loosely typed rows and JSON is the intended
+    //   coercion; objects with a known type are still checked.
+    "typescript/no-base-to-string": ["error", { "checkUnknown": false }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", "**/test-support/**", "e2e/**"],
+      "rules": {
+        // Tests assert forbidden or malformed inputs on purpose.
+        "typescript/no-explicit-any": "off",
+        // `node:test`'s `test()` promises are owned by the runner; awaiting a
+        // synchronous helper in a test is harmless; fixtures stringify loosely
+        // typed request bodies on purpose.
+        "typescript/no-floating-promises": "off",
+        "typescript/await-thenable": "off",
+        "typescript/no-base-to-string": "off",
+        // Sorting short string fixtures before comparing them.
+        "typescript/require-array-sort-compare": "off",
+        // tsgolint builds test files against the nearest tsconfig.json, not
+        // the tsconfig.test.json that types them (Bun globals, `fetch`
+        // extensions), so "unnecessary" assertions in tests can be required.
+        "typescript/no-unnecessary-type-assertion": "off"
+      }
+    },
+    {
+      "files": ["scripts/**/*.mjs", "infra/**/*.mjs"],
+      "rules": {
+        // Untyped Node scripts sort path strings, where the default order is
+        // the intended one.
+        "typescript/require-array-sort-compare": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/.output/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.design/**",
+    "**/routeTree.gen.ts",
+    "**/styled-system/generated/**",
+    "**/.moon/**",
+    "e2e/__visual__/**",
+    "test-results/**",
+    "apps/desktop/src-tauri/target/**",
+    "**/.venv/**"
+  ]
+}

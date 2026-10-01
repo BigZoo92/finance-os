@@ -126,6 +126,7 @@ export function AdvisorProfileDrawer({
 
   useEffect(() => {
     if (!open || !profile) return
+    // oxlint-disable-next-line react/set-state-in-effect -- re-seed the form from the latest saved profile each time the drawer opens.
     setDraft(createInvestmentProfileFormDraft(profile))
     setErrors({})
   }, [open, profile])

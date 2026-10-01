@@ -92,7 +92,7 @@ const buildTrendsRuntime = ({
         }
         return { ...sample, mode: input.mode, windowDays: input.windowDays ?? 30 }
       },
-      ...(override ?? {}),
+      ...override,
     } as unknown as DashboardRouteRuntime['useCases'],
     providerRegistry: createProviderRegistry([]),
   }

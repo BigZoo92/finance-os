@@ -136,12 +136,12 @@ export const getPublicRuntimeEnv = (): PublicRuntimeEnv => ({
   ...getStaticPublicEnv(),
   ...getWindowPublicEnv(),
   ...(typeof window === 'undefined'
-    ? (Object.fromEntries(
+    ? Object.fromEntries(
         PUBLIC_RUNTIME_ENV_KEYS.flatMap(key => {
           const value = readServerPublicEnv(key)
           return value ? [[key, value]] : []
         })
-      ) as PublicRuntimeEnv)
+      )
     : {}),
 })
 

@@ -547,7 +547,7 @@ export const createXTwitterProfileClient = ({
     for (const canonical of uniqueCanonical) {
       if (resolvedCanonicals.has(canonical)) continue
       const requesters = canonicalToRaws.get(canonical) ?? [canonical]
-      const code: 'NOT_FOUND' = 'NOT_FOUND'
+      const code = 'NOT_FOUND' as const
       for (const requester of requesters) {
         notFoundItems.push({
           ok: false,

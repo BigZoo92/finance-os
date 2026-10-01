@@ -502,7 +502,7 @@ function BacktestResultPanel({
       <div className={notice({ tone: 'warning' })}>{data.message ?? 'Backtest impossible.'}</div>
     )
   }
-  const m = (data.metrics ?? {}) as Record<string, unknown>
+  const m = data.metrics ?? {}
   return (
     <div className={resultPanel({ tone: 'positive' })}>
       <styled.div mb="2" display="flex" flexWrap="wrap" alignItems="center" gap="2">

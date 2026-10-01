@@ -51,10 +51,7 @@ describe('validateAdvisorGraphSearch', () => {
   })
 
   it('ignores unknown extra params', () => {
-    const r = validateAdvisorGraphSearch({ node: 'a', lens: 'atlas', extra: 'evil' } as Record<
-      string,
-      unknown
-    >)
+    const r = validateAdvisorGraphSearch({ node: 'a', lens: 'atlas', extra: 'evil' })
     expect(r.node).toBe('a')
     expect(r.lens).toBe('atlas')
     expect((r as unknown as Record<string, unknown>).extra).toBeUndefined()

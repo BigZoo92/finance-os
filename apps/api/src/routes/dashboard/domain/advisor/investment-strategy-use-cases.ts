@@ -440,27 +440,38 @@ const demoPlan = (requestId: string) => {
   }
 }
 
+// Text from a loosely typed row: strings as is, scalars stringified, anything
+// else (object, array) treated as absent instead of becoming "[object Object]".
+const toRowText = (value: unknown): string | null => {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+  return null
+}
+
 const mapExternalPosition = (row: ExternalPositionRow): HoldingInput => {
-  const provider = String(row.provider ?? 'unknown')
-  const assetClass = String(row.assetClass ?? 'unknown')
+  const provider = toRowText(row.provider) ?? 'unknown'
+  const assetClass = toRowText(row.assetClass) ?? 'unknown'
   const sourceConfidence = row.sourceConfidence
+  const valueSource = row.valueSource ? toRowText(row.valueSource) : null
   return {
     provider,
-    accountId: row.accountExternalId ? String(row.accountExternalId) : null,
-    accountLabel: row.accountAlias ? String(row.accountAlias) : null,
+    accountId: row.accountExternalId ? toRowText(row.accountExternalId) : null,
+    accountLabel: row.accountAlias ? toRowText(row.accountAlias) : null,
     accountType: provider === 'binance' ? 'crypto' : 'brokerage',
-    symbol: row.symbol ? String(row.symbol) : null,
-    name: String(row.name ?? row.symbol ?? 'Unknown external position'),
+    symbol: row.symbol ? toRowText(row.symbol) : null,
+    name: toRowText(row.name ?? row.symbol) ?? 'Unknown external position',
     assetClass,
     value: toNumberOrNull(row.normalizedValue ?? row.value),
     currency: row.valueCurrency
-      ? String(row.valueCurrency)
+      ? toRowText(row.valueCurrency)
       : row.currency
-        ? String(row.currency)
+        ? toRowText(row.currency)
         : null,
     valueAsOf: typeof row.valueAsOf === 'string' ? row.valueAsOf : null,
     quantity: toNumberOrNull(row.quantity),
-    ...(row.valueSource ? { valueSource: String(row.valueSource) } : {}),
+    ...(valueSource ? { valueSource } : {}),
     confidence:
       typeof sourceConfidence === 'number'
         ? sourceConfidence
@@ -1005,7 +1016,7 @@ export const createInvestmentStrategyUseCases = ({
         ? (['crypto'] as const)
         : (['pea', 'brokerage'] as const)
     const providerSymbols = {
-      ...(curated?.providerSymbols ?? {}),
+      ...curated?.providerSymbols,
       ...toJsonRecord(row.providerSymbolsJson),
     } as Record<string, string>
     const userIntent =

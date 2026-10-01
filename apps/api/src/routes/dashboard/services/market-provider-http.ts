@@ -19,7 +19,7 @@ export const createProviderRequestInit = (
     headers: {
       accept: 'application/json',
       'x-request-id': requestId,
-      ...(headers ?? {}),
+      ...headers,
     },
     signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
   } satisfies RequestInit

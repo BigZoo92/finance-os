@@ -53,14 +53,6 @@ const bodySchema = t.Object({
   limitAccounts: t.Optional(t.Integer({ minimum: 1, maximum: 50 })),
 })
 
-type Body = {
-  runMode?: PreviousDayRunMode
-  dryRun?: boolean
-  manualConfirm?: boolean
-  allowBudgetOverride?: boolean
-  limitAccounts?: number
-}
-
 export type XDailySyncEnv = {
   NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN?: string | undefined
   X_DAILY_BUDGET_USD: number
@@ -318,7 +310,7 @@ const persistTweetsAsSignalItems = async ({
         },
       })
       inserted += 1
-    } catch (_error) {
+    } catch {
       // Likely a dedupeKey unique conflict. We treat all insert errors as dedup
       // since the signal_item table has tight unique constraints.
       deduped += 1
@@ -392,7 +384,7 @@ export const createXTwitterDailySyncRoute = ({
         },
         real: async () => {
           requireAdmin(context)
-          const body = context.body as Body
+          const body = context.body
           const dryRun = body.dryRun !== false && body.runMode !== 'manual_full_previous_day'
           const runMode: PreviousDayRunMode = body.runMode
             ? body.runMode

@@ -31,12 +31,12 @@
     "test": "node --test scripts/check-ci.test.mjs scripts/check-client-bundle.test.mjs scripts/check-bundle-budget.test.mjs scripts/desktop-scope.test.mjs scripts/gitnexus-refresh.test.mjs scripts/sync-skills.test.mjs",
     "evals:run": "bun scripts/run-evals.ts",
     "typecheck": "pnpm -r --if-present typecheck",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "check": "biome check .",
-    "check:write": "biome check --write .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "oxlint && oxfmt --check",
+    "check:write": "oxlint --fix && oxfmt",
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
     "api:dev": "pnpm --filter @finance-os/api dev",
@@ -94,7 +94,6 @@
     "affected:build": "moon run :build --affected --concurrency 2"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.14",
     "@moonrepo/cli": "2.5.5",
     "@playwright/test": "1.63.0",
     "@types/node": "catalog:",
@@ -102,6 +101,9 @@
     "concurrently": "^9.2.1",
     "gitnexus": "1.4.10",
     "js-yaml": "^4.1.1",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "7.0.2003",
     "typescript": "7.0.2"
   },
   "engines": {

@@ -145,7 +145,7 @@ const toRow = (row: typeof schema.signalSource.$inferSelect): SignalSourceRow =>
   lastFetchedCount: row.lastFetchedCount,
   externalId: row.externalId,
   profileImageUrl: row.profileImageUrl,
-  profileMetadata: (row.profileMetadata as SignalSourceProfileMetadata | null) ?? null,
+  profileMetadata: row.profileMetadata ?? null,
   profileCachedAt: row.profileCachedAt?.toISOString() ?? null,
   verificationStatus: deriveVerificationStatus(row),
   createdAt: row.createdAt.toISOString(),

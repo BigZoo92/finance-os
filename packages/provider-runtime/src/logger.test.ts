@@ -17,7 +17,7 @@ const makeTarget = () => {
   const lines: CapturedLine[] = []
   const target: ProviderLogTarget = {
     logEvent: event => {
-      lines.push(event as CapturedLine)
+      lines.push(event)
     },
   }
   return { target, lines }
@@ -43,7 +43,7 @@ describe('logProviderEvent', () => {
     const { target, lines } = makeTarget()
     logProviderEvent(target, {
       name: 'provider.call.succeeded',
-      // biome-ignore lint/suspicious/noExplicitAny: testing forbidden field passthrough
+      // testing forbidden field passthrough
       fields: { providerId: pid, secret: 'leak', payload: { token: 'leak' } } as any,
     })
     expect(lines[0]?.secret).toBeUndefined()

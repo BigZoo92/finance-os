@@ -351,11 +351,7 @@ export const createAdvisorKnowledgeRoute = ({
 
         const auth = getAuth(context)
         const requestId = getRequestMeta(context).requestId
-        const query = context.query as {
-          scope?: AdvisorKnowledgeGraphScope
-          limit?: number
-          includeExamples?: boolean
-        }
+        const query = context.query
         const scope: AdvisorKnowledgeGraphScope = query.scope ?? 'overview'
         const limit = Math.min(1000, Math.max(1, query.limit ?? 500))
         const includeExamples = query.includeExamples === true
@@ -395,9 +391,9 @@ export const createAdvisorKnowledgeRoute = ({
             client.contextBundle(bundleInput, requestId),
             client.query(queryInput, requestId),
           ])
-          if (bundleRes.status === 'fulfilled') bundle = bundleRes.value as KnowledgeBundleShape
+          if (bundleRes.status === 'fulfilled') bundle = bundleRes.value
           else serviceFailed = true
-          if (queryRes.status === 'fulfilled') queryResp = queryRes.value as KnowledgeQueryShape
+          if (queryRes.status === 'fulfilled') queryResp = queryRes.value
           else serviceFailed = true
         } catch (error) {
           logApiEvent({

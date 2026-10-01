@@ -425,14 +425,14 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
           singleton: true,
           generatedAt: input.generatedAt,
           schemaVersion: input.schemaVersion,
-          bundle: input.bundle as unknown as Record<string, unknown>,
+          bundle: input.bundle,
         })
         .onConflictDoUpdate({
           target: schema.marketContextBundleSnapshot.singleton,
           set: {
             generatedAt: input.generatedAt,
             schemaVersion: input.schemaVersion,
-            bundle: input.bundle as unknown as Record<string, unknown>,
+            bundle: input.bundle,
             updatedAt: new Date(),
           },
         })

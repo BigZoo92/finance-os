@@ -1,6 +1,7 @@
 import { cva, cx } from '@finance-os/styled-system/css'
 import type { IChartApi } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
+import { useIsClient } from '@/lib/use-is-client'
 import { getTradingChartColors, removeChart } from './chart-colors'
 
 export type EquityPoint = { date: string; equity: number }
@@ -50,15 +51,11 @@ type Props = {
  */
 export function EquityCurveChart({ data, chartHeight = 240, className, currency = 'USD' }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const [isClient, setIsClient] = useState(false)
+  const isClient = useIsClient()
   const [error, setError] = useState<string | null>(null)
   // Terminal render state, exposed as `data-chart-state` for tests that must
   // wait for the lazy chart (loading, pending, ready or unavailable).
   const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   useEffect(() => {
     if (!isClient || !containerRef.current || data.length === 0) return
@@ -66,7 +63,7 @@ export function EquityCurveChart({ data, chartHeight = 240, className, currency 
     let resizeObserver: ResizeObserver | null = null
 
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       try {
         const { AreaSeries, createChart } = await import('lightweight-charts')
         if (cancelled || !containerRef.current) return

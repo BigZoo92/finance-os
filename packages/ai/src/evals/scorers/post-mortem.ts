@@ -52,7 +52,7 @@ interface PostMortemExpectation {
 
 const readCandidate = (input: AiEvalCaseSeed['input']): PostMortemCandidate => {
   const candidate = (input.candidateOutput ?? {}) as Record<string, unknown>
-  return candidate as PostMortemCandidate
+  return candidate
 }
 
 const readExpectation = (input: AiEvalCaseSeed['expectation']): PostMortemExpectation => {

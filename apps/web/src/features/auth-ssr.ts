@@ -16,7 +16,7 @@ const getRequestAuthContext = () => {
 
   let requestContext: RequestAuthContext | undefined
   try {
-    requestContext = getGlobalStartContext() as RequestAuthContext | undefined
+    requestContext = getGlobalStartContext()
   } catch {
     return null
   }

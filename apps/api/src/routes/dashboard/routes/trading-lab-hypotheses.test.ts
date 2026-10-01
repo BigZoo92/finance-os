@@ -86,7 +86,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
         name: input.name,
         slug: input.slug,
         description: input.description ?? null,
-        strategyType: (input.strategyType ?? 'experimental') as string,
+        strategyType: input.strategyType ?? 'experimental',
         status: (input.status ?? 'draft') as StoredStrategy['status'],
         enabled: input.enabled ?? true,
         tags: input.tags ?? [],
@@ -109,7 +109,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
     async updateStrategy(id, patch) {
       const idx = state.strategies.findIndex(s => s.id === id)
       if (idx === -1) {
-        return null as unknown as Awaited<ReturnType<HypothesesRepositoryAdapter['updateStrategy']>>
+        return null
       }
       const current = state.strategies[idx] as StoredStrategy
       const merged: StoredStrategy = {
@@ -142,9 +142,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
         updatedAt: now,
       }
       state.scenarios.push(created)
-      return created as unknown as Awaited<
-        ReturnType<HypothesesRepositoryAdapter['createScenario']>
-      >
+      return created
     },
   }
   return { repo, state }

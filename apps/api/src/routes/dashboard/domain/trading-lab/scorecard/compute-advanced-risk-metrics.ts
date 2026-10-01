@@ -352,7 +352,7 @@ export const computeAdvancedRiskMetrics = (
     typeof input.rollingWindow === 'number' && input.rollingWindow > 1
       ? Math.floor(input.rollingWindow)
       : DEFAULT_ROLLING_WINDOW
-  const varConfidence = (input.varConfidence ?? DEFAULT_VAR_CONFIDENCE) as 0.95
+  const varConfidence = input.varConfidence ?? DEFAULT_VAR_CONFIDENCE
 
   const warnings: string[] = []
   const empty: AdvancedRiskMetricsResult = {

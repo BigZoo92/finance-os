@@ -303,7 +303,7 @@ const toRecommendationResponse = ({
   assumptions: item.assumptions,
   confidence: item.confidence,
   riskLevel: item.riskLevel,
-  expectedImpact: item.expectedImpact as unknown as Record<string, unknown>,
+  expectedImpact: item.expectedImpact,
   effort: item.effort,
   reversibility: item.reversibility,
   blockingFactors: item.blockingFactors,
@@ -794,7 +794,7 @@ const buildPreviewArtifacts = ({
       0,
       8
     ),
-    recommendationNotes: briefDraft.recommendationNotes as Array<Record<string, unknown>>,
+    recommendationNotes: briefDraft.recommendationNotes,
     provider: null,
     model: null,
     createdAt: new Date().toISOString(),
@@ -1372,7 +1372,7 @@ export const createDashboardAdvisorUseCases = ({
             opportunities: llmBrief.opportunities,
             risks: llmBrief.risks,
             watchItems: llmBrief.watchItems,
-            recommendationNotes: llmBrief.recommendationNotes as Array<Record<string, unknown>>,
+            recommendationNotes: llmBrief.recommendationNotes,
             provider: 'openai',
             model: config.openAi?.dailyModel ?? 'gpt-5.4-mini',
           }
@@ -1627,7 +1627,7 @@ export const createDashboardAdvisorUseCases = ({
           >,
           driftSignals: preview.snapshot.driftSignals as unknown as Array<Record<string, unknown>>,
           scenarios: preview.snapshot.scenarios as unknown as Array<Record<string, unknown>>,
-          diagnostics: preview.snapshot.diagnostics as unknown as Record<string, unknown>,
+          diagnostics: preview.snapshot.diagnostics,
         },
         assumptions: preview.assumptions.items.map(item => ({
           assumptionKey: item.assumptionKey,
@@ -2092,10 +2092,10 @@ export const createDashboardAdvisorUseCases = ({
         },
         assistantMessage: {
           content: answer.answer,
-          citations: answer.citations as Array<Record<string, unknown>>,
+          citations: answer.citations,
           assumptions: answer.assumptions,
           caveats: answer.caveats,
-          simulations: answer.simulations as Array<Record<string, unknown>>,
+          simulations: answer.simulations,
           ...(!config.forceLocalOnly && !budgetState.blocked && openAiClient
             ? {
                 provider: 'openai',

@@ -396,7 +396,7 @@ export const createAssetValuationUseCases = ({
         },
         itemCount: valuations.length,
         snapshotCount: input.dryRun ? snapshotRows.length : snapshotCount,
-        providerFailures: providerFailures as unknown as Array<Record<string, unknown>>,
+        providerFailures: providerFailures,
         finishedAt,
         durationMs: finishedAt.getTime() - startedAt.getTime(),
       })

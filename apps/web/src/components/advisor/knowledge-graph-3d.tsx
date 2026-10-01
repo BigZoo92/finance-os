@@ -1,7 +1,7 @@
 import { css } from '@finance-os/styled-system/css'
 import { styled } from '@finance-os/styled-system/jsx'
 import { type Token, token } from '@finance-os/styled-system/tokens'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   AdvisorGraph,
   AdvisorGraphLink,
@@ -222,13 +222,17 @@ export function KnowledgeGraph3D({
     onRenderError,
     onWebGlFailure,
   })
-  callbacksRef.current = {
-    onSelectNode,
-    onSelectLink,
-    onRenderStateChange,
-    onRenderError,
-    onWebGlFailure,
-  }
+  // Latest callbacks for the runtime and the async effects, refreshed after
+  // every commit (never written during render).
+  useLayoutEffect(() => {
+    callbacksRef.current = {
+      onSelectNode,
+      onSelectLink,
+      onRenderStateChange,
+      onRenderError,
+      onWebGlFailure,
+    }
+  })
 
   const [runtime, setRuntime] = useState<KnowledgeGraphRuntime | null>(null)
   const [renderState, setRenderState] = useState<KnowledgeGraphRenderState>('idle')
@@ -273,7 +277,6 @@ export function KnowledgeGraph3D({
 
   useEffect(() => {
     if (!hasNodes) {
-      setRenderState('idle')
       callbacksRef.current.onRenderStateChange?.('idle')
       return
     }
@@ -323,6 +326,8 @@ export function KnowledgeGraph3D({
       cancelled = true
       ownedRuntime?.destroy()
       if (runtimeRef.current === ownedRuntime) runtimeRef.current = null
+      // Back to idle when the graph empties (the next run reports loading).
+      setRenderState('idle')
     }
   }, [hasNodes])
 

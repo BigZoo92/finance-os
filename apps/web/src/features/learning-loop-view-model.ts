@@ -9,7 +9,6 @@ import type {
   DashboardAdvisorDecisionJournalCreateInput,
   DashboardAdvisorDecisionKind,
   DashboardAdvisorDecisionReasonCode,
-  DashboardAdvisorEvalCaseResponse,
   DashboardAdvisorEvalRunResponse,
   DashboardAdvisorEvalsResponse,
   DashboardAdvisorEvalTrendCategory,
@@ -245,7 +244,7 @@ export const buildEvalScorecard = (
   }
   const cases = evals.cases ?? []
   const byGroup = new Map<EvalScorecardGroup, Map<string, EvalScorecardCategoryRow>>()
-  for (const c of cases as DashboardAdvisorEvalCaseResponse[]) {
+  for (const c of cases) {
     const group = groupForCategory(c.category)
     const groupBucket = byGroup.get(group) ?? new Map<string, EvalScorecardCategoryRow>()
     const existing = groupBucket.get(c.category)
@@ -507,10 +506,10 @@ export const buildPostMortemFeed = (
 ): PostMortemFeedRow[] => {
   if (!list) return []
   return list.map(row => {
-    const findings = (row.findings ?? {}) as Record<string, unknown>
-    const calibration = (row.calibration ?? {}) as Record<string, unknown>
-    const riskNotes = (row.riskNotes ?? {}) as Record<string, unknown>
-    const actions = (row.learningActions ?? []) as Array<Record<string, unknown>>
+    const findings = row.findings ?? {}
+    const calibration = row.calibration ?? {}
+    const riskNotes = row.riskNotes ?? {}
+    const actions = row.learningActions ?? []
     return {
       id: row.id,
       recommendationKey: row.recommendationKey,

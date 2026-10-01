@@ -606,7 +606,7 @@ export const createPostMortemUseCases = ({
             outcomeDrivers: parsed.outcomeDrivers,
             lessons: parsed.lessons,
           },
-          calibration: parsed.confidenceCalibration as unknown as Record<string, unknown>,
+          calibration: parsed.confidenceCalibration,
           learningActions: parsed.learningActions as unknown as Array<Record<string, unknown>>,
           riskNotes: {
             graphIngest: graphIngest ? 'attempted' : 'disabled',

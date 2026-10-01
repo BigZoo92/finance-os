@@ -167,7 +167,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
               .orderBy(schema.advisorDecisionOutcome.observedAt)
       type OutcomeRow = (typeof outcomeRows)[number]
       const outcomesByDecisionId = new Map<number, OutcomeRow[]>()
-      for (const o of outcomeRows as OutcomeRow[]) {
+      for (const o of outcomeRows) {
         const list = outcomesByDecisionId.get(o.decisionId) ?? []
         list.push(o)
         outcomesByDecisionId.set(o.decisionId, list)
@@ -210,16 +210,12 @@ export const createDashboardAdvisorPostMortemRepository = ({
               ? Number.parseFloat(recommendation.confidence)
               : null,
           recommendationRiskLevel: toRiskLevel(recommendation.riskLevel),
-          evidence: Array.isArray(recommendation.evidence)
-            ? (recommendation.evidence as string[])
-            : [],
-          assumptions: Array.isArray(recommendation.assumptions)
-            ? (recommendation.assumptions as string[])
-            : [],
+          evidence: Array.isArray(recommendation.evidence) ? recommendation.evidence : [],
+          assumptions: Array.isArray(recommendation.assumptions) ? recommendation.assumptions : [],
           outcomes: decisionOutcomes.map(o => ({
             outcomeKind: o.outcomeKind,
             observedAt: o.observedAt.toISOString(),
-            learningTags: Array.isArray(o.learningTags) ? (o.learningTags as string[]) : [],
+            learningTags: Array.isArray(o.learningTags) ? o.learningTags : [],
           })),
           // Hypothesis context: only attached when the recommendation links cleanly to a manual
           // hypothesis through its evidence/assumptions metadata. PR4 keeps this conservative —
@@ -275,7 +271,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
         })
         .returning()
       if (!row) throw new Error('Failed to insert advisor post-mortem row')
-      return mapPostMortemRow(row as PostMortemRow)
+      return mapPostMortemRow(row)
     },
 
     async listPostMortems(input) {
@@ -296,7 +292,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
         .where(eq(schema.advisorPostMortem.id, id))
         .limit(1)
       if (!row) return null
-      return mapPostMortemRow(row as PostMortemRow)
+      return mapPostMortemRow(row)
     },
   }
 }

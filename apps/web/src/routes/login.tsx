@@ -14,6 +14,12 @@ import { powensQueryKeys } from '@/features/powens/query-options'
 import { ApiRequestError } from '@/lib/api'
 import { pushToast } from '@/lib/toast-store'
 
+// A text input's value; a file entry (never expected here) reads as empty.
+const readTextField = (formData: FormData, name: string): string => {
+  const value = formData.get(name)
+  return typeof value === 'string' ? value : ''
+}
+
 const toLoginErrorMessage = (value: unknown) => {
   if (value instanceof ApiRequestError && (value.status === 401 || value.status === 403)) {
     return 'Identifiants incorrects'
@@ -351,8 +357,8 @@ function LoginPage() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const email = String(formData.get('email') ?? '').trim()
-    const password = String(formData.get('password') ?? '')
+    const email = readTextField(formData, 'email').trim()
+    const password = readTextField(formData, 'password')
     if (!email || !password) {
       pushToast({
         title: 'Champs requis',

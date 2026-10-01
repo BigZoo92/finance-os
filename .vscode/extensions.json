@@ -1,3 +1,4 @@
 {
-  "recommendations": ["biomejs.biome", "typescriptteam.native-preview"]
+  "recommendations": ["oxc.oxc-vscode", "typescriptteam.native-preview"],
+  "unwantedRecommendations": ["biomejs.biome"]
 }
