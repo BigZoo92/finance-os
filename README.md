@@ -71,5 +71,6 @@ pnpm affected:test          run only the tests of projects touched since main
 - [Operations](docs/operations.md)
 - [Claude/Codex system](docs/agentic.md)
 - [Command Pixel design system](DESIGN.md)
+- [Modernization V1 notes](docs/modernization-v1.md) (deviations, defects fixed, measurements, validation matrix)
 
 Repository instructions live in the nearest `AGENTS.md`; Claude-specific bootstrap guidance lives in `CLAUDE.md`.
