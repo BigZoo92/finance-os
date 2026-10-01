@@ -1,6 +1,6 @@
 ---
 name: panda-css
-description: Author, migrate, and review styling in Finance-OS with Panda CSS (styled() factory, recipes, slot recipes, tokens, semantic tokens, patterns). Use whenever touching component styles, design tokens, theming, dark mode, layout primitives, the styled-system package, or when removing Tailwind classes.
+description: Author and review styling in Finance-OS with Panda CSS (styled() factory, recipes, slot recipes, tokens, semantic tokens, patterns, global styles). Use whenever touching component styles, design tokens, theming, dark mode, layout primitives, the element reset, global CSS, or the styled-system package.
 ---
 
 # Panda CSS in Finance-OS
@@ -12,11 +12,14 @@ extracted into cascade layers, there is no CSS-in-JS runtime, and
 ## Where things live
 
 ```text
-packages/styled-system/src/preset.ts   Command Pixel tokens (colors, radii, fonts, motion, elevation, z-index, keyframes)
-packages/styled-system/panda.config.ts  the single Panda config (extracts packages/ui/src and apps/web/src)
-packages/styled-system/generated/       generated runtime, gitignored, rebuilt by `pnpm panda:codegen` and on install
-packages/ui/src/components/**           shared components (styled() + recipes + slot recipes)
-apps/web/src/**                         product screens (styled elements, patterns, css())
+packages/styled-system/src/preset.ts      Command Pixel tokens (colors, radii, fonts, motion, elevation, z-index, keyframes, text styles)
+packages/styled-system/src/global-css.ts  global element styles (body surface, contour colors, reduced motion, scrollbar, selection)
+packages/styled-system/panda.config.ts    the single Panda config (extracts packages/ui/src and apps/web/src)
+packages/styled-system/generated/         generated runtime, gitignored, rebuilt by `pnpm panda:codegen` and on install
+packages/ui/src/styles/preflight.css      element reset (vendored Tailwind 4.3.3 preflight, MIT), cascade layer `preflight`
+packages/ui/src/components/**             shared components (styled() + recipes + slot recipes)
+apps/web/src/styles.css                   cascade order, fonts, the reset import and Panda's layer anchor
+apps/web/src/**                           product screens (styled elements, patterns, css())
 ```
 
 Imports always go through the export map, never through relative paths into
@@ -108,18 +111,20 @@ export const card = sva({
 - Financial semantics (`positive`, `negative`, `warning`) are never the brand color. Money uses `fontFamily: 'mono'` with tabular figures (see the `Amount` component) and `null` renders as unavailable, never as 0.
 - Signature compositions (login canvas, radar canvas) keep their tokens under `login.*` and `radar.*`.
 
-## Coexistence and exit policy
+## Cascade, reset and global styles
 
-- Until the Tailwind exit lands, Tailwind owns the preflight and `base` layer. `apps/web/src/styles.css` pins the cascade order `properties, theme, base, panda_*, components, utilities`: Tailwind's preflight stays below Panda utilities (otherwise `* { padding: 0; border: 0 }` erases migrated components), while Tailwind utilities passed by not-yet-migrated consumers still override migrated components, exactly as `twMerge` did. Migrate bottom-up (shared components first, then screens); a file is either Tailwind or Panda, never both.
-- Legacy unlayered classes (`font-financial`, `font-tnum`, `login-*`, `animate-shimmer`, `bg-radar-canvas`) used to beat every utility. Their Panda replacements are layered, so a consumer class such as `tracking-tight` on an `Amount` now wins; remove such no-op overrides when migrating a screen instead of reproducing them.
-- `twMerge` replaced same-group classes, so a consumer `text-[10px]` on a component with `text-xs` also dropped the component's line height. Panda keeps the recipe's `textStyle`, so such a consumer must set the line height explicitly: `leading-[inherit]` while the consumer is still Tailwind, `lineHeight: 'inherit'` (or the intended value) once migrated. Named sizes (`text-xs`, `textStyle: 'xs'`) carry their own line height and need nothing.
-- Recipes put typography on the variant that owned it in Tailwind: `Button` sets `textStyle` per size and `lineHeight: 'inherit'` for the pixel sizes (`lg`, `xl`), because the old `text-[15px]` replaced `text-sm` instead of layering on it.
+- `apps/web/src/styles.css` declares the cascade order `preflight, reset, base, tokens, recipes, utilities` before any import, then Panda's own layer statement, which is the anchor its PostCSS plugin fills. Unlayered CSS is reserved for `@font-face`; everything else is layered.
+- The element reset is `packages/ui/src/styles/preflight.css` (layer `preflight`), vendored from Tailwind 4.3.3 because the product was designed on it. Panda's `preflight` stays `false`: its reset sets `body { height: 100% }`, balances headings and tints the selection, which moves layouts. Keep the vendored file byte-for-byte except for the documented font-token substitution, and keep the attribution in `docs/third-party-notices.md`.
+- Global element styles (body surface, `*` contour and outline colors, the reduced-motion override, scrollbar, selection) live in `packages/styled-system/src/global-css.ts` and use tokens. Do not add hand-written class names to a stylesheet; signature surfaces (login canvas, radar wash, shimmer) are `css()`/recipes next to the component that owns them.
+- Runtime code that needs a resolved color (charts, the 3D graph, canvas) reads Panda's variable through `token.var('colors.primary')` (strip the `var()` wrapper before `getPropertyValue`) on `document.documentElement`; the `.dark` class holds the dark set on `<html>` itself. SVG attributes and inline gradients use `token('colors.primary')`.
 - Line-height ratios are `lineHeights` tokens (`calc(1.25 / 0.875)`) referenced from the text styles: a bare `calc()` in an atom is folded to five decimals by the minifier and a 12px line box becomes 15.98px.
-- Panda extracts style props from any JSX element it can see. Do not name custom component props after style props (`display`, `h`, `w`, `color`, `size` on non-styled components); rename them (`displayValue`, `height`) or the extractor emits junk atoms.
+- A `fontSize` override on a component whose recipe owns a `textStyle` (Status, Button, Input, CardDescription, Badge) also needs `lineHeight: 'inherit'` (or the intended value): the recipe's text style keeps its line height. Named sizes (`textStyle: 'xs'`) carry their own line height and need nothing. `Button` sets `textStyle` per size and `lineHeight: 'inherit'` for its pixel sizes (`lg`, `xl`).
+- Panda extracts style props from any capitalized JSX tag it can see. Do not name custom component props after style props (`display`, `h`, `w`, `color`, `size`, `position`, `height` on non-styled components); rename them (`displayValue`, `chartHeight`) or the extractor emits junk atoms.
+- `space-y-*`-style spacing over inline children: Panda's `spaceY` sets `margin-top` on every child but the first, which inline-block children honour. Where a child is inline-level, write the rule explicitly (`'& > :not(:last-child)': { marginBlockEnd: '2' }`).
 - `packages/styled-system/panda.config.ts` is bundled to CommonJS by Panda: anchor paths with `__dirname`, not `import.meta.url`.
-- After the exit, `preflight: true` and the former `@layer base` rules move into `globalCss`; `tailwindcss`, `@tailwindcss/vite`, `tw-animate-css`, `tailwind-merge`, `class-variance-authority`, `clsx` and `shadcn` are removed. Panda's `cva`/`sva`/`cx` replace them.
+- No Tailwind, `tailwind-merge`, `class-variance-authority`, `clsx`, `tw-animate-css` or shadcn: Panda's `cva`/`sva`/`cx` and the preset keyframes cover them. Overlay motion uses the preset keyframes (`fadeIn`, `scaleIn`, `slideInFromBottom`, `nudgeFrom*`).
 
 ## Testing
 
-- Unit tests assert behavior and semantics (`data-slot`, roles, text), not generated class names. If a class must be asserted, use the exact Panda atom (`c_positive`, `textStyle_financial`, `bdr_full`) rendered through `renderToStaticMarkup`, as `badge.test.tsx` does.
-- Visual regression: `pnpm test:e2e:visual -- --update-snapshots` records local baselines (45 screenshots: desktop dark/light, mobile dark, every canonical route) in `e2e/__visual__` (gitignored); `pnpm test:e2e:visual` compares with a 100-pixel tolerance. Record before touching a family, compare after; a migration is done only when the suite is green.
+- Unit tests assert behavior and semantics (`data-slot`, roles, text), not generated class names. If a class must be asserted, use the exact Panda atom (`c_positive`, `ff_mono`, `bdr_full`, `min-h_11`) rendered through `renderToStaticMarkup`, as `badge.test.tsx` does.
+- Visual regression: `pnpm test:e2e:visual -- --update-snapshots` records local baselines (45 screenshots: desktop dark/light, mobile dark, every canonical route) in `e2e/__visual__` (gitignored); `pnpm test:e2e:visual` compares with a 100-pixel tolerance. The run pins the clock in the browser and in the SSR process (`e2e/support`), so relative labels never drift. Record before a styling change, compare after; a styling change is done only when the suite is green or the new baseline is an intended, reviewed change.

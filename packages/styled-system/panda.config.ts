@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { defineConfig } from '@pandacss/dev'
+import { financeOsGlobalCss } from './src/global-css'
 import { financeOsPreset } from './src/preset'
 
 // Panda resolves `include` globs against the process cwd (apps/web under Vite,
@@ -12,13 +13,15 @@ const source = (relativePath: string) => resolve(__dirname, relativePath).replac
  * UI package and the web app; the runtime is generated into ./generated and
  * consumed through the `@finance-os/styled-system/*` export map.
  *
- * Coexistence policy (until the Tailwind exit): Tailwind owns the preflight
- * and the `base` layer; Panda's layers are namespaced so the two cascades never
- * merge, and Panda's utilities are declared last so they win over Tailwind
- * utilities on the same element.
+ * `preflight` stays off: the element reset is the vendored Tailwind preflight
+ * (`packages/ui/src/styles/preflight.css`, cascade layer `preflight`, declared
+ * below every Panda layer in apps/web/src/styles.css), which the product was
+ * designed on. Panda's own reset moves layouts (`body { height: 100% }`,
+ * balanced headings). Global element styles live in `globalCss`.
  */
 export default defineConfig({
   preflight: false,
+  globalCss: financeOsGlobalCss,
   presets: ['@pandacss/preset-base', '@pandacss/preset-panda', financeOsPreset],
   include: [source('../ui/src/**/*.{ts,tsx}'), source('../../apps/web/src/**/*.{ts,tsx}')],
   exclude: ['**/*.test.{ts,tsx}'],
@@ -30,13 +33,6 @@ export default defineConfig({
   importMap: '@finance-os/styled-system',
   jsxFramework: 'react',
   jsxStyleProps: 'all',
-  layers: {
-    reset: 'panda_reset',
-    base: 'panda_base',
-    tokens: 'panda_tokens',
-    recipes: 'panda_recipes',
-    utilities: 'panda_utilities',
-  },
   strictTokens: false,
   hash: false,
   minify: false,

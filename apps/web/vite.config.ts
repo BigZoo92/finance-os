@@ -1,6 +1,5 @@
 import { fileURLToPath } from 'node:url'
 import babel from '@rolldown/plugin-babel'
-import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
@@ -44,7 +43,8 @@ export default defineConfig(({ command }) => ({
       // untraced file at boot.
       noExternals: ['tslib'],
     }),
-    tailwindcss(),
+    // Styles are Panda CSS, extracted at build time by its PostCSS plugin
+    // (postcss.config.cjs); there is no CSS framework plugin in the Vite graph.
     tanstackStart(),
     // Vite 8 handles JSX and Fast Refresh in Oxc; the React Compiler still runs
     // through Babel (`babel-plugin-react-compiler` behind `@rolldown/plugin-babel`)

@@ -1,48 +1,10 @@
-/* Cascade order for the Tailwind -> Panda coexistence period: Tailwind's preflight
-   (`base`) must stay below Panda utilities, while Tailwind utilities passed by
-   not-yet-migrated consumers must still override migrated components. The second
-   statement is the anchor Panda's PostCSS plugin fills with the generated CSS. */
-@layer properties,
-  theme,
-  base,
-  panda_reset,
-  panda_base,
-  panda_tokens,
-  panda_recipes,
-  panda_utilities,
-  components,
-  utilities;
-@layer panda_reset, panda_base, panda_tokens, panda_recipes, panda_utilities;
+/* Cascade order: the vendored element reset sits below every Panda layer. The
+   second statement is the anchor Panda's PostCSS plugin fills with the
+   generated CSS (tokens, global styles, recipes, utilities). */
+@layer preflight, reset, base, tokens, recipes, utilities;
+@layer reset, base, tokens, recipes, utilities;
 
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 @import "@fontsource/geist-pixel";
 @import "@finance-os/ui/styles.css";
-
-@source "./**/*.{ts,tsx}";
-
-/* Safe area for mobile bottom navigation */
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* Scrollbar styling for premium feel */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: oklch(0.5 0 0 / 20%);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0 0 / 35%);
-}
-
-/* Selection color */
-::selection {
-  background: oklch(from var(--primary) l c h / 25%);
-}
