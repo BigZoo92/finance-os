@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import type { schema } from '@finance-os/db'
 import {
   derivePowensAccountBalance,
   derivePowensAccountMetadata,
@@ -8,7 +9,6 @@ import {
   derivePowensTransactionMerchant,
   derivePowensTransactionProviderObjectAt,
 } from '@finance-os/powens'
-import type { schema } from '@finance-os/db'
 
 const SENSITIVE_PAYLOAD_KEYS = new Set([
   'access_token',

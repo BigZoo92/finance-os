@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getDemoDashboardSummary } from './demo-data'
 import { adaptDailySurfaceViewModel } from './dashboard-view-model-adapter'
+import { getDemoDashboardSummary } from './demo-data'
 
 describe('adaptDailySurfaceViewModel', () => {
   it('returns deterministic demo output regardless of incoming summary payload', () => {

@@ -113,10 +113,7 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
     'VITE_CTA_EMERGENCY_DISABLE_LIST',
     toOptionalEnv(env.VITE_CTA_EMERGENCY_DISABLE_LIST)
   ),
-  ...withDefined(
-    'VITE_LEARNING_LOOP_UI_ENABLED',
-    toOptionalEnv(env.VITE_LEARNING_LOOP_UI_ENABLED)
-  ),
+  ...withDefined('VITE_LEARNING_LOOP_UI_ENABLED', toOptionalEnv(env.VITE_LEARNING_LOOP_UI_ENABLED)),
 })
 
 const getWindowPublicEnv = (): PublicRuntimeEnv => {

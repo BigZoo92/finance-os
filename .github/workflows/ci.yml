@@ -227,7 +227,6 @@ jobs:
       - name: Run Docker build smoke
         run: pnpm docker:build:smoke
 
-
   tauri-validate:
     name: Tauri Validate
     needs: desktop-scope

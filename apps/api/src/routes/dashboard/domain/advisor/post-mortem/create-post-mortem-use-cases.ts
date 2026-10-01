@@ -159,8 +159,7 @@ export interface PostMortemStructuredRunner {
 // scorer module from runtime code.
 // ---------------------------------------------------------------------------
 
-const stripDiacritics = (value: string): string =>
-  value.normalize('NFD').replace(/[̀-ͯ]/g, '')
+const stripDiacritics = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -413,7 +412,10 @@ export const createPostMortemUseCases = ({
       if (input.mode === 'demo') {
         const found = demoFixtures.list.find(row => row.id === input.postMortemId)
         if (!found) return null
-        return { ...found, learningActions: found.learningActions ? [...found.learningActions] : null }
+        return {
+          ...found,
+          learningActions: found.learningActions ? [...found.learningActions] : null,
+        }
       }
       return repository.getPostMortemById(input.postMortemId)
     },

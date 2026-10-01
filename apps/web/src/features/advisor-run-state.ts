@@ -11,9 +11,8 @@ export type AdvisorManualOperationUiStatus =
   | DashboardAdvisorManualOperationResponse['status']
   | 'skipped'
 
-const isManualOperationActiveStatus = (
-  status: DashboardAdvisorManualOperationResponse['status']
-) => status === 'queued' || status === 'running'
+const isManualOperationActiveStatus = (status: DashboardAdvisorManualOperationResponse['status']) =>
+  status === 'queued' || status === 'running'
 
 export const resolveAdvisorManualOperationUiStatus = (
   operation: DashboardAdvisorManualOperationResponse | null | undefined
@@ -103,8 +102,7 @@ export const describeManualOperationError = (
       return {
         category: 'recovered_timeout',
         label: 'recupere (timeout)',
-        detail:
-          'Run non finalise dans le delai imparti, cloture automatiquement par la recovery.',
+        detail: 'Run non finalise dans le delai imparti, cloture automatiquement par la recovery.',
         actionable: false,
         recovered: true,
       }

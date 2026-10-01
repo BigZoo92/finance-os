@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { createRefreshJobRegistry } from './refresh-registry'
 import type { DashboardRouteRuntime } from '../dashboard/types'
+import { createRefreshJobRegistry } from './refresh-registry'
 
 const enabledConfig = {
   externalInvestmentsEnabled: true,
@@ -231,9 +231,7 @@ describe('createRefreshJobRegistry', () => {
     expect(result.jobs.find(job => job.jobId === 'investment-learning-review')?.status).toBe(
       'pending'
     )
-    expect(result.jobs.find(job => job.jobId === 'investment-action-plan')?.status).toBe(
-      'pending'
-    )
+    expect(result.jobs.find(job => job.jobId === 'investment-action-plan')?.status).toBe('pending')
     expect(powensCalls).toBe(0)
   })
 

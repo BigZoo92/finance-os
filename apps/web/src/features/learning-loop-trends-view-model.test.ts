@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildEvalScorecardTrends } from './learning-loop-view-model'
 import type { DashboardAdvisorEvalTrendsResponse } from './dashboard-types'
+import { buildEvalScorecardTrends } from './learning-loop-view-model'
 
 const sampleResponse: DashboardAdvisorEvalTrendsResponse = {
   generatedAt: '2026-05-01T09:00:00.000Z',
@@ -91,8 +91,22 @@ const emptyResponse: DashboardAdvisorEvalTrendsResponse = {
   mode: 'admin',
   windowDays: 30,
   groups: [
-    { group: 'quality', totalRuns: 0, latestPassRate: null, previousPassRate: null, delta: null, categories: [] },
-    { group: 'safety', totalRuns: 0, latestPassRate: null, previousPassRate: null, delta: null, categories: [] },
+    {
+      group: 'quality',
+      totalRuns: 0,
+      latestPassRate: null,
+      previousPassRate: null,
+      delta: null,
+      categories: [],
+    },
+    {
+      group: 'safety',
+      totalRuns: 0,
+      latestPassRate: null,
+      previousPassRate: null,
+      delta: null,
+      categories: [],
+    },
     {
       group: 'economics',
       totalRuns: 0,

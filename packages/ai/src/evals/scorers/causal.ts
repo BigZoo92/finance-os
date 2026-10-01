@@ -94,9 +94,7 @@ export const scoreCausalReasoning = (caseSeed: AiEvalCaseSeed): ScoringResult =>
     typeof expectation.minEvidenceCount === 'number' &&
     evidenceCount < expectation.minEvidenceCount
   ) {
-    failed.push(
-      `evidence_below_minimum:${evidenceCount}<${expectation.minEvidenceCount}`
-    )
+    failed.push(`evidence_below_minimum:${evidenceCount}<${expectation.minEvidenceCount}`)
   }
 
   // 4. Uncertainty markers required when evidence is weak or banned vocab risk is high.

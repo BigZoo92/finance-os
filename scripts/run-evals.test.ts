@@ -86,9 +86,9 @@ describe('runEvalsCli', () => {
     expect(scoredOutcomes.length).toBe(3)
     expect(scoredOutcomes.every(o => o.status === 'passed')).toBe(true)
     // Existing categories are skipped (they require live snapshot).
-    expect(
-      parsed.outcomes.some(o => o.category === 'cost_control' && o.status === 'skipped')
-    ).toBe(true)
+    expect(parsed.outcomes.some(o => o.category === 'cost_control' && o.status === 'skipped')).toBe(
+      true
+    )
   })
 
   it('exits 2 in --strict mode because existing categories are still skipped', async () => {

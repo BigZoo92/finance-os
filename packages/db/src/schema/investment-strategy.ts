@@ -11,8 +11,8 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
-import { aiRun } from './ai'
 import { advisorMarketHypothesis, advisorMarketPostMortem } from './advisor-learning'
+import { aiRun } from './ai'
 import { assetPriceSnapshot, assetValuationSnapshot } from './valuation'
 
 export type InvestmentStrategyStatus = 'active' | 'draft' | 'archived'
@@ -375,9 +375,12 @@ export const advisorActionPlanItem = pgTable(
     priceSnapshotId: integer('price_snapshot_id').references(() => assetPriceSnapshot.id, {
       onDelete: 'set null',
     }),
-    valuationSnapshotId: integer('valuation_snapshot_id').references(() => assetValuationSnapshot.id, {
-      onDelete: 'set null',
-    }),
+    valuationSnapshotId: integer('valuation_snapshot_id').references(
+      () => assetValuationSnapshot.id,
+      {
+        onDelete: 'set null',
+      }
+    ),
     dataFreshnessJson: jsonb('data_freshness_json')
       .$type<Record<string, unknown>>()
       .notNull()
@@ -385,9 +388,12 @@ export const advisorActionPlanItem = pgTable(
     humanValidationRequired: boolean('human_validation_required').notNull().default(true),
     noAutoTrade: boolean('no_auto_trade').notNull().default(true),
     createsHypothesis: boolean('creates_hypothesis').notNull().default(false),
-    createdHypothesisId: integer('created_hypothesis_id').references(() => advisorMarketHypothesis.id, {
-      onDelete: 'set null',
-    }),
+    createdHypothesisId: integer('created_hypothesis_id').references(
+      () => advisorMarketHypothesis.id,
+      {
+        onDelete: 'set null',
+      }
+    ),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [
@@ -405,12 +411,18 @@ export const strategyLesson = pgTable(
     strategyId: integer('strategy_id')
       .notNull()
       .references(() => investmentStrategyProfile.id, { onDelete: 'cascade' }),
-    sourceHypothesisId: integer('source_hypothesis_id').references(() => advisorMarketHypothesis.id, {
-      onDelete: 'set null',
-    }),
-    sourcePostMortemId: integer('source_post_mortem_id').references(() => advisorMarketPostMortem.id, {
-      onDelete: 'set null',
-    }),
+    sourceHypothesisId: integer('source_hypothesis_id').references(
+      () => advisorMarketHypothesis.id,
+      {
+        onDelete: 'set null',
+      }
+    ),
+    sourcePostMortemId: integer('source_post_mortem_id').references(
+      () => advisorMarketPostMortem.id,
+      {
+        onDelete: 'set null',
+      }
+    ),
     lessonType: text('lesson_type').notNull(),
     title: text('title').notNull(),
     description: text('description').notNull(),

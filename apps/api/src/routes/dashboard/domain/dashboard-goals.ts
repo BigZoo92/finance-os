@@ -142,7 +142,10 @@ export const createUpdateDashboardGoalUseCase = ({
   updateGoal,
 }: {
   getGoalById: (goalId: number) => Promise<DashboardGoalRow | null>
-  updateGoal: (goalId: number, input: DashboardGoalPersistenceInput) => Promise<DashboardGoalRow | null>
+  updateGoal: (
+    goalId: number,
+    input: DashboardGoalPersistenceInput
+  ) => Promise<DashboardGoalRow | null>
 }): DashboardUseCases['updateGoal'] => {
   return async (goalId, input) => {
     const existing = await getGoalById(goalId)

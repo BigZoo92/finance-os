@@ -31,7 +31,6 @@ import {
   toNumberOrNull,
   validateStrategy,
 } from './investment-strategy-engine'
-
 import type {
   AssetSearchInput,
   GenerateActionPlanInput,

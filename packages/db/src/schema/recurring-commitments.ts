@@ -1,4 +1,14 @@
-import { boolean, index, integer, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  index,
+  integer,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 
 export const recurringCommitmentKindEnum = pgEnum('recurring_commitment_kind', [
   'fixed_charge',
@@ -13,11 +23,10 @@ export const recurringCommitmentPeriodicityEnum = pgEnum('recurring_commitment_p
   'unknown',
 ])
 
-export const recurringCommitmentValidationStatusEnum = pgEnum('recurring_commitment_validation_status', [
-  'suggested',
-  'validated',
-  'rejected',
-])
+export const recurringCommitmentValidationStatusEnum = pgEnum(
+  'recurring_commitment_validation_status',
+  ['suggested', 'validated', 'rejected']
+)
 
 export const recurringCommitment = pgTable(
   'recurring_commitment',
@@ -27,11 +36,15 @@ export const recurringCommitment = pgTable(
     canonicalLabel: text('canonical_label').notNull(),
     merchant: text('merchant'),
     currency: text('currency').notNull(),
-    estimatedPeriodicity: recurringCommitmentPeriodicityEnum('estimated_periodicity').notNull().default('unknown'),
+    estimatedPeriodicity: recurringCommitmentPeriodicityEnum('estimated_periodicity')
+      .notNull()
+      .default('unknown'),
     lastAmount: numeric('last_amount', { precision: 18, scale: 2 }),
     lastObservedAt: timestamp('last_observed_at', { withTimezone: true }),
     active: boolean('active').notNull().default(true),
-    validationStatus: recurringCommitmentValidationStatusEnum('validation_status').notNull().default('suggested'),
+    validationStatus: recurringCommitmentValidationStatusEnum('validation_status')
+      .notNull()
+      .default('suggested'),
     validatedAt: timestamp('validated_at', { withTimezone: true }),
     rejectedAt: timestamp('rejected_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

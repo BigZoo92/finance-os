@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import { createNewsRoute } from './news'
 import type { DashboardRouteRuntime } from '../types'
+import { createNewsRoute } from './news'
 
 const createApp = (runtime: DashboardRouteRuntime) =>
   new Elysia()

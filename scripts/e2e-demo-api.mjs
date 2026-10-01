@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import { createServer } from 'node:http'
 
 const host = process.env.E2E_DEMO_API_HOST ?? '127.0.0.1'
 const port = Number(process.env.E2E_DEMO_API_PORT ?? 3001)

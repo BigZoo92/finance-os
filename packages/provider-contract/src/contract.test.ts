@@ -20,12 +20,7 @@ import {
   PROVIDER_MODES,
   __PROVIDER_CAPABILITY_GUARD_OK,
 } from './index'
-import type {
-  ProviderCallContext,
-  ProviderError,
-  ProviderErrorCode,
-  ProviderResult,
-} from './index'
+import type { ProviderCallContext, ProviderError, ProviderErrorCode, ProviderResult } from './index'
 
 // ---------------------------------------------------------------------------
 // 1. Forbidden vs allowed capabilities — runtime mirror of the compile-time guard.
@@ -250,8 +245,8 @@ describe('ProviderHealthStatus', () => {
 describe('package boundary', () => {
   const here = dirname(fileURLToPath(import.meta.url))
   const sourceFiles = readdirSync(here)
-    .filter((f) => f.endsWith('.ts'))
-    .filter((f) => !f.endsWith('.test.ts'))
+    .filter(f => f.endsWith('.ts'))
+    .filter(f => !f.endsWith('.test.ts'))
 
   it('imports nothing beyond intra-package relative paths', () => {
     // Extract every import / from-style module specifier and assert each one is either

@@ -23,9 +23,7 @@ export const detectTransactionGaps = ({
 }): TransactionGap[] => {
   const normalized = [...new Set(bookingDates)]
     .map(value => ({ value, dayValue: toDayValue(value) }))
-    .filter(
-      (entry): entry is { value: string; dayValue: number } => entry.dayValue !== null
-    )
+    .filter((entry): entry is { value: string; dayValue: number } => entry.dayValue !== null)
     .sort((left, right) => left.dayValue - right.dayValue) as Array<{
     value: string
     dayValue: number

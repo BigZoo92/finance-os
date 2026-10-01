@@ -39,7 +39,11 @@ export const DECISION_KIND_OPTIONS: ReadonlyArray<{
 }> = [
   { value: 'accepted', label: 'Suivre', description: 'Je suis cette recommandation.' },
   { value: 'deferred', label: 'Reporter', description: 'À revoir plus tard, pas maintenant.' },
-  { value: 'rejected', label: 'Refuser', description: "Je ne suis pas d'accord ou ce n'est pas pour moi." },
+  {
+    value: 'rejected',
+    label: 'Refuser',
+    description: "Je ne suis pas d'accord ou ce n'est pas pour moi.",
+  },
   { value: 'ignored', label: 'Ignorer', description: 'Aucune action prévue.' },
 ]
 
@@ -214,10 +218,7 @@ const GROUP_LABEL: Record<EvalScorecardGroup, string> = {
   economics: 'Économie',
 }
 
-const readSummaryArray = (
-  summary: Record<string, unknown> | null,
-  key: string
-): unknown[] => {
+const readSummaryArray = (summary: Record<string, unknown> | null, key: string): unknown[] => {
   if (!summary) return []
   const value = summary[key]
   return Array.isArray(value) ? value : []
@@ -287,7 +288,9 @@ export const buildEvalScorecard = (
       if (!caseId || !category) return null
       return { caseId, category, failedExpectations }
     })
-    .filter((v): v is { caseId: string; category: string; failedExpectations: string[] } => v !== null)
+    .filter(
+      (v): v is { caseId: string; category: string; failedExpectations: string[] } => v !== null
+    )
 
   return {
     hasData: cases.length > 0,
@@ -337,7 +340,13 @@ export type EvalTrendsLoadState =
   | { kind: 'flag_disabled' }
   | { kind: 'loading' }
   | { kind: 'unavailable' }
-  | { kind: 'ready'; groups: EvalTrendsGroupView[]; caveats: string[]; windowDays: number; mode: 'demo' | 'admin' }
+  | {
+      kind: 'ready'
+      groups: EvalTrendsGroupView[]
+      caveats: string[]
+      windowDays: number
+      mode: 'demo' | 'admin'
+    }
   | { kind: 'empty'; caveats: string[]; windowDays: number; mode: 'demo' | 'admin' }
 
 const groupSummaryStatus = (
@@ -442,7 +451,11 @@ export const describePostMortemRunStatus = (
 ): PostMortemRunStatusView => {
   switch (status) {
     case 'completed':
-      return { tone: 'success', label: 'Terminé', detail: 'Le batch a produit des leçons advisory-only.' }
+      return {
+        tone: 'success',
+        label: 'Terminé',
+        detail: 'Le batch a produit des leçons advisory-only.',
+      }
     case 'skipped_disabled':
       return {
         tone: 'info',
@@ -459,13 +472,14 @@ export const describePostMortemRunStatus = (
       return {
         tone: 'info',
         label: 'Aucune recommandation à analyser',
-        detail: 'Aucune recommandation expirée n\'attend une analyse rétrospective.',
+        detail: "Aucune recommandation expirée n'attend une analyse rétrospective.",
       }
     case 'failed':
       return {
         tone: 'error',
         label: 'Échec',
-        detail: 'Le batch a échoué. Les leçons éventuelles ne sont pas persistées comme utilisables.',
+        detail:
+          'Le batch a échoué. Les leçons éventuelles ne sont pas persistées comme utilisables.',
       }
   }
 }
@@ -503,7 +517,7 @@ export const buildPostMortemFeed = (
       status: row.status,
       evaluatedAt: row.evaluatedAt,
       expectedOutcomeAt: row.expectedOutcomeAt,
-      summary: stringField(findings.summary) ?? "Pas de résumé",
+      summary: stringField(findings.summary) ?? 'Pas de résumé',
       overallOutcome: stringField(findings.overallOutcome),
       calibrationFrom: stringField(calibration.previousConfidence),
       calibrationTo: stringField(calibration.calibratedConfidence),
@@ -676,7 +690,8 @@ export const buildHypothesisDraftFromDetection = (
   context: PatternDetectionDraftContext = {}
 ): DashboardTradingLabHypothesisCreateInput => {
   const label = PATTERN_LABELS_FR[detection.patternType] ?? detection.patternType
-  const symbolPart = context.symbol && context.symbol.trim().length > 0 ? context.symbol.trim() : null
+  const symbolPart =
+    context.symbol && context.symbol.trim().length > 0 ? context.symbol.trim() : null
   const timeframePart =
     context.timeframe && context.timeframe.trim().length > 0 ? context.timeframe.trim() : null
   const titleSegments = [label]
@@ -684,12 +699,7 @@ export const buildHypothesisDraftFromDetection = (
   if (timeframePart) titleSegments.push(timeframePart)
   const name = `Hypothèse papier ${titleSegments.join(', ')}`
   const slug = slugify(
-    [
-      detection.patternType,
-      symbolPart ?? '',
-      timeframePart ?? '',
-      detection.id.slice(-6),
-    ].join('-')
+    [detection.patternType, symbolPart ?? '', timeframePart ?? '', detection.id.slice(-6)].join('-')
   ).slice(0, 80)
 
   // Deliberately cautious thesis: phrased as an observation to be tested, never as a directive.

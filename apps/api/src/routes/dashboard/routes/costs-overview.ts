@@ -5,8 +5,8 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { getDashboardRuntime } from '../context'
-import type { ApiDb } from '../types'
 import { readXUsageSnapshot } from '../services/providers/x-twitter-usage-ledger'
+import type { ApiDb } from '../types'
 
 type RecurringCostCadence = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'one_time'
 
@@ -90,7 +90,13 @@ export const summarizeByCurrency = (
     .sort((left, right) => left.currency.localeCompare(right.currency))
 }
 
-export const createCostsOverviewRoute = ({ db, now = () => new Date() }: { db: ApiDb; now?: () => Date }) =>
+export const createCostsOverviewRoute = ({
+  db,
+  now = () => new Date(),
+}: {
+  db: ApiDb
+  now?: () => Date
+}) =>
   new Elysia().get('/costs/overview', async context => {
     const requestId = getRequestMeta(context).requestId
     context.set.headers['cache-control'] = 'no-store'
@@ -155,7 +161,10 @@ export const createCostsOverviewRoute = ({ db, now = () => new Date() }: { db: A
               )
             )
           )
-          .orderBy(desc(schema.recurringProviderCost.updatedAt), desc(schema.recurringProviderCost.id))
+          .orderBy(
+            desc(schema.recurringProviderCost.updatedAt),
+            desc(schema.recurringProviderCost.id)
+          )
 
         const recurringSubscriptions: CostOverviewSubscription[] = rows.map(row => {
           const amount = toNumber(row.amount)
@@ -212,10 +221,7 @@ export const createCostsOverviewRoute = ({ db, now = () => new Date() }: { db: A
               recurringSubscriptions,
               'monthlyAmount'
             ),
-            recurringAnnualByCurrency: summarizeByCurrency(
-              recurringSubscriptions,
-              'annualAmount'
-            ),
+            recurringAnnualByCurrency: summarizeByCurrency(recurringSubscriptions, 'annualAmount'),
             variableMonthlyUsd: Number(variableMonthlyUsd.toFixed(6)),
             variableDailyUsd: Number(variableDailyUsd.toFixed(6)),
           },

@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-
 import { Select, SelectSeparator, SelectTrigger, SelectValue } from './select'
 
 describe('Select', () => {

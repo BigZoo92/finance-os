@@ -1,5 +1,5 @@
-import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
 import { randomUUID } from 'node:crypto'
+import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
 import { logApiEvent } from '../../observability/logger'
 import type { DashboardAdvisorManualOperationResponse } from '../dashboard/advisor-contract'
 import type { DashboardRouteRuntime } from '../dashboard/types'

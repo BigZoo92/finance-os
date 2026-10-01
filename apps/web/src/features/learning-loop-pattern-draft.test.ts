@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildHypothesisDraftFromDetection } from './learning-loop-view-model'
 import type { DashboardTradingLabPatternDetection } from './dashboard-types'
+import { buildHypothesisDraftFromDetection } from './learning-loop-view-model'
 
 const baseDetection: DashboardTradingLabPatternDetection = {
   id: 'det_abcdef123456',
@@ -51,9 +51,7 @@ describe('buildHypothesisDraftFromDetection', () => {
     expect(draft.thesis).toBeTruthy()
     const banned = ['buy', 'sell', 'execute', 'place order', 'leverage']
     const wb = (term: string) =>
-      term.includes(' ')
-        ? new RegExp(term, 'i')
-        : new RegExp(`\\b${term}\\b`, 'i')
+      term.includes(' ') ? new RegExp(term, 'i') : new RegExp(`\\b${term}\\b`, 'i')
     for (const term of banned) {
       expect(wb(term).test(draft.thesis ?? '')).toBe(false)
     }

@@ -97,9 +97,7 @@ const buildFakeAdvisorRepository = ({
         freeNote: input.freeNote ?? null,
         decidedBy: input.decidedBy,
         decidedAt: decidedAtIso,
-        expectedOutcomeAt: input.expectedOutcomeAt
-          ? input.expectedOutcomeAt.toISOString()
-          : null,
+        expectedOutcomeAt: input.expectedOutcomeAt ? input.expectedOutcomeAt.toISOString() : null,
         scope: input.scope,
         metadata: input.metadata ?? null,
         createdAt: decidedAtIso,
@@ -150,8 +148,7 @@ const buildFakeAdvisorRepository = ({
         id: nextOutcomeId++,
         decisionId: input.decisionId,
         observedAt: observedAtIso,
-        outcomeKind:
-          input.outcomeKind as DashboardAdvisorDecisionOutcomeResponse['outcomeKind'],
+        outcomeKind: input.outcomeKind as DashboardAdvisorDecisionOutcomeResponse['outcomeKind'],
         deltaMetrics: input.deltaMetrics ?? null,
         learningTags: input.learningTags ?? [],
         freeNote: input.freeNote ?? null,
@@ -384,8 +381,7 @@ describe('createAdvisorRoute · decision journal', () => {
     const listResponse = await app.handle(
       new Request('http://finance-os.local/advisor/journal?limit=5')
     )
-    const listPayload =
-      (await listResponse.json()) as DashboardAdvisorDecisionJournalListResponse
+    const listPayload = (await listResponse.json()) as DashboardAdvisorDecisionJournalListResponse
 
     expect(listResponse.status).toBe(200)
     expect(listPayload.items.length).toBe(1)

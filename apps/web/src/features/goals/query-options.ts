@@ -8,11 +8,7 @@ export const financialGoalsQueryKeys = {
   list: () => [...financialGoalsQueryKeys.all, 'list'] as const,
 }
 
-export const financialGoalsQueryOptionsWithMode = ({
-  mode,
-}: {
-  mode: AuthMode | undefined
-}) =>
+export const financialGoalsQueryOptionsWithMode = ({ mode }: { mode: AuthMode | undefined }) =>
   queryOptions({
     queryKey: financialGoalsQueryKeys.list(),
     queryFn: () => {

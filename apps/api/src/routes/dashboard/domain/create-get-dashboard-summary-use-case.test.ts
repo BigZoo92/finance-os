@@ -319,5 +319,4 @@ describe('createGetDashboardSummaryUseCase', () => {
     expect(summary.assets.map(asset => asset.assetId)).toEqual([1])
     expect(summary.totals.balance).toBe(100)
   })
-
 })

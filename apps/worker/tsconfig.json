@@ -3,12 +3,7 @@
   "extends": "../../packages/config-ts/server.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": [
-      "node",
-      "bun-types"
-    ]
+    "types": ["node", "bun-types"]
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

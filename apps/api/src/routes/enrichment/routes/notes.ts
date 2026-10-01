@@ -3,9 +3,12 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
-import { applyDemoEnrichmentOperation, listDemoEnrichmentNotes } from '../mocks/demo-enrichment-store'
-import { enrichmentNoteUpsertBodySchema, enrichmentNotesQuerySchema } from '../schemas'
+import {
+  applyDemoEnrichmentOperation,
+  listDemoEnrichmentNotes,
+} from '../mocks/demo-enrichment-store'
 import { getEnrichmentRuntime } from '../runtime'
+import { enrichmentNoteUpsertBodySchema, enrichmentNotesQuerySchema } from '../schemas'
 
 const normalizeItemKeys = (input: string) =>
   input

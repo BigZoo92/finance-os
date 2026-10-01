@@ -140,9 +140,7 @@ const renderServiceReport = (report: ServiceDiagnostics): string => {
       : feature.enabled
         ? `${COLORS.red}BLOCKED${COLORS.reset}`
         : `${COLORS.dim}disabled${COLORS.reset}`
-    lines.push(
-      `  ${status.padEnd(20)} ${feature.feature} (${feature.flagKey}=${feature.enabled})`
-    )
+    lines.push(`  ${status.padEnd(20)} ${feature.feature} (${feature.flagKey}=${feature.enabled})`)
     if (feature.reasonIfBlocked) {
       lines.push(`      ${COLORS.dim}↳ ${feature.reasonIfBlocked}${COLORS.reset}`)
     }

@@ -4,8 +4,8 @@ import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
 import { applyDemoEnrichmentOperation } from '../mocks/demo-enrichment-store'
-import { enrichmentBulkTriageBodySchema } from '../schemas'
 import { getEnrichmentRuntime } from '../runtime'
+import { enrichmentBulkTriageBodySchema } from '../schemas'
 import { recordBulkTriageMetrics } from '../services/bulk-metrics'
 
 export const createEnrichmentBulkTriageRoute = () =>

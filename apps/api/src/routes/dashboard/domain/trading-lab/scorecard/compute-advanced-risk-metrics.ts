@@ -391,7 +391,9 @@ export const computeAdvancedRiskMetrics = (
     }
   }
 
-  const annualizationInferred = validTimestamps ? inferAnnualizationFromTimestamps(timestamps) : null
+  const annualizationInferred = validTimestamps
+    ? inferAnnualizationFromTimestamps(timestamps)
+    : null
   const annualization =
     typeof input.annualizationOverride === 'number' &&
     Number.isFinite(input.annualizationOverride) &&
@@ -494,8 +496,7 @@ export const computeAdvancedRiskMetrics = (
     tailRatio: tailRatio === null ? null : finiteOrNull(tailRatio),
     omegaRatio: omegaRatio === null ? null : finiteOrNull(omegaRatio),
     valueAtRisk95: valueAtRisk95 === null ? null : finiteOrNull(valueAtRisk95),
-    expectedShortfall95:
-      expectedShortfall95 === null ? null : finiteOrNull(expectedShortfall95),
+    expectedShortfall95: expectedShortfall95 === null ? null : finiteOrNull(expectedShortfall95),
     rollingSharpe,
     rollingMaxDrawdown,
     payoffRatio: tradeMetrics.payoffRatio,
@@ -505,8 +506,7 @@ export const computeAdvancedRiskMetrics = (
       annualizationPeriods: annualization,
       riskFreeRate,
       varConfidence,
-      rollingWindow:
-        rollingSharpe.window ?? rollingMaxDrawdown.window ?? null,
+      rollingWindow: rollingSharpe.window ?? rollingMaxDrawdown.window ?? null,
     },
     warnings,
   }
@@ -535,7 +535,5 @@ export const buildDemoAdvancedRiskMetrics = (): AdvancedRiskMetricsResult => ({
     varConfidence: 0.95,
     rollingWindow: 30,
   },
-  warnings: [
-    "Mode démo : métriques déterministes, non issues d'une session réelle.",
-  ],
+  warnings: ["Mode démo : métriques déterministes, non issues d'une session réelle."],
 })

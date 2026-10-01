@@ -4,13 +4,7 @@ const { apiFetchMock, getDemoMarketsOverviewMock, MockApiRequestError } = vi.hoi
   class HoistedApiRequestError extends Error {
     status: number | 'network_error'
 
-    constructor({
-      message,
-      status,
-    }: {
-      message: string
-      status: number | 'network_error'
-    }) {
+    constructor({ message, status }: { message: string; status: number | 'network_error' }) {
       super(message)
       this.name = 'ApiRequestError'
       this.status = status

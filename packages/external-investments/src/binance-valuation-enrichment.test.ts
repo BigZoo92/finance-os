@@ -47,72 +47,66 @@ const baseSnapshot = (
   ...overrides,
 })
 
-const cryptoPosition = (
-  asset: string,
-  quantity: string,
-  extra: Record<string, unknown> = {}
-) =>
-  ({
-    provider: 'binance' as const,
-    connectionId: 'conn-1',
-    accountExternalId: 'binance:spot',
-    instrumentKey: `binance:asset:${asset}`,
-    positionKey: `binance:conn-1:${asset}`,
-    providerPositionId: asset,
-    name: asset,
-    symbol: asset,
-    assetClass: 'crypto' as const,
-    quantity,
-    freeQuantity: quantity,
-    lockedQuantity: '0',
-    currency: asset,
-    providerValue: null,
-    normalizedValue: null,
-    valueCurrency: null,
-    valueSource: 'unknown' as const,
-    valueAsOf: now(),
-    costBasis: null,
-    costBasisCurrency: null,
-    realizedPnl: null,
-    unrealizedPnl: null,
-    metadata: null,
-    assumptions: ['Binance Spot balances do not include EUR valuation in USER_DATA account info.'],
-    degradedReasons: ['VALUATION_PARTIAL', 'unknown_cost_basis'],
-    sourceConfidence: 'high' as const,
-    rawImportKey: `binance:position:${asset}`,
-    ...extra,
-  })
+const cryptoPosition = (asset: string, quantity: string, extra: Record<string, unknown> = {}) => ({
+  provider: 'binance' as const,
+  connectionId: 'conn-1',
+  accountExternalId: 'binance:spot',
+  instrumentKey: `binance:asset:${asset}`,
+  positionKey: `binance:conn-1:${asset}`,
+  providerPositionId: asset,
+  name: asset,
+  symbol: asset,
+  assetClass: 'crypto' as const,
+  quantity,
+  freeQuantity: quantity,
+  lockedQuantity: '0',
+  currency: asset,
+  providerValue: null,
+  normalizedValue: null,
+  valueCurrency: null,
+  valueSource: 'unknown' as const,
+  valueAsOf: now(),
+  costBasis: null,
+  costBasisCurrency: null,
+  realizedPnl: null,
+  unrealizedPnl: null,
+  metadata: null,
+  assumptions: ['Binance Spot balances do not include EUR valuation in USER_DATA account info.'],
+  degradedReasons: ['VALUATION_PARTIAL', 'unknown_cost_basis'],
+  sourceConfidence: 'high' as const,
+  rawImportKey: `binance:position:${asset}`,
+  ...extra,
+})
 
-const eurCashPosition = () =>
-  ({
-    provider: 'binance' as const,
-    connectionId: 'conn-1',
-    accountExternalId: 'binance:spot',
-    instrumentKey: 'binance:asset:EUR',
-    positionKey: 'binance:conn-1:EUR',
-    providerPositionId: 'EUR',
-    name: 'EUR',
-    symbol: 'EUR',
-    assetClass: 'cash' as const,
-    quantity: '4',
-    freeQuantity: '4',
-    lockedQuantity: '0',
-    currency: 'EUR',
-    providerValue: '4',
-    normalizedValue: '4',
-    valueCurrency: 'EUR',
-    valueSource: 'provider_reported' as const,
-    valueAsOf: now(),
-    costBasis: '4',
-    costBasisCurrency: 'EUR',
-    realizedPnl: null,
-    unrealizedPnl: null,
-    metadata: null,
-    assumptions: ['EUR cash balance is valued at its nominal amount.'],
-    degradedReasons: [],
-    sourceConfidence: 'high' as const,
-    rawImportKey: 'binance:position:EUR',
-  })
+const eurCashPosition = () => ({
+  provider: 'binance' as const,
+  connectionId: 'conn-1',
+  accountExternalId: 'binance:spot',
+  instrumentKey: 'binance:asset:EUR',
+  positionKey: 'binance:conn-1:EUR',
+  providerPositionId: 'EUR',
+  name: 'EUR',
+  symbol: 'EUR',
+  assetClass: 'cash' as const,
+  quantity: '4',
+  freeQuantity: '4',
+  lockedQuantity: '0',
+  currency: 'EUR',
+  providerValue: '4',
+  normalizedValue: '4',
+  valueCurrency: 'EUR',
+  valueSource: 'provider_reported' as const,
+  valueAsOf: now(),
+  costBasis: '4',
+  costBasisCurrency: 'EUR',
+  realizedPnl: null,
+  unrealizedPnl: null,
+  metadata: null,
+  assumptions: ['EUR cash balance is valued at its nominal amount.'],
+  degradedReasons: [],
+  sourceConfidence: 'high' as const,
+  rawImportKey: 'binance:position:EUR',
+})
 
 describe('enrichBinanceValuations', () => {
   it('resolves BTC via BTCEUR direct pair and writes normalized value', async () => {
@@ -206,10 +200,7 @@ describe('enrichBinanceValuations', () => {
   it('mirrors the real-world Finance-OS scenario: BTC 0.00007145 + EUR 4 cash', async () => {
     // This is the actual snapshot the user is observing in prod after v11.4.0.
     const snapshot = baseSnapshot({
-      positions: [
-        cryptoPosition('BTC', '0.00007145'),
-        eurCashPosition(),
-      ],
+      positions: [cryptoPosition('BTC', '0.00007145'), eurCashPosition()],
     })
     const result = await enrichBinanceValuations({
       snapshot,
@@ -326,14 +317,15 @@ describe('enrichBinanceValuations — FX provenance', () => {
   })
 })
 
-const snapshotReaderFromRate = (
-  rate: number | null,
-  {
-    rateTimestamp = '2026-05-12T15:00:00.000Z',
-    staleAfterSeconds = 96 * 3600,
-    provider = 'ecb',
-  }: { rateTimestamp?: string; staleAfterSeconds?: number; provider?: string } = {}
-): SnapshotFxRateReader =>
+const snapshotReaderFromRate =
+  (
+    rate: number | null,
+    {
+      rateTimestamp = '2026-05-12T15:00:00.000Z',
+      staleAfterSeconds = 96 * 3600,
+      provider = 'ecb',
+    }: { rateTimestamp?: string; staleAfterSeconds?: number; provider?: string } = {}
+  ): SnapshotFxRateReader =>
   async ({ baseCurrency, quoteCurrency }) => {
     if (rate === null || baseCurrency !== 'EUR' || quoteCurrency !== 'USD') {
       return null

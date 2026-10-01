@@ -26,9 +26,7 @@ export interface LearningLoopVisibilityInputs {
  * no extra components, no flag-dependent layout.
  */
 export const shouldShowLearningLoopOnIa = (inputs: LearningLoopVisibilityInputs): boolean =>
-  inputs.aiAdvisorVisible === true &&
-  inputs.learningLoopFlag === true &&
-  inputs.mode !== undefined
+  inputs.aiAdvisorVisible === true && inputs.learningLoopFlag === true && inputs.mode !== undefined
 
 /**
  * The Hypothesis Lab section on `/ia/trading-lab` is visible only when the flag is on and an
@@ -60,14 +58,12 @@ export const shouldShowPostMortemRunButton = (inputs: {
  * renders when the flag is on AND a mode is resolved; this predicate reports the disabled
  * state of inner controls.
  */
-export const decisionRecorderControlsDisabled = (inputs: {
-  mode: AuthMode | undefined
-}): boolean => inputs.mode !== 'admin'
+export const decisionRecorderControlsDisabled = (inputs: { mode: AuthMode | undefined }): boolean =>
+  inputs.mode !== 'admin'
 
 /**
  * Hypothesis Lab admin actions ("Nouvelle hypothèse", "Archiver", "Créer un scénario paper")
  * are only available in admin mode. Demo mode renders a read-only list.
  */
-export const hypothesisLabAdminActionsVisible = (inputs: {
-  mode: AuthMode | undefined
-}): boolean => inputs.mode === 'admin'
+export const hypothesisLabAdminActionsVisible = (inputs: { mode: AuthMode | undefined }): boolean =>
+  inputs.mode === 'admin'

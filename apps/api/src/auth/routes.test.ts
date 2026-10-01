@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import { AUTH_SESSION_COOKIE_NAME } from './session'
 import { createAuthRoutes } from './routes'
+import { AUTH_SESSION_COOKIE_NAME } from './session'
 import type { AuthRoutesDependencies } from './types'
 
-const createAuthTestEnv = (
-  overrides?: Partial<AuthRoutesDependencies['env']>
-) =>
+const createAuthTestEnv = (overrides?: Partial<AuthRoutesDependencies['env']>) =>
   ({
     NODE_ENV: 'test',
     AUTH_ADMIN_EMAIL: 'givernaudenzo@gmail.com',

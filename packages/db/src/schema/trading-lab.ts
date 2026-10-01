@@ -26,15 +26,26 @@ export const tradingLabStrategy = pgTable(
       .notNull()
       .default('experimental')
       .$type<
-        'technical' | 'signal-driven' | 'risk-model' | 'benchmark' | 'manual-hypothesis' | 'experimental'
+        | 'technical'
+        | 'signal-driven'
+        | 'risk-model'
+        | 'benchmark'
+        | 'manual-hypothesis'
+        | 'experimental'
       >(),
     status: text('status')
       .notNull()
       .default('draft')
       .$type<'draft' | 'active-paper' | 'archived'>(),
     enabled: boolean('enabled').notNull().default(true),
-    tags: jsonb('tags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    parameters: jsonb('parameters').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    tags: jsonb('tags')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    parameters: jsonb('parameters')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     indicators: jsonb('indicators')
       .$type<Array<{ name: string; params: Record<string, unknown> }>>()
       .notNull()
@@ -51,8 +62,14 @@ export const tradingLabStrategy = pgTable(
       .$type<Array<{ id: string; description: string; condition: string }>>()
       .notNull()
       .default(sql`'[]'::jsonb`),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    caveats: jsonb('caveats').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    caveats: jsonb('caveats')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     scope: text('scope').notNull().default('admin').$type<'admin' | 'demo'>(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -98,20 +115,19 @@ export const tradingLabBacktestRun = pgTable(
     resultSummary: jsonb('result_summary').$type<Record<string, unknown>>(),
     metrics: jsonb('metrics').$type<Record<string, unknown>>(),
     equityCurve: jsonb('equity_curve').$type<Array<{ date: string; equity: number }>>(),
-    trades: jsonb('trades')
-      .$type<
-        Array<{
-          entryDate: string
-          exitDate: string
-          side: 'long' | 'short'
-          entryPrice: number
-          exitPrice: number
-          size: number
-          pnl: number
-          pnlPct: number
-          fees: number
-        }>
-      >(),
+    trades: jsonb('trades').$type<
+      Array<{
+        entryDate: string
+        exitDate: string
+        side: 'long' | 'short'
+        entryPrice: number
+        exitPrice: number
+        size: number
+        pnl: number
+        pnlPct: number
+        fees: number
+      }>
+    >(),
     drawdowns: jsonb('drawdowns').$type<Array<{ date: string; drawdown: number }>>(),
     errorSummary: text('error_summary'),
     scope: text('scope').notNull().default('admin').$type<'admin' | 'demo'>(),

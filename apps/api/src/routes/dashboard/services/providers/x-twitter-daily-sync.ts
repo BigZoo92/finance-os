@@ -18,10 +18,7 @@
  */
 
 import { normalizeXHandle } from './x-twitter-profile-client'
-import {
-  dedupeXSignalSources,
-  type XDedupedSourceReport,
-} from './x-twitter-signal-source-dedupe'
+import { dedupeXSignalSources, type XDedupedSourceReport } from './x-twitter-signal-source-dedupe'
 
 export type XTwitterTimelineFetcher = (input: {
   userId: string
@@ -401,7 +398,13 @@ export const runPreviousDaySync = async ({
   config: PreviousDaySyncConfig
   fetchTimeline: XTwitterTimelineFetcher
   scoreTweet?: (tweet: XTwitterTimelineTweet) => number
-}): Promise<PreviousDaySyncOutcome & { tweets: Array<XTwitterTimelineTweet & { score: number; keptForAdvisor: boolean; sourceHandle: string }> }> => {
+}): Promise<
+  PreviousDaySyncOutcome & {
+    tweets: Array<
+      XTwitterTimelineTweet & { score: number; keptForAdvisor: boolean; sourceHandle: string }
+    >
+  }
+> => {
   const deduped = dedupeXFollowedAccounts(accounts)
   const activeAccounts = deduped.accounts
   const estimate = estimatePreviousDaySyncCost({
@@ -411,9 +414,13 @@ export const runPreviousDaySync = async ({
     maxResultsPerPage: config.caps.maxResultsPerPage,
   })
 
-  const dailyBudgetRemaining = Math.max(0, config.budget.dailyBudgetUsd - config.budget.spentTodayUsd)
+  const dailyBudgetRemaining = Math.max(
+    0,
+    config.budget.dailyBudgetUsd - config.budget.spentTodayUsd
+  )
   const wouldExceedDailyBudget = estimate.estimatedCostUsd > dailyBudgetRemaining
-  const wouldExceedMonthlyBudget = estimate.estimatedCostUsd > config.budget.remainingMonthlyBudgetUsd
+  const wouldExceedMonthlyBudget =
+    estimate.estimatedCostUsd > config.budget.remainingMonthlyBudgetUsd
   const requiresManual =
     estimate.estimatedCostUsd > config.budget.requireManualConfirmationOverUsd &&
     !config.budget.manuallyConfirmed
@@ -494,7 +501,9 @@ export const runPreviousDaySync = async ({
   let totalKeptForAdvisor = 0
   const perAuthor: PreviousDaySyncOutcome['perAuthor'] = []
   const seenTweetIds = new Set<string>()
-  const scoredTweets: Array<XTwitterTimelineTweet & { score: number; keptForAdvisor: boolean; sourceHandle: string }> = []
+  const scoredTweets: Array<
+    XTwitterTimelineTweet & { score: number; keptForAdvisor: boolean; sourceHandle: string }
+  > = []
 
   for (const account of activeAccounts) {
     if (!account.externalId) {

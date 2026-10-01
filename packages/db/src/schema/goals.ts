@@ -1,5 +1,15 @@
 import { sql } from 'drizzle-orm'
-import { date, index, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  date,
+  index,
+  integer,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 export const personalGoalTypeEnum = pgEnum('personal_goal_type', [
   'emergency_fund',

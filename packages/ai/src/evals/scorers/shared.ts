@@ -19,11 +19,9 @@ export const buildResult = (params: {
   failedExpectations: params.failedExpectations,
 })
 
-const stripDiacritics = (value: string): string =>
-  value.normalize('NFD').replace(/[̀-ͯ]/g, '')
+const stripDiacritics = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-export const normalizeText = (value: string): string =>
-  stripDiacritics(value).toLowerCase()
+export const normalizeText = (value: string): string => stripDiacritics(value).toLowerCase()
 
 export const collectStrings = (input: unknown): string[] => {
   const out: string[] = []
@@ -204,9 +202,7 @@ export interface ExecutionDirectiveMatch {
 const truncateExcerpt = (text: string, max = 160): string =>
   text.length <= max ? text : `${text.slice(0, max - 1)}…`
 
-export const detectExecutionDirective = (
-  text: string
-): ExecutionDirectiveMatch | null => {
+export const detectExecutionDirective = (text: string): ExecutionDirectiveMatch | null => {
   const executionMatches = containsAnyTerm(text, EXECUTION_VOCABULARY)
   if (executionMatches.length === 0) return null
   const directiveMatches = containsAnyTerm(text, DIRECTIVE_MARKERS)
@@ -218,9 +214,7 @@ export const detectExecutionDirective = (
   }
 }
 
-export const findExecutionDirectives = (
-  values: readonly string[]
-): ExecutionDirectiveMatch[] => {
+export const findExecutionDirectives = (values: readonly string[]): ExecutionDirectiveMatch[] => {
   const out: ExecutionDirectiveMatch[] = []
   for (const value of values) {
     const match = detectExecutionDirective(value)

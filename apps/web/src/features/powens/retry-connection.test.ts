@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { isPowensConnectionRetryable } from './retry-connection'
 import type { PowensConnectionStatus } from './types'
 
-const makeConnection = (
-  status: PowensConnectionStatus['status'],
-): PowensConnectionStatus => ({
+const makeConnection = (status: PowensConnectionStatus['status']): PowensConnectionStatus => ({
   id: 1,
   source: 'powens',
   provider: 'powens',

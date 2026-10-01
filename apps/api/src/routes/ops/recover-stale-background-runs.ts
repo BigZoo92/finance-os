@@ -1,7 +1,7 @@
 import { schema } from '@finance-os/db'
 import { and, eq, lt } from 'drizzle-orm'
-import type { ApiDb, DashboardBackgroundRunRecoveryResponse } from '../dashboard/types'
 import { logApiEvent } from '../../observability/logger'
+import type { ApiDb, DashboardBackgroundRunRecoveryResponse } from '../dashboard/types'
 
 export type BackgroundStaleRunRecovery = DashboardBackgroundRunRecoveryResponse
 
@@ -64,7 +64,10 @@ export const recoverStaleBackgroundRuns = async ({
     .select()
     .from(schema.freeFirehoseRun)
     .where(
-      and(eq(schema.freeFirehoseRun.status, 'running'), lt(schema.freeFirehoseRun.startedAt, cutoff))
+      and(
+        eq(schema.freeFirehoseRun.status, 'running'),
+        lt(schema.freeFirehoseRun.startedAt, cutoff)
+      )
     )
 
   for (const row of freeFirehoseRows) {
@@ -87,7 +90,9 @@ export const recoverStaleBackgroundRuns = async ({
         durationMs,
         errorSummary: 'STALE_TIMED_OUT: Free Firehose run exceeded stale recovery threshold.',
       })
-      .where(and(eq(schema.freeFirehoseRun.id, row.id), eq(schema.freeFirehoseRun.status, 'running')))
+      .where(
+        and(eq(schema.freeFirehoseRun.id, row.id), eq(schema.freeFirehoseRun.status, 'running'))
+      )
     recoveredByTable.free_firehose_run += 1
     recovered.push(
       toRecovery({
@@ -105,7 +110,10 @@ export const recoverStaleBackgroundRuns = async ({
     .select()
     .from(schema.signalIngestionRun)
     .where(
-      and(eq(schema.signalIngestionRun.status, 'running'), lt(schema.signalIngestionRun.startedAt, cutoff))
+      and(
+        eq(schema.signalIngestionRun.status, 'running'),
+        lt(schema.signalIngestionRun.startedAt, cutoff)
+      )
     )
 
   for (const row of signalRows) {
@@ -129,7 +137,10 @@ export const recoverStaleBackgroundRuns = async ({
         errorSummary: 'STALE_TIMED_OUT: Signal ingestion run exceeded stale recovery threshold.',
       })
       .where(
-        and(eq(schema.signalIngestionRun.id, row.id), eq(schema.signalIngestionRun.status, 'running'))
+        and(
+          eq(schema.signalIngestionRun.id, row.id),
+          eq(schema.signalIngestionRun.status, 'running')
+        )
       )
     recoveredByTable.signal_ingestion_run += 1
     recovered.push(

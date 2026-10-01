@@ -100,17 +100,12 @@ export const createInvestmentStrategyRepository = ({ db }: { db: ApiDb }) => {
       .orderBy(desc(schema.userAssetInterest.updatedAt), schema.userAssetInterest.symbol)
   }
 
-  const upsertUserAssetInterest = async (
-    input: typeof schema.userAssetInterest.$inferInsert
-  ) => {
+  const upsertUserAssetInterest = async (input: typeof schema.userAssetInterest.$inferInsert) => {
     const [row] = await db
       .insert(schema.userAssetInterest)
       .values(input)
       .onConflictDoUpdate({
-        target: [
-          schema.userAssetInterest.normalizedSymbol,
-          schema.userAssetInterest.assetClass,
-        ],
+        target: [schema.userAssetInterest.normalizedSymbol, schema.userAssetInterest.assetClass],
         set: {
           symbol: input.symbol,
           name: input.name,

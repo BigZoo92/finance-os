@@ -14,8 +14,7 @@ export const MANUAL_OPERATION_TERMINAL_STATUSES = ['completed', 'failed', 'degra
 export type ManualOperationTerminalStatus = (typeof MANUAL_OPERATION_TERMINAL_STATUSES)[number]
 
 export const MANUAL_OPERATION_STEP_ACTIVE_STATUSES = ['queued', 'running'] as const
-export type ManualOperationStepActiveStatus =
-  (typeof MANUAL_OPERATION_STEP_ACTIVE_STATUSES)[number]
+export type ManualOperationStepActiveStatus = (typeof MANUAL_OPERATION_STEP_ACTIVE_STATUSES)[number]
 
 export type ManualOperationStepStatus =
   | 'queued'

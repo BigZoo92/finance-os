@@ -40,7 +40,9 @@ export type DiagnosticsServiceResponse = {
   lastCheckedAt: string
 }
 
-const resolveOutcomeFromError = (error: unknown): {
+const resolveOutcomeFromError = (
+  error: unknown
+): {
   outcome: Exclude<DiagnosticOutcome, 'ok' | 'degraded'>
   issueType: DiagnosticIssueType
   guidance: string

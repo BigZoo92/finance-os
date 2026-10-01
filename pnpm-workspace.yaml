@@ -1,19 +1,19 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 # Shared versions (pnpm catalog): one owner for dependencies used by several
 # workspace packages. Reference them as "catalog:" in package.json.
 catalog:
   effect: ^3.22.2
-  bun-types: "1.4.2"
-  "@types/node": "24.13.6"
-  drizzle-orm: "0.45.3"
-  zod: "^4.6.5"
-  react: "19.2.8"
-  react-dom: "19.2.8"
-  "@types/react": "19.2.18"
-  "@types/react-dom": "19.2.7"
+  bun-types: '1.4.2'
+  '@types/node': '24.13.6'
+  drizzle-orm: '0.45.3'
+  zod: '^4.6.5'
+  react: '19.2.8'
+  react-dom: '19.2.8'
+  '@types/react': '19.2.18'
+  '@types/react-dom': '19.2.7'
 
 # Supply-chain policy: pnpm 11 defaults (minimumReleaseAge, strictDepBuilds) are
 # kept. The single documented exception: the dev-only GitNexus code-intelligence
@@ -33,7 +33,7 @@ allowBuilds:
   # the loader opens it; without the script GitNexus fails with ERR_DLOPEN_FAILED.
   # Reviewed (install.js: copy, source build only when no prebuilt exists) and
   # validated with `pnpm gitnexus:analyze`.
-  "@ladybugdb/core": true
+  '@ladybugdb/core': true
   # The remaining GitNexus native dependencies: prebuilt binaries are bundled or
   # resolved at runtime, so their install scripts are not needed.
   # msw ships a postinstall notice only (pulled in transitively by the web test tooling).

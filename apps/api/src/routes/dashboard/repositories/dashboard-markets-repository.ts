@@ -1,7 +1,7 @@
 import { schema } from '@finance-os/db'
 import { eq, notInArray, sql } from 'drizzle-orm'
-import { safeNumber, toIsoOrNull, toProviderFreshnessLabel } from '../domain/market-helpers'
 import { MARKET_PROVIDER_LABELS } from '../domain/market-definitions'
+import { safeNumber, toIsoOrNull, toProviderFreshnessLabel } from '../domain/market-helpers'
 import type {
   DashboardMarketProviderHealth,
   MarketContextBundle,
@@ -106,18 +106,14 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
               ...(quote.previousClose !== null
                 ? { previousClose: String(quote.previousClose) }
                 : {}),
-              ...(quote.dayChangePct !== null
-                ? { dayChangePct: String(quote.dayChangePct) }
-                : {}),
+              ...(quote.dayChangePct !== null ? { dayChangePct: String(quote.dayChangePct) } : {}),
               ...(quote.weekChangePct !== null
                 ? { weekChangePct: String(quote.weekChangePct) }
                 : {}),
               ...(quote.monthChangePct !== null
                 ? { monthChangePct: String(quote.monthChangePct) }
                 : {}),
-              ...(quote.ytdChangePct !== null
-                ? { ytdChangePct: String(quote.ytdChangePct) }
-                : {}),
+              ...(quote.ytdChangePct !== null ? { ytdChangePct: String(quote.ytdChangePct) } : {}),
               history: quote.history,
               ...(quote.metadata ? { metadata: quote.metadata } : {}),
             }))
@@ -171,7 +167,10 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
           value: schema.marketMacroObservation.value,
         })
         .from(schema.marketMacroObservation)
-        .orderBy(schema.marketMacroObservation.seriesId, schema.marketMacroObservation.observationDate)
+        .orderBy(
+          schema.marketMacroObservation.seriesId,
+          schema.marketMacroObservation.observationDate
+        )
         .then(rows =>
           rows.map(row => ({
             ...row,
@@ -265,7 +264,9 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
           ...(input.lastMacroObservationCount !== undefined
             ? { lastMacroObservationCount: input.lastMacroObservationCount }
             : {}),
-          ...(input.lastSignalCount !== undefined ? { lastSignalCount: input.lastSignalCount } : {}),
+          ...(input.lastSignalCount !== undefined
+            ? { lastSignalCount: input.lastSignalCount }
+            : {}),
           ...(input.lastRefreshDurationMs !== undefined
             ? { lastRefreshDurationMs: input.lastRefreshDurationMs }
             : {}),
@@ -293,7 +294,9 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
             ...(input.lastMacroObservationCount !== undefined
               ? { lastMacroObservationCount: input.lastMacroObservationCount }
               : {}),
-            ...(input.lastSignalCount !== undefined ? { lastSignalCount: input.lastSignalCount } : {}),
+            ...(input.lastSignalCount !== undefined
+              ? { lastSignalCount: input.lastSignalCount }
+              : {}),
             ...(input.lastRefreshDurationMs !== undefined
               ? { lastRefreshDurationMs: input.lastRefreshDurationMs }
               : {}),

@@ -1,8 +1,9 @@
 {
   "name": "@finance-os/api",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
+  "module": "src/index.js",
   "scripts": {
     "start": "bun src/index.ts",
     "auth:hash": "bun src/auth/hash-password.ts",
@@ -31,6 +32,5 @@
   },
   "devDependencies": {
     "bun-types": "catalog:"
-  },
-  "module": "src/index.js"
+  }
 }

@@ -5,9 +5,7 @@ const maxAgeRaw = process.env.WORKER_HEALTHCHECK_MAX_AGE_MS ?? '120000'
 const maxAgeMs = Number(maxAgeRaw)
 
 if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0) {
-  console.error(
-    `WORKER_HEALTHCHECK_MAX_AGE_MS must be a positive number, received "${maxAgeRaw}"`
-  )
+  console.error(`WORKER_HEALTHCHECK_MAX_AGE_MS must be a positive number, received "${maxAgeRaw}"`)
   process.exit(1)
 }
 

@@ -34,7 +34,13 @@ export const createHnNewsProvider = ({
         const providerArticleId = trimOrNull(hit.objectID)
         const publishedAt = hit.created_at ? new Date(hit.created_at) : null
 
-        if (!title || !providerUrl || !providerArticleId || !publishedAt || Number.isNaN(publishedAt.getTime())) {
+        if (
+          !title ||
+          !providerUrl ||
+          !providerArticleId ||
+          !publishedAt ||
+          Number.isNaN(publishedAt.getTime())
+        ) {
           return null
         }
 

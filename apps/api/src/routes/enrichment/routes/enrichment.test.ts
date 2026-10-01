@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
+import { createEnrichmentRuntimePlugin, type EnrichmentRuntime } from '../runtime'
 import { createEnrichmentBulkTriageRoute } from './bulk-triage'
 import { createEnrichmentNotesRoute } from './notes'
-import { createEnrichmentRuntimePlugin, type EnrichmentRuntime } from '../runtime'
 
 const createRuntime = (): EnrichmentRuntime => ({
   bulkEnabled: true,

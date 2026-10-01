@@ -109,7 +109,9 @@ describe('createGetDashboardSummaryUseCase (unknown values)', () => {
 
     expect(summary.assets.find(asset => asset.assetId === 1)?.valuation).toBeNull()
     expect(summary.assets.find(asset => asset.assetId === 2)?.valuation).toBe(250)
-    expect(summary.accounts.find(account => account.powensAccountId === 'acc-1')?.balance).toBeNull()
+    expect(
+      summary.accounts.find(account => account.powensAccountId === 'acc-1')?.balance
+    ).toBeNull()
     expect(summary.accounts.find(account => account.powensAccountId === 'acc-2')?.balance).toBe(100)
     // One unknown account balance makes the connection total unknown.
     expect(summary.connections[0]?.balance).toBeNull()

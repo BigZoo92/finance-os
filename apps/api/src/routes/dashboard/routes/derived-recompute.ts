@@ -1,14 +1,14 @@
+import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdminOrInternalToken } from '../../../auth/guard'
 import { getDashboardDerivedRecomputeStatusMock } from '../../../mocks/dashboardDerivedRecompute.mock'
+import { getDashboardRuntime } from '../context'
 import {
   DashboardDerivedRecomputeAlreadyRunningError,
   DashboardDerivedRecomputeDisabledError,
   DashboardDerivedRecomputeFailedError,
 } from '../domain/derived-recompute'
-import { getDashboardRuntime } from '../context'
-import { Elysia } from 'elysia'
 
 const isDashboardDerivedRecomputeDemoMode = <TContext extends object>(context: TContext) => {
   return getAuth(context).mode !== 'admin' && !getInternalAuth(context).hasValidToken

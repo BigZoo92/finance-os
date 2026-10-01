@@ -24,9 +24,7 @@ describe('demo transactions fixture scenario coverage', () => {
 
     expect(fixture.items.length).toBeGreaterThan(0)
     expect(
-      fixture.items.every(
-        item => item.tags.includes('offline') || item.tags.includes('pending')
-      )
+      fixture.items.every(item => item.tags.includes('offline') || item.tags.includes('pending'))
     ).toBeTrue()
   })
 

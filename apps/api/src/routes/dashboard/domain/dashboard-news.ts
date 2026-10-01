@@ -1,12 +1,12 @@
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
-import { buildNewsClusters, buildNewsContextBundle } from './news-context-bundle'
-import { buildFailsoftEnvelope, type FailsoftSource } from './failsoft-policy'
+import type { LiveNewsIngestionSummary } from '../services/fetch-live-news'
 import type {
   DashboardNewsRepository,
   DashboardNewsResponse,
   DashboardNewsUseCases,
 } from '../types'
-import type { LiveNewsIngestionSummary } from '../services/fetch-live-news'
+import { buildFailsoftEnvelope, type FailsoftSource } from './failsoft-policy'
+import { buildNewsClusters, buildNewsContextBundle } from './news-context-bundle'
 
 const STALE_AFTER_MS = 1000 * 60 * 60 * 6
 
@@ -230,9 +230,7 @@ export const createDashboardNewsUseCases = ({
 
       await repository.upsertNewsCacheState({
         lastAttemptAt: new Date(),
-        ...(isHardFailure
-          ? { lastFailureAt: new Date() }
-          : { lastSuccessAt: new Date() }),
+        ...(isHardFailure ? { lastFailureAt: new Date() } : { lastSuccessAt: new Date() }),
         lastErrorCode: cacheErrorCode,
         lastErrorMessage: cacheErrorMessage,
         lastRequestId: requestId,

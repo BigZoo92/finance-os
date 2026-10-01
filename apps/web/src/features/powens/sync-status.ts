@@ -44,7 +44,9 @@ const toTooltipLabel = ({
   snapshotAt: string | null
 }) => {
   const formattedAttempt = formatAttemptTime(attemptAt)
-  const attemptLabel = formattedAttempt ? `Dernier essai a ${formattedAttempt}` : 'Dernier essai inconnu'
+  const attemptLabel = formattedAttempt
+    ? `Dernier essai a ${formattedAttempt}`
+    : 'Dernier essai inconnu'
 
   return `${attemptLabel}. ${toSnapshotFreshnessLabel(snapshotAt)}`
 }

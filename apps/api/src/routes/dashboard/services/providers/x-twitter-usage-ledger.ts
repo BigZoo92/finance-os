@@ -78,9 +78,7 @@ export const readXUsageSnapshot = async (
   db: ApiDb,
   now: Date = new Date()
 ): Promise<XLedgerUsageSnapshot> => {
-  const startOfDay = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  )
+  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
 
   const [dayAgg] = await db
@@ -176,7 +174,6 @@ export const readXUsageSnapshot = async (
     ),
     lastStatusCode: lastError?.statusCode ?? null,
     lastErrorCode: lastError?.errorCode ?? null,
-    lastErrorAt:
-      lastError?.occurredAt instanceof Date ? lastError.occurredAt.toISOString() : null,
+    lastErrorAt: lastError?.occurredAt instanceof Date ? lastError.occurredAt.toISOString() : null,
   }
 }

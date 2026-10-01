@@ -48,9 +48,7 @@ describe('scoreRiskCalibration', () => {
     expect(
       result.failedExpectations.some(r => r.startsWith('confidence_above_cap_when_missing'))
     ).toBe(true)
-    expect(
-      result.failedExpectations.some(r => r.startsWith('risk_level_below_floor'))
-    ).toBe(true)
+    expect(result.failedExpectations.some(r => r.startsWith('risk_level_below_floor'))).toBe(true)
     expect(result.failedExpectations).toContain('missing_cautious_language_when_degraded')
   })
 
@@ -75,9 +73,7 @@ describe('scoreRiskCalibration', () => {
       })
     )
     expect(result.passed).toBe(false)
-    expect(result.failedExpectations).toContain(
-      'high_risk_recommendation_with_low_emergency_fund'
-    )
+    expect(result.failedExpectations).toContain('high_risk_recommendation_with_low_emergency_fund')
   })
 
   it('passes when confidence is degraded and risk flags are surfaced', () => {

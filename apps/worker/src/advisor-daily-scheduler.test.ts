@@ -173,11 +173,11 @@ describe('startDashboardAdvisorScheduler', () => {
       log: event => {
         events.push(event)
       },
-      setIntervalFn: ((handler: () => void, timeout?: number) => {
+      setIntervalFn: (handler: () => void, timeout?: number) => {
         intervals.push(timeout ?? 0)
         void handler()
         return 123 as unknown as ReturnType<typeof setInterval>
-      }),
+      },
     })
 
     expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
@@ -208,12 +208,12 @@ describe('startDashboardAdvisorScheduler', () => {
       },
       nowFn: () => ticks.shift() ?? new Date('2026-04-22T13:25:00.000Z'),
       log: () => undefined,
-      setIntervalFn: ((handler: () => void) => {
+      setIntervalFn: (handler: () => void) => {
         void handler()
         void handler()
         void handler()
         return 123 as unknown as ReturnType<typeof setInterval>
-      }),
+      },
     })
 
     expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)

@@ -80,7 +80,9 @@ interface CreateGetDashboardSummaryUseCaseDependencies {
     }>
   >
   getFlowTotals: (fromDate: string) => Promise<{ income: string; expenses: string }>
-  listDailyNetFlows: (fromDate: string) => Promise<Array<{ bookingDate: string; netAmount: string }>>
+  listDailyNetFlows: (
+    fromDate: string
+  ) => Promise<Array<{ bookingDate: string; netAmount: string }>>
   listTopExpenseGroups: (
     fromDate: string,
     limit: number
@@ -268,32 +270,32 @@ export const createGetDashboardSummaryUseCase = ({
     const positionSummaries: DashboardSummaryResponse['positions'] = positions.map(position => {
       const itemValuation = valuationByItemKey.get(`position:${position.positionKey}`)
       return {
-      positionId: position.positionId,
-      positionKey: position.positionKey,
-      assetId: position.assetId,
-      powensAccountId: position.powensAccountId,
-      powensConnectionId: position.powensConnectionId,
-      source: position.source,
-      provider: position.provider,
-      providerConnectionId: position.providerConnectionId,
-      providerPositionId: position.providerPositionId,
-      assetName: position.assetName,
-      accountName: position.accountName,
-      name: position.name,
-      currency: position.currency,
-      quantity: toNumberOrNull(position.quantity),
-      costBasis: toMoneyOrNull(position.costBasis),
-      costBasisSource: position.costBasisSource,
-      currentValue: toMoneyOrNull(position.currentValue),
-      lastKnownValue: toMoneyOrNull(position.lastKnownValue),
-      openedAt: toIsoString(position.openedAt),
-      closedAt: toIsoString(position.closedAt),
-      valuedAt: toIsoString(position.valuedAt),
-      lastSyncedAt: toIsoString(position.lastSyncedAt),
-      valueBase: itemValuation?.valueBase ?? null,
-      valuationStatus: itemValuation?.status ?? null,
-      enabled: position.closedAt === null,
-      metadata: position.metadata,
+        positionId: position.positionId,
+        positionKey: position.positionKey,
+        assetId: position.assetId,
+        powensAccountId: position.powensAccountId,
+        powensConnectionId: position.powensConnectionId,
+        source: position.source,
+        provider: position.provider,
+        providerConnectionId: position.providerConnectionId,
+        providerPositionId: position.providerPositionId,
+        assetName: position.assetName,
+        accountName: position.accountName,
+        name: position.name,
+        currency: position.currency,
+        quantity: toNumberOrNull(position.quantity),
+        costBasis: toMoneyOrNull(position.costBasis),
+        costBasisSource: position.costBasisSource,
+        currentValue: toMoneyOrNull(position.currentValue),
+        lastKnownValue: toMoneyOrNull(position.lastKnownValue),
+        openedAt: toIsoString(position.openedAt),
+        closedAt: toIsoString(position.closedAt),
+        valuedAt: toIsoString(position.valuedAt),
+        lastSyncedAt: toIsoString(position.lastSyncedAt),
+        valueBase: itemValuation?.valueBase ?? null,
+        valuationStatus: itemValuation?.status ?? null,
+        enabled: position.closedAt === null,
+        metadata: position.metadata,
       }
     })
 
@@ -320,9 +322,7 @@ export const createGetDashboardSummaryUseCase = ({
         // One unknown account balance makes the connection total unknown: a
         // partial sum would read as a precise total.
         existing.balance =
-          existing.balance === null || balance === null
-            ? null
-            : toMoney(existing.balance + balance)
+          existing.balance === null || balance === null ? null : toMoney(existing.balance + balance)
         existing.accountCount += 1
         continue
       }
@@ -377,9 +377,7 @@ export const createGetDashboardSummaryUseCase = ({
             statusCounts: overlay.coverage.statusCounts,
             unknownValueCount: overlay.coverage.unknownValueCount,
             totalUnrealizedPnlBase:
-              knownPnl.length > 0
-                ? toMoney(knownPnl.reduce((sum, value) => sum + value, 0))
-                : null,
+              knownPnl.length > 0 ? toMoney(knownPnl.reduce((sum, value) => sum + value, 0)) : null,
             pnlCoverageCount: knownPnl.length,
             asOf: currentDate.toISOString(),
           }

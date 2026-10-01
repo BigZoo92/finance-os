@@ -18,10 +18,7 @@ test.describe('Login desktop', () => {
     await expect(page.getByRole('heading', { level: 1, name: /Finance OS/i })).toBeVisible()
     await expect(page.getByText(/Connexion admin requise/i).first()).toBeVisible()
     await expect(page.getByLabel('Email')).toHaveAttribute('autocomplete', 'email')
-    await expect(page.locator('#password')).toHaveAttribute(
-      'autocomplete',
-      'current-password'
-    )
+    await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'current-password')
     await page.getByLabel('Email').fill('admin@example.test')
     await page.locator('#password').fill('secret')
     await page.getByRole('button', { name: 'Afficher le mot de passe' }).click()

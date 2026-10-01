@@ -374,22 +374,20 @@ export const createTradingLabRoute = ({
       },
       listBacktestRunsForStrategy: async strategyId => {
         const rows = await repo.listBacktestRuns({ strategyId, limit: 100 })
-        return rows.map(
-          (row): StrategyScorecardInputBacktestRun => ({
-            id: row.id,
-            runStatus: row.runStatus,
-            feesBps: row.feesBps,
-            slippageBps: row.slippageBps,
-            metrics: (row.metrics ?? null) as Record<string, unknown> | null,
-            resultSummary: (row.resultSummary ?? null) as Record<string, unknown> | null,
-            createdAt: row.createdAt,
-            trades: row.trades,
-            // PR14 — pass the equity curve through so the scorecard's advanced-metrics helper
-            // can compute Calmar / Ulcer / VaR / rolling Sharpe / etc. The shape matches:
-            //   Array<{ date: string; equity: number }>
-            equityCurve: row.equityCurve ?? null,
-          })
-        )
+        return rows.map((row): StrategyScorecardInputBacktestRun => ({
+          id: row.id,
+          runStatus: row.runStatus,
+          feesBps: row.feesBps,
+          slippageBps: row.slippageBps,
+          metrics: (row.metrics ?? null) as Record<string, unknown> | null,
+          resultSummary: (row.resultSummary ?? null) as Record<string, unknown> | null,
+          createdAt: row.createdAt,
+          trades: row.trades,
+          // PR14 — pass the equity curve through so the scorecard's advanced-metrics helper
+          // can compute Calmar / Ulcer / VaR / rolling Sharpe / etc. The shape matches:
+          //   Array<{ date: string; equity: number }>
+          equityCurve: row.equityCurve ?? null,
+        }))
       },
     },
   })
@@ -1985,9 +1983,8 @@ export const createTradingLabRoute = ({
           real: async () => {
             requireAdmin(context)
             try {
-              const { runAttentionAutoGenerator } = await import(
-                '../services/attention-auto-generator'
-              )
+              const { runAttentionAutoGenerator } =
+                await import('../services/attention-auto-generator')
               const result = await runAttentionAutoGenerator({ db })
               return { ...result, requestId }
             } catch (error) {

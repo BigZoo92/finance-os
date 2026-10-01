@@ -1,5 +1,5 @@
-import type { InferSelectModel } from 'drizzle-orm'
 import type { schema } from '@finance-os/db'
+import type { InferSelectModel } from 'drizzle-orm'
 
 export type EnrichmentNoteRow = InferSelectModel<typeof schema.enrichmentNote>
 

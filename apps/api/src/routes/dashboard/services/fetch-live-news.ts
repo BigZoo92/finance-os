@@ -1,13 +1,16 @@
-import { createSourceReferenceFromSignal, createNormalizedNewsSignal } from '../domain/news-enrichment'
 import { resolveNewsDuplicate } from '../domain/news-dedupe'
-import { scrapeArticleMetadata } from './scrape-article-metadata'
-import type { NewsProviderAdapter } from './news-provider-types'
+import {
+  createSourceReferenceFromSignal,
+  createNormalizedNewsSignal,
+} from '../domain/news-enrichment'
 import type {
   NewsMetadataFetchStatus,
   NewsPersistableSignalDraft,
   NewsProviderRunResult,
 } from '../domain/news-types'
 import type { DashboardNewsRepository } from '../types'
+import type { NewsProviderAdapter } from './news-provider-types'
+import { scrapeArticleMetadata } from './scrape-article-metadata'
 
 const DUPLICATE_LOOKBACK_MS = 36 * 60 * 60 * 1000
 
@@ -68,7 +71,9 @@ const buildPersistableSignal = async ({
   metadataFetchMaxBytes: number
   metadataUserAgent: string
 }): Promise<NewsPersistableSignalDraft> => {
-  let metadataFetchStatus: NewsMetadataFetchStatus = metadataFetchEnabled ? 'pending' : 'not_requested'
+  let metadataFetchStatus: NewsMetadataFetchStatus = metadataFetchEnabled
+    ? 'pending'
+    : 'not_requested'
   let metadataCard = null
   let metadataFetchedAt: Date | null = null
 
@@ -229,7 +234,8 @@ export const createLiveNewsIngestionService = ({
             requestId,
             errorCode: null,
             errorMessage: null,
-            cooldownUntil: provider.cooldownMs > 0 ? new Date(Date.now() + provider.cooldownMs) : null,
+            cooldownUntil:
+              provider.cooldownMs > 0 ? new Date(Date.now() + provider.cooldownMs) : null,
           }
           providerResults.push(result)
           await repository.upsertNewsProviderState({
@@ -248,7 +254,8 @@ export const createLiveNewsIngestionService = ({
             requestId,
             errorCode: error instanceof Error ? error.message.slice(0, 96) : 'NEWS_PROVIDER_ERROR',
             errorMessage: 'Provider fetch failed.',
-            cooldownUntil: provider.cooldownMs > 0 ? new Date(Date.now() + provider.cooldownMs) : null,
+            cooldownUntil:
+              provider.cooldownMs > 0 ? new Date(Date.now() + provider.cooldownMs) : null,
           }
           providerResults.push(result)
           await repository.upsertNewsProviderState({

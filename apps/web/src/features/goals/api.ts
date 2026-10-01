@@ -16,9 +16,7 @@ const readOnlineState = () => {
   return typeof navigator.onLine === 'boolean' ? navigator.onLine : true
 }
 
-export const normalizeFinancialGoalActionError = (
-  value: unknown
-): FinancialGoalActionError => {
+export const normalizeFinancialGoalActionError = (value: unknown): FinancialGoalActionError => {
   const offline = !readOnlineState()
 
   if (value instanceof ApiRequestError) {

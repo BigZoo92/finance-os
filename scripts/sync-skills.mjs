@@ -324,8 +324,7 @@ const syncProjection = async ({ targetRoot, expected, inspection }) => {
     const fullPath = join(targetRoot, ...rel.split('/'))
     await mkdir(dirname(fullPath), { recursive: true })
     const entry = inspection.actual.get(rel)
-    if (entry?.type !== 'file' || !entry.content.equals(content))
-      await writeFile(fullPath, content)
+    if (entry?.type !== 'file' || !entry.content.equals(content)) await writeFile(fullPath, content)
   }
 
   const after = await inspectProjection({ targetRoot, expected })

@@ -35,9 +35,8 @@ export class HypothesisValidationError extends Error {
   }
 }
 
-export const isHypothesisValidationError = (
-  error: unknown
-): error is HypothesisValidationError => error instanceof HypothesisValidationError
+export const isHypothesisValidationError = (error: unknown): error is HypothesisValidationError =>
+  error instanceof HypothesisValidationError
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -137,10 +136,7 @@ export const readHypothesisExtras = (
 // ---------------------------------------------------------------------------
 
 export interface HypothesesRepositoryAdapter {
-  listStrategies: (opts?: {
-    status?: string
-    limit?: number
-  }) => Promise<StrategyRow[]>
+  listStrategies: (opts?: { status?: string; limit?: number }) => Promise<StrategyRow[]>
   getStrategy: (id: number) => Promise<StrategyRow | null>
   createStrategy: (input: {
     name: string
@@ -158,10 +154,7 @@ export interface HypothesesRepositoryAdapter {
     assumptions?: string[]
     caveats?: string[]
   }) => Promise<StrategyRow>
-  updateStrategy: (
-    id: number,
-    input: Record<string, unknown>
-  ) => Promise<StrategyRow | null>
+  updateStrategy: (id: number, input: Record<string, unknown>) => Promise<StrategyRow | null>
   archiveStrategy: (id: number) => Promise<StrategyRow | null>
   createScenario: (input: {
     name: string
@@ -210,7 +203,10 @@ const requireText = ({ field, value, max }: { field: string; value: string; max:
 const validateStringList = (
   field: string,
   values: readonly string[] | undefined,
-  { max = STRING_LIST_MAX_ITEMS, itemMax = STRING_LIST_ITEM_MAX }: { max?: number; itemMax?: number } = {}
+  {
+    max = STRING_LIST_MAX_ITEMS,
+    itemMax = STRING_LIST_ITEM_MAX,
+  }: { max?: number; itemMax?: number } = {}
 ): string[] => {
   const list = (values ?? []).map(v => v.trim()).filter(v => v.length > 0)
   if (list.length > max) {
@@ -441,7 +437,9 @@ export const createHypothesisUseCases = ({
           ? { invalidationCriteria: input.invalidationCriteria }
           : {}),
         ...(input.evidenceNotes !== undefined ? { evidenceNotes: input.evidenceNotes } : {}),
-        ...(input.horizon !== undefined && input.horizon !== null ? { horizon: input.horizon } : {}),
+        ...(input.horizon !== undefined && input.horizon !== null
+          ? { horizon: input.horizon }
+          : {}),
         ...(input.entryRules !== undefined ? { entryRules: input.entryRules } : {}),
         ...(input.exitRules !== undefined ? { exitRules: input.exitRules } : {}),
         ...(input.riskRules !== undefined ? { riskRules: input.riskRules } : {}),
@@ -518,10 +516,7 @@ export const createHypothesisUseCases = ({
 
           let nextInvalidation: string[]
           if (input.invalidationCriteria !== undefined) {
-            const validated = validateStringList(
-              'invalidationCriteria',
-              input.invalidationCriteria
-            )
+            const validated = validateStringList('invalidationCriteria', input.invalidationCriteria)
             if (validated.length === 0) {
               throw new HypothesisValidationError({
                 code: 'INVALIDATION_CRITERIA_REQUIRED',
@@ -562,7 +557,8 @@ export const createHypothesisUseCases = ({
           baseParams[HYPOTHESIS_PARAMETERS_KEY] = {
             thesis: existingExtras.thesis,
             invalidationCriteria: existingExtras.invalidationCriteria,
-            ...(existingExtras.evidenceNotes !== undefined && existingExtras.evidenceNotes.length > 0
+            ...(existingExtras.evidenceNotes !== undefined &&
+            existingExtras.evidenceNotes.length > 0
               ? { evidenceNotes: existingExtras.evidenceNotes }
               : {}),
             ...(existingExtras.horizon !== null && existingExtras.horizon !== undefined

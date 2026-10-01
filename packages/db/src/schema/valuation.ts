@@ -198,7 +198,9 @@ export const fxRateSnapshot = pgTable(
       .default(36 * 60 * 60),
     isStale: boolean('is_stale').notNull().default(false),
     confidence: doublePrecision('confidence').notNull().default(0),
-    metadata: jsonb('metadata').$type<Record<string, unknown> | null>().default(sql`'{}'::jsonb`),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown> | null>()
+      .default(sql`'{}'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   table => [

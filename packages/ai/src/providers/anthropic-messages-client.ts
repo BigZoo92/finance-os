@@ -1,8 +1,5 @@
 import { estimateModelUsageCost } from '../pricing/registry'
-import type {
-  StructuredCompletionRequest,
-  StructuredCompletionResult,
-} from '../types'
+import type { StructuredCompletionRequest, StructuredCompletionResult } from '../types'
 
 type AnthropicToolUseBlock = {
   type: 'tool_use'
@@ -97,23 +94,17 @@ export const createAnthropicMessagesClient = ({
           inputTokens: typeof usage.input_tokens === 'number' ? usage.input_tokens : 0,
           outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : 0,
           cachedInputTokens:
-            typeof usage.cache_read_input_tokens === 'number'
-              ? usage.cache_read_input_tokens
-              : 0,
+            typeof usage.cache_read_input_tokens === 'number' ? usage.cache_read_input_tokens : 0,
           cacheWriteTokens:
             typeof usage.cache_creation_input_tokens === 'number'
               ? usage.cache_creation_input_tokens
               : 0,
           cacheDuration: request.promptCache ? '5m' : null,
           latencyMs: Date.now() - startedAt,
-          requestId:
-            typeof payload.id === 'string' ? payload.id : null,
+          requestId: typeof payload.id === 'string' ? payload.id : null,
           responseId: typeof payload.id === 'string' ? payload.id : null,
           usdToEurRate,
-          rawUsage:
-            Object.keys(usage).length > 0
-              ? usage
-              : null,
+          rawUsage: Object.keys(usage).length > 0 ? usage : null,
         }),
       }
     },

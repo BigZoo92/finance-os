@@ -21,7 +21,9 @@ const baseInput: FinanceEngineInput = {
   goals: [],
   dailyWealth: [],
   // 12% of monthly expenses: below the 20% concentration trigger.
-  topExpenses: [{ label: 'Loyer', category: 'housing', merchant: 'Bailleur', total: 300, count: 1 }],
+  topExpenses: [
+    { label: 'Loyer', category: 'housing', merchant: 'Bailleur', total: 300, count: 1 },
+  ],
 }
 
 describe('financial honesty: unknown values', () => {

@@ -14,15 +14,14 @@
  *   3. One ledger row per X HTTP call in `x_twitter_usage_ledger`
  */
 
+import { randomUUID } from 'node:crypto'
 import { schema } from '@finance-os/db'
 import { and, eq, sql } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { randomUUID } from 'node:crypto'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
-import type { ApiDb } from '../types'
 import {
   computePreviousDayWindow,
   dedupeXFollowedAccounts,
@@ -37,10 +36,8 @@ import {
   createXTwitterProfileClient,
   type XTwitterFetch,
 } from '../services/providers/x-twitter-profile-client'
-import {
-  readXUsageSnapshot,
-  writeXUsageLedger,
-} from '../services/providers/x-twitter-usage-ledger'
+import { readXUsageSnapshot, writeXUsageLedger } from '../services/providers/x-twitter-usage-ledger'
+import type { ApiDb } from '../types'
 
 const bodySchema = t.Object({
   runMode: t.Optional(
@@ -139,7 +136,11 @@ const autoResolveMissingExternalIds = async ({
   now: Date
   userReadsToday: number
   maxUserReadsPerDay: number
-}): Promise<{ accounts: XTwitterFollowedAccount[]; resolvedCount: number; failedCount: number }> => {
+}): Promise<{
+  accounts: XTwitterFollowedAccount[]
+  resolvedCount: number
+  failedCount: number
+}> => {
   const deduped = dedupeXFollowedAccounts(accounts)
   accounts = deduped.accounts
   const missing = accounts.filter(a => a.externalId === null)

@@ -32,17 +32,32 @@ export const newsArticle = pgTable(
     country: text('country'),
     region: text('region'),
     geoScope: text('geo_scope'),
-    domains: jsonb('domains').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    categories: jsonb('categories').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    subcategories: jsonb('subcategories').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    domains: jsonb('domains')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    categories: jsonb('categories')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    subcategories: jsonb('subcategories')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     eventType: text('event_type').notNull().default('general_update'),
     severity: integer('severity').notNull().default(0),
     confidence: integer('confidence').notNull().default(0),
     novelty: integer('novelty').notNull().default(0),
     marketImpactScore: integer('market_impact_score').notNull().default(0),
     relevanceScore: integer('relevance_score').notNull().default(0),
-    riskFlags: jsonb('risk_flags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    opportunityFlags: jsonb('opportunity_flags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    riskFlags: jsonb('risk_flags')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    opportunityFlags: jsonb('opportunity_flags')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     affectedEntities: jsonb('affected_entities')
       .$type<
         Array<{
@@ -54,9 +69,18 @@ export const newsArticle = pgTable(
       >()
       .notNull()
       .default(sql`'[]'::jsonb`),
-    affectedTickers: jsonb('affected_tickers').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    affectedSectors: jsonb('affected_sectors').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    affectedThemes: jsonb('affected_themes').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    affectedTickers: jsonb('affected_tickers')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    affectedSectors: jsonb('affected_sectors')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    affectedThemes: jsonb('affected_themes')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     transmissionHypotheses: jsonb('transmission_hypotheses')
       .$type<
         Array<{
@@ -80,8 +104,14 @@ export const newsArticle = pgTable(
       .$type<Array<Record<string, unknown>>>()
       .notNull()
       .default(sql`'[]'::jsonb`),
-    whyItMatters: jsonb('why_it_matters').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    scoringReasons: jsonb('scoring_reasons').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    whyItMatters: jsonb('why_it_matters')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    scoringReasons: jsonb('scoring_reasons')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     normalizedTitle: text('normalized_title'),
     canonicalUrlFingerprint: text('canonical_url_fingerprint'),
     clusteringKey: text('clustering_key').notNull().default('legacy'),
@@ -90,14 +120,13 @@ export const newsArticle = pgTable(
     firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
     metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
     rawProviderPayload: jsonb('raw_provider_payload').$type<Record<string, unknown> | null>(),
-    provenance: jsonb('provenance')
-      .$type<{
-        sourceCount: number
-        providerCount: number
-        providers: string[]
-        sourceDomains: string[]
-        primaryReason: string | null
-      } | null>(),
+    provenance: jsonb('provenance').$type<{
+      sourceCount: number
+      providerCount: number
+      providers: string[]
+      sourceDomains: string[]
+      primaryReason: string | null
+    } | null>(),
     metadataFetchStatus: text('metadata_fetch_status').notNull().default('not_requested'),
     metadataCard: jsonb('metadata_card').$type<Record<string, unknown> | null>(),
     metadataFetchedAt: timestamp('metadata_fetched_at', { withTimezone: true }),

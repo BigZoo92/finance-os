@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getDemoDashboardSummary } from './demo-data'
 import { adaptDashboardSummaryLegacy } from './dashboard-legacy-adapter'
+import { getDemoDashboardSummary } from './demo-data'
 
 describe('adaptDashboardSummaryLegacy', () => {
   it('returns deterministic fallback payload when summary is missing', () => {

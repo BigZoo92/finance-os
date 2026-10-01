@@ -33,7 +33,6 @@ describe('resolvePersistedSyncSnapshot', () => {
     })
   })
 
-
   it('marks integrity issues as OK with PARTIAL_IMPORT reason', () => {
     expect(
       resolvePersistedSyncSnapshot({

@@ -4,7 +4,7 @@
 @layer preflight, reset, base, tokens, recipes, utilities;
 @layer reset, base, tokens, recipes, utilities;
 
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
-@import "@fontsource/geist-pixel";
-@import "@finance-os/ui/styles.css";
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+@import '@fontsource/geist-pixel';
+@import '@finance-os/ui/styles.css';

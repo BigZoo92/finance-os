@@ -66,11 +66,13 @@ describe('sendBacktestToKnowledgeGraph', () => {
 
   it('sends compact payload and never includes equity curve / trades', async () => {
     const captured: { url?: string; body?: unknown } = {}
-    ;(globalThis as { fetch: typeof fetch }).fetch = mock(async (url: string | URL, init?: RequestInit) => {
-      captured.url = String(url)
-      captured.body = init?.body ? JSON.parse(String(init.body)) : null
-      return new Response(JSON.stringify({ ok: true }), { status: 200 })
-    }) as unknown as typeof fetch
+    ;(globalThis as { fetch: typeof fetch }).fetch = mock(
+      async (url: string | URL, init?: RequestInit) => {
+        captured.url = String(url)
+        captured.body = init?.body ? JSON.parse(String(init.body)) : null
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }
+    ) as unknown as typeof fetch
 
     const result = await sendBacktestToKnowledgeGraph({
       knowledgeServiceUrl: 'http://localhost:8011',

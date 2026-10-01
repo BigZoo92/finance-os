@@ -73,8 +73,7 @@ export const recoverOrphanedManualOperationSteps = async ({
     )
 
   const orphans = steps.filter(
-    step =>
-      isManualOperationStepActiveStatus(step.status) && parentStatusById.has(step.operationId)
+    step => isManualOperationStepActiveStatus(step.status) && parentStatusById.has(step.operationId)
   )
   if (orphans.length === 0) {
     return { closed: 0, closedFailed: 0, closedSkipped: 0 }

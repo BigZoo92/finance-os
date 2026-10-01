@@ -1,5 +1,11 @@
 import type { NewsProviderAdapter } from '../news-provider-types'
-import { ensureArray, fetchText, newsXmlParser, sanitizePayload, trimOrNull } from '../news-provider-utils'
+import {
+  ensureArray,
+  fetchText,
+  newsXmlParser,
+  sanitizePayload,
+  trimOrNull,
+} from '../news-provider-utils'
 
 export const createFedRssNewsProvider = ({
   enabled,
@@ -33,13 +39,17 @@ export const createFedRssNewsProvider = ({
           const title = trimOrNull(typeof item.title === 'string' ? item.title : null)
           const providerUrl = trimOrNull(typeof item.link === 'string' ? item.link : null)
           const providerArticleId =
-            trimOrNull(typeof item.guid === 'string' ? item.guid : null) ??
-            providerUrl ??
-            title
+            trimOrNull(typeof item.guid === 'string' ? item.guid : null) ?? providerUrl ?? title
           const publishedAtRaw = trimOrNull(typeof item.pubDate === 'string' ? item.pubDate : null)
           const publishedAt = publishedAtRaw ? new Date(publishedAtRaw) : null
 
-          if (!title || !providerUrl || !providerArticleId || !publishedAt || Number.isNaN(publishedAt.getTime())) {
+          if (
+            !title ||
+            !providerUrl ||
+            !providerArticleId ||
+            !publishedAt ||
+            Number.isNaN(publishedAt.getTime())
+          ) {
             return null
           }
 
@@ -68,6 +78,9 @@ export const createFedRssNewsProvider = ({
       })
     )
 
-    return allItems.flat().filter((item): item is NonNullable<typeof item> => item !== null).slice(0, maxItems)
+    return allItems
+      .flat()
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .slice(0, maxItems)
   },
 })

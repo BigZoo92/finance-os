@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-
 import { SegmentedControl } from './segmented-control'
 
 const options = [

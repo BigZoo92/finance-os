@@ -126,8 +126,7 @@ export type XDailySyncResponse = {
   message?: string
 }
 
-export const fetchXHealth = () =>
-  apiFetch<XHealthResponse>('/dashboard/signals/x-twitter/health')
+export const fetchXHealth = () => apiFetch<XHealthResponse>('/dashboard/signals/x-twitter/health')
 
 export const lookupXHandle = (body: XProfileLookupBody) =>
   apiFetch<XProfileLookupResponse>('/dashboard/signals/sources/x-twitter/lookup-handle', {

@@ -1,10 +1,10 @@
 import type { AuthMode } from './auth-types'
-import { getDemoDashboardSummary } from './demo-data'
 import {
   adaptDashboardSummaryLegacy,
   type LegacyDashboardAdapterResult,
 } from './dashboard-legacy-adapter'
 import type { DashboardRange, DashboardSummaryResponse } from './dashboard-types'
+import { getDemoDashboardSummary } from './demo-data'
 
 export type DailySurfaceAdapterMode = 'demoAdapter' | 'adminAdapter'
 

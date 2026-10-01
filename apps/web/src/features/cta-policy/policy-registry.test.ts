@@ -11,7 +11,9 @@ const baseContext = {
   emergencyDisableSet: new Set<string>(),
 }
 
-const createPolicy = (overrides: Partial<CtaPolicyDefinition> & Pick<CtaPolicyDefinition, 'id'>): CtaPolicyDefinition => ({
+const createPolicy = (
+  overrides: Partial<CtaPolicyDefinition> & Pick<CtaPolicyDefinition, 'id'>
+): CtaPolicyDefinition => ({
   id: overrides.id,
   priority: overrides.priority ?? 10,
   visibleIn: overrides.visibleIn ?? 'both',
@@ -24,14 +26,21 @@ const createPolicy = (overrides: Partial<CtaPolicyDefinition> & Pick<CtaPolicyDe
 describe('orchestrateCtas', () => {
   it('applies deterministic tie-break ordering by id when priorities are equal', () => {
     const decisions = orchestrateCtas({
-      policies: [createPolicy({ id: 'cta-z', priority: 20 }), createPolicy({ id: 'cta-a', priority: 20 })],
+      policies: [
+        createPolicy({ id: 'cta-z', priority: 20 }),
+        createPolicy({ id: 'cta-a', priority: 20 }),
+      ],
       context: baseContext,
       cooldownSnapshot: new Map(),
     })
 
     expect(decisions.map(decision => decision.id)).toEqual(['cta-a', 'cta-z'])
     expect(decisions[0]).toMatchObject({ id: 'cta-a', enabled: true, state: 'enabled' })
-    expect(decisions[1]).toMatchObject({ id: 'cta-z', enabled: false, resolutionReason: 'conflict_lost' })
+    expect(decisions[1]).toMatchObject({
+      id: 'cta-z',
+      enabled: false,
+      resolutionReason: 'conflict_lost',
+    })
   })
 
   it('suppresses duplicate dedupe keys and cooldowned entries', () => {
@@ -39,12 +48,15 @@ describe('orchestrateCtas', () => {
       policies: [
         createPolicy({ id: 'cta-primary', priority: 20, dedupeKey: () => 'same' }),
         createPolicy({ id: 'cta-duplicate', priority: 10, dedupeKey: () => 'same' }),
-        createPolicy({ id: 'cta-cooldown', priority: 5, cooldownMs: 10_000, dedupeKey: () => 'cooldown' }),
+        createPolicy({
+          id: 'cta-cooldown',
+          priority: 5,
+          cooldownMs: 10_000,
+          dedupeKey: () => 'cooldown',
+        }),
       ],
       context: baseContext,
-      cooldownSnapshot: new Map([
-        ['cooldown', 1_500],
-      ]),
+      cooldownSnapshot: new Map([['cooldown', 1_500]]),
     })
 
     expect(decisions.find(decision => decision.id === 'cta-duplicate')).toMatchObject({

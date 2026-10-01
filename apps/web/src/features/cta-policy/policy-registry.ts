@@ -100,7 +100,8 @@ const parseEmergencyDisableList = (value: string | undefined) => {
 }
 
 export const readCtaPolicyRuntime = (mode: AuthMode, requestId: string): CtaPolicyContext => {
-  const featureFlagEnabled = parseBoolean(readPublicRuntimeEnv('VITE_CTA_POLICY_REGISTRY_V1')) ?? false
+  const featureFlagEnabled =
+    parseBoolean(readPublicRuntimeEnv('VITE_CTA_POLICY_REGISTRY_V1')) ?? false
   const orchestrationOff = parseBoolean(readPublicRuntimeEnv('VITE_CTA_ORCHESTRATION_OFF')) ?? false
   const emergencyDisableSet = parseEmergencyDisableList(
     readPublicRuntimeEnv('VITE_CTA_EMERGENCY_DISABLE_LIST')
@@ -140,7 +141,9 @@ export const orchestrateCtas = ({
   for (const policy of sortedPolicies) {
     const dedupeKey = policy.dedupeKey(context)
 
-    const buildDecision = (decision: Omit<CtaDecision, 'id' | 'priority' | 'dedupeKey'>): CtaDecision => ({
+    const buildDecision = (
+      decision: Omit<CtaDecision, 'id' | 'priority' | 'dedupeKey'>
+    ): CtaDecision => ({
       id: policy.id,
       priority: policy.priority,
       dedupeKey,
@@ -182,7 +185,11 @@ export const orchestrateCtas = ({
     }
 
     const lastShownAt = cooldownSnapshot.get(dedupeKey)
-    if (typeof lastShownAt === 'number' && policy.cooldownMs > 0 && context.nowMs - lastShownAt < policy.cooldownMs) {
+    if (
+      typeof lastShownAt === 'number' &&
+      policy.cooldownMs > 0 &&
+      context.nowMs - lastShownAt < policy.cooldownMs
+    ) {
       decisions.push(
         buildDecision({
           state: 'disabled',
@@ -255,7 +262,9 @@ export const computeCtaOrchestrationMetrics = (decisions: readonly CtaDecision[]
       decision.resolutionReason === 'feature_flag_off' ||
       decision.resolutionReason === 'emergency_disabled'
   ).length
-  const conflicts = decisions.filter(decision => decision.resolutionReason === 'conflict_lost').length
+  const conflicts = decisions.filter(
+    decision => decision.resolutionReason === 'conflict_lost'
+  ).length
 
   return {
     evaluated,

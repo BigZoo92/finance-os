@@ -1,6 +1,6 @@
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
-import type { DashboardMarketsOverviewResponse } from './markets-types'
 import { getDashboardMarketsFixture } from './market-fixture-pack'
+import type { DashboardMarketsOverviewResponse } from './markets-types'
 
 const withDatasetSource = (
   payload: DashboardMarketsOverviewResponse,
@@ -41,7 +41,11 @@ export const selectDashboardMarketsDataset = async ({
   }
 
   if (forceFixtureFallback) {
-    const payload = withDatasetSource(getDashboardMarketsFixture(requestId), 'admin_fallback', 'admin')
+    const payload = withDatasetSource(
+      getDashboardMarketsFixture(requestId),
+      'admin_fallback',
+      'admin'
+    )
     logApiEvent({
       level: 'warn',
       msg: 'dashboard dataset selected via kill-switch fallback',
@@ -66,7 +70,11 @@ export const selectDashboardMarketsDataset = async ({
     })
     return livePayload
   } catch (error) {
-    const payload = withDatasetSource(getDashboardMarketsFixture(requestId), 'admin_fallback', 'admin')
+    const payload = withDatasetSource(
+      getDashboardMarketsFixture(requestId),
+      'admin_fallback',
+      'admin'
+    )
     logApiEvent({
       level: 'warn',
       msg: 'dashboard dataset selected via admin fallback',

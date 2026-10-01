@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'bun:test'
 import { resolveExternalInvestmentServerConfig } from './server-config'
 
-const input = (overrides: {
-  ibkrToken?: string
-  ibkrQueryIds?: string[]
-  binanceApiKey?: string
-  binanceApiSecret?: string
-} = {}) => ({
+const input = (
+  overrides: {
+    ibkrToken?: string
+    ibkrQueryIds?: string[]
+    binanceApiKey?: string
+    binanceApiSecret?: string
+  } = {}
+) => ({
   ibkr: {
     ...(overrides.ibkrToken ? { flexToken: overrides.ibkrToken } : {}),
     queryIds: overrides.ibkrQueryIds ?? [],
@@ -40,9 +42,7 @@ describe('resolveExternalInvestmentServerConfig', () => {
     const configured = resolveExternalInvestmentServerConfig(
       input({ binanceApiKey: 'api-key', binanceApiSecret: 'api-secret' })
     )
-    const missingSecret = resolveExternalInvestmentServerConfig(
-      input({ binanceApiKey: 'api-key' })
-    )
+    const missingSecret = resolveExternalInvestmentServerConfig(input({ binanceApiKey: 'api-key' }))
 
     expect(configured.configured.binance).toBe(true)
     expect(configured.credentials.binance).toMatchObject({ provider: 'binance', apiKey: 'api-key' })

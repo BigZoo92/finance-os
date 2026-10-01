@@ -1,4 +1,3 @@
-import { clampHistory, computeChangePct, computeFreshnessMinutes, getMarketSessionState, safeNumber } from '../domain/market-helpers'
 import {
   getMarketInstrumentDefinition,
   getMarketMacroSeriesDefinition,
@@ -6,6 +5,13 @@ import {
   type MarketInstrumentDefinition,
   type MarketMacroSeriesDefinition,
 } from '../domain/market-definitions'
+import {
+  clampHistory,
+  computeChangePct,
+  computeFreshnessMinutes,
+  getMarketSessionState,
+  safeNumber,
+} from '../domain/market-helpers'
 import type {
   MarketMacroObservationPersistInput,
   MarketProviderRunResult,
@@ -111,8 +117,14 @@ const buildQuoteFromHistory = ({
     price: lastPoint.value,
     previousClose: previousPoint?.value ?? null,
     dayChangePct: computeChangePct(lastPoint.value, previousPoint?.value ?? null),
-    weekChangePct: computeChangePct(lastPoint.value, values.length > 5 ? values[values.length - 6] ?? null : values[0] ?? null),
-    monthChangePct: computeChangePct(lastPoint.value, values.length > 21 ? values[values.length - 22] ?? null : values[0] ?? null),
+    weekChangePct: computeChangePct(
+      lastPoint.value,
+      values.length > 5 ? (values[values.length - 6] ?? null) : (values[0] ?? null)
+    ),
+    monthChangePct: computeChangePct(
+      lastPoint.value,
+      values.length > 21 ? (values[values.length - 22] ?? null) : (values[0] ?? null)
+    ),
     ytdChangePct: computeChangePct(lastPoint.value, resolveYtdAnchorValue(history)),
     history: clampHistory(
       history.map(point => ({
@@ -179,9 +191,7 @@ const applyTwelveDataOverlay = ({
     sourceProvider: 'twelve_data',
     overlayProvider: 'twelve_data',
     sourceMode: quote.is_market_open ? 'intraday' : 'delayed',
-    sourceDelayLabel: quote.is_market_open
-      ? 'Overlay US plus frais'
-      : 'Overlay US différé',
+    sourceDelayLabel: quote.is_market_open ? 'Overlay US plus frais' : 'Overlay US différé',
     sourceReason:
       'Surcouche Twelve Data appliquée sur symbole US éligible pour fournir une lecture plus fraîche lorsque disponible.',
     quoteDate,
@@ -300,7 +310,10 @@ const fetchFredObservations = async ({
       observationDate: observation.date,
       value: safeNumber(observation.value),
     }))
-    .filter((observation): observation is { observationDate: string; value: number } => observation.value !== null)
+    .filter(
+      (observation): observation is { observationDate: string; value: number } =>
+        observation.value !== null
+    )
 }
 
 export const createLiveMarketDataRefreshService = ({
@@ -513,8 +526,7 @@ export const createLiveMarketDataRefreshService = ({
         const failures = fredRuns.filter(result => result.status === 'rejected')
         providerResults.push({
           provider: 'fred',
-          status:
-            failures.length === fredRuns.length && fredRuns.length > 0 ? 'failed' : 'success',
+          status: failures.length === fredRuns.length && fredRuns.length > 0 ? 'failed' : 'success',
           requestId,
           fetchedCount: macroSeries.length,
           durationMs: Date.now() - fredStartedAt,

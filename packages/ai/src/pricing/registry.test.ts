@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import {
-  AI_PRICING_REGISTRY_VERSION,
-  estimateModelUsageCost,
-  getPricingEntry,
-} from './registry'
+import { AI_PRICING_REGISTRY_VERSION, estimateModelUsageCost, getPricingEntry } from './registry'
 
 describe('AI pricing registry', () => {
   it('exposes versioned entries for configured models', () => {

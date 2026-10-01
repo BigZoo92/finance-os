@@ -36,12 +36,12 @@ describe('assertProductionApiEnv', () => {
   }
 
   it('requires INTERNAL_SERVICE_TOKEN in production when a Python service is enabled', () => {
-    expect(() =>
-      assertProductionApiEnv({ ...base, KNOWLEDGE_SERVICE_ENABLED: true })
-    ).toThrow(/INTERNAL_SERVICE_TOKEN is required/)
-    expect(() =>
-      assertProductionApiEnv({ ...base, QUANT_SERVICE_ENABLED: true })
-    ).toThrow(/INTERNAL_SERVICE_TOKEN is required/)
+    expect(() => assertProductionApiEnv({ ...base, KNOWLEDGE_SERVICE_ENABLED: true })).toThrow(
+      /INTERNAL_SERVICE_TOKEN is required/
+    )
+    expect(() => assertProductionApiEnv({ ...base, QUANT_SERVICE_ENABLED: true })).toThrow(
+      /INTERNAL_SERVICE_TOKEN is required/
+    )
     expect(() =>
       assertProductionApiEnv({
         ...base,

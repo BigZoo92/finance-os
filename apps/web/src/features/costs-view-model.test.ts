@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { COST_PERIODS, createCostsViewModel } from './costs-view-model'
 import type {
   DashboardAdvisorSpendAnalyticsResponse,
   DashboardCostOverviewResponse,
 } from './dashboard-types'
-import { COST_PERIODS, createCostsViewModel } from './costs-view-model'
 
 const overview = (advisorStatus: 'ok' | 'degraded' = 'ok'): DashboardCostOverviewResponse => ({
   ok: true,

@@ -232,9 +232,7 @@ describe('computeAdvancedRiskMetrics', () => {
   it('never emits execution vocabulary in warnings or assumptions', () => {
     const banned = ['buy', 'sell', 'execute', 'execution', 'place order', 'leverage', 'futures']
     const wb = (term: string) =>
-      term.includes(' ')
-        ? new RegExp(term, 'i')
-        : new RegExp(`\\b${term}\\b`, 'i')
+      term.includes(' ') ? new RegExp(term, 'i') : new RegExp(`\\b${term}\\b`, 'i')
     const out = computeAdvancedRiskMetrics({ equityCurve: buildSyntheticDaily(252) })
     const text = [...out.warnings].join(' ')
     for (const term of banned) {

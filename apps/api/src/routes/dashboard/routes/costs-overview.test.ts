@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'bun:test'
-import { summarizeByCurrency, toMonthlyAmount, type CostOverviewSubscription } from './costs-overview'
+import {
+  summarizeByCurrency,
+  toMonthlyAmount,
+  type CostOverviewSubscription,
+} from './costs-overview'
 
-const subscription = (
-  overrides: Partial<CostOverviewSubscription>
-): CostOverviewSubscription => ({
+const subscription = (overrides: Partial<CostOverviewSubscription>): CostOverviewSubscription => ({
   id: 'seed-x',
   provider: 'x_twitter',
   label: 'X API Basic seat',

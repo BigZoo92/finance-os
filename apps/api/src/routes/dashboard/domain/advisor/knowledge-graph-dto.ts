@@ -53,12 +53,7 @@ export type AdvisorGraphOrigin = 'real' | 'demo' | 'example'
 
 export type AdvisorGraphFreshness = 'fresh' | 'stale' | 'unknown'
 
-export type AdvisorKnowledgeGraphMetaOrigin =
-  | 'real'
-  | 'demo'
-  | 'mixed'
-  | 'empty'
-  | 'degraded'
+export type AdvisorKnowledgeGraphMetaOrigin = 'real' | 'demo' | 'mixed' | 'empty' | 'degraded'
 
 export interface AdvisorGraphNodeDto {
   id: string
@@ -119,10 +114,7 @@ export type AdvisorKnowledgeGraphScope =
   | 'risk'
   | 'personal'
 
-const SCOPE_INCLUDES: Record<
-  AdvisorKnowledgeGraphScope,
-  ReadonlyArray<AdvisorGraphNodeKind>
-> = {
+const SCOPE_INCLUDES: Record<AdvisorKnowledgeGraphScope, ReadonlyArray<AdvisorGraphNodeKind>> = {
   overview: [
     'personal_snapshot',
     'financial_account',
@@ -154,14 +146,7 @@ const SCOPE_INCLUDES: Record<
     'asset',
     'goal',
   ],
-  recommendations: [
-    'recommendation',
-    'assumption',
-    'risk',
-    'concept',
-    'investment',
-    'asset',
-  ],
+  recommendations: ['recommendation', 'assumption', 'risk', 'concept', 'investment', 'asset'],
   sources: ['source', 'concept', 'formula', 'recommendation'],
   risk: ['risk', 'contradiction', 'assumption', 'recommendation', 'investment', 'asset'],
   personal: [
@@ -268,11 +253,7 @@ export const redactMetadata = (
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(metadata)) {
     if (!SAFE_METADATA_KEYS.has(key)) continue
-    if (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    ) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       out[key] = value
     }
   }

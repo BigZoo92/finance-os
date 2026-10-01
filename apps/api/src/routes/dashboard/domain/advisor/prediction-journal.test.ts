@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
+import type { AdvisorInvestmentRecommendationDraft } from './investment-recommendation-contract'
 import {
   createHypothesisDraftFromRecommendation,
   scorePredictionOutcome,
 } from './prediction-journal'
-import type { AdvisorInvestmentRecommendationDraft } from './investment-recommendation-contract'
 
 const recommendation: AdvisorInvestmentRecommendationDraft = {
   runId: 7,

@@ -35,7 +35,10 @@ describe('buildDemoPatternDetectionResponse', () => {
   })
 
   it('returns sufficient=false and a warning when candle count is below threshold', () => {
-    const out = buildDemoPatternDetectionResponse({ ...baseBody, candles: baseBody.candles.slice(0, 10) })
+    const out = buildDemoPatternDetectionResponse({
+      ...baseBody,
+      candles: baseBody.candles.slice(0, 10),
+    })
     expect(out.dataQuality.candleCount).toBe(10)
     expect(out.dataQuality.sufficient).toBe(false)
     expect(out.dataQuality.warnings.length).toBeGreaterThan(0)

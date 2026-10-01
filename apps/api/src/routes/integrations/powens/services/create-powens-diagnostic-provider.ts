@@ -1,5 +1,5 @@
-import type { PowensConnectionStatusView } from '../types'
 import type { DiagnosticProvider } from '../domain/diagnostics'
+import type { PowensConnectionStatusView } from '../types'
 
 const hasTimeoutSignal = (connection: PowensConnectionStatusView) => {
   return (connection.lastError ?? '').toLowerCase().includes('timeout')
@@ -7,7 +7,11 @@ const hasTimeoutSignal = (connection: PowensConnectionStatusView) => {
 
 const hasAuthSignal = (connection: PowensConnectionStatusView) => {
   const message = (connection.lastError ?? '').toLowerCase()
-  return connection.status === 'reconnect_required' || message.includes('token') || message.includes('auth')
+  return (
+    connection.status === 'reconnect_required' ||
+    message.includes('token') ||
+    message.includes('auth')
+  )
 }
 
 export const createPowensDiagnosticProvider = ({
@@ -49,12 +53,17 @@ export const createPowensDiagnosticProvider = ({
         }
       }
 
-      if (statuses.some(connection => connection.status === 'error' || connection.lastSyncStatus === 'KO')) {
+      if (
+        statuses.some(
+          connection => connection.status === 'error' || connection.lastSyncStatus === 'KO'
+        )
+      ) {
         return {
           provider: 'powens',
           outcome: 'provider_error',
           issueType: 'provider',
-          guidance: 'Provider returned errors for some connections, but dashboard data stays usable.',
+          guidance:
+            'Provider returned errors for some connections, but dashboard data stays usable.',
           retryable: true,
         }
       }

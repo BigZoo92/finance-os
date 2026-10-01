@@ -68,32 +68,33 @@ const canUseLocalStorage = () => {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
 }
 
-export const readReconnectBannerDeferredSnapshot = (): PowensReconnectBannerDeferredSnapshot | null => {
-  if (!canUseLocalStorage()) {
-    return null
-  }
-
-  try {
-    const value = window.localStorage.getItem(RECONNECT_BANNER_DEFER_STORAGE_KEY)
-
-    if (!value) {
+export const readReconnectBannerDeferredSnapshot =
+  (): PowensReconnectBannerDeferredSnapshot | null => {
+    if (!canUseLocalStorage()) {
       return null
     }
 
-    const parsed = JSON.parse(value) as Partial<PowensReconnectBannerDeferredSnapshot>
+    try {
+      const value = window.localStorage.getItem(RECONNECT_BANNER_DEFER_STORAGE_KEY)
 
-    if (typeof parsed.fingerprint !== 'string' || typeof parsed.deferredAt !== 'string') {
+      if (!value) {
+        return null
+      }
+
+      const parsed = JSON.parse(value) as Partial<PowensReconnectBannerDeferredSnapshot>
+
+      if (typeof parsed.fingerprint !== 'string' || typeof parsed.deferredAt !== 'string') {
+        return null
+      }
+
+      return {
+        fingerprint: parsed.fingerprint,
+        deferredAt: parsed.deferredAt,
+      }
+    } catch {
       return null
     }
-
-    return {
-      fingerprint: parsed.fingerprint,
-      deferredAt: parsed.deferredAt,
-    }
-  } catch {
-    return null
   }
-}
 
 export const writeReconnectBannerDeferredSnapshot = (
   snapshot: PowensReconnectBannerDeferredSnapshot

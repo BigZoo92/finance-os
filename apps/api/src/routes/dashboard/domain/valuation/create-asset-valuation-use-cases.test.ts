@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'bun:test'
 import type { schema } from '@finance-os/db'
 import type { EcbFxRate } from '../../services/fetch-ecb-fx-rates'
+import type { ValuationAssetRow, ValuationExternalPositionRow } from './collect-valuation-items'
 import {
   AssetValuationAlreadyRunningError,
   AssetValuationDisabledError,
   createAssetValuationUseCases,
 } from './create-asset-valuation-use-cases'
-import type { ValuationAssetRow, ValuationExternalPositionRow } from './collect-valuation-items'
 
 const NOW = new Date('2026-08-07T12:00:00.000Z')
 

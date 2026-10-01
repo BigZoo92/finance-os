@@ -126,9 +126,7 @@ const buildFakeRepo = (
         status: input.status,
         horizonDays: input.horizonDays ?? null,
         evaluatedAt: input.evaluatedAt.toISOString(),
-        expectedOutcomeAt: input.expectedOutcomeAt
-          ? input.expectedOutcomeAt.toISOString()
-          : null,
+        expectedOutcomeAt: input.expectedOutcomeAt ? input.expectedOutcomeAt.toISOString() : null,
         inputSummary: input.inputSummary ?? null,
         findings: input.findings ?? null,
         learningActions: input.learningActions ?? null,
@@ -522,7 +520,10 @@ describe('createPostMortemUseCases · PR8 graph ingest hook', () => {
   }
 
   it('fires the graph hook once per persisted row on the happy path', async () => {
-    const contexts = [makeContext({ recommendationKey: 'rec-a' }), makeContext({ recommendationKey: 'rec-b' })]
+    const contexts = [
+      makeContext({ recommendationKey: 'rec-a' }),
+      makeContext({ recommendationKey: 'rec-b' }),
+    ]
     const { repo } = buildFakeRepo(contexts)
     const { runner } = buildFakeRunner(makeOutput())
     const { hook, calls } = buildHook()

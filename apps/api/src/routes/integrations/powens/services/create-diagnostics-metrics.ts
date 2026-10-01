@@ -1,5 +1,5 @@
-import type { RedisClient } from '../types'
 import type { DiagnosticOutcome } from '../domain/diagnostics'
+import type { RedisClient } from '../types'
 
 const OUTCOME_COUNTER_PREFIX = 'powens:metrics:diagnostics:outcome:'
 

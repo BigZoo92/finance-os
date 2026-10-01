@@ -249,7 +249,10 @@ export const externalInvestmentPosition = pgTable(
     costBasisCurrency: text('cost_basis_currency'),
     realizedPnl: numeric('realized_pnl', { precision: 24, scale: 6 }),
     unrealizedPnl: numeric('unrealized_pnl', { precision: 24, scale: 6 }),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     degradedReasons: jsonb('degraded_reasons')
       .$type<string[]>()
       .notNull()
@@ -361,7 +364,10 @@ export const externalInvestmentValuationSnapshot = pgTable(
     source: text('source').notNull().default('unknown'),
     confidence: text('confidence').notNull().default('unknown'),
     asOf: timestamp('as_of', { withTimezone: true }).notNull(),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     degradedReasons: jsonb('degraded_reasons')
       .$type<string[]>()
       .notNull()

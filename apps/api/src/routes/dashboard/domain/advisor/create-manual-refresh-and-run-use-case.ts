@@ -95,13 +95,7 @@ const acquireLock = async (redisClient: RedisClient) => {
   return acquired === 'OK' ? token : null
 }
 
-const releaseLock = async ({
-  redisClient,
-  token,
-}: {
-  redisClient: RedisClient
-  token: string
-}) => {
+const releaseLock = async ({ redisClient, token }: { redisClient: RedisClient; token: string }) => {
   await redisClient.eval(
     'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end',
     {
@@ -196,10 +190,7 @@ const runPersonalSyncStep = async ({
   await enqueueAllConnectionsSync({ requestId })
 
   const deadline = Date.now() + POWENS_SYNC_WAIT_TIMEOUT_MS
-  let latestSummary = summarizeSyncStatuses(
-    await readModel.listPowensConnections(),
-    stageStartedAt
-  )
+  let latestSummary = summarizeSyncStatuses(await readModel.listPowensConnections(), stageStartedAt)
 
   while (!latestSummary.done && Date.now() < deadline) {
     await delay(POWENS_SYNC_POLL_INTERVAL_MS)
@@ -547,7 +538,8 @@ const runAdvisorStep = async ({
   })
 
   return {
-    status: result.run.status === 'degraded' || result.run.status === 'failed' ? 'degraded' : 'completed',
+    status:
+      result.run.status === 'degraded' || result.run.status === 'failed' ? 'degraded' : 'completed',
     details: {
       advisorRunId: result.run.id,
       advisorRunStatus: result.run.status,
@@ -843,7 +835,8 @@ export const createAdvisorManualRefreshAndRunUseCases = ({
 
     listManualOperations: async (limit: number) => repository.listManualOperations(limit),
 
-    getManualOperationById: async (operationId: string) => repository.getManualOperation(operationId),
+    getManualOperationById: async (operationId: string) =>
+      repository.getManualOperation(operationId),
 
     startManualRefreshAndRun: async ({
       requestId,

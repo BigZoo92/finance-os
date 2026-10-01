@@ -183,13 +183,7 @@ export interface DashboardAdvisorSocialSignalResponse {
 export interface DashboardAdvisorExcludedSocialSignalResponse {
   signalKey: string
   handle: string
-  exclusionReason:
-    | 'budget_cap'
-    | 'signal_cap'
-    | 'stale'
-    | 'low_score'
-    | 'policy_off'
-    | 'toggle_off'
+  exclusionReason: 'budget_cap' | 'signal_cap' | 'stale' | 'low_score' | 'policy_off' | 'toggle_off'
 }
 
 export interface DashboardAdvisorSocialSignalsResponse {
@@ -301,10 +295,7 @@ export interface DashboardAdvisorKnowledgeTopicsResponse {
   requestId: string
   generatedAt: string
   retrievalEnabled: boolean
-  browseOnlyReason:
-    | 'provider_disable_switch'
-    | 'retrieval_kill_switch'
-    | null
+  browseOnlyReason: 'provider_disable_switch' | 'retrieval_kill_switch' | null
   topics: DashboardAdvisorKnowledgeTopicResponse[]
 }
 
@@ -352,13 +343,7 @@ export interface DashboardAdvisorKnowledgeAnswerResponse {
     | null
   retrievalEnabled: boolean
   retrieval: {
-    intent:
-      | 'definition'
-      | 'comparison'
-      | 'how_to'
-      | 'risk'
-      | 'planning'
-      | 'unknown'
+    intent: 'definition' | 'comparison' | 'how_to' | 'risk' | 'planning' | 'unknown'
     matchedTopicIds: string[]
     hitCount: number
     guardrailTriggered: boolean
@@ -578,12 +563,7 @@ export interface DashboardAdvisorManualOperationStepResponse {
 export interface DashboardAdvisorManualOperationResponse {
   operationId: string
   requestId: string
-  status:
-    | 'queued'
-    | 'running'
-    | 'completed'
-    | 'failed'
-    | 'degraded'
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded'
   currentStage: DashboardAdvisorManualOperationStepKey | null
   statusMessage: string | null
   triggerSource: string

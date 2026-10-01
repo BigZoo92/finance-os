@@ -2,7 +2,9 @@ import type { DashboardTransactionCursor } from '../types'
 
 const CURSOR_PATTERN = /^(\d{4}-\d{2}-\d{2})\|(\d+)$/
 
-export const decodeDashboardCursor = (value: string | undefined): DashboardTransactionCursor | null => {
+export const decodeDashboardCursor = (
+  value: string | undefined
+): DashboardTransactionCursor | null => {
   if (!value) {
     return null
   }

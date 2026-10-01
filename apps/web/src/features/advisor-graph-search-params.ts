@@ -5,19 +5,14 @@
  * else is intentionally ignored. Pure functions so they can be unit-
  * tested without spinning up the router.
  */
-import {
-  ADVISOR_GRAPH_LENSES,
-  type AdvisorGraphLensId,
-} from './advisor-graph-lenses'
+import { ADVISOR_GRAPH_LENSES, type AdvisorGraphLensId } from './advisor-graph-lenses'
 
 export interface AdvisorGraphSearch {
   node: string | undefined
   lens: AdvisorGraphLensId | undefined
 }
 
-const VALID_LENS_IDS = new Set<AdvisorGraphLensId>(
-  ADVISOR_GRAPH_LENSES.map(l => l.id)
-)
+const VALID_LENS_IDS = new Set<AdvisorGraphLensId>(ADVISOR_GRAPH_LENSES.map(l => l.id))
 
 const MAX_NODE_ID_LENGTH = 200
 const NODE_ID_PATTERN = /^[A-Za-z0-9_:.\-/]+$/

@@ -111,9 +111,9 @@ describe('startAttentionRebuildScheduler', () => {
       intervalMs: 1000,
       trigger: async () => {},
       log: e => events.push(e),
-      setIntervalFn: (() => {
+      setIntervalFn: () => {
         throw new Error('should not be called')
-      }),
+      },
     })
     expect(timer).toBeNull()
     expect(events[0]?.reason).toBe('ATTENTION_SYSTEM_ENABLED=false')
@@ -128,9 +128,9 @@ describe('startAttentionRebuildScheduler', () => {
       intervalMs: 1000,
       trigger: async () => {},
       log: e => events.push(e),
-      setIntervalFn: (() => {
+      setIntervalFn: () => {
         throw new Error('should not be called')
-      }),
+      },
     })
     expect(timer).toBeNull()
     expect(events[0]?.reason).toBe('ATTENTION_REBUILD_AUTO_ENABLED=false')
@@ -145,9 +145,9 @@ describe('startAttentionRebuildScheduler', () => {
       intervalMs: 1000,
       trigger: async () => {},
       log: e => events.push(e),
-      setIntervalFn: (() => {
+      setIntervalFn: () => {
         throw new Error('should not be called')
-      }),
+      },
     })
     expect(timer).toBeNull()
     expect(events[0]?.reason).toBe('EXTERNAL_INTEGRATIONS_SAFE_MODE=true')
@@ -162,12 +162,12 @@ describe('startAttentionRebuildScheduler', () => {
       intervalMs: 1000,
       trigger: async () => {},
       log: () => {},
-      setIntervalFn: ((fn: () => void, ms: number) => {
+      setIntervalFn: (fn: () => void, ms: number) => {
         expect(typeof fn).toBe('function')
         expect(ms).toBe(1000)
         scheduled = true
         return 'fake-timer' as unknown as ReturnType<typeof setInterval>
-      }),
+      },
     })
     expect(scheduled).toBe(true)
     expect(timer).toBe('fake-timer' as unknown as ReturnType<typeof setInterval>)

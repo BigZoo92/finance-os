@@ -1,4 +1,11 @@
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import type { LiveMarketRefreshSummary } from '../services/fetch-live-market-data'
+import type { DashboardMarketsRepository, DashboardMarketsUseCases } from '../types'
+import {
+  buildMacroSeriesSnapshots,
+  buildMarketContextBundle,
+  buildMarketsOverviewResponse,
+} from './market-analytics'
 import {
   DEFAULT_MARKET_MACRO_SERIES_IDS,
   DEFAULT_MARKET_WATCHLIST_IDS,
@@ -9,7 +16,6 @@ import {
   PANORAMA_MARKET_IDS,
   type MarketProviderId,
 } from './market-definitions'
-import { buildMacroSeriesSnapshots, buildMarketContextBundle, buildMarketsOverviewResponse } from './market-analytics'
 import { getMarketSessionState, toIsoOrNull } from './market-helpers'
 import type {
   DashboardMarketProviderHealth,
@@ -19,8 +25,6 @@ import type {
   DashboardMarketsOverviewResponse,
   DashboardMarketsWatchlistResponse,
 } from './markets-types'
-import type { LiveMarketRefreshSummary } from '../services/fetch-live-market-data'
-import type { DashboardMarketsRepository, DashboardMarketsUseCases } from '../types'
 
 const buildProviderHealthFallback = ({
   enabledMap,
@@ -136,14 +140,16 @@ const buildOverview = async ({
   }
 
   const macroSeries = buildMacroSeriesSnapshots({
-    definitions: DEFAULT_MARKET_MACRO_SERIES_IDS
-      .map(seriesId => getMarketMacroSeriesDefinition(seriesId))
-      .filter((definition): definition is NonNullable<typeof definition> => definition !== null),
+    definitions: DEFAULT_MARKET_MACRO_SERIES_IDS.map(seriesId =>
+      getMarketMacroSeriesDefinition(seriesId)
+    ).filter((definition): definition is NonNullable<typeof definition> => definition !== null),
     observations: macroObservations,
   })
 
   const providerHealth =
-    providerRows.length > 0 ? providerRows : buildProviderHealthFallback({ enabledMap: providerEnabledMap })
+    providerRows.length > 0
+      ? providerRows
+      : buildProviderHealthFallback({ enabledMap: providerEnabledMap })
 
   const overview = buildMarketsOverviewResponse({
     requestId,
@@ -287,7 +293,8 @@ export const createDashboardMarketsUseCases = ({
 
     try {
       const result = await runLiveRefresh({
-        watchlistIds: defaultWatchlistIds.length > 0 ? defaultWatchlistIds : DEFAULT_MARKET_WATCHLIST_IDS,
+        watchlistIds:
+          defaultWatchlistIds.length > 0 ? defaultWatchlistIds : DEFAULT_MARKET_WATCHLIST_IDS,
         fredSeriesIds: fredSeriesIds.length > 0 ? fredSeriesIds : DEFAULT_MARKET_MACRO_SERIES_IDS,
         requestId,
       })
@@ -321,13 +328,18 @@ export const createDashboardMarketsUseCases = ({
         generatedAt: overview.generatedAt,
         quotes: overview.watchlist.items,
         macroSeries: buildMacroSeriesSnapshots({
-          definitions: DEFAULT_MARKET_MACRO_SERIES_IDS
-            .map(seriesId => getMarketMacroSeriesDefinition(seriesId))
-            .filter((definition): definition is NonNullable<typeof definition> => definition !== null),
+          definitions: DEFAULT_MARKET_MACRO_SERIES_IDS.map(seriesId =>
+            getMarketMacroSeriesDefinition(seriesId)
+          ).filter(
+            (definition): definition is NonNullable<typeof definition> => definition !== null
+          ),
           observations: macroObservations,
         }),
         signals: overview.signals.items,
-        providers: providerHealth.length > 0 ? providerHealth : buildProviderHealthFallback({ enabledMap: providerEnabledMap }),
+        providers:
+          providerHealth.length > 0
+            ? providerHealth
+            : buildProviderHealthFallback({ enabledMap: providerEnabledMap }),
         staleAfterMinutes,
       })
 
@@ -340,14 +352,12 @@ export const createDashboardMarketsUseCases = ({
         repository.upsertMarketCacheState({
           lastAttemptAt: new Date(),
           lastSuccessAt: new Date(),
-          lastErrorCode:
-            result.providerResults.some(provider => provider.status === 'failed')
-              ? 'PARTIAL_PROVIDER_FAILURE'
-              : null,
-          lastErrorMessage:
-            result.providerResults.some(provider => provider.status === 'failed')
-              ? 'Au moins un provider marchés a échoué. Les snapshots restent utilisables.'
-              : null,
+          lastErrorCode: result.providerResults.some(provider => provider.status === 'failed')
+            ? 'PARTIAL_PROVIDER_FAILURE'
+            : null,
+          lastErrorMessage: result.providerResults.some(provider => provider.status === 'failed')
+            ? 'Au moins un provider marchés a échoué. Les snapshots restent utilisables.'
+            : null,
           lastRequestId: requestId,
           refreshCountIncrement: 1,
           providerFailureCountIncrement: result.providerResults.filter(
@@ -361,7 +371,9 @@ export const createDashboardMarketsUseCases = ({
       ])
 
       logApiEvent({
-        level: result.providerResults.some(provider => provider.status === 'failed') ? 'warn' : 'info',
+        level: result.providerResults.some(provider => provider.status === 'failed')
+          ? 'warn'
+          : 'info',
         msg: 'dashboard markets refreshed',
         requestId,
         market_quote_count: overview.watchlist.items.length,
@@ -385,7 +397,8 @@ export const createDashboardMarketsUseCases = ({
       await repository.upsertMarketCacheState({
         lastAttemptAt: new Date(),
         lastFailureAt: new Date(),
-        lastErrorCode: error instanceof Error ? error.message.slice(0, 80) : 'MARKET_REFRESH_FAILED',
+        lastErrorCode:
+          error instanceof Error ? error.message.slice(0, 80) : 'MARKET_REFRESH_FAILED',
         lastErrorMessage: 'Market refresh failed. Cached data remains available when present.',
         lastRequestId: requestId,
         refreshCountIncrement: 1,

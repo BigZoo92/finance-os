@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { createGetDashboardAdvisorUseCase } from './create-get-dashboard-advisor-use-case'
 import type { DashboardSummaryResponse } from '../types'
+import { createGetDashboardAdvisorUseCase } from './create-get-dashboard-advisor-use-case'
 
 const summaryFixture: DashboardSummaryResponse = {
   range: '30d',

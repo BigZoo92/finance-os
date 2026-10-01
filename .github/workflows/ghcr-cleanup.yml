@@ -8,22 +8,22 @@ name: GHCR cleanup
 
 on:
   schedule:
-    - cron: "0 4 * * 0" # every Sunday at 04:00 UTC
+    - cron: '0 4 * * 0' # every Sunday at 04:00 UTC
   workflow_dispatch:
     inputs:
       keep:
         description: Number of recent versions to retain per image
         required: false
-        default: "20"
+        default: '20'
         type: string
       dry_run:
         description: Dry run (do not actually delete)
         required: false
-        default: "false"
+        default: 'false'
         type: choice
         options:
-          - "true"
-          - "false"
+          - 'true'
+          - 'false'
 
 permissions:
   packages: write
@@ -49,5 +49,5 @@ jobs:
           package-name: ${{ matrix.package }}
           package-type: container
           min-versions-to-keep: ${{ github.event.inputs.keep || '20' }}
-          delete-only-untagged-versions: "false"
+          delete-only-untagged-versions: 'false'
           dry-run: ${{ github.event.inputs.dry_run == 'true' }}

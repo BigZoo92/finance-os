@@ -84,14 +84,12 @@ export interface KnowledgeQueryShape {
 
 const MIN_REAL_NODES_FOR_RENDER = 4
 
-const isString = (value: unknown): value is string =>
-  typeof value === 'string' && value.length > 0
+const isString = (value: unknown): value is string => typeof value === 'string' && value.length > 0
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 
-const readString = (value: unknown, fallback = ''): string =>
-  isString(value) ? value : fallback
+const readString = (value: unknown, fallback = ''): string => (isString(value) ? value : fallback)
 
 const readNumber = (value: unknown): number | undefined =>
   isFiniteNumber(value) ? value : undefined
@@ -135,7 +133,8 @@ const ingestEntity = (
   const summary = readString(raw.summary)
   const confidence = readNumber(raw.confidence)
   const recency = readNumber(raw.recency)
-  const importance = confidence !== undefined ? confidence * (hints.importanceScale ?? 1) : undefined
+  const importance =
+    confidence !== undefined ? confidence * (hints.importanceScale ?? 1) : undefined
   const provenanceRefs = asArray(raw.provenanceRefs).filter(isString)
   const node: AdvisorGraphNodeDto = {
     id,
@@ -183,10 +182,7 @@ const ingestPathEntity = (acc: NodeAccumulator, raw: unknown): void => {
   upsertNode(acc, node)
 }
 
-const ingestRelation = (
-  links: AdvisorGraphLinkDto[],
-  raw: KnowledgeBundleRelationShape
-): void => {
+const ingestRelation = (links: AdvisorGraphLinkDto[], raw: KnowledgeBundleRelationShape): void => {
   const fromId = readString(raw.fromId)
   const toId = readString(raw.toId)
   if (!fromId || !toId) return
@@ -274,7 +270,8 @@ export const buildAdminKnowledgeGraphDto = ({
         ingestPathEntity(acc, hit.entity)
       }
       for (const rel of asArray(hit.relations)) {
-        if (rel && typeof rel === 'object') ingestRelation(links, rel as KnowledgeBundleRelationShape)
+        if (rel && typeof rel === 'object')
+          ingestRelation(links, rel as KnowledgeBundleRelationShape)
       }
       for (const ev of asArray(hit.evidence)) {
         const shape = readEntityShape(ev)

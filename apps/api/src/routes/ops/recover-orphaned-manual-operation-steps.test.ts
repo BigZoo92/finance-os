@@ -19,13 +19,7 @@ type StepRow = {
  * the closure values the function provides (`failed` => parent failed/degraded,
  * `skipped` => parent completed).
  */
-const createFakeDb = ({
-  operations,
-  steps,
-}: {
-  operations: OpRow[]
-  steps: StepRow[]
-}): ApiDb =>
+const createFakeDb = ({ operations, steps }: { operations: OpRow[]; steps: StepRow[] }): ApiDb =>
   ({
     select: () => ({
       from: (table: unknown) => ({
@@ -60,7 +54,9 @@ const createFakeDb = ({
     }),
   }) as unknown as ApiDb
 
-const step = (overrides: Partial<StepRow> & Pick<StepRow, 'id' | 'operationId' | 'status'>): StepRow => ({
+const step = (
+  overrides: Partial<StepRow> & Pick<StepRow, 'id' | 'operationId' | 'status'>
+): StepRow => ({
   errorCode: null,
   errorMessage: null,
   finishedAt: null,

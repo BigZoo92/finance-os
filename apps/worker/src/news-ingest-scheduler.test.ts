@@ -183,11 +183,11 @@ describe('startDashboardNewsScheduler', () => {
       log: event => {
         events.push(event)
       },
-      setIntervalFn: ((handler: () => void, timeout?: number) => {
+      setIntervalFn: (handler: () => void, timeout?: number) => {
         void handler
         intervals.push(timeout ?? 0)
         return 123 as unknown as ReturnType<typeof setInterval>
-      }),
+      },
     })
 
     expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)

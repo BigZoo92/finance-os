@@ -1,8 +1,4 @@
-import {
-  createJsonLogger,
-  type JsonLogLevel,
-  toErrorLogFields,
-} from '@finance-os/prelude'
+import { createJsonLogger, type JsonLogLevel, toErrorLogFields } from '@finance-os/prelude'
 
 const workerLogger = createJsonLogger({ service: 'worker' })
 

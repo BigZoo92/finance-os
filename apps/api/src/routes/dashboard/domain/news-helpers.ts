@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import type { NewsDirection } from './news-types'
 import type { NewsScoreLabel } from './news-taxonomy'
+import type { NewsDirection } from './news-types'
 
 export const clampScore = (value: number, min = 0, max = 100) => {
   return Math.min(max, Math.max(min, Math.round(value)))
@@ -92,11 +92,7 @@ export const toStableHash = (value: string, length = 48) => {
 
 export const uniqueStrings = (values: Array<string | null | undefined>) => {
   return Array.from(
-    new Set(
-      values
-        .map(value => value?.trim())
-        .filter((value): value is string => Boolean(value))
-    )
+    new Set(values.map(value => value?.trim()).filter((value): value is string => Boolean(value)))
   )
 }
 

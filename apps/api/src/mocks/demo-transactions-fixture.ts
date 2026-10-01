@@ -1,12 +1,12 @@
-import type { DashboardTransactionsResponse } from '../routes/dashboard/types'
 import { env } from '../env'
-import { DEMO_TRANSACTIONS_LEGACY } from './transactions.mock'
+import type { DashboardTransactionsResponse } from '../routes/dashboard/types'
 import {
   matchPersonaScenario,
   type DemoPersonaId,
   type DemoTransactionsScenario,
   type PersonaMatchResult,
 } from './demo-scenario-library'
+import { DEMO_TRANSACTIONS_LEGACY } from './transactions.mock'
 
 export const DEMO_DATASET_VERSION = 'demoDataset:v1'
 export const DEMO_DATASET_SEED = 'finance-os-demo-seed-v1'
@@ -257,7 +257,9 @@ const V1_FIXTURE_JSON = JSON.stringify([
 ])
 
 const MINIMAL_FIXTURE: DashboardTransactionsResponse['items'] =
-  DEMO_TRANSACTIONS_LEGACY.length > 0 ? [DEMO_TRANSACTIONS_LEGACY[0] as DashboardTransactionsResponse['items'][number]] : []
+  DEMO_TRANSACTIONS_LEGACY.length > 0
+    ? [DEMO_TRANSACTIONS_LEGACY[0] as DashboardTransactionsResponse['items'][number]]
+    : []
 
 const readFixtureItems = (strategy: DemoDatasetStrategy, scenario: DemoTransactionsScenario) => {
   if (scenario === 'empty') {

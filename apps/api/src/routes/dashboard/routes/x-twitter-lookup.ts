@@ -20,7 +20,6 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
-import type { ApiDb, RedisClient } from '../types'
 import {
   X_BATCH_MAX_USERNAMES,
   createXTwitterProfileClient,
@@ -33,10 +32,8 @@ import {
   dedupeXSignalSources,
   mergeTags,
 } from '../services/providers/x-twitter-signal-source-dedupe'
-import {
-  readXUsageSnapshot,
-  writeXUsageLedger,
-} from '../services/providers/x-twitter-usage-ledger'
+import { readXUsageSnapshot, writeXUsageLedger } from '../services/providers/x-twitter-usage-ledger'
+import type { ApiDb, RedisClient } from '../types'
 
 const lookupBodySchema = t.Object({
   handle: t.String({ minLength: 1, maxLength: 32 }),
@@ -101,7 +98,16 @@ export type ResolveAllSummaryItem = {
 }
 
 const mapBatchItemToStatus = (
-  itemCode: 'NOT_FOUND' | 'INVALID_HANDLE' | 'TOKEN_MISSING' | 'TOKEN_INVALID' | 'PAYMENT_REQUIRED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'PROVIDER_UNAVAILABLE' | 'NETWORK_ERROR'
+  itemCode:
+    | 'NOT_FOUND'
+    | 'INVALID_HANDLE'
+    | 'TOKEN_MISSING'
+    | 'TOKEN_INVALID'
+    | 'PAYMENT_REQUIRED'
+    | 'FORBIDDEN'
+    | 'RATE_LIMITED'
+    | 'PROVIDER_UNAVAILABLE'
+    | 'NETWORK_ERROR'
 ): ResolveAllSummaryItem['status'] => {
   switch (itemCode) {
     case 'NOT_FOUND':
@@ -137,478 +143,481 @@ export const createXTwitterLookupRoute = ({
   fetcher?: XTwitterFetch
   now?: () => Date
 }) =>
-  new Elysia().post(
-    '/signals/sources/x-twitter/lookup-handle',
-    async context => {
-      rejectInvalidCredentials(context)
-      const requestId = getRequestMeta(context).requestId
-      context.set.headers['cache-control'] = 'no-store'
+  new Elysia()
+    .post(
+      '/signals/sources/x-twitter/lookup-handle',
+      async context => {
+        rejectInvalidCredentials(context)
+        const requestId = getRequestMeta(context).requestId
+        context.set.headers['cache-control'] = 'no-store'
 
-      return demoOrReal({
-        context,
-        demo: () => {
-          context.set.status = 403
-          return {
-            ok: false as const,
-            code: 'DEMO_MODE_FORBIDDEN' as const,
-            message: 'Admin session required',
-            requestId,
-          }
-        },
-        real: async () => {
-          requireAdmin(context)
-          const body = context.body as LookupBody
-          const normalized = normalizeXHandle(body.handle)
-          if (!normalized.ok) {
-            context.set.status = 400
+        return demoOrReal({
+          context,
+          demo: () => {
+            context.set.status = 403
             return {
               ok: false as const,
-              code: 'INVALID_HANDLE' as const,
-              message: normalized.reason,
-              verificationStatus: 'unverified_invalid_handle' as const,
+              code: 'DEMO_MODE_FORBIDDEN' as const,
+              message: 'Admin session required',
               requestId,
             }
-          }
-          const handle = normalized.handle
-          const forceRefresh = body.forceRefresh === true
-          const persist = body.persist !== false
-
-          // 1. Cache check
-          const key = cacheKey(handle)
-          if (!forceRefresh) {
-            const cached = await redisClient.get(key)
-            if (cached) {
-              try {
-                const profile = JSON.parse(cached) as XTwitterProfile
-                return {
-                  ok: true as const,
-                  source: 'cache' as const,
-                  fetchedFromX: false,
-                  userReads: 0,
-                  estimatedCostUsd: 0,
-                  profile,
-                  verificationStatus: 'verified' as const,
-                  requestId,
-                }
-              } catch {
-                // Malformed cache entry — fall through to network.
+          },
+          real: async () => {
+            requireAdmin(context)
+            const body = context.body as LookupBody
+            const normalized = normalizeXHandle(body.handle)
+            if (!normalized.ok) {
+              context.set.status = 400
+              return {
+                ok: false as const,
+                code: 'INVALID_HANDLE' as const,
+                message: normalized.reason,
+                verificationStatus: 'unverified_invalid_handle' as const,
+                requestId,
               }
             }
-          }
+            const handle = normalized.handle
+            const forceRefresh = body.forceRefresh === true
+            const persist = body.persist !== false
 
-          // 2. Budget check before spending a $0.01 user read.
-          const usage = await readXUsageSnapshot(db, now())
-          if (usage.userReadsToday >= env.X_MAX_USER_READS_PER_DAY) {
+            // 1. Cache check
+            const key = cacheKey(handle)
+            if (!forceRefresh) {
+              const cached = await redisClient.get(key)
+              if (cached) {
+                try {
+                  const profile = JSON.parse(cached) as XTwitterProfile
+                  return {
+                    ok: true as const,
+                    source: 'cache' as const,
+                    fetchedFromX: false,
+                    userReads: 0,
+                    estimatedCostUsd: 0,
+                    profile,
+                    verificationStatus: 'verified' as const,
+                    requestId,
+                  }
+                } catch {
+                  // Malformed cache entry — fall through to network.
+                }
+              }
+            }
+
+            // 2. Budget check before spending a $0.01 user read.
+            const usage = await readXUsageSnapshot(db, now())
+            if (usage.userReadsToday >= env.X_MAX_USER_READS_PER_DAY) {
+              await writeXUsageLedger(db, {
+                runId: null,
+                endpoint: 'users/by/username',
+                userReads: 0,
+                estimatedCostUsd: 0,
+                statusCode: null,
+                errorCode: 'BUDGET_EXCEEDED',
+              })
+              context.set.status = 429
+              return {
+                ok: false as const,
+                code: 'BUDGET_EXCEEDED' as const,
+                message: `Daily user-read cap reached (${usage.userReadsToday}/${env.X_MAX_USER_READS_PER_DAY}).`,
+                verificationStatus: 'unverified_budget_exceeded' as const,
+                requestId,
+              }
+            }
+
+            // 3. Lookup
+            const client = createXTwitterProfileClient({
+              bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
+              fetcher,
+            })
+            const outcome = await client.lookupHandle(handle)
+
+            // 4. Ledger row, regardless of outcome.
+            const errorCode = outcome.ok ? null : outcome.code
             await writeXUsageLedger(db, {
               runId: null,
               endpoint: 'users/by/username',
-              userReads: 0,
-              estimatedCostUsd: 0,
-              statusCode: null,
-              errorCode: 'BUDGET_EXCEEDED',
-            })
-            context.set.status = 429
-            return {
-              ok: false as const,
-              code: 'BUDGET_EXCEEDED' as const,
-              message: `Daily user-read cap reached (${usage.userReadsToday}/${env.X_MAX_USER_READS_PER_DAY}).`,
-              verificationStatus: 'unverified_budget_exceeded' as const,
-              requestId,
-            }
-          }
-
-          // 3. Lookup
-          const client = createXTwitterProfileClient({
-            bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
-            fetcher,
-          })
-          const outcome = await client.lookupHandle(handle)
-
-          // 4. Ledger row, regardless of outcome.
-          const errorCode = outcome.ok ? null : outcome.code
-          await writeXUsageLedger(db, {
-            runId: null,
-            endpoint: 'users/by/username',
-            userReads: outcome.userReads,
-            estimatedCostUsd: outcome.estimatedCostUsd,
-            statusCode: outcome.ok ? 200 : outcome.statusCode,
-            errorCode,
-          })
-
-          if (!outcome.ok) {
-            const status =
-              outcome.code === 'TOKEN_MISSING' ||
-              outcome.code === 'TOKEN_INVALID'
-                ? 401
-                : outcome.code === 'PAYMENT_REQUIRED'
-                  ? 402
-                  : outcome.code === 'FORBIDDEN'
-                    ? 403
-                    : outcome.code === 'NOT_FOUND'
-                      ? 404
-                      : outcome.code === 'RATE_LIMITED'
-                        ? 429
-                        : outcome.code === 'INVALID_HANDLE'
-                          ? 400
-                          : 502
-            context.set.status = status
-            return {
-              ok: false as const,
-              code: outcome.code,
-              message: outcome.message,
-              verificationStatus: mapVerificationStatus(outcome.code),
               userReads: outcome.userReads,
               estimatedCostUsd: outcome.estimatedCostUsd,
-              statusCode: outcome.statusCode,
+              statusCode: outcome.ok ? 200 : outcome.statusCode,
+              errorCode,
+            })
+
+            if (!outcome.ok) {
+              const status =
+                outcome.code === 'TOKEN_MISSING' || outcome.code === 'TOKEN_INVALID'
+                  ? 401
+                  : outcome.code === 'PAYMENT_REQUIRED'
+                    ? 402
+                    : outcome.code === 'FORBIDDEN'
+                      ? 403
+                      : outcome.code === 'NOT_FOUND'
+                        ? 404
+                        : outcome.code === 'RATE_LIMITED'
+                          ? 429
+                          : outcome.code === 'INVALID_HANDLE'
+                            ? 400
+                            : 502
+              context.set.status = status
+              return {
+                ok: false as const,
+                code: outcome.code,
+                message: outcome.message,
+                verificationStatus: mapVerificationStatus(outcome.code),
+                userReads: outcome.userReads,
+                estimatedCostUsd: outcome.estimatedCostUsd,
+                statusCode: outcome.statusCode,
+                requestId,
+              }
+            }
+
+            // 5. Cache 24h
+            await redisClient.set(key, JSON.stringify(outcome.profile), { EX: CACHE_TTL_SECONDS })
+
+            // 6. Optional persist to signal_source when the handle is followed.
+            let persisted = false
+            if (persist) {
+              persisted = await persistProfileOnSignalSource({
+                db,
+                handle,
+                profile: outcome.profile,
+                now: now(),
+              })
+            }
+
+            return {
+              ok: true as const,
+              source: 'x_api' as const,
+              fetchedFromX: true,
+              userReads: outcome.userReads,
+              estimatedCostUsd: outcome.estimatedCostUsd,
+              persisted,
+              profile: outcome.profile,
+              verificationStatus: 'verified' as const,
               requestId,
             }
-          }
+          },
+        })
+      },
+      { body: lookupBodySchema }
+    )
+    .post(
+      '/signals/sources/x-twitter/resolve-all',
+      async context => {
+        rejectInvalidCredentials(context)
+        const requestId = getRequestMeta(context).requestId
+        context.set.headers['cache-control'] = 'no-store'
 
-          // 5. Cache 24h
-          await redisClient.set(key, JSON.stringify(outcome.profile), { EX: CACHE_TTL_SECONDS })
+        return demoOrReal({
+          context,
+          demo: () => {
+            context.set.status = 403
+            return {
+              ok: false as const,
+              code: 'DEMO_MODE_FORBIDDEN' as const,
+              message: 'Admin session required',
+              requestId,
+            }
+          },
+          real: async () => {
+            requireAdmin(context)
+            const body = (context.body ?? {}) as { force?: boolean; sourceIds?: number[] }
+            const force = body.force === true
+            const filterIds =
+              Array.isArray(body.sourceIds) && body.sourceIds.length > 0
+                ? body.sourceIds.filter(id => Number.isInteger(id) && id > 0)
+                : null
 
-          // 6. Optional persist to signal_source when the handle is followed.
-          let persisted = false
-          if (persist) {
-            persisted = await persistProfileOnSignalSource({
-              db,
-              handle,
-              profile: outcome.profile,
-              now: now(),
-            })
-          }
-
-          return {
-            ok: true as const,
-            source: 'x_api' as const,
-            fetchedFromX: true,
-            userReads: outcome.userReads,
-            estimatedCostUsd: outcome.estimatedCostUsd,
-            persisted,
-            profile: outcome.profile,
-            verificationStatus: 'verified' as const,
-            requestId,
-          }
-        },
-      })
-    },
-    { body: lookupBodySchema }
-  )
-  .post(
-    '/signals/sources/x-twitter/resolve-all',
-    async context => {
-      rejectInvalidCredentials(context)
-      const requestId = getRequestMeta(context).requestId
-      context.set.headers['cache-control'] = 'no-store'
-
-      return demoOrReal({
-        context,
-        demo: () => {
-          context.set.status = 403
-          return {
-            ok: false as const,
-            code: 'DEMO_MODE_FORBIDDEN' as const,
-            message: 'Admin session required',
-            requestId,
-          }
-        },
-        real: async () => {
-          requireAdmin(context)
-          const body = (context.body ?? {}) as { force?: boolean; sourceIds?: number[] }
-          const force = body.force === true
-          const filterIds =
-            Array.isArray(body.sourceIds) && body.sourceIds.length > 0
-              ? body.sourceIds.filter(id => Number.isInteger(id) && id > 0)
-              : null
-
-          // 1. Read X rows, canonicalize before any lookup, and disable
-          //    historical duplicates so unresolved URL-shaped rows cannot
-          //    poison dry-run/sync after a canonical row exists.
-          const baseConditions = [eq(schema.signalSource.provider, 'x_twitter')]
-          const allRows = await db
-            .select({
-              id: schema.signalSource.id,
-              handle: schema.signalSource.handle,
-              externalId: schema.signalSource.externalId,
-              enabled: schema.signalSource.enabled,
-              priority: schema.signalSource.priority,
-              tags: schema.signalSource.tags,
-              profileImageUrl: schema.signalSource.profileImageUrl,
-              profileMetadata: schema.signalSource.profileMetadata,
-              profileCachedAt: schema.signalSource.profileCachedAt,
-              createdAt: schema.signalSource.createdAt,
-              updatedAt: schema.signalSource.updatedAt,
-            })
-            .from(schema.signalSource)
-            .where(and(...baseConditions))
-
-          const scopedRows = filterIds
-            ? allRows.filter(r => filterIds.includes(r.id))
-            : allRows
-          const deduped = dedupeXSignalSources(scopedRows)
-          const duplicateItems: ResolveAllSummaryItem[] = []
-          for (const duplicate of deduped.dedupedSources) {
-            const duplicateRow = scopedRows.find(row => row.id === duplicate.duplicateId)
-            const keptRow = scopedRows.find(row => row.id === duplicate.keptId)
-            if (!duplicateRow || !keptRow) continue
-
-            await db
-              .update(schema.signalSource)
-              .set({
-                tags: mergeTags([keptRow, duplicateRow]),
-                enabled: keptRow.enabled || duplicateRow.enabled,
-                updatedAt: now(),
+            // 1. Read X rows, canonicalize before any lookup, and disable
+            //    historical duplicates so unresolved URL-shaped rows cannot
+            //    poison dry-run/sync after a canonical row exists.
+            const baseConditions = [eq(schema.signalSource.provider, 'x_twitter')]
+            const allRows = await db
+              .select({
+                id: schema.signalSource.id,
+                handle: schema.signalSource.handle,
+                externalId: schema.signalSource.externalId,
+                enabled: schema.signalSource.enabled,
+                priority: schema.signalSource.priority,
+                tags: schema.signalSource.tags,
+                profileImageUrl: schema.signalSource.profileImageUrl,
+                profileMetadata: schema.signalSource.profileMetadata,
+                profileCachedAt: schema.signalSource.profileCachedAt,
+                createdAt: schema.signalSource.createdAt,
+                updatedAt: schema.signalSource.updatedAt,
               })
-              .where(eq(schema.signalSource.id, keptRow.id))
-            await db
-              .update(schema.signalSource)
-              .set({
-                enabled: false,
-                lastError: `disabled_duplicate:${duplicate.canonicalHandle}:kept:${duplicate.keptId}`,
-                updatedAt: now(),
+              .from(schema.signalSource)
+              .where(and(...baseConditions))
+
+            const scopedRows = filterIds ? allRows.filter(r => filterIds.includes(r.id)) : allRows
+            const deduped = dedupeXSignalSources(scopedRows)
+            const duplicateItems: ResolveAllSummaryItem[] = []
+            for (const duplicate of deduped.dedupedSources) {
+              const duplicateRow = scopedRows.find(row => row.id === duplicate.duplicateId)
+              const keptRow = scopedRows.find(row => row.id === duplicate.keptId)
+              if (!duplicateRow || !keptRow) continue
+
+              await db
+                .update(schema.signalSource)
+                .set({
+                  tags: mergeTags([keptRow, duplicateRow]),
+                  enabled: keptRow.enabled || duplicateRow.enabled,
+                  updatedAt: now(),
+                })
+                .where(eq(schema.signalSource.id, keptRow.id))
+              await db
+                .update(schema.signalSource)
+                .set({
+                  enabled: false,
+                  lastError: `disabled_duplicate:${duplicate.canonicalHandle}:kept:${duplicate.keptId}`,
+                  updatedAt: now(),
+                })
+                .where(eq(schema.signalSource.id, duplicate.duplicateId))
+
+              duplicateItems.push({
+                sourceId: duplicate.duplicateId,
+                handleBefore: duplicate.rawHandle,
+                handleAfter: duplicate.canonicalHandle,
+                externalId: keptRow.externalId,
+                status: 'disabled_duplicate',
+                errorMessage: duplicate.reason,
               })
-              .where(eq(schema.signalSource.id, duplicate.duplicateId))
+            }
 
-            duplicateItems.push({
-              sourceId: duplicate.duplicateId,
-              handleBefore: duplicate.rawHandle,
-              handleAfter: duplicate.canonicalHandle,
-              externalId: keptRow.externalId,
-              status: 'disabled_duplicate',
-              errorMessage: duplicate.reason,
+            const rows = deduped.sources.filter(
+              row => row.enabled && (force || row.externalId === null)
+            )
+
+            if (rows.length === 0) {
+              const summary = {
+                total: scopedRows.length,
+                resolved: 0,
+                alreadyResolved: 0,
+                invalidHandle: 0,
+                notFound: 0,
+                providerError: 0,
+                tokenInvalid: 0,
+                rateLimited: 0,
+                forbidden: 0,
+                mergedDuplicate: 0,
+                disabledDuplicate: duplicateItems.length,
+                deletedDuplicate: 0,
+                dedupedSourcesCount: deduped.dedupedSourcesCount,
+              }
+              return {
+                ok: true as const,
+                requestId,
+                summary,
+                items: duplicateItems,
+                userReads: 0,
+                estimatedCostUsd: 0,
+                rateLimit: null,
+                providerError: null,
+                dedupedSourcesCount: deduped.dedupedSourcesCount,
+                dedupedSources: deduped.dedupedSources,
+              }
+            }
+
+            // 2. Budget gate. Worst-case = rows.length user reads — refuse if
+            //    we don't have headroom under the daily cap.
+            const usage = await readXUsageSnapshot(db, now())
+            const headroom = env.X_MAX_USER_READS_PER_DAY - usage.userReadsToday
+            if (headroom <= 0) {
+              context.set.status = 429
+              return {
+                ok: false as const,
+                code: 'BUDGET_EXCEEDED' as const,
+                message: `Daily user-read cap reached (${usage.userReadsToday}/${env.X_MAX_USER_READS_PER_DAY}).`,
+                requestId,
+              }
+            }
+
+            // 3. Normalize all handles first. Invalid rows are reported with
+            //    the original `handle` so the admin can fix them in the UI.
+            type Candidate = {
+              sourceId: number
+              originalHandle: string
+              canonical: string | null
+              invalidReason: string | null
+            }
+            const candidates: Candidate[] = rows.map(r => {
+              const normalized = normalizeXHandle(r.handle)
+              return normalized.ok
+                ? {
+                    sourceId: r.id,
+                    originalHandle: r.handle,
+                    canonical: normalized.handle,
+                    invalidReason: null,
+                  }
+                : {
+                    sourceId: r.id,
+                    originalHandle: r.handle,
+                    canonical: null,
+                    invalidReason: normalized.reason,
+                  }
             })
-          }
 
-          const rows = deduped.sources.filter(
-            row => row.enabled && (force || row.externalId === null)
-          )
+            const items: ResolveAllSummaryItem[] = [...duplicateItems]
+            for (const c of candidates) {
+              if (c.canonical === null) {
+                items.push({
+                  sourceId: c.sourceId,
+                  handleBefore: c.originalHandle,
+                  handleAfter: null,
+                  externalId: null,
+                  status: 'invalid_handle',
+                  errorMessage: c.invalidReason,
+                })
+              }
+            }
 
-          if (rows.length === 0) {
+            const toLookup = candidates.filter(c => c.canonical !== null)
+            // 4. Chunk to X_BATCH_MAX_USERNAMES. Track the aggregated rate
+            //    limit + provider error so the UI can show one banner.
+            let userReadsTotal = 0
+            let estimatedCostUsdTotal = 0
+            let lastRateLimit: XTwitterBatchLookupOutcome['rateLimit'] = null
+            let providerError: XTwitterBatchLookupOutcome['providerError'] = null
+            const client = createXTwitterProfileClient({
+              bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
+              fetcher,
+            })
+            for (let i = 0; i < toLookup.length; i += X_BATCH_MAX_USERNAMES) {
+              // Stop chunking early if the previous chunk already produced a
+              // batch-wide provider error — repeating the same 401/429 just
+              // burns the rate-limit window.
+              if (providerError !== null) break
+              const chunk = toLookup.slice(i, i + X_BATCH_MAX_USERNAMES)
+              const handles = chunk.map(c => c.canonical as string)
+              const outcome = await client.lookupHandlesBatch(handles)
+              userReadsTotal += outcome.userReads
+              estimatedCostUsdTotal += outcome.estimatedCostUsd
+              if (outcome.rateLimit) lastRateLimit = outcome.rateLimit
+              if (outcome.providerError) providerError = outcome.providerError
+
+              // 5. Persist + emit per-item summary
+              for (const item of outcome.items) {
+                const candidate =
+                  chunk.find(c => c.canonical === item.canonicalHandle) ??
+                  chunk.find(c => c.originalHandle === item.handle)
+                const sourceId = candidate?.sourceId ?? rows.find(r => r.handle === item.handle)?.id
+                if (sourceId === undefined) continue
+                const handleBefore = candidate?.originalHandle ?? item.handle
+
+                if (item.ok) {
+                  await persistProfileOnSignalSourceById({
+                    db,
+                    sourceId,
+                    canonicalHandle: item.profile.username,
+                    profile: item.profile,
+                    now: now(),
+                  })
+                  // Cache 24h so subsequent /lookup-handle hits skip the
+                  // network call.
+                  await redisClient.set(
+                    cacheKey(item.profile.username),
+                    JSON.stringify(item.profile),
+                    { EX: 24 * 60 * 60 }
+                  )
+                  items.push({
+                    sourceId,
+                    handleBefore,
+                    handleAfter: item.profile.username,
+                    externalId: item.profile.id,
+                    status: 'resolved',
+                    errorMessage: null,
+                  })
+                } else {
+                  items.push({
+                    sourceId,
+                    handleBefore,
+                    handleAfter: item.canonicalHandle,
+                    externalId: null,
+                    status: mapBatchItemToStatus(item.code),
+                    errorMessage: item.message,
+                  })
+                }
+              }
+
+              // Single ledger row per batch HTTP call.
+              await writeXUsageLedger(db, {
+                runId: null,
+                endpoint: 'users/by',
+                userReads: outcome.userReads,
+                estimatedCostUsd: outcome.estimatedCostUsd,
+                statusCode: outcome.providerError?.statusCode ?? 200,
+                errorCode: outcome.providerError?.code ?? null,
+              })
+            }
+
+            // 6. Mark sources that were already resolved (force=false skipped
+            //    them entirely from the candidate set, so this branch only
+            //    matters when force=true and the row was already resolved
+            //    but a subsequent X call surfaced an error — handled inline
+            //    above). For the default flow, candidates with non-null
+            //    externalId would have been filtered out by the where clause
+            //    so we don't need a special "already_resolved" case here.
+
+            logApiEvent({
+              level: providerError ? 'warn' : 'info',
+              msg: 'x_twitter_resolve_all',
+              requestId,
+              stage: 'resolve_all',
+              totalRows: rows.length,
+              resolved: items.filter(i => i.status === 'resolved').length,
+              invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
+              notFound: items.filter(i => i.status === 'not_found').length,
+              providerErrorCount: items.filter(
+                i =>
+                  i.status === 'provider_error' ||
+                  i.status === 'rate_limited' ||
+                  i.status === 'forbidden' ||
+                  i.status === 'token_missing_or_invalid'
+              ).length,
+              userReadsTotal,
+              estimatedCostUsdTotal,
+              providerErrorCode: providerError?.code ?? null,
+            })
+
             const summary = {
               total: scopedRows.length,
-              resolved: 0,
+              resolved: items.filter(i => i.status === 'resolved').length,
               alreadyResolved: 0,
-              invalidHandle: 0,
-              notFound: 0,
-              providerError: 0,
-              tokenInvalid: 0,
-              rateLimited: 0,
-              forbidden: 0,
-              mergedDuplicate: 0,
-              disabledDuplicate: duplicateItems.length,
-              deletedDuplicate: 0,
+              invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
+              notFound: items.filter(i => i.status === 'not_found').length,
+              providerError: items.filter(i => i.status === 'provider_error').length,
+              tokenInvalid: items.filter(i => i.status === 'token_missing_or_invalid').length,
+              rateLimited: items.filter(i => i.status === 'rate_limited').length,
+              forbidden: items.filter(i => i.status === 'forbidden').length,
+              mergedDuplicate: items.filter(i => i.status === 'merged_duplicate').length,
+              disabledDuplicate: items.filter(i => i.status === 'disabled_duplicate').length,
+              deletedDuplicate: items.filter(i => i.status === 'deleted_duplicate').length,
               dedupedSourcesCount: deduped.dedupedSourcesCount,
             }
+
             return {
               ok: true as const,
               requestId,
               summary,
-              items: duplicateItems,
-              userReads: 0,
-              estimatedCostUsd: 0,
-              rateLimit: null,
-              providerError: null,
+              items,
+              userReads: userReadsTotal,
+              estimatedCostUsd: estimatedCostUsdTotal,
+              rateLimit: lastRateLimit,
+              providerError,
               dedupedSourcesCount: deduped.dedupedSourcesCount,
               dedupedSources: deduped.dedupedSources,
             }
-          }
-
-          // 2. Budget gate. Worst-case = rows.length user reads — refuse if
-          //    we don't have headroom under the daily cap.
-          const usage = await readXUsageSnapshot(db, now())
-          const headroom = env.X_MAX_USER_READS_PER_DAY - usage.userReadsToday
-          if (headroom <= 0) {
-            context.set.status = 429
-            return {
-              ok: false as const,
-              code: 'BUDGET_EXCEEDED' as const,
-              message: `Daily user-read cap reached (${usage.userReadsToday}/${env.X_MAX_USER_READS_PER_DAY}).`,
-              requestId,
-            }
-          }
-
-          // 3. Normalize all handles first. Invalid rows are reported with
-          //    the original `handle` so the admin can fix them in the UI.
-          type Candidate = {
-            sourceId: number
-            originalHandle: string
-            canonical: string | null
-            invalidReason: string | null
-          }
-          const candidates: Candidate[] = rows.map(r => {
-            const normalized = normalizeXHandle(r.handle)
-            return normalized.ok
-              ? { sourceId: r.id, originalHandle: r.handle, canonical: normalized.handle, invalidReason: null }
-              : {
-                  sourceId: r.id,
-                  originalHandle: r.handle,
-                  canonical: null,
-                  invalidReason: normalized.reason,
-                }
-          })
-
-          const items: ResolveAllSummaryItem[] = [...duplicateItems]
-          for (const c of candidates) {
-            if (c.canonical === null) {
-              items.push({
-                sourceId: c.sourceId,
-                handleBefore: c.originalHandle,
-                handleAfter: null,
-                externalId: null,
-                status: 'invalid_handle',
-                errorMessage: c.invalidReason,
-              })
-            }
-          }
-
-          const toLookup = candidates.filter(c => c.canonical !== null)
-          // 4. Chunk to X_BATCH_MAX_USERNAMES. Track the aggregated rate
-          //    limit + provider error so the UI can show one banner.
-          let userReadsTotal = 0
-          let estimatedCostUsdTotal = 0
-          let lastRateLimit: XTwitterBatchLookupOutcome['rateLimit'] = null
-          let providerError: XTwitterBatchLookupOutcome['providerError'] = null
-          const client = createXTwitterProfileClient({
-            bearerToken: env.NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN ?? '',
-            fetcher,
-          })
-          for (let i = 0; i < toLookup.length; i += X_BATCH_MAX_USERNAMES) {
-            // Stop chunking early if the previous chunk already produced a
-            // batch-wide provider error — repeating the same 401/429 just
-            // burns the rate-limit window.
-            if (providerError !== null) break
-            const chunk = toLookup.slice(i, i + X_BATCH_MAX_USERNAMES)
-            const handles = chunk.map(c => c.canonical as string)
-            const outcome = await client.lookupHandlesBatch(handles)
-            userReadsTotal += outcome.userReads
-            estimatedCostUsdTotal += outcome.estimatedCostUsd
-            if (outcome.rateLimit) lastRateLimit = outcome.rateLimit
-            if (outcome.providerError) providerError = outcome.providerError
-
-            // 5. Persist + emit per-item summary
-            for (const item of outcome.items) {
-              const candidate = chunk.find(c => c.canonical === item.canonicalHandle) ??
-                chunk.find(c => c.originalHandle === item.handle)
-              const sourceId = candidate?.sourceId ?? rows.find(r => r.handle === item.handle)?.id
-              if (sourceId === undefined) continue
-              const handleBefore = candidate?.originalHandle ?? item.handle
-
-              if (item.ok) {
-                await persistProfileOnSignalSourceById({
-                  db,
-                  sourceId,
-                  canonicalHandle: item.profile.username,
-                  profile: item.profile,
-                  now: now(),
-                })
-                // Cache 24h so subsequent /lookup-handle hits skip the
-                // network call.
-                await redisClient.set(
-                  cacheKey(item.profile.username),
-                  JSON.stringify(item.profile),
-                  { EX: 24 * 60 * 60 }
-                )
-                items.push({
-                  sourceId,
-                  handleBefore,
-                  handleAfter: item.profile.username,
-                  externalId: item.profile.id,
-                  status: 'resolved',
-                  errorMessage: null,
-                })
-              } else {
-                items.push({
-                  sourceId,
-                  handleBefore,
-                  handleAfter: item.canonicalHandle,
-                  externalId: null,
-                  status: mapBatchItemToStatus(item.code),
-                  errorMessage: item.message,
-                })
-              }
-            }
-
-            // Single ledger row per batch HTTP call.
-            await writeXUsageLedger(db, {
-              runId: null,
-              endpoint: 'users/by',
-              userReads: outcome.userReads,
-              estimatedCostUsd: outcome.estimatedCostUsd,
-              statusCode: outcome.providerError?.statusCode ?? 200,
-              errorCode: outcome.providerError?.code ?? null,
-            })
-          }
-
-          // 6. Mark sources that were already resolved (force=false skipped
-          //    them entirely from the candidate set, so this branch only
-          //    matters when force=true and the row was already resolved
-          //    but a subsequent X call surfaced an error — handled inline
-          //    above). For the default flow, candidates with non-null
-          //    externalId would have been filtered out by the where clause
-          //    so we don't need a special "already_resolved" case here.
-
-          logApiEvent({
-            level: providerError ? 'warn' : 'info',
-            msg: 'x_twitter_resolve_all',
-            requestId,
-            stage: 'resolve_all',
-            totalRows: rows.length,
-            resolved: items.filter(i => i.status === 'resolved').length,
-            invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
-            notFound: items.filter(i => i.status === 'not_found').length,
-            providerErrorCount: items.filter(
-              i =>
-                i.status === 'provider_error' ||
-                i.status === 'rate_limited' ||
-                i.status === 'forbidden' ||
-                i.status === 'token_missing_or_invalid'
-            ).length,
-            userReadsTotal,
-            estimatedCostUsdTotal,
-            providerErrorCode: providerError?.code ?? null,
-          })
-
-          const summary = {
-            total: scopedRows.length,
-            resolved: items.filter(i => i.status === 'resolved').length,
-            alreadyResolved: 0,
-            invalidHandle: items.filter(i => i.status === 'invalid_handle').length,
-            notFound: items.filter(i => i.status === 'not_found').length,
-            providerError: items.filter(i => i.status === 'provider_error').length,
-            tokenInvalid: items.filter(i => i.status === 'token_missing_or_invalid')
-              .length,
-            rateLimited: items.filter(i => i.status === 'rate_limited').length,
-            forbidden: items.filter(i => i.status === 'forbidden').length,
-            mergedDuplicate: items.filter(i => i.status === 'merged_duplicate').length,
-            disabledDuplicate: items.filter(i => i.status === 'disabled_duplicate').length,
-            deletedDuplicate: items.filter(i => i.status === 'deleted_duplicate').length,
-            dedupedSourcesCount: deduped.dedupedSourcesCount,
-          }
-
-          return {
-            ok: true as const,
-            requestId,
-            summary,
-            items,
-            userReads: userReadsTotal,
-            estimatedCostUsd: estimatedCostUsdTotal,
-            rateLimit: lastRateLimit,
-            providerError,
-            dedupedSourcesCount: deduped.dedupedSourcesCount,
-            dedupedSources: deduped.dedupedSources,
-          }
-        },
-      })
-    },
-    {
-      body: t.Optional(
-        t.Object({
-          force: t.Optional(t.Boolean()),
-          sourceIds: t.Optional(t.Array(t.Integer())),
+          },
         })
-      ),
-    }
-  )
+      },
+      {
+        body: t.Optional(
+          t.Object({
+            force: t.Optional(t.Boolean()),
+            sourceIds: t.Optional(t.Array(t.Integer())),
+          })
+        ),
+      }
+    )
 
 const mapVerificationStatus = (
   code: string

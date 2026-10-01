@@ -51,13 +51,11 @@ export interface Provider<
 
 export interface ProviderRegistryContract {
   /** All adapters registered for the given capability, in registration order. */
-  readonly list: <C extends ProviderCapability>(
-    capability: C,
-  ) => ReadonlyArray<Provider<C>>
+  readonly list: <C extends ProviderCapability>(capability: C) => ReadonlyArray<Provider<C>>
   /** Lookup a specific adapter by `(capability, providerId)`. */
   readonly get: <C extends ProviderCapability>(
     capability: C,
-    providerId: ProviderId,
+    providerId: ProviderId
   ) => Provider<C> | undefined
   /** Health snapshot for every registered adapter, keyed by provider id. */
   readonly health: () => ReadonlyMap<ProviderId, ProviderHealth>

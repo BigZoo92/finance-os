@@ -37,17 +37,14 @@ const getOrCreateSession = async (
   }
 
   try {
-    const response = await fetch(
-      `${serviceUrl}/xrpc/com.atproto.server.createSession`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-request-id': requestId,
-        },
-        body: JSON.stringify({ identifier: handle, password: appPassword }),
-      }
-    )
+    const response = await fetch(`${serviceUrl}/xrpc/com.atproto.server.createSession`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-request-id': requestId,
+      },
+      body: JSON.stringify({ identifier: handle, password: appPassword }),
+    })
     if (!response.ok) {
       cachedSession = null
       return null

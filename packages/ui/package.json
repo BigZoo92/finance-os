@@ -1,7 +1,7 @@
 {
   "name": "@finance-os/ui",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     "./styles.css": "./src/styles/preflight.css",
@@ -13,10 +13,6 @@
     "./icons/types": "./src/icons/types.ts",
     "./icons/pixel": "./src/icons/pixel/index.ts",
     "./icons/pixel/*": "./src/icons/pixel/*.tsx"
-  },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -32,5 +28,9 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "vitest": "5.0.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

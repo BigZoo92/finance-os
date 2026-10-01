@@ -81,24 +81,20 @@ export const buildCockpitViewModel = (
 
   const investmentItems = assets
     .filter(asset => asset.type === 'investment')
-    .map(
-      (asset): CockpitBreakdownItem => ({
-        id: `asset-${asset.assetId}`,
-        label: asset.name,
-        detail: asset.providerInstitutionName,
-        value: assetValueInBaseCurrency(asset),
-      })
-    )
+    .map((asset): CockpitBreakdownItem => ({
+      id: `asset-${asset.assetId}`,
+      label: asset.name,
+      detail: asset.providerInstitutionName,
+      value: assetValueInBaseCurrency(asset),
+    }))
   const manualItems = assets
     .filter(asset => asset.type === 'manual')
-    .map(
-      (asset): CockpitBreakdownItem => ({
-        id: `asset-${asset.assetId}`,
-        label: asset.name,
-        detail: 'Actif manuel',
-        value: assetValueInBaseCurrency(asset),
-      })
-    )
+    .map((asset): CockpitBreakdownItem => ({
+      id: `asset-${asset.assetId}`,
+      label: asset.name,
+      detail: 'Actif manuel',
+      value: assetValueInBaseCurrency(asset),
+    }))
 
   const valuation = summary?.valuation ?? null
   const valuationState: CockpitViewModel['valuationState'] = !valuation

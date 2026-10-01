@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { Elysia } from 'elysia'
 import { toSafeErrorMessage } from '@finance-os/prelude/errors'
+import { Elysia } from 'elysia'
 import { getAuth, getRequestMeta } from '../../../../auth/context'
 import { demoOrReal } from '../../../../auth/demo-mode'
 import { logApiEvent } from '../../../../observability/logger'

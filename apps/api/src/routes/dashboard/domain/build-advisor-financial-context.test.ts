@@ -7,7 +7,7 @@ describe('buildAdvisorFinancialContext', () => {
     const summary: DashboardSummaryResponse = {
       range: '30d',
       valuation: null,
-  totals: { balance: 12345.678, unknownValuationAssetCount: 0, incomes: 2500, expenses: 1800 },
+      totals: { balance: 12345.678, unknownValuationAssetCount: 0, incomes: 2500, expenses: 1800 },
       connections: [],
       accounts: [],
       assets: [

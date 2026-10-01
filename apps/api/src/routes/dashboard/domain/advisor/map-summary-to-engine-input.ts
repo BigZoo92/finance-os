@@ -1,10 +1,13 @@
+import type {
+  ExternalInvestmentBundle,
+  ExternalInvestmentAssetClass,
+} from '@finance-os/external-investments'
 import {
   ASSET_CLASS_ASSUMPTIONS,
   type AssetClass,
   type ExternalSignalSummary,
   type FinanceEngineInput,
 } from '@finance-os/finance-engine'
-import type { ExternalInvestmentBundle, ExternalInvestmentAssetClass } from '@finance-os/external-investments'
 import type { DashboardGoalResponse, DashboardSummaryResponse } from '../../types'
 import type { NewsContextBundle } from '../news-types'
 
@@ -75,7 +78,8 @@ export const mapSummaryToFinanceEngineInput = ({
     assetClass: ExternalInvestmentAssetClass | string | null | undefined
   ): AssetClass | null => {
     if (assetClass === 'cash' || assetClass === 'stablecoin') return 'cash'
-    if (assetClass === 'equity' || assetClass === 'etf' || assetClass === 'fund') return 'equity_global'
+    if (assetClass === 'equity' || assetClass === 'etf' || assetClass === 'fund')
+      return 'equity_global'
     if (assetClass === 'bond') return 'fixed_income'
     if (assetClass === 'commodity') return 'gold'
     if (assetClass === 'crypto') return 'alternatives'

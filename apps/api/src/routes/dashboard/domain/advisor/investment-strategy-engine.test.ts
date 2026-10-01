@@ -43,7 +43,9 @@ const strategy: StrategyProfileDto = {
 const buckets = defaultBuckets(1).map((bucket, index) => ({ ...bucket, id: index + 1 }))
 const policies = defaultAccountPolicies(1).map((policy, index) => ({ ...policy, id: index + 1 }))
 
-const candidate = (input: Partial<AssetCandidateDto> & Pick<AssetCandidateDto, 'symbol'>): AssetCandidateDto => ({
+const candidate = (
+  input: Partial<AssetCandidateDto> & Pick<AssetCandidateDto, 'symbol'>
+): AssetCandidateDto => ({
   id: input.id ?? 1,
   symbol: input.symbol,
   name: input.name ?? input.symbol,
@@ -251,9 +253,9 @@ describe('investment strategy engine', () => {
     expect(plan.items.some(item => item.symbol === 'CORE_REVIEW' && item.action === 'buy')).toBe(
       true
     )
-    expect(
-      plan.items.find(item => item.symbol === 'CORE_REVIEW')?.recommendabilityStatus
-    ).toBe('recommendable')
+    expect(plan.items.find(item => item.symbol === 'CORE_REVIEW')?.recommendabilityStatus).toBe(
+      'recommendable'
+    )
   })
 
   it('keeps no-buy guardrails while producing concrete contribution and setup steps', () => {
@@ -311,9 +313,20 @@ describe('investment strategy engine', () => {
     expect(plan.actionableSteps).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ type: 'no_trade_today' }),
-        expect.objectContaining({ type: 'allocate_contribution', bucket: 'core', amountValue: 200 }),
-        expect.objectContaining({ type: 'allocate_contribution', bucket: 'growth', amountValue: 100 }),
-        expect.objectContaining({ type: 'do_not_reinforce_overweight_bucket', bucket: 'asymmetric' }),
+        expect.objectContaining({
+          type: 'allocate_contribution',
+          bucket: 'core',
+          amountValue: 200,
+        }),
+        expect.objectContaining({
+          type: 'allocate_contribution',
+          bucket: 'growth',
+          amountValue: 100,
+        }),
+        expect.objectContaining({
+          type: 'do_not_reinforce_overweight_bucket',
+          bucket: 'asymmetric',
+        }),
         expect.objectContaining({ type: 'resolve_asset_eligibility' }),
         expect.objectContaining({ type: 'connect_price_source' }),
       ])

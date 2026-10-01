@@ -1,9 +1,4 @@
-import type {
-  AssetClass,
-  AssetClassAssumption,
-  RiskProfile,
-  RiskProfileTargets,
-} from '../types'
+import type { AssetClass, AssetClassAssumption, RiskProfile, RiskProfileTargets } from '../types'
 
 export const DEFAULT_INFLATION_ASSUMPTION_PCT = 2.5
 export const DEFAULT_CASH_RATE_PCT = 1.75

@@ -33,9 +33,7 @@ describe('AI JSON schemas', () => {
     )
 
     expect(chatGroundedAnswerJsonSchema.properties.citations.items.type).toBe('object')
-    expect(chatGroundedAnswerJsonSchema.properties.citations.items.additionalProperties).toBe(
-      false
-    )
+    expect(chatGroundedAnswerJsonSchema.properties.citations.items.additionalProperties).toBe(false)
     expect(chatGroundedAnswerJsonSchema.properties.citations.items.required).toEqual([
       'sourceType',
       'sourceId',
@@ -44,9 +42,12 @@ describe('AI JSON schemas', () => {
   })
 
   it('keeps model-facing enums bounded to the supported taxonomy', () => {
-    expect(
-      recommendationChallengeJsonSchema.properties.status.enum
-    ).toEqual(['confirmed', 'softened', 'flagged', 'skipped'])
+    expect(recommendationChallengeJsonSchema.properties.status.enum).toEqual([
+      'confirmed',
+      'softened',
+      'flagged',
+      'skipped',
+    ])
 
     expect(
       transactionLabelSuggestionsJsonSchema.properties.suggestions.items.properties.suggestedKind

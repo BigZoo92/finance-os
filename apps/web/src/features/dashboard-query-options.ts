@@ -1,4 +1,5 @@
 import { type QueryClient, infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
+import type { AuthMode } from './auth-types'
 import {
   fetchAdvisorDecisionJournal,
   fetchAdvisorPostMortems,
@@ -47,18 +48,17 @@ import {
   fetchDashboardSummary,
   fetchDashboardTransactions,
 } from './dashboard-api'
-import {
-  getDemoAdvisorDecisionJournal,
-  getDemoAdvisorPostMortems,
-  getDemoTradingLabHypotheses,
-} from './learning-loop-demo-data'
-import type { AuthMode } from './auth-types'
+import type { DashboardRange } from './dashboard-types'
 import {
   getDemoDashboardDerivedRecomputeStatus,
   getDemoDashboardNews,
   getDemoDashboardSummary,
 } from './demo-data'
-import type { DashboardRange } from './dashboard-types'
+import {
+  getDemoAdvisorDecisionJournal,
+  getDemoAdvisorPostMortems,
+  getDemoTradingLabHypotheses,
+} from './learning-loop-demo-data'
 
 export type DemoTransactionsScenario =
   | 'default'

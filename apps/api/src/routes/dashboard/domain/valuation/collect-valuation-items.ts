@@ -157,7 +157,8 @@ export const collectValuationItems = ({
       isManual,
       costBasis,
       costBasisCurrency: bridgedPosition?.currency ?? null,
-      costBasisSource: costBasis === null ? 'unknown' : bridgedPosition?.costBasisSource ?? 'unknown',
+      costBasisSource:
+        costBasis === null ? 'unknown' : (bridgedPosition?.costBasisSource ?? 'unknown'),
       identity: { provider: asset.provider },
       degradedReasons: [],
     })

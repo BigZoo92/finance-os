@@ -1,7 +1,4 @@
-import type {
-  EstimatedModelUsage,
-  ModelPricingEntry,
-} from '../types'
+import type { EstimatedModelUsage, ModelPricingEntry } from '../types'
 
 const round = (value: number, digits = 6) => {
   const factor = 10 ** digits
@@ -78,9 +75,7 @@ export const AI_PRICING_REGISTRY: ModelPricingEntry[] = [
 ]
 
 export const getPricingEntry = (provider: string, model: string) => {
-  return AI_PRICING_REGISTRY.find(
-    entry => entry.provider === provider && entry.model === model
-  )
+  return AI_PRICING_REGISTRY.find(entry => entry.provider === provider && entry.model === model)
 }
 
 export const estimateModelUsageCost = ({
@@ -124,17 +119,17 @@ export const estimateModelUsageCost = ({
   }
 
   const effectiveInputPrice = batch
-    ? pricing.batchInputUsdPerMillion ?? pricing.inputUsdPerMillion
+    ? (pricing.batchInputUsdPerMillion ?? pricing.inputUsdPerMillion)
     : pricing.inputUsdPerMillion
   const effectiveOutputPrice = batch
-    ? pricing.batchOutputUsdPerMillion ?? pricing.outputUsdPerMillion
+    ? (pricing.batchOutputUsdPerMillion ?? pricing.outputUsdPerMillion)
     : pricing.outputUsdPerMillion
   const effectiveCachedPrice =
     pricing.cachedInputUsdPerMillion ?? pricing.cacheReadUsdPerMillion ?? effectiveInputPrice
   const effectiveCacheWritePrice =
     cacheDuration === '1h'
-      ? pricing.cacheWriteUsdPerMillion1h ?? effectiveInputPrice
-      : pricing.cacheWriteUsdPerMillion5m ?? effectiveInputPrice
+      ? (pricing.cacheWriteUsdPerMillion1h ?? effectiveInputPrice)
+      : (pricing.cacheWriteUsdPerMillion5m ?? effectiveInputPrice)
 
   const baseInputTokens = Math.max(inputTokens - cachedInputTokens - cacheWriteTokens, 0)
   const estimatedCostUsd =

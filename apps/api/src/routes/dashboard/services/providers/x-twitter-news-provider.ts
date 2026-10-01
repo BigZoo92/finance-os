@@ -66,9 +66,7 @@ export const createXTwitterNewsProvider = ({
     }
 
     const effectiveQuery =
-      watchlist && watchlist.length > 0
-        ? buildXWatchlistQuery(query, watchlist)
-        : query
+      watchlist && watchlist.length > 0 ? buildXWatchlistQuery(query, watchlist) : query
 
     const payload = await fetchJson<TwitterRecentSearchResponse>({
       url: `https://api.x.com/2/tweets/search/recent?query=${encodeURIComponent(effectiveQuery)}&max_results=${Math.min(maxItems, 100)}&tweet.fields=created_at,lang,author_id`,

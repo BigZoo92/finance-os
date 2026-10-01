@@ -1,8 +1,5 @@
 import { apiFetch } from '@/lib/api'
-import type {
-  AdvisorKnowledgeGraphDto,
-  AdvisorKnowledgeGraphScope,
-} from './advisor-graph-dto'
+import type { AdvisorKnowledgeGraphDto, AdvisorKnowledgeGraphScope } from './advisor-graph-dto'
 import type {
   KnowledgeContextBundleResponse,
   KnowledgeQueryResponse,
@@ -61,8 +58,9 @@ export const fetchKnowledgeGraphDto = (input: {
   if (typeof input.limit === 'number') params.set('limit', String(input.limit))
   if (input.includeExamples === true) params.set('includeExamples', 'true')
   const qs = params.toString()
-  const url = qs.length > 0
-    ? `/dashboard/advisor/knowledge/graph?${qs}`
-    : '/dashboard/advisor/knowledge/graph'
+  const url =
+    qs.length > 0
+      ? `/dashboard/advisor/knowledge/graph?${qs}`
+      : '/dashboard/advisor/knowledge/graph'
   return apiFetch<AdvisorKnowledgeGraphDto>(url)
 }

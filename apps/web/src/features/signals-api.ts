@@ -7,10 +7,7 @@ import { apiFetch } from '@/lib/api'
 export type SignalSourceGroup = 'finance' | 'ai_tech'
 export type SignalSourceAttentionPolicy = 'auto' | 'always' | 'never' | 'high_only'
 
-export type SignalSourceVerificationStatus =
-  | 'verified'
-  | 'unresolved'
-  | 'not_applicable'
+export type SignalSourceVerificationStatus = 'verified' | 'unresolved' | 'not_applicable'
 
 export interface SignalSourceProfileMetadata {
   username?: string | null
@@ -215,11 +212,9 @@ export const deleteSignalSource = (id: number) =>
     method: 'DELETE',
   })
 
-export const fetchSignalRuns = () =>
-  apiFetch<SignalRunsResponse>('/dashboard/signals/runs')
+export const fetchSignalRuns = () => apiFetch<SignalRunsResponse>('/dashboard/signals/runs')
 
-export const fetchSignalHealth = () =>
-  apiFetch<SignalHealthResponse>('/dashboard/signals/health')
+export const fetchSignalHealth = () => apiFetch<SignalHealthResponse>('/dashboard/signals/health')
 
 export const fetchSignalItems = (opts?: {
   signalDomain?: string

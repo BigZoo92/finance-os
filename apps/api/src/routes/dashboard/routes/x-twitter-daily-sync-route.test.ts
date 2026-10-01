@@ -14,9 +14,9 @@ const makeFakeDb = () => {
       const tableName =
         typeof table === 'string'
           ? table
-          : (table as { _?: { name?: string }; name?: string })._?.name ??
+          : ((table as { _?: { name?: string }; name?: string })._?.name ??
             (table as { name?: string }).name ??
-            'unknown'
+            'unknown')
       return {
         values(values: Record<string, unknown>) {
           if (shouldDedupe) {
@@ -48,7 +48,10 @@ const tweet = (overrides: Partial<Record<string, unknown>> = {}) => ({
 describe('persistTweetsAsSignalItems', () => {
   it('inserts a signal_item row per tweet with provenance + advisor flag', async () => {
     const { db, inserts } = makeFakeDb()
-    const tweets = [tweet(), tweet({ id: 't2', text: 'unrelated', score: 20, keptForAdvisor: false })]
+    const tweets = [
+      tweet(),
+      tweet({ id: 't2', text: 'unrelated', score: 20, keptForAdvisor: false }),
+    ]
     const result = await persistTweetsAsSignalItems({
       db,
       runId: 'run-1',

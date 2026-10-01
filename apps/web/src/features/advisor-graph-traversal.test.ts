@@ -75,10 +75,7 @@ describe('findShortestPath', () => {
   it('returns null when no path exists', () => {
     const disconnected: AdvisorGraph = {
       ...tinyGraph,
-      nodes: [
-        ...tinyGraph.nodes,
-        { id: 'orphan', label: 'Orphan', kind: 'unknown' },
-      ],
+      nodes: [...tinyGraph.nodes, { id: 'orphan', label: 'Orphan', kind: 'unknown' }],
     }
     expect(findShortestPath(disconnected, 'a', 'orphan')).toBeNull()
   })

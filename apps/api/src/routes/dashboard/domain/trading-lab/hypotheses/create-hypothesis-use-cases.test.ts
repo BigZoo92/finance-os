@@ -117,9 +117,7 @@ const buildFakeRepository = (): {
     async updateStrategy(id, patch) {
       const idx = state.strategies.findIndex(s => s.id === id)
       if (idx === -1) {
-        return null as unknown as Awaited<
-          ReturnType<HypothesesRepositoryAdapter['updateStrategy']>
-        >
+        return null as unknown as Awaited<ReturnType<HypothesesRepositoryAdapter['updateStrategy']>>
       }
       const current = state.strategies[idx] as StoredStrategy
       const merged: StoredStrategy = {
@@ -128,9 +126,7 @@ const buildFakeRepository = (): {
         updatedAt: new Date(),
       }
       state.strategies[idx] = merged
-      return merged as unknown as Awaited<
-        ReturnType<HypothesesRepositoryAdapter['updateStrategy']>
-      >
+      return merged as unknown as Awaited<ReturnType<HypothesesRepositoryAdapter['updateStrategy']>>
     },
     async archiveStrategy(id) {
       return repo.updateStrategy(id, { status: 'archived' })
@@ -251,9 +247,7 @@ describe('createHypothesisUseCases', () => {
 
     let caught: unknown = null
     try {
-      await useCases.createManualHypothesis(
-        validCreateInput({ invalidationCriteria: [] })
-      )
+      await useCases.createManualHypothesis(validCreateInput({ invalidationCriteria: [] }))
     } catch (error) {
       caught = error
     }

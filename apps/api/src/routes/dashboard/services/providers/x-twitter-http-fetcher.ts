@@ -9,10 +9,7 @@
  * truncated and stripped of any header values before being returned.
  */
 
-import type {
-  XTwitterTimelineFetcher,
-  XTwitterTimelinePage,
-} from './x-twitter-daily-sync'
+import type { XTwitterTimelineFetcher, XTwitterTimelinePage } from './x-twitter-daily-sync'
 
 const TWEET_FIELDS = [
   'id',

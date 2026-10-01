@@ -144,10 +144,11 @@ const buildRawImportPersistence = ({
   }
 }
 
-const mapConnectionRow = (row: typeof schema.externalInvestmentConnection.$inferSelect) => ({
-  ...row,
-  provider: isProvider(row.provider) ? row.provider : 'ibkr',
-}) satisfies ExternalInvestmentConnectionRecord
+const mapConnectionRow = (row: typeof schema.externalInvestmentConnection.$inferSelect) =>
+  ({
+    ...row,
+    provider: isProvider(row.provider) ? row.provider : 'ibkr',
+  }) satisfies ExternalInvestmentConnectionRecord
 
 const sumCounts = (snapshot: ExternalInvestmentNormalizedSnapshot) => ({
   accounts: snapshot.accounts.length,
@@ -331,7 +332,9 @@ export const createExternalInvestmentsRepository = ({
           ...(input.errorCode !== undefined ? { errorCode: input.errorCode } : {}),
           ...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
           ...(input.rowCounts !== undefined ? { rowCounts: input.rowCounts } : {}),
-          ...(input.degradedReasons !== undefined ? { degradedReasons: input.degradedReasons } : {}),
+          ...(input.degradedReasons !== undefined
+            ? { degradedReasons: input.degradedReasons }
+            : {}),
           updatedAt: new Date(),
         })
         .where(eq(schema.externalInvestmentSyncRun.id, input.runId))
@@ -400,7 +403,9 @@ export const createExternalInvestmentsRepository = ({
           ...(input.errorMessage !== undefined ? { lastErrorMessage: input.errorMessage } : {}),
           ...(input.requestId ? { lastRequestId: input.requestId } : {}),
           ...(input.durationMs !== undefined ? { lastDurationMs: input.durationMs } : {}),
-          ...(input.rawImportCount !== undefined ? { lastRawImportCount: input.rawImportCount } : {}),
+          ...(input.rawImportCount !== undefined
+            ? { lastRawImportCount: input.rawImportCount }
+            : {}),
           ...(input.normalizedRowCount !== undefined
             ? { lastNormalizedRowCount: input.normalizedRowCount }
             : {}),
@@ -716,7 +721,9 @@ export const createExternalInvestmentsRepository = ({
             costBasis: toAssetValuationString(position.costBasis),
             costBasisSource: position.costBasis ? 'provider' : 'unknown',
             currentValue: toAssetValuationString(position.normalizedValue),
-            lastKnownValue: toAssetValuationString(position.providerValue ?? position.normalizedValue),
+            lastKnownValue: toAssetValuationString(
+              position.providerValue ?? position.normalizedValue
+            ),
             valuedAt: toDateOrNull(position.valueAsOf),
             lastSyncedAt: now,
             metadata: positionMetadata(position),
@@ -737,7 +744,9 @@ export const createExternalInvestmentsRepository = ({
               costBasis: toAssetValuationString(position.costBasis),
               costBasisSource: position.costBasis ? 'provider' : 'unknown',
               currentValue: toAssetValuationString(position.normalizedValue),
-              lastKnownValue: toAssetValuationString(position.providerValue ?? position.normalizedValue),
+              lastKnownValue: toAssetValuationString(
+                position.providerValue ?? position.normalizedValue
+              ),
               valuedAt: toDateOrNull(position.valueAsOf),
               lastSyncedAt: now,
               metadata: positionMetadata(position),
@@ -964,10 +973,7 @@ export const createExternalInvestmentsRepository = ({
     },
 
     async getStatus() {
-      const [connections, health] = await Promise.all([
-        listConnections(),
-        this.getProviderHealth(),
-      ])
+      const [connections, health] = await Promise.all([listConnections(), this.getProviderHealth()])
       return {
         connections: connections.map(connection => {
           const { maskedMetadata: _maskedMetadata, ...safeConnection } = connection
@@ -992,7 +998,10 @@ export const createExternalInvestmentsRepository = ({
       const rows = await db
         .select()
         .from(schema.externalInvestmentAccount)
-        .orderBy(schema.externalInvestmentAccount.provider, schema.externalInvestmentAccount.accountExternalId)
+        .orderBy(
+          schema.externalInvestmentAccount.provider,
+          schema.externalInvestmentAccount.accountExternalId
+        )
       return rows.map(row => ({
         ...row,
         provider: isProvider(row.provider) ? row.provider : 'ibkr',
@@ -1089,42 +1098,41 @@ export const createExternalInvestmentsRepository = ({
         this.listCashFlows(100),
       ])
       const now = new Date()
-      const providerCoverage: ExternalInvestmentProviderCoverage[] = (['ibkr', 'binance'] as const).map(
-        provider => {
-          const connection = status.connections.find(item => item.provider === provider)
-          const health = status.health.find(item => item.provider === provider)
-          const lastSuccessAt = connection?.lastSuccessAt ?? health?.lastSuccessAt ?? null
-          const lastSuccessDate = toDateOrNull(lastSuccessAt)
-          const stale =
-            !lastSuccessDate ||
-            now.getTime() - lastSuccessDate.getTime() > staleAfterMinutes * 60 * 1000
-          return {
-            provider,
-            configured: status.providerConfigured[provider],
-            status: !connection
-              ? 'missing'
-              : stale
-                ? 'degraded'
-                : health?.status === 'healthy'
-                  ? 'healthy'
-                  : connection.status === 'error'
-                    ? 'failing'
-                    : connection.status === 'degraded'
-                      ? 'degraded'
-                      : 'idle',
-            lastSuccessAt,
-            lastAttemptAt: connection?.lastSyncAttemptAt ?? health?.lastAttemptAt ?? null,
-            stale,
-            degradedReasons: [
-              ...(connection?.lastErrorCode ? [connection.lastErrorCode] : []),
-              ...(connection?.syncMetadata &&
-              Array.isArray(connection.syncMetadata.degradedReasons)
-                ? connection.syncMetadata.degradedReasons.map(String)
-                : []),
-            ],
-          }
+      const providerCoverage: ExternalInvestmentProviderCoverage[] = (
+        ['ibkr', 'binance'] as const
+      ).map(provider => {
+        const connection = status.connections.find(item => item.provider === provider)
+        const health = status.health.find(item => item.provider === provider)
+        const lastSuccessAt = connection?.lastSuccessAt ?? health?.lastSuccessAt ?? null
+        const lastSuccessDate = toDateOrNull(lastSuccessAt)
+        const stale =
+          !lastSuccessDate ||
+          now.getTime() - lastSuccessDate.getTime() > staleAfterMinutes * 60 * 1000
+        return {
+          provider,
+          configured: status.providerConfigured[provider],
+          status: !connection
+            ? 'missing'
+            : stale
+              ? 'degraded'
+              : health?.status === 'healthy'
+                ? 'healthy'
+                : connection.status === 'error'
+                  ? 'failing'
+                  : connection.status === 'degraded'
+                    ? 'degraded'
+                    : 'idle',
+          lastSuccessAt,
+          lastAttemptAt: connection?.lastSyncAttemptAt ?? health?.lastAttemptAt ?? null,
+          stale,
+          degradedReasons: [
+            ...(connection?.lastErrorCode ? [connection.lastErrorCode] : []),
+            ...(connection?.syncMetadata && Array.isArray(connection.syncMetadata.degradedReasons)
+              ? connection.syncMetadata.degradedReasons.map(String)
+              : []),
+          ],
         }
-      )
+      })
       const bundlePositions: ExternalInvestmentBundlePositionInput[] = positions.map(position => ({
         provider: position.provider,
         connectionId: String(position.connectionId),

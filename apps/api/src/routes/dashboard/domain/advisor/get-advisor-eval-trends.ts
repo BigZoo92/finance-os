@@ -169,7 +169,10 @@ export const computeAdvisorEvalTrends = (
   }
 
   const allCategories = collectAllCategories(runs)
-  const groupBuckets = new Map<DashboardAdvisorEvalTrendsGroup, DashboardAdvisorEvalTrendCategory[]>([
+  const groupBuckets = new Map<
+    DashboardAdvisorEvalTrendsGroup,
+    DashboardAdvisorEvalTrendCategory[]
+  >([
     ['quality', []],
     ['safety', []],
     ['economics', []],
@@ -266,7 +269,8 @@ export const computeAdvisorEvalTrends = (
       }
     }
 
-    const latestPassRate = hasLatestData && latestEvaluable > 0 ? latestPassed / latestEvaluable : null
+    const latestPassRate =
+      hasLatestData && latestEvaluable > 0 ? latestPassed / latestEvaluable : null
     const previousPassRate =
       hasPreviousData && previousEvaluable > 0 ? previousPassed / previousEvaluable : null
     const delta =
@@ -386,7 +390,9 @@ export const buildDeterministicAdvisorEvalTrendsDemo = (
     const latestPassRate = e > 0 ? p / e : null
     const previousPassRate = pe > 0 ? pp / pe : null
     const delta =
-      latestPassRate !== null && previousPassRate !== null ? latestPassRate - previousPassRate : null
+      latestPassRate !== null && previousPassRate !== null
+        ? latestPassRate - previousPassRate
+        : null
     return { group, totalRuns, latestPassRate, previousPassRate, delta, categories: cats }
   }
 

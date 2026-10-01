@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getRecoveryFeedbackMessage, isRefreshStatusActive } from './view-state'
 import type { RecoverStaleRunsResponse } from './api'
+import { getRecoveryFeedbackMessage, isRefreshStatusActive } from './view-state'
 
 const makeRecoveryResult = (
   overrides: Partial<RecoverStaleRunsResponse>

@@ -1,0 +1,58 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  // Oxc formatter (replaces Biome). Style options are the migrated Biome ones
+  // (`oxfmt --migrate biome`); experimental features are opted in below.
+  "useTabs": false,
+  "tabWidth": 2,
+  "printWidth": 100,
+  "singleQuote": true,
+  "jsxSingleQuote": false,
+  "quoteProps": "as-needed",
+  "trailingComma": "es5",
+  "semi": false,
+  "arrowParens": "avoid",
+  "bracketSameLine": false,
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  // Experimental: one import block per file, the order Biome's organizeImports
+  // kept (builtins, packages, the `@/` alias, relative paths), types mixed with
+  // values, no blank lines between groups.
+  "sortImports": {
+    "groups": [["builtin"], ["external"], ["internal"], ["parent", "sibling", "index"], "unknown"],
+    "internalPattern": ["@/"],
+    "newlinesBetween": false,
+    "ignoreCase": true
+  },
+  // Experimental: canonical key order in package.json manifests; scripts keep
+  // their hand-written order.
+  "sortPackageJson": { "sortScripts": false },
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/coverage",
+    "**/.turbo",
+    "**/.next",
+    "**/.output",
+    "**/.design",
+    "**/.moon",
+    "**/routeTree.gen.ts",
+    "**/routeTree.gen.tsx",
+    "**/styled-system/generated",
+    // Generated files: drizzle-kit snapshots, lockfiles.
+    "packages/db/drizzle/**",
+    "pnpm-lock.yaml",
+    "**/uv.lock",
+    // Hand-authored documentation: table padding and code-fence rewriting
+    // would make every doc diff noisy (and broke a JSX example).
+    "**/*.md",
+    // Vendored Tailwind preflight: kept as upstream wrote it.
+    "packages/ui/src/styles/preflight.css",
+    // Local, untracked editor settings.
+    ".claude/settings.local.json",
+    "e2e/__visual__/**",
+    "test-results/**",
+    "apps/desktop/src-tauri/target/**",
+    "apps/desktop/src-tauri/gen/**"
+  ]
+}

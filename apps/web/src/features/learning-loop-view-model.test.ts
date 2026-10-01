@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type {
+  DashboardAdvisorEvalsResponse,
+  DashboardAdvisorPostMortemRow,
+  DashboardAdvisorPostMortemRunResponse,
+} from './dashboard-types'
 import {
   buildDecisionPayload,
   buildEvalScorecard,
@@ -12,11 +17,6 @@ import {
   splitLines,
   summarizePostMortemRunResponse,
 } from './learning-loop-view-model'
-import type {
-  DashboardAdvisorEvalsResponse,
-  DashboardAdvisorPostMortemRow,
-  DashboardAdvisorPostMortemRunResponse,
-} from './dashboard-types'
 
 describe('learning-loop-view-model', () => {
   describe('decision payload', () => {

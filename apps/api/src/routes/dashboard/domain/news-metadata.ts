@@ -1,5 +1,5 @@
-import type { NewsMetadataCard, NewsMetadataFetchStatus } from './news-types'
 import { extractHostname, uniqueStrings } from './news-helpers'
+import type { NewsMetadataCard, NewsMetadataFetchStatus } from './news-types'
 
 const toTrimmedStringOrNull = (value: unknown) => {
   if (typeof value !== 'string') {
@@ -15,14 +15,10 @@ const toStringArray = (value: unknown) => {
     return []
   }
 
-  return uniqueStrings(
-    value.map(entry => (typeof entry === 'string' ? entry : null))
-  )
+  return uniqueStrings(value.map(entry => (typeof entry === 'string' ? entry : null)))
 }
 
-export const normalizeNewsMetadataCard = (
-  value: unknown
-): NewsMetadataCard | null => {
+export const normalizeNewsMetadataCard = (value: unknown): NewsMetadataCard | null => {
   if (!value || typeof value !== 'object') {
     return null
   }
@@ -61,9 +57,7 @@ export const normalizeNewsMetadataCard = (
   }
 }
 
-export const getNewsMetadataCardRichness = (
-  value: NewsMetadataCard | null
-) => {
+export const getNewsMetadataCardRichness = (value: NewsMetadataCard | null) => {
   if (!value) {
     return -1
   }

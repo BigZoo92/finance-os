@@ -69,10 +69,12 @@ export const aiRecommendationReversibilityEnum = pgEnum('ai_recommendation_rever
   'low',
 ])
 
-export const aiRecommendationChallengeStatusEnum = pgEnum(
-  'ai_recommendation_challenge_status',
-  ['confirmed', 'softened', 'flagged', 'skipped']
-)
+export const aiRecommendationChallengeStatusEnum = pgEnum('ai_recommendation_challenge_status', [
+  'confirmed',
+  'softened',
+  'flagged',
+  'skipped',
+])
 
 export const aiChatMessageRoleEnum = pgEnum('ai_chat_message_role', ['user', 'assistant', 'system'])
 
@@ -161,7 +163,10 @@ export const aiManualOperationStep = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [
-    uniqueIndex('ai_manual_operation_step_operation_key_unique').on(table.operationId, table.stepKey),
+    uniqueIndex('ai_manual_operation_step_operation_key_unique').on(
+      table.operationId,
+      table.stepKey
+    ),
     index('ai_manual_operation_step_status_idx').on(table.status),
     index('ai_manual_operation_step_operation_id_idx').on(table.operationId),
   ]
@@ -200,7 +205,9 @@ export const aiPortfolioSnapshot = pgTable(
     currency: text('currency').notNull().default('EUR'),
     riskProfile: text('risk_profile').notNull(),
     metrics: jsonb('metrics').$type<Record<string, unknown>>().notNull(),
-    allocationBuckets: jsonb('allocation_buckets').$type<Array<Record<string, unknown>>>().notNull(),
+    allocationBuckets: jsonb('allocation_buckets')
+      .$type<Array<Record<string, unknown>>>()
+      .notNull(),
     assetClassAllocations: jsonb('asset_class_allocations')
       .$type<Array<Record<string, unknown>>>()
       .notNull(),
@@ -227,10 +234,22 @@ export const aiDailyBrief = pgTable(
     }),
     title: text('title').notNull(),
     summary: text('summary').notNull(),
-    keyFacts: jsonb('key_facts').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    opportunities: jsonb('opportunities').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    risks: jsonb('risks').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    watchItems: jsonb('watch_items').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    keyFacts: jsonb('key_facts')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    opportunities: jsonb('opportunities')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    risks: jsonb('risks')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    watchItems: jsonb('watch_items')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     recommendationNotes: jsonb('recommendation_notes')
       .$type<Array<Record<string, unknown>>>()
       .notNull()
@@ -263,20 +282,35 @@ export const aiRecommendation = pgTable(
     title: text('title').notNull(),
     description: text('description').notNull(),
     whyNow: text('why_now').notNull(),
-    evidence: jsonb('evidence').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    evidence: jsonb('evidence')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     confidence: numeric('confidence', { precision: 6, scale: 4 }).notNull(),
     riskLevel: aiRecommendationRiskLevelEnum('risk_level').notNull(),
     expectedImpact: jsonb('expected_impact').$type<Record<string, unknown>>().notNull(),
     effort: aiRecommendationEffortEnum('effort').notNull(),
     reversibility: aiRecommendationReversibilityEnum('reversibility').notNull(),
-    blockingFactors: jsonb('blocking_factors').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    alternatives: jsonb('alternatives').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    blockingFactors: jsonb('blocking_factors')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    alternatives: jsonb('alternatives')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     deterministicMetricsUsed: jsonb('deterministic_metrics_used')
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
-    llmModelsUsed: jsonb('llm_models_used').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    llmModelsUsed: jsonb('llm_models_used')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     challengerStatus: aiRecommendationChallengeStatusEnum('challenger_status')
       .notNull()
       .default('skipped'),
@@ -304,8 +338,14 @@ export const aiRecommendationChallenge = pgTable(
       .references(() => aiRun.id, { onDelete: 'cascade' }),
     status: aiRecommendationChallengeStatusEnum('status').notNull(),
     summary: text('summary').notNull(),
-    contradictions: jsonb('contradictions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    missingSignals: jsonb('missing_signals').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    contradictions: jsonb('contradictions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    missingSignals: jsonb('missing_signals')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     confidenceAdjustment: numeric('confidence_adjustment', { precision: 6, scale: 4 }).notNull(),
     provider: text('provider'),
     model: text('model'),
@@ -329,10 +369,22 @@ export const aiMacroSignal = pgTable(
     direction: text('direction').notNull(),
     severity: integer('severity').notNull().default(0),
     confidence: integer('confidence').notNull().default(0),
-    facts: jsonb('facts').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    hypotheses: jsonb('hypotheses').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    implications: jsonb('implications').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    sourceRefs: jsonb('source_refs').$type<Array<Record<string, unknown>>>().notNull().default(sql`'[]'::jsonb`),
+    facts: jsonb('facts')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    hypotheses: jsonb('hypotheses')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    implications: jsonb('implications')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sourceRefs: jsonb('source_refs')
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [
@@ -358,10 +410,22 @@ export const aiNewsSignal = pgTable(
     severity: integer('severity').notNull().default(0),
     confidence: integer('confidence').notNull().default(0),
     publishedAt: timestamp('published_at', { withTimezone: true }),
-    supportingUrls: jsonb('supporting_urls').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    affectedEntities: jsonb('affected_entities').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    affectedSectors: jsonb('affected_sectors').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    whyItMatters: jsonb('why_it_matters').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    supportingUrls: jsonb('supporting_urls')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    affectedEntities: jsonb('affected_entities')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    affectedSectors: jsonb('affected_sectors')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    whyItMatters: jsonb('why_it_matters')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [
@@ -387,16 +451,25 @@ export const aiTransactionLabelSuggestion = pgTable(
     suggestedKind: text('suggested_kind').notNull(),
     suggestedCategory: text('suggested_category').notNull(),
     suggestedSubcategory: text('suggested_subcategory'),
-    suggestedTags: jsonb('suggested_tags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    suggestedTags: jsonb('suggested_tags')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     confidence: numeric('confidence', { precision: 6, scale: 4 }).notNull(),
-    rationale: jsonb('rationale').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    rationale: jsonb('rationale')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     provider: text('provider'),
     model: text('model'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
   },
   table => [
-    uniqueIndex('ai_transaction_label_suggestion_run_key_unique').on(table.runId, table.suggestionKey),
+    uniqueIndex('ai_transaction_label_suggestion_run_key_unique').on(
+      table.runId,
+      table.suggestionKey
+    ),
     index('ai_transaction_label_suggestion_transaction_id_idx').on(table.transactionId),
     index('ai_transaction_label_suggestion_status_idx').on(table.status),
   ]
@@ -450,10 +523,22 @@ export const aiChatMessage = pgTable(
     runId: integer('run_id').references(() => aiRun.id, { onDelete: 'set null' }),
     role: aiChatMessageRoleEnum('role').notNull(),
     content: text('content').notNull(),
-    citations: jsonb('citations').$type<Array<Record<string, unknown>>>().notNull().default(sql`'[]'::jsonb`),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    caveats: jsonb('caveats').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    simulations: jsonb('simulations').$type<Array<Record<string, unknown>>>().notNull().default(sql`'[]'::jsonb`),
+    citations: jsonb('citations')
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    caveats: jsonb('caveats')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    simulations: jsonb('simulations')
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     provider: text('provider'),
     model: text('model'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

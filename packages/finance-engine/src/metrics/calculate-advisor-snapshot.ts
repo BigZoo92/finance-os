@@ -226,22 +226,19 @@ const buildScenarioResults = ({
     {
       scenarioId: 'risk_off',
       title: 'Risk-off court terme',
-      description:
-        'Baisse actions et actifs cycliques, obligations et cash plus resistants.',
+      description: 'Baisse actions et actifs cycliques, obligations et cash plus resistants.',
       shockMultiplier: 1,
     },
     {
       scenarioId: 'inflation_sticky',
       title: 'Inflation persistante',
-      description:
-        'Cash et obligations longues sous pression, actifs reels plus resilients.',
+      description: 'Cash et obligations longues sous pression, actifs reels plus resilients.',
       shockMultiplier: 0.65,
     },
     {
       scenarioId: 'growth_upside',
       title: 'Croissance au-dessus du consensus',
-      description:
-        'Amelioration de la croissance nominale et compression du cash drag.',
+      description: 'Amelioration de la croissance nominale et compression du cash drag.',
       shockMultiplier: -0.55,
     },
   ]
@@ -366,8 +363,7 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
     totalValue > 0
       ? sum(
           weightedAssetClasses.map(
-            item =>
-              item.weight * ASSET_CLASS_ASSUMPTIONS[item.assetClass].expectedReturnPct
+            item => item.weight * ASSET_CLASS_ASSUMPTIONS[item.assetClass].expectedReturnPct
           )
         )
       : DEFAULT_CASH_RATE_PCT
@@ -382,9 +378,7 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
     )
   )
 
-  const volatilityPct = round(
-    computeDiversifiedVolatility(weightedAssetClasses, 'volatilityPct')
-  )
+  const volatilityPct = round(computeDiversifiedVolatility(weightedAssetClasses, 'volatilityPct'))
   const downsideDeviationPct = round(
     computeDiversifiedVolatility(weightedAssetClasses, 'downsideDeviationPct')
   )
@@ -395,16 +389,14 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
   const sortinoRatio =
     downsideDeviationPct > 0
       ? round(
-          (expectedReturnPct - DEFAULT_CASH_RATE_PCT - weightedFeeDragPct) /
-            downsideDeviationPct,
+          (expectedReturnPct - DEFAULT_CASH_RATE_PCT - weightedFeeDragPct) / downsideDeviationPct,
           3
         )
       : null
 
   const positionWeights = positions.map(position => toWeight(position.value, totalValue))
   const concentrationHhi = round(sum(positionWeights.map(weight => weight * weight)), 4)
-  const effectivePositionCount =
-    concentrationHhi > 0 ? round(1 / concentrationHhi, 2) : 0
+  const effectivePositionCount = concentrationHhi > 0 ? round(1 / concentrationHhi, 2) : 0
   const topPositionSharePct = round(Math.max(...positionWeights, 0) * 100)
 
   const allocationBuckets = buildAllocationBuckets(positions, totalValue)
@@ -434,9 +426,7 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
   assetClassAllocations.forEach((allocation, index) => {
     const riskContribution = roughRiskContributions[index] ?? 0
     allocation.riskContributionPct =
-      totalRiskContribution > 0
-        ? round((riskContribution / totalRiskContribution) * 100)
-        : 0
+      totalRiskContribution > 0 ? round((riskContribution / totalRiskContribution) * 100) : 0
   })
 
   const largestRiskContributionPct = Math.max(
@@ -487,9 +477,8 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
     input.signals?.filter(signal => signal.direction === 'risk' && signal.severity >= 50).length ??
     0
   const signalsOpportunityCount =
-    input.signals?.filter(
-      signal => signal.direction === 'opportunity' && signal.severity >= 50
-    ).length ?? 0
+    input.signals?.filter(signal => signal.direction === 'opportunity' && signal.severity >= 50)
+      .length ?? 0
   const topExpenseSharePct =
     monthlyExpenses > 0 && input.topExpenses[0]
       ? round((input.topExpenses[0].total / monthlyExpenses) * 100)
@@ -500,10 +489,9 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
       key: 'risk_profile',
       value: riskProfile,
       source: input.explicitRiskProfile ? 'observed' : 'inferred',
-      justification:
-        input.explicitRiskProfile
-          ? 'Profil de risque explicite fourni par le contexte applicatif.'
-          : 'Profil de risque implicite infere depuis le poids des actifs de croissance et du cash.',
+      justification: input.explicitRiskProfile
+        ? 'Profil de risque explicite fourni par le contexte applicatif.'
+        : 'Profil de risque implicite infere depuis le poids des actifs de croissance et du cash.',
     },
     {
       key: 'inflation_assumption_pct',
@@ -524,8 +512,7 @@ export const calculateAdvisorSnapshot = (input: FinanceEngineInput): AdvisorSnap
     },
     {
       key: 'cash_drag_definition',
-      value:
-        'excess_cash_weight_above_target_midpoint * excess_expected_return_gap',
+      value: 'excess_cash_weight_above_target_midpoint * excess_expected_return_gap',
       source: 'default',
       justification:
         'Mesure conservative du manque a gagner potentiel lie a un surplus de cash non alloue.',

@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog'
 import { Drawer, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from './drawer'
 

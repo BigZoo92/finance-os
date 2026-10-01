@@ -1,4 +1,8 @@
-import { assertPasswordProvided, generatePasswordHash, readPasswordInput } from './hash-password-utils'
+import {
+  assertPasswordProvided,
+  generatePasswordHash,
+  readPasswordInput,
+} from './hash-password-utils'
 
 const main = async () => {
   const password = await readPasswordInput()

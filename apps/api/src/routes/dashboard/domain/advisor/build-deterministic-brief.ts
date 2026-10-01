@@ -12,8 +12,7 @@ const round = (value: number, digits = 1) => {
 // Unknown liquidity or an unvalued portfolio is worded as unavailable. The
 // brief never prints a 0 that the engine did not observe.
 const UNAVAILABLE = 'indisponible'
-const describeMonths = (value: number | null) =>
-  value === null ? UNAVAILABLE : `${value} mois`
+const describeMonths = (value: number | null) => (value === null ? UNAVAILABLE : `${value} mois`)
 
 export const buildDeterministicBrief = ({
   snapshot,

@@ -1,3 +1,4 @@
+import { formatPercent } from '@finance-os/ui/lib/format'
 /**
  * Signal Field layout.
  *
@@ -14,7 +15,6 @@
 import { max } from 'd3-array'
 import { scaleLinear, scaleTime } from 'd3-scale'
 import { curveMonotoneX, line } from 'd3-shape'
-import { formatPercent } from '@finance-os/ui/lib/format'
 import { formatDayMonth, type RadarMarket, type RadarTone, toneForChange } from './view-model'
 
 export type FieldTier = 'desktop' | 'compact' | 'mobile'

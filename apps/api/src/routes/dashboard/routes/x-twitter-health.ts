@@ -14,8 +14,8 @@ import { Elysia } from 'elysia'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
-import type { ApiDb } from '../types'
 import { readXUsageSnapshot } from '../services/providers/x-twitter-usage-ledger'
+import type { ApiDb } from '../types'
 
 export type XHealthEnv = {
   NEWS_PROVIDER_X_TWITTER_ENABLED: boolean
@@ -53,10 +53,7 @@ export const createXTwitterHealthRoute = ({
       real: async () => {
         requireAdmin(context)
         const usage = await readXUsageSnapshot(db, now())
-        const remainingDailyBudget = Math.max(
-          0,
-          env.X_DAILY_BUDGET_USD - usage.chargeableCostToday
-        )
+        const remainingDailyBudget = Math.max(0, env.X_DAILY_BUDGET_USD - usage.chargeableCostToday)
         const remainingMonthlyBudget = Math.max(
           0,
           env.X_MONTHLY_BUDGET_USD - usage.chargeableCostThisMonth
@@ -66,9 +63,7 @@ export const createXTwitterHealthRoute = ({
         const dayOfMonth = now().getUTCDate() || 1
         const projectedMonthlyAtCurrentRate =
           (usage.chargeableCostThisMonth / dayOfMonth) *
-          new Date(
-            Date.UTC(now().getUTCFullYear(), now().getUTCMonth() + 1, 0)
-          ).getUTCDate()
+          new Date(Date.UTC(now().getUTCFullYear(), now().getUTCMonth() + 1, 0)).getUTCDate()
 
         // Last daily sync run from signal_ingestion_run for the X provider.
         const [lastRun] = await db
@@ -116,9 +111,7 @@ export const createXTwitterHealthRoute = ({
           actualCostThisMonth: usage.actualCostThisMonth,
           chargeableCostThisMonth: usage.chargeableCostThisMonth,
           costBasisThisMonth: usage.costBasisThisMonth,
-          estimatedMonthlyCostAtCurrentRate: Number(
-            projectedMonthlyAtCurrentRate.toFixed(2)
-          ),
+          estimatedMonthlyCostAtCurrentRate: Number(projectedMonthlyAtCurrentRate.toFixed(2)),
           remainingDailyBudget,
           remainingMonthlyBudget,
           lastStatusCode: usage.lastStatusCode,

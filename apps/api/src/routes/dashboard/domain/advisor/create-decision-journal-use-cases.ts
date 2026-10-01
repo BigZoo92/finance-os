@@ -130,9 +130,7 @@ export const createDecisionJournalUseCases = ({
 
     return repository.listDecisionJournalEntries({
       limit: input.limit ?? 50,
-      ...(input.recommendationId !== undefined
-        ? { recommendationId: input.recommendationId }
-        : {}),
+      ...(input.recommendationId !== undefined ? { recommendationId: input.recommendationId } : {}),
       ...(input.runId !== undefined ? { runId: input.runId } : {}),
       ...(input.decision !== undefined ? { decision: input.decision } : {}),
       scope: 'admin',
@@ -151,7 +149,10 @@ export const createDecisionJournalUseCases = ({
   },
 
   async createAdvisorDecisionJournalEntry(
-    input: { mode: 'demo' | 'admin'; requestId: string } & DashboardAdvisorDecisionJournalCreateInput
+    input: {
+      mode: 'demo' | 'admin'
+      requestId: string
+    } & DashboardAdvisorDecisionJournalCreateInput
   ): Promise<DashboardAdvisorDecisionJournalEntryResponse> {
     if (input.mode === 'demo') {
       throw new Error('Decision journal mutations are admin-only')
@@ -162,9 +163,7 @@ export const createDecisionJournalUseCases = ({
     const freeNote = truncateFreeNote(input.freeNote)
 
     const created = await repository.createDecisionJournalEntry({
-      ...(input.recommendationId !== undefined
-        ? { recommendationId: input.recommendationId }
-        : {}),
+      ...(input.recommendationId !== undefined ? { recommendationId: input.recommendationId } : {}),
       ...(input.runId !== undefined ? { runId: input.runId } : {}),
       ...(input.recommendationKey !== undefined
         ? { recommendationKey: input.recommendationKey }

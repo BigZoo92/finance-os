@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { MARKET_MACRO_SERIES } from './market-definitions'
 import { buildMacroSeriesSnapshots, buildMarketSignals } from './market-analytics'
+import { MARKET_MACRO_SERIES } from './market-definitions'
 
 describe('buildMacroSeriesSnapshots', () => {
   it('computes CPI year-over-year and preserves level series', () => {

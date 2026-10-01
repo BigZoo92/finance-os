@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { __testing } from './free-firehose'
 
-const { adaptNewsItemToSignalItem, buildHistoryAdapter, toSafeFreeFirehoseErrorMessage } =
-  __testing
+const { adaptNewsItemToSignalItem, buildHistoryAdapter, toSafeFreeFirehoseErrorMessage } = __testing
 
 describe('adaptNewsItemToSignalItem', () => {
   it('maps a free news provider raw item to a signal_item insert payload', () => {

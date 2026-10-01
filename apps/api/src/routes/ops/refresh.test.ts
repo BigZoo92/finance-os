@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import { createOpsRefreshRoute } from './refresh'
 import type { DashboardRouteRuntime } from '../dashboard/types'
+import { createOpsRefreshRoute } from './refresh'
 
 const config = {
   externalInvestmentsEnabled: true,
@@ -291,9 +291,7 @@ describe('createOpsRefreshRoute', () => {
     expect(payload.jobs.find(job => job.jobId === 'investment-learning-review')?.status).toBe(
       'pending'
     )
-    expect(payload.jobs.find(job => job.jobId === 'investment-action-plan')?.status).toBe(
-      'pending'
-    )
+    expect(payload.jobs.find(job => job.jobId === 'investment-action-plan')?.status).toBe('pending')
     expect(refreshCalls).toBe(0)
     expect(staleRecoveryCalls).toBe(0)
   })

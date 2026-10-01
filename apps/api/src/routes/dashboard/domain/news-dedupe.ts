@@ -100,7 +100,8 @@ export const resolveNewsDuplicate = ({
         reasons.push('source-domain-match')
       }
 
-      const hoursDistance = Math.abs(signal.publishedAt.getTime() - candidate.publishedAt.getTime()) / 3_600_000
+      const hoursDistance =
+        Math.abs(signal.publishedAt.getTime() - candidate.publishedAt.getTime()) / 3_600_000
       if (hoursDistance <= 3) {
         score += 18
         reasons.push('published-window-tight')

@@ -1,37 +1,35 @@
-import { queryOptions } from "@tanstack/react-query";
-import type { AuthMode } from "../auth-types";
-import { fetchPushSettings } from "./api";
-import { getPushUiConfig } from "./ui-config";
+import { queryOptions } from '@tanstack/react-query'
+import type { AuthMode } from '../auth-types'
+import { fetchPushSettings } from './api'
+import { getPushUiConfig } from './ui-config'
 
 export const notificationsQueryKeys = {
-  all: ["notifications"] as const,
-  pushSettings: () => [...notificationsQueryKeys.all, "push-settings"] as const,
-};
+  all: ['notifications'] as const,
+  pushSettings: () => [...notificationsQueryKeys.all, 'push-settings'] as const,
+}
 
-export const pushSettingsQueryOptionsWithMode = ({
-  mode,
-}: { mode?: AuthMode } = {}) =>
+export const pushSettingsQueryOptionsWithMode = ({ mode }: { mode?: AuthMode } = {}) =>
   queryOptions({
     queryKey: notificationsQueryKeys.pushSettings(),
     queryFn: () => {
-      const uiConfig = getPushUiConfig();
-      if (mode === "demo") {
+      const uiConfig = getPushUiConfig()
+      if (mode === 'demo') {
         return {
           enabled: true,
-          mode: "demo",
+          mode: 'demo',
           featureEnabled: uiConfig.enabled,
           criticalEnabled: uiConfig.criticalEnabled,
           providerAvailable: false,
-          providerStatus: "unavailable",
+          providerStatus: 'unavailable',
           optIn: true,
-          permission: "granted",
+          permission: 'granted',
           subscriptionStale: false,
-          requestId: "demo-notifications",
-        } as const;
+          requestId: 'demo-notifications',
+        } as const
       }
 
-      return fetchPushSettings();
+      return fetchPushSettings()
     },
     enabled: mode !== undefined,
-    staleTime: mode === "demo" ? Number.POSITIVE_INFINITY : 10_000,
-  });
+    staleTime: mode === 'demo' ? Number.POSITIVE_INFINITY : 10_000,
+  })

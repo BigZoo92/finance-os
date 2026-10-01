@@ -128,9 +128,7 @@ export const enrichMarketQuotedValuations = async ({
       missingCount += 1
       nextPositions.push({
         ...position,
-        degradedReasons: Array.from(
-          new Set([...position.degradedReasons, 'MARKET_QUOTE_MISSING'])
-        ),
+        degradedReasons: Array.from(new Set([...position.degradedReasons, 'MARKET_QUOTE_MISSING'])),
       })
       continue
     }

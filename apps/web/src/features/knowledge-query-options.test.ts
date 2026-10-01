@@ -70,7 +70,6 @@ describe('knowledge query keys', () => {
       }).queryKey
     ).not.toEqual(options.queryKey)
   })
-
 })
 
 describe('removeKnowledgeQueriesForAuthTransition', () => {

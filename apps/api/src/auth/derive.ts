@@ -12,10 +12,7 @@ const resolveRequestId = (request: Request) => {
 export const deriveAuth = ({
   env,
 }: {
-  env: Pick<
-    ApiEnv,
-    'AUTH_SESSION_SECRET' | 'AUTH_SESSION_TTL_DAYS' | 'PRIVATE_ACCESS_TOKEN'
-  >
+  env: Pick<ApiEnv, 'AUTH_SESSION_SECRET' | 'AUTH_SESSION_TTL_DAYS' | 'PRIVATE_ACCESS_TOKEN'>
 }) => {
   return new Elysia({ name: 'auth.derive' }).derive({ as: 'global' }, ({ request, set }) => {
     const requestId = resolveRequestId(request)

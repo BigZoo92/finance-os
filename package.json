@@ -1,16 +1,11 @@
 {
   "name": "finance-os",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "description": "",
   "keywords": [],
-  "author": "BigZoo",
   "license": "ISC",
-  "packageManager": "pnpm@11.28.0",
-  "engines": {
-    "node": ">=24.21.0 <25",
-    "pnpm": ">=11.28.0 <12"
-  },
+  "author": "BigZoo",
   "scripts": {
     "dev:apps": "concurrently -k -n api,worker,web \"pnpm api:dev\" \"pnpm worker:dev\" \"pnpm web:dev\"",
     "dev:all": "pnpm infra:up && pnpm dev:apps",
@@ -103,10 +98,15 @@
     "@moonrepo/cli": "2.5.5",
     "@playwright/test": "1.63.0",
     "@types/node": "catalog:",
+    "bun-types": "catalog:",
     "concurrently": "^9.2.1",
     "gitnexus": "1.4.10",
     "js-yaml": "^4.1.1",
-    "typescript": "7.0.2",
-    "bun-types": "catalog:"
-  }
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "pnpm": ">=11.28.0 <12"
+  },
+  "packageManager": "pnpm@11.28.0"
 }

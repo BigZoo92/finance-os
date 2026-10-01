@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import { classifySignal } from './signal-classifier'
-import { createNormalizedNewsSignal } from './news-enrichment'
-import { toStableHash } from './news-helpers'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
 import { buildXWatchlistQuery } from '../services/providers/x-twitter-news-provider'
+import { createNormalizedNewsSignal } from './news-enrichment'
+import { toStableHash } from './news-helpers'
 import type { NormalizedNewsSignalDraft, NewsProviderRawItem } from './news-types'
+import { classifySignal } from './signal-classifier'
 
 // ---------------------------------------------------------------------------
 // Manual import normalization
@@ -175,9 +175,7 @@ describe('classifySignal — Finance vs AI/Tech routing', () => {
   })
 
   it('does not flag routine content as attention', () => {
-    const result = classifySignal(
-      makeSignal({ title: 'Regular tech blog post about React' })
-    )
+    const result = classifySignal(makeSignal({ title: 'Regular tech blog post about React' }))
     expect(result.requiresAttention).toBe(false)
   })
 })

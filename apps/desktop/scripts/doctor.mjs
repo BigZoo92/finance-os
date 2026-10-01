@@ -77,7 +77,9 @@ function checkBun() {
   const bunVersion = spawn('bun', ['--version'])
 
   if (bunVersion.error?.code === 'ENOENT') {
-    addNote('bun not found in PATH (optional for desktop shell, required for full `pnpm check:ci`).')
+    addNote(
+      'bun not found in PATH (optional for desktop shell, required for full `pnpm check:ci`).'
+    )
     return
   }
 

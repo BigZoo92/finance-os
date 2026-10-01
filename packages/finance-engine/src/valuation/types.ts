@@ -43,7 +43,15 @@ export interface AssetIdentityResolution {
   /** Deterministic canonical key, e.g. `conid:265598`, `isin:FR0000121014`. */
   identityKey: string | null
   /** Which identifier decided the resolution. */
-  resolvedBy: 'conid' | 'isin' | 'binance_asset' | 'symbol_exchange' | 'symbol_currency' | 'account' | 'manual' | null
+  resolvedBy:
+    | 'conid'
+    | 'isin'
+    | 'binance_asset'
+    | 'symbol_exchange'
+    | 'symbol_currency'
+    | 'account'
+    | 'manual'
+    | null
 }
 
 export interface FxRateInput {

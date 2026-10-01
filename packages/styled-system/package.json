@@ -1,9 +1,10 @@
 {
   "name": "@finance-os/styled-system",
-  "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "private": true,
   "description": "Command Pixel design tokens (Panda preset) and the generated Panda CSS runtime shared by @finance-os/ui and @finance-os/web.",
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     "./preset": "./src/preset.ts",
     "./css": {
@@ -30,18 +31,17 @@
       "types": "./generated/types/index.d.ts"
     }
   },
-  "sideEffects": false,
   "scripts": {
     "codegen": "panda codegen --clean",
     "prepare": "panda codegen --clean",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "peerDependencies": {
-    "react": "^19.0.0"
-  },
   "devDependencies": {
     "@pandacss/dev": "1.12.1",
     "@types/react": "catalog:",
     "react": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
   }
 }

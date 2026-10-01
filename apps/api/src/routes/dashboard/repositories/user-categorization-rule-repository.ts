@@ -130,7 +130,9 @@ export const createUserCategorizationRuleRepository = ({ db }: { db: ApiDb }) =>
     return row ? mapRule(row) : null
   },
 
-  async getTransactionForDryRun(transactionId: number): Promise<CategorizationDryRunTransaction | null> {
+  async getTransactionForDryRun(
+    transactionId: number
+  ): Promise<CategorizationDryRunTransaction | null> {
     const [row] = await db
       .select({
         bookingDate: schema.transaction.bookingDate,

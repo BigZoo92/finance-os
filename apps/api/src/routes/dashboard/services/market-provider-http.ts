@@ -4,15 +4,17 @@ const toSafeProviderErrorMessage = (value: string) => {
   return value.replace(/\s+/g, ' ').trim().slice(0, 220)
 }
 
-export const createProviderRequestInit = ({
-  requestId,
-  headers,
-}: {
-  requestId: string
-  headers?: Record<string, string>
-} = {
-  requestId: 'n/a',
-}) => {
+export const createProviderRequestInit = (
+  {
+    requestId,
+    headers,
+  }: {
+    requestId: string
+    headers?: Record<string, string>
+  } = {
+    requestId: 'n/a',
+  }
+) => {
   return {
     headers: {
       accept: 'application/json',
