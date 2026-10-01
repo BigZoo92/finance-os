@@ -27,8 +27,7 @@
     "cheerio": "^1.2.0",
     "drizzle-orm": "catalog:",
     "elysia": "1.4.30",
-    "fast-xml-parser": "^5.5.11",
-    "zod": "catalog:"
+    "fast-xml-parser": "^5.5.11"
   },
   "devDependencies": {
     "bun-types": "catalog:"

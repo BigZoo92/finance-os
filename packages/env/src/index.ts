@@ -1,7 +1,10 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
-import { z } from 'zod'
+// The Zod 3 API, shipped inside the single zod 4 dependency: the schema relies on
+// Zod 3 `.default()` semantics (the default is parsed through the inner schema),
+// which Zod 4 short-circuits. Migrating to the v4 API is a separate, reviewed change.
+import { z } from 'zod/v3'
 
 let rootEnvLoaded = false
 

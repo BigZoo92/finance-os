@@ -116,9 +116,6 @@ importers:
       fast-xml-parser:
         specifier: ^5.5.11
         version: 5.5.11
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
     devDependencies:
       bun-types:
         specifier: 'catalog:'
@@ -303,9 +300,6 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.3(@types/pg@8.16.0)(bun-types@1.4.2)(pg@8.18.0)(postgres@3.4.8)
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
     devDependencies:
       bun-types:
         specifier: 'catalog:'
@@ -343,8 +337,8 @@ importers:
         specifier: ^17.3.1
         version: 17.3.1
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: 'catalog:'
+        version: 4.6.5
 
   packages/external-investments:
     dependencies:
@@ -6408,9 +6402,6 @@ packages:
     peerDependencies:
       zod: ^3.25 || ^4
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
@@ -12155,7 +12146,5 @@ snapshots:
   zod-to-json-schema@3.25.1(zod@4.6.5):
     dependencies:
       zod: 4.6.5
-
-  zod@3.25.76: {}
 
   zod@4.6.5: {}
