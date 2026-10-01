@@ -22,7 +22,11 @@ export default defineConfig({
   presets: ['@pandacss/preset-base', '@pandacss/preset-panda', financeOsPreset],
   include: [source('../ui/src/**/*.{ts,tsx}'), source('../../apps/web/src/**/*.{ts,tsx}')],
   exclude: ['**/*.test.{ts,tsx}'],
-  outdir: source('generated'),
+  // Relative on purpose: the CLI joins its cwd and `outdir` (an absolute path
+  // would be nested under this package). Codegen only runs from this package
+  // (`prepare`, `pnpm panda:codegen`, the Moon `codegen` task); the PostCSS
+  // plugin under apps/web never writes the runtime.
+  outdir: 'generated',
   importMap: '@finance-os/styled-system',
   jsxFramework: 'react',
   jsxStyleProps: 'all',
