@@ -3,6 +3,8 @@
  * or event. Observation first, then the few fields that help read it.
  * No raw score, no pipeline identifier, no provenance internals.
  */
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Button, CurrencyAmount, Freshness, PercentChange } from '@finance-os/ui/components'
 import { ExternalLinkPixelIcon, TimesPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -37,14 +39,46 @@ type RadarFocusDetailProps = {
   onClose: () => void
 }
 
+const detailRow = css({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '4',
+  textStyle: 'xs',
+})
+
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 text-xs">
-      <dt className="shrink-0 text-foreground/45">{label}</dt>
-      <dd className="min-w-0 text-right text-foreground">{children}</dd>
+    <div className={detailRow}>
+      <styled.dt flexShrink="0" color="foreground/45">
+        {label}
+      </styled.dt>
+      <styled.dd minW="0" textAlign="right" color="foreground">
+        {children}
+      </styled.dd>
     </div>
   )
 }
+
+const chip = cva({
+  base: {
+    rounded: '5px',
+    borderWidth: '1px',
+    px: '2',
+    py: '0.5',
+    fontFamily: 'mono',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  variants: {
+    tone: {
+      neutral: { borderColor: 'foreground/16', color: 'foreground/65' },
+      primary: { borderColor: 'primary/40', color: 'primary' },
+      teal: { borderColor: 'teal/40', color: 'teal' },
+    },
+  },
+})
 
 function Chip({
   children,
@@ -53,20 +87,77 @@ function Chip({
   children: React.ReactNode
   tone?: 'neutral' | 'primary' | 'teal'
 }) {
-  const classes =
-    tone === 'primary'
-      ? 'border-primary/40 text-primary'
-      : tone === 'teal'
-        ? 'border-teal/40 text-teal'
-        : 'border-foreground/16 text-foreground/65'
-  return (
-    <span
-      className={`rounded-[5px] border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${classes}`}
-    >
-      {children}
-    </span>
-  )
+  return <span className={chip({ tone })}>{children}</span>
 }
+
+const closeButton = css({
+  display: 'grid',
+  boxSize: '8',
+  flexShrink: '0',
+  placeItems: 'center',
+  rounded: 'tile',
+  color: 'foreground/60',
+  outlineStyle: 'none',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { color: 'foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const escapeHint = css({ fontFamily: 'mono', fontSize: '10px', color: 'foreground/35' })
+
+const chipRow = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2' })
+
+const leadText = css({
+  fontSize: 'sm',
+  lineHeight: 'snug',
+  fontWeight: 'medium',
+  color: 'foreground',
+})
+
+// The dated rule between each block of the detail.
+const detailBlock = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+  borderTopWidth: '1px',
+  borderColor: 'foreground/9',
+  pt: '3',
+})
+
+const monoValue = css({ fontFamily: 'mono', fontSize: '11px' })
+
+const detailActions = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  columnGap: '4',
+  rowGap: '2',
+  borderTopWidth: '1px',
+  borderColor: 'foreground/9',
+  pt: '3',
+  textStyle: 'xs',
+  fontWeight: 'medium',
+})
+
+const sourceLink = css({
+  color: 'primary',
+  outlineStyle: 'none',
+  _hover: { textDecorationLine: 'underline' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const externalLink = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '1',
+  color: 'foreground/70',
+  outlineStyle: 'none',
+  _hover: { color: 'foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
 
 export function RadarFocusDetail({
   focus,
@@ -87,28 +178,28 @@ export function RadarFocusDetail({
         : focus.event.sourceLabel
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex items-center gap-3">
-        <h3
+    <styled.div display="flex" flexDirection="column" gap="3.5">
+      <styled.div display="flex" alignItems="center" gap="3">
+        <styled.h3
           id={headingId}
-          className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground"
+          minW="0"
+          flex="1"
+          truncate
+          fontSize="15px"
+          fontWeight="semibold"
+          color="foreground"
         >
           {heading}
-        </h3>
+        </styled.h3>
         {showEscapeHint ? (
-          <span aria-hidden="true" className="font-mono text-[10px] text-foreground/35">
+          <span aria-hidden="true" className={escapeHint}>
             ESC
           </span>
         ) : null}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Fermer"
-          className="grid size-8 shrink-0 place-items-center rounded-tile text-foreground/60 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
-        >
+        <button type="button" onClick={onClose} aria-label="Fermer" className={closeButton}>
           <TimesPixelIcon size={13} />
         </button>
-      </div>
+      </styled.div>
 
       {focus.kind === 'signal' ? (
         <SignalDetail
@@ -125,7 +216,7 @@ export function RadarFocusDetail({
       ) : (
         <EventDetail event={focus.event} marketLabelById={marketLabelById} isAdmin={isAdmin} />
       )}
-    </div>
+    </styled.div>
   )
 }
 
@@ -144,19 +235,21 @@ function SignalDetail({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className={chipRow}>
         <SeverityChip severity={signal.severity} />
         <Chip>{TONE_LABEL[signal.tone]}</Chip>
       </div>
-      {signal.value ? <SignalValue signal={signal} className="text-[22px] font-medium" /> : null}
-      <p className="text-sm font-medium leading-snug text-foreground">{signal.observation}</p>
+      {signal.value ? <SignalValue signal={signal} fontSize="22px" fontWeight="medium" /> : null}
+      <p className={leadText}>{signal.observation}</p>
       {signal.detail ? (
-        <p className="text-xs leading-relaxed text-foreground/65">{signal.detail}</p>
+        <styled.p fontSize="xs" lineHeight="relaxed" color="foreground/65">
+          {signal.detail}
+        </styled.p>
       ) : null}
-      <dl className="flex flex-col gap-2 border-t border-foreground/9 pt-3">
+      <dl className={detailBlock}>
         {signal.evidence.map(item => (
           <DetailRow key={item} label="Donnée">
-            <span className="font-mono text-[11px]">{item}</span>
+            <span className={monoValue}>{item}</span>
           </DetailRow>
         ))}
         {relatedLabels.length > 0 ? (
@@ -185,15 +278,16 @@ function MarketDetail({
 }) {
   return (
     <>
-      <div className="flex flex-wrap items-baseline gap-2.5">
+      <styled.div display="flex" flexWrap="wrap" alignItems="baseline" gap="2.5">
         <CurrencyAmount
           value={market.price}
           currency={market.currency}
-          className="text-[22px] font-medium"
+          fontSize="22px"
+          fontWeight="medium"
         />
-        <PercentChange value={market.changePct} className="text-[13px]" />
-      </div>
-      <dl className="flex flex-col gap-2 border-t border-foreground/9 pt-3">
+        <PercentChange value={market.changePct} fontSize="13px" />
+      </styled.div>
+      <dl className={detailBlock}>
         <DetailRow label="Sur la période">
           <PercentChange value={periodChangePct} decimals={1} />
         </DetailRow>
@@ -204,21 +298,31 @@ function MarketDetail({
         </DetailRow>
       </dl>
       {signals.length > 0 ? (
-        <ul
-          className="flex flex-col gap-2 border-t border-foreground/9 pt-3"
-          aria-label="Signaux liés"
-        >
+        <ul className={detailBlock} aria-label="Signaux liés">
           {signals.map(signal => (
-            <li key={signal.id} className="flex items-start gap-2 text-xs text-foreground/75">
+            <styled.li
+              key={signal.id}
+              display="flex"
+              alignItems="flex-start"
+              gap="2"
+              textStyle="xs"
+              color="foreground/75"
+            >
               <SeverityChip severity={signal.severity} />
-              <span className="leading-snug">{signal.observation}</span>
-            </li>
+              <styled.span lineHeight="snug">{signal.observation}</styled.span>
+            </styled.li>
           ))}
         </ul>
       ) : (
-        <p className="border-t border-foreground/9 pt-3 text-xs text-foreground/50">
+        <styled.p
+          borderTopWidth="1px"
+          borderColor="foreground/9"
+          pt="3"
+          textStyle="xs"
+          color="foreground/50"
+        >
           Aucun signal sur ce marché
-        </p>
+        </styled.p>
       )}
     </>
   )
@@ -253,20 +357,20 @@ function EventDetail({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className={chipRow}>
         {event.requiresAttention ? <Chip tone="primary">Attention</Chip> : null}
         {event.usedByAdvisor ? <Chip tone="teal">Utilisé par Advisor</Chip> : null}
       </div>
-      <p className="text-sm font-medium leading-snug text-foreground">{event.title}</p>
-      <dl className="flex flex-col gap-2 border-t border-foreground/9 pt-3">
+      <p className={leadText}>{event.title}</p>
+      <dl className={detailBlock}>
         {event.author ? (
           <DetailRow label="Compte">
-            <span className="font-mono text-[11px]">{event.author}</span>
+            <span className={monoValue}>{event.author}</span>
           </DetailRow>
         ) : null}
         {moment ? (
           <DetailRow label="Publié">
-            <time dateTime={event.publishedAt} className="font-mono text-[11px]">
+            <time dateTime={event.publishedAt} className={monoValue}>
               {moment}
             </time>
           </DetailRow>
@@ -275,23 +379,18 @@ function EventDetail({
           <DetailRow label="Marchés">{relatedLabels.join(', ')}</DetailRow>
         ) : null}
       </dl>
-      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-t border-foreground/9 pt-3 text-xs font-medium">
+      <div className={detailActions}>
         {event.social && event.author ? (
           <Link
             to="/social-intelligence"
             search={{ q: event.author.replace(/^@/, '') }}
-            className="text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/70"
+            className={sourceLink}
           >
             Voir la source
           </Link>
         ) : null}
         {event.url ? (
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="inline-flex items-center gap-1 text-foreground/70 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
-          >
+          <a href={event.url} target="_blank" rel="noreferrer noopener" className={externalLink}>
             Ouvrir
             <ExternalLinkPixelIcon size={11} />
           </a>

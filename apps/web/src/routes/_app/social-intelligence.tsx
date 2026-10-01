@@ -6,6 +6,8 @@
  * normal product destination; source management stays Admin-only and the
  * backend authorization is untouched.
  */
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Drawer,
@@ -59,6 +61,65 @@ export const Route = createFileRoute('/_app/social-intelligence')({
 })
 
 const SOURCES_QUERY_KEY = ['signal-sources'] as const
+
+// Tailwind's `space-y-7` (margin under every child but the last), kept verbatim: the
+// last child is often the `md:hidden` rows list, so the gallery keeps its trailing
+// margin, which `spaceY` (margin above every child but the first) would drop.
+const pageStack = css({ '& > :not(:last-child)': { marginBlockEnd: '7' } })
+
+const searchIcon = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  left: '3',
+  top: '50%',
+  translate: '0 -50%',
+  color: 'foreground/40',
+})
+
+const sourceGrid = css({
+  display: 'grid',
+  gap: '5',
+  md: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+  xl: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' },
+})
+
+// The gallery only exists from `md` up; the rows take over below.
+const desktopGallery = css({
+  display: 'none',
+  gap: '5',
+  md: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+  xl: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' },
+})
+
+const mobileRows = css({ md: { display: 'none' } })
+
+// Former unlayered `.animate-shimmer`, stopped under reduced motion.
+const skeleton = css({
+  h: '40',
+  rounded: 'surface',
+  bgImage:
+    'linear-gradient(90deg, {colors.muted} 0%, oklch(from {colors.muted} calc(l + 0.05) c h) 50%, {colors.muted} 100%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.8s ease-in-out infinite',
+  _motionReduce: { animation: 'none' },
+})
+
+const emptyState = css({ borderYWidth: '1px', borderColor: 'border/60', py: '10' })
+
+const emptyTitle = css({ textStyle: 'sm', color: 'foreground' })
+
+// Desktop detail: a floating card under the navbar instead of a full-height sheet.
+const floatingDetail = css.raw({
+  top: '5.5rem',
+  bottom: 'auto',
+  right: '6',
+  h: 'auto',
+  maxH: 'calc(100dvh - 7rem)',
+  w: '340px',
+  rounded: 'surface',
+  borderWidth: '1px',
+  borderColor: 'primary/40',
+})
 
 function SocialIntelligencePage() {
   const search = Route.useSearch()
@@ -137,22 +198,25 @@ function SocialIntelligencePage() {
   const countLabel = `${total} ${total === 1 ? 'source' : 'sources'}`
 
   return (
-    <div className="space-y-7">
+    <div className={pageStack}>
       <PageHeader
         title="Social Intelligence"
         status={
-          <span className="font-mono text-xs text-foreground/55">
+          <styled.span fontFamily="mono" textStyle="xs" color="foreground/55">
             {sourcesQuery.isPending ? 'Chargement' : countLabel}
-          </span>
+          </styled.span>
         }
         actions={
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <div className="relative min-w-0 flex-1 sm:w-[200px] sm:flex-none">
-              <SearchPixelIcon
-                size={13}
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40"
-              />
+          <styled.div
+            display="flex"
+            w="full"
+            flexWrap="wrap"
+            alignItems="center"
+            gap="2"
+            sm={{ w: 'auto' }}
+          >
+            <styled.div position="relative" minW="0" flex="1" sm={{ w: '200px', flex: 'none' }}>
+              <SearchPixelIcon size={13} aria-hidden="true" className={searchIcon} />
               <Input
                 type="search"
                 value={query}
@@ -166,7 +230,7 @@ function SocialIntelligencePage() {
                   updateSearch({ ...filters, q: event.target.value }, search.selected)
                 }}
               />
-            </div>
+            </styled.div>
             <SourceFilters
               filters={filters}
               facets={facets}
@@ -179,43 +243,46 @@ function SocialIntelligencePage() {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-h-9"
+                minH="9"
                 onClick={() => setAddOpen(true)}
               >
                 Ajouter une source
               </Button>
             ) : null}
-          </div>
+          </styled.div>
         }
       />
 
       {sourcesQuery.isPending ? (
-        <output
-          aria-label="Chargement des sources"
-          className="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
-        >
+        <output aria-label="Chargement des sources" className={sourceGrid}>
           {[0, 1, 2].map(index => (
-            <div
-              key={index}
-              className="h-40 animate-shimmer rounded-surface motion-reduce:animate-none"
-            />
+            <div key={index} className={skeleton} />
           ))}
         </output>
       ) : sourcesQuery.isError ? (
-        <div className="flex flex-wrap items-center gap-4 border-y border-border/60 py-8">
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="center"
+          gap="4"
+          borderYWidth="1px"
+          borderColor="border/60"
+          py="8"
+        >
           <Status tone="negative" label="Sources indisponibles" />
           <Button type="button" variant="outline" onClick={() => sourcesQuery.refetch()}>
             Réessayer
           </Button>
-        </div>
+        </styled.div>
       ) : cards.length === 0 ? (
-        <div className="border-y border-border/60 py-10">
-          <p className="text-sm text-foreground">Aucune source</p>
+        <div className={emptyState}>
+          <p className={emptyTitle}>Aucune source</p>
           {isAdmin ? (
             <Button
               type="button"
               variant="outline"
-              className="mt-4 min-h-11"
+              mt="4"
+              minH="11"
               onClick={() => setAddOpen(true)}
             >
               Ajouter une source
@@ -223,12 +290,13 @@ function SocialIntelligencePage() {
           ) : null}
         </div>
       ) : visible.length === 0 ? (
-        <div className="border-y border-border/60 py-10">
-          <p className="text-sm text-foreground">Aucune source correspondante</p>
+        <div className={emptyState}>
+          <p className={emptyTitle}>Aucune source correspondante</p>
           <Button
             type="button"
             variant="outline"
-            className="mt-4 min-h-11"
+            mt="4"
+            minH="11"
             onClick={() => {
               setQuery('')
               updateSearch(
@@ -242,22 +310,19 @@ function SocialIntelligencePage() {
         </div>
       ) : (
         <>
-          <ul
-            className="hidden gap-5 md:grid md:grid-cols-2 xl:grid-cols-3"
-            aria-label="Sources suivies"
-          >
+          <ul className={desktopGallery} aria-label="Sources suivies">
             {visible.map(card => (
-              <li key={card.id} className="min-w-0">
+              <styled.li key={card.id} minW="0">
                 <SourceCard
                   source={card}
                   selected={card.id === selected?.id}
                   variant="card"
                   onSelect={select}
                 />
-              </li>
+              </styled.li>
             ))}
           </ul>
-          <ul className="md:hidden" aria-label="Sources suivies">
+          <ul className={mobileRows} aria-label="Sources suivies">
             {visible.map(card => (
               <li key={card.id}>
                 <SourceCard
@@ -270,10 +335,10 @@ function SocialIntelligencePage() {
             ))}
           </ul>
           {filtering ? (
-            <p className="font-mono text-[11px] text-foreground/45">
+            <styled.p fontFamily="mono" fontSize="11px" color="foreground/45">
               {visible.length}{' '}
               {visible.length === 1 ? 'source correspondante' : 'sources correspondantes'}
-            </p>
+            </styled.p>
           ) : null}
         </>
       )}
@@ -285,18 +350,12 @@ function SocialIntelligencePage() {
             event.preventDefault()
             restoreTriggerFocus()
           }}
-          className={
-            isMobile
-              ? ''
-              : 'top-[5.5rem] bottom-auto right-6 h-auto max-h-[calc(100dvh-7rem)] w-[340px] rounded-surface border border-primary/40'
-          }
+          {...(isMobile ? {} : { css: floatingDetail })}
         >
-          <DrawerTitle className="sr-only">{selected ? selected.name : 'Source'}</DrawerTitle>
-          <DrawerDescription className="sr-only">
-            Détail de la source sélectionnée
-          </DrawerDescription>
+          <DrawerTitle srOnly>{selected ? selected.name : 'Source'}</DrawerTitle>
+          <DrawerDescription srOnly>Détail de la source sélectionnée</DrawerDescription>
           {selected ? (
-            <div className="px-5 pb-4 pt-5">
+            <styled.div px="5" pb="4" pt="5">
               <SourceDetail
                 source={selected}
                 relatedSignals={relatedSignals}
@@ -309,7 +368,7 @@ function SocialIntelligencePage() {
                 }
                 onDelete={() => deleteMutation.mutate(selected.id)}
               />
-            </div>
+            </styled.div>
           ) : null}
         </DrawerContent>
       </Drawer>

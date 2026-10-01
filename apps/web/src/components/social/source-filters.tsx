@@ -5,6 +5,8 @@
  * status). Desktop: detached Popover. Mobile: bottom Drawer. Choices are a
  * draft until "Appliquer", exactly like the canonical frame.
  */
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Drawer,
@@ -18,7 +20,6 @@ import {
   SegmentedControl,
 } from '@finance-os/ui/components'
 import { FilterPixelIcon } from '@finance-os/ui/icons/pixel'
-import { cn } from '@finance-os/ui/lib/utils'
 import { type ReactNode, useState } from 'react'
 import {
   countActiveFilters,
@@ -48,14 +49,78 @@ const toDraft = (filters: SocialFilters): FilterDraft => ({
 
 const EMPTY_DRAFT: FilterDraft = { platform: null, tag: null, status: null, group: null }
 
+const sectionLegend = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.12em',
+  color: 'foreground/45',
+})
+
+// Active filters tint the outline trigger, merged through the `css` prop. The tint
+// also holds on hover, as the former Tailwind classes did over the recipe's `_hover`.
+const activeTrigger = css.raw({
+  borderColor: 'primary/40',
+  bg: 'primary/10',
+  color: 'primary',
+  _hover: { borderColor: 'primary/40', bg: 'primary/10', color: 'primary' },
+})
+
+const tagToggle = cva({
+  base: {
+    minH: '8',
+    rounded: 'tile',
+    borderWidth: '1px',
+    px: '2.5',
+    textStyle: 'xs',
+    outlineStyle: 'none',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+  },
+  variants: {
+    active: {
+      true: { borderColor: 'primary/40', bg: 'primary/12', fontWeight: 'medium', color: 'primary' },
+      false: {
+        borderColor: 'foreground/14',
+        color: 'foreground/65',
+        _hover: { color: 'foreground' },
+      },
+    },
+  },
+})
+
+const filtersFooter = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+  borderTopWidth: '1px',
+  borderColor: 'foreground/9',
+  pt: '3.5',
+})
+
+const resetButton = css({
+  minH: '9',
+  textStyle: 'xs',
+  color: 'foreground/45',
+  outlineStyle: 'none',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { color: 'foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const matchCountText = css({ fontFamily: 'mono', fontSize: '11px', color: 'foreground/45' })
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="min-w-0">
-      <legend className="font-mono text-[10px] uppercase tracking-[0.12em] text-foreground/45">
-        {title}
-      </legend>
-      <div className="mt-2.5">{children}</div>
-    </fieldset>
+    <styled.fieldset minW="0">
+      <legend className={sectionLegend}>{title}</legend>
+      <styled.div mt="2.5">{children}</styled.div>
+    </styled.fieldset>
   )
 }
 
@@ -85,25 +150,24 @@ export function SourceFilters({
       type="button"
       variant="outline"
       size="sm"
-      className={cn(
-        'min-h-9 gap-2',
-        activeCount > 0 && 'border-primary/40 bg-primary/10 text-primary'
-      )}
+      minH="9"
+      gap="2"
+      {...(activeCount > 0 ? { css: activeTrigger } : {})}
       aria-expanded={open}
     >
       <FilterPixelIcon size={13} aria-hidden="true" />
       Filtres
       {activeCount > 0 ? (
-        <span className="font-mono text-[10px]">
+        <styled.span fontFamily="mono" fontSize="10px">
           {activeCount}
-          <span className="sr-only"> {activeCount > 1 ? 'filtres actifs' : 'filtre actif'}</span>
-        </span>
+          <styled.span srOnly> {activeCount > 1 ? 'filtres actifs' : 'filtre actif'}</styled.span>
+        </styled.span>
       ) : null}
     </Button>
   )
 
   const body = (
-    <div className="flex flex-col gap-5">
+    <styled.div display="flex" flexDirection="column" gap="5">
       {facets.platforms.length > 1 ? (
         <Section title="Source">
           <SegmentedControl
@@ -149,7 +213,7 @@ export function SourceFilters({
 
       {facets.tags.length > 0 ? (
         <Section title="Sujet">
-          <div className="flex flex-wrap gap-1.5">
+          <styled.div display="flex" flexWrap="wrap" gap="1.5">
             {facets.tags.map(tag => {
               const active = draft.tag !== null && draft.tag.toLowerCase() === tag.toLowerCase()
               return (
@@ -158,18 +222,13 @@ export function SourceFilters({
                   type="button"
                   aria-pressed={active}
                   onClick={() => setDraft(current => ({ ...current, tag: active ? null : tag }))}
-                  className={cn(
-                    'min-h-8 rounded-tile border px-2.5 text-xs outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring/70',
-                    active
-                      ? 'border-primary/40 bg-primary/12 font-medium text-primary'
-                      : 'border-foreground/14 text-foreground/65 hover:text-foreground'
-                  )}
+                  className={tagToggle({ active })}
                 >
                   {tag}
                 </button>
               )
             })}
-          </div>
+          </styled.div>
         </Section>
       ) : null}
 
@@ -192,28 +251,18 @@ export function SourceFilters({
         />
       </Section>
 
-      <div className="flex items-center justify-between gap-3 border-t border-foreground/9 pt-3.5">
-        <button
-          type="button"
-          onClick={() => apply(EMPTY_DRAFT)}
-          className="min-h-9 text-xs text-foreground/45 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
-        >
+      <div className={filtersFooter}>
+        <button type="button" onClick={() => apply(EMPTY_DRAFT)} className={resetButton}>
           Réinitialiser
         </button>
-        <Button
-          type="button"
-          size="sm"
-          variant="soft"
-          className="min-h-9"
-          onClick={() => apply(draft)}
-        >
+        <Button type="button" size="sm" variant="soft" minH="9" onClick={() => apply(draft)}>
           Appliquer
         </Button>
       </div>
-      <p className="font-mono text-[11px] text-foreground/45">
+      <p className={matchCountText}>
         {matchCount} {matchCount === 1 ? 'source correspondante' : 'sources correspondantes'}
       </p>
-    </div>
+    </styled.div>
   )
 
   if (isMobile) {
@@ -221,11 +270,13 @@ export function SourceFilters({
       <Drawer open={open} onOpenChange={handleOpenChange}>
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
         <DrawerContent side="bottom">
-          <div className="px-5 pb-3 pt-5">
-            <DrawerTitle className="text-[15px]">Filtres</DrawerTitle>
-            <DrawerDescription className="sr-only">Filtrer les sources suivies</DrawerDescription>
-            <div className="mt-4">{body}</div>
-          </div>
+          <styled.div px="5" pb="3" pt="5">
+            <DrawerTitle fontSize="15px" lineHeight="inherit">
+              Filtres
+            </DrawerTitle>
+            <DrawerDescription srOnly>Filtrer les sources suivies</DrawerDescription>
+            <styled.div mt="4">{body}</styled.div>
+          </styled.div>
         </DrawerContent>
       </Drawer>
     )
@@ -234,7 +285,7 @@ export function SourceFilters({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent align="end" className="w-[320px] p-5">
+      <PopoverContent align="end" w="320px" p="5">
         {body}
       </PopoverContent>
     </Popover>

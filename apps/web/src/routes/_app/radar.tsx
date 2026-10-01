@@ -7,6 +7,8 @@
  * sells. Viewing is open to demo and admin; only the manual market refresh
  * stays an Admin action.
  */
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Badge,
   Button,
@@ -72,7 +74,140 @@ export const Route = createFileRoute('/_app/radar')({
   component: RadarPage,
 })
 
-const SECTION_TITLE = 'font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/55'
+const sectionTitle = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'foreground/55',
+})
+
+const mutedNote = css({ textStyle: 'sm', color: 'foreground/55' })
+
+// Former unlayered `.animate-shimmer`, stopped under reduced motion.
+const skeleton = cva({
+  base: {
+    bgImage:
+      'linear-gradient(90deg, {colors.muted} 0%, oklch(from {colors.muted} calc(l + 0.05) c h) 50%, {colors.muted} 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'shimmer 1.8s ease-in-out infinite',
+    _motionReduce: { animation: 'none' },
+  },
+  variants: {
+    shape: {
+      tile: { rounded: 'tile' },
+      surface: { rounded: 'surface' },
+      row: { rounded: '11px' },
+    },
+  },
+})
+
+const Skeleton = styled('div', skeleton)
+
+const radarColumns = css({
+  display: 'grid',
+  gap: '6',
+  lg: { gridTemplateColumns: 'minmax(0, 1fr) 330px', gap: '9' },
+})
+
+const mobileFreshness = css({
+  ml: 'auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+  fontFamily: 'mono',
+  fontSize: '10px',
+  color: 'foreground/55',
+  lg: { display: 'none' },
+})
+
+const desktopFreshness = css({
+  display: 'none',
+  alignItems: 'center',
+  gap: '2',
+  fontFamily: 'mono',
+  fontSize: '11px',
+  color: 'foreground/55',
+  lg: { display: 'flex' },
+})
+
+const quietState = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  insetX: '0',
+  bottom: '9',
+  textAlign: 'center',
+})
+
+// Tailwind composed the focus ring with the resting overlay shadow.
+const detailPanel = css({
+  position: 'absolute',
+  right: '3',
+  top: '3',
+  zIndex: '1',
+  maxH: 'calc(100% - 1.5rem)',
+  w: '290px',
+  maxW: 'calc(100% - 1.5rem)',
+  overflowY: 'auto',
+  rounded: 'dropdown',
+  borderWidth: '1px',
+  borderColor: 'border',
+  bg: 'popover',
+  p: '18px',
+  color: 'popover.foreground',
+  shadow: 'overlay',
+  outlineStyle: 'none',
+  _focusVisible: {
+    boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent), {shadows.overlay}',
+  },
+})
+
+const fieldCaption = css({
+  mt: '2',
+  display: 'none',
+  alignItems: 'center',
+  gap: '3.5',
+  fontFamily: 'mono',
+  fontSize: '11px',
+  letterSpacing: '0.1em',
+  color: 'foreground/45',
+  lg: { display: 'flex' },
+})
+
+// Tailwind's `space-y-7` (margin under every child but the last): the last child is
+// the inline-flex link, so the rule is kept verbatim instead of `spaceY`.
+const radarAside = css({
+  '& > :not(:last-child)': { marginBlockEnd: '7' },
+  lg: { pt: '1.5' },
+})
+
+const sourcesLink = css({
+  display: 'inline-flex',
+  minH: '9',
+  alignItems: 'center',
+  gap: '2',
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'foreground/55',
+  outlineStyle: 'none',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { color: 'foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+/** Signature canvas wash (former unlayered `.bg-radar-canvas`). */
+const radarCanvas = css({
+  pointerEvents: 'none',
+  position: 'fixed',
+  inset: '0',
+  zIndex: '-10',
+  bgImage:
+    'radial-gradient(1000px 620px at 46% 44%, {colors.radar.canvas.center} 0%, {colors.radar.canvas.mid} 58%, {colors.radar.canvas.edge} 100%)',
+})
 
 const parseDay = (value: string | null): number | null => {
   if (!value) return null
@@ -229,28 +364,28 @@ function RadarPage() {
     if (overviewQuery.isError) {
       return (
         <RadarFrame>
-          <div className="flex flex-wrap items-center gap-4 py-10">
+          <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="4" py="10">
             <Status tone="negative" label="Marchés indisponibles" />
             <Button type="button" variant="outline" onClick={() => overviewQuery.refetch()}>
               Réessayer
             </Button>
-          </div>
+          </styled.div>
         </RadarFrame>
       )
     }
     return (
       <RadarFrame>
-        <output aria-label="Chargement du radar" className="block space-y-5">
-          <div className="h-6 w-full animate-shimmer rounded-tile motion-reduce:animate-none" />
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_330px] lg:gap-9">
-            <div className="h-[250px] animate-shimmer rounded-surface motion-reduce:animate-none lg:h-[520px]" />
-            <div className="space-y-2">
-              <div className="h-20 animate-shimmer rounded-[11px] motion-reduce:animate-none" />
-              <div className="h-16 animate-shimmer rounded-[11px] motion-reduce:animate-none" />
-              <div className="h-16 animate-shimmer rounded-[11px] motion-reduce:animate-none" />
-            </div>
+        <styled.output aria-label="Chargement du radar" display="block" spaceY="5">
+          <Skeleton shape="tile" h="6" w="full" />
+          <div className={radarColumns}>
+            <Skeleton shape="surface" h="250px" lg={{ h: '520px' }} />
+            <styled.div spaceY="2">
+              <Skeleton shape="row" h="20" />
+              <Skeleton shape="row" h="16" />
+              <Skeleton shape="row" h="16" />
+            </styled.div>
           </div>
-        </output>
+        </styled.output>
       </RadarFrame>
     )
   }
@@ -309,21 +444,24 @@ function RadarPage() {
 
   return (
     <RadarFrame>
-      <div className="flex items-center gap-3 lg:block">
-        <h1 className="text-[15px] font-semibold text-foreground lg:sr-only">Radar</h1>
-        <span className="ml-auto flex items-center gap-2 font-mono text-[10px] text-foreground/55 lg:hidden">
+      <styled.div display="flex" alignItems="center" gap="3" lg={{ display: 'block' }}>
+        <styled.h1 fontSize="15px" fontWeight="semibold" color="foreground" lg={{ srOnly: true }}>
+          Radar
+        </styled.h1>
+        <span className={mobileFreshness}>
           <Freshness
             asOf={vm.freshness.asOf}
             staleAfterMinutes={vm.freshness.staleAfterMinutes}
-            className="text-[10px] leading-[inherit]"
+            fontSize="10px"
+            lineHeight="inherit"
           />
           {updateMoment && vm.freshness.asOf ? (
             <time dateTime={vm.freshness.asOf}>{updateMoment}</time>
           ) : null}
         </span>
-      </div>
+      </styled.div>
 
-      <div className="mt-4 space-y-3.5 lg:mt-0">
+      <styled.div mt="4" spaceY="3.5" lg={{ mt: '0' }}>
         <RadarMarketStrip
           items={scope.strip}
           focusedId={focusedMarketId}
@@ -338,17 +476,26 @@ function RadarPage() {
           }}
         />
 
-        <div className="flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2">
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="center"
+          justifyContent="flex-end"
+          columnGap="3.5"
+          rowGap="2"
+        >
           {offline ? <Status tone="attention" label="Hors ligne" /> : null}
           {isDemo ? <Badge variant="outline">Mode démo</Badge> : null}
           {isAdmin && vm.isDemoData ? (
             <Badge variant="warning">Données de démonstration</Badge>
           ) : null}
-          <span className="hidden items-center gap-2 font-mono text-[11px] text-foreground/55 lg:flex">
+          <span className={desktopFreshness}>
             <Freshness
               asOf={vm.freshness.asOf}
               staleAfterMinutes={vm.freshness.staleAfterMinutes}
-              className="font-mono text-[11px] leading-[inherit]"
+              fontFamily="mono"
+              fontSize="11px"
+              lineHeight="inherit"
             />
             {updateMoment && vm.freshness.asOf ? (
               <time dateTime={vm.freshness.asOf}>{updateMoment}</time>
@@ -375,11 +522,16 @@ function RadarPage() {
               <RefreshPixelIcon size={14} />
             </Button>
           ) : null}
-        </div>
-      </div>
+        </styled.div>
+      </styled.div>
 
-      <div className="mt-4 grid gap-7 lg:mt-5 lg:grid-cols-[minmax(0,1fr)_330px] lg:gap-9">
-        <section aria-label="Champ des signaux" className="relative">
+      <styled.div
+        mt="4"
+        display="grid"
+        gap="7"
+        lg={{ mt: '5', gridTemplateColumns: 'minmax(0, 1fr) 330px', gap: '9' }}
+      >
+        <styled.section aria-label="Champ des signaux" position="relative">
           <SignalField
             series={series}
             markers={markers}
@@ -394,11 +546,13 @@ function RadarPage() {
             onSelectMarker={selectMarker}
           >
             {vm.quiet ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-9 text-center">
-                <p className="text-[15px] text-foreground/65">Rien de notable</p>
-                <p className="mt-1.5 font-mono text-[11px] text-foreground/35">
+              <div className={quietState}>
+                <styled.p fontSize="15px" color="foreground/65">
+                  Rien de notable
+                </styled.p>
+                <styled.p mt="1.5" fontFamily="mono" fontSize="11px" color="foreground/35">
                   {fieldMarketCount} marchés suivis
-                </p>
+                </styled.p>
               </div>
             ) : null}
             {detail && !isMobile ? (
@@ -406,28 +560,28 @@ function RadarPage() {
                 ref={panelRef}
                 tabIndex={-1}
                 aria-labelledby={detailHeadingId}
-                className="absolute right-3 top-3 z-[1] max-h-[calc(100%-1.5rem)] w-[290px] max-w-[calc(100%-1.5rem)] overflow-y-auto rounded-dropdown border border-border bg-popover p-[18px] text-popover-foreground shadow-overlay outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                className={detailPanel}
               >
                 {detail}
               </section>
             ) : null}
           </SignalField>
           {!vm.quiet ? (
-            <p className="mt-2 hidden items-center gap-3.5 font-mono text-[11px] tracking-[0.1em] text-foreground/45 lg:flex">
+            <p className={fieldCaption}>
               <span>{fieldMarketCount} marchés suivis</span>
-              <span aria-hidden="true" className="size-[3px] bg-foreground/30" />
+              <styled.span aria-hidden="true" boxSize="3px" bg="foreground/30" />
               <span>{scope.signals.length} signaux</span>
             </p>
           ) : null}
-        </section>
+        </styled.section>
 
-        <aside className="space-y-7 lg:pt-1.5">
+        <aside className={radarAside}>
           {scope.signals.length > 0 ? (
             <section aria-labelledby="radar-signals-title">
-              <h2 id="radar-signals-title" className={SECTION_TITLE}>
+              <h2 id="radar-signals-title" className={sectionTitle}>
                 Signaux
               </h2>
-              <div className="mt-3">
+              <styled.div mt="3">
                 <RadarSignalList
                   signals={scope.signals}
                   focusedId={focusedSignalId}
@@ -435,24 +589,26 @@ function RadarPage() {
                     toggleFocus({ kind: 'signal', id: signal.id }, trigger)
                   }
                 />
-              </div>
+              </styled.div>
             </section>
           ) : vm.quiet ? null : (
             <section aria-labelledby="radar-signals-title">
-              <h2 id="radar-signals-title" className={SECTION_TITLE}>
+              <h2 id="radar-signals-title" className={sectionTitle}>
                 Signaux
               </h2>
-              <p className="mt-3 text-sm text-foreground/55">Aucun signal sur cette sélection</p>
+              <styled.p mt="3" textStyle="sm" color="foreground/55">
+                Aucun signal sur cette sélection
+              </styled.p>
             </section>
           )}
 
           <section aria-labelledby="radar-events-title">
-            <h2 id="radar-events-title" className={SECTION_TITLE}>
+            <h2 id="radar-events-title" className={sectionTitle}>
               Événements
             </h2>
-            <div className="mt-2.5">
+            <styled.div mt="2.5">
               {eventsQuery.isError && vm.events.length === 0 ? (
-                <p className="text-sm text-foreground/55">Événements indisponibles</p>
+                <p className={mutedNote}>Événements indisponibles</p>
               ) : vm.events.length > 0 ? (
                 <RadarEvents
                   events={vm.events}
@@ -464,20 +620,17 @@ function RadarPage() {
                   }
                 />
               ) : (
-                <p className="text-sm text-foreground/55">Aucun événement récent</p>
+                <p className={mutedNote}>Aucun événement récent</p>
               )}
-            </div>
+            </styled.div>
           </section>
 
-          <Link
-            to="/social-intelligence"
-            className="inline-flex min-h-9 items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-foreground/55 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
-          >
+          <Link to="/social-intelligence" className={sourcesLink}>
             Sources suivies
             <span aria-hidden="true">→</span>
           </Link>
         </aside>
-      </div>
+      </styled.div>
 
       {isMobile ? (
         <Drawer open={Boolean(detail)} onOpenChange={open => !open && setFocus(null)}>
@@ -488,11 +641,11 @@ function RadarPage() {
               restoreTriggerFocus(triggerRef)
             }}
           >
-            <DrawerTitle className="sr-only">Détail du signal</DrawerTitle>
-            <DrawerDescription className="sr-only">
-              Détail de la sélection du Radar
-            </DrawerDescription>
-            <div className="px-5 pb-3 pt-5">{detail}</div>
+            <DrawerTitle srOnly>Détail du signal</DrawerTitle>
+            <DrawerDescription srOnly>Détail de la sélection du Radar</DrawerDescription>
+            <styled.div px="5" pb="3" pt="5">
+              {detail}
+            </styled.div>
           </DrawerContent>
         </Drawer>
       ) : null}
@@ -510,9 +663,9 @@ const currentFocusOf = (focus: NonNullable<ReturnType<typeof resolveRadarFocus>>
 /** Immersive frame: the signature canvas wash behind the page content. */
 function RadarFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative isolate">
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-radar-canvas" />
+    <styled.div position="relative" isolation="isolate">
+      <div aria-hidden="true" className={radarCanvas} />
       {children}
-    </div>
+    </styled.div>
   )
 }

@@ -5,6 +5,8 @@
  * "already present" branch) behind human copy: no HTTP codes, no provider
  * payloads, no follower metrics.
  */
+import { cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Dialog,
@@ -50,6 +52,27 @@ type AddSourceDialogProps = {
 type Platform = Exclude<SocialPlatform, 'other'>
 const PLATFORMS: Platform[] = ['x', 'bluesky', 'manual']
 const GROUPS: SignalSourceGroup[] = ['finance', 'ai_tech']
+
+/*
+ * Field label. Tailwind's `space-y-1.5` is kept verbatim (margin under every child
+ * but the last): the label is inline and its first child an inline span, so only a
+ * block-level control followed by Radix's hidden native select receives it.
+ */
+const fieldLabel = cva({
+  base: {
+    textStyle: 'xs',
+    fontWeight: 'medium',
+    color: 'foreground',
+    '& > :not(:last-child)': { marginBlockEnd: '1.5' },
+  },
+  variants: {
+    wide: {
+      true: { sm: { gridColumn: 'span 2 / span 2' } },
+      false: {},
+    },
+  },
+  defaultVariants: { wide: false },
+})
 
 /**
  * Mounted only while open (the parent renders it conditionally), so form
@@ -140,18 +163,29 @@ export function AddSourceDialog({
 
   return (
     <Dialog open={open} onOpenChange={next => !createMutation.isPending && onOpenChange(next)}>
-      <DialogContent className="max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
-        <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <DialogContent
+        smDown={{
+          bottom: '0',
+          left: '0',
+          top: 'auto',
+          w: 'full',
+          maxW: 'none',
+          translate: '0 0',
+          roundedBottom: '0',
+        }}
+      >
+        <styled.form onSubmit={submit} noValidate display="flex" flexDirection="column" gap="4">
           <DialogHeader>
             <DialogTitle>Ajouter une source</DialogTitle>
             <DialogDescription>Le compte rejoint la liste des sources suivies.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label
-              className="space-y-1.5 text-xs font-medium text-foreground"
-              htmlFor="source-platform"
-            >
+          <styled.div
+            display="grid"
+            gap="4"
+            sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+          >
+            <label className={fieldLabel()} htmlFor="source-platform">
               <span>Source</span>
               <Select
                 value={platform}
@@ -160,7 +194,7 @@ export function AddSourceDialog({
                   lookupMutation.reset()
                 }}
               >
-                <SelectTrigger id="source-platform" className="h-10 w-full">
+                <SelectTrigger id="source-platform" h="10" w="full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -172,13 +206,10 @@ export function AddSourceDialog({
                 </SelectContent>
               </Select>
             </label>
-            <label
-              className="space-y-1.5 text-xs font-medium text-foreground"
-              htmlFor="source-group"
-            >
+            <label className={fieldLabel()} htmlFor="source-group">
               <span>Groupe</span>
               <Select value={group} onValueChange={value => setGroup(value as SignalSourceGroup)}>
-                <SelectTrigger id="source-group" className="h-10 w-full">
+                <SelectTrigger id="source-group" h="10" w="full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -190,10 +221,7 @@ export function AddSourceDialog({
                 </SelectContent>
               </Select>
             </label>
-            <label
-              className="space-y-1.5 text-xs font-medium text-foreground"
-              htmlFor="source-handle"
-            >
+            <label className={fieldLabel()} htmlFor="source-handle">
               <span>Identifiant</span>
               <Input
                 id="source-handle"
@@ -203,10 +231,7 @@ export function AddSourceDialog({
                 autoComplete="off"
               />
             </label>
-            <label
-              className="space-y-1.5 text-xs font-medium text-foreground"
-              htmlFor="source-name"
-            >
+            <label className={fieldLabel()} htmlFor="source-name">
               <span>Nom affiché</span>
               <Input
                 id="source-name"
@@ -216,10 +241,7 @@ export function AddSourceDialog({
                 autoComplete="off"
               />
             </label>
-            <label
-              className="space-y-1.5 text-xs font-medium text-foreground sm:col-span-2"
-              htmlFor="source-tags"
-            >
+            <label className={fieldLabel({ wide: true })} htmlFor="source-tags">
               <span>Sujets (séparés par des virgules)</span>
               <Input
                 id="source-tags"
@@ -229,11 +251,11 @@ export function AddSourceDialog({
                 autoComplete="off"
               />
             </label>
-          </div>
+          </styled.div>
 
           {platform === 'x' ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-3">
+            <styled.div display="flex" flexDirection="column" gap="3">
+              <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="3">
                 <Button
                   type="button"
                   size="sm"
@@ -252,9 +274,18 @@ export function AddSourceDialog({
                     label={describeLookupOutcome(lookup.verificationStatus, lookup.ok)}
                   />
                 ) : null}
-              </div>
+              </styled.div>
               {profile ? (
-                <div className="flex items-start gap-3 rounded-control border border-positive/30 bg-positive/5 p-3">
+                <styled.div
+                  display="flex"
+                  alignItems="flex-start"
+                  gap="3"
+                  rounded="control"
+                  borderWidth="1px"
+                  borderColor="positive/30"
+                  bg="positive/5"
+                  p="3"
+                >
                   <SourceAvatar
                     source={{
                       avatarUrl: profile.profileImageUrl,
@@ -264,24 +295,28 @@ export function AddSourceDialog({
                     }}
                     size="sm"
                   />
-                  <div className="min-w-0 text-sm">
-                    <p className="truncate font-semibold text-foreground">{profile.name}</p>
-                    <p className="font-mono text-[11px] text-foreground/55">@{previewHandle}</p>
+                  <styled.div minW="0" textStyle="sm">
+                    <styled.p truncate fontWeight="semibold" color="foreground">
+                      {profile.name}
+                    </styled.p>
+                    <styled.p fontFamily="mono" fontSize="11px" color="foreground/55">
+                      @{previewHandle}
+                    </styled.p>
                     {profile.description ? (
-                      <p className="mt-1 line-clamp-2 text-xs text-foreground/65">
+                      <styled.p mt="1" lineClamp="2" textStyle="xs" color="foreground/65">
                         {profile.description}
-                      </p>
+                      </styled.p>
                     ) : null}
-                  </div>
-                </div>
+                  </styled.div>
+                </styled.div>
               ) : null}
-            </div>
+            </styled.div>
           ) : null}
 
           {error ? (
-            <p role="alert" className="text-sm text-negative">
+            <styled.p role="alert" textStyle="sm" color="negative">
               {error}
-            </p>
+            </styled.p>
           ) : null}
 
           <DialogFooter>
@@ -294,7 +329,7 @@ export function AddSourceDialog({
               {createMutation.isPending ? 'Ajout' : 'Ajouter'}
             </Button>
           </DialogFooter>
-        </form>
+        </styled.form>
       </DialogContent>
     </Dialog>
   )

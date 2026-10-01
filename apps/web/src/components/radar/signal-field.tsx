@@ -12,6 +12,8 @@
  * The equivalent structured content (signals, markets, events) lives in the
  * lists next to it; endpoints are pointer shortcuts, not the only path.
  */
+import { css, cva } from '@finance-os/styled-system/css'
+import { token } from '@finance-os/styled-system/tokens'
 import { type ReactNode, useId, useRef } from 'react'
 import {
   buildFieldLayout,
@@ -25,12 +27,81 @@ import type { RadarTone } from '@/features/radar/view-model'
 import { useElementWidth } from '@/lib/use-element-width'
 
 const TONE_COLOR: Record<RadarTone, string> = {
-  positive: 'var(--positive)',
-  negative: 'var(--negative)',
-  neutral: 'var(--foreground)',
+  positive: token('colors.positive'),
+  negative: token('colors.negative'),
+  neutral: token('colors.foreground'),
 }
 
 const TONES: RadarTone[] = ['positive', 'negative', 'neutral']
+
+const fieldFrame = css({ position: 'relative', w: 'full', minH: '250px', lg: { minH: '440px' } })
+
+// Former tw-animate-css `animate-in fade-in-0 duration-500`, skipped under reduced motion.
+const fieldCanvas = cva({
+  base: { position: 'absolute', inset: '0', overflow: 'visible' },
+  variants: {
+    animated: {
+      true: { animation: 'fadeIn 500ms ease' },
+      false: {},
+    },
+  },
+})
+
+const gridRule = cva({
+  variants: {
+    kind: {
+      time: { stroke: 'foreground/6' },
+      zero: { stroke: 'foreground/14' },
+      amplitude: { stroke: 'foreground/5' },
+    },
+  },
+})
+
+const axisLabel = css({ fill: 'foreground/30', fontFamily: 'mono', fontSize: '9px' })
+
+const fadeGroup = css({
+  transitionProperty: 'opacity',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _motionReduce: { transitionProperty: 'none' },
+})
+
+const focusHalo = cva({
+  variants: {
+    ring: {
+      inner: { stroke: 'primary/30' },
+      outer: { stroke: 'primary/15' },
+    },
+  },
+})
+
+const cornerMarks = css({ fill: 'primary' })
+
+const leaderLine = css({ stroke: 'foreground/25' })
+
+const seriesLabel = cva({
+  base: { fontFamily: 'sans' },
+  variants: {
+    strong: {
+      true: { fill: 'foreground', fontWeight: 'semibold' },
+      false: { fill: 'foreground/70' },
+    },
+  },
+})
+
+const seriesSublabel = css({ fill: 'foreground/50', fontFamily: 'sans' })
+
+const markerLabel = cva({
+  base: { fontFamily: 'sans' },
+  variants: {
+    focused: {
+      true: { fill: 'foreground' },
+      false: { fill: 'foreground/55' },
+    },
+  },
+})
+
+const hitArea = css({ cursor: 'pointer' })
 
 type SignalFieldProps = {
   series: FieldSeries[]
@@ -96,11 +167,7 @@ export function SignalField({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full min-h-[250px] lg:min-h-[440px]"
-      {...(width > 0 ? { style: { height } } : {})}
-    >
+    <div ref={containerRef} className={fieldFrame} {...(width > 0 ? { style: { height } } : {})}>
       {layout ? (
         // biome-ignore lint/a11y/useKeyWithClickEvents: pointer shortcut only, the Signaux and Marchés lists next to the field are the keyboard path
         <svg
@@ -111,9 +178,7 @@ export function SignalField({
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
           onClick={handlePointer}
-          className={`absolute inset-0 overflow-visible ${
-            reducedMotion ? '' : 'animate-in fade-in-0 duration-500'
-          }`}
+          className={fieldCanvas({ animated: !reducedMotion })}
         >
           <title id={titleId}>{title}</title>
           <desc id={descriptionId}>{description}</desc>
@@ -135,7 +200,7 @@ export function SignalField({
                 x2={tick.x}
                 y1={layout.plot.top}
                 y2={layout.plot.bottom}
-                className="stroke-foreground/6"
+                className={gridRule({ kind: 'time' })}
               />
             ))}
             {layout.yTicks.map(tick => (
@@ -145,7 +210,7 @@ export function SignalField({
                 x2={layout.plot.right}
                 y1={tick.y}
                 y2={tick.y}
-                className={tick.value === 0 ? 'stroke-foreground/14' : 'stroke-foreground/5'}
+                className={gridRule({ kind: tick.value === 0 ? 'zero' : 'amplitude' })}
               />
             ))}
             {layout.yTicks.map(tick => (
@@ -153,7 +218,7 @@ export function SignalField({
                 key={`yl-${tick.value}`}
                 x={layout.plot.left}
                 y={tick.value > 0 ? tick.y + 11 : tick.y - 5}
-                className="fill-foreground/30 font-mono text-[9px]"
+                className={axisLabel}
               >
                 {tick.label}
               </text>
@@ -166,7 +231,7 @@ export function SignalField({
                   x={tick.x}
                   y={layout.height - 8}
                   textAnchor={index === 0 ? 'start' : index === all.length - 1 ? 'end' : 'middle'}
-                  className="fill-foreground/30 font-mono text-[9px]"
+                  className={axisLabel}
                 >
                   {tick.label}
                 </text>
@@ -189,7 +254,7 @@ export function SignalField({
                   key={item.id}
                   data-series-id={item.id}
                   data-focused={focused || undefined}
-                  className="transition-opacity duration-150 motion-reduce:transition-none"
+                  className={fadeGroup}
                   opacity={recessive ? 0.22 : 1}
                 >
                   <path
@@ -226,16 +291,16 @@ export function SignalField({
                         cy={item.end.y}
                         r={r + 20}
                         fill="none"
-                        className="stroke-primary/30"
+                        className={focusHalo({ ring: 'inner' })}
                       />
                       <circle
                         cx={item.end.x}
                         cy={item.end.y}
                         r={r + 31}
                         fill="none"
-                        className="stroke-primary/15"
+                        className={focusHalo({ ring: 'outer' })}
                       />
-                      <g className="fill-primary">
+                      <g className={cornerMarks}>
                         <rect
                           x={item.end.x - cornerOffset - 2}
                           y={item.end.y - cornerOffset - 2}
@@ -276,16 +341,14 @@ export function SignalField({
                       y1={item.end.y}
                       x2={item.end.x + 8}
                       y2={item.labelY}
-                      className="stroke-foreground/25"
+                      className={leaderLine}
                     />
                   ) : null}
                   {item.labelY !== null ? (
                     <text
                       x={item.end.x + 10}
                       y={item.labelY + 4}
-                      className={`font-sans ${
-                        strong ? 'fill-foreground font-semibold' : 'fill-foreground/70'
-                      }`}
+                      className={seriesLabel({ strong })}
                       style={{ fontSize }}
                     >
                       {item.label}
@@ -295,7 +358,7 @@ export function SignalField({
                     <text
                       x={item.end.x + 10}
                       y={item.labelY + 4 + fontSize + 2}
-                      className="fill-foreground/50 font-sans"
+                      className={seriesSublabel}
                       style={{ fontSize: fontSize - 1 }}
                     >
                       {sublabel}
@@ -306,7 +369,7 @@ export function SignalField({
                     cy={item.end.y}
                     r={22}
                     fill="transparent"
-                    className="cursor-pointer"
+                    className={hitArea}
                     data-series-hit={item.id}
                   />
                 </g>
@@ -319,15 +382,15 @@ export function SignalField({
             const recessive = hasFocus && !focused && focusMarkerIds.size > 0
             const color =
               marker.kind === 'macro'
-                ? 'var(--teal)'
+                ? token('colors.teal')
                 : marker.attention
-                  ? 'var(--primary)'
-                  : 'var(--foreground)'
+                  ? token('colors.primary')
+                  : token('colors.foreground')
             return (
               <g
                 key={marker.id}
                 data-marker-id={marker.id}
-                className="transition-opacity duration-150 motion-reduce:transition-none"
+                className={fadeGroup}
                 opacity={recessive ? 0.35 : 1}
               >
                 {marker.links.map(link => (
@@ -352,7 +415,7 @@ export function SignalField({
                 <text
                   x={marker.x + 9}
                   y={marker.y + 4}
-                  className={`font-sans ${focused ? 'fill-foreground' : 'fill-foreground/55'}`}
+                  className={markerLabel({ focused })}
                   style={{ fontSize: 11 }}
                 >
                   {marker.label}
@@ -362,7 +425,7 @@ export function SignalField({
                   cy={marker.y}
                   r={18}
                   fill="transparent"
-                  className="cursor-pointer"
+                  className={hitArea}
                   data-marker-hit={marker.id}
                 />
               </g>
