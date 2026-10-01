@@ -9,6 +9,8 @@
 //   • Never frame anything as a buy/sell instruction.
 //   • Demo mode renders a deterministic read-only list — no mutations.
 
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Badge, Button, Input } from '@finance-os/ui/components'
 import { FlaskIcon } from '@phosphor-icons/react/dist/csr/Flask'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -62,6 +64,77 @@ const initialFormState = (): HypothesisFormState => ({
   evidenceNotesRaw: '',
   horizon: '',
   status: 'draft',
+})
+
+const formCard = css({
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderColor: 'border/50',
+  bg: 'surface.1/40',
+  p: '3',
+})
+
+const FormGrid = styled('div', {
+  base: { display: 'grid', gap: '2', sm: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } },
+})
+
+// Labels above a full-width textarea are block-level; the ones in the form grid stay inline.
+const fieldLabel = cva({
+  base: { textStyle: 'xs', fontWeight: 'medium', color: 'muted.foreground' },
+  variants: {
+    block: { true: { display: 'block' } },
+  },
+})
+
+const textArea = css({
+  mt: '1',
+  display: 'block',
+  w: 'full',
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'background',
+  px: '2',
+  py: '1',
+  textStyle: 'sm',
+})
+
+const emptyState = css({
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderStyle: 'dashed',
+  borderColor: 'border/45',
+  bg: 'surface.1/35',
+  px: '4',
+  py: '6',
+  textAlign: 'center',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const hypothesisCard = css({
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderColor: 'border/50',
+  bg: 'background/40',
+  p: '3',
+  textStyle: 'sm',
+})
+
+const sectionLabel = css({
+  textStyle: 'xs',
+  fontWeight: 'semibold',
+  textTransform: 'uppercase',
+  letterSpacing: 'wide',
+  color: 'muted.foreground',
+})
+
+const bulletList = css({
+  mt: '1',
+  listStylePosition: 'inside',
+  listStyleType: 'disc',
+  textStyle: 'xs',
+  color: 'foreground/90',
 })
 
 export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
@@ -132,8 +205,8 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
       icon={<FlaskIcon size={16} />}
       tone="plain"
     >
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+      <styled.div spaceY="4">
+        <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2" textStyle="xs">
           <Badge variant="outline">Paper only</Badge>
           <Badge variant="outline">Simulation</Badge>
           {isAdmin ? (
@@ -147,28 +220,27 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
               {creating ? 'Annuler' : 'Nouvelle hypothèse'}
             </Button>
           ) : (
-            <span className="text-muted-foreground">Édition réservée au mode admin.</span>
+            <styled.span color="muted.foreground">Édition réservée au mode admin.</styled.span>
           )}
-        </div>
+        </styled.div>
 
         {creating && isAdmin ? (
-          <div className="rounded-xl border border-border/50 bg-surface-1/40 p-3">
-            <p className="text-sm font-medium text-foreground">Nouvelle hypothèse</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+          <div className={formCard}>
+            <styled.p textStyle="sm" fontWeight="medium" color="foreground">
+              Nouvelle hypothèse
+            </styled.p>
+            <styled.p mt="1" textStyle="xs" color="muted.foreground">
               Décrire une hypothèse falsifiable. Critère(s) d&apos;invalidation requis. Aucune
               instruction d&apos;achat ou de vente.
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            </styled.p>
+            <FormGrid mt="3">
               <div>
-                <label
-                  htmlFor="hypothesis-form-name"
-                  className="text-xs font-medium text-muted-foreground"
-                >
+                <label htmlFor="hypothesis-form-name" className={fieldLabel()}>
                   Nom
                 </label>
                 <Input
                   id="hypothesis-form-name"
-                  className="mt-1"
+                  mt="1"
                   value={formState.name}
                   disabled={createMutation.isPending}
                   onChange={event => {
@@ -178,15 +250,12 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                 />
               </div>
               <div>
-                <label
-                  htmlFor="hypothesis-form-slug"
-                  className="text-xs font-medium text-muted-foreground"
-                >
+                <label htmlFor="hypothesis-form-slug" className={fieldLabel()}>
                   Slug (a-z, 0-9, tirets)
                 </label>
                 <Input
                   id="hypothesis-form-slug"
-                  className="mt-1"
+                  mt="1"
                   value={formState.slug}
                   disabled={createMutation.isPending}
                   onChange={event => {
@@ -195,17 +264,14 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                   }}
                 />
               </div>
-            </div>
-            <div className="mt-2">
-              <label
-                htmlFor="hypothesis-form-thesis"
-                className="block text-xs font-medium text-muted-foreground"
-              >
+            </FormGrid>
+            <styled.div mt="2">
+              <label htmlFor="hypothesis-form-thesis" className={fieldLabel({ block: true })}>
                 Thèse (optionnelle)
               </label>
               <textarea
                 id="hypothesis-form-thesis"
-                className="mt-1 block w-full rounded-md border border-border/60 bg-background px-2 py-1 text-sm"
+                className={textArea}
                 rows={2}
                 value={formState.thesis}
                 disabled={createMutation.isPending}
@@ -214,17 +280,14 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                   setFormState(prev => ({ ...prev, thesis: next }))
                 }}
               />
-            </div>
-            <div className="mt-2">
-              <label
-                htmlFor="hypothesis-form-invalidation"
-                className="block text-xs font-medium text-muted-foreground"
-              >
+            </styled.div>
+            <styled.div mt="2">
+              <label htmlFor="hypothesis-form-invalidation" className={fieldLabel({ block: true })}>
                 Critères d&apos;invalidation (un par ligne) *
               </label>
               <textarea
                 id="hypothesis-form-invalidation"
-                className="mt-1 block w-full rounded-md border border-border/60 bg-background px-2 py-1 text-sm"
+                className={textArea}
                 rows={3}
                 value={formState.invalidationCriteriaRaw}
                 disabled={createMutation.isPending}
@@ -233,18 +296,15 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                   setFormState(prev => ({ ...prev, invalidationCriteriaRaw: next }))
                 }}
               />
-            </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            </styled.div>
+            <FormGrid mt="2">
               <div>
-                <label
-                  htmlFor="hypothesis-form-evidence-notes"
-                  className="text-xs font-medium text-muted-foreground"
-                >
+                <label htmlFor="hypothesis-form-evidence-notes" className={fieldLabel()}>
                   Notes / preuves (un par ligne)
                 </label>
                 <textarea
                   id="hypothesis-form-evidence-notes"
-                  className="mt-1 block w-full rounded-md border border-border/60 bg-background px-2 py-1 text-sm"
+                  className={textArea}
                   rows={2}
                   value={formState.evidenceNotesRaw}
                   disabled={createMutation.isPending}
@@ -255,15 +315,12 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                 />
               </div>
               <div>
-                <label
-                  htmlFor="hypothesis-form-horizon"
-                  className="text-xs font-medium text-muted-foreground"
-                >
+                <label htmlFor="hypothesis-form-horizon" className={fieldLabel()}>
                   Horizon (libre, ex. 90d)
                 </label>
                 <Input
                   id="hypothesis-form-horizon"
-                  className="mt-1"
+                  mt="1"
                   value={formState.horizon}
                   disabled={createMutation.isPending}
                   onChange={event => {
@@ -272,16 +329,18 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                   }}
                 />
               </div>
-            </div>
+            </FormGrid>
             {validationError ? (
-              <p className="mt-2 text-xs text-destructive">{validationError}</p>
+              <styled.p mt="2" textStyle="xs" color="destructive">
+                {validationError}
+              </styled.p>
             ) : null}
             {createMutation.isError ? (
-              <p className="mt-2 text-xs text-destructive">
+              <styled.p mt="2" textStyle="xs" color="destructive">
                 Échec de la création: {toErrorMessage(createMutation.error)}
-              </p>
+              </styled.p>
             ) : null}
-            <div className="mt-3">
+            <styled.div mt="3">
               <Button
                 type="button"
                 size="sm"
@@ -290,71 +349,74 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
               >
                 {createMutation.isPending ? 'Création…' : 'Créer (paper-only)'}
               </Button>
-            </div>
+            </styled.div>
           </div>
         ) : null}
 
         {hypotheses.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border/45 bg-surface-1/35 px-4 py-6 text-center text-sm text-muted-foreground">
-            Aucune hypothèse manuelle pour l&apos;instant.
-          </p>
+          <p className={emptyState}>Aucune hypothèse manuelle pour l&apos;instant.</p>
         ) : (
-          <ul className="space-y-3">
+          <styled.ul spaceY="3">
             {hypotheses.map(hypothesis => {
               const extras = readHypothesisExtras(hypothesis.parameters)
               return (
-                <li
-                  key={hypothesis.id}
-                  className="rounded-xl border border-border/50 bg-background/40 p-3 text-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium text-foreground">{hypothesis.name}</p>
+                <li key={hypothesis.id} className={hypothesisCard}>
+                  <styled.div
+                    display="flex"
+                    flexWrap="wrap"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    gap="2"
+                  >
+                    <styled.p fontWeight="medium" color="foreground">
+                      {hypothesis.name}
+                    </styled.p>
                     <Badge variant={STATUS_VARIANT[hypothesis.status]}>
                       {STATUS_LABEL[hypothesis.status]}
                     </Badge>
-                  </div>
+                  </styled.div>
                   {extras.thesis ? (
-                    <p className="mt-1 text-xs text-muted-foreground">Thèse : {extras.thesis}</p>
+                    <styled.p mt="1" textStyle="xs" color="muted.foreground">
+                      Thèse : {extras.thesis}
+                    </styled.p>
                   ) : null}
                   {extras.horizon ? (
-                    <p className="mt-1 text-xs text-muted-foreground">Horizon : {extras.horizon}</p>
+                    <styled.p mt="1" textStyle="xs" color="muted.foreground">
+                      Horizon : {extras.horizon}
+                    </styled.p>
                   ) : null}
                   {extras.invalidationCriteria.length > 0 ? (
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Invalidation
-                      </p>
-                      <ul className="mt-1 list-inside list-disc text-xs text-foreground/90">
+                    <styled.div mt="2">
+                      <p className={sectionLabel}>Invalidation</p>
+                      <ul className={bulletList}>
                         {extras.invalidationCriteria.map(item => (
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                    </div>
+                    </styled.div>
                   ) : null}
                   {extras.evidenceNotes.length > 0 ? (
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Notes / preuves
-                      </p>
-                      <ul className="mt-1 list-inside list-disc text-xs text-foreground/90">
+                    <styled.div mt="2">
+                      <p className={sectionLabel}>Notes / preuves</p>
+                      <ul className={bulletList}>
                         {extras.evidenceNotes.map(item => (
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                    </div>
+                    </styled.div>
                   ) : null}
                   {hypothesis.assumptions.length > 0 ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
+                    <styled.p mt="2" textStyle="xs" color="muted.foreground">
                       Hypothèses : {hypothesis.assumptions.join(', ')}
-                    </p>
+                    </styled.p>
                   ) : null}
                   {hypothesis.caveats.length > 0 ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <styled.p mt="1" textStyle="xs" color="muted.foreground">
                       Caveats : {hypothesis.caveats.join(', ')}
-                    </p>
+                    </styled.p>
                   ) : null}
                   {isAdmin && hypothesis.status !== 'archived' ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <styled.div mt="3" display="flex" flexWrap="wrap" gap="2">
                       <Button
                         type="button"
                         size="sm"
@@ -382,28 +444,28 @@ export function HypothesisLabSection({ mode }: HypothesisLabSectionProps) {
                       >
                         {scenarioMutation.isPending ? 'Création…' : 'Créer un scénario paper'}
                       </Button>
-                    </div>
+                    </styled.div>
                   ) : null}
 
                   {/* PR12 — collapsible evidence-quality scorecard. Read-only. */}
-                  <div className="mt-3">
+                  <styled.div mt="3">
                     <StrategyScorecardCard
                       strategyId={hypothesis.id}
                       mode={mode}
                       learningLoopEnabled={learningLoopEnabled}
                     />
-                  </div>
+                  </styled.div>
                 </li>
               )
             })}
-          </ul>
+          </styled.ul>
         )}
         {scenarioMutation.isError ? (
-          <p className="text-xs text-destructive">
+          <styled.p textStyle="xs" color="destructive">
             Échec création scénario: {toErrorMessage(scenarioMutation.error)}
-          </p>
+          </styled.p>
         ) : null}
-      </div>
+      </styled.div>
     </Panel>
   )
 }

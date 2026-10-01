@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { ChevronDownPixelIcon, ExclamationTrianglePixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -43,13 +45,149 @@ export const Route = createFileRoute('/_app/ia/trading-lab')({
   component: TradingLabPage,
 })
 
+type PillTone = 'negative' | 'warning' | 'teal' | 'positive' | 'neutral' | 'archived'
+
+// Severity and status chips share one pill; the tone maps replace the former class lookups.
+const pill = cva({
+  base: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    rounded: 'full',
+    borderWidth: '1px',
+    px: '2',
+    py: '0.5',
+    textStyle: 'xs',
+    fontWeight: 'medium',
+  },
+  variants: {
+    tone: {
+      negative: { bg: 'negative/20', color: 'negative', borderColor: 'negative/30' },
+      warning: { bg: 'warning/20', color: 'warning', borderColor: 'warning/30' },
+      teal: { bg: 'teal/20', color: 'teal', borderColor: 'teal/30' },
+      positive: { bg: 'positive/20', color: 'positive', borderColor: 'positive/30' },
+      neutral: { bg: 'surface.2', color: 'muted.foreground', borderColor: 'border' },
+      archived: { bg: 'surface.1', color: 'muted.foreground/60', borderColor: 'border/50' },
+    },
+  },
+})
+
+const SEVERITY_TONE: Record<string, PillTone> = {
+  critical: 'negative',
+  important: 'warning',
+  watch: 'teal',
+  info: 'neutral',
+}
+
+const STATUS_TONE: Record<string, PillTone> = {
+  'active-paper': 'positive',
+  draft: 'neutral',
+  archived: 'archived',
+  completed: 'positive',
+  running: 'warning',
+  failed: 'negative',
+  pending: 'neutral',
+  open: 'teal',
+  tracking: 'warning',
+}
+
+// Bare `rounded` is Tailwind's inlined 0.25rem, not a radius token.
+const typeTag = cva({
+  base: { rounded: '0.25rem', borderWidth: '1px', px: '1.5', py: '0.5', fontSize: '10px' },
+  variants: {
+    kind: {
+      experimental: { borderColor: 'warning/20', bg: 'warning/15', color: 'warning' },
+      benchmark: { borderColor: 'positive/20', bg: 'positive/15', color: 'positive' },
+    },
+  },
+})
+
+const card = cva({
+  base: { rounded: 'md', borderWidth: '1px', borderColor: 'border', bg: 'surface.0', p: '3' },
+  variants: {
+    layout: {
+      block: {},
+      row: { display: 'flex', alignItems: 'center', gap: '3' },
+      rowStart: { display: 'flex', alignItems: 'flex-start', gap: '3' },
+    },
+  },
+  defaultVariants: { layout: 'block' },
+})
+
+const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
+
+const itemTitle = css({ textStyle: 'sm', fontWeight: 'medium', color: 'foreground' })
+
+const warningIcon = css({ mt: '0.5', flexShrink: '0', color: 'warning' })
+
+const viewLink = css({
+  flexShrink: '0',
+  textStyle: 'xs',
+  color: 'primary',
+  _hover: { textDecorationLine: 'underline' },
+})
+
+const figure = css({ textStyle: 'financial', color: 'foreground' })
+
+const hash = css({ fontFamily: 'mono', color: 'foreground/80' })
+
+const metricsGrid = css({
+  mb: '3',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: '2',
+  sm: { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' },
+  lg: { gridTemplateColumns: 'repeat(8, minmax(0, 1fr))' },
+})
+
+const chartHeader = css({
+  mb: '1',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: 'wide',
+  color: 'muted.foreground/70',
+})
+
+const mono = css({ fontFamily: 'mono' })
+
+const tradesSummary = css({
+  cursor: 'pointer',
+  textStyle: 'xs',
+  color: 'muted.foreground',
+  _hover: { color: 'foreground' },
+})
+
+const inlineIcon = css({ display: 'inline-block', verticalAlign: '-1px' })
+
+const cell = cva({
+  base: { px: '2', py: '1' },
+  variants: {
+    align: {
+      left: { textAlign: 'left' },
+      right: { textAlign: 'right' },
+    },
+    tone: {
+      unavailable: { color: 'muted.foreground' },
+      positive: { color: 'positive' },
+      negative: { color: 'negative' },
+    },
+  },
+})
+
+const pnlTone = (value: number | null) =>
+  value === null ? 'unavailable' : value >= 0 ? 'positive' : 'negative'
+
+const caveatItem = css({
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '2',
+  textStyle: 'xs',
+  color: 'muted.foreground',
+})
+
 function SeverityBadge({ severity }: { severity: string }) {
-  const colorMap: Record<string, string> = {
-    critical: 'bg-negative/20 text-negative border-negative/30',
-    important: 'bg-warning/20 text-warning border-warning/30',
-    watch: 'bg-teal/20 text-teal border-teal/30',
-    info: 'bg-surface-2 text-muted-foreground border-border',
-  }
   const labelMap: Record<string, string> = {
     critical: 'Critique',
     important: 'Important',
@@ -57,26 +195,13 @@ function SeverityBadge({ severity }: { severity: string }) {
     info: 'Information',
   }
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorMap[severity] ?? colorMap.info}`}
-    >
+    <span className={pill({ tone: SEVERITY_TONE[severity] ?? 'neutral' })}>
       {labelMap[severity] ?? 'Information'}
     </span>
   )
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    'active-paper': 'bg-positive/20 text-positive border-positive/30',
-    draft: 'bg-surface-2 text-muted-foreground border-border',
-    archived: 'bg-surface-1 text-muted-foreground/60 border-border/50',
-    completed: 'bg-positive/20 text-positive border-positive/30',
-    running: 'bg-warning/20 text-warning border-warning/30',
-    failed: 'bg-negative/20 text-negative border-negative/30',
-    pending: 'bg-surface-2 text-muted-foreground border-border',
-    open: 'bg-teal/20 text-teal border-teal/30',
-    tracking: 'bg-warning/20 text-warning border-warning/30',
-  }
   const labelMap: Record<string, string> = {
     'active-paper': 'Simulation active',
     archived: 'Archivé',
@@ -89,9 +214,7 @@ function StatusBadge({ status }: { status: string }) {
     tracking: 'Suivi',
   }
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorMap[status] ?? colorMap.draft}`}
-    >
+    <span className={pill({ tone: STATUS_TONE[status] ?? 'neutral' })}>
       {labelMap[status] ?? 'État inconnu'}
     </span>
   )
@@ -99,12 +222,20 @@ function StatusBadge({ status }: { status: string }) {
 
 function MetricCard({ label, value }: { label: string; value: string | number | null }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-1 p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-financial text-lg font-semibold text-foreground">
+    <styled.div rounded="lg" borderWidth="1px" borderColor="border" bg="surface.1" p="3">
+      <styled.div textStyle="xs" color="muted.foreground">
+        {label}
+      </styled.div>
+      <styled.div
+        textStyle="financial"
+        fontSize="lg"
+        lineHeight="lg"
+        fontWeight="semibold"
+        color="foreground"
+      >
         {value !== null && value !== undefined ? String(value) : 'Indisponible'}
-      </div>
-    </div>
+      </styled.div>
+    </styled.div>
   )
 }
 
@@ -132,7 +263,7 @@ function TradingLabPage() {
   const scenarioList = scenarios as TradingLabScenario[]
 
   return (
-    <div className="space-y-6">
+    <styled.div spaceY="6">
       <PageHeader
         eyebrow="Expert en recherche papier"
         title="Trading Lab"
@@ -140,56 +271,64 @@ function TradingLabPage() {
       />
 
       {/* Paper-only warning */}
-      <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
-        <div className="flex items-start gap-2">
-          <ExclamationTrianglePixelIcon className="mt-0.5 shrink-0 text-warning" size={18} />
+      <styled.div
+        rounded="lg"
+        borderWidth="1px"
+        borderColor="warning/30"
+        bg="warning/10"
+        px="4"
+        py="3"
+      >
+        <styled.div display="flex" alignItems="flex-start" gap="2">
+          <ExclamationTrianglePixelIcon className={warningIcon} size={18} />
           <div>
-            <div className="text-sm font-medium text-warning">
+            <styled.div textStyle="sm" fontWeight="medium" color="warning">
               Simulation uniquement. Un backtest n’est pas une prédiction.
-            </div>
-            <div className="mt-0.5 text-xs text-warning/80">
+            </styled.div>
+            <styled.div mt="0.5" textStyle="xs" color="warning/80">
               Environnement de recherche et simulation. Aucun capital réel, aucune connexion broker,
               aucune exécution d'ordre. Les stratégies techniques sont expérimentales sauf marquées
               comme benchmark. Les signaux sociaux seuls sont une preuve faible.
-            </div>
+            </styled.div>
           </div>
-        </div>
-      </div>
+        </styled.div>
+      </styled.div>
 
       {/* Attention items */}
       {openCount > 0 && (
         <Panel title={`Ce qui demande ton attention (${openCount})`}>
-          <div className="space-y-2">
+          <styled.div spaceY="2">
             {attentionItems.slice(0, 5).map((item: AttentionItem) => (
-              <div
-                key={item.id}
-                className="flex items-start gap-3 rounded-md border border-border bg-surface-0 p-3"
-              >
+              <div key={item.id} className={card({ layout: 'rowStart' })}>
                 <SeverityBadge severity={item.severity} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">{item.title}</div>
+                <styled.div flex="1" minW="0">
+                  <styled.div truncate textStyle="sm" fontWeight="medium" color="foreground">
+                    {item.title}
+                  </styled.div>
                   {item.summary ? (
-                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                    <styled.div mt="0.5" lineClamp="2" textStyle="xs" color="muted.foreground">
                       {item.summary}
-                    </div>
+                    </styled.div>
                   ) : null}
-                </div>
+                </styled.div>
                 {item.actionHref ? (
-                  <a
-                    href={item.actionHref}
-                    className="text-xs text-primary hover:underline shrink-0"
-                  >
+                  <a href={item.actionHref} className={viewLink}>
                     Voir
                   </a>
                 ) : null}
               </div>
             ))}
-          </div>
+          </styled.div>
         </Panel>
       )}
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <styled.div
+        display="grid"
+        gridTemplateColumns="repeat(2, minmax(0, 1fr))"
+        gap="3"
+        sm={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+      >
         <KpiTile label="Stratégies" value={strategyList.length} />
         <KpiTile label="Backtests" value={backtestList.length} />
         <KpiTile label="Scénarios" value={scenarioList.length} />
@@ -197,7 +336,7 @@ function TradingLabPage() {
           label="Quant Service"
           displayValue={capabilities?.quantServiceAvailable ? 'Connecté' : 'Hors-ligne'}
         />
-      </div>
+      </styled.div>
 
       {/* In-UI runner (admin) + strategy editor (admin) — collapsed by default */}
       <BacktestRunner
@@ -218,57 +357,50 @@ function TradingLabPage() {
       {/* Strategies list */}
       <Panel title="Stratégies">
         {strategiesLoading ? (
-          <div className="text-sm text-muted-foreground">Chargement…</div>
+          <div className={mutedText}>Chargement…</div>
         ) : strategyList.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
+          <div className={mutedText}>
             Aucune stratégie pour le moment.
             {isAdmin ? ' Crée-en une via le builder ci-dessus.' : ''}
           </div>
         ) : (
-          <div className="space-y-2">
+          <styled.div spaceY="2">
             {strategyList.map(s => (
-              <div
-                key={s.id}
-                className="flex items-center gap-3 rounded-md border border-border bg-surface-0 p-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">{s.name}</span>
+              <div key={s.id} className={card({ layout: 'row' })}>
+                <styled.div flex="1" minW="0">
+                  <styled.div display="flex" alignItems="center" gap="2">
+                    <span className={itemTitle}>{s.name}</span>
                     <StatusBadge status={s.status} />
                     {s.strategyType === 'experimental' && (
-                      <span className="rounded border border-warning/20 bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning">
-                        expérimentale
-                      </span>
+                      <span className={typeTag({ kind: 'experimental' })}>expérimentale</span>
                     )}
                     {s.strategyType === 'benchmark' && (
-                      <span className="rounded border border-positive/20 bg-positive/15 px-1.5 py-0.5 text-[10px] text-positive">
-                        benchmark
-                      </span>
+                      <span className={typeTag({ kind: 'benchmark' })}>benchmark</span>
                     )}
-                  </div>
+                  </styled.div>
                   {s.description ? (
-                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    <styled.div mt="0.5" lineClamp="1" textStyle="xs" color="muted.foreground">
                       {s.description}
-                    </div>
+                    </styled.div>
                   ) : null}
-                </div>
-                <div className="text-xs text-muted-foreground/60 shrink-0">
+                </styled.div>
+                <styled.div flexShrink="0" textStyle="xs" color="muted.foreground/60">
                   {s.tags.slice(0, 3).join(', ')}
-                </div>
+                </styled.div>
               </div>
             ))}
-          </div>
+          </styled.div>
         )}
       </Panel>
 
       {/* Latest backtests */}
       <Panel title="Backtests récents">
         {backtestsLoading ? (
-          <div className="text-sm text-muted-foreground">Chargement…</div>
+          <div className={mutedText}>Chargement…</div>
         ) : backtestList.length === 0 ? (
-          <div className="text-sm text-muted-foreground">Aucun backtest pour le moment.</div>
+          <div className={mutedText}>Aucun backtest pour le moment.</div>
         ) : (
-          <div className="space-y-4">
+          <styled.div spaceY="4">
             {backtestList.slice(0, 5).map(b => {
               const m = (b.metrics ?? {}) as Record<string, unknown>
               const equity = (b.equityCurve ?? []) as EquityPoint[]
@@ -278,59 +410,61 @@ function TradingLabPage() {
               const dataProvider = (summary.dataProvider as string | undefined) ?? null
               const fallbackUsed = Boolean(summary.fallbackUsed)
               return (
-                <div key={b.id} className="rounded-md border border-border bg-surface-0 p-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">{b.name}</span>
+                <div key={b.id} className={card()}>
+                  <styled.div mb="2" display="flex" flexWrap="wrap" alignItems="center" gap="2">
+                    <span className={itemTitle}>{b.name}</span>
                     <StatusBadge status={b.runStatus} />
-                    <span className="ml-auto font-financial text-xs text-muted-foreground">
+                    <styled.span
+                      ml="auto"
+                      textStyle="financial"
+                      fontSize="xs"
+                      lineHeight="xs"
+                      color="muted.foreground"
+                    >
                       {b.symbol}
-                    </span>
+                    </styled.span>
                     <DataSourceBadge
                       resolvedMarketDataSource={b.marketDataSource}
                       dataProvider={dataProvider}
                       dataQuality={dataQuality}
                       fallbackUsed={fallbackUsed}
                     />
-                  </div>
+                  </styled.div>
 
-                  <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <styled.div
+                    mb="3"
+                    display="flex"
+                    flexWrap="wrap"
+                    gap="2"
+                    fontSize="11px"
+                    color="muted.foreground"
+                  >
                     <span>
-                      cash{' '}
-                      <span className="font-financial text-foreground">
-                        ${b.initialCash.toFixed(0)}
-                      </span>
+                      cash <span className={figure}>${b.initialCash.toFixed(0)}</span>
                     </span>
                     <span>
-                      fees <span className="font-financial text-foreground">{b.feesBps}bps</span>
+                      fees <span className={figure}>{b.feesBps}bps</span>
                     </span>
                     <span>
-                      slippage{' '}
-                      <span className="font-financial text-foreground">{b.slippageBps}bps</span>
+                      slippage <span className={figure}>{b.slippageBps}bps</span>
                     </span>
                     <span>
-                      spread{' '}
-                      <span className="font-financial text-foreground">{b.spreadBps}bps</span>
+                      spread <span className={figure}>{b.spreadBps}bps</span>
                     </span>
                     {b.paramsHash ? (
                       <span>
-                        params{' '}
-                        <span className="font-mono text-foreground/80">
-                          {b.paramsHash.slice(0, 8)}
-                        </span>
+                        params <span className={hash}>{b.paramsHash.slice(0, 8)}</span>
                       </span>
                     ) : null}
                     {b.dataHash ? (
                       <span>
-                        data{' '}
-                        <span className="font-mono text-foreground/80">
-                          {b.dataHash.slice(0, 8)}
-                        </span>
+                        data <span className={hash}>{b.dataHash.slice(0, 8)}</span>
                       </span>
                     ) : null}
-                  </div>
+                  </styled.div>
 
                   {b.metrics ? (
-                    <div className="mb-3 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+                    <div className={metricsGrid}>
                       <MetricCard
                         label="CAGR"
                         value={m.cagr != null ? `${((m.cagr as number) * 100).toFixed(1)}%` : null}
@@ -374,42 +508,56 @@ function TradingLabPage() {
                   ) : null}
 
                   {b.runStatus === 'completed' && equity.length > 0 ? (
-                    <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+                    // minmax(0, …): a chart canvas mounted wider than its track
+                    // must not widen the column (autoSize never shrinks it back).
+                    <styled.div
+                      display="grid"
+                      gap="3"
+                      lg={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}
+                    >
                       <div>
-                        <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                        <div className={chartHeader}>
                           <span>Courbe d'équité</span>
-                          <span className="font-mono">{equity.length} pts</span>
+                          <span className={mono}>{equity.length} pts</span>
                         </div>
-                        <EquityCurveChart data={equity} height={200} />
+                        <EquityCurveChart data={equity} chartHeight={200} />
                       </div>
                       <div>
-                        <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                        <div className={chartHeader}>
                           <span>Drawdown</span>
-                          <span className="font-mono">{drawdowns.length} pts</span>
+                          <span className={mono}>{drawdowns.length} pts</span>
                         </div>
-                        <DrawdownChart data={drawdowns} height={200} />
+                        <DrawdownChart data={drawdowns} chartHeight={200} />
                       </div>
-                    </div>
+                    </styled.div>
                   ) : null}
 
                   {b.runStatus === 'completed' && b.trades && b.trades.length > 0 ? (
-                    <details className="mt-3">
-                      <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                    <styled.details mt="3">
+                      <summary className={tradesSummary}>
                         {b.trades.length} trade{b.trades.length > 1 ? 's' : ''}{' '}
-                        <ChevronDownPixelIcon size={10} className="inline-block align-[-1px]" />
+                        <ChevronDownPixelIcon size={10} className={inlineIcon} />
                       </summary>
-                      <div className="mt-2 max-h-44 overflow-auto rounded border border-border/50 bg-surface-1">
-                        <table className="w-full text-[11px]">
-                          <thead className="text-muted-foreground/70">
-                            <tr className="border-b border-border/40">
-                              <th className="px-2 py-1 text-left">Entrée</th>
-                              <th className="px-2 py-1 text-left">Sortie</th>
-                              <th className="px-2 py-1 text-right">Côté</th>
-                              <th className="px-2 py-1 text-right">PnL</th>
-                              <th className="px-2 py-1 text-right">PnL %</th>
-                            </tr>
-                          </thead>
-                          <tbody className="font-financial">
+                      <styled.div
+                        mt="2"
+                        maxH="44"
+                        overflow="auto"
+                        rounded="0.25rem"
+                        borderWidth="1px"
+                        borderColor="border/50"
+                        bg="surface.1"
+                      >
+                        <styled.table w="full" fontSize="11px">
+                          <styled.thead color="muted.foreground/70">
+                            <styled.tr borderBottomWidth="1px" borderColor="border/40">
+                              <th className={cell({ align: 'left' })}>Entrée</th>
+                              <th className={cell({ align: 'left' })}>Sortie</th>
+                              <th className={cell({ align: 'right' })}>Côté</th>
+                              <th className={cell({ align: 'right' })}>PnL</th>
+                              <th className={cell({ align: 'right' })}>PnL %</th>
+                            </styled.tr>
+                          </styled.thead>
+                          <styled.tbody textStyle="financial">
                             {b.trades.slice(0, 50).map(t => {
                               const tr = t as Record<string, unknown>
                               const pnlValue = tr.pnl == null ? null : Number(tr.pnl)
@@ -428,57 +576,57 @@ function TradingLabPage() {
                                 String(tr.pnl ?? ''),
                               ].join(':')
                               return (
-                                <tr key={tradeKey} className="border-b border-border/20">
-                                  <td className="px-2 py-1">
+                                <styled.tr
+                                  key={tradeKey}
+                                  borderBottomWidth="1px"
+                                  borderColor="border/20"
+                                >
+                                  <td className={cell()}>
                                     {String(tr.entry_date ?? tr.entryDate ?? '')}
                                   </td>
-                                  <td className="px-2 py-1">
+                                  <td className={cell()}>
                                     {String(tr.exit_date ?? tr.exitDate ?? '')}
                                   </td>
-                                  <td className="px-2 py-1 text-right">
+                                  <td className={cell({ align: 'right' })}>
                                     {tr.side === 'long'
                                       ? 'Achat'
                                       : tr.side === 'short'
                                         ? 'Vente'
                                         : 'Indisponible'}
                                   </td>
-                                  <td
-                                    className={`px-2 py-1 text-right ${pnl === null ? 'text-muted-foreground' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}
-                                  >
+                                  <td className={cell({ align: 'right', tone: pnlTone(pnl) })}>
                                     {pnl === null
                                       ? 'Indisponible'
                                       : `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}`}
                                   </td>
-                                  <td
-                                    className={`px-2 py-1 text-right ${pnlPct === null ? 'text-muted-foreground' : pnlPct >= 0 ? 'text-positive' : 'text-negative'}`}
-                                  >
+                                  <td className={cell({ align: 'right', tone: pnlTone(pnlPct) })}>
                                     {pnlPct === null
                                       ? 'Indisponible'
                                       : `${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%`}
                                   </td>
-                                </tr>
+                                </styled.tr>
                               )
                             })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </details>
+                          </styled.tbody>
+                        </styled.table>
+                      </styled.div>
+                    </styled.details>
                   ) : null}
 
                   {b.runStatus === 'failed' ? (
-                    <div className="mt-2 text-xs text-negative">
+                    <styled.div mt="2" textStyle="xs" color="negative">
                       Simulation interrompue. Vérifiez les paramètres et réessayez.
-                    </div>
+                    </styled.div>
                   ) : null}
 
-                  <div className="mt-3 text-[10px] text-warning/70">
+                  <styled.div mt="3" fontSize="10px" color="warning/70">
                     Backtest = simulation, pas une prédiction. Stratégies techniques expérimentales.
                     Signaux sociaux seuls = preuve faible.
-                  </div>
+                  </styled.div>
                 </div>
               )
             })}
-          </div>
+          </styled.div>
         )}
       </Panel>
 
@@ -505,46 +653,48 @@ function TradingLabPage() {
       {/* Scenarios */}
       <Panel title="Scénarios papier">
         {scenariosLoading ? (
-          <div className="text-sm text-muted-foreground">Chargement…</div>
+          <div className={mutedText}>Chargement…</div>
         ) : scenarioList.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
+          <div className={mutedText}>
             Aucun scénario. Crée-en un depuis un signal pour structurer une thèse.
           </div>
         ) : (
-          <div className="space-y-2">
+          <styled.div spaceY="2">
             {scenarioList.map(s => (
-              <div key={s.id} className="rounded-md border border-border bg-surface-0 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">{s.name}</span>
+              <div key={s.id} className={card()}>
+                <styled.div display="flex" alignItems="center" gap="2">
+                  <span className={itemTitle}>{s.name}</span>
                   <StatusBadge status={s.status} />
-                </div>
+                </styled.div>
                 {s.thesis ? (
-                  <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.thesis}</div>
+                  <styled.div mt="1" lineClamp="2" textStyle="xs" color="muted.foreground">
+                    {s.thesis}
+                  </styled.div>
                 ) : null}
                 {s.invalidationCriteria ? (
-                  <div className="mt-1 text-xs text-negative/70">
+                  <styled.div mt="1" textStyle="xs" color="negative/70">
                     Invalidation : {s.invalidationCriteria}
-                  </div>
+                  </styled.div>
                 ) : null}
               </div>
             ))}
-          </div>
+          </styled.div>
         )}
       </Panel>
 
       {/* Capabilities / risk caveats */}
       {capabilities?.caveats && capabilities.caveats.length > 0 && (
         <Panel title="Risques & caveats">
-          <ul className="space-y-1">
+          <styled.ul spaceY="1">
             {capabilities.caveats.map((c: string) => (
-              <li key={c} className="text-xs text-muted-foreground flex items-start gap-2">
-                <span aria-hidden className="mt-1.5 size-1.5 shrink-0 bg-warning" />
+              <li key={c} className={caveatItem}>
+                <styled.span aria-hidden mt="1.5" boxSize="1.5" flexShrink="0" bg="warning" />
                 {c}
               </li>
             ))}
-          </ul>
+          </styled.ul>
         </Panel>
       )}
-    </div>
+    </styled.div>
   )
 }

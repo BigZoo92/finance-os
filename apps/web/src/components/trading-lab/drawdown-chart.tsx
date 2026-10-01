@@ -1,11 +1,43 @@
+import { cva, cx } from '@finance-os/styled-system/css'
+import type { IChartApi } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
-import { getTradingChartColors } from './chart-colors'
+import { getTradingChartColors, removeChart } from './chart-colors'
 
 export type DrawdownPoint = { date: string; drawdown: number }
 
+// The placeholder frame (SSR and fallback) is dashed; the live chart container is bare.
+const chartBox = cva({
+  base: { position: 'relative', w: 'full' },
+  variants: {
+    placeholder: {
+      true: {
+        rounded: 'md',
+        borderWidth: '1px',
+        borderStyle: 'dashed',
+        borderColor: 'border/40',
+        bg: 'surface.1',
+      },
+    },
+  },
+})
+
+const chartMessage = cva({
+  base: {
+    position: 'absolute',
+    inset: '0',
+    display: 'grid',
+    placeItems: 'center',
+    textStyle: 'xs',
+    color: 'muted.foreground',
+  },
+  variants: {
+    summary: { true: { px: '3', textAlign: 'center' } },
+  },
+})
+
 type Props = {
   data: DrawdownPoint[]
-  height?: number
+  chartHeight?: number
   className?: string
 }
 
@@ -13,10 +45,13 @@ type Props = {
  * Drawdown chart (negative-only area), client-only.
  * Lazy-loads `lightweight-charts`. Falls back to text summary on failure.
  */
-export function DrawdownChart({ data, height = 180, className }: Props) {
+export function DrawdownChart({ data, chartHeight = 180, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [isClient, setIsClient] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Terminal render state, exposed as `data-chart-state` for tests that must
+  // wait for the lazy chart (loading, pending, ready or unavailable).
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
@@ -24,16 +59,18 @@ export function DrawdownChart({ data, height = 180, className }: Props) {
 
   useEffect(() => {
     if (!isClient || !containerRef.current || data.length === 0) return
-    let chart: { remove: () => void } | null = null
+    let chart: IChartApi | null = null
 
     let cancelled = false
     ;(async () => {
       try {
-        const mod = await import('lightweight-charts')
+        const { AreaSeries, createChart } = await import('lightweight-charts')
         if (cancelled || !containerRef.current) return
         const colors = getTradingChartColors()
-        const created = mod.createChart(containerRef.current, {
-          height,
+        // Assigned before the series is added so a failure below still removes
+        // the canvas the library already mounted in the container.
+        chart = createChart(containerRef.current, {
+          height: chartHeight,
           autoSize: true,
           layout: {
             background: { color: 'transparent' },
@@ -54,11 +91,9 @@ export function DrawdownChart({ data, height = 180, className }: Props) {
           handleScroll: false,
           handleScale: false,
         })
-        const series = (created as unknown as {
-          addAreaSeries: (opts: Record<string, unknown>) => {
-            setData: (d: Array<{ time: string; value: number }>) => void
-          }
-        }).addAreaSeries({
+        // lightweight-charts 5 API: series are added through their definition
+        // (`addAreaSeries` was removed in v5, which left the chart unavailable).
+        const series = chart.addSeries(AreaSeries, {
           lineColor: colors.negative,
           topColor: colors.negativeFaint,
           bottomColor: colors.negativeSoft,
@@ -70,33 +105,30 @@ export function DrawdownChart({ data, height = 180, className }: Props) {
           .filter(p => p.date && Number.isFinite(p.drawdown))
           .map(p => ({ time: p.date, value: -Math.abs(p.drawdown) * 100 }))
         series.setData(chartData)
-        chart = created as unknown as { remove: () => void }
+        if (!cancelled) setReady(true)
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'chart_failed_to_load')
+        removeChart(chart)
+        chart = null
+        if (!cancelled) setError(e instanceof Error ? e.message : 'chart_failed_to_load')
       }
     })()
 
     return () => {
       cancelled = true
-      try {
-        chart?.remove()
-      } catch {
-        /* ignore */
-      }
+      removeChart(chart)
     }
-  }, [data, height, isClient])
+  }, [data, chartHeight, isClient])
 
   if (!isClient) {
     return (
       <div
-        className={`relative w-full rounded-md border border-dashed border-border/40 bg-surface-1 ${className ?? ''}`}
-        style={{ height }}
+        className={cx(chartBox({ placeholder: true }), className)}
+        style={{ height: chartHeight }}
         role="img"
         aria-label="Drawdown chart loading"
+        data-chart-state="loading"
       >
-        <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
-          Chargement du graphique…
-        </div>
+        <div className={chartMessage()}>Chargement du graphique…</div>
       </div>
     )
   }
@@ -109,12 +141,13 @@ export function DrawdownChart({ data, height = 180, className }: Props) {
         : 'Données de baisse indisponibles'
     return (
       <div
-        className={`relative w-full rounded-md border border-dashed border-border/40 bg-surface-1 ${className ?? ''}`}
-        style={{ height }}
+        className={cx(chartBox({ placeholder: true }), className)}
+        style={{ height: chartHeight }}
         role="img"
         aria-label={summary}
+        data-chart-state="unavailable"
       >
-        <div className="absolute inset-0 grid place-items-center px-3 text-center text-xs text-muted-foreground">
+        <div className={chartMessage({ summary: true })}>
           {error ? 'Graphique indisponible' : summary}
         </div>
       </div>
@@ -124,9 +157,10 @@ export function DrawdownChart({ data, height = 180, className }: Props) {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full ${className ?? ''}`}
-      style={{ height }}
+      className={cx(chartBox(), className)}
+      style={{ height: chartHeight }}
       role="img"
+      data-chart-state={ready ? 'ready' : 'pending'}
       aria-label={`Graphique de baisse sur ${data.length} points`}
     />
   )

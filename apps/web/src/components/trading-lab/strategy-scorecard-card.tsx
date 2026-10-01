@@ -6,16 +6,14 @@
 //   • Demo mode renders a deterministic fixture without contacting the API.
 //   • Copy is paper-only / research-only; no buy/sell/order/execute wording.
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Badge, Button } from '@finance-os/ui/components'
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import type { AuthMode } from '@/features/auth-types'
 import { dashboardTradingLabStrategyScorecardQueryOptionsWithMode } from '@/features/dashboard-query-options'
-import type {
-  DashboardTradingLabStrategyScorecardAdvancedMetrics,
-  DashboardTradingLabStrategyScorecardQualityFlag,
-  DashboardTradingLabStrategyScorecardResponse,
-} from '@/features/dashboard-types'
+import type { DashboardTradingLabStrategyScorecardAdvancedMetrics } from '@/features/dashboard-types'
 import {
   SCORECARD_FLAG_TONE,
   SCORECARD_GRADE_LABEL_FR,
@@ -40,33 +38,90 @@ const formatRatio = (value: number | null): string => {
   return value.toFixed(2)
 }
 
-const gradeToneClass = (grade: DashboardTradingLabStrategyScorecardResponse['evidenceGrade']) => {
-  switch (SCORECARD_GRADE_TONE[grade]) {
-    case 'success':
-      return 'text-positive'
-    case 'warning':
-      return 'text-warning'
-    case 'danger':
-      return 'text-destructive'
-    case 'info':
-      return 'text-teal'
-    case 'muted':
-      return 'text-muted-foreground'
-  }
-}
+// Evidence-grade and quality-flag tones; the view model maps grades and severities to these keys.
+const toneText = cva({
+  base: {},
+  variants: {
+    tone: {
+      success: { color: 'positive' },
+      info: { color: 'teal' },
+      warning: { color: 'warning' },
+      danger: { color: 'destructive' },
+      muted: { color: 'muted.foreground' },
+    },
+  },
+})
 
-const flagToneClass = (
-  severity: DashboardTradingLabStrategyScorecardQualityFlag['severity']
-): string => {
-  switch (SCORECARD_FLAG_TONE[severity]) {
-    case 'info':
-      return 'text-teal'
-    case 'warning':
-      return 'text-warning'
-    case 'danger':
-      return 'text-destructive'
-  }
-}
+const gradeLabel = css({ textStyle: 'xs', fontWeight: 'medium' })
+
+const cardRoot = css({
+  rounded: 'lg',
+  borderWidth: '1px',
+  borderColor: 'border/40',
+  bg: 'surface.1/35',
+  p: '3',
+})
+
+// Inset blocks of the expanded card (advanced metrics, latest-run metrics).
+const insetBlock = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border/40',
+  bg: 'background/40',
+  p: '3',
+  textStyle: 'xs',
+})
+
+const summaryTile = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border/40',
+  bg: 'background/40',
+  px: '2',
+  py: '1',
+})
+
+const headerRow = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '2',
+})
+
+const footnote = css({ fontSize: '11px', color: 'muted.foreground' })
+
+const mutedText = css({ color: 'muted.foreground' })
+
+const metricValue = css({ color: 'foreground' })
+
+const MetricList = styled('dl', {
+  base: {
+    display: 'grid',
+    columnGap: '4',
+    rowGap: '1',
+    sm: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' },
+  },
+})
+
+const assumptionsNote = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border/30',
+  bg: 'surface.1/35',
+  px: '2',
+  py: '1',
+  fontSize: '11px',
+  color: 'muted.foreground',
+})
+
+const sectionLabel = css({
+  textStyle: 'xs',
+  fontWeight: 'semibold',
+  textTransform: 'uppercase',
+  letterSpacing: 'wide',
+  color: 'muted.foreground',
+})
 
 const PERMANENT_BADGES = ['Paper only', 'Qualité de preuve', 'Recherche']
 
@@ -108,8 +163,8 @@ function AdvancedMetricsSection({ data }: AdvancedMetricsSectionProps) {
     data.averageWin === null &&
     data.averageLoss === null
   return (
-    <div className="rounded-md border border-border/40 bg-background/40 p-3 text-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className={insetBlock}>
+      <div className={headerRow}>
         <Button
           type="button"
           size="sm"
@@ -119,109 +174,108 @@ function AdvancedMetricsSection({ data }: AdvancedMetricsSectionProps) {
         >
           {open ? 'Masquer les métriques avancées' : 'Afficher les métriques avancées'}
         </Button>
-        <span className="text-[11px] text-muted-foreground">
+        <span className={footnote}>
           Métriques rétrospectives. Elles ne prédisent pas les résultats futurs.
         </span>
       </div>
       {open ? (
-        <div className="mt-3 space-y-3">
+        <styled.div mt="3" spaceY="3">
           {allMetricsNull ? (
-            <p className="text-xs text-muted-foreground">
+            <styled.p textStyle="xs" color="muted.foreground">
               Données insuffisantes pour calculer des métriques avancées sur ce run.
-            </p>
+            </styled.p>
           ) : (
             <>
-              <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-3">
+              <MetricList>
                 <div>
-                  <dt className="text-muted-foreground">Calmar</dt>
-                  <dd className="text-foreground">{formatNumber(data.calmarRatio)}</dd>
+                  <dt className={mutedText}>Calmar</dt>
+                  <dd className={metricValue}>{formatNumber(data.calmarRatio)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">MAR</dt>
-                  <dd className="text-foreground">{formatNumber(data.marRatio)}</dd>
+                  <dt className={mutedText}>MAR</dt>
+                  <dd className={metricValue}>{formatNumber(data.marRatio)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Recovery factor</dt>
-                  <dd className="text-foreground">{formatNumber(data.recoveryFactor)}</dd>
+                  <dt className={mutedText}>Recovery factor</dt>
+                  <dd className={metricValue}>{formatNumber(data.recoveryFactor)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Ulcer index</dt>
-                  <dd className="text-foreground">{formatNumber(data.ulcerIndex, 4)}</dd>
+                  <dt className={mutedText}>Ulcer index</dt>
+                  <dd className={metricValue}>{formatNumber(data.ulcerIndex, 4)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Tail ratio</dt>
-                  <dd className="text-foreground">{formatNumber(data.tailRatio)}</dd>
+                  <dt className={mutedText}>Tail ratio</dt>
+                  <dd className={metricValue}>{formatNumber(data.tailRatio)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Omega</dt>
-                  <dd className="text-foreground">{formatNumber(data.omegaRatio)}</dd>
+                  <dt className={mutedText}>Omega</dt>
+                  <dd className={metricValue}>{formatNumber(data.omegaRatio)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">VaR 95% (historique)</dt>
-                  <dd className="text-foreground">{formatPercent(data.valueAtRisk95)}</dd>
+                  <dt className={mutedText}>VaR 95% (historique)</dt>
+                  <dd className={metricValue}>{formatPercent(data.valueAtRisk95)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Expected shortfall 95% (historique)</dt>
-                  <dd className="text-foreground">{formatPercent(data.expectedShortfall95)}</dd>
+                  <dt className={mutedText}>Expected shortfall 95% (historique)</dt>
+                  <dd className={metricValue}>{formatPercent(data.expectedShortfall95)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Payoff ratio</dt>
-                  <dd className="text-foreground">{formatNumber(data.payoffRatio)}</dd>
+                  <dt className={mutedText}>Payoff ratio</dt>
+                  <dd className={metricValue}>{formatNumber(data.payoffRatio)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Sharpe glissant (dernier)</dt>
-                  <dd className="text-foreground">{formatNumber(data.rollingSharpe.latest)}</dd>
+                  <dt className={mutedText}>Sharpe glissant (dernier)</dt>
+                  <dd className={metricValue}>{formatNumber(data.rollingSharpe.latest)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Sharpe glissant (min/max/moy)</dt>
-                  <dd className="text-foreground">
-                    {formatNumber(data.rollingSharpe.min)} / {formatNumber(data.rollingSharpe.max)} /{' '}
-                    {formatNumber(data.rollingSharpe.average)}
+                  <dt className={mutedText}>Sharpe glissant (min/max/moy)</dt>
+                  <dd className={metricValue}>
+                    {formatNumber(data.rollingSharpe.min)} / {formatNumber(data.rollingSharpe.max)}{' '}
+                    / {formatNumber(data.rollingSharpe.average)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">DD glissant (dernier / pire)</dt>
-                  <dd className="text-foreground">
+                  <dt className={mutedText}>DD glissant (dernier / pire)</dt>
+                  <dd className={metricValue}>
                     {formatPercent(data.rollingMaxDrawdown.latest)} /{' '}
                     {formatPercent(data.rollingMaxDrawdown.worst)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Gain moyen</dt>
-                  <dd className="text-foreground">{formatCurrency(data.averageWin)}</dd>
+                  <dt className={mutedText}>Gain moyen</dt>
+                  <dd className={metricValue}>{formatCurrency(data.averageWin)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Perte moyenne</dt>
-                  <dd className="text-foreground">{formatCurrency(data.averageLoss)}</dd>
+                  <dt className={mutedText}>Perte moyenne</dt>
+                  <dd className={metricValue}>{formatCurrency(data.averageLoss)}</dd>
                 </div>
-              </dl>
+              </MetricList>
 
-              <div className="rounded-md border border-border/30 bg-surface-1/35 px-2 py-1 text-[11px] text-muted-foreground">
+              <div className={assumptionsNote}>
                 <p>
                   Hypothèses : annualisation ={' '}
                   {data.assumptions.annualizationPeriods === null
                     ? 'inconnue'
                     : `${data.assumptions.annualizationPeriods} périodes/an`}
-                  , taux sans risque ={' '}
-                  {(data.assumptions.riskFreeRate * 100).toFixed(2)}%, VaR confiance ={' '}
-                  {Math.round(data.assumptions.varConfidence * 100)}%, fenêtre glissante ={' '}
-                  {data.assumptions.rollingWindow ?? 'n/a'}.
+                  , taux sans risque = {(data.assumptions.riskFreeRate * 100).toFixed(2)}%, VaR
+                  confiance = {Math.round(data.assumptions.varConfidence * 100)}%, fenêtre glissante
+                  = {data.assumptions.rollingWindow ?? 'n/a'}.
                 </p>
-                <p className="mt-1">
+                <styled.p mt="1">
                   VaR / CVaR sont des estimations historiques, pas des garanties de pire cas.
-                </p>
+                </styled.p>
               </div>
 
               {data.warnings.length > 0 ? (
-                <ul className="space-y-1 text-[11px] text-warning">
+                <styled.ul spaceY="1" fontSize="11px" color="warning">
                   {data.warnings.map(warning => (
                     <li key={warning}>{warning}</li>
                   ))}
-                </ul>
+                </styled.ul>
               ) : null}
             </>
           )}
-        </div>
+        </styled.div>
       ) : null}
     </div>
   )
@@ -242,11 +296,7 @@ export function StrategyScorecardCard({
       strategyId,
       learningLoopEnabled: queryEnabled,
     }),
-    enabled:
-      mode !== undefined &&
-      queryEnabled &&
-      Number.isFinite(strategyId) &&
-      strategyId > 0,
+    enabled: mode !== undefined && queryEnabled && Number.isFinite(strategyId) && strategyId > 0,
   })
 
   if (!learningLoopEnabled) {
@@ -258,9 +308,9 @@ export function StrategyScorecardCard({
   const isError = query.isError
 
   return (
-    <div className="rounded-lg border border-border/40 bg-surface-1/35 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+    <div className={cardRoot}>
+      <div className={headerRow}>
+        <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2" textStyle="xs">
           <Button
             type="button"
             size="sm"
@@ -276,82 +326,88 @@ export function StrategyScorecardCard({
             </Badge>
           ))}
           {data ? (
-            <span className={`text-xs font-medium ${gradeToneClass(data.evidenceGrade)}`}>
+            <span
+              className={cx(
+                gradeLabel,
+                toneText({ tone: SCORECARD_GRADE_TONE[data.evidenceGrade] })
+              )}
+            >
               {SCORECARD_GRADE_LABEL_FR[data.evidenceGrade]}
             </span>
           ) : null}
-        </div>
-        <span className="text-[11px] text-muted-foreground">
-          Ne constitue pas une recommandation.
-        </span>
+        </styled.div>
+        <span className={footnote}>Ne constitue pas une recommandation.</span>
       </div>
 
       {open ? (
-        <div className="mt-3 space-y-3">
+        <styled.div mt="3" spaceY="3">
           {isLoading ? (
-            <p className="text-xs text-muted-foreground">Chargement du scorecard…</p>
+            <styled.p textStyle="xs" color="muted.foreground">
+              Chargement du scorecard…
+            </styled.p>
           ) : null}
 
           {isError ? (
-            <p className="text-xs text-warning">
+            <styled.p textStyle="xs" color="warning">
               Scorecard indisponible : {toErrorMessage(query.error)}
-            </p>
+            </styled.p>
           ) : null}
 
           {data ? (
             <>
-              <div className="grid gap-2 text-xs sm:grid-cols-2">
-                <div className="rounded-md border border-border/40 bg-background/40 px-2 py-1">
-                  <p className="text-muted-foreground">Backtests complétés</p>
-                  <p className="font-medium text-foreground">
+              <styled.div
+                display="grid"
+                gap="2"
+                textStyle="xs"
+                sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+              >
+                <div className={summaryTile}>
+                  <p className={mutedText}>Backtests complétés</p>
+                  <styled.p fontWeight="medium" color="foreground">
                     {data.summary.totalBacktests} ({data.summary.totalTrades} trades)
-                  </p>
+                  </styled.p>
                 </div>
-                <div className="rounded-md border border-border/40 bg-background/40 px-2 py-1">
-                  <p className="text-muted-foreground">Run le plus récent</p>
-                  <p className="font-medium text-foreground">
-                    {data.summary.latestRunAt
-                      ? data.summary.latestRunAt.slice(0, 10)
-                      : 'Aucun'}
-                  </p>
+                <div className={summaryTile}>
+                  <p className={mutedText}>Run le plus récent</p>
+                  <styled.p fontWeight="medium" color="foreground">
+                    {data.summary.latestRunAt ? data.summary.latestRunAt.slice(0, 10) : 'Aucun'}
+                  </styled.p>
                 </div>
-              </div>
+              </styled.div>
 
-              <div className="rounded-md border border-border/40 bg-background/40 p-3 text-xs">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Métriques (run le plus récent)
-                </p>
-                <dl className="mt-1 grid gap-x-4 gap-y-1 sm:grid-cols-3">
+              <div className={insetBlock}>
+                <p className={sectionLabel}>Métriques (run le plus récent)</p>
+                <MetricList mt="1">
                   <div>
-                    <dt className="text-muted-foreground">Win rate</dt>
-                    <dd className="text-foreground">{formatPct(data.metrics.winRate)}</dd>
+                    <dt className={mutedText}>Win rate</dt>
+                    <dd className={metricValue}>{formatPct(data.metrics.winRate)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Profit factor</dt>
-                    <dd className="text-foreground">{formatRatio(data.metrics.profitFactor)}</dd>
+                    <dt className={mutedText}>Profit factor</dt>
+                    <dd className={metricValue}>{formatRatio(data.metrics.profitFactor)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Drawdown max</dt>
-                    <dd className="text-foreground">{formatPct(data.metrics.maxDrawdown)}</dd>
+                    <dt className={mutedText}>Drawdown max</dt>
+                    <dd className={metricValue}>{formatPct(data.metrics.maxDrawdown)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Sharpe</dt>
-                    <dd className="text-foreground">{formatRatio(data.metrics.sharpe)}</dd>
+                    <dt className={mutedText}>Sharpe</dt>
+                    <dd className={metricValue}>{formatRatio(data.metrics.sharpe)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Sortino</dt>
-                    <dd className="text-foreground">{formatRatio(data.metrics.sortino)}</dd>
+                    <dt className={mutedText}>Sortino</dt>
+                    <dd className={metricValue}>{formatRatio(data.metrics.sortino)}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">Walk-forward</dt>
-                    <dd className="text-foreground">
+                    <dt className={mutedText}>Walk-forward</dt>
+                    <dd className={metricValue}>
                       {data.metrics.walkForwardRuns > 0
                         ? `${data.metrics.walkForwardRuns} run(s)`
                         : 'Aucun'}
                     </dd>
                   </div>
-                </dl>
-                <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                </MetricList>
+                <styled.div mt="2" display="flex" flexWrap="wrap" gap="2" fontSize="11px">
                   <Badge variant="outline">
                     Frais inclus :{' '}
                     {data.metrics.feesIncluded === null
@@ -368,7 +424,7 @@ export function StrategyScorecardCard({
                         ? 'oui'
                         : 'non'}
                   </Badge>
-                </div>
+                </styled.div>
               </div>
 
               {/* PR14 — collapsible advanced-metrics subsection. Render only if the response
@@ -376,25 +432,28 @@ export function StrategyScorecardCard({
               <AdvancedMetricsSection data={data.advancedMetrics ?? null} />
 
               {data.qualityFlags.length > 0 ? (
-                <ul className="space-y-1 text-xs">
+                <styled.ul spaceY="1" textStyle="xs">
                   {data.qualityFlags.map(flag => (
-                    <li key={`${flag.kind}-${flag.message}`} className={flagToneClass(flag.severity)}>
+                    <li
+                      key={`${flag.kind}-${flag.message}`}
+                      className={toneText({ tone: SCORECARD_FLAG_TONE[flag.severity] })}
+                    >
                       {flag.message}
                     </li>
                   ))}
-                </ul>
+                </styled.ul>
               ) : null}
 
               {data.caveats.length > 0 ? (
-                <ul className="space-y-1 text-[11px] text-muted-foreground">
+                <styled.ul spaceY="1" fontSize="11px" color="muted.foreground">
                   {data.caveats.map(caveat => (
                     <li key={caveat}>{caveat}</li>
                   ))}
-                </ul>
+                </styled.ul>
               ) : null}
             </>
           ) : null}
-        </div>
+        </styled.div>
       ) : null}
     </div>
   )

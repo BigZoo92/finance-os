@@ -5,13 +5,15 @@
  * compact, accessible card flow. Does NOT query Neo4j directly — it just
  * walks data the API already exposes (scenarios + backtests + caveats).
  */
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+import { Panel } from '@/components/surfaces/panel'
 import type {
   AttentionItem,
   TradingLabBacktestRun,
   TradingLabScenario,
   TradingLabStrategy,
 } from '@/features/trading-lab-api'
-import { Panel } from '@/components/surfaces/panel'
 
 type Props = {
   scenarios: TradingLabScenario[]
@@ -44,13 +46,42 @@ const HUMAN_LABELS: Record<string, string> = {
 const toHumanLabel = (value: string) =>
   HUMAN_LABELS[value] ?? value.replaceAll('_', ' ').replace(/^./, letter => letter.toUpperCase())
 
-const KIND_TINT: Record<PathStep['kind'], string> = {
-  signal: 'border-teal/40 bg-teal/10 text-teal',
-  scenario: 'border-ai/40 bg-ai/10 text-ai',
-  strategy: 'border-positive/40 bg-positive/10 text-positive',
-  backtest: 'border-teal/40 bg-teal/10 text-teal',
-  caveat: 'border-warning/40 bg-warning/10 text-warning',
-}
+// One chip per step; the kind tint replaces the former class lookup. Bare `rounded` is
+// Tailwind's inlined 0.25rem, not a radius token.
+const stepChip = cva({
+  base: {
+    display: 'flex',
+    flexDirection: 'column',
+    rounded: '0.25rem',
+    borderWidth: '1px',
+    px: '2',
+    py: '1',
+    fontSize: '11px',
+  },
+  variants: {
+    kind: {
+      signal: { borderColor: 'teal/40', bg: 'teal/10', color: 'teal' },
+      scenario: { borderColor: 'ai/40', bg: 'ai/10', color: 'ai' },
+      strategy: { borderColor: 'positive/40', bg: 'positive/10', color: 'positive' },
+      backtest: { borderColor: 'teal/40', bg: 'teal/10', color: 'teal' },
+      caveat: { borderColor: 'warning/40', bg: 'warning/10', color: 'warning' },
+    },
+    link: {
+      true: { _hover: { opacity: '0.9' } },
+    },
+  },
+})
+
+const kindLabel = css({
+  fontSize: '9px',
+  textTransform: 'uppercase',
+  letterSpacing: 'wide',
+  opacity: '0.7',
+})
+
+const stepTitle = css({ lineClamp: '1', fontWeight: 'medium' })
+
+const stepSubtitle = css({ lineClamp: '1', fontSize: '10px', opacity: '0.75' })
 
 const KIND_LABEL: Record<PathStep['kind'], string> = {
   signal: 'Signal',
@@ -159,51 +190,46 @@ export function GraphPathPreview(props: Props) {
   const paths = buildPaths(props)
 
   return (
-    <Panel
-      title="Parcours"
-      description="Du signal aux limites de la simulation."
-      tone="ai"
-    >
+    <Panel title="Parcours" description="Du signal aux limites de la simulation." tone="ai">
       {paths.length === 0 ? (
-        <div className="text-xs text-muted-foreground">
+        <styled.div textStyle="xs" color="muted.foreground">
           Aucun parcours enregistré. Crée un scénario depuis Radar.
-        </div>
+        </styled.div>
       ) : (
-        <ul className="space-y-3">
+        <styled.ul spaceY="3">
           {paths.map(path => (
             <li key={path.key}>
-              <div className="mb-1 text-xs text-muted-foreground">{path.title}</div>
-              <ol className="flex flex-wrap items-stretch gap-1.5">
+              <styled.div mb="1" textStyle="xs" color="muted.foreground">
+                {path.title}
+              </styled.div>
+              <styled.ol display="flex" flexWrap="wrap" alignItems="stretch" gap="1.5">
                 {path.steps.map((step, index) => (
-                  <li key={step.id} className="flex items-stretch">
+                  <styled.li key={step.id} display="flex" alignItems="stretch">
                     {step.href ? (
-                      <a
-                        href={step.href}
-                        className={`flex flex-col rounded border px-2 py-1 text-[11px] ${KIND_TINT[step.kind]} hover:opacity-90`}
-                      >
+                      <a href={step.href} className={stepChip({ kind: step.kind, link: true })}>
                         <StepHeader step={step} />
                       </a>
                     ) : (
-                      <div
-                        className={`flex flex-col rounded border px-2 py-1 text-[11px] ${KIND_TINT[step.kind]}`}
-                      >
+                      <div className={stepChip({ kind: step.kind })}>
                         <StepHeader step={step} />
                       </div>
                     )}
                     {index < path.steps.length - 1 ? (
-                      <span
+                      <styled.span
                         aria-hidden
-                        className="self-center px-1 text-muted-foreground/60"
+                        alignSelf="center"
+                        px="1"
+                        color="muted.foreground/60"
                       >
                         →
-                      </span>
+                      </styled.span>
                     ) : null}
-                  </li>
+                  </styled.li>
                 ))}
-              </ol>
+              </styled.ol>
             </li>
           ))}
-        </ul>
+        </styled.ul>
       )}
     </Panel>
   )
@@ -212,11 +238,9 @@ export function GraphPathPreview(props: Props) {
 function StepHeader({ step }: { step: PathStep }) {
   return (
     <>
-      <span className="text-[9px] uppercase tracking-wide opacity-70">{KIND_LABEL[step.kind]}</span>
-      <span className="line-clamp-1 font-medium">{step.title}</span>
-      {step.subtitle ? (
-        <span className="line-clamp-1 text-[10px] opacity-75">{step.subtitle}</span>
-      ) : null}
+      <span className={kindLabel}>{KIND_LABEL[step.kind]}</span>
+      <span className={stepTitle}>{step.title}</span>
+      {step.subtitle ? <span className={stepSubtitle}>{step.subtitle}</span> : null}
     </>
   )
 }

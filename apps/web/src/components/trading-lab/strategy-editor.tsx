@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { Panel } from '@/components/surfaces/panel'
 import {
   archiveTradingLabStrategy,
-  createTradingLabStrategy,
   type CreateStrategyRequest,
+  createTradingLabStrategy,
   type TradingLabStrategy,
 } from '@/features/trading-lab-api'
-import { Panel } from '@/components/surfaces/panel'
 
 type Props = {
   strategies: TradingLabStrategy[]
@@ -32,13 +34,13 @@ const PRESETS = {
   buy_and_hold: {
     name: 'Buy & Hold',
     slug: 'buy-and-hold',
-    description: 'Benchmark long-only. Achat à l\'ouverture et conservation jusqu\'à la fin.',
+    description: "Benchmark long-only. Achat à l'ouverture et conservation jusqu'à la fin.",
     strategyType: 'benchmark',
     tags: ['benchmark', 'long-only'],
     parameters: { strategy_type: 'buy_and_hold' },
     indicators: [],
     entryRules: [{ id: 'bh-entry', description: 'Achat au démarrage', condition: 'always' }],
-    exitRules: [{ id: 'bh-exit', description: 'Détention jusqu\'à la fin', condition: 'never' }],
+    exitRules: [{ id: 'bh-exit', description: "Détention jusqu'à la fin", condition: 'never' }],
     riskRules: [],
     assumptions: ['Marché long-terme haussier'],
     caveats: ['Aucune gestion du drawdown', 'Exposition pleine et continue'],
@@ -54,11 +56,13 @@ const PRESETS = {
       { name: 'ema', params: { period: 10 } },
       { name: 'ema', params: { period: 20 } },
     ],
-    entryRules: [{ id: 'ec-entry', description: 'EMA10 > EMA20', condition: 'ema_fast > ema_slow' }],
+    entryRules: [
+      { id: 'ec-entry', description: 'EMA10 > EMA20', condition: 'ema_fast > ema_slow' },
+    ],
     exitRules: [{ id: 'ec-exit', description: 'EMA10 < EMA20', condition: 'ema_fast < ema_slow' }],
     riskRules: [],
     assumptions: ['Persistance des tendances', 'Liquidité suffisante'],
-    caveats: ['Pas d\'edge prouvée', 'Whipsaws en marché latéral'],
+    caveats: ["Pas d'edge prouvée", 'Whipsaws en marché latéral'],
   },
   rsi_mean_reversion: {
     name: 'RSI Mean Reversion',
@@ -81,7 +85,7 @@ const PRESETS = {
     ],
     riskRules: [],
     assumptions: ['Le marché tend à revenir vers sa moyenne'],
-    caveats: ['Risque de couteau qui tombe', 'Pas d\'edge prouvée'],
+    caveats: ['Risque de couteau qui tombe', "Pas d'edge prouvée"],
   },
   parabolic_sar_trend: {
     name: 'Parabolic SAR Trend',
@@ -108,9 +112,7 @@ const PRESETS = {
     entryRules: [
       { id: 'orb-entry', description: 'Cassure haute', condition: 'close > range_high' },
     ],
-    exitRules: [
-      { id: 'orb-exit', description: 'Cassure basse', condition: 'close < range_low' },
-    ],
+    exitRules: [{ id: 'orb-exit', description: 'Cassure basse', condition: 'close < range_low' }],
     riskRules: [],
     assumptions: ['Volatilité directionnelle après cassure'],
     caveats: ['Faux signaux fréquents en range'],
@@ -135,6 +137,78 @@ const strategyStatusLabel = (status: string) => {
   }
   return labels[status] ?? 'État inconnu'
 }
+
+const toggleButton = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border',
+  bg: 'surface.1',
+  px: '2',
+  py: '1',
+  fontSize: '11px',
+  color: 'muted.foreground',
+  _hover: { color: 'foreground' },
+})
+
+const field = css({ display: 'flex', flexDirection: 'column', gap: '1', textStyle: 'xs' })
+
+const fieldLabel = css({ color: 'muted.foreground' })
+
+// The slug field swaps the control's text size for the mono `xs` one.
+const control = cva({
+  base: {
+    rounded: 'md',
+    borderWidth: '1px',
+    borderColor: 'border',
+    bg: 'surface.1',
+    px: '2',
+    py: '1.5',
+    color: 'foreground',
+    _disabled: { opacity: '0.5' },
+  },
+  variants: {
+    kind: {
+      text: { textStyle: 'sm' },
+      slug: { fontFamily: 'mono', textStyle: 'xs' },
+    },
+  },
+  defaultVariants: { kind: 'text' },
+})
+
+const createButton = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'primary/40',
+  bg: 'primary/15',
+  px: '3',
+  py: '1.5',
+  textStyle: 'xs',
+  fontWeight: 'medium',
+  color: 'primary',
+  _hover: { bg: 'primary/25' },
+  _disabled: { opacity: '0.5' },
+})
+
+const strategyRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+  rounded: '0.25rem',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'surface.1',
+  px: '2',
+  py: '1',
+  textStyle: 'xs',
+})
+
+const archiveButton = css({
+  fontSize: '10px',
+  color: 'muted.foreground',
+  _hover: { color: 'negative' },
+})
+
+const summaryKey = css({ color: 'foreground/80' })
 
 export function StrategyEditor({ strategies, isAdmin }: Props) {
   const queryClient = useQueryClient()
@@ -175,7 +249,10 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
   const handleCreate = () => {
     setFeedback(null)
     const trimmedName = name.trim()
-    const trimmedSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-')
+    const trimmedSlug = slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
     if (!trimmedName || !trimmedSlug) {
       setFeedback('Nom et slug requis.')
       return
@@ -208,32 +285,32 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
     <Panel
       title="Création de stratégie"
       description={
-        isAdmin
-          ? 'Crée une stratégie simulée à partir d’un modèle.'
-          : 'Lecture seule en démo.'
+        isAdmin ? 'Crée une stratégie simulée à partir d’un modèle.' : 'Lecture seule en démo.'
       }
       tone="brand"
       actions={
-        <button
-          type="button"
-          className="rounded-md border border-border bg-surface-1 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
-          onClick={() => setOpen(state => !state)}
-        >
+        <button type="button" className={toggleButton} onClick={() => setOpen(state => !state)}>
           {open ? 'Masquer' : 'Afficher'}
         </button>
       }
     >
       {!open ? (
-        <div className="text-xs text-muted-foreground">
-          {strategies.length} stratégie{strategies.length > 1 ? 's' : ''} active{strategies.length > 1 ? 's' : ''}.
-        </div>
+        <styled.div textStyle="xs" color="muted.foreground">
+          {strategies.length} stratégie{strategies.length > 1 ? 's' : ''} active
+          {strategies.length > 1 ? 's' : ''}.
+        </styled.div>
       ) : (
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Modèle</span>
+        <styled.div spaceY="3">
+          <styled.div
+            display="grid"
+            gap="3"
+            sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+            lg={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+          >
+            <label className={field}>
+              <span className={fieldLabel}>Modèle</span>
               <select
-                className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
+                className={control()}
                 value={presetKey}
                 disabled={!isAdmin}
                 onChange={event => applyPreset(event.target.value as PresetKey)}
@@ -245,100 +322,127 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Nom</span>
+            <label className={field}>
+              <span className={fieldLabel}>Nom</span>
               <input
                 type="text"
                 value={name}
                 onChange={event => setName(event.target.value)}
                 disabled={!isAdmin}
-                className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
+                className={control()}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs">
-              <span className="text-muted-foreground">Slug</span>
+            <label className={field}>
+              <span className={fieldLabel}>Slug</span>
               <input
                 type="text"
                 value={slug}
                 onChange={event => setSlug(event.target.value)}
                 disabled={!isAdmin}
-                className="rounded-md border border-border bg-surface-1 px-2 py-1.5 font-mono text-xs text-foreground disabled:opacity-50"
+                className={control({ kind: 'slug' })}
               />
             </label>
-          </div>
+          </styled.div>
 
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-muted-foreground">Description</span>
+          <label className={field}>
+            <span className={fieldLabel}>Description</span>
             <textarea
               rows={2}
               value={description}
               onChange={event => setDescription(event.target.value)}
               disabled={!isAdmin}
-              className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
+              className={control()}
             />
           </label>
 
-          <div className="rounded-md border border-border/60 bg-surface-1 p-2 text-[11px]">
-            <div className="mb-1 text-muted-foreground">Règles et limites du modèle</div>
+          <styled.div
+            rounded="md"
+            borderWidth="1px"
+            borderColor="border/60"
+            bg="surface.1"
+            p="2"
+            fontSize="11px"
+          >
+            <styled.div mb="1" color="muted.foreground">
+              Règles et limites du modèle
+            </styled.div>
             <PresetSummary preset={PRESETS[presetKey] ?? DEFAULT_PRESET} />
-          </div>
+          </styled.div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2">
             <button
               type="button"
               disabled={!isAdmin || createMutation.isPending}
               onClick={handleCreate}
-              className="rounded-md border border-primary/40 bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25 disabled:opacity-50"
+              className={createButton}
             >
               {createMutation.isPending ? 'Création…' : 'Créer la stratégie'}
             </button>
-            {feedback ? <span className="text-xs text-muted-foreground">{feedback}</span> : null}
-            <span className="ml-auto text-[10px] text-warning/70">
+            {feedback ? (
+              <styled.span textStyle="xs" color="muted.foreground">
+                {feedback}
+              </styled.span>
+            ) : null}
+            <styled.span ml="auto" fontSize="10px" color="warning/70">
               Simulation uniquement.
-            </span>
-          </div>
+            </styled.span>
+          </styled.div>
 
-          <div className="rounded-md border border-border bg-surface-0 p-2">
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <styled.div rounded="md" borderWidth="1px" borderColor="border" bg="surface.0" p="2">
+            <styled.div
+              mb="1"
+              fontSize="11px"
+              textTransform="uppercase"
+              letterSpacing="wide"
+              color="muted.foreground"
+            >
               Stratégies existantes
-            </div>
-            <ul className="space-y-1">
+            </styled.div>
+            <styled.ul spaceY="1">
               {strategies.length === 0 ? (
-                <li className="text-xs text-muted-foreground">Aucune stratégie pour le moment.</li>
+                <styled.li textStyle="xs" color="muted.foreground">
+                  Aucune stratégie pour le moment.
+                </styled.li>
               ) : null}
               {strategies.map(strategy => (
-                <li
-                  key={strategy.id}
-                  className="flex items-center gap-2 rounded border border-border/60 bg-surface-1 px-2 py-1 text-xs"
-                >
-                  <span className="font-medium text-foreground">{strategy.name}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">
+                <li key={strategy.id} className={strategyRow}>
+                  <styled.span fontWeight="medium" color="foreground">
+                    {strategy.name}
+                  </styled.span>
+                  <styled.span fontFamily="mono" fontSize="10px" color="muted.foreground">
                     {strategy.slug}
-                  </span>
-                  <span className="rounded-full border border-border/60 px-1.5 text-[10px] text-muted-foreground">
+                  </styled.span>
+                  <styled.span
+                    rounded="full"
+                    borderWidth="1px"
+                    borderColor="border/60"
+                    px="1.5"
+                    fontSize="10px"
+                    color="muted.foreground"
+                  >
                     {strategy.strategyType === 'benchmark'
                       ? 'Référence'
                       : strategy.strategyType === 'experimental'
                         ? 'Expérimentale'
                         : 'Autre'}
-                  </span>
-                  <span className="ml-auto text-[10px] text-muted-foreground">
+                  </styled.span>
+                  <styled.span ml="auto" fontSize="10px" color="muted.foreground">
                     {strategyStatusLabel(strategy.status)}
-                  </span>
+                  </styled.span>
                   {isAdmin && strategy.status !== 'archived' ? (
                     <button
                       type="button"
                       onClick={() => archiveMutation.mutate(strategy.id)}
-                      className="text-[10px] text-muted-foreground hover:text-negative"
+                      className={archiveButton}
                     >
                       Archiver
                     </button>
                   ) : null}
                 </li>
               ))}
-            </ul>
-          </div>
-        </div>
+            </styled.ul>
+          </styled.div>
+        </styled.div>
       )}
     </Panel>
   )
@@ -346,9 +450,9 @@ export function StrategyEditor({ strategies, isAdmin }: Props) {
 
 function PresetSummary({ preset }: { preset: Preset }) {
   return (
-    <div className="space-y-1 text-muted-foreground">
+    <styled.div spaceY="1" color="muted.foreground">
       <div>
-        <span className="text-foreground/80">Indicateurs : </span>
+        <span className={summaryKey}>Indicateurs : </span>
         {preset.indicators.length === 0
           ? 'aucun'
           : preset.indicators
@@ -356,17 +460,17 @@ function PresetSummary({ preset }: { preset: Preset }) {
               .join(', ')}
       </div>
       <div>
-        <span className="text-foreground/80">Entrée : </span>
+        <span className={summaryKey}>Entrée : </span>
         {preset.entryRules.map(rule => rule.description).join(', ')}
       </div>
       <div>
-        <span className="text-foreground/80">Sortie : </span>
+        <span className={summaryKey}>Sortie : </span>
         {preset.exitRules.map(rule => rule.description).join(', ')}
       </div>
       <div>
-        <span className="text-foreground/80">Caveats : </span>
+        <span className={summaryKey}>Caveats : </span>
         {preset.caveats.join(', ')}
       </div>
-    </div>
+    </styled.div>
   )
 }

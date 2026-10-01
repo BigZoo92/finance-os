@@ -11,6 +11,8 @@
 // Conversion to a manual hypothesis draft uses the existing PR3 endpoint via
 // `postTradingLabHypothesis`; on success the hypotheses query keys are invalidated.
 
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Badge, Button, Input } from '@finance-os/ui/components'
 import { ChartNetworkPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -65,18 +67,127 @@ const SMC_ICT_KEYS: ReadonlySet<DashboardTradingLabPatternKey> = new Set([
 
 const DEFAULT_TIMEFRAME = '1d'
 
-const CONFIDENCE_TONE: Record<DashboardTradingLabPatternDetection['confidence'], string> = {
-  low: 'text-muted-foreground',
-  medium: 'text-teal',
-  high: 'text-positive',
+// Direction, confidence and data-sufficiency tones.
+const toneText = cva({
+  base: {},
+  variants: {
+    tone: {
+      muted: { color: 'muted.foreground' },
+      teal: { color: 'teal' },
+      positive: { color: 'positive' },
+      warning: { color: 'warning' },
+    },
+  },
+})
+
+type TextTone = 'muted' | 'teal' | 'positive' | 'warning'
+
+const CONFIDENCE_TONE: Record<DashboardTradingLabPatternDetection['confidence'], TextTone> = {
+  low: 'muted',
+  medium: 'teal',
+  high: 'positive',
 }
 
-const DIRECTION_TONE: Record<DashboardTradingLabPatternDetection['direction'], string> = {
-  bullish: 'text-positive',
-  bearish: 'text-warning',
-  neutral: 'text-muted-foreground',
-  unknown: 'text-muted-foreground',
+const DIRECTION_TONE: Record<DashboardTradingLabPatternDetection['direction'], TextTone> = {
+  bullish: 'positive',
+  bearish: 'warning',
+  neutral: 'muted',
+  unknown: 'muted',
 }
+
+const fieldLabel = css({
+  display: 'block',
+  textStyle: 'xs',
+  fontWeight: 'medium',
+  color: 'muted.foreground',
+})
+
+const sectionLabel = css({
+  textStyle: 'xs',
+  fontWeight: 'semibold',
+  textTransform: 'uppercase',
+  letterSpacing: 'wide',
+  color: 'muted.foreground',
+})
+
+// Tailwind's `space-y-1` rule kept verbatim: the first child is the fieldset legend.
+const patternFieldset = css({ '& > :not(:last-child)': { marginBlockEnd: '1' } })
+
+const optionLabel = css({ display: 'flex', alignItems: 'center', gap: '2', textStyle: 'xs' })
+
+const checkbox = css({ boxSize: '3' })
+
+const candlesInput = css({
+  mt: '1',
+  display: 'block',
+  w: 'full',
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'background',
+  px: '2',
+  py: '1',
+  fontFamily: 'mono',
+  textStyle: 'xs',
+})
+
+const mutedText = css({ color: 'muted.foreground' })
+
+const qualityBar = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '2',
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderColor: 'border/40',
+  bg: 'surface.1/40',
+  px: '3',
+  py: '2',
+  textStyle: 'xs',
+})
+
+// Tailwind's `space-x-2` rule kept verbatim: the children are inline spans that may wrap.
+const qualitySummary = css({ '& > :not(:last-child)': { marginInlineEnd: '2' } })
+
+const emptyState = css({
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderStyle: 'dashed',
+  borderColor: 'border/45',
+  bg: 'surface.1/35',
+  px: '4',
+  py: '6',
+  textAlign: 'center',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const detectionCard = css({
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderColor: 'border/50',
+  bg: 'background/40',
+  p: '3',
+  textStyle: 'sm',
+})
+
+const bulletList = cva({
+  base: {
+    mt: '1',
+    listStylePosition: 'inside',
+    listStyleType: 'disc',
+    textStyle: 'xs',
+  },
+  variants: {
+    tone: {
+      body: { color: 'foreground/90' },
+      muted: { color: 'muted.foreground' },
+    },
+  },
+  defaultVariants: { tone: 'body' },
+})
 
 interface PatternDetectionPanelProps {
   mode: AuthMode
@@ -218,8 +329,8 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
       icon={<ChartNetworkPixelIcon size={16} />}
       tone="plain"
     >
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+      <styled.div spaceY="4">
+        <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2" textStyle="xs">
           <Badge variant="outline">Paper only</Badge>
           <Badge variant="outline">Aucune exécution</Badge>
           <Badge variant="outline">Recherche</Badge>
@@ -227,87 +338,88 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
           {selectedPatterns.some(p => SMC_ICT_KEYS.has(p)) ? (
             <Badge variant="outline">SMC/ICT research</Badge>
           ) : null}
-        </div>
+        </styled.div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <styled.div
+          display="grid"
+          gap="3"
+          sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+        >
           <div>
-            <label
-              htmlFor="pattern-detect-symbol"
-              className="block text-xs font-medium text-muted-foreground"
-            >
+            <label htmlFor="pattern-detect-symbol" className={fieldLabel}>
               Symbole (libre)
             </label>
             <Input
               id="pattern-detect-symbol"
-              className="mt-1"
+              mt="1"
               value={symbol}
               onChange={event => setSymbol(event.target.value)}
             />
           </div>
           <div>
-            <label
-              htmlFor="pattern-detect-timeframe"
-              className="block text-xs font-medium text-muted-foreground"
-            >
+            <label htmlFor="pattern-detect-timeframe" className={fieldLabel}>
               Timeframe
             </label>
             <Input
               id="pattern-detect-timeframe"
-              className="mt-1"
+              mt="1"
               value={timeframe}
               onChange={event => setTimeframe(event.target.value)}
             />
           </div>
-        </div>
+        </styled.div>
 
-        <fieldset className="space-y-1">
-          <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Patterns à évaluer
-          </legend>
-          <div className="grid gap-1 sm:grid-cols-2">
+        <fieldset className={patternFieldset}>
+          <legend className={sectionLabel}>Patterns à évaluer</legend>
+          <styled.div
+            display="grid"
+            gap="1"
+            sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+          >
             {PATTERN_OPTIONS.map(option => {
               const id = `pattern-detect-${option.key}`
               const checked = selectedPatterns.includes(option.key)
               return (
-                <label key={option.key} htmlFor={id} className="flex items-center gap-2 text-xs">
+                <label key={option.key} htmlFor={id} className={optionLabel}>
                   <input
                     id={id}
                     type="checkbox"
                     checked={checked}
                     onChange={() => togglePattern(option.key)}
-                    className="h-3 w-3"
+                    className={checkbox}
                   />
-                  <span className="text-foreground">{option.label}</span>
+                  <styled.span color="foreground">{option.label}</styled.span>
                 </label>
               )
             })}
-          </div>
+          </styled.div>
         </fieldset>
 
         <div>
-          <label
-            htmlFor="pattern-detect-candles"
-            className="block text-xs font-medium text-muted-foreground"
-          >
+          <label htmlFor="pattern-detect-candles" className={fieldLabel}>
             Candles (JSON, OHLCV)
           </label>
           <textarea
             id="pattern-detect-candles"
             rows={6}
-            className="mt-1 block w-full rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-xs"
+            className={candlesInput}
             value={candlesJson}
             onChange={event => setCandlesJson(event.target.value)}
           />
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <styled.p mt="1" fontSize="11px" color="muted.foreground">
             Format : tableau d&apos;objets{' '}
             <code>{'{ timestamp, open, high, low, close, volume? }'}</code>. Le mode démo prérempli
             ce champ avec une fixture déterministe.
-          </p>
+          </styled.p>
         </div>
 
-        {parseError ? <p className="text-xs text-destructive">{parseError}</p> : null}
+        {parseError ? (
+          <styled.p textStyle="xs" color="destructive">
+            {parseError}
+          </styled.p>
+        ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2">
           <Button type="button" size="sm" onClick={handleRun} disabled={detectMutation.isPending}>
             {mode === 'demo'
               ? 'Voir la détection (démo)'
@@ -321,28 +433,32 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
             </Button>
           ) : null}
           {!isAdmin && mode !== 'demo' ? (
-            <span className="text-xs text-muted-foreground">Détection réservée au mode admin.</span>
+            <styled.span textStyle="xs" color="muted.foreground">
+              Détection réservée au mode admin.
+            </styled.span>
           ) : null}
-        </div>
+        </styled.div>
 
         {detectMutation.isError ? (
-          <p className="text-xs text-destructive">
+          <styled.p textStyle="xs" color="destructive">
             Échec de la détection : {toErrorMessage(detectMutation.error)}
-          </p>
+          </styled.p>
         ) : null}
 
         {result ? (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/40 bg-surface-1/40 px-3 py-2 text-xs">
-              <div className="space-x-2">
-                <span className="text-muted-foreground">Candles :</span>
-                <span className="font-medium text-foreground">
+          <styled.div spaceY="3">
+            <div className={qualityBar}>
+              <div className={qualitySummary}>
+                <span className={mutedText}>Candles :</span>
+                <styled.span fontWeight="medium" color="foreground">
                   {result.dataQuality.candleCount}
-                </span>
-                <span className="text-muted-foreground">/</span>
-                <span className="text-muted-foreground">Données suffisantes :</span>
+                </styled.span>
+                <span className={mutedText}>/</span>
+                <span className={mutedText}>Données suffisantes :</span>
                 <span
-                  className={result.dataQuality.sufficient ? 'text-positive' : 'text-warning'}
+                  className={toneText({
+                    tone: result.dataQuality.sufficient ? 'positive' : 'warning',
+                  })}
                 >
                   {result.dataQuality.sufficient ? 'oui' : 'non'}
                 </span>
@@ -351,94 +467,101 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
             </div>
 
             {result.dataQuality.warnings.length > 0 ? (
-              <ul className="space-y-1 text-[11px] text-warning">
+              <styled.ul spaceY="1" fontSize="11px" color="warning">
                 {result.dataQuality.warnings.map(warning => (
                   <li key={warning}>{warning}</li>
                 ))}
-              </ul>
+              </styled.ul>
             ) : null}
 
             {result.detections.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border/45 bg-surface-1/35 px-4 py-6 text-center text-sm text-muted-foreground">
-                Aucune détection sur cette série de candles.
-              </p>
+              <p className={emptyState}>Aucune détection sur cette série de candles.</p>
             ) : (
-              <ul className="space-y-3">
+              <styled.ul spaceY="3">
                 {result.detections.map(detection => (
-                  <li
-                    key={detection.id}
-                    className="rounded-xl border border-border/50 bg-background/40 p-3 text-sm"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                  <li key={detection.id} className={detectionCard}>
+                    <styled.div
+                      display="flex"
+                      flexWrap="wrap"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      gap="2"
+                    >
                       <div>
-                        <p className="font-medium text-foreground">
+                        <styled.p fontWeight="medium" color="foreground">
                           {PATTERN_LABELS_FR[detection.patternType] ?? detection.patternType}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
+                        </styled.p>
+                        <styled.p textStyle="xs" color="muted.foreground">
                           Observé le {detection.observedAt}
-                        </p>
+                        </styled.p>
                         {SMC_ICT_KEYS.has(detection.patternType) ? (
-                          <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                          <styled.p
+                            mt="1"
+                            fontSize="11px"
+                            textTransform="uppercase"
+                            letterSpacing="wide"
+                            color="muted.foreground"
+                          >
                             Structure candidate. Pas un signal. Simulation uniquement.
-                          </p>
+                          </styled.p>
                         ) : null}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className={DIRECTION_TONE[detection.direction]}>
+                      <styled.div
+                        display="flex"
+                        flexWrap="wrap"
+                        alignItems="center"
+                        gap="2"
+                        textStyle="xs"
+                      >
+                        <span className={toneText({ tone: DIRECTION_TONE[detection.direction] })}>
                           {TREND_PATTERN_DIRECTION_LABEL_FR[detection.direction]}
                         </span>
-                        <span className={CONFIDENCE_TONE[detection.confidence]}>
+                        <span className={toneText({ tone: CONFIDENCE_TONE[detection.confidence] })}>
                           {PATTERN_CONFIDENCE_LABEL_FR[detection.confidence]}
                         </span>
-                      </div>
-                    </div>
+                      </styled.div>
+                    </styled.div>
 
                     {detection.evidence.length > 0 ? (
-                      <div className="mt-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Indices
-                        </p>
-                        <ul className="mt-1 list-inside list-disc text-xs text-foreground/90">
+                      <styled.div mt="2">
+                        <p className={sectionLabel}>Indices</p>
+                        <ul className={bulletList()}>
                           {detection.evidence.map(line => (
                             <li key={line}>{line}</li>
                           ))}
                         </ul>
-                      </div>
+                      </styled.div>
                     ) : null}
 
                     {detection.invalidationHints.length > 0 ? (
-                      <div className="mt-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Invalidation
-                        </p>
-                        <ul className="mt-1 list-inside list-disc text-xs text-foreground/90">
+                      <styled.div mt="2">
+                        <p className={sectionLabel}>Invalidation</p>
+                        <ul className={bulletList()}>
                           {detection.invalidationHints.map(line => (
                             <li key={line}>{line}</li>
                           ))}
                         </ul>
-                      </div>
+                      </styled.div>
                     ) : null}
 
                     {detection.limitations.length > 0 ? (
-                      <div className="mt-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Limites
-                        </p>
-                        <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+                      <styled.div mt="2">
+                        <p className={sectionLabel}>Limites</p>
+                        <ul className={bulletList({ tone: 'muted' })}>
                           {detection.limitations.map(line => (
                             <li key={line}>{line}</li>
                           ))}
                         </ul>
-                      </div>
+                      </styled.div>
                     ) : null}
 
-                    <p className="mt-2 text-[11px] text-muted-foreground">
+                    <styled.p mt="2" fontSize="11px" color="muted.foreground">
                       Cette détection n&apos;est pas une recommandation. Les résultats doivent être
                       backtestés avant toute conclusion.
-                    </p>
+                    </styled.p>
 
                     {isAdmin ? (
-                      <div className="mt-3">
+                      <styled.div mt="3">
                         <Button
                           type="button"
                           size="sm"
@@ -450,30 +573,34 @@ export function PatternDetectionPanel({ mode }: PatternDetectionPanelProps) {
                             ? 'Création…'
                             : 'Créer une hypothèse papier'}
                         </Button>
-                      </div>
+                      </styled.div>
                     ) : null}
                   </li>
                 ))}
-              </ul>
+              </styled.ul>
             )}
 
             {result.caveats && result.caveats.length > 0 ? (
-              <ul className="space-y-1 text-[11px] text-muted-foreground">
+              <styled.ul spaceY="1" fontSize="11px" color="muted.foreground">
                 {result.caveats.map(caveat => (
                   <li key={caveat}>{caveat}</li>
                 ))}
-              </ul>
+              </styled.ul>
             ) : null}
-          </div>
+          </styled.div>
         ) : null}
 
-        {createdMessage ? <p className="text-xs text-positive">{createdMessage}</p> : null}
-        {createHypothesisMutation.isError ? (
-          <p className="text-xs text-destructive">
-            Échec de la création d&apos;hypothèse : {toErrorMessage(createHypothesisMutation.error)}
-          </p>
+        {createdMessage ? (
+          <styled.p textStyle="xs" color="positive">
+            {createdMessage}
+          </styled.p>
         ) : null}
-      </div>
+        {createHypothesisMutation.isError ? (
+          <styled.p textStyle="xs" color="destructive">
+            Échec de la création d&apos;hypothèse : {toErrorMessage(createHypothesisMutation.error)}
+          </styled.p>
+        ) : null}
+      </styled.div>
     </Panel>
   )
 }
