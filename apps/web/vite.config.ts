@@ -1,19 +1,29 @@
-import { fileURLToPath } from 'node:url'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
-import { reactCompilerOptions } from './react-compiler.config'
+import { reactCompilerOptions } from './react-compiler.config.ts'
 
 // `/api/*` is served by the runtime proxy in src/routes/api/$.ts (API_INTERNAL_URL is
 // read per request), so neither a dev-server proxy nor a build-time Nitro route
 // rule is configured here: one code path serves dev, preview, and production.
 export default defineConfig(({ command }) => ({
   envDir: '../../',
+  build: {
+    rolldownOptions: {
+      // Experimental: skip compiling unused re-exports of side-effect-free barrels
+      // (planned to become Rolldown's default). Measured: same bundle, same build
+      // time here; nativeMagicString (no prod sourcemaps) and inlineConst "all"
+      // (+0.8 kB raw) were measured and left at their defaults.
+      experimental: { lazyBarrel: true },
+    },
+  },
   resolve: {
+    // Native tsconfig `paths` resolution (Vite 8): the `@/` alias has one source,
+    // tsconfig.json.
+    tsconfigPaths: true,
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
       // Rolldown resolves the `node` import condition of tslib to an ESM wrapper over
       // its `__esModule`-flagged CommonJS build and then reads `.default` (undefined),
       // which crashes the SSR bundle at boot (`react-remove-scroll-bar` via Radix).
@@ -28,6 +38,8 @@ export default defineConfig(({ command }) => ({
     nitro({
       rolldownConfig: {
         external: [/^@sentry\//],
+        // Same lazy-barrel optimization for the server bundle.
+        experimental: { lazyBarrel: true },
         output: {
           codeSplitting: {
             // Nitro groups server chunks per npm package. Rolldown captures a
