@@ -27,9 +27,15 @@ blockExoticSubdeps: false
 # granted only after a clean install and runtime validation. Never re-enable
 # unrestricted builds.
 allowBuilds:
-  # GitNexus (dev-only code intelligence) native dependencies: prebuilt binaries
-  # are bundled or resolved at runtime, so their install scripts are not needed.
-  "@ladybugdb/core": false
+  # GitNexus (dev-only code intelligence) graph database. Its install script only
+  # copies `lbugjs.node` from the per-platform optional package
+  # (`@ladybugdb/core-<platform>-<arch>`) into the package root, which is where
+  # the loader opens it; without the script GitNexus fails with ERR_DLOPEN_FAILED.
+  # Reviewed (install.js: copy, source build only when no prebuilt exists) and
+  # validated with `pnpm gitnexus:analyze`.
+  "@ladybugdb/core": true
+  # The remaining GitNexus native dependencies: prebuilt binaries are bundled or
+  # resolved at runtime, so their install scripts are not needed.
   # msw ships a postinstall notice only (pulled in transitively by the web test tooling).
   msw: false
   onnxruntime-node: false
