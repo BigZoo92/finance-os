@@ -83,6 +83,8 @@ export const createTransactionsRoute = () =>
           const fixture = resolveDemoTransactionsFixture({
             scenario: requestedScenario,
             profile: requestedProfile,
+            strategy: env.DEMO_DATASET_STRATEGY,
+            personaMatchingEnabled: env.DEMO_PERSONA_MATCHING_ENABLED,
           })
 
           if (fixture.degradedFallback) {
