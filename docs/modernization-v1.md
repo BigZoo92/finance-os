@@ -14,10 +14,10 @@ durable record; the pull request description summarizes it.
 | P3 | Internal service token (`x-internal-service-token`) enforced by the Python services; production requires it when they are enabled. |
 | P4 | Owner-token Redis locks with compare-and-delete release and a lease `AbortSignal`. |
 | P5 | Client bundle denylist (`pnpm check:client-bundle`), server-only token resolution in the SSR middleware. |
-| P6 | Node 24.21 / Bun 1.4.2 / Python 3.12 / pnpm 11.28 (catalog, `allowBuilds`, supply-chain policy), Biome 2.5, Playwright 1.63, Moon 2.5 Stage A. |
+| P6 | Node 24.21 / Bun 1.4.2 / Python 3.12 / pnpm 11.28 (catalog, `allowBuilds`, supply-chain policy), Biome 2.5 (replaced after P19 by oxlint and oxfmt), Playwright 1.63, Moon 2.5 Stage A. |
 | P7–P8 | Explicit ambient types per project, test-tree typechecks, TypeScript 7.0.2 as the canonical compiler. |
 | P9 | Pinned TanStack Start cohort, runtime `/api` proxy (`API_INTERNAL_URL` read per request), rolldown-vite bridge validated. |
-| P10 | Vite 8.3.1 on Rolldown/Oxc, `@vitejs/plugin-react` 6 with the React Compiler through `@rolldown/plugin-babel`, Vitest 4.1.11, devtools gated out of production. |
+| P10 | Vite 8.3.1 on Rolldown/Oxc, `@vitejs/plugin-react` 6 with the React Compiler through `@rolldown/plugin-babel`, Vitest 4.1.11, devtools gated out of production. Superseded after P19 by the Oxc toolchain (see below). |
 | P11 | `@finance-os/api-contract` (Zod 4) as the single source of the financial DTOs; closed root exports of `ai` and `external-investments`; prelude `./runtime` subpath. |
 | P12 | Panda CSS 1.12 foundation: `packages/styled-system` (preset, single config, generated runtime), `panda-css` skill, visual regression harness. |
 | P13 | Every shared component and screen migrated to Panda (`styled()`, recipes, patterns, style props); Tailwind, tw-animate-css, tailwind-merge, class-variance-authority, clsx and shadcn removed; vendored element reset and Panda `globalCss`. |
@@ -74,14 +74,10 @@ durable record; the pull request description summarizes it.
   `d3-array` into the client-only 3D graph chunk and evaluating
   `window.THREE` during SSR (`codeSplitting.includeDependenciesRecursively:
   false`).
-- **React Compiler path.** The Vite 8 line runs the compiler through
-  `@rolldown/plugin-babel` + `reactCompilerPreset()` so its output matches
-  the Vite 7 line; the native Oxc compiler path stays a follow-up until it
-  leaves experimental status.
-- **Vitest 4, not 5.** Vitest 5.0 shipped days before the migration; the
-  plan's 4.1.11 line was kept (its migration is documented and validated),
-  with the 5.0 changes (`clearMocks` default, hoisting rules) noted for a
-  later, isolated upgrade.
+- **Toolchain beyond the plan.** The plan stopped at the React Compiler
+  through Babel, Vitest 4.1.11 and Biome. After P19 the web toolchain moved
+  to Oxc end to end, experimental options included, each measured before
+  being kept (see [Oxc toolchain](#oxc-toolchain-after-p19)).
 - **Effect scope.** Effect is used for the provider policy only; it is not
   spread into domain code, and Effect 4 is not adopted.
 - **Migration snapshot.** The journal had no snapshot since 0036; migration
@@ -101,7 +97,8 @@ durable record; the pull request description summarizes it.
   budget set to `Infinity` no longer removes its cap), padded URLs trimmed
   (a padded `APP_URL` no longer yields `" https://…/api"`). Built-in error
   messages changed wording; a required URL now says "is required" when
-  absent. `zod/v3` and `zod/v4` imports are forbidden by Biome.
+  absent. `zod/v3` and `zod/v4` imports are forbidden by oxlint
+  (`no-restricted-imports`).
 - **Visual baselines for the trading lab.** The route was not in the
   original matrix. Its pre-migration screenshots were recorded from a
   detached worktree of the last Tailwind commit (with the same chart repair
@@ -122,6 +119,7 @@ durable record; the pull request description summarizes it.
 | GitNexus (CLI and MCP) failed with `ERR_DLOPEN_FAILED` after a reinstall | Modernization (P6 build policy skipped `@ladybugdb/core`'s copy-only install script) | Script reviewed and allowed |
 | Two Zod majors shipped; the API and worker declared zod without importing it | Pre-existing | One zod, unused declarations removed |
 | A boot error echoed the first 18 characters of an invalid `AUTH_*PASSWORD_HASH` value (a misplaced plaintext password) | Pre-existing | The message names the variable only; test asserts the value never appears |
+| Unhandled promises, unknown values stringified as `[object Object]`, refs written during render, state reset synchronously inside effects | Pre-existing, surfaced by oxlint's type-aware and React rules | Promises awaited or explicitly voided, typed text helpers, `useSyncExternalStore` for client-only state, refs refreshed in layout effects |
 
 ## Measurements
 
@@ -159,11 +157,76 @@ own so a failure would not hide the following ones.
 | GitNexus refresh | pass (7,528 nodes, 300 flows) |
 | Desktop shell build (`pnpm desktop:build`) | not run: the Tauri CLI is not installed locally; the desktop code is unchanged (only a `moon.yml` was added) |
 
+## Oxc toolchain (after P19)
+
+The web toolchain now runs on Oxc and Rolldown from lint to build. The
+options marked experimental are experimental upstream; each one was
+measured on this repository and kept only when it held up.
+
+Adopted:
+
+- **Vitest 5.0.3** for the web and UI suites. The new defaults (`clearMocks`
+  on, stricter `vi.mock` hoisting) required no test change.
+- **React Compiler in Oxc** (experimental): `@vitejs/plugin-react` 6
+  `react({ compiler })` with `oxc-transform-react` runs the compiler,
+  TypeScript, JSX and Fast Refresh in one pass. Babel,
+  `@rolldown/plugin-babel` and `babel-plugin-react-compiler` are gone. The
+  options live in `apps/web/react-compiler.config.ts`, shared by the build
+  and Vitest. The plugin compiles client environments only; SSR renders the
+  same markup uncompiled.
+- **oxlint**, type-aware through `oxlint-tsgolint` on TypeScript 7, replaces
+  Biome's linter. Correctness and suspicious rules are errors, warnings fail
+  the run, and unused disable directives are errors. Every remaining
+  `oxlint-disable-next-line` carries its reason.
+- **oxfmt** replaces Biome's formatter with the same style (migrated
+  options), plus experimental import sorting and `package.json` key
+  sorting. The repository was reformatted in a commit of its own. CI now
+  checks formatting (`pnpm format:check`), which it never did with Biome.
+- **Vite `resolve.tsconfigPaths`**: the `@/` alias has a single source,
+  `tsconfig.json`, for the build and the tests.
+- **Rolldown `experimental.lazyBarrel`** on the client and Nitro bundles.
+- **Vitest `experimental.preParse`**.
+
+Measured and not adopted:
+
+| Option | Result |
+|---|---|
+| Rolldown `nativeMagicString` | No gain measured: production builds emit no sourcemaps |
+| Rolldown `inlineConst` in `all` mode | +0.8 kB raw, same build time |
+| `sideEffects: false` on `@finance-os/ui` | 59 → 76 client chunks |
+| Vitest `isolate: false` | 3.5× faster, but per-file `vi.mock` leaked into other files |
+| Vitest `experimental.viteModuleRunner: false` | Needs Node's native type stripping (Node ≥ 22.18; local Node is 22.17) |
+| Vite `configLoader: 'native'` | Needs `--experimental-strip-types` on the local Node 22.17 |
+| Vite bundled dev mode (`vite dev --experimentalBundle`) | The dev server starts with TanStack Start, but requests to it could not be exercised in this environment |
+
+| Measurement | Value |
+|---|---|
+| Web production build, React Compiler through Babel | 11.3 s |
+| Web production build, React Compiler in Oxc (same machine, same session) | 6.5–7.3 s |
+| Compiled components | identical: 494 memo-cache sentinels in 22 chunks with either compiler |
+| oxlint, type-aware, whole repository | 4.4 s |
+| oxfmt `--check` (1,123 files) | 0.3 s |
+| Client bundle | 887.6 kB gzip JS (887 kB before the switch) |
+
+Validated on 2026-10-02 at the head of the branch:
+
+- `pnpm check:ci` passed every step, including the new format check.
+  Tests: api 773, web 477, worker 114, provider-runtime 77,
+  external-investments 67, ui 64, ai 48, finance-engine 39, env 30,
+  provider-contract 16, redis 12, api-contract 8, powens 4, db 3, Python
+  25 + 78.
+- E2E: 65 passed. Visual regression: 48 screenshots, no difference above
+  tolerance. The mobile-dark trading lab baseline was re-recorded once,
+  for the intended single-column `minmax(0, 1fr)` chart track.
+
 ## Remaining limits
 
 - Local validation ran on Node 22.17 and Bun 1.3.13 (the sandbox denies
   runtime downloads); CI runs the pinned Node 24.21 / Bun 1.4.2.
 - The desktop shell build was not run locally (see the matrix).
+- Vite's bundled dev mode stays off until a browser session confirms it
+  serves the app; it can be tried with
+  `pnpm --filter @finance-os/web exec vite dev --experimentalBundle`.
 - Visual baselines are local (font rendering is machine specific) and
   follow the local `.env` build flags (`VITE_*`). The run pins the clock on
   both sides of SSR (`e2e/support`), so relative labels do not drift;
