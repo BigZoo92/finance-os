@@ -106,6 +106,11 @@ durable record; the pull request description summarizes it.
   version. Lazy chart containers are masked in the capture because their
   canvases resize asynchronously during a full-page screenshot; their
   rendering is asserted by an E2E test instead.
+- **Desktop shell removed.** The Tauri shell (`apps/desktop`) only wrapped
+  the web product and was not used. It was deleted after P19 with everything
+  that existed for it: the `desktop:*` scripts, the desktop-scope detection
+  and its CI jobs, the `check:ci` scopes, and the Rust ignore and attribute
+  rules. The web app is the only client.
 - **PLAN.md.** The plan was supplied with the task and is not versioned in
   the repository; this page is the in-repo record of the deviations.
 
@@ -120,6 +125,7 @@ durable record; the pull request description summarizes it.
 | Two Zod majors shipped; the API and worker declared zod without importing it | Pre-existing | One zod, unused declarations removed |
 | A boot error echoed the first 18 characters of an invalid `AUTH_*PASSWORD_HASH` value (a misplaced plaintext password) | Pre-existing | The message names the variable only; test asserts the value never appears |
 | A fresh install (CI, Docker) failed with `ERR_PNPM_IGNORED_BUILDS` for esbuild and protobufjs | Modernization (P6 `allowBuilds` list written against an already built local `node_modules`) | Both reviewed and listed as `false` (optional install scripts); validated by `check:ci` in a clean worktree without `.env` |
+| The Docker images failed at `pnpm install --frozen-lockfile`: the manifest stage did not copy `packages/config-ts` (nor `apps/desktop`, since removed), and the styled-system `prepare` script (`panda codegen`) found no Panda config | Modernization: pnpm 11 refuses importers missing from the build context (pnpm 10 tolerated them), and P12 added the `prepare` script; `docker:check` only covered the runtime dependencies | Every manifest copied, the Panda config, preset and tsconfig chain copied before the install, local generated output kept out of the context; `docker:check` now requires every importer of the lockfile; `pnpm docker:build:smoke` builds all five images |
 | The demo transactions fixture test needed a complete API environment and failed wherever no `.env` exists, as in CI | Pre-existing | The route passes the two demo settings to the fixture, which no longer reads the API environment |
 | Unhandled promises, unknown values stringified as `[object Object]`, refs written during render, state reset synchronously inside effects | Pre-existing, surfaced by oxlint's type-aware and React rules | Promises awaited or explicitly voided, typed text helpers, `useSyncExternalStore` for client-only state, refs refreshed in layout effects |
 
@@ -157,7 +163,7 @@ own so a failure would not hide the following ones.
 | E2E (Playwright, demo stack) | 65 passed |
 | Visual regression | 48 screenshots, no difference above tolerance |
 | GitNexus refresh | pass (7,528 nodes, 300 flows) |
-| Desktop shell build (`pnpm desktop:build`) | not run: the Tauri CLI is not installed locally; the desktop code is unchanged (only a `moon.yml` was added) |
+| Desktop shell build (`pnpm desktop:build`) | not run: the Tauri CLI is not installed locally (the desktop shell has since been removed) |
 
 ## Oxc toolchain (after P19)
 
@@ -227,7 +233,6 @@ Validated on 2026-10-02 at the head of the branch:
 
 - Local validation ran on Node 22.17 and Bun 1.3.13 (the sandbox denies
   runtime downloads); CI runs the pinned Node 24.21 / Bun 1.4.2.
-- The desktop shell build was not run locally (see the matrix).
 - Vite's bundled dev mode stays off until a browser session confirms it
   serves the app; it can be tried with
   `pnpm --filter @finance-os/web exec vite dev --experimentalBundle`.
