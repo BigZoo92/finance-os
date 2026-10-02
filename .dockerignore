@@ -15,6 +15,8 @@ dist
 .tmp
 .turbo
 **/.next
+# Panda runtime: generated in the image by the install (`prepare`).
+**/styled-system/generated
 **/__pycache__
 **/*.py[cod]
 .pytest_cache

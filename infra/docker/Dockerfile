@@ -23,6 +23,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY packages/ai/package.json packages/ai/package.json
 COPY packages/api-contract/package.json packages/api-contract/package.json
+COPY packages/config-ts/package.json packages/config-ts/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
 COPY packages/external-investments/package.json packages/external-investments/package.json
@@ -36,6 +37,11 @@ COPY packages/styled-system/package.json packages/styled-system/package.json
 COPY packages/ui/package.json packages/ui/package.json
 
 FROM manifests AS deps
+# The styled-system `prepare` script runs `panda codegen` during the install; it
+# needs the Panda config, the preset sources and the tsconfig chain the config
+# loader reads (codegen does not scan `include`).
+COPY packages/config-ts packages/config-ts
+COPY packages/styled-system packages/styled-system
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build-web
