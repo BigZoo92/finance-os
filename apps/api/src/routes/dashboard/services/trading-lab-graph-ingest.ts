@@ -5,6 +5,8 @@
  * NEVER sends full equity curves or trade lists — graph stores compact memory only.
  */
 
+import { internalServiceHeaders } from '../../../services/internal-service-auth'
+
 interface BacktestSummaryIngestInput {
   strategy: {
     id: number
@@ -67,6 +69,7 @@ const compactMetrics = (metrics: Record<string, unknown> | null): Record<string,
 export const sendBacktestToKnowledgeGraph = async ({
   knowledgeServiceUrl,
   knowledgeServiceEnabled,
+  internalServiceToken,
   ingestEnabled,
   requestId,
   input,
@@ -74,6 +77,7 @@ export const sendBacktestToKnowledgeGraph = async ({
 }: {
   knowledgeServiceUrl: string
   knowledgeServiceEnabled: boolean
+  internalServiceToken?: string
   ingestEnabled: boolean
   requestId: string
   input: BacktestSummaryIngestInput
@@ -128,6 +132,7 @@ export const sendBacktestToKnowledgeGraph = async ({
       headers: {
         'content-type': 'application/json',
         'x-request-id': requestId,
+        ...internalServiceHeaders(internalServiceToken),
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -141,7 +146,10 @@ export const sendBacktestToKnowledgeGraph = async ({
   } catch (error) {
     return {
       ok: false,
-      reason: error instanceof Error ? `knowledge_service_error:${error.message.slice(0, 60)}` : 'knowledge_service_error',
+      reason:
+        error instanceof Error
+          ? `knowledge_service_error:${error.message.slice(0, 60)}`
+          : 'knowledge_service_error',
     }
   }
 }

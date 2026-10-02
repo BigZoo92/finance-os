@@ -42,7 +42,10 @@ export const createFxConverter = ({
     }
     const quote = rate.quoteCurrency.toUpperCase()
     const existing = byQuote.get(quote)
-    if (!existing || new Date(rate.rateTimestamp).getTime() > new Date(existing.rateTimestamp).getTime()) {
+    if (
+      !existing ||
+      new Date(rate.rateTimestamp).getTime() > new Date(existing.rateTimestamp).getTime()
+    ) {
       byQuote.set(quote, rate)
     }
   }
@@ -95,6 +98,8 @@ export const createFxConverter = ({
       return quote === normalizedBase || byQuote.has(quote)
     },
     staleCurrencies: () =>
-      [...byQuote.values()].filter(rate => isRateStale(rate)).map(rate => rate.quoteCurrency.toUpperCase()),
+      [...byQuote.values()]
+        .filter(rate => isRateStale(rate))
+        .map(rate => rate.quoteCurrency.toUpperCase()),
   }
 }

@@ -11,12 +11,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core'
 
-export type RecurringProviderCostCadence =
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'yearly'
-  | 'one_time'
+export type RecurringProviderCostCadence = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'one_time'
 
 export const recurringProviderCost = pgTable(
   'recurring_provider_cost',

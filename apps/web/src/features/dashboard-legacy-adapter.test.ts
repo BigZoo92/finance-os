@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getDemoDashboardSummary } from './demo-data'
 import { adaptDashboardSummaryLegacy } from './dashboard-legacy-adapter'
+import { getDemoDashboardSummary } from './demo-data'
 
 describe('adaptDashboardSummaryLegacy', () => {
   it('returns deterministic fallback payload when summary is missing', () => {
@@ -12,9 +12,10 @@ describe('adaptDashboardSummaryLegacy', () => {
 
     expect(adapted.range).toBe('30d')
     expect(adapted.totals).toEqual({
-      balance: 0,
-      incomes: 0,
-      expenses: 0,
+      balance: null,
+      unknownValuationAssetCount: 0,
+      incomes: null,
+      expenses: null,
     })
     expect(adapted.connections).toEqual([])
     expect(adapted.assets).toEqual([])

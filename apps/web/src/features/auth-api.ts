@@ -1,6 +1,6 @@
 import { apiFetch, ApiRequestError } from '@/lib/api'
-import { AUTH_UNAVAILABLE_RESPONSE, DEMO_AUTH_RESPONSE } from './demo-data'
 import type { AuthMeResponse } from './auth-types'
+import { AUTH_UNAVAILABLE_RESPONSE, DEMO_AUTH_RESPONSE } from './demo-data'
 
 export const fetchAuthMe = async () => {
   try {

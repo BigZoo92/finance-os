@@ -112,9 +112,7 @@ describe('fetchDashboardAdvisorKnowledgeAnswer', () => {
   it('encodes the question on the knowledge answer endpoint', async () => {
     apiFetchMock.mockResolvedValue({ status: 'answered' })
 
-    await fetchDashboardAdvisorKnowledgeAnswer(
-      'Pourquoi diversifier un portefeuille actions ?'
-    )
+    await fetchDashboardAdvisorKnowledgeAnswer('Pourquoi diversifier un portefeuille actions ?')
 
     expect(apiFetchMock).toHaveBeenCalledWith(
       '/dashboard/advisor/knowledge-answer?question=Pourquoi+diversifier+un+portefeuille+actions+%3F'

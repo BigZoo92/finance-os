@@ -6,6 +6,7 @@ No live trading, no broker connections, no real execution.
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
 
 from . import __version__
-from .config import get_settings
+from .config import Settings, get_settings
 from .engines.backtest import AVAILABLE_STRATEGIES, run_backtest
 from .engines.indicators import AVAILABLE_INDICATORS, compute_indicator
 from .engines.metrics import compute_all_metrics
@@ -57,6 +58,15 @@ METRIC_NAMES = [
     "beta",
     "drawdown_recovery_days",
 ]
+
+INTERNAL_SERVICE_TOKEN_HEADER = "x-internal-service-token"
+# Probe routes stay open so Compose healthchecks and ops status never need the secret.
+PUBLIC_PATHS = frozenset({"/health", "/version"})
+
+
+def _configured_internal_service_token(settings: Settings) -> str | None:
+    token = (settings.internal_service_token or "").strip()
+    return token or None
 
 
 def _request_id(request: Request) -> str:
@@ -109,6 +119,13 @@ def _check_quantstats() -> bool:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    internal_service_token = _configured_internal_service_token(settings)
+    if internal_service_token is None:
+        if settings.internal_service_auth_required:
+            raise RuntimeError(
+                "INTERNAL_SERVICE_AUTH_REQUIRED is true but INTERNAL_SERVICE_TOKEN is not configured"
+            )
+        _log("warn", "internal service auth disabled")
 
     app = FastAPI(
         title="Finance-OS Quant Service",
@@ -116,6 +133,33 @@ def create_app() -> FastAPI:
         version=__version__,
         docs_url="/docs" if settings.quant_service_enabled else None,
     )
+
+    # --- Internal service auth (never logs the token or its shape) ---
+    @app.middleware("http")
+    async def internal_service_auth_middleware(request: Request, call_next):
+        if internal_service_token is None or request.url.path in PUBLIC_PATHS:
+            return await call_next(request)
+
+        provided = request.headers.get(INTERNAL_SERVICE_TOKEN_HEADER, "")
+        if not provided:
+            code, message = "INTERNAL_AUTH_REQUIRED", "Internal service token required."
+        elif not hmac.compare_digest(
+            provided.encode("utf-8"), internal_service_token.encode("utf-8")
+        ):
+            code, message = "INTERNAL_AUTH_INVALID", "Internal service token invalid."
+        else:
+            return await call_next(request)
+
+        rid = _request_id(request)
+        _log(
+            "warn",
+            "internal service auth rejected",
+            requestId=rid,
+            route=request.url.path,
+            method=request.method,
+            code=code,
+        )
+        return _safe_error(rid, 401, code, message)
 
     # --- Validation error handler ---
     @app.exception_handler(RequestValidationError)

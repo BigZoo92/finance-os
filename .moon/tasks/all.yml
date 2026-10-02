@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/tasks.json
+# Moon Stage B: projects declare explicit tasks (see each moon.yml). This file
+# holds the shared file groups, the workspace-level inputs every task hash must
+# include, and the cache policy. Caching is conservative: a task is only replayed
+# from cache when its declared inputs and its dependencies' task hashes match.
+fileGroups:
+  sources:
+    - 'src/**/*'
+    - 'drizzle/**/*'
+    - 'public/**/*'
+  tests:
+    - 'src/**/*.test.*'
+    - 'e2e/**/*'
+    - 'vitest.config.*'
+  configs:
+    - 'package.json'
+    - 'tsconfig*.json'
+    - '*.config.{js,cjs,mjs,ts}'
+    - 'postcss.config.cjs'
+    - 'drizzle.config.cjs'
+    - 'panda.config.ts'
+
+# Workspace files that change how any project builds, typechecks or tests.
+implicitInputs:
+  - '/pnpm-lock.yaml'
+  - '/pnpm-workspace.yaml'
+  - '/packages/config-ts/*.json'
+  - '/.oxlintrc.json'
+  - '/.oxfmtrc.json'
+  # Configuration only: `.moon/cache` must never be an input (self-invalidation).
+  - '/.moon/*.yml'
+  - '/.moon/tasks/**/*'
+
+taskOptions:
+  cache: true
+  runInCI: true

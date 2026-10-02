@@ -151,8 +151,9 @@ const createPostMortemRuntime = (params?: {
         const items = getAdvisorPostMortemListMock().items
         return items.find(row => row.id === input.postMortemId) ?? null
       }
-      const lookup = params?.adminGetById ?? ((id: number) =>
-        adminListFixture.find(row => row.id === id) ?? null)
+      const lookup =
+        params?.adminGetById ??
+        ((id: number) => adminListFixture.find(row => row.id === id) ?? null)
       return lookup(input.postMortemId)
     },
     runAdvisorPostMortem: async input => {
@@ -225,9 +226,7 @@ describe('createAdvisorRoute · post-mortem', () => {
       runtime: createPostMortemRuntime({ calls }),
     })
 
-    const response = await app.handle(
-      new Request('http://finance-os.local/advisor/post-mortem')
-    )
+    const response = await app.handle(new Request('http://finance-os.local/advisor/post-mortem'))
     const payload = (await response.json()) as DashboardAdvisorPostMortemListResponse
     const expected = getAdvisorPostMortemListMock()
 
@@ -314,9 +313,9 @@ describe('createAdvisorRoute · post-mortem', () => {
       runStub: { kind: 'completed' },
     })
     // Override `runAdvisorPostMortem` to capture the mode the route forwards.
-    ;(runtime.useCases as { runAdvisorPostMortem?: unknown }).runAdvisorPostMortem = async (
-      input: { mode: 'admin' | 'demo' }
-    ) => {
+    ;(runtime.useCases as { runAdvisorPostMortem?: unknown }).runAdvisorPostMortem = async (input: {
+      mode: 'admin' | 'demo'
+    }) => {
       observed.mode = input.mode
       return {
         status: 'completed',
@@ -520,9 +519,7 @@ describe('createAdvisorRoute · post-mortem', () => {
       runtime: createPostMortemRuntime({ calls, adminList: adminRows }),
     })
 
-    const response = await app.handle(
-      new Request('http://finance-os.local/advisor/post-mortem')
-    )
+    const response = await app.handle(new Request('http://finance-os.local/advisor/post-mortem'))
     const payload = (await response.json()) as DashboardAdvisorPostMortemListResponse
 
     expect(response.status).toBe(200)
@@ -575,8 +572,8 @@ describe('createAdvisorRoute · post-mortem', () => {
     }
     const runtime = createPostMortemRuntime({ calls })
     // Stub a couple of pre-existing use-cases so we can hit them without 503.
-    ;(runtime.useCases as DashboardUseCases).getAdvisorRuns = async () => ({ items: [] })
-    ;(runtime.useCases as DashboardUseCases).listAdvisorDecisionJournal = async () => ({
+    runtime.useCases.getAdvisorRuns = async () => ({ items: [] })
+    runtime.useCases.listAdvisorDecisionJournal = async () => ({
       items: [],
     })
 

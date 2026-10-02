@@ -1,19 +1,9 @@
 import { randomUUID } from 'node:crypto'
+import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const ADVISOR_DAILY_LOCK_KEY = 'advisor:dashboard:daily:lock'
 export const ADVISOR_DAILY_LOCK_TTL_SECONDS = 30 * 60
-
-type RedisLockClient = {
-  set: (
-    key: string,
-    value: string,
-    options: {
-      NX: true
-      EX: number
-    }
-  ) => Promise<string | null>
-  del: (key: string) => Promise<number>
-}
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -140,15 +130,60 @@ export const triggerDashboardAdvisorDailyRun = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
 }) => {
-  const lock = await redisClient.set(ADVISOR_DAILY_LOCK_KEY, requestId, {
-    NX: true,
-    EX: ADVISOR_DAILY_LOCK_TTL_SECONDS,
-  })
+  const outcome = await withRedisLock(
+    {
+      client: redisClient,
+      key: ADVISOR_DAILY_LOCK_KEY,
+      ttlSeconds: ADVISOR_DAILY_LOCK_TTL_SECONDS,
+      log,
+    },
+    async ({ signal }) => {
+      try {
+        const request = buildDashboardAdvisorDailyRequest({
+          apiInternalUrl,
+          requestId,
+          ...(privateAccessToken ? { privateAccessToken } : {}),
+        })
+        const response = await fetchImpl(request.url, { ...request.init, signal })
 
-  if (lock !== 'OK') {
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`ADVISOR_DAILY_HTTP_${response.status}:${text.slice(0, 200)}`)
+        }
+
+        log({
+          level: 'info',
+          msg: 'worker advisor daily run triggered',
+          requestId,
+          apiInternalUrl,
+        })
+
+        return {
+          status: 'triggered' as const,
+          requestId,
+        }
+      } catch (error) {
+        log({
+          level: 'error',
+          msg: 'worker advisor daily run trigger failed',
+          requestId,
+          apiInternalUrl,
+          errMessage: toSafeErrorMessage(error),
+        })
+
+        return {
+          status: 'failed' as const,
+          requestId,
+          errorMessage: toSafeErrorMessage(error),
+        }
+      }
+    }
+  )
+
+  if (outcome.status === 'skipped') {
     log({
       level: 'warn',
       msg: 'worker advisor daily run skipped because another run is active',
@@ -160,47 +195,7 @@ export const triggerDashboardAdvisorDailyRun = async ({
     }
   }
 
-  try {
-    const request = buildDashboardAdvisorDailyRequest({
-      apiInternalUrl,
-      requestId,
-      ...(privateAccessToken ? { privateAccessToken } : {}),
-    })
-    const response = await fetchImpl(request.url, request.init)
-
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`ADVISOR_DAILY_HTTP_${response.status}:${text.slice(0, 200)}`)
-    }
-
-    log({
-      level: 'info',
-      msg: 'worker advisor daily run triggered',
-      requestId,
-      apiInternalUrl,
-    })
-
-    return {
-      status: 'triggered' as const,
-      requestId,
-    }
-  } catch (error) {
-    log({
-      level: 'error',
-      msg: 'worker advisor daily run trigger failed',
-      requestId,
-      apiInternalUrl,
-      errMessage: toSafeErrorMessage(error),
-    })
-
-    return {
-      status: 'failed' as const,
-      requestId,
-      errorMessage: toSafeErrorMessage(error),
-    }
-  } finally {
-    await redisClient.del(ADVISOR_DAILY_LOCK_KEY)
-  }
+  return outcome.value
 }
 
 export const startDashboardAdvisorScheduler = ({
@@ -232,7 +227,7 @@ export const startDashboardAdvisorScheduler = ({
   trigger: () => Promise<unknown>
   log: SchedulerLogger
   nowFn?: () => Date
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

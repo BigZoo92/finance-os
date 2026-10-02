@@ -67,9 +67,7 @@ export const getAdvisorPostMortemListMock = (): DashboardAdvisorPostMortemListRe
   })),
 })
 
-export const getAdvisorPostMortemByIdMock = (
-  id: number
-): DashboardAdvisorPostMortemRow | null => {
+export const getAdvisorPostMortemByIdMock = (id: number): DashboardAdvisorPostMortemRow | null => {
   const found = DEMO_ROWS.find(row => row.id === id)
   if (!found) return null
   return { ...found, learningActions: found.learningActions ? [...found.learningActions] : null }

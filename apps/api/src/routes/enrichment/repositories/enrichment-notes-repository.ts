@@ -19,7 +19,10 @@ export const createEnrichmentNotesRepository = ({ db }: { db: ApiDb }) => ({
       return []
     }
 
-    return db.select(selection).from(schema.enrichmentNote).where(inArray(schema.enrichmentNote.itemKey, itemKeys))
+    return db
+      .select(selection)
+      .from(schema.enrichmentNote)
+      .where(inArray(schema.enrichmentNote.itemKey, itemKeys))
   },
 
   async upsertOne(input: EnrichmentOperationInput): Promise<EnrichmentOperationResult> {
@@ -50,7 +53,12 @@ export const createEnrichmentNotesRepository = ({ db }: { db: ApiDb }) => ({
           version: existing.version + 1,
           updatedAt: now,
         })
-        .where(and(eq(schema.enrichmentNote.id, existing.id), eq(schema.enrichmentNote.version, existing.version)))
+        .where(
+          and(
+            eq(schema.enrichmentNote.id, existing.id),
+            eq(schema.enrichmentNote.version, existing.version)
+          )
+        )
         .returning(selection)
 
       if (!updated) {

@@ -84,6 +84,7 @@ export function useTheme() {
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('dark')
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- hydration-safe: SSR renders dark, the stored preference and the bootstrap-resolved class are read once mounted.
     setPreferenceState(readStoredThemePreference())
     setResolvedTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
   }, [])

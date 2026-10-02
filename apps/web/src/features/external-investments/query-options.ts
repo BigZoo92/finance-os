@@ -1,14 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { AuthMode } from '../auth-types'
 import {
-  getDemoExternalInvestmentCashFlows,
-  getDemoExternalInvestmentPositions,
-  getDemoExternalInvestmentStatus,
-  getDemoExternalInvestmentSummary,
-  getDemoExternalInvestmentSyncRuns,
-  getDemoExternalInvestmentTrades,
-} from './demo-data'
-import {
   fetchExternalInvestmentCashFlows,
   fetchExternalInvestmentPositions,
   fetchExternalInvestmentStatus,
@@ -16,6 +8,14 @@ import {
   fetchExternalInvestmentSyncRuns,
   fetchExternalInvestmentTrades,
 } from './api'
+import {
+  getDemoExternalInvestmentCashFlows,
+  getDemoExternalInvestmentPositions,
+  getDemoExternalInvestmentStatus,
+  getDemoExternalInvestmentSummary,
+  getDemoExternalInvestmentSyncRuns,
+  getDemoExternalInvestmentTrades,
+} from './demo-data'
 
 export const externalInvestmentsQueryKeys = {
   all: ['external-investments'] as const,

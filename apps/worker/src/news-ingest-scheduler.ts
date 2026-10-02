@@ -1,19 +1,9 @@
 import { randomUUID } from 'node:crypto'
+import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const NEWS_INGEST_LOCK_KEY = 'news:dashboard:ingest:lock'
 export const NEWS_INGEST_LOCK_TTL_SECONDS = 15 * 60
-
-type RedisLockClient = {
-  set: (
-    key: string,
-    value: string,
-    options: {
-      NX: true
-      EX: number
-    }
-  ) => Promise<string | null>
-  del: (key: string) => Promise<number>
-}
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -63,15 +53,60 @@ export const triggerDashboardNewsIngest = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
 }) => {
-  const lock = await redisClient.set(NEWS_INGEST_LOCK_KEY, requestId, {
-    NX: true,
-    EX: NEWS_INGEST_LOCK_TTL_SECONDS,
-  })
+  const outcome = await withRedisLock(
+    {
+      client: redisClient,
+      key: NEWS_INGEST_LOCK_KEY,
+      ttlSeconds: NEWS_INGEST_LOCK_TTL_SECONDS,
+      log,
+    },
+    async ({ signal }) => {
+      try {
+        const request = buildDashboardNewsIngestRequest({
+          apiInternalUrl,
+          requestId,
+          ...(privateAccessToken ? { privateAccessToken } : {}),
+        })
+        const response = await fetchImpl(request.url, { ...request.init, signal })
 
-  if (lock !== 'OK') {
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`NEWS_INGEST_HTTP_${response.status}:${text.slice(0, 200)}`)
+        }
+
+        log({
+          level: 'info',
+          msg: 'worker news ingest triggered',
+          requestId,
+          apiInternalUrl,
+        })
+
+        return {
+          status: 'triggered' as const,
+          requestId,
+        }
+      } catch (error) {
+        log({
+          level: 'error',
+          msg: 'worker news ingest trigger failed',
+          requestId,
+          apiInternalUrl,
+          errMessage: toSafeErrorMessage(error),
+        })
+
+        return {
+          status: 'failed' as const,
+          requestId,
+          errorMessage: toSafeErrorMessage(error),
+        }
+      }
+    }
+  )
+
+  if (outcome.status === 'skipped') {
     log({
       level: 'warn',
       msg: 'worker news ingest skipped because another run is active',
@@ -83,47 +118,7 @@ export const triggerDashboardNewsIngest = async ({
     }
   }
 
-  try {
-    const request = buildDashboardNewsIngestRequest({
-      apiInternalUrl,
-      requestId,
-      ...(privateAccessToken ? { privateAccessToken } : {}),
-    })
-    const response = await fetchImpl(request.url, request.init)
-
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`NEWS_INGEST_HTTP_${response.status}:${text.slice(0, 200)}`)
-    }
-
-    log({
-      level: 'info',
-      msg: 'worker news ingest triggered',
-      requestId,
-      apiInternalUrl,
-    })
-
-    return {
-      status: 'triggered' as const,
-      requestId,
-    }
-  } catch (error) {
-    log({
-      level: 'error',
-      msg: 'worker news ingest trigger failed',
-      requestId,
-      apiInternalUrl,
-      errMessage: toSafeErrorMessage(error),
-    })
-
-    return {
-      status: 'failed' as const,
-      requestId,
-      errorMessage: toSafeErrorMessage(error),
-    }
-  } finally {
-    await redisClient.del(NEWS_INGEST_LOCK_KEY)
-  }
+  return outcome.value
 }
 
 export const startDashboardNewsScheduler = ({
@@ -139,7 +134,7 @@ export const startDashboardNewsScheduler = ({
   intervalMs: number
   trigger: () => Promise<unknown>
   log: SchedulerLogger
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

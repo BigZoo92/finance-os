@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Button, CurrencyAmount, Input, Status } from '@finance-os/ui/components'
 import { useState } from 'react'
 
@@ -51,6 +53,14 @@ const writeBudgets = (entries: BudgetEntry[]): string | null => {
   }
 }
 
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
 export function MonthlyCategoryBudgetsCard({
   isAdmin,
   isDemo,
@@ -89,20 +99,28 @@ export function MonthlyCategoryBudgetsCard({
 
   return (
     <section aria-labelledby="monthly-budgets-title">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="monthly-budgets-title"
-          className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-        >
+      <styled.div
+        display="flex"
+        flexWrap="wrap"
+        alignItems="center"
+        justifyContent="space-between"
+        gap="3"
+      >
+        <h2 id="monthly-budgets-title" className={eyebrow}>
           Budgets mensuels
         </h2>
         <Status tone="neutral" label="Plafonds mensuels" />
-      </div>
-      <Status tone="attention" label="Comparaison suspendue hors mois civil" className="mt-4" />
-      {warning ? <Status tone="attention" label={warning} className="mt-3" /> : null}
+      </styled.div>
+      <Status tone="attention" label="Comparaison suspendue hors mois civil" mt="4" />
+      {warning ? <Status tone="attention" label={warning} mt="3" /> : null}
 
       {isAdmin ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
+        <styled.div
+          mt="4"
+          display="grid"
+          gap="2"
+          sm={{ gridTemplateColumns: 'minmax(0, 1fr) 150px auto' }}
+        >
           <Input
             value={categoryInput}
             onChange={event => setCategoryInput(event.target.value)}
@@ -117,23 +135,31 @@ export function MonthlyCategoryBudgetsCard({
           <Button type="button" variant="outline" onClick={addBudget}>
             Ajouter
           </Button>
-        </div>
+        </styled.div>
       ) : null}
 
-      <div className="mt-4 border-t border-border">
+      <styled.div mt="4" borderTopWidth="1px" borderColor="border">
         {visibleBudgets.length ? (
           visibleBudgets.map(entry => (
-            <div
+            <styled.div
               key={entry.category}
-              className="flex items-center justify-between gap-4 border-b border-border py-3"
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap="4"
+              borderBottomWidth="1px"
+              borderColor="border"
+              py="3"
             >
-              <span className="text-sm text-foreground">{entry.category}</span>
-              <div className="flex items-center gap-3">
+              <styled.span textStyle="sm" color="foreground">
+                {entry.category}
+              </styled.span>
+              <styled.div display="flex" alignItems="center" gap="3">
                 <CurrencyAmount
                   value={entry.monthlyBudget}
                   currency="EUR"
                   decimals={0}
-                  className="text-sm"
+                  textStyle="sm"
                 />
                 {isAdmin ? (
                   <Button
@@ -145,15 +171,21 @@ export function MonthlyCategoryBudgetsCard({
                     Supprimer
                   </Button>
                 ) : null}
-              </div>
-            </div>
+              </styled.div>
+            </styled.div>
           ))
         ) : (
-          <p className="border-b border-border py-5 text-sm text-muted-foreground">
+          <styled.p
+            borderBottomWidth="1px"
+            borderColor="border"
+            py="5"
+            textStyle="sm"
+            color="muted.foreground"
+          >
             Aucun budget configuré
-          </p>
+          </styled.p>
         )}
-      </div>
+      </styled.div>
     </section>
   )
 }

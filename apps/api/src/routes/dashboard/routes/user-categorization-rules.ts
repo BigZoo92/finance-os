@@ -6,15 +6,12 @@ import {
   applyTransactionAutoCategorization,
   type UserCategorizationRule,
 } from '../domain/transaction-auto-categorization'
-import {
-  createUserCategorizationRuleRepository,
-  type CategorizationDryRunTransaction,
-} from '../repositories/user-categorization-rule-repository'
+import type { CategorizationDryRunTransaction } from '../repositories/user-categorization-rule-repository'
 import {
   dashboardUserCategorizationDryRunBodySchema,
   dashboardUserCategorizationRuleBodySchema,
 } from '../schemas'
-import type { ApiDb } from '../types'
+import type { DashboardRouteRuntime } from '../types'
 
 const DEMO_RULES: UserCategorizationRule[] = [
   {
@@ -47,7 +44,9 @@ const DEMO_TRANSACTION: CategorizationDryRunTransaction = {
 
 type UserCategorizationRuleBody = Static<typeof dashboardUserCategorizationRuleBodySchema>
 type UserCategorizationDryRunBody = Static<typeof dashboardUserCategorizationDryRunBodySchema>
-type UserCategorizationDryRunTransactionBody = NonNullable<UserCategorizationDryRunBody['transaction']>
+type UserCategorizationDryRunTransactionBody = NonNullable<
+  UserCategorizationDryRunBody['transaction']
+>
 
 const normalizeRuleInput = (
   input: UserCategorizationRuleBody,
@@ -127,9 +126,11 @@ const runCategorization = (
     userRules: rules,
   })
 
-export const createUserCategorizationRulesRoute = ({ db }: { db: ApiDb }) => {
-  const repository = createUserCategorizationRuleRepository({ db })
-
+export const createUserCategorizationRulesRoute = ({
+  repository,
+}: {
+  repository: DashboardRouteRuntime['repositories']['userCategorizationRules']
+}) => {
   return new Elysia()
     .get('/transactions/categorization-rules', async context => {
       const requestId = getRequestMeta(context).requestId
@@ -194,15 +195,16 @@ export const createUserCategorizationRulesRoute = ({ db }: { db: ApiDb }) => {
           demo: () => {
             const candidateRule = context.body.rule
               ? normalizeRuleInput(context.body.rule)
-              : DEMO_RULES[0] ?? {
+              : (DEMO_RULES[0] ?? {
                   id: 'demo-default-rule',
                   enabled: true,
                   priority: 100,
                   matcherType: 'label_contains' as const,
                   matcherValue: 'openai',
                   category: 'Abonnements',
-                }
-            const transaction = normalizeDryRunTransaction(context.body.transaction) ?? DEMO_TRANSACTION
+                })
+            const transaction =
+              normalizeDryRunTransaction(context.body.transaction) ?? DEMO_TRANSACTION
             return {
               ok: true as const,
               mode: 'demo' as const,
@@ -225,7 +227,9 @@ export const createUserCategorizationRulesRoute = ({ db }: { db: ApiDb }) => {
               context.set.status = context.body.transactionId ? 404 : 400
               return {
                 ok: false as const,
-                code: context.body.transactionId ? ('NOT_FOUND' as const) : ('BAD_REQUEST' as const),
+                code: context.body.transactionId
+                  ? ('NOT_FOUND' as const)
+                  : ('BAD_REQUEST' as const),
                 message: context.body.transactionId
                   ? 'Transaction not found'
                   : 'transaction or transactionId is required',

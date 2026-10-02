@@ -1,3 +1,4 @@
+import { schema } from '@finance-os/db'
 /**
  * Trading Lab market data adapter.
  *
@@ -15,7 +16,6 @@
  *   ("auto" walks the full chain).
  */
 import { and, eq, sql } from 'drizzle-orm'
-import { schema } from '@finance-os/db'
 import type { ApiDb } from '../types'
 import { fetchProviderJson } from './market-provider-http'
 import { generateDeterministicOhlcv, type OhlcvBar } from './trading-lab-ohlcv-fixtures'
@@ -481,17 +481,12 @@ export const resolveMarketData = async ({
       resolvedMarketDataSource: 'deterministic_fixture',
       dataProvider: 'fixture',
       dataQuality: 'synthetic',
-      dataWarnings: [
-        'Synthetic deterministic OHLCV — not real market data.',
-        ...warnings,
-      ],
+      dataWarnings: ['Synthetic deterministic OHLCV — not real market data.', ...warnings],
       barsCount: bars.length,
       firstBarDate: bars[0]?.date ?? null,
       lastBarDate: bars[bars.length - 1]?.date ?? null,
       fallbackUsed: deps.forceFixtureFallback && preference !== 'deterministic_fixture',
-      fallbackReason: deps.forceFixtureFallback
-        ? 'MARKET_DATA_FORCE_FIXTURE_FALLBACK'
-        : null,
+      fallbackReason: deps.forceFixtureFallback ? 'MARKET_DATA_FORCE_FIXTURE_FALLBACK' : null,
     }
   }
 
@@ -505,7 +500,8 @@ export const resolveMarketData = async ({
   // Filter to enabled+keyed providers
   const enabledProviders = providerOrder.filter(p => {
     if (p === 'eodhd') return deps.marketDataEodhdEnabled && Boolean(deps.eodhdApiKey)
-    if (p === 'twelvedata') return deps.marketDataTwelveDataEnabled && Boolean(deps.twelveDataApiKey)
+    if (p === 'twelvedata')
+      return deps.marketDataTwelveDataEnabled && Boolean(deps.twelveDataApiKey)
     return false
   })
 
@@ -612,8 +608,7 @@ export const resolveMarketData = async ({
         return {
           ok: true,
           bars: sortedBars,
-          resolvedMarketDataSource:
-            provider === 'eodhd' ? 'provider_eodhd' : 'provider_twelvedata',
+          resolvedMarketDataSource: provider === 'eodhd' ? 'provider_eodhd' : 'provider_twelvedata',
           dataProvider: provider,
           dataQuality: 'real',
           dataWarnings: warnings,
@@ -651,7 +646,10 @@ export const resolveMarketData = async ({
       fallbackUsed: true,
       fallbackReason:
         attempted.length > 0
-          ? `provider_fallback:${attempted.map(a => a.source).join(',').slice(0, 100)}`
+          ? `provider_fallback:${attempted
+              .map(a => a.source)
+              .join(',')
+              .slice(0, 100)}`
           : 'no_provider_configured',
     }
   }

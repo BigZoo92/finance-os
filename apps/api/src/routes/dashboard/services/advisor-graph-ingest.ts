@@ -17,6 +17,8 @@
  *    without disabling the whole service.
  */
 
+import { internalServiceHeaders } from '../../../services/internal-service-auth'
+
 const FREE_NOTE_MAX = 480
 
 const clampNote = (value: string | null | undefined): string | undefined => {
@@ -69,6 +71,7 @@ export interface GraphIngestResult {
 const sendAdvisorIngest = async ({
   knowledgeServiceUrl,
   knowledgeServiceEnabled,
+  internalServiceToken,
   ingestEnabled,
   requestId,
   body,
@@ -76,6 +79,7 @@ const sendAdvisorIngest = async ({
 }: {
   knowledgeServiceUrl: string
   knowledgeServiceEnabled: boolean
+  internalServiceToken?: string
   ingestEnabled: boolean
   requestId: string
   body: Record<string, unknown>
@@ -92,6 +96,7 @@ const sendAdvisorIngest = async ({
       headers: {
         'content-type': 'application/json',
         'x-request-id': requestId,
+        ...internalServiceHeaders(internalServiceToken),
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -116,6 +121,7 @@ const sendAdvisorIngest = async ({
 export const sendDecisionPointToKnowledgeGraph = async ({
   knowledgeServiceUrl,
   knowledgeServiceEnabled,
+  internalServiceToken,
   ingestEnabled,
   requestId,
   input,
@@ -123,6 +129,7 @@ export const sendDecisionPointToKnowledgeGraph = async ({
 }: {
   knowledgeServiceUrl: string
   knowledgeServiceEnabled: boolean
+  internalServiceToken?: string
   ingestEnabled: boolean
   requestId: string
   input: DecisionPointGraphInput
@@ -157,6 +164,7 @@ export const sendDecisionPointToKnowledgeGraph = async ({
   return sendAdvisorIngest({
     knowledgeServiceUrl,
     knowledgeServiceEnabled,
+    ...(internalServiceToken !== undefined ? { internalServiceToken } : {}),
     ingestEnabled,
     requestId,
     body: {
@@ -171,6 +179,7 @@ export const sendDecisionPointToKnowledgeGraph = async ({
 export const sendPostMortemToKnowledgeGraph = async ({
   knowledgeServiceUrl,
   knowledgeServiceEnabled,
+  internalServiceToken,
   ingestEnabled,
   requestId,
   actions,
@@ -178,6 +187,7 @@ export const sendPostMortemToKnowledgeGraph = async ({
 }: {
   knowledgeServiceUrl: string
   knowledgeServiceEnabled: boolean
+  internalServiceToken?: string
   ingestEnabled: boolean
   requestId: string
   actions: LearningActionGraphInput[]
@@ -213,6 +223,7 @@ export const sendPostMortemToKnowledgeGraph = async ({
   return sendAdvisorIngest({
     knowledgeServiceUrl,
     knowledgeServiceEnabled,
+    ...(internalServiceToken !== undefined ? { internalServiceToken } : {}),
     ingestEnabled,
     requestId,
     body: {

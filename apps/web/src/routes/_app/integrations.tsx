@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Drawer,
@@ -62,6 +64,59 @@ export const Route = createFileRoute('/_app/integrations')({
     ])
   },
   component: IntegrationsPage,
+})
+
+const demoNotice = css({
+  borderYWidth: '1px',
+  borderColor: 'border/60',
+  py: '3',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const providerCard = css({
+  display: 'flex',
+  minH: '64',
+  flexDirection: 'column',
+  rounded: 'surface',
+  borderWidth: '1px',
+  borderColor: 'border/70',
+  bg: 'card',
+  p: '5',
+  shadow: 'surface',
+})
+
+const providerName = css({
+  fontFamily: 'pixel',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  color: 'primary',
+})
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  color: 'muted.foreground',
+})
+
+const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
+
+const connectionRow = css({
+  borderBottomWidth: '1px',
+  borderColor: 'border/50',
+  py: '4',
+  _last: { borderBottomWidth: '0' },
+})
+
+const disconnectPanel = css({
+  w: 'full',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'negative/30',
+  p: '3',
 })
 
 function IntegrationsPage() {
@@ -207,7 +262,7 @@ function IntegrationsPage() {
   }
 
   return (
-    <div className="space-y-7">
+    <styled.div spaceY="7">
       <PageHeader
         eyebrow="Ops"
         icon={<LinkPixelIcon size={12} />}
@@ -216,13 +271,18 @@ function IntegrationsPage() {
       />
 
       {authViewState === 'demo' ? (
-        <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
+        <div className={demoNotice}>
           Lecture seule avec données de démonstration. Les actions de connexion sont réservées à
           l’Admin.
         </div>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-3" aria-label="Fournisseurs connectés">
+      <styled.section
+        display="grid"
+        gap="4"
+        lg={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+        aria-label="Fournisseurs connectés"
+      >
         {providers.map(provider => {
           const pending =
             provider.id === 'powens'
@@ -241,27 +301,36 @@ function IntegrationsPage() {
               powensSyncState.blocked
             )
           return (
-            <article
-              key={provider.id}
-              className="flex min-h-64 flex-col rounded-surface border border-border/70 bg-card p-5 shadow-surface"
-            >
-              <div className="flex items-start justify-between gap-3">
+            <article key={provider.id} className={providerCard}>
+              <styled.div
+                display="flex"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                gap="3"
+              >
                 <div>
-                  <p className="font-pixel text-[10px] uppercase tracking-[0.14em] text-primary">
-                    {provider.label}
-                  </p>
-                  <h2 className="mt-3 text-base font-semibold">{provider.role}</h2>
+                  <p className={providerName}>{provider.label}</p>
+                  <styled.h2 mt="3" textStyle="md" fontWeight="semibold">
+                    {provider.role}
+                  </styled.h2>
                 </div>
                 <ProviderStatus status={provider.state} />
-              </div>
-              <p className="mt-4 text-sm text-muted-foreground">{provider.detail}</p>
-              <div className="mt-4">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Dernière synchronisation
-                </p>
-                <Freshness asOf={provider.lastSyncAt} className="mt-2" />
-              </div>
-              <div className="mt-auto flex items-center justify-between gap-2 pt-6">
+              </styled.div>
+              <styled.p mt="4" textStyle="sm" color="muted.foreground">
+                {provider.detail}
+              </styled.p>
+              <styled.div mt="4">
+                <p className={eyebrow}>Dernière synchronisation</p>
+                <Freshness asOf={provider.lastSyncAt} mt="2" />
+              </styled.div>
+              <styled.div
+                mt="auto"
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap="2"
+                pt="6"
+              >
                 <Button
                   type="button"
                   variant="ghost"
@@ -281,11 +350,11 @@ function IntegrationsPage() {
                     {pending ? 'En cours' : provider.primaryActionLabel}
                   </Button>
                 ) : null}
-              </div>
+              </styled.div>
             </article>
           )
         })}
-      </section>
+      </styled.section>
 
       <Drawer
         open={selected !== null}
@@ -300,19 +369,22 @@ function IntegrationsPage() {
           {selected ? (
             <>
               <DrawerHeader>
-                <div className="flex items-center justify-between gap-3">
+                <styled.div
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap="3"
+                >
                   <DrawerTitle>{selected.label}</DrawerTitle>
                   <ProviderStatus status={selected.state} />
-                </div>
+                </styled.div>
                 <DrawerDescription>{selected.role}</DrawerDescription>
               </DrawerHeader>
-              <div className="space-y-5 px-5 pb-6">
-                <div className="border-y border-border/60 py-4">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    Dernière synchronisation réussie
-                  </p>
-                  <Freshness asOf={selected.lastSyncAt} className="mt-2" />
-                </div>
+              <styled.div spaceY="5" px="5" pb="6">
+                <styled.div borderYWidth="1px" borderColor="border/60" py="4">
+                  <p className={eyebrow}>Dernière synchronisation réussie</p>
+                  <Freshness asOf={selected.lastSyncAt} mt="2" />
+                </styled.div>
                 {selected.id === 'powens' ? (
                   <PowensConnections
                     connections={powensQuery.data?.connections ?? []}
@@ -324,16 +396,16 @@ function IntegrationsPage() {
                     onConfirmDisconnect={connectionId => disconnectMutation.mutate(connectionId)}
                   />
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className={mutedText}>
                     La connexion est gérée côté serveur et reste strictement en lecture seule.
                   </p>
                 )}
-              </div>
+              </styled.div>
             </>
           ) : null}
         </DrawerContent>
       </Drawer>
-    </div>
+    </styled.div>
   )
 }
 
@@ -355,17 +427,14 @@ function PowensConnections({
   onConfirmDisconnect: (connectionId: string) => void
 }) {
   if (connections.length === 0) {
-    return <p className="text-sm text-muted-foreground">Aucune banque connectée</p>
+    return <p className={mutedText}>Aucune banque connectée</p>
   }
   return (
     <section aria-labelledby="powens-banks-title">
-      <h3
-        id="powens-banks-title"
-        className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
-      >
+      <h3 id="powens-banks-title" className={eyebrow}>
         Banques
       </h3>
-      <div className="mt-2 border-y border-border/60">
+      <styled.div mt="2" borderYWidth="1px" borderColor="border/60">
         {connections.map(connection => {
           const confirming = pendingDisconnectId === connection.powensConnectionId
           const action = getPowensDisconnectActionState({
@@ -382,23 +451,23 @@ function PowensConnections({
                   ? 'reconnect_required'
                   : 'error'
           return (
-            <div key={connection.id} className="border-b border-border/50 py-4 last:border-b-0">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium">
+            <div key={connection.id} className={connectionRow}>
+              <styled.div display="flex" alignItems="center" justifyContent="space-between" gap="3">
+                <styled.p textStyle="sm" fontWeight="medium">
                   {connection.providerInstitutionName ?? 'Banque connectée'}
-                </p>
+                </styled.p>
                 <ProviderStatus status={providerState} />
-              </div>
+              </styled.div>
               {isAdmin ? (
-                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                <styled.div mt="3" display="flex" flexWrap="wrap" justifyContent="flex-end" gap="2">
                   {action.showConfirmation ? (
                     <div
-                      className="w-full rounded-control border border-negative/30 p-3"
+                      className={disconnectPanel}
                       role="alertdialog"
                       aria-label="Confirmer le retrait de la connexion"
                     >
-                      <p className="text-sm">Retirer cette connexion bancaire&nbsp;?</p>
-                      <div className="mt-3 flex justify-end gap-2">
+                      <styled.p textStyle="sm">Retirer cette connexion bancaire&nbsp;?</styled.p>
+                      <styled.div mt="3" display="flex" justifyContent="flex-end" gap="2">
                         <Button
                           type="button"
                           variant="ghost"
@@ -417,7 +486,7 @@ function PowensConnections({
                         >
                           {disconnectPending ? 'Retrait en cours' : 'Confirmer le retrait'}
                         </Button>
-                      </div>
+                      </styled.div>
                     </div>
                   ) : (
                     <Button
@@ -430,12 +499,12 @@ function PowensConnections({
                       Retirer
                     </Button>
                   )}
-                </div>
+                </styled.div>
               ) : null}
             </div>
           )
         })}
-      </div>
+      </styled.div>
     </section>
   )
 }

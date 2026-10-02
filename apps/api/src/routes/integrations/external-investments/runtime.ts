@@ -1,7 +1,5 @@
-import {
-  createExternalInvestmentsRepository,
-  resolveExternalInvestmentServerConfig,
-} from '@finance-os/external-investments'
+import { createExternalInvestmentsRepository } from '@finance-os/external-investments/repository'
+import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments/server-config'
 import { createExternalInvestmentsJobQueueRepository } from './repositories/external-investments-job-queue-repository'
 import type {
   ExternalInvestmentsRouteRuntime,

@@ -302,9 +302,9 @@ Do not create isolated:
 - motion values
 - page-specific visual systems
 
-Existing tokens in `packages/ui/src/styles/globals.css` must be audited against the canonical handoff before migration.
+Tokens live in the Panda preset (`packages/styled-system/src/preset.ts`) and must stay aligned with the canonical handoff; new values are added there, never inline in a component.
 
-Legacy token names may remain temporarily for compatibility, but they must not define the new visual direction.
+Legacy token names may remain for compatibility, but they must not define the new visual direction.
 
 Canonical surface hierarchy should express:
 

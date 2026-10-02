@@ -1,4 +1,65 @@
 packages:
-  - "apps/*"
-  - "packages/*"
-dangerouslyAllowAllBuilds: true
+  - 'apps/*'
+  - 'packages/*'
+
+# Shared versions (pnpm catalog): one owner for dependencies used by several
+# workspace packages. Reference them as "catalog:" in package.json.
+catalog:
+  effect: ^3.22.2
+  bun-types: '1.4.2'
+  '@types/node': '24.13.6'
+  drizzle-orm: '0.45.3'
+  zod: '^4.6.5'
+  react: '19.2.8'
+  react-dom: '19.2.8'
+  '@types/react': '19.2.18'
+  '@types/react-dom': '19.2.7'
+
+# Supply-chain policy: pnpm 11 defaults (minimumReleaseAge, strictDepBuilds) are
+# kept. The single documented exception: the dev-only GitNexus code-intelligence
+# CLI pulls `tree-sitter-dart` from a git repository, which blockExoticSubdeps
+# would refuse. Revisit when GitNexus ships without git subdependencies.
+blockExoticSubdeps: false
+
+# Dependency lifecycle policy (pnpm 11, strictDepBuilds): every dependency that
+# ships install scripts must be listed explicitly. `false` means the script is
+# skipped (the package works through prebuilt optional binaries); `true` is
+# granted only after a clean install and runtime validation. Never re-enable
+# unrestricted builds.
+allowBuilds:
+  # GitNexus (dev-only code intelligence) graph database. Its install script only
+  # copies `lbugjs.node` from the per-platform optional package
+  # (`@ladybugdb/core-<platform>-<arch>`) into the package root, which is where
+  # the loader opens it; without the script GitNexus fails with ERR_DLOPEN_FAILED.
+  # Reviewed (install.js: copy, source build only when no prebuilt exists) and
+  # validated with `pnpm gitnexus:analyze`.
+  '@ladybugdb/core': true
+  # esbuild (drizzle-kit, tsx, the Panda config loader): the JS API and the
+  # `esbuild` shim resolve the binary from the per-platform optional package
+  # (`@esbuild/<platform>-<arch>`); the install script only re-verifies it.
+  esbuild: false
+  # protobufjs (onnxruntime-web, under GitNexus): the install script only warns
+  # when a dependent's manifest uses another version scheme.
+  protobufjs: false
+  # The remaining GitNexus native dependencies: prebuilt binaries are bundled or
+  # resolved at runtime, so their install scripts are not needed.
+  # msw ships a postinstall notice only (pulled in transitively by the web test tooling).
+  msw: false
+  onnxruntime-node: false
+  sharp: false
+  tree-sitter: false
+  tree-sitter-cli: false
+  tree-sitter-c: false
+  tree-sitter-c-sharp: false
+  tree-sitter-cpp: false
+  tree-sitter-dart: false
+  tree-sitter-go: false
+  tree-sitter-java: false
+  tree-sitter-javascript: false
+  tree-sitter-kotlin: false
+  tree-sitter-php: false
+  tree-sitter-python: false
+  tree-sitter-ruby: false
+  tree-sitter-rust: false
+  tree-sitter-swift: false
+  tree-sitter-typescript: false

@@ -70,7 +70,10 @@ export const advisorInvestmentRecommendation = pgTable(
       .$type<Array<'J1' | 'J7' | 'J30'>>()
       .notNull()
       .default(sql`'[]'::jsonb`),
-    missingData: jsonb('missing_data').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    missingData: jsonb('missing_data')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     humanValidationRequired: boolean('human_validation_required').notNull().default(true),
     noAutoTrade: boolean('no_auto_trade').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -195,8 +198,14 @@ export const advisorMarketPostMortem = pgTable(
       onDelete: 'set null',
     }),
     result: text('result').notNull(),
-    whatWorked: jsonb('what_worked').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    whatFailed: jsonb('what_failed').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    whatWorked: jsonb('what_worked')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    whatFailed: jsonb('what_failed')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     whyItWorkedOrFailed: text('why_it_worked_or_failed').notNull(),
     lesson: text('lesson').notNull(),
     futurePromptHint: text('future_prompt_hint'),
@@ -242,7 +251,10 @@ export const advisorMemoryEvent = pgTable(
         | 'risk_limit_triggered'
         | 'pricing_issue_detected'
       >(),
-    payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    payload: jsonb('payload')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     graphWriteStatus: text('graph_write_status')
       .notNull()
       .default('pending')

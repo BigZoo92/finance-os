@@ -4,12 +4,11 @@ import { Elysia, t } from 'elysia'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
-import type { ApiDb } from '../types'
 import {
   applyTransactionAutoCategorization,
   type UserCategorizationRule,
 } from '../domain/transaction-auto-categorization'
-import { createUserCategorizationRuleRepository } from '../repositories/user-categorization-rule-repository'
+import type { ApiDb, DashboardRouteRuntime } from '../types'
 
 const backfillBodySchema = t.Object({
   dryRun: t.Optional(t.Boolean()),
@@ -154,7 +153,13 @@ const runBackfill = async ({
   return { dryRun, limit, counts, sampleChanges }
 }
 
-export const createTransactionCategorizationBackfillRoute = ({ db }: { db: ApiDb }) =>
+export const createTransactionCategorizationBackfillRoute = ({
+  db,
+  userCategorizationRules,
+}: {
+  db: ApiDb
+  userCategorizationRules: DashboardRouteRuntime['repositories']['userCategorizationRules']
+}) =>
   new Elysia().post(
     '/transactions/categorize/backfill',
     async context => {
@@ -175,11 +180,11 @@ export const createTransactionCategorizationBackfillRoute = ({ db }: { db: ApiDb
         real: async () => {
           requireAdmin(context)
           const startedAt = Date.now()
-          const body = context.body as BackfillBody
+          const body = context.body
           // Respect persisted user categorization rules in backfill too, so it
           // stays consistent with the live transaction list (which already
           // applies enabled user rules by priority).
-          const userRules = await createUserCategorizationRuleRepository({ db }).listEnabledRules()
+          const userRules = await userCategorizationRules.listEnabledRules()
           const result = await runBackfill({ db, body, userRules })
           return {
             ok: true,

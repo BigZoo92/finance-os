@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-
-import { assessFreshness, formatAge, formatAmount, formatPercent, UNAVAILABLE_LABEL } from './format'
+import {
+  assessFreshness,
+  formatAge,
+  formatAmount,
+  formatPercent,
+  UNAVAILABLE_LABEL,
+} from './format'
 
 /** Normalize locale spaces and minus signs for stable assertions. */
 const norm = (value: string | null) =>

@@ -84,7 +84,8 @@ export const verifyPasswordHash = async ({
     return await verifyPassword(password, passwordHash)
   } catch (error) {
     throw new Error(
-      `Password verification failed: ${error instanceof Error ? error.message : String(error)}`
+      `Password verification failed: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
     )
   }
 }

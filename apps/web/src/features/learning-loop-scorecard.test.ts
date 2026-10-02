@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import type {
+  DashboardTradingLabStrategyScorecardEvidenceGrade,
+  DashboardTradingLabStrategyScorecardQualityFlag,
+} from './dashboard-types'
 import {
   SCORECARD_FLAG_TONE,
   SCORECARD_GRADE_LABEL_FR,
   SCORECARD_GRADE_TONE,
 } from './learning-loop-view-model'
-import type {
-  DashboardTradingLabStrategyScorecardEvidenceGrade,
-  DashboardTradingLabStrategyScorecardQualityFlag,
-} from './dashboard-types'
 
 const ALL_GRADES: DashboardTradingLabStrategyScorecardEvidenceGrade[] = [
   'insufficient',
@@ -61,9 +61,7 @@ describe('Strategy scorecard view-model constants', () => {
   it('never uses execution vocabulary in any constant', () => {
     const banned = ['buy', 'sell', 'execute', 'execution', 'place order', 'leverage']
     const wb = (term: string) =>
-      term.includes(' ')
-        ? new RegExp(term, 'i')
-        : new RegExp(`\\b${term}\\b`, 'i')
+      term.includes(' ') ? new RegExp(term, 'i') : new RegExp(`\\b${term}\\b`, 'i')
     const allText = Object.values(SCORECARD_GRADE_LABEL_FR).join(' ')
     for (const term of banned) {
       expect(wb(term).test(allText)).toBe(false)

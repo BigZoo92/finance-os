@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   CurrencyAmount,
@@ -149,6 +151,63 @@ const getGoalStatus = (goal: FinancialGoal) => {
   return { tone: 'positive' as const, label: 'Sur la bonne voie' }
 }
 
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const goalRow = css({
+  display: 'grid',
+  gap: '5',
+  borderBottomWidth: '1px',
+  borderColor: 'border',
+  py: '6',
+  md: {
+    gridTemplateColumns: 'minmax(180px, 0.8fr) minmax(240px, 1.25fr) minmax(150px, 0.65fr) auto',
+    alignItems: 'center',
+    gap: '8',
+  },
+})
+
+// Tailwind's `space-y-2` put the margin on every child but the last: the inline
+// <label> ignores it, so Panda's `spaceY` (a margin on the following control)
+// would add 8px that the screen never had.
+const fieldGroup = css({ '& > :not(:last-child)': { marginBlockEnd: '2' } })
+
+const fieldLabel = css({ textStyle: 'sm', fontWeight: 'medium' })
+
+const fieldPair = css({
+  display: 'grid',
+  gap: '4',
+  sm: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+})
+
+// The trigger recipe owns `width: fit-content`; a `min-width` stretches it to the
+// field without racing that atom (max(fit-content, 100%) is the field width).
+
+const noteField = css({
+  minH: '20',
+  w: 'full',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'input',
+  bg: 'transparent',
+  px: '3',
+  py: '2',
+  textStyle: 'sm',
+  outlineStyle: 'none',
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const archivedList = css({
+  borderTopWidth: '1px',
+  borderColor: 'border',
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border' },
+})
+
 function ErrorBanner({
   error,
   onRetry,
@@ -159,13 +218,26 @@ function ErrorBanner({
   onDismiss?: () => void
 }) {
   return (
-    <div role="alert" className="border border-negative/35 bg-negative/8 p-4 text-sm">
-      <p className="font-semibold text-negative">{error.title}</p>
-      <p className="mt-1 text-foreground">{error.message}</p>
+    <styled.div
+      role="alert"
+      borderWidth="1px"
+      borderColor="negative/35"
+      bg="negative/8"
+      p="4"
+      textStyle="sm"
+    >
+      <styled.p fontWeight="semibold" color="negative">
+        {error.title}
+      </styled.p>
+      <styled.p mt="1" color="foreground">
+        {error.message}
+      </styled.p>
       {error.offline ? (
-        <p className="mt-2 text-xs text-muted-foreground">Connexion indisponible</p>
+        <styled.p mt="2" textStyle="xs" color="muted.foreground">
+          Connexion indisponible
+        </styled.p>
       ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <styled.div mt="3" display="flex" flexWrap="wrap" gap="2">
         <Button
           type="button"
           variant="outline"
@@ -180,8 +252,8 @@ function ErrorBanner({
             Fermer
           </Button>
         ) : null}
-      </div>
-    </div>
+      </styled.div>
+    </styled.div>
   )
 }
 
@@ -199,38 +271,44 @@ function GoalSurface({
   const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0)
 
   return (
-    <article className="grid gap-5 border-b border-border py-6 md:grid-cols-[minmax(180px,0.8fr)_minmax(240px,1.25fr)_minmax(150px,0.65fr)_auto] md:items-center md:gap-8">
-      <div className="min-w-0">
-        <h3 className="truncate text-base font-medium text-foreground">{goal.name}</h3>
-        <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+    <article className={goalRow}>
+      <styled.div minW="0">
+        <styled.h3 truncate textStyle="md" fontWeight="medium" color="foreground">
+          {goal.name}
+        </styled.h3>
+        <styled.p mt="1" fontFamily="mono" fontSize="11px" color="muted.foreground">
           Échéance {formatDate(goal.targetDate)}
-        </p>
-        <Status tone={status.tone} label={status.label} className="mt-2" />
-      </div>
+        </styled.p>
+        <Status tone={status.tone} label={status.label} mt="2" />
+      </styled.div>
       <div>
         <Progress value={progress} label={goal.name} showValue />
-        <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+        <styled.p mt="2" fontFamily="mono" fontSize="11px" color="muted.foreground">
           Reste <CurrencyAmount value={remaining} currency={goal.currency} decimals={0} />
-        </p>
+        </styled.p>
       </div>
-      <div className="md:text-right">
+      <styled.div md={{ textAlign: 'right' }}>
         <CurrencyAmount
           value={goal.currentAmount}
           currency={goal.currency}
           decimals={0}
-          className="text-lg font-medium text-foreground"
+          textStyle="lg"
+          fontWeight="medium"
+          color="foreground"
         />
-        <p className="mt-1 font-mono text-xs text-muted-foreground">
+        <styled.p mt="1" fontFamily="mono" textStyle="xs" color="muted.foreground">
           sur <CurrencyAmount value={goal.targetAmount} currency={goal.currency} decimals={0} />
-        </p>
-      </div>
+        </styled.p>
+      </styled.div>
       <Button
         type="button"
         variant="outline"
         size="sm"
         onClick={onEdit}
         disabled={!canEdit}
-        className="min-h-11 w-full md:min-h-0 md:w-auto"
+        minH="11"
+        w="full"
+        md={{ minH: '0', w: 'auto' }}
       >
         Modifier
       </Button>
@@ -272,27 +350,39 @@ function GoalEditor({
 
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-w-[440px] max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:rounded-t-frame">
+      <DialogContent
+        maxW="440px"
+        smDown={{
+          bottom: '0',
+          left: '0',
+          top: 'auto',
+          w: 'full',
+          maxW: 'none',
+          translate: '0 0',
+          roundedBottom: '0',
+          roundedTop: 'frame',
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {state.mode === 'create' ? 'Ajouter un objectif' : "Modifier l'objectif"}
           </DialogTitle>
           <DialogDescription>Montant, progression et échéance</DialogDescription>
         </DialogHeader>
-        <form
-          className="space-y-4"
+        <styled.form
+          spaceY="4"
           onSubmit={event => {
             event.preventDefault()
             onSave()
           }}
         >
           {validationError ? (
-            <p role="alert" className="text-sm text-negative">
+            <styled.p role="alert" textStyle="sm" color="negative">
               {validationError}
-            </p>
+            </styled.p>
           ) : null}
-          <div className="space-y-2">
-            <label htmlFor="goal-name" className="text-sm font-medium">
+          <div className={fieldGroup}>
+            <label htmlFor="goal-name" className={fieldLabel}>
               Nom
             </label>
             <Input
@@ -302,9 +392,9 @@ function GoalEditor({
               required
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="goal-target-amount" className="text-sm font-medium">
+          <div className={fieldPair}>
+            <div className={fieldGroup}>
+              <label htmlFor="goal-target-amount" className={fieldLabel}>
                 Montant cible
               </label>
               <Input
@@ -319,8 +409,8 @@ function GoalEditor({
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="goal-current-amount" className="text-sm font-medium">
+            <div className={fieldGroup}>
+              <label htmlFor="goal-current-amount" className={fieldLabel}>
                 Montant actuel
               </label>
               <Input
@@ -336,9 +426,9 @@ function GoalEditor({
               />
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="goal-type" className="text-sm font-medium">
+          <div className={fieldPair}>
+            <div className={fieldGroup}>
+              <label htmlFor="goal-type" className={fieldLabel}>
                 Type
               </label>
               <Select
@@ -347,7 +437,7 @@ function GoalEditor({
                   setDraft(current => ({ ...current, goalType: value as FinancialGoalType }))
                 }
               >
-                <SelectTrigger id="goal-type" className="w-full">
+                <SelectTrigger id="goal-type" w="full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -359,8 +449,8 @@ function GoalEditor({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <label htmlFor="goal-currency" className="text-sm font-medium">
+            <div className={fieldGroup}>
+              <label htmlFor="goal-currency" className={fieldLabel}>
                 Devise
               </label>
               <Input
@@ -374,8 +464,8 @@ function GoalEditor({
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <label htmlFor="goal-target-date" className="text-sm font-medium">
+          <div className={fieldGroup}>
+            <label htmlFor="goal-target-date" className={fieldLabel}>
               Échéance
             </label>
             <Input
@@ -387,13 +477,13 @@ function GoalEditor({
               }
             />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="goal-note" className="text-sm font-medium">
+          <div className={fieldGroup}>
+            <label htmlFor="goal-note" className={fieldLabel}>
               Note
             </label>
             <textarea
               id="goal-note"
-              className="min-h-20 w-full rounded-control border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+              className={noteField}
               value={draft.note ?? ''}
               onChange={event =>
                 setDraft(current => ({
@@ -403,10 +493,10 @@ function GoalEditor({
               }
             />
           </div>
-          <div className="border-y border-border py-3">
+          <styled.div borderYWidth="1px" borderColor="border" py="3">
             <Progress value={previewProgress} label="Aperçu de la progression" showValue />
-          </div>
-          <DialogFooter className="sm:items-center sm:justify-between">
+          </styled.div>
+          <DialogFooter sm={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               {state.mode === 'edit' ? (
                 <Button
@@ -424,16 +514,16 @@ function GoalEditor({
                 </Button>
               ) : null}
             </div>
-            <div className="flex gap-2">
+            <styled.div display="flex" gap="2">
               <Button type="button" variant="ghost" onClick={onClose}>
                 Annuler
               </Button>
               <Button type="submit" disabled={savePending || archivePending}>
                 {savePending ? 'Enregistrement' : 'Enregistrer'}
               </Button>
-            </div>
+            </styled.div>
           </DialogFooter>
-        </form>
+        </styled.form>
       </DialogContent>
     </Dialog>
   )
@@ -559,33 +649,38 @@ export function PersonalFinancialGoalsCard({
   return (
     <>
       <section aria-labelledby="active-goals-title">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="center"
+          justifyContent="space-between"
+          gap="4"
+          borderBottomWidth="1px"
+          borderColor="border"
+          pb="5"
+        >
           <div>
-            <h2
-              id="active-goals-title"
-              className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
-            >
+            <h2 id="active-goals-title" className={eyebrow}>
               Objectifs actifs
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <styled.p mt="2" textStyle="sm" color="muted.foreground">
               {activeGoals.length} objectif{activeGoals.length > 1 ? 's' : ''}
-            </p>
+            </styled.p>
           </div>
           <Button
             type="button"
             onClick={openCreate}
             disabled={!isAdmin}
-            className="min-h-11 sm:min-h-0"
+            minH="11"
+            sm={{ minH: '0' }}
           >
             Ajouter un objectif
           </Button>
-        </div>
+        </styled.div>
 
-        {isDemo ? (
-          <Status tone="neutral" label="Lecture seule en mode démo" className="mt-4" />
-        ) : null}
+        {isDemo ? <Status tone="neutral" label="Lecture seule en mode démo" mt="4" /> : null}
         {bannerError ? (
-          <div className="mt-5">
+          <styled.div mt="5">
             <ErrorBanner
               error={bannerError}
               onRetry={retryLastAction}
@@ -593,22 +688,36 @@ export function PersonalFinancialGoalsCard({
                 ? {}
                 : { onDismiss: () => setRecoverableError(null) })}
             />
-          </div>
+          </styled.div>
         ) : null}
         {authMode === undefined || goalsQuery.isPending ? (
-          <Status tone="progress" label="Chargement" className="mt-6" />
+          <Status tone="progress" label="Chargement" mt="6" />
         ) : null}
 
         {!goalsQuery.isPending && !goalsQuery.isError && activeGoals.length === 0 ? (
-          <div className="mt-6 border border-dashed border-border px-6 py-10 text-center">
-            <FlagPixelIcon size={28} className="mx-auto text-primary" aria-hidden="true" />
-            <p className="mt-4 text-sm text-muted-foreground">Aucun objectif pour le moment.</p>
+          <styled.div
+            mt="6"
+            borderWidth="1px"
+            borderStyle="dashed"
+            borderColor="border"
+            px="6"
+            py="10"
+            textAlign="center"
+          >
+            <FlagPixelIcon
+              size={28}
+              className={css({ mx: 'auto', color: 'primary' })}
+              aria-hidden="true"
+            />
+            <styled.p mt="4" textStyle="sm" color="muted.foreground">
+              Aucun objectif pour le moment.
+            </styled.p>
             {isAdmin ? (
-              <Button type="button" className="mt-4" onClick={openCreate}>
+              <Button type="button" mt="4" onClick={openCreate}>
                 Ajouter un objectif
               </Button>
             ) : null}
-          </div>
+          </styled.div>
         ) : null}
 
         {!goalsQuery.isPending && !goalsQuery.isError
@@ -624,24 +733,32 @@ export function PersonalFinancialGoalsCard({
       </section>
 
       {archivedGoals.length > 0 ? (
-        <details className="border-b border-border py-5">
-          <summary className="min-h-11 cursor-pointer py-3 text-sm text-muted-foreground">
+        <styled.details borderBottomWidth="1px" borderColor="border" py="5">
+          <styled.summary minH="11" cursor="pointer" py="3" textStyle="sm" color="muted.foreground">
             Objectifs archivés ({archivedGoals.length})
-          </summary>
-          <div className="divide-y divide-border border-t border-border">
+          </styled.summary>
+          <div className={archivedList}>
             {archivedGoals.map(goal => (
-              <div key={goal.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-                <span className="text-muted-foreground">{goal.name}</span>
+              <styled.div
+                key={goal.id}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap="4"
+                py="3"
+                textStyle="sm"
+              >
+                <styled.span color="muted.foreground">{goal.name}</styled.span>
                 <CurrencyAmount
                   value={goal.currentAmount}
                   currency={goal.currency}
                   decimals={0}
-                  className="text-muted-foreground"
+                  color="muted.foreground"
                 />
-              </div>
+              </styled.div>
             ))}
           </div>
-        </details>
+        </styled.details>
       ) : null}
 
       {editorState ? (

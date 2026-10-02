@@ -1,3 +1,4 @@
+import type { IntervalScheduler } from './scheduler-types'
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
   msg: string
@@ -17,7 +18,7 @@ export const startPowensAutoSyncScheduler = ({
   intervalMs: number
   trigger: () => Promise<unknown>
   log: SchedulerLogger
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

@@ -10,9 +10,21 @@ import type { DashboardRange, DashboardSummaryResponse } from './dashboard-types
  * 2. Fallback counters stay at zero in normal admin usage.
  * 3. Range mismatch diagnostics are no longer observed in QA/CI.
  */
+/**
+ * Period flow sums stay unknown (null) when the summary payload is degraded;
+ * the API contract itself only ever reports numbers here.
+ */
+export type LegacyDashboardTotals = Omit<
+  DashboardSummaryResponse['totals'],
+  'incomes' | 'expenses'
+> & {
+  incomes: number | null
+  expenses: number | null
+}
+
 export interface LegacyDashboardAdapterResult {
   range: DashboardRange
-  totals: DashboardSummaryResponse['totals']
+  totals: LegacyDashboardTotals
   /** Canonical valuation block; null when the API did not provide one (unknown, not zero). */
   valuation: NonNullable<DashboardSummaryResponse['valuation']> | null
   connections: DashboardSummaryResponse['connections']
@@ -83,7 +95,11 @@ const getMigrationStage = (diagnostics: AdapterDiagnostics): DashboardMigrationS
   return 'mixed-fallback'
 }
 
-const toArrayWithFallback = <T>(value: T[] | undefined, field: string, diagnostics: AdapterDiagnostics) => {
+const toArrayWithFallback = <T>(
+  value: T[] | undefined,
+  field: string,
+  diagnostics: AdapterDiagnostics
+) => {
   if (Array.isArray(value)) {
     return value
   }
@@ -95,16 +111,18 @@ const toArrayWithFallback = <T>(value: T[] | undefined, field: string, diagnosti
 const toTotalsWithFallback = (
   totals: DashboardSummaryResponse['totals'] | undefined,
   diagnostics: AdapterDiagnostics
-): DashboardSummaryResponse['totals'] => {
+): LegacyDashboardTotals => {
   if (totals) {
     return totals
   }
 
   diagnostics.fallbackFields.push('totals')
+  // A degraded payload has no totals: they are unknown and stay unknown.
   return {
-    balance: 0,
-    incomes: 0,
-    expenses: 0,
+    balance: null,
+    unknownValuationAssetCount: 0,
+    incomes: null,
+    expenses: null,
   }
 }
 
@@ -191,7 +209,11 @@ export const adaptDashboardSummaryLegacy = ({
       'dailyWealthSnapshots',
       diagnostics
     ),
-    topExpenseGroups: toArrayWithFallback(summary?.topExpenseGroups, 'topExpenseGroups', diagnostics),
+    topExpenseGroups: toArrayWithFallback(
+      summary?.topExpenseGroups,
+      'topExpenseGroups',
+      diagnostics
+    ),
     migration: {
       stage: getMigrationStage(diagnostics),
       fallbackFieldCount: diagnostics.fallbackFields.length,

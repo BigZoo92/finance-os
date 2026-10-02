@@ -14,15 +14,14 @@
  *   3. One ledger row per X HTTP call in `x_twitter_usage_ledger`
  */
 
+import { randomUUID } from 'node:crypto'
 import { schema } from '@finance-os/db'
 import { and, eq, sql } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { randomUUID } from 'node:crypto'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
-import type { ApiDb } from '../types'
 import {
   computePreviousDayWindow,
   dedupeXFollowedAccounts,
@@ -37,10 +36,8 @@ import {
   createXTwitterProfileClient,
   type XTwitterFetch,
 } from '../services/providers/x-twitter-profile-client'
-import {
-  readXUsageSnapshot,
-  writeXUsageLedger,
-} from '../services/providers/x-twitter-usage-ledger'
+import { readXUsageSnapshot, writeXUsageLedger } from '../services/providers/x-twitter-usage-ledger'
+import type { ApiDb } from '../types'
 
 const bodySchema = t.Object({
   runMode: t.Optional(
@@ -55,14 +52,6 @@ const bodySchema = t.Object({
   allowBudgetOverride: t.Optional(t.Boolean()),
   limitAccounts: t.Optional(t.Integer({ minimum: 1, maximum: 50 })),
 })
-
-type Body = {
-  runMode?: PreviousDayRunMode
-  dryRun?: boolean
-  manualConfirm?: boolean
-  allowBudgetOverride?: boolean
-  limitAccounts?: number
-}
 
 export type XDailySyncEnv = {
   NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN?: string | undefined
@@ -139,7 +128,11 @@ const autoResolveMissingExternalIds = async ({
   now: Date
   userReadsToday: number
   maxUserReadsPerDay: number
-}): Promise<{ accounts: XTwitterFollowedAccount[]; resolvedCount: number; failedCount: number }> => {
+}): Promise<{
+  accounts: XTwitterFollowedAccount[]
+  resolvedCount: number
+  failedCount: number
+}> => {
   const deduped = dedupeXFollowedAccounts(accounts)
   accounts = deduped.accounts
   const missing = accounts.filter(a => a.externalId === null)
@@ -317,7 +310,7 @@ const persistTweetsAsSignalItems = async ({
         },
       })
       inserted += 1
-    } catch (_error) {
+    } catch {
       // Likely a dedupeKey unique conflict. We treat all insert errors as dedup
       // since the signal_item table has tight unique constraints.
       deduped += 1
@@ -391,7 +384,7 @@ export const createXTwitterDailySyncRoute = ({
         },
         real: async () => {
           requireAdmin(context)
-          const body = context.body as Body
+          const body = context.body
           const dryRun = body.dryRun !== false && body.runMode !== 'manual_full_previous_day'
           const runMode: PreviousDayRunMode = body.runMode
             ? body.runMode

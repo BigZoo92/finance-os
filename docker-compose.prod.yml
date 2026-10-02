@@ -5,8 +5,8 @@ name: finance-os-prod
 x-logging: &default-logging
   driver: json-file
   options:
-    max-size: "10m"
-    max-file: "5"
+    max-size: '10m'
+    max-file: '5'
 
 # Resource governance profile for the current single-user VPS shape (~7.6 GiB RAM).
 # Dokploy receives this file as raw Docker Compose from the release workflow; verify
@@ -15,7 +15,7 @@ x-resource-web: &resource-web
   deploy:
     resources:
       limits:
-        cpus: "0.50"
+        cpus: '0.50'
         memory: 256M
         pids: 128
       reservations:
@@ -25,7 +25,7 @@ x-resource-api: &resource-api
   deploy:
     resources:
       limits:
-        cpus: "1.50"
+        cpus: '1.50'
         memory: 1280M
         pids: 256
       reservations:
@@ -35,7 +35,7 @@ x-resource-worker: &resource-worker
   deploy:
     resources:
       limits:
-        cpus: "1.25"
+        cpus: '1.25'
         memory: 1024M
         pids: 256
       reservations:
@@ -45,7 +45,7 @@ x-resource-ops-alerts: &resource-ops-alerts
   deploy:
     resources:
       limits:
-        cpus: "0.25"
+        cpus: '0.25'
         memory: 256M
         pids: 128
       reservations:
@@ -55,7 +55,7 @@ x-resource-knowledge-service: &resource-knowledge-service
   deploy:
     resources:
       limits:
-        cpus: "0.75"
+        cpus: '0.75'
         memory: 512M
         pids: 128
       reservations:
@@ -65,7 +65,7 @@ x-resource-quant-service: &resource-quant-service
   deploy:
     resources:
       limits:
-        cpus: "0.75"
+        cpus: '0.75'
         memory: 512M
         pids: 128
       reservations:
@@ -75,7 +75,7 @@ x-resource-neo4j: &resource-neo4j
   deploy:
     resources:
       limits:
-        cpus: "1.50"
+        cpus: '1.50'
         memory: 2048M
         pids: 256
       reservations:
@@ -85,7 +85,7 @@ x-resource-qdrant: &resource-qdrant
   deploy:
     resources:
       limits:
-        cpus: "0.75"
+        cpus: '0.75'
         memory: 768M
         pids: 128
       reservations:
@@ -95,7 +95,7 @@ x-resource-postgres: &resource-postgres
   deploy:
     resources:
       limits:
-        cpus: "1.00"
+        cpus: '1.00'
         memory: 1024M
         pids: 256
       reservations:
@@ -105,7 +105,7 @@ x-resource-redis: &resource-redis
   deploy:
     resources:
       limits:
-        cpus: "0.50"
+        cpus: '0.50'
         memory: 256M
         pids: 128
       reservations:
@@ -128,7 +128,7 @@ services:
     # to the API through a unique internal DNS alias. Avoid the generic `api`
     # hostname because Dokploy can attach multiple stacks to shared networks.
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - '${WEB_PORT:-3000}:3000'
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
@@ -167,13 +167,36 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ["CMD", "node", "infra/docker/healthchecks/http-healthcheck.mjs"]
+      test: ['CMD', 'node', 'infra/docker/healthchecks/http-healthcheck.mjs']
       interval: 15s
       timeout: 5s
       retries: 10
       start_period: 20s
     security_opt:
       - no-new-privileges:true
+
+  # One-shot schema migration. Runs the Drizzle journal against PostgreSQL and
+  # exits; the API only starts once it has completed successfully.
+  migrate:
+    image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-api:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: always
+    restart: 'no'
+    logging: *default-logging
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    command: ['bun', 'packages/db/src/migrate.ts']
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+      DATABASE_URL: ${DATABASE_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   api:
     <<: *resource-api
@@ -190,7 +213,7 @@ services:
     # Internal-only service. Public `/api/*` requests are expected to go
     # through `web:3000`, which proxies them to this container.
     expose:
-      - "3001"
+      - '3001'
     env_file:
       - .env
     environment:
@@ -208,6 +231,7 @@ services:
       REDIS_URL: ${REDIS_URL:-}
       PRIVATE_ACCESS_TOKEN: ${PRIVATE_ACCESS_TOKEN:-}
       DEBUG_METRICS_TOKEN: ${DEBUG_METRICS_TOKEN:-}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       KNOWLEDGE_SERVICE_ENABLED: ${KNOWLEDGE_SERVICE_ENABLED:-false}
       KNOWLEDGE_SERVICE_URL: ${KNOWLEDGE_SERVICE_URL:-http://knowledge-service:8011}
       KNOWLEDGE_SERVICE_TIMEOUT_MS: ${KNOWLEDGE_SERVICE_TIMEOUT_MS:-2500}
@@ -252,8 +276,6 @@ services:
       POWENS_WEBVIEW_BASE_URL: ${POWENS_WEBVIEW_BASE_URL:-https://webview.powens.com/connect}
       POWENS_WEBVIEW_URL: ${POWENS_WEBVIEW_URL:-}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
-      RUN_DB_MIGRATIONS: ${RUN_DB_MIGRATIONS:-true}
-      DRIZZLE_MIGRATIONS_FOLDER: packages/db/drizzle
       HEALTHCHECK_URL: http://127.0.0.1:3001/health
       # --- Runtime feature flags & provider credentials ----------------------
       # IMPORTANT: every flag/secret consumed by API routes at runtime MUST be
@@ -429,6 +451,8 @@ services:
       PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
       PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -442,7 +466,7 @@ services:
         aliases:
           - finance-os-api
     healthcheck:
-      test: ["CMD", "bun", "infra/docker/healthchecks/http-healthcheck.mjs"]
+      test: ['CMD', 'bun', 'infra/docker/healthchecks/http-healthcheck.mjs']
       interval: 15s
       timeout: 5s
       retries: 10
@@ -571,12 +595,7 @@ services:
     volumes:
       - worker_run_v2:/var/run/finance-os
     healthcheck:
-      test:
-        [
-          "CMD",
-          "bun",
-          "infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs",
-        ]
+      test: ['CMD', 'bun', 'infra/docker/healthchecks/worker-heartbeat-healthcheck.mjs']
       interval: 20s
       timeout: 5s
       retries: 10
@@ -596,7 +615,7 @@ services:
       - /tmp:rw,nosuid,nodev,size=64m
     cap_drop:
       - ALL
-    command: ["bun", "infra/docker/ops-alerts/monitor.mjs"]
+    command: ['bun', 'infra/docker/ops-alerts/monitor.mjs']
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
@@ -637,12 +656,12 @@ services:
   knowledge-service-storage-init:
     image: ${GHCR_IMAGE_NAME:?GHCR_IMAGE_NAME is required}-knowledge-service:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
     pull_policy: always
-    restart: "no"
-    user: "0:0"
+    restart: 'no'
+    user: '0:0'
     command:
       [
-        "sh",
-        "-lc",
+        'sh',
+        '-lc',
         "mkdir -p /data/knowledge-graph && chown -R app:app /data/knowledge-graph && chmod -R u+rwX,g+rwX /data/knowledge-graph && stat -c 'knowledge graph storage owner=%u:%g mode=%a path=%n' /data/knowledge-graph",
       ]
     logging: *default-logging
@@ -659,12 +678,14 @@ services:
     logging: *default-logging
     init: true
     expose:
-      - "8011"
+      - '8011'
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
       APP_VERSION: ${APP_VERSION:-}
       APP_COMMIT_SHA: ${APP_COMMIT_SHA:-}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      INTERNAL_SERVICE_AUTH_REQUIRED: 'true'
       KNOWLEDGE_SERVICE_ENABLED: ${KNOWLEDGE_SERVICE_ENABLED:-true}
       KNOWLEDGE_GRAPH_BACKEND: ${KNOWLEDGE_GRAPH_BACKEND:-neo4j}
       KNOWLEDGE_GRAPH_STORAGE_PATH: /data/knowledge-graph
@@ -718,7 +739,7 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
+          'CMD-SHELL',
           'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8011/health'', timeout=3).read()"',
         ]
       interval: 15s
@@ -736,7 +757,7 @@ services:
     logging: *default-logging
     init: true
     expose:
-      - "8012"
+      - '8012'
     environment:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
@@ -744,6 +765,8 @@ services:
       APP_COMMIT_SHA: ${APP_COMMIT_SHA:-}
       QUANT_SERVICE_HOST: 0.0.0.0
       QUANT_SERVICE_PORT: 8012
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      INTERNAL_SERVICE_AUTH_REQUIRED: 'true'
       TRADING_LAB_PAPER_ONLY: ${TRADING_LAB_PAPER_ONLY:-true}
       TRADING_LAB_MAX_BACKTEST_ROWS: ${TRADING_LAB_MAX_BACKTEST_ROWS:-50000}
       TRADING_LAB_DEFAULT_FEES_BPS: ${TRADING_LAB_DEFAULT_FEES_BPS:-10}
@@ -753,7 +776,7 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
+          'CMD-SHELL',
           'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8012/health'', timeout=3).read()"',
         ]
       interval: 15s
@@ -769,24 +792,20 @@ services:
     restart: unless-stopped
     logging: *default-logging
     environment:
-      NEO4J_AUTH: "${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-change-me}"
+      NEO4J_AUTH: '${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-change-me}'
       NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
       NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX:-1024m}
       NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-512m}
     expose:
-      - "7474"
-      - "7687"
+      - '7474'
+      - '7687'
     volumes:
       - knowledge_neo4j_data:/data
       - knowledge_neo4j_logs:/logs
     networks:
       - finance_os_internal
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1",
-        ]
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1']
       interval: 15s
       timeout: 5s
       retries: 20
@@ -800,8 +819,8 @@ services:
     restart: unless-stopped
     logging: *default-logging
     expose:
-      - "6333"
-      - "6334"
+      - '6333'
+      - '6334'
     volumes:
       - knowledge_qdrant_data:/qdrant/storage
     networks:
@@ -822,13 +841,13 @@ services:
     shm_size: 256m
     command:
       [
-        "postgres",
-        "-c",
-        "shared_buffers=256MB",
-        "-c",
-        "effective_cache_size=768MB",
-        "-c",
-        "work_mem=4MB",
+        'postgres',
+        '-c',
+        'shared_buffers=256MB',
+        '-c',
+        'effective_cache_size=768MB',
+        '-c',
+        'work_mem=4MB',
       ]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-finance_os}
@@ -840,7 +859,7 @@ services:
     networks:
       - finance_os_internal
     healthcheck:
-      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -855,25 +874,25 @@ services:
     logging: *default-logging
     command:
       [
-        "redis-server",
-        "--appendonly",
-        "yes",
-        "--save",
-        "60",
-        "1000",
-        "--loglevel",
-        "warning",
-        "--maxmemory",
-        "192mb",
-        "--maxmemory-policy",
-        "noeviction",
+        'redis-server',
+        '--appendonly',
+        'yes',
+        '--save',
+        '60',
+        '1000',
+        '--loglevel',
+        'warning',
+        '--maxmemory',
+        '192mb',
+        '--maxmemory-policy',
+        'noeviction',
       ]
     volumes:
       - redis_data:/data
     networks:
       - finance_os_internal
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 3s
       retries: 10

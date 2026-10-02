@@ -13,6 +13,7 @@ import type {
 } from '../advisor-contract'
 import { buildAdvisorKnowledgeAnswer } from '../domain/advisor/knowledge-pack'
 import { createDashboardRuntimePlugin } from '../plugin'
+import { createRuntimeRepositoriesFixture } from '../test-support/runtime-repositories-fixture'
 import type { DashboardRouteRuntime } from '../types'
 import { createAdvisorRoute } from './advisor'
 
@@ -180,10 +181,7 @@ const sampleManualOperation: DashboardAdvisorManualOperationResponse = {
 const createDashboardRuntime = (
   overrides?: Partial<DashboardRouteRuntime['useCases']>
 ): DashboardRouteRuntime => ({
-  repositories: {
-    readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
-    derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
-  },
+  repositories: createRuntimeRepositoriesFixture(),
   useCases: {
     getSummary: async () => {
       throw new Error('not used')

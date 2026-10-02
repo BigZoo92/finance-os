@@ -5,14 +5,9 @@ import {
   buildAdvisorDemoGraph,
   buildAdvisorGraphFromKnowledge,
 } from './advisor-graph-data'
-import type {
-  KnowledgeContextBundleResponse,
-  KnowledgeQueryResponse,
-} from './knowledge-types'
+import type { KnowledgeContextBundleResponse, KnowledgeQueryResponse } from './knowledge-types'
 
-const buildBundle = (
-  entityCount: number
-): KnowledgeContextBundleResponse => ({
+const buildBundle = (entityCount: number): KnowledgeContextBundleResponse => ({
   requestId: 'req-test',
   mode: 'admin',
   generatedAt: '2026-04-26T00:00:00.000Z',
@@ -229,4 +224,3 @@ describe('buildAdvisorGraphFromKnowledge — adapter integrity', () => {
     expect(example?.isExample).toBe(true)
   })
 })
-

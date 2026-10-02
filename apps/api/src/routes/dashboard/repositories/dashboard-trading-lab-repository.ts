@@ -1,13 +1,8 @@
-import { and, desc, eq, sql } from 'drizzle-orm'
 import { schema } from '@finance-os/db'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import type { ApiDb } from '../types'
 
-const {
-  attentionItem,
-  tradingLabBacktestRun,
-  tradingLabPaperScenario,
-  tradingLabStrategy,
-} = schema
+const { attentionItem, tradingLabBacktestRun, tradingLabPaperScenario, tradingLabStrategy } = schema
 
 const expectReturnedRow = <T>(rows: T[], operation: string): T => {
   const row = rows[0]
@@ -69,7 +64,9 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
         name: input.name,
         slug: input.slug,
         ...(input.description !== undefined ? { description: input.description } : {}),
-        ...(input.strategyType !== undefined ? { strategyType: input.strategyType as 'technical' } : {}),
+        ...(input.strategyType !== undefined
+          ? { strategyType: input.strategyType as 'technical' }
+          : {}),
         ...(input.status !== undefined ? { status: input.status as 'draft' } : {}),
         ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
         ...(input.tags ? { tags: input.tags } : {}),
@@ -85,10 +82,7 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
     return expectReturnedRow(rows, 'create trading lab strategy')
   }
 
-  const updateStrategy = async (
-    id: number,
-    input: Record<string, unknown>
-  ) => {
+  const updateStrategy = async (id: number, input: Record<string, unknown>) => {
     const rows = await db
       .update(tradingLabStrategy)
       .set({ ...input, updatedAt: new Date() })
@@ -97,8 +91,7 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
     return rows[0] ?? null
   }
 
-  const archiveStrategy = async (id: number) =>
-    updateStrategy(id, { status: 'archived' })
+  const archiveStrategy = async (id: number) => updateStrategy(id, { status: 'archived' })
 
   // ---------------------------------------------------------------------------
   // Backtest runs
@@ -155,17 +148,16 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
         ...(input.feesBps !== undefined ? { feesBps: input.feesBps } : {}),
         ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
         ...(input.spreadBps !== undefined ? { spreadBps: input.spreadBps } : {}),
-        ...(input.marketDataSource !== undefined ? { marketDataSource: input.marketDataSource } : {}),
+        ...(input.marketDataSource !== undefined
+          ? { marketDataSource: input.marketDataSource }
+          : {}),
         runStatus: 'pending',
       })
       .returning()
     return expectReturnedRow(rows, 'create trading lab backtest run')
   }
 
-  const updateBacktestRunResult = async (
-    id: number,
-    result: Record<string, unknown>
-  ) => {
+  const updateBacktestRunResult = async (id: number, result: Record<string, unknown>) => {
     const rows = await db
       .update(tradingLabBacktestRun)
       .set({ ...result, updatedAt: new Date() })
@@ -205,17 +197,11 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
     invalidationCriteria?: string
     riskNotes?: string
   }) => {
-    const rows = await db
-      .insert(tradingLabPaperScenario)
-      .values(input)
-      .returning()
+    const rows = await db.insert(tradingLabPaperScenario).values(input).returning()
     return expectReturnedRow(rows, 'create trading lab scenario')
   }
 
-  const updateScenario = async (
-    id: number,
-    input: Record<string, unknown>
-  ) => {
+  const updateScenario = async (id: number, input: Record<string, unknown>) => {
     const rows = await db
       .update(tradingLabPaperScenario)
       .set({ ...input, updatedAt: new Date() })
@@ -250,7 +236,14 @@ export const createDashboardTradingLabRepository = ({ db }: { db: ApiDb }) => {
   }
 
   const upsertAttentionItem = async (input: {
-    sourceType: 'signal' | 'provider-health' | 'advisor' | 'budget' | 'portfolio' | 'trading-lab' | 'system'
+    sourceType:
+      | 'signal'
+      | 'provider-health'
+      | 'advisor'
+      | 'budget'
+      | 'portfolio'
+      | 'trading-lab'
+      | 'system'
     sourceId?: string
     severity: 'info' | 'watch' | 'important' | 'critical'
     title: string

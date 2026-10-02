@@ -2,27 +2,23 @@ import { Elysia } from 'elysia'
 import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { requireAdminOrInternalToken } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
+import type {
+  AdvisorKnowledgeGraphDto,
+  AdvisorKnowledgeGraphScope,
+  KnowledgeBundleShape,
+  KnowledgeQueryShape,
+} from '../domain/advisor'
 import {
+  buildAdminKnowledgeGraphDto,
+  buildDemoKnowledgeGraphDto,
+  buildExampleOverlay,
   getDemoKnowledgeContextBundle,
   getDemoKnowledgeExplain,
   getDemoKnowledgeQuery,
   getDemoKnowledgeSchema,
   getDemoKnowledgeStats,
-} from '../domain/advisor/knowledge-graph-demo'
-import {
-  buildAdminKnowledgeGraphDto,
-  type KnowledgeBundleShape,
-  type KnowledgeQueryShape,
-} from '../domain/advisor/knowledge-graph-dto-admin'
-import {
-  buildDemoKnowledgeGraphDto,
-  buildExampleOverlay,
-} from '../domain/advisor/knowledge-graph-dto-demo'
-import type {
-  AdvisorKnowledgeGraphDto,
-  AdvisorKnowledgeGraphScope,
-} from '../domain/advisor/knowledge-graph-dto'
-import { hardenGraphDto } from '../domain/advisor/knowledge-graph-dto'
+  hardenGraphDto,
+} from '../domain/advisor'
 import {
   dashboardAdvisorKnowledgeContextBundleBodySchema,
   dashboardAdvisorKnowledgeExplainBodySchema,
@@ -355,11 +351,7 @@ export const createAdvisorKnowledgeRoute = ({
 
         const auth = getAuth(context)
         const requestId = getRequestMeta(context).requestId
-        const query = context.query as {
-          scope?: AdvisorKnowledgeGraphScope
-          limit?: number
-          includeExamples?: boolean
-        }
+        const query = context.query
         const scope: AdvisorKnowledgeGraphScope = query.scope ?? 'overview'
         const limit = Math.min(1000, Math.max(1, query.limit ?? 500))
         const includeExamples = query.includeExamples === true
@@ -399,9 +391,9 @@ export const createAdvisorKnowledgeRoute = ({
             client.contextBundle(bundleInput, requestId),
             client.query(queryInput, requestId),
           ])
-          if (bundleRes.status === 'fulfilled') bundle = bundleRes.value as KnowledgeBundleShape
+          if (bundleRes.status === 'fulfilled') bundle = bundleRes.value
           else serviceFailed = true
-          if (queryRes.status === 'fulfilled') queryResp = queryRes.value as KnowledgeQueryShape
+          if (queryRes.status === 'fulfilled') queryResp = queryRes.value
           else serviceFailed = true
         } catch (error) {
           logApiEvent({
@@ -428,7 +420,8 @@ export const createAdvisorKnowledgeRoute = ({
               ...dto.meta,
               origin: 'degraded',
               degraded: true,
-              reason: 'Knowledge service unavailable; deterministic finance-engine remains primary.',
+              reason:
+                'Knowledge service unavailable; deterministic finance-engine remains primary.',
               source: 'fallback',
             },
           }

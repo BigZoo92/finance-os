@@ -41,7 +41,10 @@ export const runAdvisorEvals = ({
     }
 
     if (item.key === 'budget-overrun-disables-deep') {
-      if (budgetState.dailyUsdSpent / Math.max(budgetState.dailyBudgetUsd, 1) >= 0.8 && budgetState.deepAnalysisAllowed) {
+      if (
+        budgetState.dailyUsdSpent / Math.max(budgetState.dailyBudgetUsd, 1) >= 0.8 &&
+        budgetState.deepAnalysisAllowed
+      ) {
         failures.push(item.key)
       }
       continue

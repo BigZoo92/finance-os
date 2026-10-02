@@ -266,7 +266,9 @@ describe('computeBehaviorAnalytics', () => {
     const decisions = Array.from({ length: 10 }, (_, i) =>
       buildDecision({ id: i + 1, decision: 'accepted', reasonCode: 'accepted' })
     )
-    const outcomes = decisions.map((_, i) => buildOutcome(i + 1, i % 2 === 0 ? 'positive' : 'negative'))
+    const outcomes = decisions.map((_, i) =>
+      buildOutcome(i + 1, i % 2 === 0 ? 'positive' : 'negative')
+    )
     const out = computeBehaviorAnalytics({
       decisions,
       outcomes,

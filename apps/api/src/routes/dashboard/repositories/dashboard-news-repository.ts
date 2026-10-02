@@ -1,5 +1,9 @@
 import { schema } from '@finance-os/db'
 import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
+import type { NewsDuplicateCandidate } from '../domain/news-dedupe'
+import { inferDirection, toIsoOrNull, toScoreLabel, uniqueStrings } from '../domain/news-helpers'
+import { normalizeNewsMetadataCard, selectPreferredNewsMetadata } from '../domain/news-metadata'
+import { NEWS_PROVIDER_LABELS, type NewsProviderId } from '../domain/news-taxonomy'
 import type {
   DashboardNewsFilters,
   DashboardNewsSignalCard,
@@ -8,14 +12,7 @@ import type {
   NewsProviderHealth,
   NewsProviderRunResult,
 } from '../domain/news-types'
-import { inferDirection, toIsoOrNull, toScoreLabel, uniqueStrings } from '../domain/news-helpers'
-import {
-  normalizeNewsMetadataCard,
-  selectPreferredNewsMetadata,
-} from '../domain/news-metadata'
-import { NEWS_PROVIDER_LABELS, type NewsProviderId } from '../domain/news-taxonomy'
 import type { ApiDb, DashboardNewsCacheStateRow } from '../types'
-import type { NewsDuplicateCandidate } from '../domain/news-dedupe'
 
 const sourcePriority = (sourceType: string) => {
   switch (sourceType) {
@@ -47,6 +44,13 @@ const mergeUniqueByJson = <T>(values: T[]) => {
   }
 
   return output
+}
+
+// Dedupe reasons arrive as a string list; stored as the comma-joined text the
+// provenance field has always held (`String(array)`), never "[object Object]".
+const formatDedupeReasons = (reasons: unknown): string | null => {
+  if (Array.isArray(reasons)) return reasons.join(',')
+  return typeof reasons === 'string' ? reasons : null
 }
 
 const jsonbArrayContains = (column: unknown, value: string) => {
@@ -182,62 +186,66 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
         const derivedProviderCount = new Set(articleSourceRefs.map(ref => ref.provider)).size
 
         return {
-        id: String(row.id),
-        title: row.title,
-        summary: row.summary,
-        contentSnippet: row.contentSnippet,
-        url: row.url,
-        canonicalUrl: row.canonicalUrl,
-        sourceName: row.sourceName,
-        sourceDomain: row.sourceDomain,
-        sourceType: row.sourceType as DashboardNewsSignalCard['sourceType'],
-        topic: row.topic,
-        language: row.language,
-        publishedAt: row.publishedAt.toISOString(),
-        domains: (row.domains ?? []) as DashboardNewsSignalCard['domains'],
-        categories: row.categories ?? [],
-        subcategories: row.subcategories ?? [],
-        eventType: row.eventType as DashboardNewsSignalCard['eventType'],
-        severity: row.severity,
-        severityLabel: toScoreLabel(row.severity),
-        confidence: row.confidence,
-        novelty: row.novelty,
-        marketImpactScore: row.marketImpactScore,
-        relevanceScore: row.relevanceScore,
-        direction: inferDirection({
-          riskFlags: row.riskFlags ?? [],
-          opportunityFlags: row.opportunityFlags ?? [],
-        }),
-        riskFlags: (row.riskFlags ?? []) as DashboardNewsSignalCard['riskFlags'],
-        opportunityFlags: (row.opportunityFlags ?? []) as DashboardNewsSignalCard['opportunityFlags'],
-        affectedEntities: (row.affectedEntities ?? []) as DashboardNewsSignalCard['affectedEntities'],
-        affectedTickers: row.affectedTickers ?? [],
-        affectedSectors: row.affectedSectors ?? [],
-        affectedThemes: row.affectedThemes ?? [],
-        transmissionHypotheses: row.transmissionHypotheses ?? [],
-        whyItMatters: row.whyItMatters ?? [],
-        scoringReasons: row.scoringReasons ?? [],
-        metadataCard: normalizeNewsMetadataCard(row.metadataCard),
-        metadataFetchStatus: row.metadataFetchStatus as DashboardNewsSignalCard['metadataFetchStatus'],
-        eventClusterId: row.eventClusterId,
-        provenance: {
-          sourceCount: row.provenance?.sourceCount ?? (articleSourceRefs.length || 1),
-          providerCount: row.provenance?.providerCount ?? (derivedProviderCount || 1),
-          providers:
-            ((row.provenance?.providers as NewsProviderId[] | undefined) ??
-              (uniqueStrings(articleSourceRefs.map(ref => ref.provider)) as NewsProviderId[])),
-          sourceDomains: row.provenance?.sourceDomains ?? uniqueStrings([row.sourceDomain]),
-        },
-        sources: articleSourceRefs.map(ref => ({
-          provider: ref.provider as NewsProviderId,
-          providerArticleId: ref.providerArticleId,
-          sourceName: ref.sourceName,
-          sourceDomain: ref.sourceDomain,
-          sourceType: ref.sourceType as DashboardNewsSignalCard['sourceType'],
-          publishedAt: ref.publishedAt.toISOString(),
-          providerUrl: ref.providerUrl,
-        })),
-      }})
+          id: String(row.id),
+          title: row.title,
+          summary: row.summary,
+          contentSnippet: row.contentSnippet,
+          url: row.url,
+          canonicalUrl: row.canonicalUrl,
+          sourceName: row.sourceName,
+          sourceDomain: row.sourceDomain,
+          sourceType: row.sourceType as DashboardNewsSignalCard['sourceType'],
+          topic: row.topic,
+          language: row.language,
+          publishedAt: row.publishedAt.toISOString(),
+          domains: (row.domains ?? []) as DashboardNewsSignalCard['domains'],
+          categories: row.categories ?? [],
+          subcategories: row.subcategories ?? [],
+          eventType: row.eventType as DashboardNewsSignalCard['eventType'],
+          severity: row.severity,
+          severityLabel: toScoreLabel(row.severity),
+          confidence: row.confidence,
+          novelty: row.novelty,
+          marketImpactScore: row.marketImpactScore,
+          relevanceScore: row.relevanceScore,
+          direction: inferDirection({
+            riskFlags: row.riskFlags ?? [],
+            opportunityFlags: row.opportunityFlags ?? [],
+          }),
+          riskFlags: (row.riskFlags ?? []) as DashboardNewsSignalCard['riskFlags'],
+          opportunityFlags: (row.opportunityFlags ??
+            []) as DashboardNewsSignalCard['opportunityFlags'],
+          affectedEntities: (row.affectedEntities ??
+            []) as DashboardNewsSignalCard['affectedEntities'],
+          affectedTickers: row.affectedTickers ?? [],
+          affectedSectors: row.affectedSectors ?? [],
+          affectedThemes: row.affectedThemes ?? [],
+          transmissionHypotheses: row.transmissionHypotheses ?? [],
+          whyItMatters: row.whyItMatters ?? [],
+          scoringReasons: row.scoringReasons ?? [],
+          metadataCard: normalizeNewsMetadataCard(row.metadataCard),
+          metadataFetchStatus:
+            row.metadataFetchStatus as DashboardNewsSignalCard['metadataFetchStatus'],
+          eventClusterId: row.eventClusterId,
+          provenance: {
+            sourceCount: row.provenance?.sourceCount ?? (articleSourceRefs.length || 1),
+            providerCount: row.provenance?.providerCount ?? (derivedProviderCount || 1),
+            providers:
+              (row.provenance?.providers as NewsProviderId[] | undefined) ??
+              (uniqueStrings(articleSourceRefs.map(ref => ref.provider)) as NewsProviderId[]),
+            sourceDomains: row.provenance?.sourceDomains ?? uniqueStrings([row.sourceDomain]),
+          },
+          sources: articleSourceRefs.map(ref => ({
+            provider: ref.provider as NewsProviderId,
+            providerArticleId: ref.providerArticleId,
+            sourceName: ref.sourceName,
+            sourceDomain: ref.sourceDomain,
+            sourceType: ref.sourceType as DashboardNewsSignalCard['sourceType'],
+            publishedAt: ref.publishedAt.toISOString(),
+            providerUrl: ref.providerUrl,
+          })),
+        }
+      })
     },
 
     async countNewsArticles() {
@@ -341,8 +349,10 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
           rawProviderPayload: signal.rawProviderPayload,
           provenance: signal.provenance,
           metadataFetchStatus: signal.metadataFetchStatus,
-          metadataCard:
-            (normalizeNewsMetadataCard(signal.metadataCard) as unknown as Record<string, unknown> | null),
+          metadataCard: normalizeNewsMetadataCard(signal.metadataCard) as unknown as Record<
+            string,
+            unknown
+          > | null,
           metadataFetchedAt: signal.metadataFetchedAt,
           ingestedAt: signal.ingestedAt,
           lastEnrichedAt: signal.lastEnrichedAt,
@@ -491,14 +501,26 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
             region: existing.region ?? params.signal.region,
             geoScope: existing.geoScope ?? params.signal.geoScope,
             domains: mergeUniqueByJson([...(existing.domains ?? []), ...params.signal.domains]),
-            categories: mergeUniqueByJson([...(existing.categories ?? []), ...params.signal.categories]),
-            subcategories: mergeUniqueByJson([...(existing.subcategories ?? []), ...params.signal.subcategories]),
+            categories: mergeUniqueByJson([
+              ...(existing.categories ?? []),
+              ...params.signal.categories,
+            ]),
+            subcategories: mergeUniqueByJson([
+              ...(existing.subcategories ?? []),
+              ...params.signal.subcategories,
+            ]),
             severity: Math.max(existing.severity, params.signal.severity),
             confidence: Math.max(existing.confidence, params.signal.confidence),
             novelty: Math.max(existing.novelty, params.signal.novelty),
-            marketImpactScore: Math.max(existing.marketImpactScore, params.signal.marketImpactScore),
+            marketImpactScore: Math.max(
+              existing.marketImpactScore,
+              params.signal.marketImpactScore
+            ),
             relevanceScore: Math.max(existing.relevanceScore, params.signal.relevanceScore),
-            riskFlags: mergeUniqueByJson([...(existing.riskFlags ?? []), ...params.signal.riskFlags]),
+            riskFlags: mergeUniqueByJson([
+              ...(existing.riskFlags ?? []),
+              ...params.signal.riskFlags,
+            ]),
             opportunityFlags: mergeUniqueByJson([
               ...(existing.opportunityFlags ?? []),
               ...params.signal.opportunityFlags,
@@ -523,17 +545,28 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
               ...(existing.transmissionHypotheses ?? []),
               ...params.signal.transmissionHypotheses,
             ]),
-            macroLinks: mergeUniqueByJson([...(existing.macroLinks ?? []), ...params.signal.macroLinks]) as Array<Record<string, unknown>>,
-            policyLinks: mergeUniqueByJson([...(existing.policyLinks ?? []), ...params.signal.policyLinks]) as Array<Record<string, unknown>>,
-            filingLinks: mergeUniqueByJson([...(existing.filingLinks ?? []), ...params.signal.filingLinks]) as Array<Record<string, unknown>>,
-            whyItMatters: mergeUniqueByJson([...(existing.whyItMatters ?? []), ...params.signal.whyItMatters]),
+            macroLinks: mergeUniqueByJson([
+              ...(existing.macroLinks ?? []),
+              ...params.signal.macroLinks,
+            ]) as Array<Record<string, unknown>>,
+            policyLinks: mergeUniqueByJson([
+              ...(existing.policyLinks ?? []),
+              ...params.signal.policyLinks,
+            ]) as Array<Record<string, unknown>>,
+            filingLinks: mergeUniqueByJson([
+              ...(existing.filingLinks ?? []),
+              ...params.signal.filingLinks,
+            ]) as Array<Record<string, unknown>>,
+            whyItMatters: mergeUniqueByJson([
+              ...(existing.whyItMatters ?? []),
+              ...params.signal.whyItMatters,
+            ]),
             scoringReasons: mergeUniqueByJson([
               ...(existing.scoringReasons ?? []),
               ...params.signal.scoringReasons,
             ]),
             metadataFetchStatus: selectedMetadata.status,
-            metadataCard:
-              (selectedMetadata.card as unknown as Record<string, unknown> | null),
+            metadataCard: selectedMetadata.card as unknown as Record<string, unknown> | null,
             metadataFetchedAt: selectedMetadata.fetchedAt,
             provenance: {
               sourceCount: existingSourceRefs.length + params.signal.sourceRefs.length,
@@ -542,8 +575,8 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
               sourceDomains: Array.from(sourceDomainSet),
               primaryReason:
                 useIncomingPrimary && params.dedupeEvidence?.reasons
-                  ? String(params.dedupeEvidence.reasons)
-                  : existing.provenance?.primaryReason ?? null,
+                  ? formatDedupeReasons(params.dedupeEvidence.reasons)
+                  : (existing.provenance?.primaryReason ?? null),
             },
             lastEnrichedAt: params.signal.lastEnrichedAt,
             updatedAt: params.signal.ingestedAt,
@@ -647,16 +680,34 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
           ...(input.lastAttemptAt !== undefined ? { lastAttemptAt: input.lastAttemptAt } : {}),
           ...(input.lastFailureAt !== undefined ? { lastFailureAt: input.lastFailureAt } : {}),
           ...(input.lastErrorCode !== undefined ? { lastErrorCode: input.lastErrorCode } : {}),
-          ...(input.lastErrorMessage !== undefined ? { lastErrorMessage: input.lastErrorMessage } : {}),
+          ...(input.lastErrorMessage !== undefined
+            ? { lastErrorMessage: input.lastErrorMessage }
+            : {}),
           ...(input.lastRequestId !== undefined ? { lastRequestId: input.lastRequestId } : {}),
-          ...(input.lastIngestDurationMs !== undefined ? { lastIngestDurationMs: input.lastIngestDurationMs } : {}),
-          ...(input.lastFetchedCount !== undefined ? { lastFetchedCount: input.lastFetchedCount } : {}),
-          ...(input.lastInsertedCount !== undefined ? { lastInsertedCount: input.lastInsertedCount } : {}),
-          ...(input.lastMergedCount !== undefined ? { lastMergedCount: input.lastMergedCount } : {}),
-          ...(input.lastProviderCount !== undefined ? { lastProviderCount: input.lastProviderCount } : {}),
-          ...(input.lastSignalCount !== undefined ? { lastSignalCount: input.lastSignalCount } : {}),
-          ...(input.ingestionCountIncrement !== undefined ? { ingestionCount: input.ingestionCountIncrement } : {}),
-          ...(input.dedupeDropCountIncrement !== undefined ? { dedupeDropCount: input.dedupeDropCountIncrement } : {}),
+          ...(input.lastIngestDurationMs !== undefined
+            ? { lastIngestDurationMs: input.lastIngestDurationMs }
+            : {}),
+          ...(input.lastFetchedCount !== undefined
+            ? { lastFetchedCount: input.lastFetchedCount }
+            : {}),
+          ...(input.lastInsertedCount !== undefined
+            ? { lastInsertedCount: input.lastInsertedCount }
+            : {}),
+          ...(input.lastMergedCount !== undefined
+            ? { lastMergedCount: input.lastMergedCount }
+            : {}),
+          ...(input.lastProviderCount !== undefined
+            ? { lastProviderCount: input.lastProviderCount }
+            : {}),
+          ...(input.lastSignalCount !== undefined
+            ? { lastSignalCount: input.lastSignalCount }
+            : {}),
+          ...(input.ingestionCountIncrement !== undefined
+            ? { ingestionCount: input.ingestionCountIncrement }
+            : {}),
+          ...(input.dedupeDropCountIncrement !== undefined
+            ? { dedupeDropCount: input.dedupeDropCountIncrement }
+            : {}),
           ...(input.providerFailureCountIncrement !== undefined
             ? { providerFailureCount: input.providerFailureCountIncrement }
             : {}),
@@ -668,19 +719,37 @@ export const createDashboardNewsRepository = ({ db }: { db: ApiDb }) => {
             ...(input.lastAttemptAt !== undefined ? { lastAttemptAt: input.lastAttemptAt } : {}),
             ...(input.lastFailureAt !== undefined ? { lastFailureAt: input.lastFailureAt } : {}),
             ...(input.lastErrorCode !== undefined ? { lastErrorCode: input.lastErrorCode } : {}),
-            ...(input.lastErrorMessage !== undefined ? { lastErrorMessage: input.lastErrorMessage } : {}),
+            ...(input.lastErrorMessage !== undefined
+              ? { lastErrorMessage: input.lastErrorMessage }
+              : {}),
             ...(input.lastRequestId !== undefined ? { lastRequestId: input.lastRequestId } : {}),
-            ...(input.lastIngestDurationMs !== undefined ? { lastIngestDurationMs: input.lastIngestDurationMs } : {}),
-            ...(input.lastFetchedCount !== undefined ? { lastFetchedCount: input.lastFetchedCount } : {}),
-            ...(input.lastInsertedCount !== undefined ? { lastInsertedCount: input.lastInsertedCount } : {}),
-            ...(input.lastMergedCount !== undefined ? { lastMergedCount: input.lastMergedCount } : {}),
-            ...(input.lastProviderCount !== undefined ? { lastProviderCount: input.lastProviderCount } : {}),
-            ...(input.lastSignalCount !== undefined ? { lastSignalCount: input.lastSignalCount } : {}),
+            ...(input.lastIngestDurationMs !== undefined
+              ? { lastIngestDurationMs: input.lastIngestDurationMs }
+              : {}),
+            ...(input.lastFetchedCount !== undefined
+              ? { lastFetchedCount: input.lastFetchedCount }
+              : {}),
+            ...(input.lastInsertedCount !== undefined
+              ? { lastInsertedCount: input.lastInsertedCount }
+              : {}),
+            ...(input.lastMergedCount !== undefined
+              ? { lastMergedCount: input.lastMergedCount }
+              : {}),
+            ...(input.lastProviderCount !== undefined
+              ? { lastProviderCount: input.lastProviderCount }
+              : {}),
+            ...(input.lastSignalCount !== undefined
+              ? { lastSignalCount: input.lastSignalCount }
+              : {}),
             ...(input.ingestionCountIncrement !== undefined
-              ? { ingestionCount: sql`${schema.newsCacheState.ingestionCount} + ${input.ingestionCountIncrement}` }
+              ? {
+                  ingestionCount: sql`${schema.newsCacheState.ingestionCount} + ${input.ingestionCountIncrement}`,
+                }
               : {}),
             ...(input.dedupeDropCountIncrement !== undefined
-              ? { dedupeDropCount: sql`${schema.newsCacheState.dedupeDropCount} + ${input.dedupeDropCountIncrement}` }
+              ? {
+                  dedupeDropCount: sql`${schema.newsCacheState.dedupeDropCount} + ${input.dedupeDropCountIncrement}`,
+                }
               : {}),
             ...(input.providerFailureCountIncrement !== undefined
               ? {

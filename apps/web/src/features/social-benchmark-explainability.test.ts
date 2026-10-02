@@ -33,6 +33,8 @@ const basePosition = {
   closedAt: null,
   valuedAt: '2026-04-21T10:00:00.000Z',
   lastSyncedAt: null,
+  valueBase: 1300,
+  valuationStatus: 'priced' as const,
   enabled: true,
   metadata: null,
 }
@@ -51,6 +53,8 @@ const baseAsset = {
   currency: 'EUR',
   valuation: 900,
   valuationAsOf: '2026-04-21',
+  valueBase: 900,
+  valuationStatus: 'priced' as const,
   enabled: true,
   metadata: null,
 }

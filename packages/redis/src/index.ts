@@ -1,5 +1,16 @@
 import { createClient } from 'redis'
 
+export {
+  acquireRedisLock,
+  REDIS_LOCK_RELEASE_SCRIPT,
+  type RedisLockClient,
+  type RedisLockHandle,
+  type RedisLockLogger,
+  type RedisLockOutcome,
+  type RedisLockReleaseStatus,
+  withRedisLock,
+} from './lock'
+
 export const createRedisClient = (redisUrl: string) => {
   if (!redisUrl) {
     throw new Error('redisUrl is required')
@@ -119,18 +130,19 @@ export const createInMemoryRedisClient = (): FinanceOsRedisClient => {
       setString(key, String(next))
       return next
     },
+    // Mirrors the real client: EXPIRE replies 1 when a timeout was set, 0 otherwise.
     async expire(key: string, seconds: number) {
       purgeExpired(key)
       const entry = strings.get(key)
       if (!entry) {
-        return false
+        return 0
       }
 
       strings.set(key, {
         ...entry,
         expiresAtMs: nowMs() + seconds * 1000,
       })
-      return true
+      return 1
     },
     async ttl(key: string) {
       purgeExpired(key)
@@ -153,9 +165,7 @@ export const createInMemoryRedisClient = (): FinanceOsRedisClient => {
     },
     async del(key: string) {
       const removed =
-        (strings.delete(key) ? 1 : 0) +
-        (hashes.delete(key) ? 1 : 0) +
-        (lists.delete(key) ? 1 : 0)
+        (strings.delete(key) ? 1 : 0) + (hashes.delete(key) ? 1 : 0) + (lists.delete(key) ? 1 : 0)
       return removed
     },
     async mGet(keys: string[]) {

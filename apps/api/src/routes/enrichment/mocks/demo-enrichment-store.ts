@@ -26,10 +26,14 @@ let rowId = 10
 const store = new Map<string, DemoRow>(seedRows.map(row => [row.itemKey, row]))
 
 export const listDemoEnrichmentNotes = (itemKeys: string[]) => {
-  return itemKeys.map(itemKey => store.get(itemKey)).filter((row): row is DemoRow => row !== undefined)
+  return itemKeys
+    .map(itemKey => store.get(itemKey))
+    .filter((row): row is DemoRow => row !== undefined)
 }
 
-export const applyDemoEnrichmentOperation = (input: EnrichmentOperationInput): EnrichmentOperationResult => {
+export const applyDemoEnrichmentOperation = (
+  input: EnrichmentOperationInput
+): EnrichmentOperationResult => {
   const existing = store.get(input.itemKey)
   const now = new Date('2026-01-01T00:00:00.000Z')
 

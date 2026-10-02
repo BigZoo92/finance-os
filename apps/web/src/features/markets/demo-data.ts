@@ -263,7 +263,7 @@ export const getDemoMarketsOverview = (): DashboardMarketsOverviewResponse => {
         {
           id: 'rates-high',
           title: 'Les taux courts restent élevés',
-          detail: "Le coût du capital reste contraignant pour les actifs longs.",
+          detail: 'Le coût du capital reste contraignant pour les actifs longs.',
           tone: 'risk',
           severity: 'high',
           evidence: ['Fed funds: 4,50 %'],
@@ -287,9 +287,24 @@ export const getDemoMarketsOverview = (): DashboardMarketsOverviewResponse => {
         instrumentCount: 3,
         macroSeriesCount: 3,
         providers: [
-          { provider: 'eodhd', role: 'prices', coverageCount: 3, freshnessLabel: 'EODHD: fixture EOD' },
-          { provider: 'twelve_data', role: 'overlay', coverageCount: 2, freshnessLabel: 'Twelve Data: overlay US actif' },
-          { provider: 'fred', role: 'macro', coverageCount: 3, freshnessLabel: 'FRED: séries officielles' },
+          {
+            provider: 'eodhd',
+            role: 'prices',
+            coverageCount: 3,
+            freshnessLabel: 'EODHD: fixture EOD',
+          },
+          {
+            provider: 'twelve_data',
+            role: 'overlay',
+            coverageCount: 2,
+            freshnessLabel: 'Twelve Data: overlay US actif',
+          },
+          {
+            provider: 'fred',
+            role: 'macro',
+            coverageCount: 3,
+            freshnessLabel: 'FRED: séries officielles',
+          },
         ],
       },
       quoteFreshness: {
@@ -340,9 +355,27 @@ export const getDemoMarketsOverview = (): DashboardMarketsOverviewResponse => {
         { instrumentId: 'spy-us', label: 'S&P 500', summary: 'Variation jour +0,96 %.' },
       ],
       providerProvenance: [
-        { provider: 'eodhd', label: 'EODHD', role: 'prices', freshnessLabel: 'EODHD: fixture EOD', note: 'Source primaire EOD / différée sur la watchlist globale.' },
-        { provider: 'twelve_data', label: 'Twelve Data', role: 'overlay', freshnessLabel: 'Twelve Data: overlay US actif', note: 'Overlay US optionnel lorsque plus frais.' },
-        { provider: 'fred', label: 'FRED', role: 'macro', freshnessLabel: 'FRED: séries officielles', note: 'Source macro officielle.' },
+        {
+          provider: 'eodhd',
+          label: 'EODHD',
+          role: 'prices',
+          freshnessLabel: 'EODHD: fixture EOD',
+          note: 'Source primaire EOD / différée sur la watchlist globale.',
+        },
+        {
+          provider: 'twelve_data',
+          label: 'Twelve Data',
+          role: 'overlay',
+          freshnessLabel: 'Twelve Data: overlay US actif',
+          note: 'Overlay US optionnel lorsque plus frais.',
+        },
+        {
+          provider: 'fred',
+          label: 'FRED',
+          role: 'macro',
+          freshnessLabel: 'FRED: séries officielles',
+          note: 'Source macro officielle.',
+        },
       ],
       confidence: {
         level: 'high',

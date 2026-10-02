@@ -1,83 +1,175 @@
-import type * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { Slot } from "radix-ui"
+import { cva, type RecipeVariantProps } from '@finance-os/styled-system/css'
+import { type HTMLStyledProps, styled } from '@finance-os/styled-system/jsx'
+import { Slot } from 'radix-ui'
 
-import { cn } from "@finance-os/ui/lib/utils"
-
-const buttonVariants = cva(
+const buttonRecipe = cva({
   // Shared control geometry, interaction, and keyboard focus treatment.
-  [
-    "group/btn relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium select-none cursor-pointer",
-    "transition-[transform,box-shadow,background,color,border-color] duration-150 ease-out",
-    "disabled:pointer-events-none disabled:opacity-40",
-    "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
-    "outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    "active:scale-[0.97]",
-  ].join(" "),
-  {
-    variants: {
-      variant: {
-        default: [
-          // Signal-orange primary action.
-          "bg-primary text-primary-foreground",
-          "shadow-[0_1px_2px_oklch(0_0_0/18%),inset_0_1px_0_oklch(1_0_0/18%)]",
-          "hover:shadow-[0_6px_18px_-4px_oklch(from_var(--primary)_l_c_h/45%),inset_0_1px_0_oklch(1_0_0/22%)]",
-          "hover:brightness-[1.06]",
-        ].join(" "),
-        destructive:
-          "bg-destructive text-white shadow-[0_1px_2px_oklch(0_0_0/16%)] hover:brightness-[1.06] focus-visible:ring-destructive/50",
-        outline:
-          "border border-border bg-transparent shadow-xs hover:bg-accent/60 hover:border-primary/30 hover:text-primary hover:shadow-sm",
-        soft:
-          // Quiet brand-tinted secondary action.
-          "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 hover:border-primary/30",
-        secondary:
-          "bg-secondary text-secondary-foreground border border-border/40 hover:bg-secondary/70 hover:shadow-xs",
-        ghost:
-          "hover:bg-accent/50 hover:text-foreground text-muted-foreground",
-        link:
-          "text-primary underline-offset-4 hover:underline active:scale-100",
+  base: {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '2',
+    whiteSpace: 'nowrap',
+    rounded: 'lg',
+    fontWeight: 'medium',
+    userSelect: 'none',
+    cursor: 'pointer',
+    flexShrink: '0',
+    transitionProperty: 'transform, box-shadow, background, color, border-color',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'out',
+    outline: 'none',
+    '& svg': { pointerEvents: 'none', flexShrink: '0' },
+    '& svg:not([class*="size-"])': { boxSize: '4' },
+    _disabled: { pointerEvents: 'none', opacity: '0.4' },
+    _focusVisible: {
+      boxShadow:
+        '0 0 0 2px {colors.background}, 0 0 0 4px color-mix(in srgb, {colors.ring} 70%, transparent)',
+    },
+    _active: { scale: '0.97' },
+  },
+  variants: {
+    variant: {
+      default: {
+        // Signal-orange primary action.
+        bg: 'primary',
+        color: 'primary.foreground',
+        boxShadow: '0 1px 2px oklch(0 0 0 / 18%), inset 0 1px 0 oklch(1 0 0 / 18%)',
+        _hover: {
+          boxShadow:
+            '0 6px 18px -4px oklch(from {colors.primary} l c h / 45%), inset 0 1px 0 oklch(1 0 0 / 22%)',
+          filter: 'brightness(1.06)',
+        },
       },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 text-xs",
-        lg: "h-11 rounded-xl px-6 has-[>svg]:px-4 text-[15px]",
-        xl: "h-12 rounded-xl px-7 has-[>svg]:px-5 text-[15px] font-semibold",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+      destructive: {
+        bg: 'destructive',
+        color: 'white',
+        boxShadow: '0 1px 2px oklch(0 0 0 / 16%)',
+        _hover: { filter: 'brightness(1.06)' },
+        _focusVisible: {
+          boxShadow:
+            '0 0 0 2px {colors.background}, 0 0 0 4px color-mix(in srgb, {colors.destructive} 50%, transparent)',
+        },
+      },
+      outline: {
+        borderWidth: '1px',
+        borderColor: 'border',
+        bg: 'transparent',
+        shadow: 'xs',
+        _hover: { bg: 'accent/60', borderColor: 'primary/30', color: 'primary', shadow: 'sm' },
+      },
+      soft: {
+        // Quiet brand-tinted secondary action.
+        bg: 'primary/10',
+        color: 'primary',
+        borderWidth: '1px',
+        borderColor: 'primary/20',
+        _hover: { bg: 'primary/15', borderColor: 'primary/30' },
+      },
+      secondary: {
+        bg: 'secondary',
+        color: 'secondary.foreground',
+        borderWidth: '1px',
+        borderColor: 'border/40',
+        _hover: { bg: 'secondary/70', shadow: 'xs' },
+      },
+      ghost: {
+        color: 'muted.foreground',
+        _hover: { bg: 'accent/50', color: 'foreground' },
+      },
+      link: {
+        color: 'primary',
+        textUnderlineOffset: '4px',
+        _hover: { textDecorationLine: 'underline' },
+        _active: { scale: '1' },
       },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    // Typography lives on the size: the former `text-sm` base was replaced (not
+    // combined) by each size's own `text-*` class, so `lg`/`xl` keep the inherited
+    // line height and the small sizes use the `xs` metrics.
+    size: {
+      default: { h: '9', px: '4', py: '2', textStyle: 'sm', '&:has(> svg)': { px: '3' } },
+      xs: {
+        h: '6',
+        gap: '1',
+        rounded: 'md',
+        px: '2',
+        textStyle: 'xs',
+        '&:has(> svg)': { px: '1.5' },
+        '& svg:not([class*="size-"])': { boxSize: '3' },
+      },
+      sm: {
+        h: '8',
+        rounded: 'md',
+        gap: '1.5',
+        px: '3',
+        textStyle: 'xs',
+        '&:has(> svg)': { px: '2.5' },
+      },
+      lg: {
+        h: '11',
+        rounded: 'xl',
+        px: '6',
+        fontSize: '15px',
+        lineHeight: 'inherit',
+        '&:has(> svg)': { px: '4' },
+      },
+      xl: {
+        h: '12',
+        rounded: 'xl',
+        px: '7',
+        fontSize: '15px',
+        lineHeight: 'inherit',
+        fontWeight: 'semibold',
+        '&:has(> svg)': { px: '5' },
+      },
+      icon: { boxSize: '9', textStyle: 'sm' },
+      'icon-xs': {
+        boxSize: '6',
+        rounded: 'md',
+        textStyle: 'sm',
+        '& svg:not([class*="size-"])': { boxSize: '3' },
+      },
+      'icon-sm': { boxSize: '8', textStyle: 'sm' },
+      'icon-lg': { boxSize: '10', textStyle: 'sm' },
     },
-  }
-)
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default',
+  },
+})
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot.Root : "button"
+type ButtonVariantProps = NonNullable<RecipeVariantProps<typeof buttonRecipe>>
+type ButtonVariant = ButtonVariantProps['variant']
+type ButtonSize = ButtonVariantProps['size']
+
+type ButtonProps = HTMLStyledProps<'button'> & {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  asChild?: boolean
+}
+
+const StyledButton = styled('button', buttonRecipe)
+const StyledSlotButton = styled(Slot.Root, buttonRecipe)
+
+function Button({ variant = 'default', size = 'default', asChild = false, ...props }: ButtonProps) {
+  const Comp = asChild ? StyledSlotButton : StyledButton
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      variant={variant}
+      size={size}
       {...props}
     />
   )
 }
 
-export { Button, buttonVariants }
+/** Class-string form of the button recipe, for non-JSX call sites. */
+const buttonVariants = buttonRecipe
+
+export { Button, type ButtonProps, type ButtonSize, type ButtonVariant, buttonVariants }

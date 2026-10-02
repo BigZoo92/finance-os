@@ -39,7 +39,10 @@ const sessionCookie = readArg('--session-cookie', process.env.SMOKE_SESSION_COOK
 const summaryRange = (readArg('--summary-range', process.env.SMOKE_SUMMARY_RANGE ?? '30d') || '30d')
   .trim()
   .toLowerCase()
-const expectedReleaseTag = readArg('--expected-release-tag', process.env.SMOKE_EXPECTED_RELEASE_TAG ?? '').trim()
+const expectedReleaseTag = readArg(
+  '--expected-release-tag',
+  process.env.SMOKE_EXPECTED_RELEASE_TAG ?? ''
+).trim()
 const results = []
 
 const VALID_AUTH_MODES = new Set(['demo', 'admin', 'auto'])
@@ -412,11 +415,19 @@ const assertSummaryPayload = ({ rawBody, expectedMode, expectedRange }) => {
     return 'dashboard summary payload missing totals'
   }
 
-  if (!isNumber(parsed.totals.balance) || !isNumber(parsed.totals.incomes) || !isNumber(parsed.totals.expenses)) {
+  if (
+    !isNumber(parsed.totals.balance) ||
+    !isNumber(parsed.totals.incomes) ||
+    !isNumber(parsed.totals.expenses)
+  ) {
     return 'dashboard summary totals must be finite numbers'
   }
 
-  if (!Array.isArray(parsed.connections) || !Array.isArray(parsed.accounts) || !Array.isArray(parsed.topExpenseGroups)) {
+  if (
+    !Array.isArray(parsed.connections) ||
+    !Array.isArray(parsed.accounts) ||
+    !Array.isArray(parsed.topExpenseGroups)
+  ) {
     return 'dashboard summary payload missing array sections'
   }
 
@@ -466,7 +477,9 @@ const assertSummaryPayload = ({ rawBody, expectedMode, expectedRange }) => {
   }
 
   if (expectedMode === 'demo') {
-    const connectionIds = new Set(parsed.connections.map(connection => connection.powensConnectionId))
+    const connectionIds = new Set(
+      parsed.connections.map(connection => connection.powensConnectionId)
+    )
     const accountIds = new Set(parsed.accounts.map(account => account.powensAccountId))
 
     for (const expectedId of DEMO_CONNECTION_IDS) {
@@ -518,7 +531,9 @@ const assertPowensStatusPayload = ({ rawBody, expectedMode }) => {
   }
 
   if (expectedMode === 'demo') {
-    const connectionIds = new Set(parsed.connections.map(connection => connection.powensConnectionId))
+    const connectionIds = new Set(
+      parsed.connections.map(connection => connection.powensConnectionId)
+    )
     for (const expectedId of DEMO_CONNECTION_IDS) {
       if (!connectionIds.has(expectedId)) {
         return `demo powens status missing connection ${expectedId}`
@@ -546,7 +561,9 @@ const finalize = async () => {
     return
   }
 
-  console.error(`Smoke prod checks failed (${failed.length}/${total}) in ${authContext.resolvedMode} mode.`)
+  console.error(
+    `Smoke prod checks failed (${failed.length}/${total}) in ${authContext.resolvedMode} mode.`
+  )
   for (const failure of failed) {
     const detail = `${failure.name} returned ${failure.status} (expected ${failure.expectedStatuses.join(', ')})${failure.assertMessage ? `; ${failure.assertMessage}` : ''}`
     console.error(`- ${detail}`)
@@ -622,7 +639,8 @@ const main = async () => {
     path: '/auth/me',
     expectedStatuses: [200],
     headers: withAuthHeaders(),
-    assert: ({ rawBody }) => assertAuthMePayload({ rawBody, expectedMode: authContext.resolvedMode }),
+    assert: ({ rawBody }) =>
+      assertAuthMePayload({ rawBody, expectedMode: authContext.resolvedMode }),
   })
 
   await runCheck({
@@ -630,7 +648,8 @@ const main = async () => {
     path: '/api/auth/me',
     expectedStatuses: [200],
     headers: withAuthHeaders(),
-    assert: ({ rawBody }) => assertAuthMePayload({ rawBody, expectedMode: authContext.resolvedMode }),
+    assert: ({ rawBody }) =>
+      assertAuthMePayload({ rawBody, expectedMode: authContext.resolvedMode }),
   })
 
   await runCheck({

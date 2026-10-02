@@ -1,3 +1,4 @@
+import { css, cva } from '@finance-os/styled-system/css'
 import { Button } from '@finance-os/ui/components'
 import { ChevronUpPixelIcon } from '@finance-os/ui/icons/pixel'
 import { forwardRef, type KeyboardEvent } from 'react'
@@ -6,6 +7,67 @@ export type AdvisorChatSendNotice = {
   tone: 'neutral' | 'warning'
   message: string
 }
+
+const visuallyHidden = css({ srOnly: true })
+
+const composerShell = css({
+  position: 'sticky',
+  bottom: '0',
+  zIndex: '10',
+  flexShrink: '0',
+  borderTopWidth: '1px',
+  borderColor: 'border/55',
+  bg: 'background/95',
+  px: '1',
+  pb: '1',
+  pt: '3',
+  backdropFilter: 'blur(8px)',
+  sm: { px: '4', pb: '2' },
+})
+
+// While the textarea has focus, the 2px ring sits above the resting `sm` shadow.
+const composerForm = css({
+  display: 'flex',
+  alignItems: 'flex-end',
+  gap: '2',
+  rounded: 'xl',
+  borderWidth: '1px',
+  borderColor: 'border/70',
+  bg: 'card/50',
+  p: '2',
+  shadow: 'sm',
+  _focusWithin: {
+    borderColor: 'primary/45',
+    boxShadow: '0 0 0 2px color-mix(in srgb, {colors.primary} 10%, transparent), {shadows.sm}',
+  },
+})
+
+const composerTextarea = css({
+  maxH: '36',
+  minH: '10',
+  flex: '1',
+  resize: 'none',
+  bg: 'transparent',
+  px: '2',
+  py: '2.5',
+  textStyle: 'sm',
+  lineHeight: '1.25rem',
+  color: 'foreground',
+  outlineStyle: 'none',
+  _placeholder: { color: 'muted.foreground/65' },
+  _disabled: { cursor: 'not-allowed', opacity: '0.55' },
+})
+
+const sendStatus = cva({
+  base: { minH: '5', px: '1', pt: '1', textStyle: 'xs' },
+  variants: {
+    tone: {
+      neutral: { color: 'muted.foreground' },
+      warning: { color: 'warning' },
+    },
+  },
+  defaultVariants: { tone: 'neutral' },
+})
 
 export const AdvisorChatComposer = forwardRef<
   HTMLTextAreaElement,
@@ -31,15 +93,15 @@ export const AdvisorChatComposer = forwardRef<
   }
 
   return (
-    <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/55 bg-background/95 px-1 pb-1 pt-3 backdrop-blur sm:px-4 sm:pb-2">
+    <div className={composerShell}>
       <form
         onSubmit={event => {
           event.preventDefault()
           onSend()
         }}
-        className="flex items-end gap-2 rounded-xl border border-border/70 bg-card/50 p-2 shadow-sm focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-primary/10"
+        className={composerForm}
       >
-        <label htmlFor="advisor-chat-composer" className="sr-only">
+        <label htmlFor="advisor-chat-composer" className={visuallyHidden}>
           Écrire à Finance-OS
         </label>
         <textarea
@@ -54,7 +116,7 @@ export const AdvisorChatComposer = forwardRef<
           }
           placeholder="Écrire à Finance-OS"
           disabled={!canSend || sending}
-          className="max-h-36 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground/65 disabled:cursor-not-allowed disabled:opacity-55"
+          className={composerTextarea}
         />
         <Button
           type="submit"
@@ -62,20 +124,19 @@ export const AdvisorChatComposer = forwardRef<
           variant="soft"
           disabled={!canSend || sending || !value.trim()}
           aria-label={sending ? 'Envoi en cours' : 'Envoyer le message'}
-          className="size-11 shrink-0"
+          boxSize="11"
+          flexShrink="0"
         >
           <ChevronUpPixelIcon size={15} aria-hidden="true" />
         </Button>
       </form>
-      <p id="advisor-chat-composer-hint" className="sr-only">
+      <p id="advisor-chat-composer-hint" className={visuallyHidden}>
         {composerHint}
       </p>
       <p
         id="advisor-chat-send-status"
         aria-live="polite"
-        className={`min-h-5 px-1 pt-1 text-xs ${
-          notice?.tone === 'warning' ? 'text-warning' : 'text-muted-foreground'
-        }`}
+        className={sendStatus({ tone: notice?.tone === 'warning' ? 'warning' : 'neutral' })}
       >
         {statusMessage}
       </p>

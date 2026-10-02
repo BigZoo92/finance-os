@@ -47,7 +47,11 @@ export const selectDashboardNewsDataset = async ({
   }
 
   if (shouldForceAdminFixtureFallback()) {
-    const fallbackPayload = withDatasetSource(getDashboardNewsFixture(requestId), 'admin_fallback', 'admin')
+    const fallbackPayload = withDatasetSource(
+      getDashboardNewsFixture(requestId),
+      'admin_fallback',
+      'admin'
+    )
     logApiEvent({
       level: 'warn',
       msg: 'dashboard dataset selected via kill-switch fallback',
@@ -74,7 +78,11 @@ export const selectDashboardNewsDataset = async ({
     })
     return livePayload
   } catch (error) {
-    const fallbackPayload = withDatasetSource(getDashboardNewsFixture(requestId), 'admin_fallback', 'admin')
+    const fallbackPayload = withDatasetSource(
+      getDashboardNewsFixture(requestId),
+      'admin_fallback',
+      'admin'
+    )
     logApiEvent({
       level: 'warn',
       msg: 'dashboard dataset selected via admin fallback',

@@ -1,6 +1,6 @@
+import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { stdin as input, stdout as output } from 'node:process'
 import { createInterface } from 'node:readline/promises'
-import { pbkdf2Sync, randomBytes } from 'node:crypto'
 
 const PASSWORD_MISSING_MESSAGE = [
   'No password provided.',
@@ -58,7 +58,13 @@ const PBKDF2_ALGORITHM = 'sha256'
 
 export const generatePasswordHash = async (password: string) => {
   const salt = randomBytes(16)
-  const derivedKey = pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH, PBKDF2_ALGORITHM)
+  const derivedKey = pbkdf2Sync(
+    password,
+    salt,
+    PBKDF2_ITERATIONS,
+    PBKDF2_KEY_LENGTH,
+    PBKDF2_ALGORITHM
+  )
   return `pbkdf2$${PBKDF2_ALGORITHM}$${PBKDF2_ITERATIONS}$${salt.toString('base64url')}$${derivedKey.toString('base64url')}`
 }
 

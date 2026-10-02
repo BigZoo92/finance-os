@@ -40,8 +40,12 @@ export const createEcbDataNewsProvider = ({
         continue
       }
 
-      const latestValue = toNumberOrNull(typeof latest.OBS_VALUE === 'string' ? latest.OBS_VALUE : null)
-      const previousValue = toNumberOrNull(typeof previous?.OBS_VALUE === 'string' ? previous.OBS_VALUE : null)
+      const latestValue = toNumberOrNull(
+        typeof latest.OBS_VALUE === 'string' ? latest.OBS_VALUE : null
+      )
+      const previousValue = toNumberOrNull(
+        typeof previous?.OBS_VALUE === 'string' ? previous.OBS_VALUE : null
+      )
       const delta =
         latestValue !== null && previousValue !== null ? latestValue - previousValue : null
       const title =
@@ -67,7 +71,8 @@ export const createEcbDataNewsProvider = ({
         sourceType: 'macro_data' as const,
         title: `${title} update`,
         summary,
-        contentSnippet: delta === null ? null : `Delta versus prior observation: ${delta.toFixed(4)}.`,
+        contentSnippet:
+          delta === null ? null : `Delta versus prior observation: ${delta.toFixed(4)}.`,
         language: 'en',
         country: 'EU',
         region: 'europe',

@@ -4,10 +4,7 @@ import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
 import { getDashboardRuntime } from '../context'
-import {
-  dashboardManualAssetBodySchema,
-  dashboardManualAssetParamsSchema,
-} from '../schemas'
+import { dashboardManualAssetBodySchema, dashboardManualAssetParamsSchema } from '../schemas'
 import type { DashboardManualAssetResponse } from '../types'
 
 const toDemoManualAssets = () => {
@@ -28,7 +25,9 @@ const toDemoManualAssets = () => {
             valuationAsOf: asset.valuationAsOf,
             enabled: asset.enabled,
             note:
-              asset.metadata && typeof asset.metadata.note === 'string' ? asset.metadata.note : null,
+              asset.metadata && typeof asset.metadata.note === 'string'
+                ? asset.metadata.note
+                : null,
             category:
               asset.metadata && typeof asset.metadata.category === 'string'
                 ? asset.metadata.category

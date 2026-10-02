@@ -1,40 +1,36 @@
 {
   "name": "@finance-os/ui",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
-    "./styles.css": "./src/styles/globals.css",
-    "./lib/utils": "./src/lib/utils.ts",
+    "./styles.css": "./src/styles/preflight.css",
     "./lib/format": "./src/lib/format.ts",
+    "./lib/style-props": "./src/lib/style-props.ts",
+    "./lib/typography": "./src/lib/typography.ts",
     "./components": "./src/components/index.ts",
     "./components/*": "./src/components/*",
     "./icons/types": "./src/icons/types.ts",
     "./icons/pixel": "./src/icons/pixel/index.ts",
     "./icons/pixel/*": "./src/icons/pixel/*.tsx"
   },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "radix-ui": "^1.4.3",
-    "shadcn": "^3.8.5",
-    "tailwind-merge": "^3.5.0",
-    "tailwindcss": "^4.1.18",
-    "tw-animate-css": "^1.4.0"
+    "@finance-os/styled-system": "workspace:*",
+    "radix-ui": "1.6.7"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "vitest": "^3.0.5"
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vitest": "5.0.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

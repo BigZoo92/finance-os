@@ -1,5 +1,5 @@
-import { createFxConverter, type FxConverter } from './fx'
 import { resolveStaleAfterSeconds } from './freshness'
+import { createFxConverter, type FxConverter } from './fx'
 import { resolveAssetIdentity } from './resolve-asset-identity'
 import type {
   FxRateInput,
@@ -60,7 +60,11 @@ const computePnl = ({
   item: ValuationItemInput
   valueBase: number | null
   fx: FxConverter
-}): { costBasisBase: number | null; unrealizedPnlBase: number | null; unrealizedPnlPercent: number | null } => {
+}): {
+  costBasisBase: number | null
+  unrealizedPnlBase: number | null
+  unrealizedPnlPercent: number | null
+} => {
   const empty = { costBasisBase: null, unrealizedPnlBase: null, unrealizedPnlPercent: null }
 
   if (

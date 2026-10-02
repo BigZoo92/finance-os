@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getDemoDashboardSummary } from './demo-data'
 import { buildCockpitViewModel } from './cockpit-view-model'
+import { getDemoDashboardSummary } from './demo-data'
 
 describe('buildCockpitViewModel', () => {
   it('prefers the canonical valuation total over the legacy aggregate', () => {

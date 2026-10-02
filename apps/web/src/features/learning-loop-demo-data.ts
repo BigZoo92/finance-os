@@ -69,25 +69,25 @@ export const getDemoAdvisorPostMortems = (): DashboardAdvisorPostMortemListRespo
         evidenceReview: {
           supportedSignals: ["L'allocation de cash s'est rapprochée de la cible"],
           contradictedSignals: [],
-          missingEvidence: ["Aucun contre-factuel sur les allocations alternatives"],
+          missingEvidence: ['Aucun contre-factuel sur les allocations alternatives'],
           staleOrWeakEvidence: [],
         },
         outcomeDrivers: {
           likelyDrivers: ["Discipline d'allocation"],
-          alternativeExplanations: ["Vent porteur macro indépendant de la recommandation"],
-          unknowns: ["Flux nets venant de comptes non suivis"],
+          alternativeExplanations: ['Vent porteur macro indépendant de la recommandation'],
+          unknowns: ['Flux nets venant de comptes non suivis'],
         },
         lessons: {
-          keep: ["Faire ressortir explicitement les bandes de dérive"],
-          change: ["Plafonner la confiance lorsque les preuves corroborantes sont minces"],
-          avoid: ["Traiter une coïncidence macro comme une causalité"],
+          keep: ['Faire ressortir explicitement les bandes de dérive'],
+          change: ['Plafonner la confiance lorsque les preuves corroborantes sont minces'],
+          avoid: ['Traiter une coïncidence macro comme une causalité'],
         },
       },
       calibration: {
         previousConfidence: 'high',
         calibratedConfidence: 'medium',
         rationale:
-          "Les preuves hors-échantillon étaient plus minces que ce que la note initiale suggérait.",
+          'Les preuves hors-échantillon étaient plus minces que ce que la note initiale suggérait.',
       },
       learningActions: [
         {

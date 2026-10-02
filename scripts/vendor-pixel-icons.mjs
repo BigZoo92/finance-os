@@ -109,7 +109,7 @@ const toJsxChildren = svg => {
   }
 
   // Each element is stripped of authoring attributes and normalised to `<tag ... />`,
-  // so the emitted JSX already matches Biome's formatting.
+  // so the emitted JSX already matches the repository formatting (oxfmt).
   return elements
     .map(element => element.replace(/\s(?:id|data-name)="[^"]*"/g, ''))
     .map(element => element.replace(/\s*\/?>$/, ' />'))

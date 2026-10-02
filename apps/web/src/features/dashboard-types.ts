@@ -1,196 +1,48 @@
 import type { AiRunStatus } from '@finance-os/ai/run-status'
+import type { DashboardRange } from '@finance-os/api-contract/dashboard'
+import type {
+  InvestmentAccountPolicy,
+  InvestmentAccountType,
+  InvestmentAction,
+  InvestmentActionableStep,
+  InvestmentAllocationSnapshot,
+  InvestmentAssetCandidate,
+  InvestmentBucketKey,
+  InvestmentDataQuality,
+  InvestmentDrift,
+  InvestmentPriceability,
+  InvestmentPriceFreshness,
+  InvestmentRecommendabilityStatus,
+  InvestmentRecommendationMode,
+  InvestmentRecommendationTier,
+  InvestmentRiskLevel,
+  InvestmentStrategyBucket,
+  InvestmentStrategyProfile,
+  InvestmentUserIntent,
+  InvestmentUserInterestLevel,
+} from '@finance-os/api-contract/investments'
 
-export type DashboardRange = '7d' | '30d' | '90d'
-
-export type DashboardValuationStatus =
-  | 'priced'
-  | 'derived'
-  | 'estimated'
-  | 'manual'
-  | 'stale'
-  | 'unresolved'
-  | 'unavailable'
-
-export type DashboardSummaryValuation = {
-  baseCurrency: 'EUR'
-  /** Canonical EUR total. Null means unknown — never render as 0. */
-  totalValueBase: number | null
-  coveragePercent: number | null
-  statusCounts: Record<DashboardValuationStatus, number>
-  unknownValueCount: number
-  totalUnrealizedPnlBase: number | null
-  pnlCoverageCount: number
-  asOf: string
+export type {
+  DashboardManualAssetResponse,
+  DashboardManualAssetsResponse,
+  DashboardRange,
+  DashboardSummaryResponse,
+  DashboardSummaryValuation,
+  DashboardTransactionsResponse,
+  DashboardValuationStatus,
+} from '@finance-os/api-contract/dashboard'
+export type {
+  InvestmentAccountType,
+  InvestmentAction,
+  InvestmentBucketKey,
+  InvestmentPriceability,
+  InvestmentRecommendabilityStatus,
+  InvestmentRecommendationMode,
+  InvestmentRecommendationTier,
+  InvestmentRiskLevel,
+  InvestmentUserIntent,
+  InvestmentUserInterestLevel,
 }
-
-export type DashboardSummaryResponse = {
-  range: DashboardRange
-  totals: {
-    /** Legacy naive sum (native currencies, no FX). Prefer valuation.totalValueBase. */
-    balance: number
-    incomes: number
-    expenses: number
-  }
-  /** Canonical valuation summary; null/absent = unknown, never zero. */
-  valuation?: DashboardSummaryValuation | null
-  connections: Array<{
-    powensConnectionId: string
-    source: string
-    provider: string
-    providerConnectionId: string
-    providerInstitutionId: string | null
-    providerInstitutionName: string | null
-    status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
-    lastSyncAttemptAt: string | null
-    lastSyncAt: string | null
-    lastSuccessAt: string | null
-    lastFailedAt: string | null
-    lastError: string | null
-    syncMetadata: Record<string, unknown> | null
-    balance: number
-    accountCount: number
-  }>
-  accounts: Array<{
-    powensAccountId: string
-    powensConnectionId: string
-    name: string
-    currency: string
-    type: string | null
-    enabled: boolean
-    balance: number
-  }>
-  assets: Array<{
-    assetId: number
-    type: 'cash' | 'investment' | 'manual'
-    origin: 'provider' | 'manual'
-    source: string
-    provider: string | null
-    providerConnectionId: string | null
-    providerInstitutionName: string | null
-    powensConnectionId: string | null
-    powensAccountId: string | null
-    name: string
-    currency: string
-    valuation: number
-    valuationAsOf: string | null
-    valueBase?: number | null
-    valuationStatus?: DashboardValuationStatus | null
-    enabled: boolean
-    metadata: Record<string, unknown> | null
-  }>
-  positions: Array<{
-    positionId: number
-    positionKey: string
-    assetId: number | null
-    powensAccountId: string | null
-    powensConnectionId: string | null
-    source: string
-    provider: string | null
-    providerConnectionId: string | null
-    providerPositionId: string | null
-    assetName: string | null
-    accountName: string | null
-    name: string
-    currency: string
-    quantity: number | null
-    costBasis: number | null
-    costBasisSource: 'minimal' | 'provider' | 'manual' | 'unknown'
-    currentValue: number | null
-    lastKnownValue: number | null
-    openedAt: string | null
-    closedAt: string | null
-    valuedAt: string | null
-    lastSyncedAt: string | null
-    valueBase?: number | null
-    valuationStatus?: DashboardValuationStatus | null
-    enabled: boolean
-    metadata: Record<string, unknown> | null
-  }>
-  dailyWealthSnapshots: Array<{
-    date: string
-    balance: number
-  }>
-  topExpenseGroups: Array<{
-    label: string
-    category: string
-    merchant: string
-    total: number
-    count: number
-  }>
-}
-
-export type DashboardTransactionsResponse = {
-  schemaVersion: '2026-04-04' | '2026-04-05'
-  range: DashboardRange
-  limit: number
-  nextCursor: string | null
-  demoFixture?: {
-    mode: 'demo' | 'admin'
-    datasetVersion: string | null
-    fixtureSeed: string | null
-    scenario: string | null
-    degradedFallback: boolean
-    degradedReason: string | null
-    personaProfile: string | null
-    personaId: 'student' | 'freelancer' | 'family' | 'retiree' | null
-    personaVariation: 0 | 1 | 2 | null
-    overrideReason: 'manual_scenario_override' | 'persona_match' | 'kill_switch_disabled' | null
-    fallbackCause: string | null
-  }
-  freshness: {
-    strategy: 'snapshot-first'
-    lastSyncedAt: string | null
-    syncStatus:
-      | 'fresh'
-      | 'stale-but-usable'
-      | 'syncing'
-      | 'sync-failed-with-safe-data'
-      | 'no-data-first-connect'
-    degradedReason: string | null
-    snapshotAgeSeconds: number | null
-    refreshRequested: boolean
-  }
-  items: Array<{
-    id: number
-    bookingDate: string
-    amount: number
-    currency: string
-    direction: 'income' | 'expense'
-    label: string
-    category: string | null
-    subcategory: string | null
-    resolvedCategory: string | null
-    resolutionSource:
-      | 'manual_override'
-      | 'user_rule'
-      | 'merchant_rules'
-      | 'mcc'
-      | 'counterparty'
-      | 'fallback'
-    resolutionRuleId: string | null
-    resolutionTrace: Array<{
-      source:
-        | 'manual_override'
-        | 'user_rule'
-        | 'merchant_rules'
-        | 'mcc'
-        | 'counterparty'
-        | 'fallback'
-      rank: number
-      matched: boolean
-      reason: string
-      category: string | null
-      subcategory: string | null
-      ruleId: string | null
-    }>
-    incomeType: 'salary' | 'recurring' | 'exceptional' | null
-    tags: string[]
-    powensConnectionId: string
-    powensAccountId: string
-    accountName: string | null
-  }>
-}
-
 
 export type DashboardAdvisorResponse = {
   mode: 'demo' | 'admin'
@@ -305,7 +157,17 @@ export type DashboardNewsSignalCard = {
   canonicalUrl: string | null
   sourceName: string
   sourceDomain: string | null
-  sourceType: 'media' | 'regulator' | 'central_bank' | 'filing' | 'macro_data' | 'company' | 'gov' | 'industry' | 'blog' | 'tech_forum'
+  sourceType:
+    | 'media'
+    | 'regulator'
+    | 'central_bank'
+    | 'filing'
+    | 'macro_data'
+    | 'company'
+    | 'gov'
+    | 'industry'
+    | 'blog'
+    | 'tech_forum'
   topic: string
   language: string
   publishedAt: string
@@ -916,7 +778,13 @@ export type DashboardAdvisorSignalsResponse = {
     excluded: Array<{
       signalKey: string
       handle: string
-      exclusionReason: 'budget_cap' | 'signal_cap' | 'stale' | 'low_score' | 'policy_off' | 'toggle_off'
+      exclusionReason:
+        | 'budget_cap'
+        | 'signal_cap'
+        | 'stale'
+        | 'low_score'
+        | 'policy_off'
+        | 'toggle_off'
     }>
     exclusionSummary: Record<string, number>
     decisionLedger: {
@@ -940,61 +808,15 @@ export type DashboardAdvisorSignalsResponse = {
   }
 }
 
-export type InvestmentBucketKey = 'core' | 'growth' | 'asymmetric'
-export type InvestmentRiskLevel = 'low' | 'medium' | 'high' | 'very_high'
-export type InvestmentAccountType = 'pea' | 'brokerage' | 'crypto' | 'cash' | 'unknown'
-export type InvestmentPriceability = 'priceable' | 'stale' | 'missing' | 'unsupported'
-export type InvestmentRecommendabilityStatus =
-  | 'recommendable'
-  | 'watch_only'
-  | 'blocked_missing_price'
-  | 'blocked_stale_price'
-  | 'blocked_ineligible_account'
-  | 'blocked_unknown_pea_eligibility'
-  | 'blocked_risk_policy'
-  | 'blocked_strategy_cap'
-  | 'rejected_by_user'
-export type InvestmentUserInterestLevel = 'none' | 'watching' | 'interested' | 'high_interest'
-export type InvestmentUserIntent = 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
-export type InvestmentRecommendationTier =
-  | 'core_candidate'
-  | 'growth_candidate'
-  | 'asymmetric_candidate'
-  | 'speculative_watch'
-  | 'user_watchlist'
-  | 'avoid'
-export type InvestmentRecommendationMode =
-  | 'action_now'
-  | 'prepare_contribution'
-  | 'watch'
-  | 'research_more'
-  | 'avoid'
-export type InvestmentAction =
-  | 'buy'
-  | 'hold'
-  | 'watch'
-  | 'avoid'
-  | 'rebalance'
-  | 'contribute_cash'
-  | 'insufficient_data'
-
-export type DashboardInvestmentStrategyProfile = {
-  id: number
-  name: string
-  version: string
-  status: 'active' | 'draft' | 'archived'
-  description: string
-  riskProfile: 'conservative' | 'balanced' | 'growth' | 'aggressive' | 'custom'
-  horizonYears: number
-  baseCurrency: string
-  monthlyContributionTarget: number | null
-  rebalanceThresholdPct: number
-  reviewFrequency: string
-  noAutoTrade: boolean
-  humanValidationRequired: boolean
-  createdAt: string
-  updatedAt: string
-}
+export type DashboardInvestmentStrategyProfile = InvestmentStrategyProfile
+export type DashboardInvestmentStrategyBucket = InvestmentStrategyBucket
+export type DashboardInvestmentAccountPolicy = InvestmentAccountPolicy
+export type DashboardInvestmentCandidate = InvestmentAssetCandidate
+export type DashboardInvestmentPriceFreshness = InvestmentPriceFreshness
+export type DashboardInvestmentDrift = InvestmentDrift
+export type DashboardInvestmentDataQuality = InvestmentDataQuality
+export type DashboardInvestmentAllocation = InvestmentAllocationSnapshot
+export type DashboardInvestmentActionableStep = InvestmentActionableStep
 
 export type DashboardInvestmentStrategyUpdateInput = {
   description?: string
@@ -1002,86 +824,6 @@ export type DashboardInvestmentStrategyUpdateInput = {
   riskProfile?: DashboardInvestmentStrategyProfile['riskProfile']
   monthlyContributionTarget?: number | null
   rebalanceThresholdPct?: number
-}
-
-export type DashboardInvestmentStrategyBucket = {
-  id: number
-  strategyId: number
-  bucketKey: InvestmentBucketKey
-  targetPct: number
-  minPct: number
-  maxPct: number
-  riskLevel: InvestmentRiskLevel
-  description: string
-  defaultHorizon: string
-  rules: Record<string, unknown>
-}
-
-export type DashboardInvestmentAccountPolicy = {
-  id: number
-  strategyId: number
-  accountId: string | null
-  provider: string
-  accountType: InvestmentAccountType
-  label: string
-  allowedBuckets: InvestmentBucketKey[]
-  preferredBucket: InvestmentBucketKey | null
-  maxAllocationPct: number
-  maxSingleAssetPct: number
-  minOrderAmount: number | null
-  tradingCurrency: string
-  taxWrapper: string | null
-  eligibilityRules: Record<string, unknown>
-  restrictedAssets: string[]
-  humanReadablePolicy: string
-  noAutoTrade: boolean
-  humanValidationRequired: boolean
-}
-
-export type DashboardInvestmentCandidate = {
-  id: number
-  symbol: string
-  name: string
-  assetClass: string
-  bucket: InvestmentBucketKey
-  accountTypesAllowed: InvestmentAccountType[]
-  providerSymbols: Record<string, string>
-  isin: string | null
-  exchange: string | null
-  currency: string
-  eligibilityStatus:
-    | 'approved'
-    | 'candidate_needs_review'
-    | 'approved_by_default_policy'
-    | 'candidate_auto_suggested'
-    | 'rejected'
-    | 'watch_only'
-    | 'unknown'
-  peaEligibilityStatus: 'eligible' | 'ineligible' | 'unknown' | 'not_applicable'
-  riskLevel: InvestmentRiskLevel
-  liquidityScore: number | null
-  notes: string | null
-  source: string
-  userInterestLevel: InvestmentUserInterestLevel
-  userIntent: InvestmentUserIntent
-  iconUrl: string | null
-  logoUrl: string | null
-}
-
-export type DashboardInvestmentPriceFreshness = {
-  provider: string | null
-  sourceType: string | null
-  marketTimestamp: string | null
-  fetchedAt: string | null
-  delaySeconds: number | null
-  ageSeconds: number | null
-  isStale: boolean
-  confidence: number
-  currency: string | null
-  price: number | null
-  staleReason: string | null
-  providerHealth: string | null
-  fallbackReason: string | null
 }
 
 export type DashboardInvestmentPlanItem = {
@@ -1129,47 +871,6 @@ export type DashboardInvestmentPlanItem = {
   score?: number
 }
 
-export type DashboardInvestmentDrift = {
-  bucket: InvestmentBucketKey
-  targetPct: number
-  actualPct: number
-  driftPct: number
-  severity: 'ok' | 'watch' | 'alert' | 'hard_limit'
-  recommendedContribution: number | null
-  recommendedAction: string
-}
-
-export type DashboardInvestmentDataQuality = {
-  status: 'ready' | 'degraded' | 'insufficient_data'
-  confidence: number
-  unknownValue: number
-  unknownPositionCount: number
-  stalePositionCount: number
-  missingPriceSymbols: string[]
-  stalePriceSymbols: string[]
-  providerWarnings: string[]
-  fxWarnings: string[]
-  graphWarnings: string[]
-}
-
-export type DashboardInvestmentAllocation = {
-  id?: number
-  strategyId: number
-  snapshotAt: string
-  baseCurrency: string
-  totalValue: number
-  coreValue: number
-  growthValue: number
-  asymmetricValue: number
-  cashValue: number
-  unknownValue: number
-  corePct: number
-  growthPct: number
-  asymmetricPct: number
-  drift: DashboardInvestmentDrift[]
-  dataQuality: DashboardInvestmentDataQuality
-}
-
 export type DashboardInvestmentActionPlan = {
   id: number | null
   strategyId: number
@@ -1194,24 +895,6 @@ export type DashboardInvestmentActionPlan = {
   actionableSteps?: DashboardInvestmentActionableStep[]
   graph?: DashboardInvestmentGraphStatus
   warnings?: string[]
-}
-
-export type DashboardInvestmentActionableStep = {
-  type:
-    | 'no_trade_today'
-    | 'allocate_contribution'
-    | 'connect_price_source'
-    | 'resolve_asset_eligibility'
-    | 'review_user_watchlist'
-    | 'do_not_reinforce_overweight_bucket'
-  priority: 'high' | 'medium' | 'low'
-  accountLabel?: string
-  bucket?: InvestmentBucketKey
-  amountValue?: number
-  amountCurrency?: string
-  message: string
-  reason: string
-  blockingReasons?: string[]
 }
 
 export type DashboardInvestmentGraphWriteSummary = {
@@ -1615,27 +1298,6 @@ export type DashboardAdvisorManualRefreshAndRunPostResponse = {
   requestId: string
   alreadyRunning: boolean
   operation: DashboardAdvisorManualOperationResponse
-}
-
-export type DashboardManualAssetResponse = {
-  assetId: number
-  type: 'cash' | 'investment' | 'manual'
-  origin: 'provider' | 'manual'
-  source: string
-  name: string
-  currency: string
-  valuation: number
-  valuationAsOf: string | null
-  enabled: boolean
-  note: string | null
-  category: string | null
-  metadata: Record<string, unknown> | null
-  createdAt: string
-  updatedAt: string
-}
-
-export type DashboardManualAssetsResponse = {
-  items: DashboardManualAssetResponse[]
 }
 
 // ----------------------------------------------------------------------------------------------

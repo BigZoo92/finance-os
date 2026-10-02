@@ -1,68 +1,10 @@
-import type { DashboardRange, DashboardSummaryResponse } from '../types'
+import type {
+  DashboardAnalyticsResponse,
+  DashboardAnalyticsWidgetState,
+} from '@finance-os/api-contract/analytics'
+import type { DashboardSummaryResponse } from '../types'
 
-export type DashboardAnalyticsWidgetState = 'loading' | 'ready' | 'empty' | 'degraded' | 'error'
-
-export interface DashboardAnalyticsResponse {
-  schemaVersion: '2026-04-06'
-  range: DashboardRange
-  source: 'demoAdapter' | 'adminAdapter'
-  generatedAt: string
-  summaryCards: {
-    netWorth: { value: number; state: DashboardAnalyticsWidgetState }
-    incomes: { value: number; state: DashboardAnalyticsWidgetState }
-    expenses: { value: number; state: DashboardAnalyticsWidgetState }
-  }
-  timeseries: {
-    points: Array<{ date: string; balance: number }>
-    state: DashboardAnalyticsWidgetState
-  }
-  categorySplit: {
-    items: Array<{ label: string; total: number; ratio: number }>
-    state: DashboardAnalyticsWidgetState
-  }
-  portfolioAllocation: {
-    items: Array<{ type: 'cash' | 'investment' | 'manual'; total: number; ratio: number }>
-    state: DashboardAnalyticsWidgetState
-  }
-  allocationEvolution: {
-    points: Array<{
-      date: string
-      total: number
-      cash: number
-      investment: number
-      manual: number
-    }>
-    state: DashboardAnalyticsWidgetState
-  }
-  recurringSpend: {
-    fixedCharges: {
-      items: Array<{ label: string; monthlyAmount: number; occurrences: number }>
-      totalMonthly: number
-      state: DashboardAnalyticsWidgetState
-    }
-    subscriptions: {
-      items: Array<{ label: string; monthlyAmount: number; occurrences: number }>
-      totalMonthly: number
-      state: DashboardAnalyticsWidgetState
-    }
-  }
-  spendConcentration: {
-    topMerchantShare: number
-    top3Share: number
-    hhi: number
-    dominantMerchantLabel: string | null
-    state: DashboardAnalyticsWidgetState
-  }
-  availability: {
-    summaryCards: boolean
-    timeseries: boolean
-    categorySplit: boolean
-    portfolioAllocation: boolean
-    allocationEvolution: boolean
-    recurringSpend: boolean
-    spendConcentration: boolean
-  }
-}
+export type { DashboardAnalyticsResponse, DashboardAnalyticsWidgetState }
 
 const toState = (enabled: boolean, hasData: boolean): DashboardAnalyticsWidgetState => {
   if (!enabled) {
@@ -93,7 +35,7 @@ const normalizeLabel = (value: string): string =>
     .replace(/[^a-z\s]/g, ' ')
     .replace(
       /\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/g,
-      ' ',
+      ' '
     )
     .replace(/\s+/g, ' ')
     .trim()
@@ -201,7 +143,7 @@ export const mapSummaryToAnalyticsContract = ({
   }))
   const portfolioTotals = summary.assets.reduce(
     (acc, asset) => {
-      if (!asset.enabled || !Number.isFinite(asset.valuation) || asset.valuation <= 0) {
+      if (!asset.enabled || asset.valuation === null || asset.valuation <= 0) {
         return acc
       }
 
@@ -214,18 +156,20 @@ export const mapSummaryToAnalyticsContract = ({
       manual: 0,
     }
   )
-  const portfolioGrandTotal = portfolioTotals.cash + portfolioTotals.investment + portfolioTotals.manual
+  const portfolioGrandTotal =
+    portfolioTotals.cash + portfolioTotals.investment + portfolioTotals.manual
   const portfolioAllocationBase = [
     { type: 'cash', total: portfolioTotals.cash, ratio: 0 },
     { type: 'investment', total: portfolioTotals.investment, ratio: 0 },
     { type: 'manual', total: portfolioTotals.manual, ratio: 0 },
   ] as const
-  const portfolioAllocationItems: DashboardAnalyticsResponse['portfolioAllocation']['items'] = portfolioAllocationBase
-    .filter(item => item.total > 0)
-    .map(item => ({
-      ...item,
-      ratio: portfolioGrandTotal > 0 ? Number((item.total / portfolioGrandTotal).toFixed(4)) : 0,
-    }))
+  const portfolioAllocationItems: DashboardAnalyticsResponse['portfolioAllocation']['items'] =
+    portfolioAllocationBase
+      .filter(item => item.total > 0)
+      .map(item => ({
+        ...item,
+        ratio: portfolioGrandTotal > 0 ? Number((item.total / portfolioGrandTotal).toFixed(4)) : 0,
+      }))
   const allocationRatioByType = portfolioAllocationItems.reduce(
     (acc, item) => {
       acc[item.type] = item.ratio
@@ -272,7 +216,7 @@ export const mapSummaryToAnalyticsContract = ({
 
     const kind: 'fixed_charge' | 'subscription' = isLikelySubscription(
       transaction.label,
-      transaction.merchant,
+      transaction.merchant
     )
       ? 'subscription'
       : 'fixed_charge'
@@ -291,8 +235,10 @@ export const mapSummaryToAnalyticsContract = ({
       dates: [transaction.bookingDate],
     })
   }
-  const fixedChargesItems: DashboardAnalyticsResponse['recurringSpend']['fixedCharges']['items'] = []
-  const subscriptionsItems: DashboardAnalyticsResponse['recurringSpend']['subscriptions']['items'] = []
+  const fixedChargesItems: DashboardAnalyticsResponse['recurringSpend']['fixedCharges']['items'] =
+    []
+  const subscriptionsItems: DashboardAnalyticsResponse['recurringSpend']['subscriptions']['items'] =
+    []
   for (const [, group] of groupedRecurring) {
     const monthGap = estimateMonthGap(group.dates)
     if (monthGap === null || monthGap < 25 || monthGap > 35 || !hasStableAmount(group.amounts)) {
@@ -314,18 +260,23 @@ export const mapSummaryToAnalyticsContract = ({
   fixedChargesItems.sort((left, right) => right.monthlyAmount - left.monthlyAmount)
   subscriptionsItems.sort((left, right) => right.monthlyAmount - left.monthlyAmount)
   const fixedChargesTotalMonthly = Number(
-    fixedChargesItems.reduce((total, item) => total + item.monthlyAmount, 0).toFixed(2),
+    fixedChargesItems.reduce((total, item) => total + item.monthlyAmount, 0).toFixed(2)
   )
   const subscriptionsTotalMonthly = Number(
-    subscriptionsItems.reduce((total, item) => total + item.monthlyAmount, 0).toFixed(2),
+    subscriptionsItems.reduce((total, item) => total + item.monthlyAmount, 0).toFixed(2)
   )
 
   const spendConcentrationItems = summary.topExpenseGroups.map(item => ({
     label: item.label,
     total: item.total,
   }))
-  const spendConcentrationTotal = spendConcentrationItems.reduce((total, item) => total + item.total, 0)
-  const orderedConcentration = [...spendConcentrationItems].sort((left, right) => right.total - left.total)
+  const spendConcentrationTotal = spendConcentrationItems.reduce(
+    (total, item) => total + item.total,
+    0
+  )
+  const orderedConcentration = [...spendConcentrationItems].sort(
+    (left, right) => right.total - left.total
+  )
   const topMerchantShare =
     spendConcentrationTotal > 0 && orderedConcentration[0]
       ? Number((orderedConcentration[0].total / spendConcentrationTotal).toFixed(4))
@@ -336,7 +287,7 @@ export const mapSummaryToAnalyticsContract = ({
           (
             orderedConcentration.slice(0, 3).reduce((total, item) => total + item.total, 0) /
             spendConcentrationTotal
-          ).toFixed(4),
+          ).toFixed(4)
         )
       : 0
   const hhi =
@@ -345,7 +296,7 @@ export const mapSummaryToAnalyticsContract = ({
           spendConcentrationItems
             .map(item => item.total / spendConcentrationTotal)
             .reduce((total, ratio) => total + ratio * ratio, 0)
-            .toFixed(4),
+            .toFixed(4)
         )
       : 0
 
@@ -357,7 +308,7 @@ export const mapSummaryToAnalyticsContract = ({
     summaryCards: {
       netWorth: {
         value: summary.totals.balance,
-        state: toState(availability.summaryCards, Number.isFinite(summary.totals.balance)),
+        state: toState(availability.summaryCards, summary.totals.balance !== null),
       },
       incomes: {
         value: summary.totals.incomes,

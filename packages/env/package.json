@@ -1,17 +1,18 @@
 {
   "name": "@finance-os/env",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./diagnostics": "./src/diagnostics.ts"
   },
+  "scripts": {
+    "test": "bun test src",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
+  },
   "dependencies": {
     "dotenv": "^17.3.1",
-    "zod": "^3.25.76"
-  },
-  "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "zod": "catalog:"
   }
 }

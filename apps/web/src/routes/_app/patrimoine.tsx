@@ -1,12 +1,14 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Amount,
   CurrencyAmount,
   Freshness,
   Progress,
   ProviderStatus,
+  type ProviderStatusKind,
   Status,
   ValuationState,
-  type ProviderStatusKind,
 } from '@finance-os/ui/components'
 import { BankPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useQuery } from '@tanstack/react-query'
@@ -56,6 +58,19 @@ export const Route = createFileRoute('/_app/patrimoine')({
   component: PatrimoinePage,
 })
 
+// `divide-y divide-border border-y border-border`: framed list with a rule between rows.
+const dividedList = css({
+  borderYWidth: '1px',
+  borderColor: 'border',
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border' },
+})
+
+const sectionTitle = css({ textStyle: 'lg', fontWeight: 'semibold' })
+
+const sectionLead = css({ mt: '1', textStyle: 'sm', color: 'muted.foreground' })
+
+const itemMeta = css({ mt: '1', textStyle: 'xs', color: 'muted.foreground' })
+
 function PatrimoinePage() {
   const { range: searchRange } = Route.useSearch()
   const range = resolveRange(searchRange)
@@ -77,7 +92,7 @@ function PatrimoinePage() {
   const model = buildPatrimoineViewModel(summary)
 
   return (
-    <div className="space-y-8">
+    <styled.div spaceY="8">
       <PageHeader
         eyebrow="Vue consolidée"
         icon={<BankPixelIcon size={12} />}
@@ -95,18 +110,35 @@ function PatrimoinePage() {
         }
       />
 
-      <section className="border-y border-border py-6">
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] md:items-end">
+      <styled.section borderYWidth="1px" borderColor="border" py="6">
+        <styled.div
+          display="grid"
+          gap="6"
+          md={{
+            gridTemplateColumns: 'minmax(0, 1.3fr) minmax(16rem, 0.7fr)',
+            alignItems: 'flex-end',
+          }}
+        >
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <styled.p
+              fontFamily="mono"
+              fontSize="11px"
+              textTransform="uppercase"
+              letterSpacing="0.16em"
+              color="muted.foreground"
+            >
               Valeur nette connue
-            </p>
+            </styled.p>
             <Amount
               value={model.totalValue}
               decimals={0}
-              className="mt-2 block text-4xl font-semibold tracking-tight sm:text-5xl"
+              mt="2"
+              display="block"
+              textStyle="4xl"
+              fontWeight="semibold"
+              sm={{ textStyle: '5xl' }}
             />
-            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+            <styled.div mt="3" display="flex" flexWrap="wrap" columnGap="5" rowGap="2">
               <Freshness asOf={model.asOf} />
               {model.unknownValueCount > 0 ? (
                 <Status
@@ -114,38 +146,52 @@ function PatrimoinePage() {
                   label={`${model.unknownValueCount} valeur${model.unknownValueCount > 1 ? 's' : ''} inconnue${model.unknownValueCount > 1 ? 's' : ''}`}
                 />
               ) : null}
-            </div>
+            </styled.div>
           </div>
-          <div className="border-l border-border pl-5 max-md:border-l-0 max-md:border-t max-md:pl-0 max-md:pt-5">
-            <div className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-muted-foreground">Couverture de valorisation</span>
-              <span className="font-financial">
+          <styled.div
+            borderLeftWidth="1px"
+            borderColor="border"
+            pl="5"
+            mdDown={{ borderLeftWidth: '0', borderTopWidth: '1px', pl: '0', pt: '5' }}
+          >
+            <styled.div
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap="4"
+              textStyle="sm"
+            >
+              <styled.span color="muted.foreground">Couverture de valorisation</styled.span>
+              <span className={css({ textStyle: 'financial' })}>
                 {model.coveragePercent === null
                   ? 'Indisponible'
                   : `${model.coveragePercent.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
               </span>
-            </div>
-            <Progress
-              value={model.coveragePercent}
-              label="Couverture de valorisation"
-              className="mt-3"
-            />
-          </div>
-        </div>
-      </section>
+            </styled.div>
+            <Progress value={model.coveragePercent} label="Couverture de valorisation" mt="3" />
+          </styled.div>
+        </styled.div>
+      </styled.section>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.48fr)]">
+      <styled.section
+        display="grid"
+        gap="6"
+        lg={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(18rem, 0.48fr)' }}
+      >
         <div>
-          <h2 className="text-lg font-semibold">Composition connue</h2>
-          <div className="mt-3 divide-y divide-border border-y border-border">
+          <h2 className={sectionTitle}>Composition connue</h2>
+          <styled.div mt="3" className={dividedList}>
             {model.buckets.map(bucket => (
-              <div
+              <styled.div
                 key={bucket.key}
-                className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                display="grid"
+                gap="2"
+                py="4"
+                sm={{ gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center' }}
               >
                 <div>
-                  <p className="font-medium">{bucket.label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <styled.p fontWeight="medium">{bucket.label}</styled.p>
+                  <p className={itemMeta}>
                     {bucket.itemCount} actif{bucket.itemCount !== 1 ? 's' : ''}
                     {bucket.unknownValueCount > 0
                       ? `, ${bucket.unknownValueCount} sans conversion fiable`
@@ -155,50 +201,66 @@ function PatrimoinePage() {
                 <Amount
                   value={bucket.value}
                   decimals={0}
-                  className="text-lg font-semibold sm:text-right"
+                  textStyle="lg"
+                  fontWeight="semibold"
+                  sm={{ textAlign: 'right' }}
                 />
-              </div>
+              </styled.div>
             ))}
-          </div>
+          </styled.div>
         </div>
-        <div className="border-l border-border pl-6 max-lg:border-l-0 max-lg:border-t max-lg:pl-0 max-lg:pt-6">
-          <h2 className="text-lg font-semibold">Évolution</h2>
-          <p className="mt-4 font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
+        <styled.div
+          borderLeftWidth="1px"
+          borderColor="border"
+          pl="6"
+          lgDown={{ borderLeftWidth: '0', borderTopWidth: '1px', pl: '0', pt: '6' }}
+        >
+          <h2 className={sectionTitle}>Évolution</h2>
+          <styled.p
+            mt="4"
+            fontFamily="mono"
+            textStyle="xs"
+            textTransform="uppercase"
+            letterSpacing="0.12em"
+            color="muted.foreground"
+          >
             Données insuffisantes
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          </styled.p>
+          <styled.p mt="2" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
             L’historique actuel ne permet pas de calculer une performance patrimoniale fiable.
-          </p>
-        </div>
-      </section>
+          </styled.p>
+        </styled.div>
+      </styled.section>
 
-      <section className="space-y-4">
+      <styled.section spaceY="4">
         <div>
-          <h2 className="text-lg font-semibold">Connexions</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            État des sources qui alimentent le patrimoine.
-          </p>
+          <h2 className={sectionTitle}>Connexions</h2>
+          <p className={sectionLead}>État des sources qui alimentent le patrimoine.</p>
         </div>
         {summary?.connections.length ? (
-          <div className="divide-y divide-border border-y border-border">
+          <div className={dividedList}>
             {summary.connections.map(connection => (
-              <div
+              <styled.div
                 key={connection.powensConnectionId}
-                className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"
+                display="flex"
+                flexDirection="column"
+                gap="2"
+                py="4"
+                sm={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <div>
-                  <p className="font-medium">
+                  <styled.p fontWeight="medium">
                     {connection.providerInstitutionName ?? 'Établissement non identifié'}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  </styled.p>
+                  <p className={itemMeta}>
                     {connection.accountCount} compte{connection.accountCount !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-4">
+                <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="4">
                   <Freshness asOf={connection.lastSuccessAt ?? connection.lastSyncAt} />
                   <ProviderStatus status={connectionStatus(connection.status)} />
-                </div>
-              </div>
+                </styled.div>
+              </styled.div>
             ))}
           </div>
         ) : (
@@ -207,46 +269,52 @@ function PatrimoinePage() {
             description="Aucune source bancaire n’alimente actuellement le patrimoine."
           />
         )}
-      </section>
+      </styled.section>
 
-      <section className="space-y-4">
+      <styled.section spaceY="4">
         <div>
-          <h2 className="text-lg font-semibold">Actifs</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Valeurs natives et état de leur valorisation.
-          </p>
+          <h2 className={sectionTitle}>Actifs</h2>
+          <p className={sectionLead}>Valeurs natives et état de leur valorisation.</p>
         </div>
         {summary?.assets.length ? (
-          <div className="divide-y divide-border border-y border-border">
+          <div className={dividedList}>
             {summary.assets.map(asset => (
-              <article
+              <styled.article
                 key={asset.assetId}
-                className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                display="grid"
+                gap="3"
+                py="4"
+                sm={{ gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center' }}
               >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <p className="font-medium">{asset.name}</p>
+                <styled.div minW="0">
+                  <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="3">
+                    <styled.p fontWeight="medium">{asset.name}</styled.p>
                     <ValuationState
                       state={
                         asset.valuationStatus ??
                         (asset.origin === 'manual' ? 'manual' : 'unavailable')
                       }
                     />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  </styled.div>
+                  <p className={itemMeta}>
                     {assetTypeLabel(asset.type)}
                     {asset.providerInstitutionName ? `, ${asset.providerInstitutionName}` : ''}
                   </p>
-                </div>
-                <div className="sm:text-right">
+                </styled.div>
+                <styled.div sm={{ textAlign: 'right' }}>
                   <CurrencyAmount
                     value={asset.valuation}
                     currency={asset.currency}
-                    className="font-semibold"
+                    fontWeight="semibold"
                   />
-                  <Freshness asOf={asset.valuationAsOf} className="mt-1 flex sm:justify-end" />
-                </div>
-              </article>
+                  <Freshness
+                    asOf={asset.valuationAsOf}
+                    mt="1"
+                    display="flex"
+                    sm={{ justifyContent: 'flex-end' }}
+                  />
+                </styled.div>
+              </styled.article>
             ))}
           </div>
         ) : (
@@ -255,9 +323,9 @@ function PatrimoinePage() {
             description="Les actifs apparaîtront ici lorsqu’une source ou une saisie manuelle en fournit."
           />
         )}
-      </section>
+      </styled.section>
 
       {isAdmin ? <ManualAssetsEditor range={range} /> : null}
-    </div>
+    </styled.div>
   )
 }

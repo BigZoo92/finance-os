@@ -3,6 +3,7 @@ import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import type { DashboardAnalyticsResponse } from '../domain/analytics-contract'
 import { createDashboardRuntimePlugin } from '../plugin'
+import { createRuntimeRepositoriesFixture } from '../test-support/runtime-repositories-fixture'
 import type { DashboardRouteRuntime, DashboardSummaryResponse } from '../types'
 import { createAnalyticsRoute } from './analytics'
 
@@ -11,6 +12,7 @@ const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => 
   valuation: null,
   totals: {
     balance: 100,
+    unknownValuationAssetCount: 0,
     incomes: 80,
     expenses: 20,
   },
@@ -68,10 +70,7 @@ const buildSummary = (range: '7d' | '30d' | '90d'): DashboardSummaryResponse => 
 const createDashboardRuntime = (
   overrides?: Partial<DashboardRouteRuntime['useCases']>
 ): DashboardRouteRuntime => ({
-  repositories: {
-    readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
-    derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
-  },
+  repositories: createRuntimeRepositoriesFixture(),
   useCases: {
     getSummary: async range => buildSummary(range),
     getTransactions: async () => ({

@@ -1,8 +1,4 @@
-import type {
-  AdvisorSnapshot,
-  DeterministicRecommendation,
-  ExternalSignalSummary,
-} from '../types'
+import type { AdvisorSnapshot, DeterministicRecommendation, ExternalSignalSummary } from '../types'
 
 const round = (value: number, digits = 2) => {
   const factor = 10 ** digits
@@ -11,6 +7,12 @@ const round = (value: number, digits = 2) => {
 
 const sortByPriority = (recommendations: DeterministicRecommendation[]) =>
   [...recommendations].sort((left, right) => right.priorityScore - left.priorityScore)
+
+// Evidence strings must keep unknown values explicit: an unavailable metric is
+// worded as such and is never rendered as 0.
+const UNAVAILABLE = 'indisponible'
+const describePct = (value: number | null) => (value === null ? UNAVAILABLE : `${value}%`)
+const describeMonths = (value: number | null) => (value === null ? UNAVAILABLE : `${value} mois`)
 
 export const generateAdvisorRecommendations = ({
   snapshot,
@@ -75,7 +77,11 @@ export const generateAdvisorRecommendations = ({
     })
   }
 
-  if ((snapshot.metrics.savingsRatePct ?? 0) < 10 || snapshot.diagnostics.topExpenseSharePct >= 20) {
+  const savingsRatePct = snapshot.metrics.savingsRatePct
+  // An unknown savings rate (no observed income) is not a weak savings rate.
+  const weakSavingsRate = savingsRatePct !== null && savingsRatePct < 10
+
+  if (weakSavingsRate || snapshot.diagnostics.topExpenseSharePct >= 20) {
     recommendations.push({
       id: 'spend-discipline',
       type: 'trim_variable_spend',
@@ -86,7 +92,7 @@ export const generateAdvisorRecommendations = ({
       whyNow:
         'Ameliorer la marge de cashflow augmente a la fois la capacite d epargne, le fonds d urgence et la tolerance aux chocs.',
       evidence: [
-        `Taux d epargne observe: ${snapshot.metrics.savingsRatePct ?? 0}%`,
+        `Taux d epargne observe: ${describePct(savingsRatePct)}`,
         `Part du premier poste de depense: ${snapshot.diagnostics.topExpenseSharePct}%`,
         `Cashflow mensuel net: ${snapshot.metrics.netMonthlyCashflow} ${snapshot.currency}`,
       ],
@@ -126,13 +132,11 @@ export const generateAdvisorRecommendations = ({
       whyNow:
         'Un fonds d urgence plus solide reduit le risque de vendre des actifs au mauvais moment en cas de choc personnel ou macro.',
       evidence: [
-        `Couverture observee: ${snapshot.metrics.emergencyFundMonths ?? 0} mois`,
+        `Couverture observee: ${describeMonths(snapshot.metrics.emergencyFundMonths)}`,
         `Cible implicite (${snapshot.riskProfile}): ${snapshot.targets.emergencyFundMonths} mois`,
-        `Runway estime: ${snapshot.metrics.runwayMonths ?? 0} mois`,
+        `Runway estime: ${describeMonths(snapshot.metrics.runwayMonths)}`,
       ],
-      assumptions: [
-        'Les depenses mensuelles observees sont representatives des besoins normaux.',
-      ],
+      assumptions: ['Les depenses mensuelles observees sont representatives des besoins normaux.'],
       confidence: 0.84,
       riskLevel: 'low',
       expectedImpact: {
@@ -147,11 +151,7 @@ export const generateAdvisorRecommendations = ({
         'Construire le fonds en deux paliers',
         'Prioriser un palier minimal avant tout arbitrage opportuniste',
       ],
-      deterministicMetricsUsed: [
-        'emergencyFundMonths',
-        'runwayMonths',
-        'targetAllocations.cash',
-      ],
+      deterministicMetricsUsed: ['emergencyFundMonths', 'runwayMonths', 'targetAllocations.cash'],
       priorityScore: 88,
     })
   }
@@ -182,8 +182,7 @@ export const generateAdvisorRecommendations = ({
         confidence: 0.81,
         riskLevel: 'medium',
         expectedImpact: {
-          summary:
-            'Reduction du risque de drift et meilleure discipline de portefeuille.',
+          summary: 'Reduction du risque de drift et meilleure discipline de portefeuille.',
           value: Math.abs(strongestDrift.driftPct),
           unit: 'pct',
         },
@@ -244,7 +243,7 @@ export const generateAdvisorRecommendations = ({
     })
   }
 
-  if ((signals.filter(signal => signal.direction === 'risk' && signal.severity >= 60).length ?? 0) >= 2) {
+  if (signals.filter(signal => signal.direction === 'risk' && signal.severity >= 60).length >= 2) {
     recommendations.push({
       id: 'macro-caution',
       type: 'increase_prudence',
@@ -257,24 +256,23 @@ export const generateAdvisorRecommendations = ({
       evidence: signals
         .filter(signal => signal.direction === 'risk')
         .slice(0, 3)
-        .map(
-          signal =>
-            `${signal.title} (sev. ${signal.severity}, conf. ${signal.confidence})`
-        ),
+        .map(signal => `${signal.title} (sev. ${signal.severity}, conf. ${signal.confidence})`),
       assumptions: [
         'Les signaux recents peuvent etre bruyants et ne constituent pas une prevision fiable du marche.',
       ],
       confidence: 0.66,
       riskLevel: 'medium',
       expectedImpact: {
-        summary:
-          'Meilleure discipline de risque plutot qu un gain de performance attendu.',
+        summary: 'Meilleure discipline de risque plutot qu un gain de performance attendu.',
         value: null,
         unit: 'pct',
       },
       effort: 'low',
       reversibility: 'high',
-      blockingFactors: ['Bruit informationnel eleve', 'Absence de preuve que le signal se materialise'],
+      blockingFactors: [
+        'Bruit informationnel eleve',
+        'Absence de preuve que le signal se materialise',
+      ],
       alternatives: [
         'Documenter les seuils qui justifieraient une vraie action',
         'Limiter la reponse a un simple ralentissement des nouveaux risques',

@@ -11,10 +11,7 @@ export type SignalSourceAttentionPolicy = 'auto' | 'always' | 'never' | 'high_on
  * `profileCachedAt` (touched on every profile refresh). Other providers
  * always report `not_applicable`.
  */
-export type SignalSourceVerificationStatus =
-  | 'verified'
-  | 'unresolved'
-  | 'not_applicable'
+export type SignalSourceVerificationStatus = 'verified' | 'unresolved' | 'not_applicable'
 
 export interface SignalSourceProfileMetadata {
   username?: string | null
@@ -148,7 +145,7 @@ const toRow = (row: typeof schema.signalSource.$inferSelect): SignalSourceRow =>
   lastFetchedCount: row.lastFetchedCount,
   externalId: row.externalId,
   profileImageUrl: row.profileImageUrl,
-  profileMetadata: (row.profileMetadata as SignalSourceProfileMetadata | null) ?? null,
+  profileMetadata: row.profileMetadata ?? null,
   profileCachedAt: row.profileCachedAt?.toISOString() ?? null,
   verificationStatus: deriveVerificationStatus(row),
   createdAt: row.createdAt.toISOString(),
@@ -329,9 +326,7 @@ export const createDashboardSignalSourcesRepository = ({ db }: { db: ApiDb }) =>
     const rows = await db
       .select()
       .from(schema.signalSource)
-      .where(
-        and(eq(schema.signalSource.provider, provider), eq(schema.signalSource.enabled, true))
-      )
+      .where(and(eq(schema.signalSource.provider, provider), eq(schema.signalSource.enabled, true)))
       .orderBy(desc(schema.signalSource.priority))
     return rows.map(toRow)
   },

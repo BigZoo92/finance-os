@@ -15,33 +15,12 @@
 // deterministically testable. Mirrors the existing `daily-intelligence-scheduler.ts` pattern.
 
 import { randomUUID } from 'node:crypto'
+import { acquireRedisLock, type RedisLockClient } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const POST_MORTEM_SCHEDULER_LOCK_KEY = 'finance-os:post-mortem:scheduler-lock'
 export const POST_MORTEM_SCHEDULER_LOCK_TTL_SECONDS_DEFAULT = 30 * 60
 export const POST_MORTEM_SCHEDULER_TRIGGER_TIMEOUT_MS_DEFAULT = 30_000
-
-// PR7-fix — the Redis client must additionally support an `eval` primitive that performs a
-// compare-and-delete (release-lock) atomically. The repo's in-memory client implements the
-// `release-lock` script as: "DEL key only if its current value matches the supplied token,
-// returning 1 if released and 0 otherwise" (see `packages/redis/src/in-memory.test.ts`). The
-// production node-redis client supports `client.eval(script, { keys, arguments })` with the
-// same return-shape contract.
-type RedisLockClient = {
-  set: (
-    key: string,
-    value: string,
-    options: { NX: true; EX: number }
-  ) => Promise<string | null>
-  eval: (
-    script: string,
-    options: { keys: string[]; arguments: string[] }
-  ) => Promise<unknown>
-}
-
-// Lua compare-and-delete: only releases when the stored value matches the supplied token.
-// Prevents worker A's late `DEL` from clobbering worker B's freshly-acquired lock.
-const RELEASE_LOCK_SCRIPT =
-  'if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end'
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -101,8 +80,7 @@ export const shouldTriggerPostMortemRun = ({
   }
 
   const [minuteField, hourField] = cron.trim().split(/\s+/)
-  const targetMinute =
-    minuteField === undefined || minuteField === '*' ? 0 : Number(minuteField)
+  const targetMinute = minuteField === undefined || minuteField === '*' ? 0 : Number(minuteField)
   const targetHour = hourField === undefined || hourField === '*' ? 7 : Number(hourField)
 
   if (!Number.isFinite(targetHour) || !Number.isFinite(targetMinute)) {
@@ -209,7 +187,7 @@ export const triggerAdvisorPostMortemRun = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
   lockTtlSeconds?: number
   triggerTimeoutMs?: number
@@ -217,16 +195,17 @@ export const triggerAdvisorPostMortemRun = async ({
   // this run's ownership of the Redis lock.
   ownerTokenFn?: () => string
 }): Promise<PostMortemTriggerResult> => {
-  // PR7-fix — owner token: a per-run UUID stored as the lock value. Release only proceeds when
-  // the stored value still matches this token, preventing worker A from deleting worker B's
-  // freshly-acquired lock if A's TTL expired before A finished.
-  const ownerToken = ownerTokenFn()
-  const lock = await redisClient.set(POST_MORTEM_SCHEDULER_LOCK_KEY, ownerToken, {
-    NX: true,
-    EX: Math.max(1, Math.floor(lockTtlSeconds)),
+  // Owner token: a per-run UUID stored as the lock value. The shared primitive releases only
+  // while the stored value still matches this token, so worker A can never delete worker B's
+  // freshly-acquired lock after A's TTL expired.
+  const lock = await acquireRedisLock({
+    client: redisClient,
+    key: POST_MORTEM_SCHEDULER_LOCK_KEY,
+    ttlSeconds: lockTtlSeconds,
+    token: ownerTokenFn(),
   })
 
-  if (lock !== 'OK') {
+  if (!lock) {
     log({
       level: 'warn',
       msg: 'worker post-mortem run skipped because another run is active',
@@ -242,13 +221,14 @@ export const triggerAdvisorPostMortemRun = async ({
     msg: 'worker post-mortem lock acquired',
     requestId,
     lockKey: POST_MORTEM_SCHEDULER_LOCK_KEY,
-    // ownerToken is intentionally omitted from logs; it's a non-secret but unnecessary detail.
+    // The owner token is intentionally omitted from logs; it's a non-secret but unnecessary detail.
   })
 
-  const controller = new AbortController()
-  const timeoutHandle = setTimeout(() => {
-    controller.abort()
-  }, Math.max(1, Math.floor(triggerTimeoutMs)))
+  // The request is bounded by the trigger timeout and by the lock lease, whichever ends first.
+  const signal = AbortSignal.any([
+    lock.signal,
+    AbortSignal.timeout(Math.max(1, Math.floor(triggerTimeoutMs))),
+  ])
 
   try {
     const request = buildPostMortemTriggerRequest({
@@ -258,7 +238,7 @@ export const triggerAdvisorPostMortemRun = async ({
     })
     const response = await fetchImpl(request.url, {
       ...request.init,
-      signal: controller.signal,
+      signal,
     })
 
     if (!response.ok) {
@@ -307,9 +287,7 @@ export const triggerAdvisorPostMortemRun = async ({
       apiStatus: apiStatus ?? null,
     }
   } catch (error) {
-    const isAbort =
-      (error as { name?: string })?.name === 'AbortError' ||
-      controller.signal.aborted === true
+    const isAbort = (error as { name?: string })?.name === 'AbortError' || signal.aborted
     if (isAbort) {
       log({
         level: 'error',
@@ -333,29 +311,22 @@ export const triggerAdvisorPostMortemRun = async ({
       errorMessage: toSafeErrorMessage(error),
     }
   } finally {
-    clearTimeout(timeoutHandle)
-    // PR7-fix — compare-and-delete: pass the owner token; the script returns 1 if released,
-    // 0 if the stored value differs (meaning another worker took over after our TTL expired).
-    try {
-      const released = await redisClient.eval(RELEASE_LOCK_SCRIPT, {
-        keys: [POST_MORTEM_SCHEDULER_LOCK_KEY],
-        arguments: [ownerToken],
+    // Compare-and-delete with the owner token: 'not_owner' means another worker took over after
+    // our TTL expired, so its lock is left intact.
+    const released = await lock.release()
+    if (released === 'not_owner') {
+      log({
+        level: 'warn',
+        msg: 'worker post-mortem lock release skipped: token mismatch',
+        requestId,
+        lockKey: POST_MORTEM_SCHEDULER_LOCK_KEY,
       })
-      if (released !== 1 && released !== 1n && released !== '1') {
-        log({
-          level: 'warn',
-          msg: 'worker post-mortem lock release skipped: token mismatch',
-          requestId,
-          lockKey: POST_MORTEM_SCHEDULER_LOCK_KEY,
-        })
-      }
-    } catch (delError) {
+    } else if (released === 'error') {
       log({
         level: 'warn',
         msg: 'worker post-mortem lock release failed',
         requestId,
         lockKey: POST_MORTEM_SCHEDULER_LOCK_KEY,
-        errMessage: toSafeErrorMessage(delError),
       })
     }
   }
@@ -380,7 +351,7 @@ export const startPostMortemScheduler = ({
   trigger: () => Promise<unknown>
   log: SchedulerLogger
   nowFn?: () => Date
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({
@@ -422,7 +393,7 @@ export const startPostMortemScheduler = ({
           typeof result === 'object' &&
           result !== null &&
           'status' in result &&
-          typeof (result as { status: unknown }).status === 'string' &&
+          typeof result.status === 'string' &&
           (result as { status: string }).status.startsWith('triggered_')
         ) {
           lastTriggeredDay = decision.dayKey

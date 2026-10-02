@@ -1,10 +1,13 @@
+import type {
+  ExternalInvestmentBundle,
+  ExternalInvestmentAssetClass,
+} from '@finance-os/external-investments'
 import {
   ASSET_CLASS_ASSUMPTIONS,
   type AssetClass,
   type ExternalSignalSummary,
   type FinanceEngineInput,
 } from '@finance-os/finance-engine'
-import type { ExternalInvestmentBundle, ExternalInvestmentAssetClass } from '@finance-os/external-investments'
 import type { DashboardGoalResponse, DashboardSummaryResponse } from '../../types'
 import type { NewsContextBundle } from '../news-types'
 
@@ -75,7 +78,8 @@ export const mapSummaryToFinanceEngineInput = ({
     assetClass: ExternalInvestmentAssetClass | string | null | undefined
   ): AssetClass | null => {
     if (assetClass === 'cash' || assetClass === 'stablecoin') return 'cash'
-    if (assetClass === 'equity' || assetClass === 'etf' || assetClass === 'fund') return 'equity_global'
+    if (assetClass === 'equity' || assetClass === 'etf' || assetClass === 'fund')
+      return 'equity_global'
     if (assetClass === 'bond') return 'fixed_income'
     if (assetClass === 'commodity') return 'gold'
     if (assetClass === 'crypto') return 'alternatives'
@@ -91,46 +95,75 @@ export const mapSummaryToFinanceEngineInput = ({
     return typeof assetClass === 'string' ? mapExternalAssetClass(assetClass) : null
   }
 
-  const positionsFromAssets = summary.assets
-    .filter(asset => asset.enabled && asset.valuation > 0)
-    .map(asset => ({
-      id: `asset:${asset.assetId}`,
-      name: asset.name,
-      value: asset.valuation,
-      assetClass:
-        getExternalAssetClassFromMetadata(asset.metadata) ??
-        classifyAssetClass({
-          label: `${asset.name} ${asset.source} ${asset.provider ?? ''}`,
-          type: asset.type,
-        }),
-      currency: asset.currency,
-      metadata: asset.metadata,
-    }))
+  const enabledAssets = summary.assets.filter(asset => asset.enabled)
+  // Unvalued assets never become positions: the engine only reasons on known
+  // amounts, and the omission is disclosed through the assumption log below.
+  const unvaluedAssets = enabledAssets.filter(asset => asset.valuation === null)
+  const positionsFromAssets = enabledAssets.flatMap(asset => {
+    if (asset.valuation === null || asset.valuation <= 0) {
+      return []
+    }
+
+    return [
+      {
+        id: `asset:${asset.assetId}`,
+        name: asset.name,
+        value: asset.valuation,
+        assetClass:
+          getExternalAssetClassFromMetadata(asset.metadata) ??
+          classifyAssetClass({
+            label: `${asset.name} ${asset.source} ${asset.provider ?? ''}`,
+            type: asset.type,
+          }),
+        currency: asset.currency,
+        metadata: asset.metadata,
+      },
+    ]
+  })
 
   const positionIds = new Set(positionsFromAssets.map(position => position.id))
   const positionsFromInvestments = summary.positions
-    .filter(
-      position =>
-        position.enabled &&
-        position.assetId === null &&
-        (position.currentValue ?? position.lastKnownValue ?? 0) > 0
-    )
-    .map(position => ({
-      id: `position:${position.positionId}`,
-      name: position.name,
-      value: position.currentValue ?? position.lastKnownValue ?? 0,
-      assetClass:
-        getExternalAssetClassFromMetadata(position.metadata) ??
-        classifyAssetClass({
-          label: `${position.name} ${position.assetName ?? ''}`,
-          type: 'investment',
-        }),
-      currency: position.currency,
-      metadata: position.metadata,
-    }))
+    .flatMap(position => {
+      const value = position.currentValue ?? position.lastKnownValue
+      if (!position.enabled || position.assetId !== null || value === null || value <= 0) {
+        return []
+      }
+
+      return [
+        {
+          id: `position:${position.positionId}`,
+          name: position.name,
+          value,
+          assetClass:
+            getExternalAssetClassFromMetadata(position.metadata) ??
+            classifyAssetClass({
+              label: `${position.name} ${position.assetName ?? ''}`,
+              type: 'investment' as const,
+            }),
+          currency: position.currency,
+          metadata: position.metadata,
+        },
+      ]
+    })
     .filter(position => !positionIds.has(position.id))
 
   const positions = [...positionsFromAssets, ...positionsFromInvestments]
+  const cashAssets = enabledAssets.filter(asset => asset.type === 'cash')
+  const liquidCashValue = cashAssets.some(asset => asset.valuation === null)
+    ? null
+    : cashAssets.reduce((sum, asset) => sum + (asset.valuation ?? 0), 0)
+  const valuationContextAssumptions =
+    unvaluedAssets.length === 0
+      ? []
+      : [
+          {
+            key: 'unvalued_asset_count',
+            value: unvaluedAssets.length,
+            source: 'observed' as const,
+            justification:
+              'Des actifs actifs n ont pas de valorisation persistee: ils sont exclus des positions et du cash liquide au lieu d etre comptes a 0.',
+          },
+        ]
   const investmentContextAssumptions =
     investmentBundle === null || investmentBundle === undefined
       ? []
@@ -176,9 +209,7 @@ export const mapSummaryToFinanceEngineInput = ({
     currency: 'EUR',
     monthlyIncome: annualizeToMonthly(summary.totals.incomes, summary.range),
     monthlyExpenses: annualizeToMonthly(summary.totals.expenses, summary.range),
-    liquidCashValue: summary.assets
-      .filter(asset => asset.enabled && asset.type === 'cash')
-      .reduce((sum, asset) => sum + asset.valuation, 0),
+    liquidCashValue,
     positions,
     goals: goals.map(goal => ({
       id: `goal:${goal.id}`,
@@ -197,6 +228,6 @@ export const mapSummaryToFinanceEngineInput = ({
       count: item.count,
     })),
     signals: mapNewsBundleToSignals(newsBundle),
-    contextAssumptions: investmentContextAssumptions,
+    contextAssumptions: [...valuationContextAssumptions, ...investmentContextAssumptions],
   }
 }

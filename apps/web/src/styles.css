@@ -1,32 +1,10 @@
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
-@import "@fontsource/geist-pixel";
-@import "@finance-os/ui/styles.css";
+/* Cascade order: the vendored element reset sits below every Panda layer. The
+   second statement is the anchor Panda's PostCSS plugin fills with the
+   generated CSS (tokens, global styles, recipes, utilities). */
+@layer preflight, reset, base, tokens, recipes, utilities;
+@layer reset, base, tokens, recipes, utilities;
 
-@source "./**/*.{ts,tsx}";
-
-/* Safe area for mobile bottom navigation */
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* Scrollbar styling for premium feel */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: oklch(0.5 0 0 / 20%);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0 0 / 35%);
-}
-
-/* Selection color */
-::selection {
-  background: oklch(from var(--primary) l c h / 25%);
-}
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+@import '@fontsource/geist-pixel';
+@import '@finance-os/ui/styles.css';

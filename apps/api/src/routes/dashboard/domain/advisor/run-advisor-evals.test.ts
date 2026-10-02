@@ -85,8 +85,7 @@ describe('runAdvisorEvals', () => {
         description: '',
         input: {
           candidateOutput: {
-            description:
-              'Paper-only hypothesis with fees, slippage and drawdown considered.',
+            description: 'Paper-only hypothesis with fees, slippage and drawdown considered.',
             caveats: ['Paper-only run, not financial advice'],
             invalidationCriteria: ['Stop if walk-forward Sharpe collapses'],
             tradeCount: 200,
@@ -187,9 +186,9 @@ describe('runAdvisorEvals', () => {
     expect(result.summary.failedCaseDetails.length).toBe(1)
     expect(result.summary.failedCaseDetails[0]?.caseId).toBe('causal-failing')
     expect(result.summary.failedCaseDetails[0]?.category).toBe('causal_reasoning')
-    expect(
-      (result.summary.failedCaseDetails[0]?.failedExpectations ?? []).length
-    ).toBeGreaterThan(0)
+    expect((result.summary.failedCaseDetails[0]?.failedExpectations ?? []).length).toBeGreaterThan(
+      0
+    )
   })
 
   it('keeps the existing budget-overrun case behaviour unchanged', () => {

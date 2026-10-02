@@ -55,9 +55,6 @@ describe('computeAiBudgetState', () => {
     })
 
     expect(state.blocked).toBe(true)
-    expect(state.reasons).toEqual([
-      'daily_budget_non_positive',
-      'monthly_budget_non_positive',
-    ])
+    expect(state.reasons).toEqual(['daily_budget_non_positive', 'monthly_budget_non_positive'])
   })
 })

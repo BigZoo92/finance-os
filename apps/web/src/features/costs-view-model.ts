@@ -1,8 +1,8 @@
+import { describeCostBasis, type CostBasis } from './costs'
 import type {
   DashboardAdvisorSpendAnalyticsResponse,
   DashboardCostOverviewResponse,
 } from './dashboard-types'
-import { describeCostBasis, type CostBasis } from './costs'
 
 export type CostPeriod = 'today' | 'month'
 

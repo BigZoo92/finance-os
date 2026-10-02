@@ -15,6 +15,14 @@ class KnowledgeSettings(BaseSettings):
     service_enabled: bool = Field(default=True, alias="KNOWLEDGE_SERVICE_ENABLED")
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
 
+    # Shared secret the API must present as `x-internal-service-token` on functional
+    # routes. Unset/blank disables the check (local dev); `INTERNAL_SERVICE_AUTH_REQUIRED`
+    # makes a missing token a startup failure so production cannot run open.
+    internal_service_token: str | None = Field(default=None, alias="INTERNAL_SERVICE_TOKEN")
+    internal_service_auth_required: bool = Field(
+        default=False, alias="INTERNAL_SERVICE_AUTH_REQUIRED"
+    )
+
     graph_backend: Literal["local", "neo4j", "memgraph", "falkordb"] = Field(
         default="local", alias="KNOWLEDGE_GRAPH_BACKEND"
     )

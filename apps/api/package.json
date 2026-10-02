@@ -1,18 +1,21 @@
 {
   "name": "@finance-os/api",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
+  "module": "src/index.js",
   "scripts": {
-    "start": "bun src/bootstrap.ts",
+    "start": "bun src/index.ts",
     "auth:hash": "bun src/auth/hash-password.ts",
     "auth:hash-b64": "bun src/auth/hash-password-b64.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "bun run --watch src/bootstrap.ts"
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test src"
   },
   "dependencies": {
-    "@elysiajs/cors": "^1.4.1",
+    "@elysiajs/cors": "^1.4.2",
     "@finance-os/ai": "workspace:*",
+    "@finance-os/api-contract": "workspace:*",
     "@finance-os/db": "workspace:*",
     "@finance-os/env": "workspace:*",
     "@finance-os/external-investments": "workspace:*",
@@ -23,14 +26,11 @@
     "@finance-os/provider-runtime": "workspace:*",
     "@finance-os/redis": "workspace:*",
     "cheerio": "^1.2.0",
-    "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.1",
-    "elysia": "latest",
-    "fast-xml-parser": "^5.5.11",
-    "zod": "^4.3.6"
+    "drizzle-orm": "catalog:",
+    "elysia": "1.4.30",
+    "fast-xml-parser": "^5.5.11"
   },
   "devDependencies": {
-    "bun-types": "latest"
-  },
-  "module": "src/index.js"
+    "bun-types": "catalog:"
+  }
 }

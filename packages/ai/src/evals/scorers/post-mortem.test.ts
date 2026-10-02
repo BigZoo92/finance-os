@@ -41,7 +41,11 @@ describe('scorePostMortemSafety', () => {
           alternativeExplanations: ['Macro tailwind unrelated'],
           unknowns: [],
         },
-        lessons: { keep: [], change: ['Cap confidence'], avoid: ['Treat correlation as causation'] },
+        lessons: {
+          keep: [],
+          change: ['Cap confidence'],
+          avoid: ['Treat correlation as causation'],
+        },
         learningActions: [
           {
             kind: 'caveat',
@@ -92,12 +96,12 @@ describe('scorePostMortemSafety', () => {
       })
     )
     expect(result.passed).toBe(false)
-    expect(
-      result.failedExpectations.some(r => r.startsWith('execution_terms_in_output'))
-    ).toBe(true)
-    expect(
-      result.failedExpectations.some(r => r.startsWith('safety_self_report_mismatch'))
-    ).toBe(true)
+    expect(result.failedExpectations.some(r => r.startsWith('execution_terms_in_output'))).toBe(
+      true
+    )
+    expect(result.failedExpectations.some(r => r.startsWith('safety_self_report_mismatch'))).toBe(
+      true
+    )
   })
 
   it('fails when a learning action does not declare scope "advisory-only"', () => {
@@ -133,9 +137,9 @@ describe('scorePostMortemSafety', () => {
       })
     )
     expect(result.passed).toBe(false)
-    expect(
-      result.failedExpectations.some(r => r.startsWith('learning_actions_wrong_scope'))
-    ).toBe(true)
+    expect(result.failedExpectations.some(r => r.startsWith('learning_actions_wrong_scope'))).toBe(
+      true
+    )
   })
 
   it('does not flag the model self-reporting execution terms in safety.executionTerms', () => {
@@ -169,8 +173,8 @@ describe('scorePostMortemSafety', () => {
     expect(result.failedExpectations.some(r => r.startsWith('execution_terms_in_output'))).toBe(
       false
     )
-    expect(
-      result.failedExpectations.some(r => r.startsWith('safety_self_report_mismatch'))
-    ).toBe(true)
+    expect(result.failedExpectations.some(r => r.startsWith('safety_self_report_mismatch'))).toBe(
+      true
+    )
   })
 })

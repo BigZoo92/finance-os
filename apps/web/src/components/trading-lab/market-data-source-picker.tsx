@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import type { DataSourcePreference, PreferredProvider } from '@/features/trading-lab-api'
 
 type Props = {
@@ -22,6 +24,22 @@ const PROVIDER_OPTIONS: Array<{ value: PreferredProvider; label: string }> = [
   { value: 'twelvedata', label: 'TwelveData' },
 ]
 
+const field = css({ display: 'flex', flexDirection: 'column', gap: '1', textStyle: 'xs' })
+
+const fieldLabel = css({ color: 'muted.foreground' })
+
+const control = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border',
+  bg: 'surface.1',
+  px: '2',
+  py: '1.5',
+  textStyle: 'sm',
+  color: 'foreground',
+  _disabled: { opacity: '0.5' },
+})
+
 export function MarketDataSourcePicker({
   source,
   onSourceChange,
@@ -30,11 +48,11 @@ export function MarketDataSourcePicker({
   disabled,
 }: Props) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="flex flex-col gap-1 text-xs">
-        <span className="text-muted-foreground">Source des données</span>
+    <styled.div display="grid" gap="3" sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+      <label className={field}>
+        <span className={fieldLabel}>Source des données</span>
         <select
-          className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
+          className={control}
           value={source}
           disabled={disabled}
           onChange={event => onSourceChange(event.target.value as DataSourcePreference)}
@@ -47,10 +65,10 @@ export function MarketDataSourcePicker({
         </select>
       </label>
 
-      <label className="flex flex-col gap-1 text-xs">
-        <span className="text-muted-foreground">Provider préféré</span>
+      <label className={field}>
+        <span className={fieldLabel}>Provider préféré</span>
         <select
-          className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
+          className={control}
           value={provider}
           disabled={disabled || (source !== 'provider' && source !== 'auto' && source !== 'cached')}
           onChange={event => onProviderChange(event.target.value as PreferredProvider)}
@@ -62,6 +80,6 @@ export function MarketDataSourcePicker({
           ))}
         </select>
       </label>
-    </div>
+    </styled.div>
   )
 }

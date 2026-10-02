@@ -15,168 +15,202 @@ let demoFixtureLoadSuccess = 0
 let demoFixtureLoadFail = 0
 
 export const createTransactionsRoute = () =>
-  new Elysia().get(
-    '/transactions',
-    async context => {
-      const range = context.query.range ?? '30d'
-      const limit = context.query.limit ?? DEFAULT_LIMIT
-      const requestId = getRequestMeta(context).requestId
-      const auth = getAuth(context)
-      const internalAuth = getInternalAuth(context)
-      const requestedScenario: DemoTransactionsScenario = context.query.demoScenario ?? 'default'
-      const requestedProfile = context.query.demoProfile ?? 'default-profile'
+  new Elysia()
+    .get(
+      '/transactions',
+      async context => {
+        const range = context.query.range ?? '30d'
+        const limit = context.query.limit ?? DEFAULT_LIMIT
+        const requestId = getRequestMeta(context).requestId
+        const auth = getAuth(context)
+        const internalAuth = getInternalAuth(context)
+        const requestedScenario: DemoTransactionsScenario = context.query.demoScenario ?? 'default'
+        const requestedProfile = context.query.demoProfile ?? 'default-profile'
 
-      const logResolutionStats = (
-        path: 'demo' | 'admin',
-        items: Array<{
-          id: number
-          resolutionSource:
-            | 'manual_override'
-            | 'user_rule'
-            | 'merchant_rules'
-            | 'mcc'
-            | 'counterparty'
-            | 'fallback'
-          resolutionTrace: Array<{ matched: boolean }>
-          resolutionRuleId: string | null
-        }>
-      ) => {
-        const sourceDistribution = items.reduce<Record<string, number>>((acc, item) => {
-          acc[item.resolutionSource] = (acc[item.resolutionSource] ?? 0) + 1
-          return acc
-        }, {})
-        const fallbackCount = items.filter(item => item.resolutionSource === 'fallback').length
-        const conflictCount = items.filter(item => item.resolutionTrace.filter(step => step.matched).length > 1).length
+        const logResolutionStats = (
+          path: 'demo' | 'admin',
+          items: Array<{
+            id: number
+            resolutionSource:
+              | 'manual_override'
+              | 'user_rule'
+              | 'merchant_rules'
+              | 'mcc'
+              | 'counterparty'
+              | 'fallback'
+            resolutionTrace: Array<{ matched: boolean }>
+            resolutionRuleId: string | null
+          }>
+        ) => {
+          const sourceDistribution = items.reduce<Record<string, number>>((acc, item) => {
+            acc[item.resolutionSource] = (acc[item.resolutionSource] ?? 0) + 1
+            return acc
+          }, {})
+          const fallbackCount = items.filter(item => item.resolutionSource === 'fallback').length
+          const conflictCount = items.filter(
+            item => item.resolutionTrace.filter(step => step.matched).length > 1
+          ).length
 
-        for (const item of items) {
+          for (const item of items) {
+            logApiEvent({
+              level: 'info',
+              msg: 'transaction categorization resolved',
+              requestId,
+              transaction_id: item.id,
+              rule_applied: item.resolutionRuleId ?? item.resolutionSource,
+              precedence_rank: item.resolutionTrace.findIndex(step => step.matched) + 1,
+              path,
+            })
+          }
+
           logApiEvent({
             level: 'info',
-            msg: 'transaction categorization resolved',
+            msg: 'transaction categorization metrics',
             requestId,
-            transaction_id: item.id,
-            rule_applied: item.resolutionRuleId ?? item.resolutionSource,
-            precedence_rank: item.resolutionTrace.findIndex(step => step.matched) + 1,
             path,
+            resolution_source_distribution: sourceDistribution,
+            conflict_count: conflictCount,
+            fallback_rate: items.length === 0 ? 0 : fallbackCount / items.length,
           })
         }
 
-        logApiEvent({
-          level: 'info',
-          msg: 'transaction categorization metrics',
-          requestId,
-          path,
-          resolution_source_distribution: sourceDistribution,
-          conflict_count: conflictCount,
-          fallback_rate: items.length === 0 ? 0 : fallbackCount / items.length,
-        })
-      }
+        const useDemoFixtureOverride =
+          auth.mode === 'admin' &&
+          internalAuth.hasValidToken &&
+          context.request.headers.get('x-demo-fixture-override') === '1'
 
-      const useDemoFixtureOverride =
-        auth.mode === 'admin' &&
-        internalAuth.hasValidToken &&
-        context.request.headers.get('x-demo-fixture-override') === '1'
+        if (auth.mode === 'demo' || useDemoFixtureOverride) {
+          const fixture = resolveDemoTransactionsFixture({
+            scenario: requestedScenario,
+            profile: requestedProfile,
+            strategy: env.DEMO_DATASET_STRATEGY,
+            personaMatchingEnabled: env.DEMO_PERSONA_MATCHING_ENABLED,
+          })
 
-      if (auth.mode === 'demo' || useDemoFixtureOverride) {
-        const fixture = resolveDemoTransactionsFixture({
-          scenario: requestedScenario,
-          profile: requestedProfile,
-        })
+          if (fixture.degradedFallback) {
+            demoFixtureLoadFail += 1
+          } else {
+            demoFixtureLoadSuccess += 1
+          }
 
-        if (fixture.degradedFallback) {
-          demoFixtureLoadFail += 1
-        } else {
-          demoFixtureLoadSuccess += 1
+          logApiEvent({
+            level: fixture.degradedFallback ? 'warn' : 'info',
+            msg: fixture.degradedFallback
+              ? 'demo fixture parse degraded to legacy dataset'
+              : 'demo fixture dataset loaded',
+            requestId,
+            mode: auth.mode,
+            dataset_version: fixture.datasetVersion,
+            fixture_seed: fixture.fixtureSeed,
+            scenario: fixture.personaMatch.scenarioId,
+            strategy: fixture.strategy,
+            persona_match_result: fixture.personaMatch.personaId,
+            scenario_id: fixture.personaMatch.scenarioId,
+            override_reason: fixture.personaMatch.overrideReason,
+            fallback_cause: fixture.personaMatch.fallbackCause,
+            demo_fixture_load_success: demoFixtureLoadSuccess,
+            demo_fixture_load_fail: demoFixtureLoadFail,
+            admin_override: useDemoFixtureOverride,
+          })
+
+          const payload = getDashboardTransactionsMock({
+            range,
+            limit,
+            cursor: context.query.cursor,
+            fixtureItems: fixture.items,
+          })
+
+          logResolutionStats('demo', payload.items)
+          const disagreements = payload.items.filter(
+            item => item.resolutionSource === 'fallback'
+          ).length
+          logApiEvent({
+            level: 'info',
+            msg: 'transaction categorization migration snapshot',
+            requestId,
+            path: 'demo',
+            total: payload.items.length,
+            rollout_percent: 0,
+            disagreements,
+            disagreement_rate:
+              payload.items.length === 0 ? 0 : disagreements / payload.items.length,
+            over_alert_threshold: false,
+            shadow_disabled_reason: 'disabled',
+          })
+
+          return {
+            ...payload,
+            schemaVersion: '2026-04-05' as const,
+            demoFixture: {
+              mode: auth.mode,
+              datasetVersion: fixture.datasetVersion,
+              fixtureSeed: fixture.fixtureSeed,
+              scenario: fixture.personaMatch.scenarioId,
+              degradedFallback: fixture.degradedFallback,
+              degradedReason: fixture.degradedReason,
+              personaProfile: fixture.personaMatch.profile,
+              personaId: fixture.personaMatch.personaId,
+              personaVariation: fixture.personaMatch.boundedVariation,
+              overrideReason: fixture.personaMatch.overrideReason,
+              fallbackCause: fixture.personaMatch.fallbackCause,
+            },
+          }
         }
 
-        logApiEvent({
-          level: fixture.degradedFallback ? 'warn' : 'info',
-          msg: fixture.degradedFallback
-            ? 'demo fixture parse degraded to legacy dataset'
-            : 'demo fixture dataset loaded',
-          requestId,
-          mode: auth.mode,
-          dataset_version: fixture.datasetVersion,
-          fixture_seed: fixture.fixtureSeed,
-          scenario: fixture.personaMatch.scenarioId,
-          strategy: fixture.strategy,
-          persona_match_result: fixture.personaMatch.personaId,
-          scenario_id: fixture.personaMatch.scenarioId,
-          override_reason: fixture.personaMatch.overrideReason,
-          fallback_cause: fixture.personaMatch.fallbackCause,
-          demo_fixture_load_success: demoFixtureLoadSuccess,
-          demo_fixture_load_fail: demoFixtureLoadFail,
-          admin_override: useDemoFixtureOverride,
-        })
-
-        const payload = getDashboardTransactionsMock({
+        const dashboard = getDashboardRuntime(context)
+        const payload = await dashboard.useCases.getTransactions({
           range,
           limit,
           cursor: context.query.cursor,
-          fixtureItems: fixture.items,
         })
-
-        logResolutionStats('demo', payload.items)
-        const disagreements = payload.items.filter(item => item.resolutionSource === 'fallback').length
-        logApiEvent({
-          level: 'info',
-          msg: 'transaction categorization migration snapshot',
-          requestId,
-          path: 'demo',
-          total: payload.items.length,
-          rollout_percent: 0,
-          disagreements,
-          disagreement_rate: payload.items.length === 0 ? 0 : disagreements / payload.items.length,
-          over_alert_threshold: false,
-          shadow_disabled_reason: 'disabled',
-        })
-
-        return {
-          ...payload,
-          schemaVersion: '2026-04-05' as const,
-          demoFixture: {
-            mode: auth.mode,
-            datasetVersion: fixture.datasetVersion,
-            fixtureSeed: fixture.fixtureSeed,
-            scenario: fixture.personaMatch.scenarioId,
-            degradedFallback: fixture.degradedFallback,
-            degradedReason: fixture.degradedReason,
-            personaProfile: fixture.personaMatch.profile,
-            personaId: fixture.personaMatch.personaId,
-            personaVariation: fixture.personaMatch.boundedVariation,
-            overrideReason: fixture.personaMatch.overrideReason,
-            fallbackCause: fixture.personaMatch.fallbackCause,
-          },
+        logResolutionStats('admin', payload.items)
+        const migrationSnapshot = getCategorizationMigrationSnapshot()
+        if (migrationSnapshot) {
+          logApiEvent({
+            level: migrationSnapshot.overAlertThreshold ? 'warn' : 'info',
+            msg: 'transaction categorization migration snapshot',
+            requestId,
+            path: 'admin',
+            ...migrationSnapshot,
+          })
         }
-      }
 
-      const dashboard = getDashboardRuntime(context)
-      const payload = await dashboard.useCases.getTransactions({
-        range,
-        limit,
-        cursor: context.query.cursor,
-      })
-      logResolutionStats('admin', payload.items)
-      const migrationSnapshot = getCategorizationMigrationSnapshot()
-      if (migrationSnapshot) {
-        logApiEvent({
-          level: migrationSnapshot.overAlertThreshold ? 'warn' : 'info',
-          msg: 'transaction categorization migration snapshot',
+        const shouldRequestBackgroundRefresh =
+          env.TRANSACTIONS_SNAPSHOT_FIRST_ENABLED &&
+          env.POWENS_REFRESH_BACKGROUND_ENABLED &&
+          (payload.freshness.syncStatus === 'stale-but-usable' ||
+            payload.freshness.syncStatus === 'sync-failed-with-safe-data' ||
+            payload.freshness.syncStatus === 'no-data-first-connect')
+
+        if (!shouldRequestBackgroundRefresh) {
+          return {
+            ...payload,
+            demoFixture: {
+              mode: 'admin',
+              datasetVersion: null,
+              fixtureSeed: null,
+              scenario: null,
+              degradedFallback: false,
+              degradedReason: null,
+              personaProfile: null,
+              personaId: null,
+              personaVariation: null,
+              overrideReason: null,
+              fallbackCause: null,
+            },
+          }
+        }
+
+        const refreshRequested = await dashboard.useCases.requestTransactionsBackgroundRefresh({
           requestId,
-          path: 'admin',
-          ...migrationSnapshot,
         })
-      }
 
-      const shouldRequestBackgroundRefresh =
-        env.TRANSACTIONS_SNAPSHOT_FIRST_ENABLED &&
-        env.POWENS_REFRESH_BACKGROUND_ENABLED &&
-        (payload.freshness.syncStatus === 'stale-but-usable' ||
-          payload.freshness.syncStatus === 'sync-failed-with-safe-data' ||
-          payload.freshness.syncStatus === 'no-data-first-connect')
-
-      if (!shouldRequestBackgroundRefresh) {
         return {
           ...payload,
+          freshness: {
+            ...payload.freshness,
+            refreshRequested,
+          },
           demoFixture: {
             mode: 'admin',
             datasetVersion: null,
@@ -191,51 +225,25 @@ export const createTransactionsRoute = () =>
             fallbackCause: null,
           },
         }
+      },
+      {
+        query: dashboardTransactionsQuerySchema,
+      }
+    )
+    .get('/transactions/migration-discrepancies', context => {
+      const auth = getAuth(context)
+      const internalAuth = getInternalAuth(context)
+      if (auth.mode !== 'admin' || !internalAuth.hasValidToken) {
+        context.set.status = 403
+        return {
+          code: 'forbidden',
+          message: 'Admin internal token required',
+        }
       }
 
-      const refreshRequested = await dashboard.useCases.requestTransactionsBackgroundRefresh({
-        requestId,
-      })
-
+      const snapshot = getCategorizationMigrationSnapshot()
       return {
-        ...payload,
-        freshness: {
-          ...payload.freshness,
-          refreshRequested,
-        },
-        demoFixture: {
-          mode: 'admin',
-          datasetVersion: null,
-          fixtureSeed: null,
-          scenario: null,
-          degradedFallback: false,
-          degradedReason: null,
-          personaProfile: null,
-          personaId: null,
-          personaVariation: null,
-          overrideReason: null,
-          fallbackCause: null,
-        },
+        schemaVersion: '2026-04-21',
+        snapshot,
       }
-    },
-    {
-      query: dashboardTransactionsQuerySchema,
-    }
-  )
-  .get('/transactions/migration-discrepancies', context => {
-    const auth = getAuth(context)
-    const internalAuth = getInternalAuth(context)
-    if (auth.mode !== 'admin' || !internalAuth.hasValidToken) {
-      context.set.status = 403
-      return {
-        code: 'forbidden',
-        message: 'Admin internal token required',
-      }
-    }
-
-    const snapshot = getCategorizationMigrationSnapshot()
-    return {
-      schemaVersion: '2026-04-21',
-      snapshot,
-    }
-  })
+    })

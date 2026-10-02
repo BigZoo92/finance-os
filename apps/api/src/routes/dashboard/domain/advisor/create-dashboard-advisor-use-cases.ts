@@ -4,8 +4,6 @@ import {
   type ChatGroundedAnswer,
   compactKnowledgeContextForPrompt,
   computeAiBudgetState,
-  createAnthropicMessagesClient,
-  createOpenAiResponsesClient,
   DAILY_BRIEF_PROMPT,
   type DailyBriefLlmDraft,
   DEFAULT_AI_EVAL_CASES,
@@ -17,6 +15,10 @@ import {
   TRANSACTION_LABELS_PROMPT,
   type TransactionLabelSuggestionDraft,
 } from '@finance-os/ai'
+import {
+  createAnthropicMessagesClient,
+  createOpenAiResponsesClient,
+} from '@finance-os/ai/providers'
 import type { ExternalInvestmentBundle } from '@finance-os/external-investments'
 import {
   type AdvisorSnapshot,
@@ -47,6 +49,7 @@ import type {
   DashboardSummaryResponse,
   DashboardUseCases,
 } from '../../types'
+import { roundFiniteNumber, toFiniteNumberOrNull } from '../../utils/number-format'
 import type { NewsContextBundle } from '../news-types'
 import { buildAdvisorChatFallback } from './build-chat-fallback'
 import { buildDeterministicBrief } from './build-deterministic-brief'
@@ -61,7 +64,6 @@ import {
   mapSummaryToFinanceEngineInput,
 } from './map-summary-to-engine-input'
 import { runAdvisorEvals } from './run-advisor-evals'
-import { roundFiniteNumber, toFiniteNumberOrNull } from '../../utils/number-format'
 
 type StructuredClient = {
   runStructured: <TOutput>(
@@ -301,7 +303,7 @@ const toRecommendationResponse = ({
   assumptions: item.assumptions,
   confidence: item.confidence,
   riskLevel: item.riskLevel,
-  expectedImpact: item.expectedImpact as unknown as Record<string, unknown>,
+  expectedImpact: item.expectedImpact,
   effort: item.effort,
   reversibility: item.reversibility,
   blockingFactors: item.blockingFactors,
@@ -792,7 +794,7 @@ const buildPreviewArtifacts = ({
       0,
       8
     ),
-    recommendationNotes: briefDraft.recommendationNotes as Array<Record<string, unknown>>,
+    recommendationNotes: briefDraft.recommendationNotes,
     provider: null,
     model: null,
     createdAt: new Date().toISOString(),
@@ -1245,21 +1247,22 @@ export const createDashboardAdvisorUseCases = ({
     })
 
     try {
-      const [summary, goalsResponse, newsBundle, investmentBundle, transactionsResponse] = await Promise.all([
-        getSummary('30d'),
-        getGoals(),
-        getNewsContextBundle
-          ? getNewsContextBundle({ requestId, range: '7d' })
-          : Promise.resolve(null),
-        getInvestmentContextBundle
-          ? getInvestmentContextBundle({ requestId })
-          : Promise.resolve(null),
-        getTransactions({
-          range: '30d',
-          limit: 40,
-          cursor: undefined,
-        }),
-      ])
+      const [summary, goalsResponse, newsBundle, investmentBundle, transactionsResponse] =
+        await Promise.all([
+          getSummary('30d'),
+          getGoals(),
+          getNewsContextBundle
+            ? getNewsContextBundle({ requestId, range: '7d' })
+            : Promise.resolve(null),
+          getInvestmentContextBundle
+            ? getInvestmentContextBundle({ requestId })
+            : Promise.resolve(null),
+          getTransactions({
+            range: '30d',
+            limit: 40,
+            cursor: undefined,
+          }),
+        ])
 
       const preview = buildPreviewArtifacts({
         summary,
@@ -1369,7 +1372,7 @@ export const createDashboardAdvisorUseCases = ({
             opportunities: llmBrief.opportunities,
             risks: llmBrief.risks,
             watchItems: llmBrief.watchItems,
-            recommendationNotes: llmBrief.recommendationNotes as Array<Record<string, unknown>>,
+            recommendationNotes: llmBrief.recommendationNotes,
             provider: 'openai',
             model: config.openAi?.dailyModel ?? 'gpt-5.4-mini',
           }
@@ -1392,11 +1395,13 @@ export const createDashboardAdvisorUseCases = ({
         challengerSkipped: !challengerViability.allowed,
         challengerSkipReason: challengerViability.allowed
           ? null
-          : (challengerViability.skipReasons.includes('investment_context_degraded')
-              ? 'investment_context_degraded'
-              : (challengerViability.skipReasons.find(reason =>
-                  reason.startsWith('investment_context_')
-                ) ?? challengerViability.skipReasons[0] ?? 'unknown')),
+          : challengerViability.skipReasons.includes('investment_context_degraded')
+            ? 'investment_context_degraded'
+            : (challengerViability.skipReasons.find(reason =>
+                reason.startsWith('investment_context_')
+              ) ??
+              challengerViability.skipReasons[0] ??
+              'unknown'),
         skipReasons: challengerViability.skipReasons,
         details: challengerViability.details,
       }
@@ -1622,7 +1627,7 @@ export const createDashboardAdvisorUseCases = ({
           >,
           driftSignals: preview.snapshot.driftSignals as unknown as Array<Record<string, unknown>>,
           scenarios: preview.snapshot.scenarios as unknown as Array<Record<string, unknown>>,
-          diagnostics: preview.snapshot.diagnostics as unknown as Record<string, unknown>,
+          diagnostics: preview.snapshot.diagnostics,
         },
         assumptions: preview.assumptions.items.map(item => ({
           assumptionKey: item.assumptionKey,
@@ -2087,10 +2092,10 @@ export const createDashboardAdvisorUseCases = ({
         },
         assistantMessage: {
           content: answer.answer,
-          citations: answer.citations as Array<Record<string, unknown>>,
+          citations: answer.citations,
           assumptions: answer.assumptions,
           caveats: answer.caveats,
-          simulations: answer.simulations as Array<Record<string, unknown>>,
+          simulations: answer.simulations,
           ...(!config.forceLocalOnly && !budgetState.blocked && openAiClient
             ? {
                 provider: 'openai',

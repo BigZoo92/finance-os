@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     trading_lab_default_fees_bps: float = 10.0
     trading_lab_default_slippage_bps: float = 5.0
     trading_lab_allow_experimental_strategies: bool = True
+    # Shared secret the API must present as `x-internal-service-token` on functional
+    # routes. Unset/blank disables the check (local dev); `INTERNAL_SERVICE_AUTH_REQUIRED`
+    # makes a missing token a startup failure so production cannot run open.
+    internal_service_token: str | None = None
+    internal_service_auth_required: bool = False
 
     model_config = {"env_prefix": "", "case_sensitive": False}
 

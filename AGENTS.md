@@ -15,7 +15,7 @@
 - Never put secrets in `VITE_*`, browser DTOs/forms, URLs, fixtures, logs, errors, prompts, or analytics.
 - Never log Powens callback codes, tokens, decrypted provider payloads, session values, or raw financial payloads.
 - Encrypt sensitive tokens at rest with the existing envelope.
-- IBKR/Binance credentials are server environment only. Do not read/write legacy `external_investment_credential` rows.
+- IBKR/Binance credentials are server environment only. The legacy `external_investment_credential` table was dropped (migration 0038); never reintroduce it.
 - Propagate `x-request-id` end to end; keep logs structured and error payloads normalized and safe.
 - `exactOptionalPropertyTypes` is enabled: omit absent optional keys instead of passing `undefined`.
 - Every behavior change preserves and tests both demo and admin paths.

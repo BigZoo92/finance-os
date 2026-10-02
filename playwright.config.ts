@@ -1,6 +1,19 @@
+import { resolve } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
+import { VISUAL_FIXED_TIME } from './e2e/support/visual-clock'
 
 const webPort = Number(process.env.E2E_WEB_PORT ?? 3000)
+
+// Visual regression pins the clock on both sides of SSR so relative labels
+// ("Ancien (216 j)") render identically on every run (see e2e/support).
+const visualRegression = process.env.VISUAL_REGRESSION === '1'
+const fixedClockEnv = visualRegression
+  ? {
+      VISUAL_FIXED_TIME,
+      // The config is loaded as CommonJS by Playwright, hence __dirname.
+      NODE_OPTIONS: `--import ${resolve(__dirname, 'e2e/support/fixed-clock.mjs')}`,
+    }
+  : {}
 const apiPort = Number(process.env.E2E_API_PORT ?? 3001)
 const webBaseUrl = `http://127.0.0.1:${webPort}`
 const apiBaseUrl = `http://127.0.0.1:${apiPort}`
@@ -69,6 +82,7 @@ const apiDemoEnv = {
 
 export default defineConfig({
   testDir: './e2e',
+  snapshotPathTemplate: '{testDir}/__visual__/{arg}{ext}',
   fullyParallel: false,
   timeout: 60_000,
   expect: {
@@ -115,6 +129,7 @@ export default defineConfig({
       env: {
         ...process.env,
         ...commonDemoEnv,
+        ...fixedClockEnv,
         NODE_ENV: 'production',
         API_INTERNAL_URL: apiBaseUrl,
         VITE_API_BASE_URL: '/api',

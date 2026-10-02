@@ -1,0 +1,47 @@
+{
+  "name": "@finance-os/styled-system",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Command Pixel design tokens (Panda preset) and the generated Panda CSS runtime shared by @finance-os/ui and @finance-os/web.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./preset": "./src/preset.ts",
+    "./css": {
+      "types": "./generated/css/index.d.ts",
+      "import": "./generated/css/index.mjs"
+    },
+    "./jsx": {
+      "types": "./generated/jsx/index.d.ts",
+      "import": "./generated/jsx/index.mjs"
+    },
+    "./patterns": {
+      "types": "./generated/patterns/index.d.ts",
+      "import": "./generated/patterns/index.mjs"
+    },
+    "./recipes": {
+      "types": "./generated/recipes/index.d.ts",
+      "import": "./generated/recipes/index.mjs"
+    },
+    "./tokens": {
+      "types": "./generated/tokens/index.d.ts",
+      "import": "./generated/tokens/index.mjs"
+    },
+    "./types": {
+      "types": "./generated/types/index.d.ts"
+    }
+  },
+  "scripts": {
+    "codegen": "panda codegen --clean",
+    "prepare": "panda codegen --clean",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "1.12.1",
+    "@types/react": "catalog:",
+    "react": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

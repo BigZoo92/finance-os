@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'bun:test'
 import type { schema } from '@finance-os/db'
 import type { EcbFxRate } from '../../services/fetch-ecb-fx-rates'
+import type { ValuationAssetRow, ValuationExternalPositionRow } from './collect-valuation-items'
 import {
   AssetValuationAlreadyRunningError,
   AssetValuationDisabledError,
   createAssetValuationUseCases,
 } from './create-asset-valuation-use-cases'
-import type { ValuationAssetRow, ValuationExternalPositionRow } from './collect-valuation-items'
 
 const NOW = new Date('2026-08-07T12:00:00.000Z')
 
@@ -14,22 +14,21 @@ type FxRow = typeof schema.fxRateSnapshot.$inferSelect
 type RunRow = typeof schema.assetValuationRun.$inferSelect
 type SnapshotInsert = typeof schema.assetValuationSnapshot.$inferInsert
 
-const usdFxRow = (): FxRow =>
-  ({
-    id: 1,
-    baseCurrency: 'EUR',
-    quoteCurrency: 'USD',
-    provider: 'ecb',
-    sourceType: 'daily',
-    rate: '1.08',
-    rateTimestamp: new Date('2026-08-07T00:00:00.000Z'),
-    fetchedAt: NOW,
-    staleAfterSeconds: 96 * 3600,
-    isStale: false,
-    confidence: 0.95,
-    metadata: null,
-    createdAt: NOW,
-  }) as FxRow
+const usdFxRow = (): FxRow => ({
+  id: 1,
+  baseCurrency: 'EUR',
+  quoteCurrency: 'USD',
+  provider: 'ecb',
+  sourceType: 'daily',
+  rate: '1.08',
+  rateTimestamp: new Date('2026-08-07T00:00:00.000Z'),
+  fetchedAt: NOW,
+  staleAfterSeconds: 96 * 3600,
+  isStale: false,
+  confidence: 0.95,
+  metadata: null,
+  createdAt: NOW,
+})
 
 const demoAssets: ValuationAssetRow[] = [
   {
@@ -276,7 +275,7 @@ describe('createAssetValuationUseCases — refresh', () => {
       fetchFxRates: async () => [],
       fxRates: { upsertMany: async () => 0, latestRatesForBase: async () => [] },
       valuationSnapshots: { insertMany: async () => 0 },
-      valuationRuns: noopRuns as never,
+      valuationRuns: noopRuns,
       listAssets: async () => [],
       listExternalPositions: async () => [],
       listInternalPositions: async () => [],
@@ -305,7 +304,7 @@ describe('createAssetValuationUseCases — refresh', () => {
       fetchFxRates: async () => [],
       fxRates: { upsertMany: async () => 0, latestRatesForBase: async () => [usdFxRow()] },
       valuationSnapshots: { insertMany: async rows => rows.length },
-      valuationRuns: noopRuns as never,
+      valuationRuns: noopRuns,
       listAssets: async () => demoAssets,
       listExternalPositions: async () => {
         throw new Error('binance down')
@@ -357,7 +356,7 @@ describe('createAssetValuationUseCases — upstream FX provenance', () => {
         completeRun: async () => {},
         markRunFailed: async () => {},
         getLatestRun: async () => null,
-      } as never,
+      },
       listAssets: async () => [],
       listExternalPositions: async () => [estimatedPosition],
       listInternalPositions: async () => [],

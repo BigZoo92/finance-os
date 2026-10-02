@@ -113,10 +113,7 @@ const getStaticPublicEnv = (): PublicRuntimeEnv => ({
     'VITE_CTA_EMERGENCY_DISABLE_LIST',
     toOptionalEnv(env.VITE_CTA_EMERGENCY_DISABLE_LIST)
   ),
-  ...withDefined(
-    'VITE_LEARNING_LOOP_UI_ENABLED',
-    toOptionalEnv(env.VITE_LEARNING_LOOP_UI_ENABLED)
-  ),
+  ...withDefined('VITE_LEARNING_LOOP_UI_ENABLED', toOptionalEnv(env.VITE_LEARNING_LOOP_UI_ENABLED)),
 })
 
 const getWindowPublicEnv = (): PublicRuntimeEnv => {
@@ -139,12 +136,12 @@ export const getPublicRuntimeEnv = (): PublicRuntimeEnv => ({
   ...getStaticPublicEnv(),
   ...getWindowPublicEnv(),
   ...(typeof window === 'undefined'
-    ? (Object.fromEntries(
+    ? Object.fromEntries(
         PUBLIC_RUNTIME_ENV_KEYS.flatMap(key => {
           const value = readServerPublicEnv(key)
           return value ? [[key, value]] : []
         })
-      ) as PublicRuntimeEnv)
+      )
     : {}),
 })
 

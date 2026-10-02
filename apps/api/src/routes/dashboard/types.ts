@@ -1,45 +1,40 @@
+import type { AiRunStatus } from '@finance-os/ai/run-status'
+import type {
+  DashboardManualAssetResponse,
+  DashboardManualAssetsResponse,
+  DashboardRange,
+  DashboardSummaryResponse,
+  DashboardTransactionsResponse,
+} from '@finance-os/api-contract/dashboard'
+import type {
+  DashboardGoalProgressSnapshot,
+  DashboardGoalResponse,
+  DashboardGoalsResponse,
+  DashboardGoalType,
+  DashboardGoalWriteInput,
+} from '@finance-os/api-contract/goals'
 import type { createDbClient } from '@finance-os/db'
 import type { getApiEnv } from '@finance-os/env'
-import type { createRedisClient } from '@finance-os/redis'
 import type { ExternalInvestmentProvider } from '@finance-os/external-investments'
-import type { AiRunStatus } from '@finance-os/ai/run-status'
 import type { ProviderRegistry } from '@finance-os/provider-runtime'
-import type {
-  AdvisorV2CapabilitiesResponse,
-  AdvisorV2PreviewResponse,
-} from './domain/advisor/v2/committee-types'
-import type { AdvisorReplayResponse } from './domain/advisor/replay/replay-types'
-import type { AdvisorFineTuningReadinessResponse } from './domain/advisor/fine-tuning/fine-tuning-types'
-import type {
-  AssetValuationStatusResponse,
-  AssetValuationUnresolvedItem,
-} from './domain/valuation/create-asset-valuation-use-cases'
-import type {
-  AssetSearchInput,
-  GenerateActionPlanInput,
-  InvestmentStrategyUpdateInput,
-  ReviewDueInput,
-  WatchlistAssetInput,
-  WatchlistAssetPatchInput,
-} from './domain/advisor/investment-strategy-use-cases'
-import type { DataQualityResponse } from './domain/data-quality/data-quality-types'
+import type { createRedisClient } from '@finance-os/redis'
 import type {
   DashboardAdvisorAssumptionsResponse,
+  DashboardAdvisorBehaviorAnalyticsResponse,
+  DashboardAdvisorChatPostResponse,
+  DashboardAdvisorChatThreadResponse,
+  DashboardAdvisorDailyBriefResponse,
   DashboardAdvisorDecisionJournalCreateInput,
   DashboardAdvisorDecisionJournalEntryResponse,
   DashboardAdvisorDecisionJournalListResponse,
   DashboardAdvisorDecisionKind,
   DashboardAdvisorDecisionOutcomeCreateInput,
   DashboardAdvisorDecisionOutcomeResponse,
-  DashboardAdvisorKnowledgeAnswerResponse,
-  DashboardAdvisorKnowledgeTopicsResponse,
-  DashboardAdvisorChatPostResponse,
-  DashboardAdvisorChatThreadResponse,
-  DashboardAdvisorDailyBriefResponse,
-  DashboardAdvisorBehaviorAnalyticsResponse,
   DashboardAdvisorEvalRunResponse,
   DashboardAdvisorEvalsResponse,
   DashboardAdvisorEvalTrendsResponse,
+  DashboardAdvisorKnowledgeAnswerResponse,
+  DashboardAdvisorKnowledgeTopicsResponse,
   DashboardAdvisorManualOperationResponse,
   DashboardAdvisorManualOperationStepKey,
   DashboardAdvisorManualRefreshAndRunPostResponse,
@@ -55,15 +50,19 @@ import type {
   DashboardAdvisorSpendAnalyticsResponse,
   DashboardAdvisorTransactionLabelSuggestionResponse,
 } from './advisor-contract'
-import type { NewsDuplicateCandidate } from './domain/news-dedupe'
 import type {
-  DashboardNewsFilters,
-  DashboardNewsSignalCard,
-  NewsContextBundle,
-  NewsPersistableSignalDraft,
-  NewsProviderHealth,
-  NewsProviderRunResult,
-} from './domain/news-types'
+  AdvisorFineTuningReadinessResponse,
+  AdvisorReplayResponse,
+  AdvisorV2CapabilitiesResponse,
+  AdvisorV2PreviewResponse,
+  AssetSearchInput,
+  GenerateActionPlanInput,
+  InvestmentStrategyUpdateInput,
+  ReviewDueInput,
+  WatchlistAssetInput,
+  WatchlistAssetPatchInput,
+} from './domain/advisor'
+import type { DataQualityResponse } from './domain/data-quality'
 import type {
   DashboardMarketsContextBundleResponse,
   DashboardMarketsMacroResponse,
@@ -74,12 +73,41 @@ import type {
   MarketProviderRunResult,
   MarketQuotePersistInput,
 } from './domain/markets-types'
+import type { NewsDuplicateCandidate } from './domain/news-dedupe'
+import type {
+  DashboardNewsFilters,
+  DashboardNewsSignalCard,
+  NewsContextBundle,
+  NewsPersistableSignalDraft,
+  NewsProviderHealth,
+  NewsProviderRunResult,
+} from './domain/news-types'
+import type { AssetValuationStatusResponse, AssetValuationUnresolvedItem } from './domain/valuation'
+import type { createDashboardSignalItemsRepository } from './repositories/dashboard-signal-items-repository'
+import type { createDashboardSignalSourcesRepository } from './repositories/dashboard-signal-sources-repository'
+import type { createDashboardTradingLabRepository } from './repositories/dashboard-trading-lab-repository'
+import type { createUserCategorizationRuleRepository } from './repositories/user-categorization-rule-repository'
 
 export type ApiDb = ReturnType<typeof createDbClient>['db']
 export type ApiEnv = ReturnType<typeof getApiEnv>
 export type RedisClient = ReturnType<typeof createRedisClient>['client']
 
-export type DashboardRange = '7d' | '30d' | '90d'
+export type {
+  DashboardManualAssetResponse,
+  DashboardManualAssetsResponse,
+  DashboardRange,
+  DashboardSummaryResponse,
+  DashboardTransactionsResponse,
+  DashboardValuationStatus,
+} from '@finance-os/api-contract/dashboard'
+export type {
+  DashboardGoalResponse,
+  DashboardGoalsResponse,
+  DashboardGoalType,
+  DashboardGoalWriteInput,
+} from '@finance-os/api-contract/goals'
+
+export type DashboardGoalProgressSnapshotRow = DashboardGoalProgressSnapshot
 
 export interface DashboardTransactionCursor {
   bookingDate: string
@@ -269,20 +297,6 @@ export interface DashboardTransactionClassificationUpdateInput {
   merchant?: string | null
 }
 
-export type DashboardGoalType =
-  | 'emergency_fund'
-  | 'travel'
-  | 'home'
-  | 'education'
-  | 'retirement'
-  | 'custom'
-
-export interface DashboardGoalProgressSnapshotRow {
-  recordedAt: string
-  amount: number
-  note: string | null
-}
-
 export interface DashboardGoalRow {
   id: number
   name: string
@@ -296,16 +310,6 @@ export interface DashboardGoalRow {
   archivedAt: Date | null
   createdAt: Date
   updatedAt: Date
-}
-
-export interface DashboardGoalWriteInput {
-  name: string
-  goalType: DashboardGoalType
-  currency: string
-  targetAmount: number
-  currentAmount: number
-  targetDate: string | null
-  note: string | null
 }
 
 export interface DashboardGoalPersistenceInput {
@@ -385,225 +389,6 @@ export interface DashboardBackgroundRunRecoveryResponse {
   errorCode: 'STALE_TIMED_OUT'
   errorMessage: string
 }
-
-export type DashboardValuationStatus =
-  | 'priced'
-  | 'derived'
-  | 'estimated'
-  | 'manual'
-  | 'stale'
-  | 'unresolved'
-  | 'unavailable'
-
-export interface DashboardSummaryResponse {
-  range: DashboardRange
-  totals: {
-    /**
-     * Legacy naive sum of enabled asset valuations in their native currencies
-     * (no FX). Kept for compatibility; prefer `valuation.totalValueBase`.
-     */
-    balance: number
-    incomes: number
-    expenses: number
-  }
-  /**
-   * Canonical valuation summary (Financial Data Core). Null when the
-   * valuation overlay is unavailable — a missing block means "unknown",
-   * never "zero".
-   */
-  valuation: {
-    baseCurrency: 'EUR'
-    totalValueBase: number | null
-    coveragePercent: number | null
-    statusCounts: Record<DashboardValuationStatus, number>
-    unknownValueCount: number
-    totalUnrealizedPnlBase: number | null
-    pnlCoverageCount: number
-    asOf: string
-  } | null
-  connections: Array<{
-    powensConnectionId: string
-    source: string
-    provider: string
-    providerConnectionId: string
-    providerInstitutionId: string | null
-    providerInstitutionName: string | null
-    status: 'connected' | 'syncing' | 'error' | 'reconnect_required'
-    lastSyncAttemptAt: string | null
-    lastSyncAt: string | null
-    lastSuccessAt: string | null
-    lastFailedAt: string | null
-    lastError: string | null
-    syncMetadata: Record<string, unknown> | null
-    balance: number
-    accountCount: number
-  }>
-  accounts: Array<{
-    powensAccountId: string
-    powensConnectionId: string
-    name: string
-    currency: string
-    type: string | null
-    metadata: Record<string, unknown> | null
-    enabled: boolean
-    balance: number
-  }>
-  assets: Array<{
-    assetId: number
-    type: 'cash' | 'investment' | 'manual'
-    origin: 'provider' | 'manual'
-    source: string
-    provider: string | null
-    providerConnectionId: string | null
-    providerInstitutionName: string | null
-    powensConnectionId: string | null
-    powensAccountId: string | null
-    name: string
-    currency: string
-    valuation: number
-    valuationAsOf: string | null
-    /** Canonical EUR value; null when unknown/unconvertible (never 0). */
-    valueBase: number | null
-    valuationStatus: DashboardValuationStatus | null
-    enabled: boolean
-    metadata: Record<string, unknown> | null
-  }>
-  positions: Array<{
-    positionId: number
-    positionKey: string
-    assetId: number | null
-    powensAccountId: string | null
-    powensConnectionId: string | null
-    source: string
-    provider: string | null
-    providerConnectionId: string | null
-    providerPositionId: string | null
-    assetName: string | null
-    accountName: string | null
-    name: string
-    currency: string
-    quantity: number | null
-    costBasis: number | null
-    costBasisSource: 'minimal' | 'provider' | 'manual' | 'unknown'
-    currentValue: number | null
-    lastKnownValue: number | null
-    openedAt: string | null
-    closedAt: string | null
-    valuedAt: string | null
-    lastSyncedAt: string | null
-    /** Canonical EUR value for unbridged positions; null when unknown. */
-    valueBase: number | null
-    valuationStatus: DashboardValuationStatus | null
-    enabled: boolean
-    metadata: Record<string, unknown> | null
-  }>
-  dailyWealthSnapshots: Array<{
-    date: string
-    balance: number
-  }>
-  topExpenseGroups: Array<{
-    label: string
-    category: string
-    merchant: string
-    total: number
-    count: number
-  }>
-}
-
-export interface DashboardTransactionsResponse {
-  schemaVersion: '2026-04-04' | '2026-04-05'
-  range: DashboardRange
-  limit: number
-  nextCursor: string | null
-  demoFixture?: {
-    mode: 'demo' | 'admin'
-    datasetVersion: string | null
-    fixtureSeed: string | null
-    scenario: string | null
-    degradedFallback: boolean
-    degradedReason: string | null
-    personaProfile: string | null
-    personaId: 'student' | 'freelancer' | 'family' | 'retiree' | null
-    personaVariation: 0 | 1 | 2 | null
-    overrideReason: 'manual_scenario_override' | 'persona_match' | 'kill_switch_disabled' | null
-    fallbackCause: string | null
-  }
-  freshness: {
-    strategy: 'snapshot-first'
-    lastSyncedAt: string | null
-    syncStatus:
-      | 'fresh'
-      | 'stale-but-usable'
-      | 'syncing'
-      | 'sync-failed-with-safe-data'
-      | 'no-data-first-connect'
-    degradedReason: string | null
-    snapshotAgeSeconds: number | null
-    refreshRequested: boolean
-  }
-  items: Array<{
-    id: number
-    bookingDate: string
-    amount: number
-    currency: string
-    direction: 'income' | 'expense'
-    label: string
-    merchant: string
-    category: string | null
-    subcategory: string | null
-    resolvedCategory: string | null
-    resolutionSource:
-      | 'manual_override'
-      | 'user_rule'
-      | 'merchant_rules'
-      | 'mcc'
-      | 'counterparty'
-      | 'fallback'
-    resolutionRuleId: string | null
-    resolutionTrace: Array<{
-      source:
-        | 'manual_override'
-        | 'user_rule'
-        | 'merchant_rules'
-        | 'mcc'
-        | 'counterparty'
-        | 'fallback'
-      rank: number
-      matched: boolean
-      reason: string
-      category: string | null
-      subcategory: string | null
-      ruleId: string | null
-    }>
-    incomeType: 'salary' | 'recurring' | 'exceptional' | null
-    tags: string[]
-    powensConnectionId: string
-    powensAccountId: string
-    accountName: string | null
-  }>
-}
-
-export interface DashboardManualAssetResponse {
-  assetId: number
-  type: 'cash' | 'investment' | 'manual'
-  origin: 'provider' | 'manual'
-  source: string
-  name: string
-  currency: string
-  valuation: number
-  valuationAsOf: string | null
-  enabled: boolean
-  note: string | null
-  category: string | null
-  metadata: Record<string, unknown> | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface DashboardManualAssetsResponse {
-  items: DashboardManualAssetResponse[]
-}
-
 
 export interface DashboardAdvisorInsight {
   id: string
@@ -722,33 +507,12 @@ export interface DashboardNewsResponse {
   items: DashboardNewsSignalCard[]
 }
 
-export interface DashboardGoalResponse {
-  id: number
-  name: string
-  goalType: DashboardGoalType
-  currency: string
-  targetAmount: number
-  currentAmount: number
-  targetDate: string | null
-  note: string | null
-  progressSnapshots: DashboardGoalProgressSnapshotRow[]
-  archivedAt: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface DashboardGoalsResponse {
-  items: DashboardGoalResponse[]
-}
-
 export interface DashboardReadRepository {
   listAccountsWithConnections: () => Promise<AccountWithConnectionRow[]>
   listPowensConnections: () => Promise<PowensConnectionRow[]>
   listAssets: () => Promise<AssetRow[]>
   listManualAssets: () => Promise<ManualAssetRow[]>
-  createManualAsset: (
-    input: DashboardManualAssetPersistenceInput
-  ) => Promise<ManualAssetRow>
+  createManualAsset: (input: DashboardManualAssetPersistenceInput) => Promise<ManualAssetRow>
   updateManualAsset: (
     assetId: number,
     input: DashboardManualAssetPersistenceInput
@@ -841,7 +605,8 @@ export interface DashboardMarketsRepository {
       marketOpen: boolean | null
       isDelayed: boolean
       freshnessMinutes: number | null
-      price: number
+      /** Null when the persisted price is missing or unparseable; never 0. */
+      price: number | null
       previousClose: number | null
       dayChangePct: number | null
       weekChangePct: number | null
@@ -855,7 +620,8 @@ export interface DashboardMarketsRepository {
     Array<{
       seriesId: string
       observationDate: string
-      value: number
+      /** Null when the persisted observation has no numeric value. */
+      value: number | null
     }>
   >
   upsertMacroObservations: (observations: MarketMacroObservationPersistInput[]) => Promise<void>
@@ -886,7 +652,9 @@ export interface DashboardMarketsRepository {
     lastSignalCount?: number | null
     lastRefreshDurationMs?: number | null
   }) => Promise<void>
-  upsertMarketProviderState: (input: MarketProviderRunResult & { enabled: boolean }) => Promise<void>
+  upsertMarketProviderState: (
+    input: MarketProviderRunResult & { enabled: boolean }
+  ) => Promise<void>
   listMarketProviderHealth: () => Promise<
     Array<{
       provider: 'eodhd' | 'fred' | 'twelve_data'
@@ -1172,10 +940,7 @@ export interface DashboardAdvisorRepository {
   // PR15A — narrow freeNote-free read for behavior analytics over advisor_decision_journal +
   // advisor_decision_outcome. Defense-in-depth: the column list is hand-typed to exclude
   // `free_note` so the analytics layer cannot accidentally expose raw notes.
-  listDecisionsForBehaviorAnalytics: (input: {
-    windowDays: number
-    limit: number
-  }) => Promise<{
+  listDecisionsForBehaviorAnalytics: (input: { windowDays: number; limit: number }) => Promise<{
     decisions: Array<{
       id: number
       decision: 'accepted' | 'rejected' | 'deferred' | 'ignored' | string
@@ -1230,7 +995,9 @@ export interface DashboardAdvisorRepository {
     errorMessage?: string | null
     details?: Record<string, unknown> | null
   }) => Promise<void>
-  getManualOperation: (operationId: string) => Promise<DashboardAdvisorManualOperationResponse | null>
+  getManualOperation: (
+    operationId: string
+  ) => Promise<DashboardAdvisorManualOperationResponse | null>
   getLatestManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
   listManualOperations: (limit: number) => Promise<DashboardAdvisorManualOperationResponse[]>
   getLatestActiveManualOperation: () => Promise<DashboardAdvisorManualOperationResponse | null>
@@ -1243,9 +1010,7 @@ export interface DashboardAdvisorRepository {
    * Idempotent: re-running on already-recovered rows is a no-op because the
    * WHERE filters out non-running states.
    */
-  recoverStaleManualOperations: (input: {
-    staleAfterMs: number
-  }) => Promise<{
+  recoverStaleManualOperations: (input: { staleAfterMs: number }) => Promise<{
     recovered: DashboardAdvisorManualOperationResponse[]
     skipped: DashboardAdvisorManualOperationResponse[]
   }>
@@ -1325,7 +1090,12 @@ export interface DashboardDerivedRecomputeRepository {
   }>
 }
 
-export interface DashboardUseCases {
+/**
+ * Bounded use-case modules. Each slice is owned by one domain module; the
+ * route runtime composes them and HTTP routes only see the composed contract.
+ */
+/** Summary, transactions, goals, manual assets and derived recompute. */
+export interface DashboardCoreUseCases {
   getSummary: (range: DashboardRange) => Promise<DashboardSummaryResponse>
   getManualAssets?: (input: { mode: 'demo' | 'admin' }) => Promise<DashboardManualAssetsResponse>
   createManualAsset?: (
@@ -1361,6 +1131,24 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource: 'admin' | 'internal'
   }) => Promise<DashboardDerivedRecomputeStatusResponse>
+  recoverStaleBackgroundRuns?: (input: {
+    mode: 'demo' | 'admin'
+    requestId: string
+    staleAfterMs: number
+  }) => Promise<{
+    recovered: DashboardBackgroundRunRecoveryResponse[]
+    skipped: DashboardBackgroundRunRecoveryResponse[]
+  }>
+  /**
+   * Cancel a specific manual operation by id. Returns the operation in its
+   * post-cancel state (status='failed' with errorCode='CANCELLED').
+   *
+   * Wired into POST /ops/refresh/runs/:runId/cancel.
+   */
+}
+
+/** Asset valuation runs and coverage (domain/valuation). */
+export interface DashboardValuationUseCases {
   getAssetValuationStatus?: () => Promise<AssetValuationStatusResponse>
   runAssetValuationRefresh?: (input: {
     requestId: string
@@ -1370,6 +1158,10 @@ export interface DashboardUseCases {
   listAssetValuationUnresolved?: (input: {
     requestId: string
   }) => Promise<{ items: AssetValuationUnresolvedItem[]; totalItems: number }>
+}
+
+/** News feed, context bundle and ingestion. */
+export interface DashboardNewsUseCaseSlice {
   getNews?: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
   getNewsContextBundle?: (input: {
     requestId: string
@@ -1381,6 +1173,10 @@ export interface DashboardUseCases {
     mergedCount: number
     dedupeDropCount: number
   }>
+}
+
+/** Markets overview, watchlist, macro and refresh. */
+export interface DashboardMarketsUseCaseSlice {
   getMarketsOverview?: (input: { requestId: string }) => Promise<DashboardMarketsOverviewResponse>
   getMarketsWatchlist?: (input: { requestId: string }) => Promise<DashboardMarketsWatchlistResponse>
   getMarketsMacro?: (input: { requestId: string }) => Promise<DashboardMarketsMacroResponse>
@@ -1395,13 +1191,14 @@ export interface DashboardUseCases {
     signalCount: number
     providerResults: MarketProviderRunResult[]
   }>
+}
+
+/** IBKR/Binance read-only summaries and sync triggers. */
+export interface DashboardExternalInvestmentsUseCases {
   getExternalInvestmentsSummary?: (input: { requestId: string }) => Promise<unknown>
   getExternalInvestmentsAccounts?: (input: { requestId: string }) => Promise<unknown>
   getExternalInvestmentsPositions?: (input: { requestId: string }) => Promise<unknown>
-  getExternalInvestmentsTrades?: (input: {
-    requestId: string
-    limit?: number
-  }) => Promise<unknown>
+  getExternalInvestmentsTrades?: (input: { requestId: string; limit?: number }) => Promise<unknown>
   getExternalInvestmentsCashFlows?: (input: {
     requestId: string
     limit?: number
@@ -1412,6 +1209,10 @@ export interface DashboardUseCases {
     requestId: string
   }) => Promise<void>
   generateExternalInvestmentContextBundle?: (input: { requestId: string }) => Promise<unknown>
+}
+
+/** Advisor runs, briefs, signals, chat, evals, manual operations and post-mortems (domain/advisor). */
+export interface DashboardAdvisorUseCases {
   getAdvisorOverview?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1488,20 +1289,6 @@ export interface DashboardUseCases {
     recovered: DashboardAdvisorManualOperationResponse[]
     skipped: DashboardAdvisorManualOperationResponse[]
   }>
-  recoverStaleBackgroundRuns?: (input: {
-    mode: 'demo' | 'admin'
-    requestId: string
-    staleAfterMs: number
-  }) => Promise<{
-    recovered: DashboardBackgroundRunRecoveryResponse[]
-    skipped: DashboardBackgroundRunRecoveryResponse[]
-  }>
-  /**
-   * Cancel a specific manual operation by id. Returns the operation in its
-   * post-cancel state (status='failed' with errorCode='CANCELLED').
-   *
-   * Wired into POST /ops/refresh/runs/:runId/cancel.
-   */
   cancelAdvisorManualOperation?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1559,10 +1346,11 @@ export interface DashboardUseCases {
     requestId: string
     triggerSource?: string
   }) => Promise<DashboardAdvisorPostMortemRunResponse>
-  getInvestmentStrategy?: (input: {
-    mode: 'demo' | 'admin'
-    requestId: string
-  }) => Promise<unknown>
+}
+
+/** Investment strategy, watchlist, plans, hypotheses and lessons (domain/advisor investment strategy). */
+export interface DashboardInvestmentUseCases {
+  getInvestmentStrategy?: (input: { mode: 'demo' | 'admin'; requestId: string }) => Promise<unknown>
   updateInvestmentStrategy?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1595,10 +1383,7 @@ export interface DashboardUseCases {
     watchlistId: number
   }) => Promise<unknown>
   generateInvestmentPlan?: (input: GenerateActionPlanInput) => Promise<unknown>
-  latestInvestmentPlan?: (input: {
-    mode: 'demo' | 'admin'
-    requestId: string
-  }) => Promise<unknown>
+  latestInvestmentPlan?: (input: { mode: 'demo' | 'admin'; requestId: string }) => Promise<unknown>
   listInvestmentHypotheses?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1622,10 +1407,11 @@ export interface DashboardUseCases {
     lessonId: number
     status: 'approved' | 'rejected'
   }) => Promise<unknown>
-  getInvestmentStatus?: (input: {
-    mode: 'demo' | 'admin'
-    requestId: string
-  }) => Promise<unknown>
+  getInvestmentStatus?: (input: { mode: 'demo' | 'admin'; requestId: string }) => Promise<unknown>
+}
+
+/** Decision journal entries and outcomes. */
+export interface DashboardDecisionJournalUseCases {
   listAdvisorDecisionJournal?: (input: {
     mode: 'demo' | 'admin'
     requestId: string
@@ -1640,7 +1426,10 @@ export interface DashboardUseCases {
     decisionId: number
   }) => Promise<DashboardAdvisorDecisionJournalEntryResponse | null>
   createAdvisorDecisionJournalEntry?: (
-    input: { mode: 'demo' | 'admin'; requestId: string } & DashboardAdvisorDecisionJournalCreateInput
+    input: {
+      mode: 'demo' | 'admin'
+      requestId: string
+    } & DashboardAdvisorDecisionJournalCreateInput
   ) => Promise<DashboardAdvisorDecisionJournalEntryResponse>
   createAdvisorDecisionOutcome?: (
     input: {
@@ -1649,6 +1438,10 @@ export interface DashboardUseCases {
       decisionId: number
     } & DashboardAdvisorDecisionOutcomeCreateInput
   ) => Promise<DashboardAdvisorDecisionOutcomeResponse>
+}
+
+/** Data quality scoring and advisor readiness reviews (domain/data-quality, advisor replay and fine-tuning gates). */
+export interface DashboardReadinessUseCases {
   // Macro Prompt 5 — Data quality + advisor readiness scoring. Read-only,
   // deterministic, no provider/LLM/graph IO. Demo returns a fixture.
   getDataQuality?: (input: {
@@ -1681,6 +1474,16 @@ export interface DashboardUseCases {
   }) => Promise<AdvisorFineTuningReadinessResponse>
 }
 
+export type DashboardUseCases = DashboardCoreUseCases &
+  DashboardValuationUseCases &
+  DashboardNewsUseCaseSlice &
+  DashboardMarketsUseCaseSlice &
+  DashboardExternalInvestmentsUseCases &
+  DashboardAdvisorUseCases &
+  DashboardInvestmentUseCases &
+  DashboardDecisionJournalUseCases &
+  DashboardReadinessUseCases
+
 export interface DashboardNewsUseCases {
   getNews: (input: DashboardNewsFilters & { requestId: string }) => Promise<DashboardNewsResponse>
   getNewsContextBundle: (input: {
@@ -1699,9 +1502,7 @@ export interface DashboardMarketsUseCases {
   getOverview: (input: { requestId: string }) => Promise<DashboardMarketsOverviewResponse>
   getWatchlist: (input: { requestId: string }) => Promise<DashboardMarketsWatchlistResponse>
   getMacro: (input: { requestId: string }) => Promise<DashboardMarketsMacroResponse>
-  getContextBundle: (input: {
-    requestId: string
-  }) => Promise<DashboardMarketsContextBundleResponse>
+  getContextBundle: (input: { requestId: string }) => Promise<DashboardMarketsContextBundleResponse>
   refreshMarkets: (input: { requestId: string }) => Promise<{
     requestId: string
     refreshedAt: string
@@ -1713,12 +1514,17 @@ export interface DashboardMarketsUseCases {
 }
 
 export interface DashboardRouteRuntime {
+  /** Composition root for persistence: HTTP routes receive repositories from here and never build them. */
   repositories: {
     readModel: DashboardReadRepository
     news?: DashboardNewsRepository
     markets?: DashboardMarketsRepository
     advisor?: DashboardAdvisorRepository
     derivedRecompute: DashboardDerivedRecomputeRepository
+    signalSources: ReturnType<typeof createDashboardSignalSourcesRepository>
+    signalItems: ReturnType<typeof createDashboardSignalItemsRepository>
+    tradingLab: ReturnType<typeof createDashboardTradingLabRepository>
+    userCategorizationRules: ReturnType<typeof createUserCategorizationRuleRepository>
   }
   useCases: DashboardUseCases
   providerRegistry: ProviderRegistry

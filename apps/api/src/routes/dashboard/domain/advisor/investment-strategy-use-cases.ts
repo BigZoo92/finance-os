@@ -1,4 +1,5 @@
 import type { PriceSourceType } from '@finance-os/db/schema'
+import { internalServiceHeaders } from '../../../../services/internal-service-auth'
 import type { InvestmentStrategyRepository } from '../../repositories/investment-strategy-repository'
 import type { PriceSnapshotContract } from '../../services/valuation-foundation'
 import type { InvestmentPositionRow } from '../../types'
@@ -19,10 +20,10 @@ import {
   defaultAccountPolicies,
   defaultBuckets,
   defaultCandidateUniverse,
-  normalizeAssetSymbol,
   getReliablePriceForRecommendation,
   type HoldingInput,
   type InvestmentActionableStep,
+  normalizeAssetSymbol,
   type StrategyBucketDto,
   type StrategyBundle,
   type StrategyProfileDto,
@@ -30,71 +31,39 @@ import {
   toNumberOrNull,
   validateStrategy,
 } from './investment-strategy-engine'
+import type {
+  AssetSearchInput,
+  GenerateActionPlanInput,
+  InvestmentStrategyUpdateInput,
+  ReviewDueInput,
+  WatchlistAssetInput,
+  WatchlistAssetPatchInput,
+} from './investment-strategy-inputs'
+
+/**
+ * Allocation snapshot amounts are NOT NULL decimals written by this module; a
+ * value that does not parse is corrupt data and must surface, never read as 0.
+ */
+const toStoredAmount = (value: string, column: string): number => {
+  const parsed = toNumberOrNull(value)
+  if (parsed === null) {
+    throw new Error(`ALLOCATION_SNAPSHOT_INVALID_${column.toUpperCase()}`)
+  }
+  return parsed
+}
+
+export type {
+  AssetSearchInput,
+  GenerateActionPlanInput,
+  InvestmentStrategyUpdateInput,
+  ReviewDueInput,
+  WatchlistAssetInput,
+  WatchlistAssetPatchInput,
+}
 
 type Mode = 'demo' | 'admin'
 
 type ExternalPositionRow = Record<string, unknown>
-
-export type InvestmentStrategyUpdateInput = {
-  monthlyContributionTarget?: number | null
-  rebalanceThresholdPct?: number
-  horizonYears?: number
-  riskProfile?: 'conservative' | 'balanced' | 'growth' | 'aggressive' | 'custom'
-  description?: string
-}
-
-export type GenerateActionPlanInput = {
-  mode: Mode
-  requestId: string
-  triggerSource: string
-  dryRun?: boolean
-}
-
-export type AssetSearchInput = {
-  mode: Mode
-  requestId: string
-  query: string
-}
-
-export type WatchlistAssetInput = {
-  symbol: string
-  name: string
-  assetClass: string
-  providerSymbols?: Record<string, string>
-  iconUrl?: string | null
-  logoUrl?: string | null
-  isin?: string | null
-  exchange?: string | null
-  currency: string
-  userInterestLevel?: 'none' | 'watching' | 'interested' | 'high_interest'
-  userIntent?: 'watch' | 'analyze' | 'compare' | 'consider_buy' | 'exclude'
-  note?: string | null
-}
-
-export type WatchlistAssetPatchInput = Partial<
-  Pick<
-    WatchlistAssetInput,
-    | 'name'
-    | 'assetClass'
-    | 'providerSymbols'
-    | 'iconUrl'
-    | 'logoUrl'
-    | 'isin'
-    | 'exchange'
-    | 'currency'
-    | 'userInterestLevel'
-    | 'userIntent'
-    | 'note'
-  >
->
-
-export type ReviewDueInput = {
-  mode: Mode
-  requestId: string
-  triggerSource: string
-  dryRun?: boolean
-  limit?: number
-}
 
 export type InvestmentStrategyUseCaseDeps = {
   repository: InvestmentStrategyRepository
@@ -104,6 +73,7 @@ export type InvestmentStrategyUseCaseDeps = {
     enabled: boolean
     url: string
     timeoutMs: number
+    internalServiceToken?: string
   }
   advisorGraphIngestEnabled: boolean
 }
@@ -470,27 +440,38 @@ const demoPlan = (requestId: string) => {
   }
 }
 
+// Text from a loosely typed row: strings as is, scalars stringified, anything
+// else (object, array) treated as absent instead of becoming "[object Object]".
+const toRowText = (value: unknown): string | null => {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+  return null
+}
+
 const mapExternalPosition = (row: ExternalPositionRow): HoldingInput => {
-  const provider = String(row.provider ?? 'unknown')
-  const assetClass = String(row.assetClass ?? 'unknown')
+  const provider = toRowText(row.provider) ?? 'unknown'
+  const assetClass = toRowText(row.assetClass) ?? 'unknown'
   const sourceConfidence = row.sourceConfidence
+  const valueSource = row.valueSource ? toRowText(row.valueSource) : null
   return {
     provider,
-    accountId: row.accountExternalId ? String(row.accountExternalId) : null,
-    accountLabel: row.accountAlias ? String(row.accountAlias) : null,
+    accountId: row.accountExternalId ? toRowText(row.accountExternalId) : null,
+    accountLabel: row.accountAlias ? toRowText(row.accountAlias) : null,
     accountType: provider === 'binance' ? 'crypto' : 'brokerage',
-    symbol: row.symbol ? String(row.symbol) : null,
-    name: String(row.name ?? row.symbol ?? 'Unknown external position'),
+    symbol: row.symbol ? toRowText(row.symbol) : null,
+    name: toRowText(row.name ?? row.symbol) ?? 'Unknown external position',
     assetClass,
     value: toNumberOrNull(row.normalizedValue ?? row.value),
     currency: row.valueCurrency
-      ? String(row.valueCurrency)
+      ? toRowText(row.valueCurrency)
       : row.currency
-        ? String(row.currency)
+        ? toRowText(row.currency)
         : null,
     valueAsOf: typeof row.valueAsOf === 'string' ? row.valueAsOf : null,
     quantity: toNumberOrNull(row.quantity),
-    ...(row.valueSource ? { valueSource: String(row.valueSource) } : {}),
+    ...(valueSource ? { valueSource } : {}),
     confidence:
       typeof sourceConfidence === 'number'
         ? sourceConfidence
@@ -643,7 +624,11 @@ const CURATED_ASSET_UNIVERSE: CuratedAsset[] = [
     iconUrl: null,
     logoUrl: null,
     providerSymbols: { binance: 'BTCEUR' },
-    eligibilityByAccount: { pea: 'not_applicable', brokerage: 'not_applicable', crypto: 'eligible' },
+    eligibilityByAccount: {
+      pea: 'not_applicable',
+      brokerage: 'not_applicable',
+      crypto: 'eligible',
+    },
     suggestedBucket: 'asymmetric',
     riskLevel: 'very_high',
   },
@@ -657,7 +642,11 @@ const CURATED_ASSET_UNIVERSE: CuratedAsset[] = [
     iconUrl: null,
     logoUrl: null,
     providerSymbols: { binance: 'ETHEUR' },
-    eligibilityByAccount: { pea: 'not_applicable', brokerage: 'not_applicable', crypto: 'eligible' },
+    eligibilityByAccount: {
+      pea: 'not_applicable',
+      brokerage: 'not_applicable',
+      crypto: 'eligible',
+    },
     suggestedBucket: 'asymmetric',
     riskLevel: 'very_high',
   },
@@ -671,7 +660,11 @@ const CURATED_ASSET_UNIVERSE: CuratedAsset[] = [
     iconUrl: null,
     logoUrl: null,
     providerSymbols: { binance: 'SOLEUR' },
-    eligibilityByAccount: { pea: 'not_applicable', brokerage: 'not_applicable', crypto: 'eligible' },
+    eligibilityByAccount: {
+      pea: 'not_applicable',
+      brokerage: 'not_applicable',
+      crypto: 'eligible',
+    },
     suggestedBucket: 'asymmetric',
     riskLevel: 'very_high',
   },
@@ -867,7 +860,8 @@ const dataQualityFromJson = (
       ? value.status
       : 'degraded',
   confidence: toNumberOrNull(value.confidence) ?? 0,
-  unknownValue: toNumberOrNull(value.unknownValue) ?? 0,
+  // Null stays null: the value of unvalued positions is unknown, never 0.
+  unknownValue: toNumberOrNull(value.unknownValue),
   unknownPositionCount: toNumberOrNull(value.unknownPositionCount) ?? 0,
   stalePositionCount: toNumberOrNull(value.stalePositionCount) ?? 0,
   missingPriceSymbols: toStringArray(value.missingPriceSymbols),
@@ -926,12 +920,12 @@ const mapPersistedAllocation = (latest: {
   strategyId: latest.snapshot.strategyId,
   snapshotAt: latest.snapshot.snapshotAt.toISOString(),
   baseCurrency: latest.snapshot.baseCurrency,
-  totalValue: toNumberOrNull(latest.snapshot.totalValue) ?? 0,
-  coreValue: toNumberOrNull(latest.snapshot.coreValue) ?? 0,
-  growthValue: toNumberOrNull(latest.snapshot.growthValue) ?? 0,
-  asymmetricValue: toNumberOrNull(latest.snapshot.asymmetricValue) ?? 0,
-  cashValue: toNumberOrNull(latest.snapshot.cashValue) ?? 0,
-  unknownValue: toNumberOrNull(latest.snapshot.unknownValue) ?? 0,
+  totalValue: toStoredAmount(latest.snapshot.totalValue, 'total_value'),
+  coreValue: toStoredAmount(latest.snapshot.coreValue, 'core_value'),
+  growthValue: toStoredAmount(latest.snapshot.growthValue, 'growth_value'),
+  asymmetricValue: toStoredAmount(latest.snapshot.asymmetricValue, 'asymmetric_value'),
+  cashValue: toStoredAmount(latest.snapshot.cashValue, 'cash_value'),
+  unknownValue: toStoredAmount(latest.snapshot.unknownValue, 'unknown_value'),
   corePct: latest.snapshot.corePct,
   growthPct: latest.snapshot.growthPct,
   asymmetricPct: latest.snapshot.asymmetricPct,
@@ -1022,7 +1016,7 @@ export const createInvestmentStrategyUseCases = ({
         ? (['crypto'] as const)
         : (['pea', 'brokerage'] as const)
     const providerSymbols = {
-      ...(curated?.providerSymbols ?? {}),
+      ...curated?.providerSymbols,
       ...toJsonRecord(row.providerSymbolsJson),
     } as Record<string, string>
     const userIntent =
@@ -1090,7 +1084,8 @@ export const createInvestmentStrategyUseCases = ({
           userInterestLevel: candidate.userInterestLevel,
           userIntent: candidate.userIntent,
           notes: candidate.notes ?? existing.notes,
-          source: existing.source === 'default_seed_needs_review' ? 'user_watchlist' : existing.source,
+          source:
+            existing.source === 'default_seed_needs_review' ? 'user_watchlist' : existing.source,
           iconUrl: candidate.iconUrl,
           logoUrl: candidate.logoUrl,
         })
@@ -1323,6 +1318,7 @@ export const createInvestmentStrategyUseCases = ({
         headers: {
           'content-type': 'application/json',
           'x-request-id': requestId,
+          ...internalServiceHeaders(knowledgeConfig.internalServiceToken),
         },
         body: JSON.stringify({
           mode: 'admin',
@@ -1650,7 +1646,8 @@ export const createInvestmentStrategyUseCases = ({
   }
 
   const assetsForSearch = async (mode: Mode) => {
-    const bundle = mode === 'demo' ? createDemoStrategyBundle() : await seedDefaultStrategyIfMissing()
+    const bundle =
+      mode === 'demo' ? createDemoStrategyBundle() : await seedDefaultStrategyIfMissing()
     const interests = mode === 'demo' ? [] : await repository.listUserAssetInterests()
     const interestSymbols = new Map(
       interests.map(row => [`${normalizeAssetSymbol(row.symbol)}:${row.assetClass}`, row])
@@ -1673,7 +1670,10 @@ export const createInvestmentStrategyUseCases = ({
   }: {
     asset: CuratedAsset | AssetCandidateDto
     price: ReturnType<typeof priceRowToContract> | null
-    watched: Map<string, Awaited<ReturnType<InvestmentStrategyRepository['listUserAssetInterests']>>[number]>
+    watched: Map<
+      string,
+      Awaited<ReturnType<InvestmentStrategyRepository['listUserAssetInterests']>>[number]
+    >
     now: Date
   }): AssetSearchResultDto => {
     const isCandidate = 'bucket' in asset
@@ -1774,7 +1774,9 @@ export const createInvestmentStrategyUseCases = ({
       ...filtered.flatMap(asset => Object.values(asset.providerSymbols)),
     ]
     const priceRows =
-      mode === 'demo' ? [] : await repository.latestPricesForSymbols(symbols.map(normalizeAssetSymbol))
+      mode === 'demo'
+        ? []
+        : await repository.latestPricesForSymbols(symbols.map(normalizeAssetSymbol))
     const prices = new Map<string, ReturnType<typeof priceRowToContract>>()
     for (const row of priceRows) {
       const price = priceRowToContract(row)
@@ -1784,8 +1786,9 @@ export const createInvestmentStrategyUseCases = ({
     }
     const items = filtered.map(asset => {
       const priceSymbol =
-        Object.values(asset.providerSymbols).find(symbol => prices.has(normalizeAssetSymbol(symbol))) ??
-        asset.symbol
+        Object.values(asset.providerSymbols).find(symbol =>
+          prices.has(normalizeAssetSymbol(symbol))
+        ) ?? asset.symbol
       return searchResultFromAsset({
         asset,
         price: prices.get(normalizeAssetSymbol(priceSymbol)) ?? null,
@@ -1879,7 +1882,9 @@ export const createInvestmentStrategyUseCases = ({
     const row = await repository.updateUserAssetInterest(watchlistId, {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.assetClass !== undefined ? { assetClass: input.assetClass } : {}),
-      ...(input.providerSymbols !== undefined ? { providerSymbolsJson: input.providerSymbols } : {}),
+      ...(input.providerSymbols !== undefined
+        ? { providerSymbolsJson: input.providerSymbols }
+        : {}),
       ...(input.iconUrl !== undefined ? { iconUrl: input.iconUrl } : {}),
       ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
       ...(input.isin !== undefined ? { isin: input.isin } : {}),
@@ -2014,7 +2019,12 @@ export const createInvestmentStrategyUseCases = ({
           priceSnapshotId: item.priceSnapshotId,
           valuationSnapshotId: item.valuationSnapshotId,
           dataFreshness,
-          priceability: dataFreshness.price === null ? 'missing' : dataFreshness.isStale ? 'stale' : 'priceable',
+          priceability:
+            dataFreshness.price === null
+              ? 'missing'
+              : dataFreshness.isStale
+                ? 'stale'
+                : 'priceable',
           recommendabilityStatus:
             item.action === 'buy'
               ? 'recommendable'

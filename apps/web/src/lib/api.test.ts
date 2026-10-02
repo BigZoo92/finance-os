@@ -39,7 +39,7 @@ describe('toApiUrl', () => {
   })
 
   it('uses browser relative API base when window is available', () => {
-    vi.stubGlobal('window', {} as Window & typeof globalThis)
+    vi.stubGlobal('window', {})
 
     expect(toApiUrl('/auth/me')).toBe('/api/auth/me')
   })
@@ -69,7 +69,7 @@ describe('apiFetch', () => {
     delete process.env.PRIVATE_ACCESS_TOKEN
     fetchMock.mockReset()
     getGlobalStartContextMock.mockReset()
-    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+    vi.stubGlobal('fetch', fetchMock)
   })
 
   afterEach(() => {
@@ -109,11 +109,14 @@ describe('apiFetch', () => {
   })
 
   it('forwards SSR cookie, request id and internal token headers on server requests', async () => {
-    process.env.PRIVATE_ACCESS_TOKEN = 'test-private-access-token'
+    // The token is resolved by the server request middleware, never from
+    // process.env inside this isomorphic module.
+    process.env.PRIVATE_ACCESS_TOKEN = 'env-token-must-be-ignored'
     getGlobalStartContextMock.mockReturnValue({
       requestOrigin: 'http://127.0.0.1:3000',
       requestCookieHeader: 'finance_os_session=session-token',
       requestId: 'req-test-1',
+      internalToken: 'test-private-access-token',
     })
 
     fetchMock.mockResolvedValue(

@@ -1,11 +1,44 @@
+import { cva, cx } from '@finance-os/styled-system/css'
+import type { IChartApi } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
-import { getTradingChartColors } from './chart-colors'
+import { useIsClient } from '@/lib/use-is-client'
+import { getTradingChartColors, removeChart } from './chart-colors'
 
 export type EquityPoint = { date: string; equity: number }
 
+// The placeholder frame (SSR and fallback) is dashed; the live chart container is bare.
+const chartBox = cva({
+  base: { position: 'relative', w: 'full' },
+  variants: {
+    placeholder: {
+      true: {
+        rounded: 'md',
+        borderWidth: '1px',
+        borderStyle: 'dashed',
+        borderColor: 'border/40',
+        bg: 'surface.1',
+      },
+    },
+  },
+})
+
+const chartMessage = cva({
+  base: {
+    position: 'absolute',
+    inset: '0',
+    display: 'grid',
+    placeItems: 'center',
+    textStyle: 'xs',
+    color: 'muted.foreground',
+  },
+  variants: {
+    summary: { true: { px: '3', textAlign: 'center' } },
+  },
+})
+
 type Props = {
   data: EquityPoint[]
-  height?: number
+  chartHeight?: number
   className?: string
   /** Currency label for tooltip / a11y. */
   currency?: string
@@ -16,28 +49,29 @@ type Props = {
  * Lazy-loads `lightweight-charts` to keep initial bundle small.
  * Falls back to a text summary if rendering is not possible.
  */
-export function EquityCurveChart({ data, height = 240, className, currency = 'USD' }: Props) {
+export function EquityCurveChart({ data, chartHeight = 240, className, currency = 'USD' }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const [isClient, setIsClient] = useState(false)
+  const isClient = useIsClient()
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
+  // Terminal render state, exposed as `data-chart-state` for tests that must
+  // wait for the lazy chart (loading, pending, ready or unavailable).
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     if (!isClient || !containerRef.current || data.length === 0) return
-    let chart: { remove: () => void } | null = null
+    let chart: IChartApi | null = null
     let resizeObserver: ResizeObserver | null = null
 
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       try {
-        const mod = await import('lightweight-charts')
+        const { AreaSeries, createChart } = await import('lightweight-charts')
         if (cancelled || !containerRef.current) return
         const colors = getTradingChartColors()
-        const created = mod.createChart(containerRef.current, {
-          height,
+        // Assigned before the series is added so a failure below still removes
+        // the canvas the library already mounted in the container.
+        chart = createChart(containerRef.current, {
+          height: chartHeight,
           autoSize: true,
           layout: {
             background: { color: 'transparent' },
@@ -55,12 +89,9 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
           handleScroll: false,
           handleScale: false,
         })
-        // Type ref: lightweight-charts API differs across versions — use any-cast minimally
-        const series = (created as unknown as {
-          addAreaSeries: (opts: Record<string, unknown>) => {
-            setData: (d: Array<{ time: string; value: number }>) => void
-          }
-        }).addAreaSeries({
+        // lightweight-charts 5 API: series are added through their definition
+        // (`addAreaSeries` was removed in v5, which left the chart unavailable).
+        const series = chart.addSeries(AreaSeries, {
           lineColor: colors.teal,
           topColor: colors.tealSoft,
           bottomColor: colors.tealFaint,
@@ -71,7 +102,7 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
           .filter(p => p.date && Number.isFinite(p.equity))
           .map(p => ({ time: p.date, value: p.equity }))
         series.setData(chartData)
-        chart = created as unknown as { remove: () => void }
+        if (!cancelled) setReady(true)
 
         // Resize handling
         if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
@@ -81,32 +112,29 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
           resizeObserver.observe(containerRef.current)
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'chart_failed_to_load')
+        removeChart(chart)
+        chart = null
+        if (!cancelled) setError(e instanceof Error ? e.message : 'chart_failed_to_load')
       }
     })()
 
     return () => {
       cancelled = true
-      try {
-        chart?.remove()
-      } catch {
-        /* ignore */
-      }
+      removeChart(chart)
       resizeObserver?.disconnect()
     }
-  }, [data, height, isClient])
+  }, [data, chartHeight, isClient])
 
   if (!isClient) {
     return (
       <div
-        className={`relative w-full rounded-md border border-dashed border-border/40 bg-surface-1 ${className ?? ''}`}
-        style={{ height }}
+        className={cx(chartBox({ placeholder: true }), className)}
+        style={{ height: chartHeight }}
         role="img"
         aria-label="Equity curve chart loading"
+        data-chart-state="loading"
       >
-        <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
-          Chargement du graphique…
-        </div>
+        <div className={chartMessage()}>Chargement du graphique…</div>
       </div>
     )
   }
@@ -120,12 +148,13 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
         : 'Données de capital indisponibles'
     return (
       <div
-        className={`relative w-full rounded-md border border-dashed border-border/40 bg-surface-1 ${className ?? ''}`}
-        style={{ height }}
+        className={cx(chartBox({ placeholder: true }), className)}
+        style={{ height: chartHeight }}
         role="img"
         aria-label={summary}
+        data-chart-state="unavailable"
       >
-        <div className="absolute inset-0 grid place-items-center px-3 text-center text-xs text-muted-foreground">
+        <div className={chartMessage({ summary: true })}>
           {error ? 'Graphique indisponible' : summary}
         </div>
       </div>
@@ -135,9 +164,10 @@ export function EquityCurveChart({ data, height = 240, className, currency = 'US
   return (
     <div
       ref={containerRef}
-      className={`relative w-full ${className ?? ''}`}
-      style={{ height }}
+      className={cx(chartBox(), className)}
+      style={{ height: chartHeight }}
       role="img"
+      data-chart-state={ready ? 'ready' : 'pending'}
       aria-label={`Courbe de capital sur ${data.length} points`}
     />
   )

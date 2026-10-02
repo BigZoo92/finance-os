@@ -24,9 +24,13 @@ export interface GetDashboardAdvisorResult {
 }
 
 export const readDashboardAdvisorFlags = (): DashboardAdvisorFlags => ({
-  advisorEnabled: process.env.AI_ADVISOR_ENABLED !== '0' && process.env.AI_ADVISOR_ENABLED !== 'false',
-  adminOnly: process.env.AI_ADVISOR_ADMIN_ONLY === '1' || process.env.AI_ADVISOR_ADMIN_ONLY === 'true',
-  forceLocalOnly: process.env.AI_ADVISOR_FORCE_LOCAL_ONLY === '1' || process.env.AI_ADVISOR_FORCE_LOCAL_ONLY === 'true',
+  advisorEnabled:
+    process.env.AI_ADVISOR_ENABLED !== '0' && process.env.AI_ADVISOR_ENABLED !== 'false',
+  adminOnly:
+    process.env.AI_ADVISOR_ADMIN_ONLY === '1' || process.env.AI_ADVISOR_ADMIN_ONLY === 'true',
+  forceLocalOnly:
+    process.env.AI_ADVISOR_FORCE_LOCAL_ONLY === '1' ||
+    process.env.AI_ADVISOR_FORCE_LOCAL_ONLY === 'true',
 })
 
 export const createGetDashboardAdvisorUseCase = ({
@@ -34,7 +38,13 @@ export const createGetDashboardAdvisorUseCase = ({
 }: {
   getSummary: (range: DashboardRange) => Promise<DashboardSummaryResponse>
 }) => {
-  return async ({ mode, range }: { mode: 'demo' | 'admin'; range: DashboardRange }): Promise<GetDashboardAdvisorResult> => {
+  return async ({
+    mode,
+    range,
+  }: {
+    mode: 'demo' | 'admin'
+    range: DashboardRange
+  }): Promise<GetDashboardAdvisorResult> => {
     if (mode === 'demo') {
       return {
         plan: {

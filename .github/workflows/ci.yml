@@ -15,27 +15,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 jobs:
-  desktop-scope:
-    name: Detect desktop scope
-    runs-on: ubuntu-latest
-    outputs:
-      required: ${{ steps.detect.outputs.required }}
-      reason: ${{ steps.detect.outputs.reason }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Detect Tauri scope
-        id: detect
-        run: node scripts/desktop-scope.mjs --github-output="${GITHUB_OUTPUT}"
-
   validate:
     name: Validate
     runs-on: ubuntu-latest
@@ -46,29 +25,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.15.0
           run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ vars.BUN_VERSION || '1.2.22' }}
+          bun-version-file: .bun-version
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version-file: .python-version
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
@@ -85,26 +65,87 @@ jobs:
       - name: Documentation link check
         run: pnpm docs:check
 
-      - name: Root lint
+      - name: Root lint (oxlint, type-aware)
         run: pnpm lint
+
+      - name: Format check (oxfmt)
+        run: pnpm format:check
 
       - name: Docker workspace manifest drift check
         run: pnpm docker:check
 
-      - name: Workspace lint
-        run: pnpm -r --if-present lint
+      - name: Moon graph and constraints
+        run: pnpm moon:validate
 
-      - name: Typecheck
-        run: pnpm -r --if-present typecheck
+      - name: Database schema check
+        run: pnpm db:check
 
-      - name: Test
-        run: pnpm -r --if-present test
+      # Moon runs the project graph: typecheck, test, build and codegen tasks of
+      # every affected project (all of them on the default branch), with the
+      # Python services' lint/format/test tasks. Task hashes replay from cache.
+      - name: Moon CI (affected project tasks)
+        run: pnpm moon:ci
 
       - name: Python checks
         run: pnpm python:check
 
-      - name: Build
-        run: pnpm -r --if-present build
+      - name: Client bundle denylist
+        run: pnpm check:client-bundle
+
+      - name: Client bundle budget
+        run: pnpm check:bundle-budget
+
+  database:
+    name: Database migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      TEST_DATABASE_URL: postgres://finance_os:finance_os@127.0.0.1:5432/finance_os_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: finance_os_test
+          POSTGRES_USER: finance_os
+          POSTGRES_PASSWORD: finance_os
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finance_os -d finance_os_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply the migration journal to a fresh PostgreSQL
+        run: DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
+
+      - name: Migration journal integration test
+        run: pnpm db:test:integration
 
   e2e-smoke:
     name: E2E Smoke
@@ -120,20 +161,19 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.15.0
           run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ vars.BUN_VERSION || '1.2.22' }}
+          bun-version-file: .bun-version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -159,62 +199,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.15.0
           run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .node-version
 
       - name: Run Docker build smoke
         run: pnpm docker:build:smoke
-
-
-  tauri-validate:
-    name: Tauri Validate
-    needs: desktop-scope
-    if: needs.desktop-scope.outputs.required == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      CI: true
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.0
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install linux dependencies for Tauri
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install tauri CLI
-        run: cargo install tauri-cli --locked --version ^2
-
-      - name: Build desktop shell
-        run: pnpm desktop:build

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import { AUTH_SESSION_COOKIE_NAME } from './session'
 import { createAuthRoutes } from './routes'
+import { AUTH_SESSION_COOKIE_NAME } from './session'
 import type { AuthRoutesDependencies } from './types'
 
-const createAuthTestEnv = (
-  overrides?: Partial<AuthRoutesDependencies['env']>
-) =>
+const createAuthTestEnv = (overrides?: Partial<AuthRoutesDependencies['env']>) =>
   ({
     NODE_ENV: 'test',
     AUTH_ADMIN_EMAIL: 'givernaudenzo@gmail.com',
@@ -168,7 +166,7 @@ describe('createAuthRoutes /auth/me', () => {
       verifyPassword: async password => password === 'valid-password',
       envOverrides: {
         NODE_ENV: 'production',
-      } as Partial<AuthRoutesDependencies['env']>,
+      },
     })
 
     const response = await app.handle(
@@ -196,7 +194,7 @@ describe('createAuthRoutes /auth/me', () => {
       envOverrides: {
         NODE_ENV: 'production',
         AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: true,
-      } as Partial<AuthRoutesDependencies['env']>,
+      },
     })
 
     const response = await app.handle(

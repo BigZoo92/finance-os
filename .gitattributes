@@ -1,0 +1,54 @@
+# Deterministic text policy: every text file is normalized to LF in the
+# repository and checked out with LF on every platform. Untouched history is
+# not rewritten; files are normalized when they are legitimately modified.
+* text=auto eol=lf
+
+# Explicit text families (keeps intent visible even when auto-detection is unsure).
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mts text eol=lf
+*.cts text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.jsonc text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.svg text eol=lf
+*.sql text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.env.example text eol=lf
+Dockerfile text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Lockfiles are generated but text; keep them LF and never let merge tools
+# attempt line-based conflict resolution on them.
+pnpm-lock.yaml text eol=lf -diff merge=binary
+uv.lock text eol=lf -diff merge=binary
+
+# Generated sources: diffable but flagged so reviewers can collapse them.
+apps/web/src/routeTree.gen.ts linguist-generated=true
+packages/db/drizzle/meta/*.json linguist-generated=true
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.gz binary

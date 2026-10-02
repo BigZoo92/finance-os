@@ -21,9 +21,11 @@ const loadRootEnv = () => {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
 
+  // The root .env is a local convenience only: an already supplied process
+  // environment (CI, Compose, Dokploy, a test harness) always wins.
   config({
     path: resolve(__dirname, '../../../.env'),
-    override: true,
+    override: false,
   })
 
   rootEnvLoaded = true
@@ -41,7 +43,7 @@ const parseEnv = <T extends z.ZodRawShape>(shape: T) => {
   if (!parsed.success) {
     throw new Error(
       `Invalid environment variables:\n${JSON.stringify(
-        parsed.error.flatten().fieldErrors,
+        z.flattenError(parsed.error).fieldErrors,
         null,
         2
       )}`
@@ -98,6 +100,16 @@ const toStringArrayEnv = (value: string | undefined, fallback: string[] = []) =>
 }
 
 const normalizeUrl = (url: string) => url.replace(/\/+$/, '')
+
+// Zod 4 applies a schema's error to every issue, a missing value included, so a
+// required URL names both cases instead of calling an absent value invalid.
+// `z.url()` also trims the value, so a padded URL no longer leaks into derived
+// URLs (API_URL, user agents).
+const urlEnv = (name: string) =>
+  z.url({
+    error: issue =>
+      issue.input === undefined ? `${name} is required` : `${name} must be a valid URL`,
+  })
 
 const toDecodedBuffer = (value: string): Buffer | null => {
   const trimmed = value.trim()
@@ -165,7 +177,6 @@ const authSessionSecretSchema = z
 
 const AUTH_PASSWORD_HASH_PREFIX_ARGON2 = '$argon2'
 const AUTH_PASSWORD_HASH_PREFIX_PBKDF2 = 'pbkdf2$'
-const AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH = 24
 
 type ResolvedAuthPasswordHashSource =
   | 'AUTH_ADMIN_PASSWORD_HASH'
@@ -214,6 +225,9 @@ const hasSupportedAuthPasswordHashPrefix = (value: string) => {
   )
 }
 
+// Validation and resolution in one transform: an invalid input reports issues
+// and returns `z.NEVER`. Messages name the variable, never any part of its value
+// (a misplaced plaintext password must not reach a boot error).
 const authPasswordHashInputsSchema = z
   .object({
     AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
@@ -221,7 +235,7 @@ const authPasswordHashInputsSchema = z
     AUTH_PASSWORD_HASH: z.string().optional(),
     AUTH_PASSWORD_HASH_B64: z.string().optional(),
   })
-  .superRefine((values, ctx) => {
+  .transform((values, ctx): ResolvedAuthPasswordHash => {
     const hashInputsByPriority: Array<{
       source: ResolvedAuthPasswordHashSource
       value: string | undefined
@@ -249,78 +263,15 @@ const authPasswordHashInputsSchema = z
       },
     ]
 
-    const selected = hashInputsByPriority.find(item => item.value)
-    if (!selected || !selected.value) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['AUTH_ADMIN_PASSWORD_HASH'],
-        message:
-          'AUTH_ADMIN_PASSWORD_HASH_B64, AUTH_ADMIN_PASSWORD_HASH, AUTH_PASSWORD_HASH_B64 or AUTH_PASSWORD_HASH is required',
-      })
-      return
+    const reject = (path: ResolvedAuthPasswordHashSource, message: string) => {
+      ctx.issues.push({ code: 'custom', input: values, path: [path], message })
+      return z.NEVER
     }
-
-    if (selected.encoded) {
-      const decoded = decodeBase64Utf8Strict(selected.value)
-      if (!decoded) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [selected.source],
-          message: `${selected.source} is not valid base64`,
-        })
-        return
-      }
-
-      if (!hasSupportedAuthPasswordHashPrefix(decoded)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [selected.source],
-          message: 'Decoded hash must start with $argon2 or pbkdf2$',
-        })
-      }
-
-      return
-    }
-
-    if (!hasSupportedAuthPasswordHashPrefix(selected.value)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: [selected.source],
-        message: `${selected.source} must start with $argon2 or pbkdf2$ (got prefix: ${selected.value.slice(0, 18)})`,
-      })
-    }
-  })
-  .transform(values => {
-    const hashInputsByPriority: Array<{
-      source: ResolvedAuthPasswordHashSource
-      value: string | undefined
-      encoded: boolean
-    }> = [
-      {
-        source: 'AUTH_ADMIN_PASSWORD_HASH_B64',
-        value: toOptionalEnv(values.AUTH_ADMIN_PASSWORD_HASH_B64),
-        encoded: true,
-      },
-      {
-        source: 'AUTH_ADMIN_PASSWORD_HASH',
-        value: toOptionalEnv(values.AUTH_ADMIN_PASSWORD_HASH),
-        encoded: false,
-      },
-      {
-        source: 'AUTH_PASSWORD_HASH_B64',
-        value: toOptionalEnv(values.AUTH_PASSWORD_HASH_B64),
-        encoded: true,
-      },
-      {
-        source: 'AUTH_PASSWORD_HASH',
-        value: toOptionalEnv(values.AUTH_PASSWORD_HASH),
-        encoded: false,
-      },
-    ]
 
     const selected = hashInputsByPriority.find(item => item.value)
-    if (!selected || !selected.value) {
-      throw new Error(
+    if (!selected?.value) {
+      return reject(
+        'AUTH_ADMIN_PASSWORD_HASH',
         'AUTH_ADMIN_PASSWORD_HASH_B64, AUTH_ADMIN_PASSWORD_HASH, AUTH_PASSWORD_HASH_B64 or AUTH_PASSWORD_HASH is required'
       )
     }
@@ -328,19 +279,21 @@ const authPasswordHashInputsSchema = z
     if (selected.encoded) {
       const decoded = decodeBase64Utf8Strict(selected.value)
       if (!decoded) {
-        throw new Error(`${selected.source} is not valid base64`)
+        return reject(selected.source, `${selected.source} is not valid base64`)
       }
 
-      return {
-        hash: decoded,
-        source: selected.source,
-      } as const
+      if (!hasSupportedAuthPasswordHashPrefix(decoded)) {
+        return reject(selected.source, 'Decoded hash must start with $argon2 or pbkdf2$')
+      }
+
+      return { hash: decoded, source: selected.source }
     }
 
-    return {
-      hash: selected.value,
-      source: selected.source,
-    } as const
+    if (!hasSupportedAuthPasswordHashPrefix(selected.value)) {
+      return reject(selected.source, `${selected.source} must start with $argon2 or pbkdf2$`)
+    }
+
+    return { hash: selected.value, source: selected.source }
   })
 
 const resolveAuthPasswordHash = (values: {
@@ -352,12 +305,26 @@ const resolveAuthPasswordHash = (values: {
   const parsed = authPasswordHashInputsSchema.safeParse(values)
   if (!parsed.success) {
     throw new Error(
-      `Invalid environment variables:\n${JSON.stringify(parsed.error.flatten().fieldErrors, null, 2)}`
+      `Invalid environment variables:\n${JSON.stringify(z.flattenError(parsed.error).fieldErrors, null, 2)}`
     )
   }
 
   return parsed.data
 }
+
+/**
+ * Debug-only diagnostic. Deliberately limited to the variable that supplied
+ * the hash and its algorithm family: no fragment, length, or encoding of the
+ * hash material may ever reach a log line.
+ */
+export const describeResolvedAuthPasswordHash = (
+  resolvedAuthPasswordHash: ResolvedAuthPasswordHash
+): { source: ResolvedAuthPasswordHashSource; algorithm: 'argon2' | 'pbkdf2' } => ({
+  source: resolvedAuthPasswordHash.source,
+  algorithm: resolvedAuthPasswordHash.hash.startsWith(AUTH_PASSWORD_HASH_PREFIX_ARGON2)
+    ? 'argon2'
+    : 'pbkdf2',
+})
 
 const logResolvedAuthPasswordHash = ({
   logLevel,
@@ -370,25 +337,21 @@ const logResolvedAuthPasswordHash = ({
     return
   }
 
-  console.info('[api:env] auth password hash resolved', {
-    source: resolvedAuthPasswordHash.source,
-    hashLength: resolvedAuthPasswordHash.hash.length,
-    hashPrefix: resolvedAuthPasswordHash.hash.slice(0, AUTH_PASSWORD_HASH_DEBUG_PREFIX_LENGTH),
-  })
+  console.info(
+    '[api:env] auth password hash resolved',
+    describeResolvedAuthPasswordHash(resolvedAuthPasswordHash)
+  )
 }
 
 const powensShape = {
   POWENS_CLIENT_ID: z.string().min(1, 'POWENS_CLIENT_ID is required'),
   POWENS_CLIENT_SECRET: z.string().min(1, 'POWENS_CLIENT_SECRET is required'),
-  POWENS_BASE_URL: z.string().url('POWENS_BASE_URL must be a valid URL'),
+  POWENS_BASE_URL: urlEnv('POWENS_BASE_URL'),
   POWENS_DOMAIN: z.string().min(1, 'POWENS_DOMAIN is required'),
-  POWENS_REDIRECT_URI_DEV: z.string().url('POWENS_REDIRECT_URI_DEV must be a valid URL'),
-  POWENS_REDIRECT_URI_PROD: z
-    .string()
-    .url('POWENS_REDIRECT_URI_PROD must be a valid URL')
-    .optional(),
-  POWENS_WEBVIEW_BASE_URL: z.string().url().default('https://webview.powens.com/connect'),
-  POWENS_WEBVIEW_URL: z.string().url().optional(),
+  POWENS_REDIRECT_URI_DEV: urlEnv('POWENS_REDIRECT_URI_DEV'),
+  POWENS_REDIRECT_URI_PROD: urlEnv('POWENS_REDIRECT_URI_PROD').optional(),
+  POWENS_WEBVIEW_BASE_URL: z.url().default('https://webview.powens.com/connect'),
+  POWENS_WEBVIEW_URL: z.url().optional(),
   APP_ENCRYPTION_KEY: encryptionKeySchema,
 } satisfies z.ZodRawShape
 
@@ -411,10 +374,7 @@ const externalInvestmentsShape = {
     .string()
     .optional()
     .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-  IBKR_FLEX_BASE_URL: z
-    .string()
-    .url('IBKR_FLEX_BASE_URL must be a valid URL')
-    .default('https://ndcdyn.interactivebrokers.com'),
+  IBKR_FLEX_BASE_URL: urlEnv('IBKR_FLEX_BASE_URL').default('https://ndcdyn.interactivebrokers.com'),
   IBKR_FLEX_USER_AGENT: z
     .string()
     .min(1, 'IBKR_FLEX_USER_AGENT is required')
@@ -429,10 +389,7 @@ const externalInvestmentsShape = {
     .string()
     .optional()
     .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-  BINANCE_SPOT_BASE_URL: z
-    .string()
-    .url('BINANCE_SPOT_BASE_URL must be a valid URL')
-    .default('https://api.binance.com'),
+  BINANCE_SPOT_BASE_URL: urlEnv('BINANCE_SPOT_BASE_URL').default('https://api.binance.com'),
   BINANCE_SPOT_RECV_WINDOW_MS: z.coerce.number().int().positive().default(5000),
   BINANCE_SPOT_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   BINANCE_SPOT_API_KEY: z.string().trim().min(1).optional(),
@@ -449,10 +406,13 @@ const externalInvestmentsShape = {
     .transform(value => (value === undefined ? true : toBooleanEnv(value))),
 } satisfies z.ZodRawShape
 
-const assertProductionApiEnv = (values: {
+export const assertProductionApiEnv = (values: {
   NODE_ENV: 'development' | 'test' | 'production'
   POWENS_REDIRECT_URI_PROD?: string | undefined
   API_ALLOW_IN_MEMORY_REDIS: boolean
+  INTERNAL_SERVICE_TOKEN?: string | undefined
+  KNOWLEDGE_SERVICE_ENABLED: boolean
+  QUANT_SERVICE_ENABLED: boolean
 }) => {
   if (values.NODE_ENV !== 'production') {
     return
@@ -469,6 +429,15 @@ const assertProductionApiEnv = (values: {
       'Invalid environment variables:\nPOWENS_REDIRECT_URI_PROD is required in production'
     )
   }
+
+  if (
+    (values.KNOWLEDGE_SERVICE_ENABLED || values.QUANT_SERVICE_ENABLED) &&
+    !values.INTERNAL_SERVICE_TOKEN
+  ) {
+    throw new Error(
+      'Invalid environment variables:\nINTERNAL_SERVICE_TOKEN is required in production when an internal Python service is enabled'
+    )
+  }
 }
 
 export const getApiEnv = () => {
@@ -479,10 +448,10 @@ export const getApiEnv = () => {
     APP_COMMIT_SHA: z.string().min(1).optional(),
     API_HOST: z.string().default('0.0.0.0'),
     API_PORT: z.coerce.number().int().positive().default(3001),
-    APP_URL: z.string().url('APP_URL must be a valid URL'),
-    WEB_URL: z.string().url('WEB_URL must be a valid URL').optional(),
-    API_URL: z.string().url('API_URL must be a valid URL').optional(),
-    WEB_ORIGIN: z.string().url('WEB_ORIGIN must be a valid URL').optional(),
+    APP_URL: urlEnv('APP_URL'),
+    WEB_URL: urlEnv('WEB_URL').optional(),
+    API_URL: urlEnv('API_URL').optional(),
+    WEB_ORIGIN: urlEnv('WEB_ORIGIN').optional(),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
     API_ALLOW_IN_MEMORY_REDIS: z
@@ -491,6 +460,8 @@ export const getApiEnv = () => {
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     DEBUG_METRICS_TOKEN: z.string().min(12).optional(),
+    // Shared secret presented to the internal Python services (knowledge, quant).
+    INTERNAL_SERVICE_TOKEN: z.string().trim().min(16).optional(),
     POWENS_MANUAL_SYNC_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(300),
     SYNC_STATUS_PERSISTENCE_ENABLED: z
       .string()
@@ -803,10 +774,9 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    FX_RATES_ECB_URL: z
-      .string()
-      .url('FX_RATES_ECB_URL must be a valid URL')
-      .default('https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'),
+    FX_RATES_ECB_URL: urlEnv('FX_RATES_ECB_URL').default(
+      'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'
+    ),
     FX_RATES_STALE_AFTER_SECONDS: z.coerce
       .number()
       .int()
@@ -872,10 +842,7 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
-    KNOWLEDGE_SERVICE_URL: z
-      .string()
-      .url('KNOWLEDGE_SERVICE_URL must be a valid URL')
-      .default('http://127.0.0.1:8011'),
+    KNOWLEDGE_SERVICE_URL: urlEnv('KNOWLEDGE_SERVICE_URL').default('http://127.0.0.1:8011'),
     KNOWLEDGE_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(2500),
     KNOWLEDGE_GRAPH_BACKEND: z.enum(['local', 'neo4j', 'memgraph', 'falkordb']).default('local'),
     KNOWLEDGE_GRAPH_STORAGE_PATH: z.string().min(1).default('./.knowledge/graph'),
@@ -915,10 +882,7 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? false : toBooleanEnv(value))),
-    QUANT_SERVICE_URL: z
-      .string()
-      .url('QUANT_SERVICE_URL must be a valid URL')
-      .default('http://127.0.0.1:8012'),
+    QUANT_SERVICE_URL: urlEnv('QUANT_SERVICE_URL').default('http://127.0.0.1:8012'),
     QUANT_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
     TRADING_LAB_ENABLED: z
       .string()
@@ -948,10 +912,10 @@ export const getApiEnv = () => {
     KNOWLEDGE_GRAPH_RECENCY_HALF_LIFE_DAYS: z.coerce.number().positive().default(45),
     KNOWLEDGE_GRAPH_EMBEDDING_PROVIDER: z.enum(['local', 'openai', 'none']).default('local'),
     KNOWLEDGE_GRAPH_EMBEDDING_MODEL: z.string().min(1).default('local-hashing-v1'),
-    NEO4J_URI: z.string().url('NEO4J_URI must be a valid URL').optional(),
+    NEO4J_URI: urlEnv('NEO4J_URI').optional(),
     NEO4J_USERNAME: z.string().min(1).optional(),
     NEO4J_PASSWORD: z.string().min(1).optional(),
-    QDRANT_URL: z.string().url('QDRANT_URL must be a valid URL').optional(),
+    QDRANT_URL: urlEnv('QDRANT_URL').optional(),
     QDRANT_API_KEY: z.string().min(1).optional(),
     AI_CHAT_ENABLED: z
       .string()
@@ -966,12 +930,12 @@ export const getApiEnv = () => {
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
     AI_OPENAI_API_KEY: z.string().min(1).optional(),
-    AI_OPENAI_BASE_URL: z.string().url('AI_OPENAI_BASE_URL must be a valid URL').optional(),
+    AI_OPENAI_BASE_URL: urlEnv('AI_OPENAI_BASE_URL').optional(),
     AI_OPENAI_CLASSIFIER_MODEL: z.string().default('gpt-5.4-nano'),
     AI_OPENAI_DAILY_MODEL: z.string().default('gpt-5.4-mini'),
     AI_OPENAI_DEEP_MODEL: z.string().default('gpt-5.4'),
     AI_ANTHROPIC_API_KEY: z.string().min(1).optional(),
-    AI_ANTHROPIC_BASE_URL: z.string().url('AI_ANTHROPIC_BASE_URL must be a valid URL').optional(),
+    AI_ANTHROPIC_BASE_URL: urlEnv('AI_ANTHROPIC_BASE_URL').optional(),
     AI_ANTHROPIC_CHALLENGER_MODEL: z.string().default('claude-sonnet-4-6'),
     AI_USD_TO_EUR_RATE: z.coerce.number().positive().default(0.92),
     AI_BUDGET_DAILY_USD: z.coerce.number().nonnegative().default(2),
@@ -993,13 +957,10 @@ export const getApiEnv = () => {
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    PUSH_DELIVERY_PROVIDER_URL: z
-      .string()
-      .url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL')
-      .optional(),
+    PUSH_DELIVERY_PROVIDER_URL: urlEnv('PUSH_DELIVERY_PROVIDER_URL').optional(),
     PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
-    AUTH_ADMIN_EMAIL: z.string().email('AUTH_ADMIN_EMAIL must be a valid email'),
+    AUTH_ADMIN_EMAIL: z.email('AUTH_ADMIN_EMAIL must be a valid email'),
     AUTH_ADMIN_PASSWORD_HASH: z.string().optional(),
     AUTH_ADMIN_PASSWORD_HASH_B64: z.string().optional(),
     AUTH_PASSWORD_HASH: z.string().optional(),
@@ -1064,7 +1025,7 @@ export const getWorkerEnv = () =>
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
-    API_INTERNAL_URL: z.string().url('API_INTERNAL_URL must be a valid URL'),
+    API_INTERNAL_URL: urlEnv('API_INTERNAL_URL'),
     PRIVATE_ACCESS_TOKEN: z.string().min(12).optional(),
     WORKER_HEARTBEAT_MS: z.coerce.number().int().positive().default(30000),
     POWENS_SYNC_INTERVAL_MS: z.coerce
@@ -1231,10 +1192,7 @@ export const getWorkerEnv = () =>
       .string()
       .optional()
       .transform(value => (value === undefined ? true : toBooleanEnv(value))),
-    PUSH_DELIVERY_PROVIDER_URL: z
-      .string()
-      .url('PUSH_DELIVERY_PROVIDER_URL must be a valid URL')
-      .optional(),
+    PUSH_DELIVERY_PROVIDER_URL: urlEnv('PUSH_DELIVERY_PROVIDER_URL').optional(),
     PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
     PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
     AI_ADVISOR_ENABLED: z

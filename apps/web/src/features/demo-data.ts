@@ -1,10 +1,10 @@
 import type { AuthMeResponse } from './auth-types'
 import type {
   DashboardDerivedRecomputeStatusResponse,
+  DashboardNewsResponse,
   DashboardRange,
   DashboardSummaryResponse,
   DashboardTransactionsResponse,
-  DashboardNewsResponse,
 } from './dashboard-types'
 import type {
   PowensAuditTrailResponse,
@@ -79,11 +79,24 @@ const buildDailyWealthSnapshots = (
   return snapshotsDescending.reverse()
 }
 
-export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummaryResponse => {
+/**
+ * The demo fixture is deterministic and fully valued: its totals are always
+ * numbers, unlike a live summary where an unvalued asset makes them unknown.
+ */
+export type DemoDashboardSummary = DashboardSummaryResponse & {
+  totals: DashboardSummaryResponse['totals'] & {
+    balance: number
+    incomes: number
+    expenses: number
+  }
+}
+
+export const getDemoDashboardSummary = (range: DashboardRange): DemoDashboardSummary => {
   return {
     range,
     totals: {
       balance: 67070.44,
+      unknownValuationAssetCount: 0,
       incomes: 4120,
       expenses: 1924.67,
     },
@@ -156,6 +169,7 @@ export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummary
         name: 'Fortuneo Courant',
         currency: 'EUR',
         type: 'checking',
+        metadata: null,
         enabled: true,
         balance: 6210.44,
       },
@@ -165,6 +179,7 @@ export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummary
         name: 'Fortuneo Livret',
         currency: 'EUR',
         type: 'savings',
+        metadata: null,
         enabled: true,
         balance: 27000,
       },
@@ -174,6 +189,7 @@ export const getDemoDashboardSummary = (range: DashboardRange): DashboardSummary
         name: 'Revolut Main',
         currency: 'EUR',
         type: 'checking',
+        metadata: null,
         enabled: true,
         balance: 15110,
       },
@@ -390,6 +406,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Carrefour Market',
+    merchant: 'Carrefour Market',
     category: 'Courses',
     subcategory: 'Supermarche',
     resolvedCategory: 'Courses',
@@ -409,6 +426,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Spotify',
+    merchant: 'Spotify',
     category: 'Abonnements',
     subcategory: 'Musique',
     resolvedCategory: 'Abonnements',
@@ -428,6 +446,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'income',
     label: 'Salaire',
+    merchant: 'Salaire',
     category: 'Revenus',
     subcategory: 'Salaire',
     resolvedCategory: 'Revenus',
@@ -447,6 +466,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'SNCF',
+    merchant: 'SNCF',
     category: 'Transport',
     subcategory: 'Train',
     resolvedCategory: 'Transport',
@@ -466,6 +486,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Netflix',
+    merchant: 'Netflix',
     category: 'Abonnements',
     subcategory: 'Video',
     resolvedCategory: 'Abonnements',
@@ -485,6 +506,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'TotalEnergies',
+    merchant: 'TotalEnergies',
     category: 'Transport',
     subcategory: 'Carburant',
     resolvedCategory: 'Transport',
@@ -504,6 +526,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Uber',
+    merchant: 'Uber',
     category: 'Transport',
     subcategory: 'VTC',
     resolvedCategory: 'Transport',
@@ -523,6 +546,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Monoprix',
+    merchant: 'Monoprix',
     category: 'Courses',
     subcategory: 'Supermarche',
     resolvedCategory: 'Courses',
@@ -542,6 +566,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'income',
     label: 'Remboursement',
+    merchant: 'Remboursement',
     category: 'Revenus',
     subcategory: 'Remboursement',
     resolvedCategory: 'Revenus',
@@ -561,6 +586,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Boulangerie',
+    merchant: 'Boulangerie',
     category: 'Courses',
     subcategory: 'Alimentation',
     resolvedCategory: 'Courses',
@@ -580,6 +606,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Carrefour Drive',
+    merchant: 'Carrefour Drive',
     category: 'Courses',
     subcategory: 'Supermarche',
     resolvedCategory: 'Courses',
@@ -599,6 +626,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'SNCF',
+    merchant: 'SNCF',
     category: 'Transport',
     subcategory: 'Train',
     resolvedCategory: 'Transport',
@@ -618,6 +646,7 @@ const DEMO_TRANSACTIONS: DashboardTransactionsResponse['items'] = [
     currency: 'EUR',
     direction: 'expense',
     label: 'Ubereats',
+    merchant: 'Ubereats',
     category: 'Restaurants',
     subcategory: 'Livraison',
     resolvedCategory: 'Restaurants',
@@ -952,14 +981,15 @@ export const getDemoPowensStatus = (): PowensStatusResponse => {
   }
 }
 
-
 export const getDemoDashboardNews = (): DashboardNewsResponse => {
   const items: DashboardNewsResponse['items'] = [
     {
       id: 'demo-news-1',
       title: 'Fed minutes reinforce a slower easing path while credit spreads stay contained',
-      summary: 'The tone remains data-dependent, but policy communication still matters for duration-sensitive assets.',
-      contentSnippet: 'Contained spreads offset part of the hawkish surprise, leaving a mixed market signal.',
+      summary:
+        'The tone remains data-dependent, but policy communication still matters for duration-sensitive assets.',
+      contentSnippet:
+        'Contained spreads offset part of the hawkish surprise, leaving a mixed market signal.',
       url: 'https://example.com/demo-news-1',
       canonicalUrl: 'https://example.com/demo-news-1',
       sourceName: 'Federal Reserve',
@@ -1006,7 +1036,8 @@ export const getDemoDashboardNews = (): DashboardNewsResponse => {
       scoringReasons: ['macro policy relevance', 'high-sensitivity event type'],
       metadataCard: {
         title: 'Fed minutes reinforce a slower easing path while credit spreads stay contained',
-        description: 'A mixed macro signal with direct implications for rates and financing conditions.',
+        description:
+          'A mixed macro signal with direct implications for rates and financing conditions.',
         canonicalUrl: 'https://example.com/demo-news-1',
         imageUrl: null,
         imageCandidates: [],
@@ -1042,7 +1073,8 @@ export const getDemoDashboardNews = (): DashboardNewsResponse => {
     {
       id: 'demo-news-2',
       title: 'A new Claude variant lands in security workflows and pressures AI tooling pricing',
-      summary: 'Enterprise demand could expand, but pricing power may compress across adjacent AI vendors.',
+      summary:
+        'Enterprise demand could expand, but pricing power may compress across adjacent AI vendors.',
       contentSnippet: 'The launch sits at the intersection of AI, cyber and cloud software.',
       url: 'https://example.com/demo-news-2',
       canonicalUrl: 'https://example.com/demo-news-2',
@@ -1097,7 +1129,8 @@ export const getDemoDashboardNews = (): DashboardNewsResponse => {
       scoringReasons: ['technology regime shift relevance', 'multi-sector spillover'],
       metadataCard: {
         title: 'A new Claude variant lands in security workflows and pressures AI tooling pricing',
-        description: 'A product release with second-order effects across AI, cyber and cloud vendors.',
+        description:
+          'A product release with second-order effects across AI, cyber and cloud vendors.',
         canonicalUrl: 'https://example.com/demo-news-2',
         imageUrl: null,
         imageCandidates: [],
@@ -1240,7 +1273,9 @@ export const getDemoDashboardNews = (): DashboardNewsResponse => {
         affectedSectors: item.affectedSectors,
         affectedTickers: item.affectedTickers,
         whyItMatters: item.whyItMatters,
-        supportingUrls: item.sources.map(source => source.providerUrl).filter((value): value is string => Boolean(value)),
+        supportingUrls: item.sources
+          .map(source => source.providerUrl)
+          .filter((value): value is string => Boolean(value)),
       })),
       mostImpactedSectors: [
         { sector: 'Financials', score: 73 },

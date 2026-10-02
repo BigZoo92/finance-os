@@ -14,7 +14,7 @@ describe('createJsonLogger', () => {
   it('redacts sensitive fields and emits structured JSON payloads', () => {
     process.env.LOG_LEVEL = 'info'
 
-    const logSpy = mock(() => {})
+    const logSpy = mock((..._args: unknown[]) => {})
     console.log = logSpy
 
     logger.logEvent({

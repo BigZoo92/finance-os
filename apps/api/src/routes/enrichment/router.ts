@@ -1,8 +1,8 @@
 import { Elysia } from 'elysia'
+import type { ApiDb } from '../dashboard/types'
 import { createEnrichmentBulkTriageRoute } from './routes/bulk-triage'
 import { createEnrichmentNotesRoute } from './routes/notes'
 import { createEnrichmentRuntime, createEnrichmentRuntimePlugin } from './runtime'
-import type { ApiDb } from '../dashboard/types'
 
 export const createEnrichmentRoutes = ({
   db,

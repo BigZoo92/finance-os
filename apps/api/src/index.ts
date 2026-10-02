@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { cors } from '@elysiajs/cors'
 import { createDbClient } from '@finance-os/db'
-import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments'
+import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments/server-config'
 import { resolveRuntimeVersion } from '@finance-os/prelude'
 import { createInMemoryRedisClient, createRedisClient } from '@finance-os/redis'
 import { Elysia } from 'elysia'
@@ -405,6 +405,7 @@ const registerAppRoutes = (app: Elysia) => {
         knowledgeGraphRetrievalMode: env.KNOWLEDGE_GRAPH_RETRIEVAL_MODE,
         knowledgeGraphMaxPathDepth: env.KNOWLEDGE_GRAPH_MAX_PATH_DEPTH,
         knowledgeGraphMinConfidence: env.KNOWLEDGE_GRAPH_MIN_CONFIDENCE,
+        internalServiceToken: env.INTERNAL_SERVICE_TOKEN,
         quantServiceEnabled: env.QUANT_SERVICE_ENABLED,
         quantServiceUrl: env.QUANT_SERVICE_URL,
         quantServiceTimeoutMs: env.QUANT_SERVICE_TIMEOUT_MS,
@@ -726,7 +727,7 @@ const app = new Elysia()
       requestId,
     })
   })
-  .use(registerAppRoutes(new Elysia() as unknown as Elysia))
+  .use(registerAppRoutes(new Elysia()))
   .use(registerAppRoutes(new Elysia({ prefix: '/api' }) as unknown as Elysia))
   .get('/__routes', ({ request, set }) => {
     if (!canAccessRoutesDebug(request)) {

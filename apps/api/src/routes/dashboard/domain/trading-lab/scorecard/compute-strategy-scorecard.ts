@@ -177,9 +177,7 @@ const pickBestRun = (
   return best?.run ?? null
 }
 
-const aggregateMetrics = (
-  runs: StrategyScorecardInputBacktestRun[]
-): StrategyScorecardMetrics => {
+const aggregateMetrics = (runs: StrategyScorecardInputBacktestRun[]): StrategyScorecardMetrics => {
   const completed = runs.filter(isCompletedRun)
   if (completed.length === 0) {
     return {
@@ -244,9 +242,7 @@ const aggregateMetrics = (
   }
 }
 
-const buildSummary = (
-  runs: StrategyScorecardInputBacktestRun[]
-): StrategyScorecardSummary => {
+const buildSummary = (runs: StrategyScorecardInputBacktestRun[]): StrategyScorecardSummary => {
   const completed = runs.filter(isCompletedRun)
   const totalBacktests = runs.length
   const totalTrades = completed.reduce((acc, run) => acc + tradesIn(run), 0)
@@ -444,9 +440,7 @@ const computeAdvancedFromLatestCompleted = (
   if (completed.length === 0) return null
   const newest = sortRunsNewestFirst(completed)[0]
   if (!newest) return null
-  const trades = Array.isArray(newest.trades)
-    ? (newest.trades as AdvancedRiskMetricsTrade[])
-    : null
+  const trades = Array.isArray(newest.trades) ? (newest.trades as AdvancedRiskMetricsTrade[]) : null
   return computeAdvancedRiskMetrics({
     equityCurve: newest.equityCurve ?? null,
     trades,
@@ -547,9 +541,7 @@ export const buildDemoStrategyScorecard = ({
 
 export interface StrategyScorecardRepositoryAdapter {
   getStrategy: (id: number) => Promise<StrategyScorecardInputStrategy | null>
-  listBacktestRunsForStrategy: (
-    strategyId: number
-  ) => Promise<StrategyScorecardInputBacktestRun[]>
+  listBacktestRunsForStrategy: (strategyId: number) => Promise<StrategyScorecardInputBacktestRun[]>
 }
 
 export interface StrategyScorecardUseCase {

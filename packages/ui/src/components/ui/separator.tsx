@@ -1,23 +1,29 @@
-import type * as React from "react"
-import { Separator as SeparatorPrimitive } from "radix-ui"
+import { cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+import { Separator as SeparatorPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-import { cn } from "@finance-os/ui/lib/utils"
+const separatorRecipe = cva({
+  base: {
+    bg: 'border',
+    flexShrink: '0',
+    '&[data-orientation=horizontal]': { h: '1px', w: 'full' },
+    '&[data-orientation=vertical]': { h: 'full', w: '1px' },
+  },
+})
+
+const StyledSeparator = styled(SeparatorPrimitive.Root, separatorRecipe)
 
 function Separator({
-  className,
-  orientation = "horizontal",
+  orientation = 'horizontal',
   decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: React.ComponentProps<typeof StyledSeparator>) {
   return (
-    <SeparatorPrimitive.Root
+    <StyledSeparator
       data-slot="separator"
       decorative={decorative}
       orientation={orientation}
-      className={cn(
-        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
-        className
-      )}
       {...props}
     />
   )

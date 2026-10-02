@@ -4,6 +4,8 @@
  * Reuses the existing auth/session data and relocates the topbar actions:
  * theme toggle, PWA install and login/logout. No invented account pages.
  */
+import { css, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Popover, PopoverContent, PopoverTrigger } from '@finance-os/ui/components'
 import { MoonPixelIcon, SunPixelIcon } from '@finance-os/ui/icons/pixel'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -21,8 +23,52 @@ import { useTheme } from '@/lib/theme'
 import { pushToast } from '@/lib/toast-store'
 import { PwaInstallMenuItem } from './pwa-install'
 
-const MENU_ITEM_CLASS =
-  'flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-left text-[13px] text-foreground transition-colors duration-150 hover:bg-accent/60 outline-none focus-visible:ring-2 focus-visible:ring-ring/70 disabled:pointer-events-none disabled:opacity-40'
+const MENU_ITEM_CLASS = css({
+  display: 'flex',
+  w: 'full',
+  alignItems: 'center',
+  gap: '2.5',
+  rounded: 'control',
+  px: '2.5',
+  py: '2',
+  textAlign: 'left',
+  fontSize: '13px',
+  color: 'foreground',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  outlineStyle: 'none',
+  _hover: { bg: 'accent/60' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+  _disabled: { pointerEvents: 'none', opacity: '0.4' },
+})
+
+const menuTrigger = css({
+  display: 'grid',
+  boxSize: '7',
+  flexShrink: '0',
+  placeItems: 'center',
+  rounded: 'full',
+  borderWidth: '1px',
+  borderColor: 'foreground/16',
+  bg: 'secondary',
+  fontSize: '11px',
+  fontWeight: 'semibold',
+  color: 'foreground/80',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  outlineStyle: 'none',
+  _hover: { borderColor: 'primary/40' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const shimmer = css({
+  bgImage:
+    'linear-gradient(90deg, {colors.muted} 0%, oklch(from {colors.muted} calc(l + 0.05) c h) 50%, {colors.muted} 100%)',
+  backgroundSize: '200% 100%',
+  animation: 'shimmer 1.8s ease-in-out infinite',
+})
 
 export function UserMenu() {
   const [open, setOpen] = useState(false)
@@ -67,54 +113,60 @@ export function UserMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        aria-label="Menu utilisateur"
-        className="grid size-7 shrink-0 place-items-center rounded-full border border-foreground/16 bg-secondary text-[11px] font-semibold text-foreground/80 transition-colors duration-150 hover:border-primary/40 outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
-      >
+      <PopoverTrigger aria-label="Menu utilisateur" className={menuTrigger}>
         {initial}
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={14} className="w-64 p-2">
-        <div className="px-2.5 pb-2 pt-1.5">
+      <PopoverContent align="end" sideOffset={14} w="64" p="2">
+        <styled.div px="2.5" pb="2" pt="1.5">
           {isAdmin && user ? (
             <>
-              <p className="truncate text-[13px] font-medium text-foreground">
+              <styled.p truncate fontSize="13px" fontWeight="medium" color="foreground">
                 {user.displayName}
-              </p>
-              <p className="truncate font-mono text-[11px] text-muted-foreground">{user.email}</p>
+              </styled.p>
+              <styled.p truncate fontFamily="mono" fontSize="11px" color="muted.foreground">
+                {user.email}
+              </styled.p>
             </>
           ) : (
             <>
-              <p className="text-[13px] font-medium text-foreground">Mode démo</p>
-              <p className="text-[11px] text-muted-foreground">Données de démonstration</p>
+              <styled.p fontSize="13px" fontWeight="medium" color="foreground">
+                Mode démo
+              </styled.p>
+              <styled.p fontSize="11px" color="muted.foreground">
+                Données de démonstration
+              </styled.p>
             </>
           )}
-        </div>
+        </styled.div>
 
-        <div className="my-1 h-px bg-border/60" />
+        <styled.div my="1" h="1px" bg="border/60" />
 
         <button type="button" onClick={toggle} className={MENU_ITEM_CLASS}>
-          <span aria-hidden="true" className="flex w-4 items-center justify-center">
+          <styled.span
+            aria-hidden="true"
+            display="flex"
+            w="4"
+            alignItems="center"
+            justifyContent="center"
+          >
             {resolvedTheme === 'dark' ? <SunPixelIcon size={14} /> : <MoonPixelIcon size={14} />}
-          </span>
+          </styled.span>
           {resolvedTheme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
         </button>
 
-        <PwaInstallMenuItem
-          mode={isAdmin ? 'admin' : 'demo'}
-          className={MENU_ITEM_CLASS}
-        />
+        <PwaInstallMenuItem mode={isAdmin ? 'admin' : 'demo'} className={MENU_ITEM_CLASS} />
 
-        <div className="my-1 h-px bg-border/60" />
+        <styled.div my="1" h="1px" bg="border/60" />
 
         {authViewState === 'pending' ? (
-          <div className="mx-2.5 my-2 h-8 animate-shimmer rounded-control" />
+          <div className={cx(shimmer, css({ mx: '2.5', my: '2', h: '8', rounded: 'control' }))} />
         ) : isDemo ? (
           <button
             type="button"
             className={MENU_ITEM_CLASS}
             onClick={() => {
               setOpen(false)
-              navigate({ to: '/login', search: { reason: undefined } })
+              void navigate({ to: '/login', search: { reason: undefined } })
             }}
           >
             Se connecter

@@ -15,9 +15,8 @@ dist
 .tmp
 .turbo
 **/.next
-apps/desktop/src-tauri/target
-apps/desktop/src-tauri/static
-apps/desktop/src-tauri/gen
+# Panda runtime: generated in the image by the install (`prepare`).
+**/styled-system/generated
 **/__pycache__
 **/*.py[cod]
 .pytest_cache

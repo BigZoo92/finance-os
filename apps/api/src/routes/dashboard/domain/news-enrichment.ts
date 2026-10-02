@@ -1,4 +1,15 @@
 import {
+  canonicalizeUrl,
+  clampScore,
+  extractHostname,
+  normalizeNewsTitle,
+  normalizeWhitespace,
+  scoreRecency,
+  toStableHash,
+  trimToLength,
+  uniqueStrings,
+} from './news-helpers'
+import {
   NEWS_SOURCE_TYPE_BY_PROVIDER,
   type NewsDomainId,
   type NewsEventType,
@@ -13,17 +24,6 @@ import type {
   NewsTransmissionHypothesis,
   NormalizedNewsSignalDraft,
 } from './news-types'
-import {
-  canonicalizeUrl,
-  clampScore,
-  extractHostname,
-  normalizeNewsTitle,
-  normalizeWhitespace,
-  scoreRecency,
-  toStableHash,
-  trimToLength,
-  uniqueStrings,
-} from './news-helpers'
 
 type KeywordRule<T extends string> = {
   id: T
@@ -252,24 +252,45 @@ const DOMAIN_RULES: Array<
 ]
 
 const EVENT_RULES: Array<KeywordRule<NewsEventType>> = [
-  { id: 'policy_decision', keywords: [/rate decision/i, /policy decision/i, /cuts? rates?/i, /raises? rates?/i] },
+  {
+    id: 'policy_decision',
+    keywords: [/rate decision/i, /policy decision/i, /cuts? rates?/i, /raises? rates?/i],
+  },
   { id: 'policy_speech', keywords: [/speech/i, /remarks/i, /testimony/i, /minutes/i] },
-  { id: 'macro_release', keywords: [/cpi/i, /ppi/i, /gdp/i, /jobs report/i, /unemployment/i, /pmi/i] },
-  { id: 'regulatory_action', keywords: [/investigation/i, /settlement/i, /fine/i, /rulemaking/i, /supervisory/i] },
-  { id: 'legislation_update', keywords: [/bill/i, /senate/i, /congress/i, /parliament/i, /lawmakers/i] },
+  {
+    id: 'macro_release',
+    keywords: [/cpi/i, /ppi/i, /gdp/i, /jobs report/i, /unemployment/i, /pmi/i],
+  },
+  {
+    id: 'regulatory_action',
+    keywords: [/investigation/i, /settlement/i, /fine/i, /rulemaking/i, /supervisory/i],
+  },
+  {
+    id: 'legislation_update',
+    keywords: [/bill/i, /senate/i, /congress/i, /parliament/i, /lawmakers/i],
+  },
   { id: 'filing_8k', keywords: [/\b8-k\b/i] },
   { id: 'filing_10q', keywords: [/\b10-q\b/i] },
   { id: 'filing_10k', keywords: [/\b10-k\b/i] },
   { id: 'filing_20f', keywords: [/\b20-f\b/i] },
   { id: 'filing_6k', keywords: [/\b6-k\b/i] },
-  { id: 'earnings_result', keywords: [/earnings/i, /quarterly results/i, /beats estimates/i, /misses estimates/i] },
+  {
+    id: 'earnings_result',
+    keywords: [/earnings/i, /quarterly results/i, /beats estimates/i, /misses estimates/i],
+  },
   { id: 'guidance_update', keywords: [/guidance/i, /outlook/i, /forecast/i] },
   { id: 'rating_action', keywords: [/downgrade/i, /upgrade/i, /credit watch/i] },
   { id: 'mna_announcement', keywords: [/acquire/i, /acquisition/i, /merger/i, /takeover/i] },
   { id: 'product_launch', keywords: [/launch/i, /unveil/i, /release new product/i] },
   { id: 'model_release', keywords: [/model/i, /\bllm\b/i, /claude/i, /gpt/i, /gemini/i] },
-  { id: 'cyber_incident', keywords: [/ransomware/i, /breach/i, /leak/i, /outage/i, /cyberattack/i] },
-  { id: 'supply_disruption', keywords: [/disruption/i, /shortage/i, /factory shutdown/i, /port closure/i] },
+  {
+    id: 'cyber_incident',
+    keywords: [/ransomware/i, /breach/i, /leak/i, /outage/i, /cyberattack/i],
+  },
+  {
+    id: 'supply_disruption',
+    keywords: [/disruption/i, /shortage/i, /factory shutdown/i, /port closure/i],
+  },
   { id: 'commodity_shock', keywords: [/oil spike/i, /gas spike/i, /commodity shock/i] },
   { id: 'geopolitical_escalation', keywords: [/escalat/i, /military/i, /attack/i, /missile/i] },
   { id: 'sanctions_update', keywords: [/sanction/i, /export control/i, /tariff/i] },
@@ -285,7 +306,10 @@ const RISK_RULES: Array<KeywordRule<NewsRiskFlag>> = [
   { id: 'growth_risk', keywords: [/recession/i, /slowdown/i, /contraction/i] },
   { id: 'liquidity_risk', keywords: [/liquidity/i, /funding stress/i, /bank run/i] },
   { id: 'policy_risk', keywords: [/policy uncertainty/i, /policy risk/i, /hawkish/i] },
-  { id: 'regulatory_risk', keywords: [/regulator/i, /investigation/i, /antitrust/i, /compliance/i] },
+  {
+    id: 'regulatory_risk',
+    keywords: [/regulator/i, /investigation/i, /antitrust/i, /compliance/i],
+  },
   { id: 'geopolitical_risk', keywords: [/war/i, /sanction/i, /geopolit/i] },
   { id: 'cyber_risk', keywords: [/cyber/i, /breach/i, /ransomware/i] },
   { id: 'supply_chain_risk', keywords: [/supply chain/i, /port closure/i, /shortage/i] },
@@ -306,7 +330,10 @@ const OPPORTUNITY_RULES: Array<KeywordRule<NewsOpportunityFlag>> = [
   { id: 'market_share_gain', keywords: [/market share/i, /customer wins/i, /share gain/i] },
   { id: 'margin_upside', keywords: [/margin expansion/i, /cost savings/i, /pricing power/i] },
   { id: 'supply_normalization', keywords: [/normalizing supply/i, /bottleneck easing/i] },
-  { id: 'capital_markets_opening', keywords: [/ipo window/i, /bond issuance/i, /capital markets reopen/i] },
+  {
+    id: 'capital_markets_opening',
+    keywords: [/ipo window/i, /bond issuance/i, /capital markets reopen/i],
+  },
   { id: 'credit_improvement', keywords: [/upgrade/i, /spreads tighten/i, /credit improvement/i] },
 ]
 
@@ -467,7 +494,11 @@ const THEME_RULES = [
 ]
 
 const REGIONAL_RULES = [
-  { country: 'US', region: 'north_america', patterns: [/\bu\.?s\.?\b/i, /\bunited states\b/i, /washington/i] },
+  {
+    country: 'US',
+    region: 'north_america',
+    patterns: [/\bu\.?s\.?\b/i, /\bunited states\b/i, /washington/i],
+  },
   { country: 'EU', region: 'europe', patterns: [/\beu\b/i, /europe/i, /brussels/i] },
   { country: 'CN', region: 'asia', patterns: [/\bchina\b/i, /beijing/i] },
   { country: 'TW', region: 'asia', patterns: [/taiwan/i] },
@@ -712,7 +743,8 @@ const buildTransmissionHypotheses = (params: {
   if (params.eventType === 'cyber_incident') {
     hypotheses.push({
       id: 'operational-downtime',
-      label: 'Cyber incidents can create downtime, remediation costs and regulatory follow-through.',
+      label:
+        'Cyber incidents can create downtime, remediation costs and regulatory follow-through.',
       direction: 'risk',
       confidence: 86,
     })
@@ -721,7 +753,8 @@ const buildTransmissionHypotheses = (params: {
   if (params.sectors.includes('Semiconductors') && params.domains.includes('geopolitics')) {
     hypotheses.push({
       id: 'hardware-supply-fragility',
-      label: 'Geopolitical tension around semiconductor supply can spill into cloud, AI and industrial capex.',
+      label:
+        'Geopolitical tension around semiconductor supply can spill into cloud, AI and industrial capex.',
       direction: 'risk',
       confidence: 80,
     })
@@ -742,7 +775,9 @@ const buildWhyItMatters = (params: {
   const reasons: string[] = []
 
   if (params.sourceType === 'central_bank') {
-    reasons.push('Central-bank communication can move rates, FX and duration-sensitive assets quickly.')
+    reasons.push(
+      'Central-bank communication can move rates, FX and duration-sensitive assets quickly.'
+    )
   }
 
   if (params.sourceType === 'filing') {
@@ -754,11 +789,15 @@ const buildWhyItMatters = (params: {
   }
 
   if (params.domains.includes('geopolitics') || params.domains.includes('sanctions')) {
-    reasons.push('Geopolitical shifts can transmit through energy, supply chains and risk appetite.')
+    reasons.push(
+      'Geopolitical shifts can transmit through energy, supply chains and risk appetite.'
+    )
   }
 
   if (params.riskFlags.includes('cyber_risk')) {
-    reasons.push('Cyber events can combine operational disruption, liability and reputational damage.')
+    reasons.push(
+      'Cyber events can combine operational disruption, liability and reputational damage.'
+    )
   }
 
   if (params.opportunityFlags.includes('innovation_upside')) {
@@ -770,7 +809,9 @@ const buildWhyItMatters = (params: {
   }
 
   if (params.tickers.length > 0) {
-    reasons.push(`Directly named or inferred listed exposure: ${params.tickers.slice(0, 4).join(', ')}.`)
+    reasons.push(
+      `Directly named or inferred listed exposure: ${params.tickers.slice(0, 4).join(', ')}.`
+    )
   }
 
   return reasons.slice(0, 4)
@@ -790,7 +831,9 @@ const scoreSignal = (params: {
   const reasons: string[] = []
   let severity = 12
   let confidence =
-    params.sourceType === 'central_bank' || params.sourceType === 'regulator' || params.sourceType === 'filing'
+    params.sourceType === 'central_bank' ||
+    params.sourceType === 'regulator' ||
+    params.sourceType === 'filing'
       ? 88
       : params.sourceType === 'macro_data'
         ? 84
@@ -894,7 +937,10 @@ export const createNormalizedNewsSignal = (
 ): NormalizedNewsSignalDraft => {
   const canonicalUrl = canonicalizeUrl(raw.canonicalUrl ?? raw.providerUrl)
   const sourceDomain =
-    raw.sourceDomain ?? extractHostname(canonicalUrl) ?? extractHostname(raw.providerUrl) ?? 'unknown'
+    raw.sourceDomain ??
+    extractHostname(canonicalUrl) ??
+    extractHostname(raw.providerUrl) ??
+    'unknown'
   const normalizedTitle = normalizeNewsTitle(raw.title)
   const textBlob = normalizeWhitespace(
     [
@@ -1008,9 +1054,15 @@ export const createNormalizedNewsSignal = (
       ...(raw.summary ? ['provider-summary-available'] : []),
     ],
     dedupeKey: toStableHash(
-      [canonicalFingerprint ?? titleFingerprint, eventType, raw.publishedAt.toISOString().slice(0, 10)].join('|')
+      [
+        canonicalFingerprint ?? titleFingerprint,
+        eventType,
+        raw.publishedAt.toISOString().slice(0, 10),
+      ].join('|')
     ),
-    clusteringKey: toStableHash([eventType, canonicalFingerprint ?? titleFingerprint, sourceDomain].join('|')),
+    clusteringKey: toStableHash(
+      [eventType, canonicalFingerprint ?? titleFingerprint, sourceDomain].join('|')
+    ),
     eventClusterId,
     canonicalUrlFingerprint: canonicalFingerprint,
     publishedAt: raw.publishedAt,

@@ -27,11 +27,18 @@ docker-data
 # GitNexus local index (generated, machine-specific)
 .gitnexus/
 
-# Tauri / Rust desktop artifacts
-apps/desktop/src-tauri/target
-apps/desktop/src-tauri/gen
-apps/desktop/src-tauri/static
-apps/desktop/src-tauri/icons/icon.ico
-
 # Agent skill import temp
 .tmp/
+
+# Local artifacts that must never be tracked
+cookies.txt
+.knowledge/
+
+# Moon local state (derived, machine-specific)
+.moon/cache/
+
+# Panda CSS runtime, regenerated on install (pnpm panda:codegen)
+packages/styled-system/generated/
+
+# Local visual-regression baselines (machine specific)
+e2e/__visual__/

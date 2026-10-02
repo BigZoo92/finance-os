@@ -2,9 +2,6 @@
 import { spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { detectDesktopScope } from './desktop-scope.mjs'
-
-const VALID_SCOPES = new Set(['auto', 'core', 'desktop', 'full'])
 
 const resolvePnpmExec = env =>
   env.npm_execpath
@@ -17,22 +14,14 @@ const resolvePnpmExec = env =>
         baseArgs: [],
       }
 
-export function parseScope(argv) {
-  const unsupported = argv.filter(arg => !arg.startsWith('--scope='))
-  if (unsupported.length) throw new Error(`Unsupported check:ci argument: ${unsupported[0]}`)
-  const scopeArgs = argv.filter(arg => arg.startsWith('--scope='))
-  if (scopeArgs.length > 1) throw new Error('check:ci accepts only one --scope argument')
-  const scope = scopeArgs.length ? scopeArgs[0].slice('--scope='.length) : 'auto'
-  if (!VALID_SCOPES.has(scope)) {
-    throw new Error(`Invalid check:ci scope: ${scope || '<empty>'}`)
-  }
-  return scope
-}
-
-export const coreSteps = [
+export const ciSteps = [
   {
     name: 'Install dependencies',
     args: ['install', '--frozen-lockfile'],
+  },
+  {
+    name: 'Panda codegen',
+    args: ['panda:codegen'],
   },
   {
     name: 'Root tooling tests',
@@ -47,12 +36,20 @@ export const coreSteps = [
     args: ['docs:check'],
   },
   {
-    name: 'Root lint',
+    name: 'Root lint (oxlint, type-aware)',
     args: ['lint'],
+  },
+  {
+    name: 'Format check (oxfmt)',
+    args: ['format:check'],
   },
   {
     name: 'Docker workspace manifest drift check',
     args: ['docker:check'],
+  },
+  {
+    name: 'Moon graph and constraints',
+    args: ['moon:validate'],
   },
   {
     name: 'Workspace lint',
@@ -61,6 +58,10 @@ export const coreSteps = [
   {
     name: 'Typecheck',
     args: ['-r', '--if-present', 'typecheck'],
+  },
+  {
+    name: 'Database schema check',
+    args: ['db:check'],
   },
   {
     name: 'Test',
@@ -74,76 +75,26 @@ export const coreSteps = [
     name: 'Build',
     args: ['-r', '--if-present', 'build'],
   },
-]
-
-export const desktopSteps = [
   {
-    name: 'Build desktop shell',
-    args: ['desktop:build'],
+    name: 'Client bundle denylist',
+    args: ['check:client-bundle'],
+  },
+  {
+    name: 'Client bundle budget',
+    args: ['check:bundle-budget'],
   },
 ]
-
-export function buildStepsForScope(
-  selectedScope,
-  { env = process.env, detect = detectDesktopScope } = {}
-) {
-  if (!VALID_SCOPES.has(selectedScope)) throw new Error(`Invalid check:ci scope: ${selectedScope}`)
-  if (selectedScope === 'core') {
-    return {
-      steps: coreSteps,
-      desktopDecision: null,
-    }
-  }
-
-  if (selectedScope === 'desktop') {
-    return {
-      steps: [coreSteps[0], ...desktopSteps],
-      desktopDecision: {
-        required: true,
-        reason: 'Desktop CI scope requested explicitly.',
-      },
-    }
-  }
-
-  if (selectedScope === 'full') {
-    return {
-      steps: [...coreSteps, ...desktopSteps],
-      desktopDecision: {
-        required: true,
-        reason: 'Full CI scope requested explicitly.',
-      },
-    }
-  }
-
-  const desktopDecision = detect({
-    baseRef: env.FINANCE_OS_DESKTOP_BASE_REF || 'origin/main',
-    mode: env.FINANCE_OS_DESKTOP_SCOPE || 'auto',
-  })
-
-  return {
-    steps: desktopDecision.required ? [...coreSteps, ...desktopSteps] : coreSteps,
-    desktopDecision,
-  }
-}
 
 export function runCheckCi({
   argv = process.argv.slice(2),
   env = process.env,
   spawn = spawnSync,
   logger = console,
-  detect = detectDesktopScope,
 } = {}) {
-  const scope = parseScope(argv)
+  if (argv.length) throw new Error(`Unsupported check:ci argument: ${argv[0]}`)
   const pnpmExec = resolvePnpmExec(env)
-  const { steps, desktopDecision } = buildStepsForScope(scope, { env, detect })
 
-  if (desktopDecision && !desktopDecision.required && scope === 'auto') {
-    logger.log('\n==> Desktop CI skipped')
-    logger.log(desktopDecision.reason)
-    logger.log('Use `pnpm check:ci:full` or `pnpm check:ci:desktop` to force Tauri validation.')
-  }
-
-  for (const step of steps) {
+  for (const step of ciSteps) {
     logger.log(`\n==> ${step.name}`)
     logger.log(`pnpm ${step.args.join(' ')}`)
 
@@ -165,8 +116,8 @@ export function runCheckCi({
     }
   }
 
-  logger.log(`\ncheck:ci (${scope}) completed successfully.`)
-  return { scope, steps, desktopDecision }
+  logger.log('\ncheck:ci completed successfully.')
+  return { steps: ciSteps }
 }
 
 const main = () => {

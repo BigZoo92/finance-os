@@ -93,11 +93,12 @@ const getRangeStartDate = (range: DashboardRange) => {
 }
 
 export const getDashboardAnalyticsMockTransactions = (
-  range: DashboardRange,
+  range: DashboardRange
 ): DashboardAnalyticsMockTransaction[] => {
   const start = getRangeStartDate(range)
 
   return DEMO_ANALYTICS_TRANSACTIONS.filter(
-    transaction => transaction.bookingDate >= start && transaction.bookingDate <= DEMO_ANALYTICS_MOCK_TODAY,
+    transaction =>
+      transaction.bookingDate >= start && transaction.bookingDate <= DEMO_ANALYTICS_MOCK_TODAY
   )
 }

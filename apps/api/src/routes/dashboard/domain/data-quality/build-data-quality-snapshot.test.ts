@@ -229,7 +229,7 @@ describe('buildDataQualityDimensions', () => {
             {
               providerId: 'knowledge-service' as never,
               status: 'ok',
-              capabilities: ['knowledge.context_bundle.read' as never],
+              capabilities: ['knowledge.context_bundle.read'],
               lastCheckedAt: '2026-05-09T11:30:00.000Z',
               degraded: false,
               freshnessMinutes: null,

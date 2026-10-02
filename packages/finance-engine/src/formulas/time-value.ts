@@ -31,8 +31,7 @@ export const calculateFutureValue = ({
   }
 
   const compoundedPresentValue = presentValue * (1 + rate) ** periods
-  const compoundedContributions =
-    periodicContribution * (((1 + rate) ** periods - 1) / rate)
+  const compoundedContributions = periodicContribution * (((1 + rate) ** periods - 1) / rate)
 
   return round(compoundedPresentValue + compoundedContributions)
 }
@@ -66,7 +65,7 @@ export const calculateCagr = ({
     return null
   }
 
-  return round((((endingValue / beginningValue) ** (1 / years)) - 1) * 100, 4)
+  return round(((endingValue / beginningValue) ** (1 / years) - 1) * 100, 4)
 }
 
 export const calculateRealReturn = ({
@@ -78,5 +77,5 @@ export const calculateRealReturn = ({
 }) => {
   const nominal = nominalReturnPct / 100
   const inflation = inflationPct / 100
-  return round((((1 + nominal) / (1 + inflation)) - 1) * 100, 4)
+  return round(((1 + nominal) / (1 + inflation) - 1) * 100, 4)
 }

@@ -70,9 +70,9 @@ describe('computeStrategyScorecard', () => {
     expect(out.summary.totalTrades).toBe(12)
     expect(out.evidenceGrade).toBe('weak')
     expect(out.qualityFlags.some(f => f.kind === 'low_sample_size')).toBe(true)
-    expect(
-      out.qualityFlags.find(f => f.kind === 'low_sample_size')?.message
-    ).toContain(String(SCORECARD_MIN_TRADES_FOR_PROMISING))
+    expect(out.qualityFlags.find(f => f.kind === 'low_sample_size')?.message).toContain(
+      String(SCORECARD_MIN_TRADES_FOR_PROMISING)
+    )
   })
 
   it('produces a missing_fees warning when feesBps is exactly 0', () => {
@@ -185,10 +185,7 @@ describe('computeStrategyScorecard', () => {
     const out = computeStrategyScorecard({
       mode: 'admin',
       strategy: baseStrategy,
-      runs: [
-        completedRun(),
-        completedRun({ id: 2, resultSummary: { walkForward: true } }),
-      ],
+      runs: [completedRun(), completedRun({ id: 2, resultSummary: { walkForward: true } })],
       generatedAt: NOW,
     })
     expect(out.metrics.walkForwardRuns).toBe(1)
@@ -279,7 +276,7 @@ describe('computeStrategyScorecard', () => {
       runs: [
         completedRun({
           metrics: { win_rate: 0.55, profit_factor: 1.4, max_drawdown: 0.15, sharpe: 1.1 },
-          trades: new Array(40).fill({}),
+          trades: Array.from({ length: 40 }, () => ({})),
         }),
       ],
       generatedAt: NOW,
@@ -292,9 +289,18 @@ describe('computeStrategyScorecard', () => {
       mode: 'admin',
       strategy: baseStrategy,
       runs: [
-        completedRun({ id: 100, metrics: { ...completedRun().metrics, profit_factor: 1.2, sharpe: 0.5 } }),
-        completedRun({ id: 200, metrics: { ...completedRun().metrics, profit_factor: 2.0, sharpe: 1.5 } }),
-        completedRun({ id: 300, metrics: { ...completedRun().metrics, profit_factor: 0.9, sharpe: 0.1 } }),
+        completedRun({
+          id: 100,
+          metrics: { ...completedRun().metrics, profit_factor: 1.2, sharpe: 0.5 },
+        }),
+        completedRun({
+          id: 200,
+          metrics: { ...completedRun().metrics, profit_factor: 2.0, sharpe: 1.5 },
+        }),
+        completedRun({
+          id: 300,
+          metrics: { ...completedRun().metrics, profit_factor: 0.9, sharpe: 0.1 },
+        }),
       ],
       generatedAt: NOW,
     })
@@ -336,9 +342,7 @@ describe('computeStrategyScorecard', () => {
     })
     const banned = ['buy', 'sell', 'execute', 'execution', 'place order', 'leverage', 'futures']
     const wb = (term: string) =>
-      term.includes(' ')
-        ? new RegExp(term, 'i')
-        : new RegExp(`\\b${term}\\b`, 'i')
+      term.includes(' ') ? new RegExp(term, 'i') : new RegExp(`\\b${term}\\b`, 'i')
     const allText = [...out.caveats, ...out.qualityFlags.map(f => f.message)].join(' ')
     for (const term of banned) {
       expect(wb(term).test(allText)).toBe(false)

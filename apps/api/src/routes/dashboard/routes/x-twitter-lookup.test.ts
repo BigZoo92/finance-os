@@ -11,7 +11,9 @@ describe('x-twitter-lookup route helpers', () => {
     expect(__testing.mapVerificationStatus('TOKEN_MISSING')).toBe('unverified_token_invalid')
     expect(__testing.mapVerificationStatus('INVALID_HANDLE')).toBe('unverified_invalid_handle')
     expect(__testing.mapVerificationStatus('NETWORK_ERROR')).toBe('unverified_provider_error')
-    expect(__testing.mapVerificationStatus('PROVIDER_UNAVAILABLE')).toBe('unverified_provider_error')
+    expect(__testing.mapVerificationStatus('PROVIDER_UNAVAILABLE')).toBe(
+      'unverified_provider_error'
+    )
   })
 
   it('produces deterministic Redis cache keys regardless of @ prefix or case', () => {

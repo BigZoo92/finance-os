@@ -3,13 +3,7 @@ import { createPowensCallbackState, readPowensCallbackState } from '../../../../
 import type { ApiEnv, PowensConnectUrlService } from '../types'
 import { getRedirectUri } from '../utils/getRedirectUri'
 
-const withStateQueryParam = ({
-  url,
-  state,
-}: {
-  url: string
-  state: string
-}) => {
+const withStateQueryParam = ({ url, state }: { url: string; state: string }) => {
   const parsed = new URL(url)
   parsed.searchParams.set('state', state)
   return parsed.toString()

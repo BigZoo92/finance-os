@@ -79,7 +79,10 @@ test.describe('desktop shell (dark, demo)', () => {
     await navbar.getByRole('button', { name: /Argent/ }).click()
     await page.getByRole('link', { name: /Patrimoine/ }).click()
     await expect(page).toHaveURL(/\/patrimoine/)
-    await expect(navbar.getByRole('button', { name: /Argent/ })).toHaveClass(/text-foreground/)
+    await expect(navbar.getByRole('button', { name: /Argent/ })).toHaveAttribute(
+      'data-active',
+      'true'
+    )
   })
 
   test('command palette opens with the shortcut and stays quiet in inputs', async ({ page }) => {

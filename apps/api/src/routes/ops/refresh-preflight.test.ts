@@ -42,9 +42,7 @@ describe('evaluatePreflight', () => {
       },
     })
     expect(result?.status).toBe('skipped_missing_config')
-    expect(result?.details.missingEnvNames).toEqual([
-      'NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN',
-    ])
+    expect(result?.details.missingEnvNames).toEqual(['NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN'])
   })
 
   it('returns skipped_budget when budgetExceeded is set', () => {

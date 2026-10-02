@@ -51,12 +51,8 @@ describe('evaluateFeatureRequirements', () => {
       X_DAILY_PREVIOUS_DAY_SYNC_ENABLED: 'true',
       NEWS_PROVIDER_X_TWITTER_BEARER_TOKEN: 'AAAAAA',
     })
-    expect(
-      issues.some(i => i.envName === 'X_DAILY_BUDGET_USD' && i.level === 'error')
-    ).toBe(true)
-    expect(
-      issues.some(i => i.envName === 'X_MONTHLY_BUDGET_USD' && i.level === 'error')
-    ).toBe(true)
+    expect(issues.some(i => i.envName === 'X_DAILY_BUDGET_USD' && i.level === 'error')).toBe(true)
+    expect(issues.some(i => i.envName === 'X_MONTHLY_BUDGET_USD' && i.level === 'error')).toBe(true)
   })
 
   it('flags placeholder values on required secrets', () => {
@@ -64,9 +60,9 @@ describe('evaluateFeatureRequirements', () => {
       MARKET_DATA_EODHD_ENABLED: 'true',
       EODHD_API_KEY: 'changeme',
     })
-    expect(
-      issues.some(i => i.envName === 'EODHD_API_KEY' && i.code === 'PLACEHOLDER_VALUE')
-    ).toBe(true)
+    expect(issues.some(i => i.envName === 'EODHD_API_KEY' && i.code === 'PLACEHOLDER_VALUE')).toBe(
+      true
+    )
   })
 
   it('passes when feature enabled and required secret looks real', () => {

@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   CurrencyAmount,
@@ -14,6 +16,30 @@ import { formatDate } from '@/lib/format'
 
 type Transaction = DashboardTransactionsResponse['items'][number]
 
+const tableFrame = css({ borderYWidth: '1px', borderColor: 'border' })
+
+// Below `md` every row becomes a two-column card with its own bottom rule.
+const mobileRow = css({
+  mdDown: {
+    my: '1',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    columnGap: '4',
+    borderBottomWidth: '1px',
+    borderColor: 'border',
+    py: '3',
+  },
+})
+
+// The amount colour follows the transaction direction through a data attribute,
+// which outranks the cell recipe's own `color` without racing its atom.
+const amountTone = css({
+  '&[data-tone=negative]': { color: 'negative' },
+  '&[data-tone=positive]': { color: 'positive' },
+})
+
+const visuallyHidden = css({ srOnly: true })
+
 export function TransactionsTable({
   transactions,
   isAdmin,
@@ -26,9 +52,9 @@ export function TransactionsTable({
   onEdit: (transaction: Transaction) => void
 }) {
   return (
-    <div className="border-y border-border">
-      <DataTable className="max-md:block">
-        <DataTableHeader className="max-md:sr-only">
+    <div className={tableFrame}>
+      <DataTable mdDown={{ display: 'block' }}>
+        <DataTableHeader mdDown={{ srOnly: true }}>
           <DataTableRow>
             <DataTableHead>Date</DataTableHead>
             <DataTableHead>Libellé</DataTableHead>
@@ -36,54 +62,63 @@ export function TransactionsTable({
             <DataTableHead numeric>Montant</DataTableHead>
             {isAdmin ? (
               <DataTableHead>
-                <span className="sr-only">Action</span>
+                <span className={visuallyHidden}>Action</span>
               </DataTableHead>
             ) : null}
           </DataTableRow>
         </DataTableHeader>
-        <DataTableBody className="max-md:block max-md:divide-y-0">
+        <DataTableBody mdDown={{ display: 'block' }}>
           {transactions.map(transaction => (
-            <DataTableRow
-              key={transaction.id}
-              className="max-md:my-1 max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-x-4 max-md:border-b max-md:border-border max-md:py-3"
-            >
-              <DataTableCell className="whitespace-nowrap text-muted-foreground max-md:order-2 max-md:p-0 max-md:text-right max-md:font-mono max-md:text-[10px]">
+            <DataTableRow key={transaction.id} className={mobileRow}>
+              <DataTableCell
+                whiteSpace="nowrap"
+                color="muted.foreground"
+                mdDown={{
+                  order: '2',
+                  p: '0',
+                  textAlign: 'right',
+                  fontFamily: 'mono',
+                  fontSize: '10px',
+                }}
+              >
                 {formatDate(transaction.bookingDate)}
               </DataTableCell>
-              <DataTableCell className="max-md:order-1 max-md:p-0">
-                <p className="font-medium">{transaction.label}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+              <DataTableCell mdDown={{ order: '1', p: '0' }}>
+                <styled.p fontWeight="medium">{transaction.label}</styled.p>
+                <styled.p mt="1" textStyle="xs" color="muted.foreground">
                   {transaction.accountName ?? transaction.powensAccountId}
-                </p>
+                </styled.p>
               </DataTableCell>
-              <DataTableCell className="max-md:order-3 max-md:py-2 max-md:pl-0">
-                <span className="text-xs text-muted-foreground">
+              <DataTableCell mdDown={{ order: '3', py: '2', pl: '0' }}>
+                <styled.span textStyle="xs" color="muted.foreground">
                   {transaction.category ?? 'Non catégorisé'}
                   {transaction.subcategory ? `, ${transaction.subcategory}` : ''}
-                </span>
+                </styled.span>
                 {!transaction.category ? (
-                  <Status tone="attention" label="À classer" className="ml-3" />
+                  <Status tone="attention" label="À classer" ml="3" />
                 ) : null}
               </DataTableCell>
               <DataTableCell
                 numeric
-                className={
-                  transaction.direction === 'expense'
-                    ? 'text-negative max-md:order-4 max-md:py-2 max-md:pr-0'
-                    : 'text-positive max-md:order-4 max-md:py-2 max-md:pr-0'
-                }
+                data-tone={transaction.direction === 'expense' ? 'negative' : 'positive'}
+                className={amountTone}
+                mdDown={{ order: '4', py: '2', pr: '0' }}
               >
                 <CurrencyAmount value={transaction.amount} currency={transaction.currency} />
               </DataTableCell>
               {isAdmin ? (
-                <DataTableCell className="text-right max-md:order-5 max-md:col-span-2 max-md:p-0">
+                <DataTableCell
+                  textAlign="right"
+                  mdDown={{ order: '5', gridColumn: 'span 2 / span 2', p: '0' }}
+                >
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     disabled={editing}
                     onClick={() => onEdit(transaction)}
-                    className="min-h-11 md:min-h-0"
+                    minH="11"
+                    md={{ minH: '0' }}
                   >
                     Modifier la catégorie
                   </Button>

@@ -133,7 +133,11 @@ export const buildFailsoftEnvelope = ({
     status: degraded ? 'degraded' : 'ok',
     source: 'cache',
     requestId,
-    reasonCode: cacheStale ? 'cache_stale' : providerFailureRate > 0 ? 'provider_unavailable' : null,
+    reasonCode: cacheStale
+      ? 'cache_stale'
+      : providerFailureRate > 0
+        ? 'provider_unavailable'
+        : null,
     policy: {
       enabled: true,
       sourceOrder,

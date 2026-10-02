@@ -102,7 +102,10 @@ describe('KnowledgeGraphRuntime lifecycle boundary', () => {
 
   it('queues pre-layout focus, consumes it before initial fit, and destroys the owned engine', () => {
     const harness = createEngineHarness()
-    forceGraphMocks.construct.mockImplementationOnce(() => harness.engine)
+    // A regular function on purpose: the runtime calls `new ForceGraph3D(...)` and Vitest rejects arrow functions for constructed mocks
+    forceGraphMocks.construct.mockImplementationOnce(function () {
+      return harness.engine
+    })
     const graph: RuntimeGraphData = {
       nodes: [{ id: 'goal:reserve', label: 'R\u00e9serve', kind: 'goal' }],
       links: [],

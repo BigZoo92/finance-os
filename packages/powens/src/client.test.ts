@@ -9,7 +9,7 @@ afterEach(() => {
 
 describe('createPowensClient', () => {
   it('turns request aborts into explicit Powens timeout errors', async () => {
-    globalThis.fetch = ((_: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = ((_: string | URL | Request, init?: RequestInit) => {
       return new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener(
           'abort',

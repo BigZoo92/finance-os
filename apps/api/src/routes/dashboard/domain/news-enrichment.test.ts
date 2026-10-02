@@ -27,10 +27,7 @@ const createRawItem = (overrides?: Partial<NewsProviderRawItem>): NewsProviderRa
 
 describe('createNormalizedNewsSignal', () => {
   it('classifies domains, entities, scores, and context links for rich AI-oriented signals', () => {
-    const signal = createNormalizedNewsSignal(
-      createRawItem(),
-      new Date('2026-04-09T09:00:00.000Z')
-    )
+    const signal = createNormalizedNewsSignal(createRawItem(), new Date('2026-04-09T09:00:00.000Z'))
 
     expect(signal.domains).toEqual(
       expect.arrayContaining(['technology', 'ai', 'cybersecurity', 'product_launches'])
@@ -43,9 +40,7 @@ describe('createNormalizedNewsSignal', () => {
     expect(signal.affectedSectors).toEqual(
       expect.arrayContaining(['AI software', 'Cloud software'])
     )
-    expect(signal.opportunityFlags).toEqual(
-      expect.arrayContaining(['productivity_upside'])
-    )
+    expect(signal.opportunityFlags).toEqual(expect.arrayContaining(['productivity_upside']))
     expect(signal.whyItMatters.length).toBeGreaterThan(0)
     expect(signal.marketImpactScore).toBeGreaterThan(0)
     expect(signal.relevanceScore).toBeGreaterThan(0)
@@ -60,14 +55,16 @@ describe('createNormalizedNewsSignal', () => {
       createRawItem({
         provider: 'sec_edgar',
         providerArticleId: '0000320193-26-000001',
-        providerUrl: 'https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/aapl-8k.htm',
+        providerUrl:
+          'https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/aapl-8k.htm',
         canonicalUrl:
           'https://www.sec.gov/Archives/edgar/data/320193/000032019326000001/aapl-8k.htm',
         sourceName: 'SEC EDGAR',
         sourceDomain: 'sec.gov',
         sourceType: 'filing',
         title: 'Apple files Form 8-K on supply chain update',
-        summary: 'The filing describes supply chain normalization and updated production assumptions.',
+        summary:
+          'The filing describes supply chain normalization and updated production assumptions.',
         contentSnippet: null,
         geoScope: 'company',
       }),

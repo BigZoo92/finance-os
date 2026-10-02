@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+language: 'python'
+layer: 'application'
+stack: 'backend'
+
+project:
+  title: 'Knowledge service'
+  description: 'Internal temporal knowledge graph and GraphRAG FastAPI service.'
+
+# Mirrors scripts/python-services.mjs. Commands run through the installed uv
+# (frozen from uv.lock); Moon does not manage the Python toolchain.
+tasks:
+  lint:
+    command: 'uv run --extra dev ruff check .'
+    toolchains: ['system']
+    inputs: ['src/**/*', 'tests/**/*', 'pyproject.toml', 'uv.lock']
+  format-check:
+    command: 'uv run --extra dev ruff format --check .'
+    toolchains: ['system']
+    inputs: ['src/**/*', 'tests/**/*', 'pyproject.toml', 'uv.lock']
+  test:
+    command: 'uv run --extra dev pytest'
+    toolchains: ['system']
+    inputs: ['src/**/*', 'tests/**/*', 'pyproject.toml', 'uv.lock']

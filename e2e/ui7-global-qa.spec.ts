@@ -77,6 +77,30 @@ test.describe('Command Pixel final route matrix', () => {
   })
 })
 
+test.describe('Trading lab', () => {
+  test('demo backtest charts render with the lightweight-charts 5 API', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.goto('/ia/trading-lab', { waitUntil: 'networkidle' })
+    await expectHealthyViewport(page)
+    // Equity curve and drawdown of the demo backtest: both must mount a chart,
+    // never fall back to "Graphique indisponible".
+    await expect(page.locator('[data-chart-state="ready"]')).toHaveCount(2)
+    await expect(page.locator('[data-chart-state="unavailable"]')).toHaveCount(0)
+    await expect(page.locator('[data-chart-state="ready"] canvas').first()).toBeVisible()
+    // The chart palette is read from Panda's color variables on <html>: they
+    // must resolve, or the charts silently fall back to hard-coded colors.
+    const palette = await page.evaluate(() => {
+      const styles = getComputedStyle(document.documentElement)
+      return ['border', 'negative', 'teal', 'muted-foreground', 'foreground'].map(name =>
+        styles.getPropertyValue(`--colors-${name}`).trim()
+      )
+    })
+    expect(palette.every(value => value.length > 0)).toBe(true)
+    expect(errors).toEqual([])
+  })
+})
+
 test.describe('Compatibility routes', () => {
   const redirects = [
     ['/transactions', '/depenses'],

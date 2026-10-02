@@ -146,7 +146,9 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
           language: input.language ?? 'en',
           createdAt: now,
           updatedAt: now,
-          ...(input.sourceAccountId !== undefined ? { sourceAccountId: input.sourceAccountId } : {}),
+          ...(input.sourceAccountId !== undefined
+            ? { sourceAccountId: input.sourceAccountId }
+            : {}),
           ...(input.url !== undefined ? { url: input.url } : {}),
           ...(input.body !== undefined ? { body: input.body } : {}),
           ...(input.author !== undefined ? { author: input.author } : {}),
@@ -155,11 +157,19 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
           ...(input.sectors !== undefined ? { sectors: input.sectors } : {}),
           ...(input.regions !== undefined ? { regions: input.regions } : {}),
           ...(input.topics !== undefined ? { topics: input.topics } : {}),
-          ...(input.attentionReason !== undefined ? { attentionReason: input.attentionReason } : {}),
+          ...(input.attentionReason !== undefined
+            ? { attentionReason: input.attentionReason }
+            : {}),
           ...(input.sentiment !== undefined ? { sentiment: input.sentiment } : {}),
-          ...(input.rawPayloadRedacted !== undefined ? { rawPayloadRedacted: input.rawPayloadRedacted } : {}),
-          ...(input.graphIngestStatus !== undefined ? { graphIngestStatus: input.graphIngestStatus } : {}),
-          ...(input.advisorIngestStatus !== undefined ? { advisorIngestStatus: input.advisorIngestStatus } : {}),
+          ...(input.rawPayloadRedacted !== undefined
+            ? { rawPayloadRedacted: input.rawPayloadRedacted }
+            : {}),
+          ...(input.graphIngestStatus !== undefined
+            ? { graphIngestStatus: input.graphIngestStatus }
+            : {}),
+          ...(input.advisorIngestStatus !== undefined
+            ? { advisorIngestStatus: input.advisorIngestStatus }
+            : {}),
           ...(input.scope !== undefined ? { scope: input.scope } : {}),
           ...(input.ingestionRunId !== undefined ? { ingestionRunId: input.ingestionRunId } : {}),
         })
@@ -185,7 +195,8 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
   }): Promise<SignalItemRow[]> {
     const conditions = []
     if (opts.signalDomain) conditions.push(eq(schema.signalItem.signalDomain, opts.signalDomain))
-    if (opts.sourceProvider) conditions.push(eq(schema.signalItem.sourceProvider, opts.sourceProvider))
+    if (opts.sourceProvider)
+      conditions.push(eq(schema.signalItem.sourceProvider, opts.sourceProvider))
     if (opts.requiresAttention !== undefined)
       conditions.push(eq(schema.signalItem.requiresAttention, opts.requiresAttention))
     if (opts.graphIngestStatus)
@@ -202,9 +213,7 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
   },
 
   async countItems(): Promise<number> {
-    const [row] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(schema.signalItem)
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.signalItem)
     return row?.count ?? 0
   },
 
@@ -241,6 +250,4 @@ export const createDashboardSignalItemsRepository = ({ db }: { db: ApiDb }) => (
   },
 })
 
-export type DashboardSignalItemsRepository = ReturnType<
-  typeof createDashboardSignalItemsRepository
->
+export type DashboardSignalItemsRepository = ReturnType<typeof createDashboardSignalItemsRepository>

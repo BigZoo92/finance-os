@@ -16,7 +16,7 @@ The exact repository prefix comes from `GHCR_IMAGE_NAME`; tags are a release tag
 
 ## Runtime topology
 
-`web` is the only public service. API, worker, ops-alerts, knowledge-service, quant-service, Neo4j, Qdrant, PostgreSQL, and Redis remain on the internal network. The API runs migrations when the current `RUN_DB_MIGRATIONS` contract enables them.
+`web` is the only public service. API, worker, ops-alerts, knowledge-service, quant-service, Neo4j, Qdrant, PostgreSQL, and Redis remain on the internal network. Schema migrations run once per release in the `migrate` service (`bun packages/db/src/migrate.ts`, the same API image); the API starts only after it completes successfully and never migrates at startup.
 
 Health contracts:
 
@@ -27,7 +27,7 @@ Health contracts:
 
 ## Normal release
 
-1. CI validates root tooling, skills/docs drift, lint, types, tests, Python checks, builds, E2E demo smoke, and Docker build smoke.
+1. CI validates root tooling, skills/docs drift, lint, types, the migration journal (drift check and a fresh PostgreSQL apply), tests, Python checks, builds, E2E demo smoke, and Docker build smoke.
 2. Release builds and optionally pushes all five images.
 3. The workflow updates Dokploy Compose and `APP_IMAGE_TAG`.
 4. Dokploy pulls immutable images and restarts the stack.

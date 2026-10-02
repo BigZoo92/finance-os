@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+# Moon Stage B: explicit tasks with inputs/outputs; caching and affected selection are
+# owned by Moon. `pnpm run` keeps package.json as the single source of the commands.
+id: 'styled-system'
+language: 'typescript'
+layer: 'library'
+tags: ['frontend']
+project:
+  title: 'Styled system'
+  description: 'Panda preset, config and generated styling runtime.'
+tasks:
+  codegen:
+    command: 'pnpm run codegen'
+    inputs: ['src/**/*', 'panda.config.ts', 'package.json']
+    outputs: ['generated/**/*']
+  typecheck:
+    command: 'pnpm run typecheck'
+    deps: ['^:typecheck']
+    inputs: ['@group(sources)', '@group(tests)', '@group(configs)']

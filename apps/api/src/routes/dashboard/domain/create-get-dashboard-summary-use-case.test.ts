@@ -129,6 +129,7 @@ describe('createGetDashboardSummaryUseCase', () => {
       range: '7d',
       totals: {
         balance: 52.5,
+        unknownValuationAssetCount: 0,
         incomes: 100,
         expenses: 25.4,
       },
@@ -318,5 +319,4 @@ describe('createGetDashboardSummaryUseCase', () => {
     expect(summary.assets.map(asset => asset.assetId)).toEqual([1])
     expect(summary.totals.balance).toBe(100)
   })
-
 })

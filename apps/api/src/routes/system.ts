@@ -27,9 +27,12 @@ export const registerSystemRoutes = (app: Elysia, env: SystemRouteEnv) => {
         safeModeActive: env.EXTERNAL_INTEGRATIONS_SAFE_MODE,
       })
     })
-    .get('/version', ({ set }: { set: { headers: Record<string, string | number | undefined> } }) => {
-      set.headers['cache-control'] = 'no-store'
+    .get(
+      '/version',
+      ({ set }: { set: { headers: Record<string, string | number | undefined> } }) => {
+        set.headers['cache-control'] = 'no-store'
 
-      return getRuntimeVersion(env)
-    })
+        return getRuntimeVersion(env)
+      }
+    )
 }

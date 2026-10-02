@@ -1,10 +1,10 @@
+import type { NewsContextBundleRange } from './news-taxonomy'
 import type {
   DashboardNewsSignalCard,
   NewsContextBundle,
   NewsContextBundleCluster,
   NewsContextBundleSignal,
 } from './news-types'
-import type { NewsContextBundleRange } from './news-taxonomy'
 
 const takeTop = <T>(items: T[], limit: number) => items.slice(0, limit)
 
@@ -25,12 +25,12 @@ const toBundleSignal = (item: DashboardNewsSignalCard): NewsContextBundleSignal 
   affectedSectors: item.affectedSectors,
   affectedTickers: item.affectedTickers,
   whyItMatters: item.whyItMatters,
-  supportingUrls: item.sources.map(source => source.providerUrl).filter((value): value is string => Boolean(value)),
+  supportingUrls: item.sources
+    .map(source => source.providerUrl)
+    .filter((value): value is string => Boolean(value)),
 })
 
-export const buildNewsClusters = (
-  items: DashboardNewsSignalCard[]
-): NewsContextBundleCluster[] => {
+export const buildNewsClusters = (items: DashboardNewsSignalCard[]): NewsContextBundleCluster[] => {
   const grouped = new Map<string, DashboardNewsSignalCard[]>()
 
   for (const item of items) {
@@ -60,25 +60,32 @@ export const buildNewsClusters = (
         return []
       }
 
-      return [{
-        clusterId,
-        title: leader.title,
-        eventType: leader.eventType,
-        direction: leader.direction,
-        signalCount: clusterItems.length,
-        sourceCount: clusterItems.reduce((count, item) => count + item.provenance.sourceCount, 0),
-        latestPublishedAt,
-        topDomains: Array.from(new Set(clusterItems.flatMap(item => item.domains))).slice(0, 4),
-        topSectors: Array.from(new Set(clusterItems.flatMap(item => item.affectedSectors))).slice(0, 4),
-        headlineIds: takeTop(sorted, 4).map(item => item.id),
-      }]
+      return [
+        {
+          clusterId,
+          title: leader.title,
+          eventType: leader.eventType,
+          direction: leader.direction,
+          signalCount: clusterItems.length,
+          sourceCount: clusterItems.reduce((count, item) => count + item.provenance.sourceCount, 0),
+          latestPublishedAt,
+          topDomains: Array.from(new Set(clusterItems.flatMap(item => item.domains))).slice(0, 4),
+          topSectors: Array.from(new Set(clusterItems.flatMap(item => item.affectedSectors))).slice(
+            0,
+            4
+          ),
+          headlineIds: takeTop(sorted, 4).map(item => item.id),
+        },
+      ]
     })
     .sort((left, right) => {
       if (right.signalCount !== left.signalCount) {
         return right.signalCount - left.signalCount
       }
 
-      return new Date(right.latestPublishedAt).getTime() - new Date(left.latestPublishedAt).getTime()
+      return (
+        new Date(right.latestPublishedAt).getTime() - new Date(left.latestPublishedAt).getTime()
+      )
     })
 }
 
@@ -110,7 +117,10 @@ export const buildNewsContextBundle = ({
   const impactedSectors = new Map<string, number>()
   const impactedEntities = new Map<string, number>()
   const causalHypotheses = new Set<string>()
-  const contradictions = new Map<string, { bullishCount: number; bearishCount: number; signalIds: string[] }>()
+  const contradictions = new Map<
+    string,
+    { bullishCount: number; bearishCount: number; signalIds: string[] }
+  >()
 
   for (const item of items) {
     for (const sector of item.affectedSectors) {
@@ -118,7 +128,10 @@ export const buildNewsContextBundle = ({
     }
 
     for (const entity of item.affectedEntities) {
-      impactedEntities.set(entity.name, (impactedEntities.get(entity.name) ?? 0) + item.marketImpactScore)
+      impactedEntities.set(
+        entity.name,
+        (impactedEntities.get(entity.name) ?? 0) + item.marketImpactScore
+      )
     }
 
     for (const hypothesis of item.transmissionHypotheses) {
@@ -177,10 +190,22 @@ export const buildNewsContextBundle = ({
       .slice(0, 6)
       .map(toBundleSignal),
     thematicHighlights: {
-      ai: items.filter(item => item.domains.includes('ai')).slice(0, 5).map(toBundleSignal),
-      cyber: items.filter(item => item.domains.includes('cybersecurity')).slice(0, 5).map(toBundleSignal),
-      geopolitics: items.filter(item => item.domains.includes('geopolitics')).slice(0, 5).map(toBundleSignal),
-      macro: items.filter(item => item.domains.includes('macroeconomy')).slice(0, 5).map(toBundleSignal),
+      ai: items
+        .filter(item => item.domains.includes('ai'))
+        .slice(0, 5)
+        .map(toBundleSignal),
+      cyber: items
+        .filter(item => item.domains.includes('cybersecurity'))
+        .slice(0, 5)
+        .map(toBundleSignal),
+      geopolitics: items
+        .filter(item => item.domains.includes('geopolitics'))
+        .slice(0, 5)
+        .map(toBundleSignal),
+      macro: items
+        .filter(item => item.domains.includes('macroeconomy'))
+        .slice(0, 5)
+        .map(toBundleSignal),
     },
     contradictorySignals: Array.from(contradictions.entries())
       .filter(([, row]) => row.bullishCount > 0 && row.bearishCount > 0)

@@ -166,9 +166,7 @@ describe('investment strategy view model', () => {
           recommendedContributionAmount: 75,
         }),
       ],
-      contribution: [
-        { bucket: 'asymmetric', amount: 75, currency: 'EUR', reason: 'underweight' },
-      ],
+      contribution: [{ bucket: 'asymmetric', amount: 75, currency: 'EUR', reason: 'underweight' }],
     } as DashboardInvestmentActionPlan
 
     const rows = advisorPlanRows(plan)

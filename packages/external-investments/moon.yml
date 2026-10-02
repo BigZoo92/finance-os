@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+# Moon Stage B: explicit tasks with inputs/outputs; caching and affected selection are
+# owned by Moon. `pnpm run` keeps package.json as the single source of the commands.
+id: 'external-investments'
+language: 'typescript'
+layer: 'library'
+tags: ['backend']
+project:
+  title: 'External investments'
+  description: 'IBKR/Binance read-only clients, jobs and normalization.'
+tasks:
+  typecheck:
+    command: 'pnpm run typecheck'
+    deps: ['^:typecheck']
+    inputs: ['@group(sources)', '@group(tests)', '@group(configs)']
+  test:
+    command: 'pnpm run test'
+    deps: ['^:typecheck']
+    inputs: ['@group(sources)', '@group(tests)', '@group(configs)']

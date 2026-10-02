@@ -1,8 +1,7 @@
 export type ExternalInvestmentProvider = 'ibkr' | 'binance'
 
-export const isExternalInvestmentProvider = (
-  value: unknown
-): value is ExternalInvestmentProvider => value === 'ibkr' || value === 'binance'
+export const isExternalInvestmentProvider = (value: unknown): value is ExternalInvestmentProvider =>
+  value === 'ibkr' || value === 'binance'
 
 export type ExternalInvestmentAssetClass =
   | 'cash'
@@ -263,7 +262,11 @@ export type ExternalInvestmentBundle = {
   providerCoverage: ExternalInvestmentProviderCoverage[]
   totalKnownValue: number
   unknownValuePositionCount: number
-  allocationByAssetClass: Array<{ key: ExternalInvestmentAssetClass; value: number; weightPct: number }>
+  allocationByAssetClass: Array<{
+    key: ExternalInvestmentAssetClass
+    value: number
+    weightPct: number
+  }>
   allocationByProvider: Array<{ key: ExternalInvestmentProvider; value: number; weightPct: number }>
   allocationByAccount: Array<{ key: string; label: string; value: number; weightPct: number }>
   allocationByCurrency: Array<{ key: string; value: number; weightPct: number }>
@@ -280,7 +283,11 @@ export type ExternalInvestmentBundle = {
   recentTradesSummary: { count: number; byProvider: Record<string, number> }
   recentCashFlowsSummary: { count: number; byType: Record<string, number> }
   feesSummary: { knownFees: number; currency: string; unknownFeeCount: number }
-  pnlSummary: { realizedKnown: number | null; unrealizedKnown: number | null; unknownPnlCount: number }
+  pnlSummary: {
+    realizedKnown: number | null
+    unrealizedKnown: number | null
+    unknownPnlCount: number
+  }
   unknownCostBasisWarnings: string[]
   missingMarketDataWarnings: string[]
   staleDataWarnings: string[]
@@ -289,5 +296,15 @@ export type ExternalInvestmentBundle = {
   opportunityFlags: string[]
   assumptions: string[]
   confidence: ExternalInvestmentSourceConfidence
-  provenance: Array<{ provider: ExternalInvestmentProvider; connectionId: string; positionCount: number }>
+  provenance: Array<{
+    provider: ExternalInvestmentProvider
+    connectionId: string
+    positionCount: number
+  }>
 }
+
+/** Narrow fetch contract for provider clients; production passes the platform fetch. */
+export type ExternalInvestmentFetch = (
+  input: string | URL | Request,
+  init?: RequestInit
+) => Promise<Response>

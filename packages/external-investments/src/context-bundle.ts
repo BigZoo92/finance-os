@@ -36,12 +36,21 @@ export const buildExternalInvestmentContextBundle = ({
   generatedAt: string
   providerCoverage: ExternalInvestmentProviderCoverage[]
   positions: ExternalInvestmentBundlePositionInput[]
-  recentTrades: Array<{ provider: ExternalInvestmentProvider; side: ExternalInvestmentTradeSide; feeAmount: number | null }>
-  recentCashFlows: Array<{ provider: ExternalInvestmentProvider; type: ExternalInvestmentCashFlowType }>
+  recentTrades: Array<{
+    provider: ExternalInvestmentProvider
+    side: ExternalInvestmentTradeSide
+    feeAmount: number | null
+  }>
+  recentCashFlows: Array<{
+    provider: ExternalInvestmentProvider
+    type: ExternalInvestmentCashFlowType
+  }>
   staleAfterMinutes: number
 }): ExternalInvestmentBundle => {
   const knownPositions = positions.filter(position => position.value !== null && position.value > 0)
-  const totalKnownValue = round(knownPositions.reduce((sum, position) => sum + (position.value ?? 0), 0))
+  const totalKnownValue = round(
+    knownPositions.reduce((sum, position) => sum + (position.value ?? 0), 0)
+  )
   const byAssetClass = new Map<ExternalInvestmentBundlePositionInput['assetClass'], number>()
   const byProvider = new Map<ExternalInvestmentProvider, number>()
   const byAccount = new Map<string, number>()
@@ -99,7 +108,9 @@ export const buildExternalInvestmentContextBundle = ({
   const cashLikeKnownValue = knownPositions
     .filter(position => position.assetClass === 'cash' || position.assetClass === 'stablecoin')
     .reduce((sum, position) => sum + (position.value ?? 0), 0)
-  const feeAmounts = recentTrades.map(trade => trade.feeAmount).filter((value): value is number => value !== null)
+  const feeAmounts = recentTrades
+    .map(trade => trade.feeAmount)
+    .filter((value): value is number => value !== null)
   const knownUnrealized = positions
     .map(position => position.unrealizedPnl)
     .filter((value): value is number => value !== null)
@@ -172,14 +183,19 @@ export const buildExternalInvestmentContextBundle = ({
       byType: byCashFlowType,
     },
     feesSummary: {
-      knownFees: round(feeAmounts.reduce((sum, value) => sum + value, 0), 4),
+      knownFees: round(
+        feeAmounts.reduce((sum, value) => sum + value, 0),
+        4
+      ),
       currency: 'mixed',
       unknownFeeCount: recentTrades.length - feeAmounts.length,
     },
     pnlSummary: {
       realizedKnown: null,
       unrealizedKnown:
-        knownUnrealized.length > 0 ? round(knownUnrealized.reduce((sum, value) => sum + value, 0)) : null,
+        knownUnrealized.length > 0
+          ? round(knownUnrealized.reduce((sum, value) => sum + value, 0))
+          : null,
       unknownPnlCount: positions.filter(position => position.unrealizedPnl === null).length,
     },
     unknownCostBasisWarnings: unknownCostBasisWarnings.slice(0, 20),

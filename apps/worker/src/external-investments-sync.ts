@@ -1,34 +1,39 @@
 import { randomUUID } from 'node:crypto'
 import { type createDbClient, schema } from '@finance-os/db'
-import { eq, or } from 'drizzle-orm'
 import type { getWorkerEnv } from '@finance-os/env'
+import {
+  createBinanceUsdEurFxFetcher,
+  createSnapshotFxFetcher,
+  type ExternalInvestmentCredentialPayload,
+  type ExternalInvestmentProvider,
+  type ExternalInvestmentsJob,
+  enrichBinanceValuations,
+  enrichMarketQuotedValuations,
+  isSoftExternalInvestmentError,
+  type MarketQuoteLookup,
+  toExternalInvestmentErrorCode,
+  toSafeExternalInvestmentErrorMessage,
+} from '@finance-os/external-investments'
 import {
   type BinanceCashFlow,
   type BinanceCoinInfo,
   type BinanceTrade,
   createBinanceReadonlyClient,
-  createBinanceUsdEurFxFetcher,
-  createExternalInvestmentsRepository,
-  createSnapshotFxFetcher,
-  createIbkrFlexClient,
-  enrichBinanceValuations,
-  enrichMarketQuotedValuations,
-  type ExternalInvestmentCredentialPayload,
-  type ExternalInvestmentConnectionRecord,
-  type ExternalInvestmentProvider,
-  type ExternalInvestmentsJob,
-  isSoftExternalInvestmentError,
-  resolveExternalInvestmentServerConfig,
-  type MarketQuoteLookup,
+} from '@finance-os/external-investments/binance'
+import { createIbkrFlexClient } from '@finance-os/external-investments/ibkr'
+import {
   normalizeBinanceSnapshot,
   normalizeIbkrFlexStatement,
-  toExternalInvestmentErrorCode,
-  toSafeExternalInvestmentErrorMessage,
-} from '@finance-os/external-investments'
-import type { createRedisClient } from '@finance-os/redis'
+} from '@finance-os/external-investments/normalizer'
+import {
+  createExternalInvestmentsRepository,
+  type ExternalInvestmentConnectionRecord,
+} from '@finance-os/external-investments/repository'
+import { resolveExternalInvestmentServerConfig } from '@finance-os/external-investments/server-config'
+import { acquireRedisLock, type RedisLockClient } from '@finance-os/redis'
+import { eq, or } from 'drizzle-orm'
 
 type WorkerDb = ReturnType<typeof createDbClient>['db']
-type WorkerRedisClient = ReturnType<typeof createRedisClient>['client']
 type WorkerEnv = ReturnType<typeof getWorkerEnv>
 type ExternalInvestmentWorkerEnvConfig = Pick<
   WorkerEnv,
@@ -119,8 +124,7 @@ export const resolveExternalInvestmentWorkerServerConfig = (
     },
   })
 
-const sanitizeError = (error: unknown) =>
-  toSafeExternalInvestmentErrorMessage(error).slice(0, 1000)
+const sanitizeError = (error: unknown) => toSafeExternalInvestmentErrorMessage(error).slice(0, 1000)
 
 const providerFailureStatus = (error: unknown) => ({
   errorCode: toExternalInvestmentErrorCode(error),
@@ -140,7 +144,7 @@ export const claimExternalInvestmentRequestSync = async ({
   requestId,
   providerConnectionId,
 }: {
-  redisClient: Pick<WorkerRedisClient, 'set'>
+  redisClient: Pick<RedisLockClient, 'set'>
   requestId: string
   providerConnectionId: string
 }) => {
@@ -194,7 +198,10 @@ const deriveBinanceTradeSymbols = ({
   ].sort((left, right) => {
     const leftQuote = BINANCE_TRADE_QUOTE_ASSETS.find(quote => left.endsWith(quote)) ?? ''
     const rightQuote = BINANCE_TRADE_QUOTE_ASSETS.find(quote => right.endsWith(quote)) ?? ''
-    return (quoteRank.get(leftQuote) ?? 999) - (quoteRank.get(rightQuote) ?? 999) || left.localeCompare(right)
+    return (
+      (quoteRank.get(leftQuote) ?? 999) - (quoteRank.get(rightQuote) ?? 999) ||
+      left.localeCompare(right)
+    )
   })
 }
 
@@ -205,7 +212,7 @@ export const createExternalInvestmentsSyncWorker = ({
   log,
 }: {
   db: WorkerDb
-  redisClient: WorkerRedisClient
+  redisClient: RedisLockClient
   env: WorkerEnv
   log: WorkerLog
 }) => {
@@ -216,30 +223,12 @@ export const createExternalInvestmentsSyncWorker = ({
     providerConfigured: serverConfig.configured,
   })
 
-  const acquireConnectionLock = async (connectionId: number) => {
-    const key = `${EXTERNAL_INVESTMENT_LOCK_PREFIX}${connectionId}`
-    const token = randomUUID()
-    const acquired = await redisClient.set(key, token, {
-      NX: true,
-      EX: EXTERNAL_INVESTMENT_LOCK_TTL_SECONDS,
+  const acquireConnectionLock = (connectionId: number) =>
+    acquireRedisLock({
+      client: redisClient,
+      key: `${EXTERNAL_INVESTMENT_LOCK_PREFIX}${connectionId}`,
+      ttlSeconds: EXTERNAL_INVESTMENT_LOCK_TTL_SECONDS,
     })
-
-    if (acquired !== 'OK') {
-      return null
-    }
-
-    return { key, token }
-  }
-
-  const releaseConnectionLock = async (lock: { key: string; token: string }) => {
-    await redisClient.eval(
-      'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end',
-      {
-        keys: [lock.key],
-        arguments: [lock.token],
-      }
-    )
-  }
 
   const marketQuoteLookup: MarketQuoteLookup = async ({ symbol, isin, conid }) => {
     const conditions = [] as ReturnType<typeof eq>[]
@@ -286,8 +275,11 @@ export const createExternalInvestmentsSyncWorker = ({
     connection,
     payload,
     requestId,
+    signal,
   }: {
     connection: ExternalInvestmentConnectionRecord
+    /** The connection lease: expiring it cancels in-flight provider requests. */
+    signal?: AbortSignal
     payload: Extract<ExternalInvestmentCredentialPayload, { provider: 'ibkr' }>
     requestId?: string
   }) => {
@@ -297,6 +289,7 @@ export const createExternalInvestmentsSyncWorker = ({
       baseUrl: payload.baseUrl ?? env.IBKR_FLEX_BASE_URL,
       userAgent: payload.userAgent ?? env.IBKR_FLEX_USER_AGENT,
       timeoutMs: env.IBKR_FLEX_TIMEOUT_MS,
+      ...(signal ? { signal } : {}),
     })
     let rowCounts: Record<string, number> = {}
     const degradedReasons: string[] = []
@@ -477,8 +470,11 @@ export const createExternalInvestmentsSyncWorker = ({
     connection,
     payload,
     requestId,
+    signal,
   }: {
     connection: ExternalInvestmentConnectionRecord
+    /** The connection lease: expiring it cancels in-flight provider requests. */
+    signal?: AbortSignal
     payload: Extract<ExternalInvestmentCredentialPayload, { provider: 'binance' }>
     requestId?: string
   }) => {
@@ -489,6 +485,7 @@ export const createExternalInvestmentsSyncWorker = ({
       baseUrl: payload.baseUrl ?? env.BINANCE_SPOT_BASE_URL,
       recvWindowMs: env.BINANCE_SPOT_RECV_WINDOW_MS,
       timeoutMs: env.BINANCE_SPOT_TIMEOUT_MS,
+      ...(signal ? { signal } : {}),
     })
     const degradedReasons: string[] = []
     const accountInfo = await client.getAccountInfo()
@@ -684,11 +681,13 @@ export const createExternalInvestmentsSyncWorker = ({
           ? await syncIbkrConnection({
               connection,
               payload: record.payload,
+              signal: lock.signal,
               ...(requestId ? { requestId } : {}),
             })
           : await syncBinanceConnection({
               connection,
               payload: record.payload,
+              signal: lock.signal,
               ...(requestId ? { requestId } : {}),
             })
 
@@ -801,7 +800,17 @@ export const createExternalInvestmentsSyncWorker = ({
         errMessage: failure.errorMessage,
       })
     } finally {
-      await releaseConnectionLock(lock)
+      const released = await lock.release()
+      if (released !== 'released') {
+        log({
+          level: 'warn',
+          msg: 'external investments connection lock release skipped',
+          provider: connection.provider,
+          connectionId: connection.id,
+          requestId: requestId ?? 'n/a',
+          releaseStatus: released,
+        })
+      }
     }
   }
 
@@ -863,9 +872,7 @@ export const createExternalInvestmentsSyncWorker = ({
 
   const generateBundle = async (requestId?: string) => {
     try {
-      const bundle = await repository.generateContextBundle({
-        ...(requestId ? { requestId } : {}),
-      })
+      const bundle = await repository.generateContextBundle(requestId ? { requestId } : {})
       log({
         level: 'info',
         msg: 'external investments advisor bundle generated',

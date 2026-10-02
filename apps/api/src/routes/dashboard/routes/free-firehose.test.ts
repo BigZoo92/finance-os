@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { __testing } from './free-firehose'
 
-const { adaptNewsItemToSignalItem, buildHistoryAdapter, toSafeFreeFirehoseErrorMessage } =
-  __testing
+const { adaptNewsItemToSignalItem, buildHistoryAdapter, toSafeFreeFirehoseErrorMessage } = __testing
 
 describe('adaptNewsItemToSignalItem', () => {
   it('maps a free news provider raw item to a signal_item insert payload', () => {
@@ -79,7 +78,7 @@ describe('buildHistoryAdapter.countLastNDays (regression: PG Date binding)', () 
             captured.params = (sqlExpr.queryChunks ?? [])
               .map(chunk => {
                 if (chunk && typeof chunk === 'object' && 'value' in chunk) {
-                  return (chunk as { value: unknown }).value
+                  return chunk.value
                 }
                 return null
               })

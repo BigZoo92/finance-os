@@ -187,6 +187,7 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     flagKey: 'KNOWLEDGE_SERVICE_ENABLED',
     enabledWhen: truthy,
     requiredSecrets: ['KNOWLEDGE_SERVICE_URL'],
+    optionalSecrets: ['INTERNAL_SERVICE_TOKEN'],
     description:
       'API must know where to reach the knowledge service. Neo4j/Qdrant credentials live on the knowledge service container only.',
   },
@@ -195,6 +196,7 @@ export const FEATURE_REQUIREMENTS: readonly FeatureRequirement[] = [
     flagKey: 'QUANT_SERVICE_ENABLED',
     enabledWhen: truthy,
     requiredSecrets: ['QUANT_SERVICE_URL'],
+    optionalSecrets: ['INTERNAL_SERVICE_TOKEN'],
     description: 'API must know where to reach the quant service.',
   },
   {
@@ -513,6 +515,8 @@ export const API_REQUIRED_KEYS: readonly string[] = [
   'KNOWLEDGE_SERVICE_ENABLED',
   'KNOWLEDGE_SERVICE_URL',
   'KNOWLEDGE_SERVICE_TIMEOUT_MS',
+  // Shared secret for the internal Python services (required in production by the API schema).
+  'INTERNAL_SERVICE_TOKEN',
   'AI_KNOWLEDGE_QA_RETRIEVAL_ENABLED',
   'ADVISOR_GRAPH_INGEST_ENABLED',
   // External investments providers

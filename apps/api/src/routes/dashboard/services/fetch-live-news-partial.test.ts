@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
+import type { DashboardNewsRepository } from '../types'
 import { createLiveNewsIngestionService } from './fetch-live-news'
 import type { NewsProviderAdapter } from './news-provider-types'
-import type { DashboardNewsRepository } from '../types'
 
 /**
  * The news ingestion group's `overallStatus` taxonomy is the contract the

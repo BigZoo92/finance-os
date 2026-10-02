@@ -88,10 +88,7 @@ export const scoreStrategyQuality = (caseSeed: AiEvalCaseSeed): ScoringResult =>
   const sampleSize = candidate.tradeCount ?? 0
 
   // 1. Sample-size threshold.
-  if (
-    typeof expectation.minTradeCount === 'number' &&
-    sampleSize < expectation.minTradeCount
-  ) {
+  if (typeof expectation.minTradeCount === 'number' && sampleSize < expectation.minTradeCount) {
     failed.push(`trade_count_below_minimum:${sampleSize}<${expectation.minTradeCount}`)
   }
 

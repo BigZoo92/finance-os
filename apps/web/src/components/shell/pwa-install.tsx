@@ -3,8 +3,9 @@
  * the legacy topbar into the UserMenu. Shows only when the browser
  * supports installation and the app is not already installed.
  */
+import { styled } from '@finance-os/styled-system/jsx'
 import { DownloadPixelIcon } from '@finance-os/ui/icons/pixel'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { AuthMode } from '@/features/auth-types'
 import {
   computeCtaOrchestrationMetrics,
@@ -18,18 +19,27 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+const STANDALONE_QUERY = '(display-mode: standalone)'
+
+const subscribeToStandalone = (onChange: () => void) => {
+  if (typeof window.matchMedia !== 'function') return () => {}
+  const query = window.matchMedia(STANDALONE_QUERY)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
+}
+
+const readStandalone = () =>
+  typeof window.matchMedia === 'function' && window.matchMedia(STANDALONE_QUERY).matches
+
 export function PwaInstallMenuItem({ mode, className }: { mode: AuthMode; className: string }) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  // Accepted from the prompt in this tab.
   const [isInstalled, setIsInstalled] = useState(false)
+  // Running as an installed app (standalone display mode), tracked live.
+  const isStandalone = useSyncExternalStore(subscribeToStandalone, readStandalone, () => false)
+  const installed = isInstalled || isStandalone
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true)
-      return
-    }
-
     const handler = (e: Event) => {
       e.preventDefault()
       setInstallPrompt(e as BeforeInstallPromptEvent)
@@ -49,7 +59,7 @@ export function PwaInstallMenuItem({ mode, className }: { mode: AuthMode; classN
         dedupeKey: () => 'pwa_install',
         telemetryContract: { version: 'v1' },
         evaluateEligibility: () => {
-          if (isInstalled) {
+          if (installed) {
             return { eligible: false, state: 'hidden', resolutionReason: 'ineligible' }
           }
 
@@ -136,9 +146,15 @@ export function PwaInstallMenuItem({ mode, className }: { mode: AuthMode; classN
       title={decision.disabledReason}
       className={className}
     >
-      <span aria-hidden="true" className="flex w-4 items-center justify-center">
+      <styled.span
+        aria-hidden="true"
+        display="flex"
+        w="4"
+        alignItems="center"
+        justifyContent="center"
+      >
         <DownloadPixelIcon size={14} />
-      </span>
+      </styled.span>
       {decision.state === 'disabled' ? 'Installation indisponible' : "Installer l'application"}
     </button>
   )

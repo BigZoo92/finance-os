@@ -18,7 +18,7 @@ Read `DESIGN.md` and `apps/web/AGENTS.md` before editing UI. `DESIGN.md` is the 
 
 ## Build from the system
 
-- Reuse tokens from `packages/ui/src/styles/globals.css` before adding values.
+- Reuse tokens from `packages/styled-system/src/preset.ts` before adding values (see the `panda-css` skill for authoring).
 - Prefer the canonical shared surfaces documented in `DESIGN.md`, including `KpiTile`, `Panel`, `PageHeader`, `RangePill`, `BrandMark`, and `StatusDot`.
 - Customize the vendored React Bits copies in place when needed; do not reinstall them.
 - Keep navigation sourced from `apps/web/src/components/shell/nav-items.ts` and update `docs/product.md` when product or route structure changes.

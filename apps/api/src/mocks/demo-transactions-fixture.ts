@@ -1,12 +1,11 @@
 import type { DashboardTransactionsResponse } from '../routes/dashboard/types'
-import { env } from '../env'
-import { DEMO_TRANSACTIONS_LEGACY } from './transactions.mock'
 import {
   matchPersonaScenario,
   type DemoPersonaId,
   type DemoTransactionsScenario,
   type PersonaMatchResult,
 } from './demo-scenario-library'
+import { DEMO_TRANSACTIONS_LEGACY } from './transactions.mock'
 
 export const DEMO_DATASET_VERSION = 'demoDataset:v1'
 export const DEMO_DATASET_SEED = 'finance-os-demo-seed-v1'
@@ -257,7 +256,9 @@ const V1_FIXTURE_JSON = JSON.stringify([
 ])
 
 const MINIMAL_FIXTURE: DashboardTransactionsResponse['items'] =
-  DEMO_TRANSACTIONS_LEGACY.length > 0 ? [DEMO_TRANSACTIONS_LEGACY[0] as DashboardTransactionsResponse['items'][number]] : []
+  DEMO_TRANSACTIONS_LEGACY.length > 0
+    ? [DEMO_TRANSACTIONS_LEGACY[0] as DashboardTransactionsResponse['items'][number]]
+    : []
 
 const readFixtureItems = (strategy: DemoDatasetStrategy, scenario: DemoTransactionsScenario) => {
   if (scenario === 'empty') {
@@ -319,24 +320,19 @@ const readFixtureItems = (strategy: DemoDatasetStrategy, scenario: DemoTransacti
   return parsed
 }
 
-export const getDemoDatasetStrategy = (): DemoDatasetStrategy => {
-  if (env.DEMO_DATASET_STRATEGY === 'legacy') {
-    return 'legacy'
-  }
-
-  if (env.DEMO_DATASET_STRATEGY === 'minimal') {
-    return 'minimal'
-  }
-
-  return 'v1'
-}
-
+// The caller passes the demo settings (DEMO_DATASET_STRATEGY,
+// DEMO_PERSONA_MATCHING_ENABLED) so the fixture stays independent of the API
+// environment.
 export const resolveDemoTransactionsFixture = ({
   scenario,
   profile,
+  strategy,
+  personaMatchingEnabled,
 }: {
   scenario: DemoTransactionsScenario
   profile?: string
+  strategy: DemoDatasetStrategy
+  personaMatchingEnabled: boolean
 }): {
   datasetVersion: string
   fixtureSeed: string
@@ -354,9 +350,8 @@ export const resolveDemoTransactionsFixture = ({
   }
   items: DashboardTransactionsResponse['items']
 } => {
-  const strategy = getDemoDatasetStrategy()
   const personaMatchResult: PersonaMatchResult = matchPersonaScenario(profile)
-  const killSwitchActive = env.DEMO_PERSONA_MATCHING_ENABLED === false
+  const killSwitchActive = !personaMatchingEnabled
   const hasScenarioOverride = scenario !== 'default'
   const scenarioToUse = killSwitchActive
     ? hasScenarioOverride

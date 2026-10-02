@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import {
-  RECURRING_PROVIDER_COST_SEED,
-  seedRecurringProviderCost,
-} from './recurring-provider-cost'
+import { RECURRING_PROVIDER_COST_SEED, seedRecurringProviderCost } from './recurring-provider-cost'
 
 type Row = { metadata?: { seedKey?: string } }
 

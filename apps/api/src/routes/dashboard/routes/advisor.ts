@@ -3,7 +3,7 @@ import { getAuth, getInternalAuth, getRequestMeta } from '../../../auth/context'
 import { requireAdmin, requireAdminOrInternalToken } from '../../../auth/guard'
 import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
-import { isDecisionJournalValidationError } from '../domain/advisor/create-decision-journal-use-cases'
+import { isDecisionJournalValidationError } from '../domain/advisor'
 import {
   dashboardAdvisorBehaviorAnalyticsQuerySchema,
   dashboardAdvisorChatBodySchema,
@@ -144,22 +144,24 @@ const buildJsonNullResponse = () =>
     },
   })
 
-export const createAdvisorRoute = ({
-  advisorEnabled,
-  adminOnly,
-  chatEnabled,
-  relabelEnabled,
-}: {
-  advisorEnabled: boolean
-  adminOnly: boolean
-  chatEnabled: boolean
-  relabelEnabled: boolean
-} = {
-  advisorEnabled: true,
-  adminOnly: false,
-  chatEnabled: true,
-  relabelEnabled: true,
-}) =>
+export const createAdvisorRoute = (
+  {
+    advisorEnabled,
+    adminOnly,
+    chatEnabled,
+    relabelEnabled,
+  }: {
+    advisorEnabled: boolean
+    adminOnly: boolean
+    chatEnabled: boolean
+    relabelEnabled: boolean
+  } = {
+    advisorEnabled: true,
+    adminOnly: false,
+    chatEnabled: true,
+    relabelEnabled: true,
+  }
+) =>
   new Elysia()
     .get(
       '/advisor',
@@ -457,10 +459,8 @@ export const createAdvisorRoute = ({
           advisor_knowledge_hit_count: response.retrieval.hitCount,
           advisor_knowledge_matched_topic_ids: response.retrieval.matchedTopicIds,
           advisor_knowledge_guardrail_triggered: response.retrieval.guardrailTriggered,
-          advisor_knowledge_latency_query_parse_ms:
-            response.retrieval.stageLatenciesMs.queryParse,
-          advisor_knowledge_latency_retrieval_ms:
-            response.retrieval.stageLatenciesMs.retrieval,
+          advisor_knowledge_latency_query_parse_ms: response.retrieval.stageLatenciesMs.queryParse,
+          advisor_knowledge_latency_retrieval_ms: response.retrieval.stageLatenciesMs.retrieval,
           advisor_knowledge_latency_answer_assembly_ms:
             response.retrieval.stageLatenciesMs.answerAssembly,
           advisor_knowledge_latency_total_ms: response.retrieval.stageLatenciesMs.total,
@@ -563,45 +563,42 @@ export const createAdvisorRoute = ({
         params: dashboardAdvisorManualOperationParamsSchema,
       }
     )
-    .post(
-      '/advisor/manual-refresh-and-run',
-      async context => {
-        const accessError = ensureAdvisorAccess({
+    .post('/advisor/manual-refresh-and-run', async context => {
+      const accessError = ensureAdvisorAccess({
+        context,
+        advisorEnabled,
+        adminOnly,
+      })
+      if (accessError) {
+        return accessError
+      }
+
+      const adminError = ensureAdminMutationAccess({
+        context,
+        message: 'Admin session or internal token required for manual advisor orchestration.',
+      })
+      if (adminError) {
+        return adminError
+      }
+
+      const dashboard = getDashboardRuntime(context)
+      if (!dashboard.useCases.runAdvisorManualRefreshAndAnalysis) {
+        return buildAdvisorRouteError({
           context,
-          advisorEnabled,
-          adminOnly,
-        })
-        if (accessError) {
-          return accessError
-        }
-
-        const adminError = ensureAdminMutationAccess({
-          context,
-          message: 'Admin session or internal token required for manual advisor orchestration.',
-        })
-        if (adminError) {
-          return adminError
-        }
-
-        const dashboard = getDashboardRuntime(context)
-        if (!dashboard.useCases.runAdvisorManualRefreshAndAnalysis) {
-          return buildAdvisorRouteError({
-            context,
-            status: 503,
-            code: 'ADVISOR_RUNTIME_UNAVAILABLE',
-            message: 'Advisor manual orchestration runtime is unavailable.',
-          })
-        }
-
-        const auth = getAuth(context)
-        const requestMeta = getRequestMeta(context)
-        return dashboard.useCases.runAdvisorManualRefreshAndAnalysis({
-          mode: auth.mode,
-          requestId: requestMeta.requestId,
-          triggerSource: 'manual',
+          status: 503,
+          code: 'ADVISOR_RUNTIME_UNAVAILABLE',
+          message: 'Advisor manual orchestration runtime is unavailable.',
         })
       }
-    )
+
+      const auth = getAuth(context)
+      const requestMeta = getRequestMeta(context)
+      return dashboard.useCases.runAdvisorManualRefreshAndAnalysis({
+        mode: auth.mode,
+        requestId: requestMeta.requestId,
+        triggerSource: 'manual',
+      })
+    })
     .get(
       '/advisor/chat',
       async context => {

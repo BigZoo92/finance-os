@@ -48,30 +48,8 @@ export const externalInvestmentConnection = pgTable(
   ]
 )
 
-export const externalInvestmentCredential = pgTable(
-  'external_investment_credential',
-  {
-    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    connectionId: integer('connection_id')
-      .notNull()
-      .references(() => externalInvestmentConnection.id, { onDelete: 'cascade' }),
-    provider: text('provider').notNull(),
-    kind: text('kind').notNull(),
-    encryptedPayload: text('encrypted_payload').notNull(),
-    maskedMetadata: jsonb('masked_metadata').$type<Record<string, unknown>>().notNull(),
-    version: text('version').notNull().default('v1'),
-    rotatedAt: timestamp('rotated_at', { withTimezone: true }),
-    deletedAt: timestamp('deleted_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  table => [
-    uniqueIndex('external_investment_credential_active_unique')
-      .on(table.connectionId, table.provider, table.kind)
-      .where(sql`${table.deletedAt} is null`),
-    index('external_investment_credential_provider_idx').on(table.provider),
-  ]
-)
+// REMOVE-01: the legacy `external_investment_credential` table was dropped in
+// migration 0038. Provider credentials are server environment only.
 
 export const externalInvestmentSyncRun = pgTable(
   'external_investment_sync_run',
@@ -91,7 +69,10 @@ export const externalInvestmentSyncRun = pgTable(
     errorCode: text('error_code'),
     errorMessage: text('error_message'),
     rowCounts: jsonb('row_counts').$type<Record<string, number> | null>(),
-    degradedReasons: jsonb('degraded_reasons').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    degradedReasons: jsonb('degraded_reasons')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -178,7 +159,10 @@ export const externalInvestmentAccount = pgTable(
     accountAlias: text('account_alias'),
     baseCurrency: text('base_currency'),
     metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
-    degradedReasons: jsonb('degraded_reasons').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    degradedReasons: jsonb('degraded_reasons')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     sourceConfidence: text('source_confidence').notNull().default('unknown'),
     rawImportId: integer('raw_import_id').references(() => externalInvestmentRawImport.id, {
       onDelete: 'set null',
@@ -265,8 +249,14 @@ export const externalInvestmentPosition = pgTable(
     costBasisCurrency: text('cost_basis_currency'),
     realizedPnl: numeric('realized_pnl', { precision: 24, scale: 6 }),
     unrealizedPnl: numeric('unrealized_pnl', { precision: 24, scale: 6 }),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    degradedReasons: jsonb('degraded_reasons').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    degradedReasons: jsonb('degraded_reasons')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     metadata: jsonb('metadata').$type<Record<string, unknown> | null>(),
     sourceConfidence: text('source_confidence').notNull().default('unknown'),
     rawImportId: integer('raw_import_id').references(() => externalInvestmentRawImport.id, {
@@ -374,8 +364,14 @@ export const externalInvestmentValuationSnapshot = pgTable(
     source: text('source').notNull().default('unknown'),
     confidence: text('confidence').notNull().default('unknown'),
     asOf: timestamp('as_of', { withTimezone: true }).notNull(),
-    assumptions: jsonb('assumptions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    degradedReasons: jsonb('degraded_reasons').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    assumptions: jsonb('assumptions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    degradedReasons: jsonb('degraded_reasons')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   table => [

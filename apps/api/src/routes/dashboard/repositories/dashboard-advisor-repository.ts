@@ -3,7 +3,6 @@ import {
   isManualOperationTerminalStatus,
   reconcileManualOperationStepForDisplay,
   resolveOrphanStepClosure,
-  type ManualOperationTerminalStatus,
 } from '@finance-os/ai/manual-operation-recovery'
 import { isAiRunTerminalStatus } from '@finance-os/ai/run-status'
 import { schema } from '@finance-os/db'
@@ -284,18 +283,20 @@ const mapRunSummary = async ({
   }),
 })
 
-const mapManualOperationStepRows = (rows: Array<{
-  id: number
-  stepKey: string
-  label: string
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
-  startedAt: Date | null
-  finishedAt: Date | null
-  durationMs: number | null
-  errorCode: string | null
-  errorMessage: string | null
-  details: Record<string, unknown> | null
-}>) =>
+const mapManualOperationStepRows = (
+  rows: Array<{
+    id: number
+    stepKey: string
+    label: string
+    status: 'queued' | 'running' | 'completed' | 'failed' | 'degraded' | 'skipped'
+    startedAt: Date | null
+    finishedAt: Date | null
+    durationMs: number | null
+    errorCode: string | null
+    errorMessage: string | null
+    details: Record<string, unknown> | null
+  }>
+) =>
   rows.map(row => ({
     id: row.id,
     stepKey: row.stepKey as DashboardAdvisorManualOperationResponse['steps'][number]['stepKey'],
@@ -314,7 +315,7 @@ const getManualOperationByPredicate = async ({
   whereClause,
 }: {
   db: ApiDb
-  whereClause: SQL<unknown>
+  whereClause: SQL
 }) => {
   const [row] = await db
     .select({
@@ -1106,7 +1107,9 @@ export const createDashboardAdvisorRepository = ({
               suggestionSource: item.suggestionSource,
               suggestedKind: item.suggestedKind,
               suggestedCategory: item.suggestedCategory,
-              ...(item.suggestedSubcategory ? { suggestedSubcategory: item.suggestedSubcategory } : {}),
+              ...(item.suggestedSubcategory
+                ? { suggestedSubcategory: item.suggestedSubcategory }
+                : {}),
               suggestedTags: item.suggestedTags,
               confidence: toNumericString(item.confidence, 4),
               rationale: item.rationale,
@@ -1185,7 +1188,7 @@ export const createDashboardAdvisorRepository = ({
               : 'needs_run',
         degradedMessage:
           latestRun.degraded || latestRun.status === 'failed'
-            ? latestRun.errorMessage ?? latestRun.fallbackReason ?? 'Dernier run degrade.'
+            ? (latestRun.errorMessage ?? latestRun.fallbackReason ?? 'Dernier run degrade.')
             : null,
         latestRun,
         brief,
@@ -1303,7 +1306,7 @@ export const createDashboardAdvisorRepository = ({
       // `advisor_run` stuck-`running` incident), this closes the orphan so the
       // Ops UI never shows a phantom "en cours" under a failed operation.
       if (input.status !== undefined && isManualOperationTerminalStatus(input.status)) {
-        const closure = resolveOrphanStepClosure(input.status as ManualOperationTerminalStatus)
+        const closure = resolveOrphanStepClosure(input.status)
         await db
           .update(schema.aiManualOperationStep)
           .set({
@@ -1338,10 +1341,7 @@ export const createDashboardAdvisorRepository = ({
           ...(input.details !== undefined ? { details: input.details } : {}),
         })
         .onConflictDoUpdate({
-          target: [
-            schema.aiManualOperationStep.operationId,
-            schema.aiManualOperationStep.stepKey,
-          ],
+          target: [schema.aiManualOperationStep.operationId, schema.aiManualOperationStep.stepKey],
           set: {
             label: sql`excluded.label`,
             status: sql`excluded.status`,
@@ -1701,7 +1701,10 @@ export const createDashboardAdvisorRepository = ({
         .select()
         .from(schema.aiTransactionLabelSuggestion)
         .where(eq(schema.aiTransactionLabelSuggestion.runId, runId))
-        .orderBy(desc(schema.aiTransactionLabelSuggestion.confidence), desc(schema.aiTransactionLabelSuggestion.id))
+        .orderBy(
+          desc(schema.aiTransactionLabelSuggestion.confidence),
+          desc(schema.aiTransactionLabelSuggestion.id)
+        )
         .limit(limit)
 
       return rows.map(row => ({
@@ -1827,7 +1830,9 @@ export const createDashboardAdvisorRepository = ({
             assumptions: input.assistantMessage.assumptions,
             caveats: input.assistantMessage.caveats,
             simulations: input.assistantMessage.simulations,
-            ...(input.assistantMessage.provider ? { provider: input.assistantMessage.provider } : {}),
+            ...(input.assistantMessage.provider
+              ? { provider: input.assistantMessage.provider }
+              : {}),
             ...(input.assistantMessage.model ? { model: input.assistantMessage.model } : {}),
           },
         ])
@@ -2022,9 +2027,8 @@ export const createDashboardAdvisorRepository = ({
 
       const baseQuery = db.select().from(schema.advisorDecisionJournal).$dynamic()
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined
-      const rows: AdvisorDecisionJournalRow[] = await (whereClause
-        ? baseQuery.where(whereClause)
-        : baseQuery
+      const rows: AdvisorDecisionJournalRow[] = await (
+        whereClause ? baseQuery.where(whereClause) : baseQuery
       )
         .orderBy(
           desc(schema.advisorDecisionJournal.decidedAt),

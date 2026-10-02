@@ -42,7 +42,7 @@ describe('manual operation orphan-step recovery', () => {
   it('leaves a step untouched while its parent is still active', () => {
     expect(shouldCloseOrphanedStep('running', 'running')).toBe(false)
     const step = { status: 'running', errorCode: null, errorMessage: null } as const
-    expect(reconcileManualOperationStepForDisplay(step, 'running')).toBe(step)
+    expect(Object.is(reconcileManualOperationStepForDisplay(step, 'running'), step)).toBe(true)
   })
 
   it('preserves an existing terminal step status and its original error', () => {
@@ -51,7 +51,7 @@ describe('manual operation orphan-step recovery', () => {
       errorCode: null,
       errorMessage: null,
     }
-    expect(reconcileManualOperationStepForDisplay(step, 'failed')).toBe(step)
+    expect(Object.is(reconcileManualOperationStepForDisplay(step, 'failed'), step)).toBe(true)
 
     const failedStep = {
       status: 'running' as const,

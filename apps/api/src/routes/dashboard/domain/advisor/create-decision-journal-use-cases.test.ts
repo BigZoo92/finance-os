@@ -27,9 +27,7 @@ const persistedEntry = (
   ...overrides,
 })
 
-const buildRepo = (
-  overrides?: Partial<DashboardAdvisorRepository>
-): DashboardAdvisorRepository => {
+const buildRepo = (overrides?: Partial<DashboardAdvisorRepository>): DashboardAdvisorRepository => {
   const stub = (() => {
     throw new Error('not used')
   }) as unknown
@@ -37,14 +35,15 @@ const buildRepo = (
     createDecisionJournalEntry: async () => persistedEntry(),
     listDecisionJournalEntries: async () => ({ items: [] }),
     getDecisionJournalEntryById: async () => null,
-    createDecisionOutcome: async () => ({
-      id: 1,
-      decisionId: 42,
-      outcomeKind: 'as_expected',
-      learningTags: [],
-      freeNote: null,
-      createdAt: '2026-04-30T09:00:00.000Z',
-    }) as unknown as Awaited<ReturnType<DashboardAdvisorRepository['createDecisionOutcome']>>,
+    createDecisionOutcome: async () =>
+      ({
+        id: 1,
+        decisionId: 42,
+        outcomeKind: 'as_expected',
+        learningTags: [],
+        freeNote: null,
+        createdAt: '2026-04-30T09:00:00.000Z',
+      }) as unknown as Awaited<ReturnType<DashboardAdvisorRepository['createDecisionOutcome']>>,
     listDecisionOutcomes: async () => [],
     ...(stub as Record<string, never>),
     ...overrides,

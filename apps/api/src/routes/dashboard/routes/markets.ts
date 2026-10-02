@@ -5,18 +5,9 @@ import { getDashboardRuntime } from '../context'
 import { selectDashboardMarketsDataset } from '../domain/dashboard-market-dataset-selector'
 import { dashboardMarketsRefreshBodySchema } from '../schemas'
 
-const toSafeMarketRefreshError = ({
-  error,
-  requestId,
-}: {
-  error: unknown
-  requestId: string
-}) => {
+const toSafeMarketRefreshError = ({ error, requestId }: { error: unknown; requestId: string }) => {
   const errorCode =
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    typeof error.code === 'string'
+    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
       ? error.code
       : error instanceof Error
         ? error.message

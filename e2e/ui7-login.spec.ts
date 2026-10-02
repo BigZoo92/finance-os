@@ -18,10 +18,7 @@ test.describe('Login desktop', () => {
     await expect(page.getByRole('heading', { level: 1, name: /Finance OS/i })).toBeVisible()
     await expect(page.getByText(/Connexion admin requise/i).first()).toBeVisible()
     await expect(page.getByLabel('Email')).toHaveAttribute('autocomplete', 'email')
-    await expect(page.locator('#password')).toHaveAttribute(
-      'autocomplete',
-      'current-password'
-    )
+    await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'current-password')
     await page.getByLabel('Email').fill('admin@example.test')
     await page.locator('#password').fill('secret')
     await page.getByRole('button', { name: 'Afficher le mot de passe' }).click()
@@ -52,7 +49,8 @@ test.describe('Login desktop', () => {
     await expect(page.getByText('Identifiants incorrects')).toBeVisible()
     await expect(page.locator('body')).not.toContainText(/raw error|request id/i)
     const after = await panel.boundingBox()
-    expect(after?.y).toBe(before?.y)
+    // The reveal animation leaves sub-pixel transform noise; the panel must not visibly move.
+    expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0))).toBeLessThan(0.5)
   })
 
   test('submits with Enter and transitions to the authenticated cockpit', async ({ page }) => {

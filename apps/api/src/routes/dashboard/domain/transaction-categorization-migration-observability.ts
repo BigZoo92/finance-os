@@ -15,7 +15,9 @@ export interface CategorizationMigrationSnapshot {
 
 let latestSnapshot: CategorizationMigrationSnapshot | null = null
 
-export const recordCategorizationMigrationSnapshot = (snapshot: CategorizationMigrationSnapshot) => {
+export const recordCategorizationMigrationSnapshot = (
+  snapshot: CategorizationMigrationSnapshot
+) => {
   latestSnapshot = snapshot
 }
 

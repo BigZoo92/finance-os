@@ -1,62 +1,68 @@
-import type * as React from 'react'
-import { cn } from '@finance-os/ui/lib/utils'
+import { cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 
-function DataTable({ className, ...props }: React.ComponentProps<'table'>) {
-  return <table className={cn('w-full border-collapse text-sm', className)} {...props} />
-}
+const dataTable = cva({
+  base: { w: 'full', borderCollapse: 'collapse', textStyle: 'sm' },
+})
 
-function DataTableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
-  return <thead className={cn('border-b border-border', className)} {...props} />
-}
+const dataTableHeader = cva({
+  base: { borderBottomWidth: '1px', borderColor: 'border' },
+})
 
-function DataTableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
-  return <tbody className={cn('divide-y divide-border', className)} {...props} />
-}
+const dataTableBody = cva({
+  base: { '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border' } },
+})
 
-function DataTableRow({ className, ...props }: React.ComponentProps<'tr'>) {
-  return (
-    <tr
-      className={cn(
-        'transition-colors duration-150 hover:bg-surface-1 focus-within:bg-surface-1',
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const dataTableRow = cva({
+  base: {
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _hover: { bg: 'surface.1' },
+    _focusWithin: { bg: 'surface.1' },
+  },
+})
 
-function DataTableHead({
-  className,
-  numeric,
-  ...props
-}: React.ComponentProps<'th'> & { numeric?: boolean }) {
-  return (
-    <th
-      className={cn(
-        'px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground',
-        numeric && 'text-right',
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const dataTableHead = cva({
+  base: {
+    px: '4',
+    py: '3',
+    textAlign: 'left',
+    fontFamily: 'mono',
+    fontSize: '10px',
+    fontWeight: 'medium',
+    textTransform: 'uppercase',
+    letterSpacing: '0.14em',
+    color: 'muted.foreground',
+  },
+  variants: {
+    numeric: { true: { textAlign: 'right' }, false: {} },
+  },
+})
 
-function DataTableCell({
-  className,
-  numeric,
-  ...props
-}: React.ComponentProps<'td'> & { numeric?: boolean }) {
-  return (
-    <td
-      className={cn(
-        'px-4 py-3 align-middle text-foreground',
-        numeric && 'text-right font-financial tabular-nums',
-        className
-      )}
-      {...props}
-    />
-  )
-}
+// Financial figures as longhands (see `@finance-os/ui/lib/typography`): a
+// caller's `textStyle="xs"` must not erase the mono treatment.
+const dataTableCell = cva({
+  base: { px: '4', py: '3', verticalAlign: 'middle', color: 'foreground' },
+  variants: {
+    numeric: {
+      true: {
+        textAlign: 'right',
+        fontFamily: 'mono',
+        fontFeatureSettings: '"tnum", "zero", "ss01"',
+        letterSpacing: '-0.01em',
+        fontVariantNumeric: 'tabular-nums',
+      },
+      false: {},
+    },
+  },
+})
+
+const DataTable = styled('table', dataTable)
+const DataTableHeader = styled('thead', dataTableHeader)
+const DataTableBody = styled('tbody', dataTableBody)
+const DataTableRow = styled('tr', dataTableRow)
+const DataTableHead = styled('th', dataTableHead)
+const DataTableCell = styled('td', dataTableCell)
 
 export { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeader, DataTableRow }

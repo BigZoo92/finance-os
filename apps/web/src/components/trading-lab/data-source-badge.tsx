@@ -1,3 +1,6 @@
+import { cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+
 type Tone = 'real' | 'real-cached' | 'real-overlay' | 'synthetic' | 'unknown'
 
 type Props = {
@@ -8,13 +11,30 @@ type Props = {
   className?: string
 }
 
-const TONE_BG: Record<Tone, string> = {
-  real: 'bg-positive/15 text-positive border-positive/30',
-  'real-cached': 'bg-teal/15 text-teal border-teal/30',
-  'real-overlay': 'bg-teal/15 text-teal border-teal/30',
-  synthetic: 'bg-warning/15 text-warning border-warning/30',
-  unknown: 'bg-surface-2 text-muted-foreground border-border',
-}
+const badge = cva({
+  base: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '1',
+    rounded: 'full',
+    borderWidth: '1px',
+    px: '2',
+    py: '0.5',
+    fontFamily: 'mono',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: 'wide',
+  },
+  variants: {
+    tone: {
+      real: { bg: 'positive/15', color: 'positive', borderColor: 'positive/30' },
+      'real-cached': { bg: 'teal/15', color: 'teal', borderColor: 'teal/30' },
+      'real-overlay': { bg: 'teal/15', color: 'teal', borderColor: 'teal/30' },
+      synthetic: { bg: 'warning/15', color: 'warning', borderColor: 'warning/30' },
+      unknown: { bg: 'surface.2', color: 'muted.foreground', borderColor: 'border' },
+    },
+  },
+})
 
 const FRENCH_SOURCE: Record<string, string> = {
   caller_provided: 'données manuelles',
@@ -50,16 +70,16 @@ export function DataSourceBadge({
 }: Props) {
   const tone = normalizeTone(dataQuality, fallbackUsed)
   const sourceLabel = resolvedMarketDataSource
-    ? FRENCH_SOURCE[resolvedMarketDataSource] ?? resolvedMarketDataSource.replace(/_/g, ' ')
+    ? (FRENCH_SOURCE[resolvedMarketDataSource] ?? resolvedMarketDataSource.replace(/_/g, ' '))
     : 'Indisponible'
   const providerLabel = dataProvider && dataProvider !== 'fixture' ? ` (${dataProvider})` : ''
   const fallbackHint = fallbackUsed ? ' (secours)' : ''
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${TONE_BG[tone]} ${className ?? ''}`}
+      className={cx(badge({ tone }), className)}
       title={`source: ${sourceLabel}${providerLabel}${fallbackHint}`}
     >
-      <span aria-hidden className="size-1.5 bg-current" />
+      <styled.span aria-hidden boxSize="1.5" bg="currentColor" />
       <span>
         {sourceLabel}
         {providerLabel}

@@ -1,10 +1,10 @@
 import { Elysia } from 'elysia'
 import { createExternalInvestmentsRuntimePlugin } from './plugin'
-import { createExternalInvestmentsRouteRuntime } from './runtime'
 import { createExternalInvestmentsDiagnosticsRoute } from './routes/diagnostics'
 import { createExternalInvestmentsStatusRoute } from './routes/status'
 import { createExternalInvestmentsSyncRoute } from './routes/sync'
 import { createExternalInvestmentsSyncRunsRoute } from './routes/sync-runs'
+import { createExternalInvestmentsRouteRuntime } from './runtime'
 import type { ExternalInvestmentsRoutesDependencies } from './types'
 
 export const createExternalInvestmentsRoutes = ({

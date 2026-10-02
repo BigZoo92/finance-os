@@ -77,7 +77,6 @@ describe('getPowensConnectionSyncBadgeModel', () => {
     )
   })
 
-
   it('adds read-only degraded copy when persisted snapshot is KO', () => {
     expect(
       getPowensConnectionSyncBadgeModel({

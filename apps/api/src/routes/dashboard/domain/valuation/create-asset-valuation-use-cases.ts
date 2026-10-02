@@ -1,11 +1,17 @@
+import type {
+  ValuationProviderFailure,
+  ValuationRunSummary,
+  ValuationStatusResponse,
+  ValuationUnresolvedItem,
+} from '@finance-os/api-contract/valuation'
+import type { schema } from '@finance-os/db'
 import {
   buildValuationCoverageReport,
-  valuateItems,
   type FxRateInput,
   type ItemValuation,
   type ValuationCoverageReport,
+  valuateItems,
 } from '@finance-os/finance-engine'
-import type { schema } from '@finance-os/db'
 import { logApiEvent, toErrorLogFields } from '../../../../observability/logger'
 import type { EcbFxRate } from '../../services/fetch-ecb-fx-rates'
 import {
@@ -49,53 +55,10 @@ export class AssetValuationFailedError extends Error {
   }
 }
 
-export interface AssetValuationProviderFailure {
-  provider: string
-  errorCode: string
-  safeErrorMessage: string
-}
-
-export interface AssetValuationRunSummary {
-  runId: number
-  dryRun: boolean
-  status: 'completed' | 'failed' | 'running'
-  triggerSource: 'admin' | 'internal'
-  startedAt: string
-  finishedAt: string | null
-  durationMs: number | null
-  coverage: ValuationCoverageReport | null
-  itemCount: number | null
-  snapshotCount: number | null
-  wouldCreateSnapshots: number | null
-  providerFailures: AssetValuationProviderFailure[]
-  safeErrorCode: string | null
-  safeErrorMessage: string | null
-}
-
-export interface AssetValuationStatusResponse {
-  featureEnabled: boolean
-  fxEnabled: boolean
-  state: 'idle' | 'running' | 'completed' | 'failed'
-  latestRun: AssetValuationRunSummary | null
-  fx: {
-    baseCurrency: 'EUR'
-    ratesAvailable: number
-    staleRates: number
-    latestRateTimestamp: string | null
-  }
-}
-
-export interface AssetValuationUnresolvedItem {
-  itemKey: string
-  name: string
-  provider: string | null
-  assetClass: string
-  status: string
-  identityStatus: string
-  errorCode: string | null
-  safeErrorMessage: string | null
-  asOf: string | null
-}
+export type AssetValuationProviderFailure = ValuationProviderFailure
+export type AssetValuationRunSummary = ValuationRunSummary
+export type AssetValuationStatusResponse = ValuationStatusResponse
+export type AssetValuationUnresolvedItem = ValuationUnresolvedItem
 
 interface FxRateRepositoryLike {
   upsertMany: (rows: Array<typeof schema.fxRateSnapshot.$inferInsert>) => Promise<number>
@@ -159,9 +122,7 @@ export interface CreateAssetValuationUseCasesDependencies {
 
 const toDecimalString = (value: number | null) => (value === null ? null : value.toString())
 
-const mapFxRowToInput = (
-  row: typeof schema.fxRateSnapshot.$inferSelect
-): FxRateInput => ({
+const mapFxRowToInput = (row: typeof schema.fxRateSnapshot.$inferSelect): FxRateInput => ({
   baseCurrency: row.baseCurrency,
   quoteCurrency: row.quoteCurrency,
   rate: Number(row.rate),
@@ -198,29 +159,30 @@ const toSnapshotRow = ({
   valuation: ItemValuation
   runId: number
   now: Date
-}): typeof schema.assetValuationSnapshot.$inferInsert | null => {
-  if (valuation.valueBase === null) {
-    return null
-  }
-
+}): typeof schema.assetValuationSnapshot.$inferInsert => {
+  // DATA-01: an item whose value could not be established is persisted with a
+  // NULL value and price, its status and error code explaining why. It is never
+  // dropped from the run (that would hide the gap) and never written as 0.
   const quantity = valuation.quantity ?? 1
   const unitPrice =
-    valuation.quantity !== null && valuation.quantity !== 0 && valuation.valueOriginal !== null
-      ? valuation.valueOriginal / valuation.quantity
-      : (valuation.valueOriginal ?? valuation.valueBase)
+    valuation.valueBase === null
+      ? null
+      : valuation.quantity !== null && valuation.quantity !== 0 && valuation.valueOriginal !== null
+        ? valuation.valueOriginal / valuation.quantity
+        : (valuation.valueOriginal ?? valuation.valueBase)
 
   return {
     assetId: valuation.itemKey,
     itemKey: valuation.itemKey,
     kind: valuation.kind,
     quantity: quantity.toString(),
-    price: unitPrice.toString(),
+    price: toDecimalString(unitPrice),
     priceCurrency: valuation.currency ?? valuation.baseCurrency,
     baseCurrency: valuation.baseCurrency,
     fxRate: toDecimalString(valuation.fxRate),
     fxRateSource: valuation.fxProvider,
     fxRateTimestamp: valuation.fxTimestamp ? new Date(valuation.fxTimestamp) : null,
-    valueBase: valuation.valueBase.toString(),
+    valueBase: toDecimalString(valuation.valueBase),
     valuationTimestamp: now,
     confidence: valuation.confidence,
     staleReason: valuation.status === 'stale' ? 'value_age_exceeds_policy' : null,
@@ -296,7 +258,8 @@ export const createAssetValuationUseCases = ({
       return {
         provider: 'ecb',
         errorCode: 'FX_REFRESH_FAILED',
-        safeErrorMessage: 'Rafraichissement des taux FX indisponible; derniers taux connus utilises.',
+        safeErrorMessage:
+          'Rafraichissement des taux FX indisponible; derniers taux connus utilises.',
       }
     }
   }
@@ -304,11 +267,7 @@ export const createAssetValuationUseCases = ({
   const loadInputsFailSoft = async ({ requestId }: { requestId: string }) => {
     const providerFailures: AssetValuationProviderFailure[] = []
 
-    const guard = async <T>(
-      provider: string,
-      fallback: T,
-      load: () => Promise<T>
-    ): Promise<T> => {
+    const guard = async <T>(provider: string, fallback: T, load: () => Promise<T>): Promise<T> => {
       try {
         return await load()
       } catch (error) {
@@ -343,7 +302,14 @@ export const createAssetValuationUseCases = ({
         ),
       ])
 
-    return { assets, externalPositions, internalPositions, instrumentIdentities, fxRows, providerFailures }
+    return {
+      assets,
+      externalPositions,
+      internalPositions,
+      instrumentIdentities,
+      fxRows,
+      providerFailures,
+    }
   }
 
   const computeValuations = async ({ requestId }: { requestId: string }) => {
@@ -392,7 +358,6 @@ export const createAssetValuationUseCases = ({
     const runId: number = run.id
 
     try {
-
       logApiEvent({
         level: 'info',
         msg: 'asset valuation refresh started',
@@ -411,9 +376,9 @@ export const createAssetValuationUseCases = ({
       }
 
       const valuationTimestamp = now()
-      const snapshotRows = valuations
-        .map(valuation => toSnapshotRow({ valuation, runId: run.id, now: valuationTimestamp }))
-        .filter((row): row is NonNullable<typeof row> => row !== null)
+      const snapshotRows = valuations.map(valuation =>
+        toSnapshotRow({ valuation, runId: run.id, now: valuationTimestamp })
+      )
 
       let snapshotCount = snapshotRows.length
       if (!input.dryRun) {
@@ -431,7 +396,7 @@ export const createAssetValuationUseCases = ({
         },
         itemCount: valuations.length,
         snapshotCount: input.dryRun ? snapshotRows.length : snapshotCount,
-        providerFailures: providerFailures as unknown as Array<Record<string, unknown>>,
+        providerFailures: providerFailures,
         finishedAt,
         durationMs: finishedAt.getTime() - startedAt.getTime(),
       })

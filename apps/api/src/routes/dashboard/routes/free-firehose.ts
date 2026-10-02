@@ -13,15 +13,19 @@
  * All routes require admin auth and reject silent demo fallback on bad creds.
  */
 
+import { randomUUID } from 'node:crypto'
 import { schema } from '@finance-os/db'
 import { eq, sql } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
-import { randomUUID } from 'node:crypto'
 import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { rejectInvalidCredentials, requireAdmin } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
-import type { ApiDb } from '../types'
+import type { NewsProviderRawItem } from '../domain/news-types'
+import type { NewsProviderAdapter } from '../services/news-provider-types'
+import { createEcbRssNewsProvider } from '../services/providers/ecb-rss-news-provider'
+import { createFedRssNewsProvider } from '../services/providers/fed-rss-news-provider'
+import { createFredNewsProvider } from '../services/providers/fred-news-provider'
 import {
   estimateFreeFirehoseVolume,
   type FreeFirehoseProviderId,
@@ -31,12 +35,8 @@ import {
 } from '../services/providers/free-firehose-orchestrator'
 import { createGdeltNewsProvider } from '../services/providers/gdelt-news-provider'
 import { createHnNewsProvider } from '../services/providers/hn-news-provider'
-import { createEcbRssNewsProvider } from '../services/providers/ecb-rss-news-provider'
-import { createFedRssNewsProvider } from '../services/providers/fed-rss-news-provider'
 import { createSecEdgarNewsProvider } from '../services/providers/sec-edgar-news-provider'
-import { createFredNewsProvider } from '../services/providers/fred-news-provider'
-import type { NewsProviderAdapter } from '../services/news-provider-types'
-import type { NewsProviderRawItem } from '../domain/news-types'
+import type { ApiDb } from '../types'
 
 export type FreeFirehoseEnv = {
   FREE_FIREHOSE_ENABLED: boolean
@@ -322,7 +322,7 @@ const buildHistoryAdapter = ({ db }: { db: ApiDb }) => ({
         dedupedCount: input.counts.deduped,
         skippedCount: input.counts.skipped,
         failedCount: input.counts.failed,
-        providerBreakdown: input.providerBreakdown as Record<string, unknown>,
+        providerBreakdown: input.providerBreakdown,
         errorSummary: input.errorSummary,
       })
       .where(eq(schema.freeFirehoseRun.runId, input.runId))
@@ -347,10 +347,7 @@ type RunBody = {
 
 const redactSensitiveErrorText = (value: string) =>
   value
-    .replace(
-      /([?&](?:api[_-]?key|token|signature|secret|authorization)=)[^&\s]+/gi,
-      '$1[REDACTED]'
-    )
+    .replace(/([?&](?:api[_-]?key|token|signature|secret|authorization)=)[^&\s]+/gi, '$1[REDACTED]')
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer [REDACTED]')
 
 const toSafeFreeFirehoseErrorMessage = (error: unknown) => {

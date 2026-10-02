@@ -58,12 +58,7 @@ export type XTwitterProfileOutcome =
 const USER_READ_COST_USD = 0.01
 
 const HANDLE_PATTERN = /^[a-z0-9_]{1,15}$/
-const SUPPORTED_X_HOSTS = new Set([
-  'x.com',
-  'twitter.com',
-  'mobile.twitter.com',
-  'm.twitter.com',
-])
+const SUPPORTED_X_HOSTS = new Set(['x.com', 'twitter.com', 'mobile.twitter.com', 'm.twitter.com'])
 
 export type NormalizeXHandleResult =
   | { ok: true; handle: string }
@@ -130,11 +125,7 @@ export const normalizeXHandle = (input: unknown): NormalizeXHandleResult => {
   }
 
   // Strip a leading @, trailing slashes, and lowercase.
-  const handle = raw
-    .replace(/^@+/, '')
-    .replace(/\/+$/, '')
-    .trim()
-    .toLowerCase()
+  const handle = raw.replace(/^@+/, '').replace(/\/+$/, '').trim().toLowerCase()
 
   if (handle.length === 0) {
     return { ok: false, code: 'INVALID_HANDLE', reason: 'Handle cannot be empty after trimming.' }
@@ -157,11 +148,9 @@ const cleanHandle = (input: string) => {
   return result.ok ? result.handle : input.trim().replace(/^@/, '').toLowerCase()
 }
 
-const mapStatusToCode = (status: number): XTwitterProfileOutcome extends infer T
-  ? T extends { code: infer C }
-    ? C
-    : never
-  : never => {
+const mapStatusToCode = (
+  status: number
+): XTwitterProfileOutcome extends infer T ? (T extends { code: infer C } ? C : never) : never => {
   if (status === 401) return 'TOKEN_INVALID'
   if (status === 402) return 'PAYMENT_REQUIRED'
   if (status === 403) return 'FORBIDDEN'
@@ -260,7 +249,14 @@ export type XTwitterBatchLookupOutcome = {
   /** Top-level provider error when the BATCH call itself failed (e.g. 401,
    *  429). Per-item errors are reported via `items[].ok=false`. */
   providerError: {
-    code: 'TOKEN_MISSING' | 'TOKEN_INVALID' | 'PAYMENT_REQUIRED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'PROVIDER_UNAVAILABLE' | 'NETWORK_ERROR'
+    code:
+      | 'TOKEN_MISSING'
+      | 'TOKEN_INVALID'
+      | 'PAYMENT_REQUIRED'
+      | 'FORBIDDEN'
+      | 'RATE_LIMITED'
+      | 'PROVIDER_UNAVAILABLE'
+      | 'NETWORK_ERROR'
     message: string
     statusCode: number | null
   } | null
@@ -544,15 +540,14 @@ export const createXTwitterProfileClient = ({
     // canonical we asked for that's missing from both data[] and errors[].
     const notFoundCanonicals = new Set<string>()
     for (const err of payload.errors ?? []) {
-      const value =
-        typeof err.value === 'string' ? err.value.toLowerCase() : null
+      const value = typeof err.value === 'string' ? err.value.toLowerCase() : null
       if (value) notFoundCanonicals.add(value)
     }
     const notFoundItems: XTwitterBatchLookupItem[] = []
     for (const canonical of uniqueCanonical) {
       if (resolvedCanonicals.has(canonical)) continue
       const requesters = canonicalToRaws.get(canonical) ?? [canonical]
-      const code: 'NOT_FOUND' = 'NOT_FOUND'
+      const code = 'NOT_FOUND' as const
       for (const requester of requesters) {
         notFoundItems.push({
           ok: false,

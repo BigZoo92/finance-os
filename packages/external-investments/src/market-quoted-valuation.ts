@@ -64,7 +64,7 @@ const quoteIsStale = (quoteAsOf: string | null, generatedAt: string, staleAfterM
 const extractIsin = (position: ExternalInvestmentCanonicalPosition): string | null => {
   const meta = position.metadata
   if (meta && typeof meta === 'object' && 'isin' in meta) {
-    const isin = (meta as Record<string, unknown>).isin
+    const isin = meta.isin
     if (typeof isin === 'string' && isin.length > 0) return isin
   }
   return null
@@ -73,7 +73,7 @@ const extractIsin = (position: ExternalInvestmentCanonicalPosition): string | nu
 const extractConid = (position: ExternalInvestmentCanonicalPosition): string | null => {
   const meta = position.metadata
   if (meta && typeof meta === 'object' && 'conid' in meta) {
-    const conid = (meta as Record<string, unknown>).conid
+    const conid = meta.conid
     if (typeof conid === 'string' && conid.length > 0) return conid
   }
   return null
@@ -128,9 +128,7 @@ export const enrichMarketQuotedValuations = async ({
       missingCount += 1
       nextPositions.push({
         ...position,
-        degradedReasons: Array.from(
-          new Set([...position.degradedReasons, 'MARKET_QUOTE_MISSING'])
-        ),
+        degradedReasons: Array.from(new Set([...position.degradedReasons, 'MARKET_QUOTE_MISSING'])),
       })
       continue
     }

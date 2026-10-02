@@ -27,7 +27,11 @@ export type ExternalInvestmentContextBundle = {
   providerCoverage: ExternalInvestmentProviderCoverage[]
   totalKnownValue: number
   unknownValuePositionCount: number
-  allocationByAssetClass: Array<{ key: ExternalInvestmentAssetClass; value: number; weightPct: number }>
+  allocationByAssetClass: Array<{
+    key: ExternalInvestmentAssetClass
+    value: number
+    weightPct: number
+  }>
   allocationByProvider: Array<{ key: ExternalInvestmentProvider; value: number; weightPct: number }>
   allocationByAccount: Array<{ key: string; label: string; value: number; weightPct: number }>
   allocationByCurrency: Array<{ key: string; value: number; weightPct: number }>
@@ -44,7 +48,11 @@ export type ExternalInvestmentContextBundle = {
   recentTradesSummary: { count: number; byProvider: Record<string, number> }
   recentCashFlowsSummary: { count: number; byType: Record<string, number> }
   feesSummary: { knownFees: number; currency: string; unknownFeeCount: number }
-  pnlSummary: { realizedKnown: number | null; unrealizedKnown: number | null; unknownPnlCount: number }
+  pnlSummary: {
+    realizedKnown: number | null
+    unrealizedKnown: number | null
+    unknownPnlCount: number
+  }
   unknownCostBasisWarnings: string[]
   missingMarketDataWarnings: string[]
   staleDataWarnings: string[]
@@ -53,7 +61,11 @@ export type ExternalInvestmentContextBundle = {
   opportunityFlags: string[]
   assumptions: string[]
   confidence: 'high' | 'medium' | 'low' | 'unknown'
-  provenance: Array<{ provider: ExternalInvestmentProvider; connectionId: string; positionCount: number }>
+  provenance: Array<{
+    provider: ExternalInvestmentProvider
+    connectionId: string
+    positionCount: number
+  }>
 }
 
 export type ExternalInvestmentConnection = {
@@ -183,7 +195,12 @@ export type ExternalInvestmentSummaryResponse = {
   providerEnabled: Record<ExternalInvestmentProvider, boolean>
   generatedAt: string | null
   dataStatus: { status: 'ready' | 'degraded' | 'empty'; message: string | null }
-  status: ExternalInvestmentStatusResponse | { connections: ExternalInvestmentConnection[]; health: ExternalInvestmentStatusResponse['health'] }
+  status:
+    | ExternalInvestmentStatusResponse
+    | {
+        connections: ExternalInvestmentConnection[]
+        health: ExternalInvestmentStatusResponse['health']
+      }
   bundle: ExternalInvestmentContextBundle | null
   latestBundleMeta: {
     schemaVersion: string

@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Amount,
   Button,
@@ -96,29 +98,100 @@ export const Route = createFileRoute('/_app/investissements')({
   component: InvestissementsPage,
 })
 
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+// `divide-y divide-border`: a rule between rows, none around the list.
+const dividedList = css({
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border' },
+})
+
+const allocationRow = css({
+  display: 'grid',
+  gap: '2',
+  py: '4',
+  sm: { gridTemplateColumns: '8rem 1fr auto', alignItems: 'center', gap: '4' },
+})
+
+const allocationAmount = css({ textStyle: 'sm', sm: { minW: '24', textAlign: 'right' } })
+
+const detailList = css({
+  borderYWidth: '1px',
+  borderColor: 'border',
+  textStyle: 'sm',
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border' },
+})
+
+const detailRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '4',
+  py: '3',
+})
+
+const detailLabel = css({ color: 'muted.foreground' })
+
+const totalAmount = css({
+  mt: '2',
+  display: 'block',
+  textStyle: '4xl',
+  fontWeight: 'semibold',
+  sm: { textStyle: '5xl' },
+})
+
+const pnlAmount = css({ mt: '2', display: 'block', textStyle: '2xl', fontWeight: 'semibold' })
+
+const filterGrid = css({
+  display: 'grid',
+  gap: '2',
+  sm: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
+  lg: { gridTemplateColumns: '12rem 9rem 9rem 9rem' },
+})
+
+const searchIcon = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  left: '3',
+  top: '50%',
+  translate: '0 -50%',
+  color: 'muted.foreground',
+})
+
+// The trigger recipe owns `width: fit-content`; a `min-width` stretches it to the
+// field without racing that atom (max(fit-content, 100%) is the field width).
+
+const loadingStatus = css({ borderYWidth: '1px', borderColor: 'border', py: '8' })
+
+const visuallyHidden = css({ srOnly: true })
+
 function AllocationList({
   allocations,
 }: {
   allocations: ReturnType<typeof buildInvestmentsViewModel>['providerAllocation']
 }) {
   if (allocations.length === 0) {
-    return <p className="py-6 text-sm text-muted-foreground">Répartition indisponible</p>
+    return (
+      <styled.p py="6" textStyle="sm" color="muted.foreground">
+        Répartition indisponible
+      </styled.p>
+    )
   }
 
   return (
-    <div className="divide-y divide-border">
+    <div className={dividedList}>
       {allocations.map(allocation => (
-        <div
-          key={allocation.key}
-          className="grid gap-2 py-4 sm:grid-cols-[8rem_1fr_auto] sm:items-center sm:gap-4"
-        >
-          <p className="text-sm font-medium">{allocation.label}</p>
+        <div key={allocation.key} className={allocationRow}>
+          <styled.p textStyle="sm" fontWeight="medium">
+            {allocation.label}
+          </styled.p>
           <Progress value={allocation.weightPct} label={allocation.label} showValue />
-          <Amount
-            value={allocation.value}
-            decimals={0}
-            className="text-sm sm:min-w-24 sm:text-right"
-          />
+          <Amount value={allocation.value} decimals={0} className={allocationAmount} />
         </div>
       ))}
     </div>
@@ -134,7 +207,17 @@ function PositionDetail({
 }) {
   return (
     <Dialog open={position !== null} onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
+      <DialogContent
+        smDown={{
+          bottom: '0',
+          left: '0',
+          top: 'auto',
+          w: 'full',
+          maxW: 'none',
+          translate: '0 0',
+          roundedBottom: '0',
+        }}
+      >
         {position ? (
           <>
             <DialogHeader>
@@ -144,38 +227,38 @@ function PositionDetail({
                 {position.account ? `, ${position.account}` : ''}
               </DialogDescription>
             </DialogHeader>
-            <dl className="divide-y divide-border border-y border-border text-sm">
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-muted-foreground">Valeur</dt>
+            <dl className={detailList}>
+              <div className={detailRow}>
+                <dt className={detailLabel}>Valeur</dt>
                 <dd>
                   <Amount value={position.value} />
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-muted-foreground">Coût d’acquisition</dt>
+              <div className={detailRow}>
+                <dt className={detailLabel}>Coût d’acquisition</dt>
                 <dd>
                   <Amount value={position.costBasis} />
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-muted-foreground">P&amp;L</dt>
-                <dd className="text-right">
+              <div className={detailRow}>
+                <dt className={detailLabel}>P&amp;L</dt>
+                <styled.dd textAlign="right">
                   <Amount value={position.pnlAmount} signed />
-                  <PercentChange value={position.pnlPercent} decimals={1} className="mt-1" />
-                </dd>
+                  <PercentChange value={position.pnlPercent} decimals={1} mt="1" />
+                </styled.dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-muted-foreground">Classe</dt>
+              <div className={detailRow}>
+                <dt className={detailLabel}>Classe</dt>
                 <dd>{assetClassLabel(position.assetClass)}</dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-muted-foreground">Valorisation</dt>
+              <div className={detailRow}>
+                <dt className={detailLabel}>Valorisation</dt>
                 <dd>
                   <ValuationState state={position.valuationState} />
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-muted-foreground">Mise à jour</dt>
+              <div className={detailRow}>
+                <dt className={detailLabel}>Mise à jour</dt>
                 <dd>
                   <Freshness asOf={position.valuedAt} />
                 </dd>
@@ -220,10 +303,10 @@ function InvestissementsPage() {
     dashboardSummaryQueryOptionsWithMode({ range, ...(authMode ? { mode: authMode } : {}) })
   )
   const externalSummaryQuery = useQuery(
-    externalInvestmentsSummaryQueryOptionsWithMode({ ...(authMode ? { mode: authMode } : {}) })
+    externalInvestmentsSummaryQueryOptionsWithMode(authMode ? { mode: authMode } : {})
   )
   const externalPositionsQuery = useQuery(
-    externalInvestmentsPositionsQueryOptionsWithMode({ ...(authMode ? { mode: authMode } : {}) })
+    externalInvestmentsPositionsQueryOptionsWithMode(authMode ? { mode: authMode } : {})
   )
 
   const model = useMemo(
@@ -282,7 +365,7 @@ function InvestissementsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <styled.div spaceY="8">
       <PageHeader
         eyebrow="Portefeuille"
         icon={<TrendingPixelIcon size={12} />}
@@ -300,18 +383,19 @@ function InvestissementsPage() {
         }
       />
 
-      <section className="border-y border-border py-6">
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(15rem,0.7fr)] md:items-end">
+      <styled.section borderYWidth="1px" borderColor="border" py="6">
+        <styled.div
+          display="grid"
+          gap="6"
+          md={{
+            gridTemplateColumns: 'minmax(0, 1.3fr) minmax(15rem, 0.7fr)',
+            alignItems: 'flex-end',
+          }}
+        >
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Valeur connue
-            </p>
-            <Amount
-              value={model.totalKnownValue}
-              decimals={0}
-              className="mt-2 block text-4xl font-semibold tracking-tight sm:text-5xl"
-            />
-            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+            <p className={eyebrow}>Valeur connue</p>
+            <Amount value={model.totalKnownValue} decimals={0} className={totalAmount} />
+            <styled.div mt="3" display="flex" flexWrap="wrap" columnGap="5" rowGap="2">
               <Freshness asOf={externalSummaryQuery.data?.generatedAt} />
               {model.unknownValueCount > 0 ? (
                 <Status
@@ -319,64 +403,74 @@ function InvestissementsPage() {
                   label={`${model.unknownValueCount} valorisation${model.unknownValueCount > 1 ? 's' : ''} inconnue${model.unknownValueCount > 1 ? 's' : ''}`}
                 />
               ) : null}
-            </div>
+            </styled.div>
           </div>
-          <div className="border-l border-border pl-5 max-md:border-l-0 max-md:border-t max-md:pl-0 max-md:pt-5">
-            <p className="text-sm text-muted-foreground">P&amp;L calculable</p>
-            <Amount
-              value={model.totalPnlKnown}
-              signed
-              decimals={0}
-              className="mt-2 block text-2xl font-semibold"
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
+          <styled.div
+            borderLeftWidth="1px"
+            borderColor="border"
+            pl="5"
+            mdDown={{ borderLeftWidth: '0', borderTopWidth: '1px', pl: '0', pt: '5' }}
+          >
+            <styled.p textStyle="sm" color="muted.foreground">
+              P&amp;L calculable
+            </styled.p>
+            <Amount value={model.totalPnlKnown} signed decimals={0} className={pnlAmount} />
+            <styled.p mt="2" textStyle="xs" color="muted.foreground">
               {model.unknownPnlCount > 0
                 ? `${model.unknownPnlCount} position${model.unknownPnlCount > 1 ? 's' : ''} sans P&L fiable`
                 : 'Toutes les positions sont couvertes'}
-            </p>
-          </div>
-        </div>
-      </section>
+            </styled.p>
+          </styled.div>
+        </styled.div>
+      </styled.section>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <styled.div display="grid" gap="8" lg={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         <section>
-          <h2 className="text-base font-semibold">Par source</h2>
+          <styled.h2 textStyle="md" fontWeight="semibold">
+            Par source
+          </styled.h2>
           <AllocationList allocations={model.providerAllocation} />
         </section>
         <section>
-          <h2 className="text-base font-semibold">Par classe d’actifs</h2>
+          <styled.h2 textStyle="md" fontWeight="semibold">
+            Par classe d’actifs
+          </styled.h2>
           <AllocationList allocations={model.assetClassAllocation} />
         </section>
-      </div>
+      </styled.div>
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <styled.section spaceY="4">
+        <styled.div
+          display="flex"
+          flexDirection="column"
+          gap="3"
+          lg={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}
+        >
           <div>
-            <h2 className="text-lg font-semibold">Positions</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <styled.h2 textStyle="lg" fontWeight="semibold">
+              Positions
+            </styled.h2>
+            <styled.p mt="1" textStyle="sm" color="muted.foreground">
               {filteredPositions.length} affichée{filteredPositions.length !== 1 ? 's' : ''}
-            </p>
+            </styled.p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[12rem_9rem_9rem_9rem]">
-            <label className="relative" htmlFor="investment-search">
-              <span className="sr-only">Rechercher un actif</span>
-              <SearchPixelIcon
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
+          <div className={filterGrid}>
+            <styled.label position="relative" htmlFor="investment-search">
+              <span className={visuallyHidden}>Rechercher un actif</span>
+              <SearchPixelIcon size={14} className={searchIcon} />
               <Input
                 id="investment-search"
                 value={q}
                 onChange={event => updateSearch({ q: event.target.value })}
                 placeholder="Rechercher"
-                className="pl-9"
+                pl="9"
               />
-            </label>
+            </styled.label>
             <Select
               value={provider}
               onValueChange={value => updateSearch({ provider: value, account: 'all' })}
             >
-              <SelectTrigger className="w-full" aria-label="Filtrer par source">
+              <SelectTrigger w="full" aria-label="Filtrer par source">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -388,7 +482,7 @@ function InvestissementsPage() {
               </SelectContent>
             </Select>
             <Select value={account} onValueChange={value => updateSearch({ account: value })}>
-              <SelectTrigger className="w-full" aria-label="Filtrer par compte">
+              <SelectTrigger w="full" aria-label="Filtrer par compte">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -400,7 +494,7 @@ function InvestissementsPage() {
               </SelectContent>
             </Select>
             <Select value={assetClass} onValueChange={value => updateSearch({ assetClass: value })}>
-              <SelectTrigger className="w-full" aria-label="Filtrer par classe">
+              <SelectTrigger w="full" aria-label="Filtrer par classe">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -414,14 +508,10 @@ function InvestissementsPage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </styled.div>
 
         {isPending && model.positions.length === 0 ? (
-          <Status
-            tone="progress"
-            label="Chargement des positions"
-            className="border-y border-border py-8"
-          />
+          <Status tone="progress" label="Chargement des positions" className={loadingStatus} />
         ) : hasError && model.positions.length === 0 ? (
           <PersonalEmptyState
             title="Positions indisponibles"
@@ -441,9 +531,9 @@ function InvestissementsPage() {
             }}
           />
         )}
-      </section>
+      </styled.section>
 
       <PositionDetail position={selectedPosition} onClose={closePositionDetail} />
-    </div>
+    </styled.div>
   )
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { classifySignal, isAiTechSignalRelevantForFinanceOs } from './signal-classifier'
 import type { NormalizedNewsSignalDraft } from './news-types'
+import { classifySignal, isAiTechSignalRelevantForFinanceOs } from './signal-classifier'
 
 const makeSignal = (
   overrides: Partial<NormalizedNewsSignalDraft> = {}

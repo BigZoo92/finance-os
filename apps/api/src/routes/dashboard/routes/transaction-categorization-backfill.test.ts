@@ -31,7 +31,9 @@ const tx = (overrides: Partial<TxRow> & Pick<TxRow, 'id'>): TxRow => ({
   ...overrides,
 })
 
-const rule = (overrides: Partial<UserCategorizationRule> & Pick<UserCategorizationRule, 'id'>): UserCategorizationRule => ({
+const rule = (
+  overrides: Partial<UserCategorizationRule> & Pick<UserCategorizationRule, 'id'>
+): UserCategorizationRule => ({
   enabled: true,
   priority: 100,
   matcherType: 'merchant_contains',

@@ -17,8 +17,7 @@ type KnowledgeTopic = DashboardAdvisorKnowledgeTopicResponse & {
   }>
 }
 
-type KnowledgeIntent =
-  DashboardAdvisorKnowledgeAnswerResponse['retrieval']['intent']
+type KnowledgeIntent = DashboardAdvisorKnowledgeAnswerResponse['retrieval']['intent']
 
 type BrowseOnlyReason = DashboardAdvisorKnowledgeTopicsResponse['browseOnlyReason']
 type FallbackReason = DashboardAdvisorKnowledgeAnswerResponse['fallbackReason']
@@ -47,8 +46,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'role',
         title: 'Role principal',
-        body:
-          'Le fonds d urgence protege la tresorerie personnelle contre les imprevus comme une depense de sante, une panne, ou une baisse temporaire de revenus.',
+        body: 'Le fonds d urgence protege la tresorerie personnelle contre les imprevus comme une depense de sante, une panne, ou une baisse temporaire de revenus.',
         keyPoints: [
           'Il sert d amortisseur de court terme.',
           'Il evite de vendre un placement sous pression.',
@@ -58,8 +56,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'sizing',
         title: 'Dimensionnement',
-        body:
-          'Une regle pedagogique consiste a viser quelques mois de depenses essentielles, puis a ajuster selon la stabilite des revenus et les personnes a charge.',
+        body: 'Une regle pedagogique consiste a viser quelques mois de depenses essentielles, puis a ajuster selon la stabilite des revenus et les personnes a charge.',
         keyPoints: [
           'Des revenus variables justifient souvent un coussin plus epais.',
           'Le niveau cible depend de la volatilite du foyer, pas seulement du salaire nominal.',
@@ -88,8 +85,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'concentration',
         title: 'Risque de concentration',
-        body:
-          'Une forte concentration amplifie la dependance a un theme, un employeur, un secteur ou une zone geographique. La diversification reduit ce risque specifique.',
+        body: 'Une forte concentration amplifie la dependance a un theme, un employeur, un secteur ou une zone geographique. La diversification reduit ce risque specifique.',
         keyPoints: [
           'Elle amortit le choc d une seule erreur de these.',
           'Elle ne supprime pas le risque de marche global.',
@@ -99,8 +95,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'tradeoffs',
         title: 'Compromis',
-        body:
-          'Diversifier peut rendre la performance moins spectaculaire en marche haussier concentre, mais elle rend souvent le parcours plus robuste.',
+        body: 'Diversifier peut rendre la performance moins spectaculaire en marche haussier concentre, mais elle rend souvent le parcours plus robuste.',
         keyPoints: [
           'La diversification vise la resilience, pas le maximum absolu.',
           'Le bon niveau depend de l horizon et de la tolerance a la volatilite.',
@@ -129,8 +124,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'mechanics',
         title: 'Mecanique',
-        body:
-          'En investissant regulierement, on achete plus de parts quand les prix sont bas et moins quand ils sont eleves. Cela lisse le prix moyen d entree.',
+        body: 'En investissant regulierement, on achete plus de parts quand les prix sont bas et moins quand ils sont eleves. Cela lisse le prix moyen d entree.',
         keyPoints: [
           'Le DCA agit surtout sur le comportement et la discipline.',
           'Il ne garantit pas de surperformance.',
@@ -140,8 +134,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'limits',
         title: 'Limites',
-        body:
-          'Si le capital est deja disponible et que l horizon est long, un investissement immediate peut statistiquement etre plus performant, mais le DCA peut rester plus acceptable psychologiquement.',
+        body: 'Si le capital est deja disponible et que l horizon est long, un investissement immediate peut statistiquement etre plus performant, mais le DCA peut rester plus acceptable psychologiquement.',
         keyPoints: [
           'Le bon choix depend souvent du confort comportemental.',
           'Le DCA n efface pas le risque de marche.',
@@ -170,8 +163,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'definition',
         title: 'Nominal versus reel',
-        body:
-          'Un placement qui rapporte moins que l inflation peut afficher un gain nominal tout en appauvrissant en pouvoir d achat.',
+        body: 'Un placement qui rapporte moins que l inflation peut afficher un gain nominal tout en appauvrissant en pouvoir d achat.',
         keyPoints: [
           'Le nominal dit ce que vaut le compte.',
           'Le reel dit ce que ce compte permet encore d acheter.',
@@ -181,8 +173,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'cash',
         title: 'Impact sur le cash',
-        body:
-          'Des liquidites trop abondantes peuvent proteger le court terme mais peser sur le rendement reel de long terme si leur remuneration reste inferieure a l inflation.',
+        body: 'Des liquidites trop abondantes peuvent proteger le court terme mais peser sur le rendement reel de long terme si leur remuneration reste inferieure a l inflation.',
         keyPoints: [
           'La liquidite a une utilite, mais aussi un cout d opportunite.',
           'Le bon arbitrage depend du besoin de disponibilite.',
@@ -211,8 +202,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'inverse',
         title: 'Relation inverse',
-        body:
-          'Quand les taux montent, les anciennes obligations au coupon plus faible deviennent moins attractives, donc leur prix baisse pour s ajuster.',
+        body: 'Quand les taux montent, les anciennes obligations au coupon plus faible deviennent moins attractives, donc leur prix baisse pour s ajuster.',
         keyPoints: [
           'Taux en hausse et prix obligataires en baisse vont souvent ensemble.',
           'L ampleur depend de la duree de vie des flux.',
@@ -222,8 +212,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'role',
         title: 'Role dans une allocation',
-        body:
-          'Les obligations peuvent stabiliser une allocation, produire du revenu, ou servir de poche moins risquee, mais leur comportement change selon le niveau de taux et la qualite de credit.',
+        body: 'Les obligations peuvent stabiliser une allocation, produire du revenu, ou servir de poche moins risquee, mais leur comportement change selon le niveau de taux et la qualite de credit.',
         keyPoints: [
           'La poche obligataire n est pas un bloc homogene.',
           'Il faut distinguer taux, duration et risque credit.',
@@ -252,8 +241,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'cost',
         title: 'Cout explicite',
-        body:
-          'Une dette a taux eleve cree une charge quasi certaine. La comparer a un rendement de marche incertain aide a prioriser rationnellement.',
+        body: 'Une dette a taux eleve cree une charge quasi certaine. La comparer a un rendement de marche incertain aide a prioriser rationnellement.',
         keyPoints: [
           'Le cout de la dette est contractuel.',
           'Le rendement d un placement reste incertain.',
@@ -263,8 +251,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'cashflow',
         title: 'Souplesse et tresorerie',
-        body:
-          'Le bon ordre depend aussi de la marge mensuelle, de la presence d une reserve, et des risques lies au non-paiement.',
+        body: 'Le bon ordre depend aussi de la marge mensuelle, de la presence d une reserve, et des risques lies au non-paiement.',
         keyPoints: [
           'La tresorerie compte autant que le taux nominal.',
           'Un arbitrage sain preserve la capacite a faire face aux imprevus.',
@@ -282,12 +269,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
     difficulty: 'intermediate',
     estimatedReadMinutes: 6,
     tags: ['datasets', 'data-quality', 'macro', 'fundamentals'],
-    aliases: [
-      'financial data',
-      'jeu de donnees financier',
-      'qualite des donnees',
-      'dataset macro',
-    ],
+    aliases: ['financial data', 'jeu de donnees financier', 'qualite des donnees', 'dataset macro'],
     relatedQuestions: [
       'Qu est-ce qu un financial dataset ? ',
       'Comment verifier la qualite d un dataset financier ?',
@@ -299,8 +281,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'families',
         title: 'Familles de datasets',
-        body:
-          'Les datasets financiers couvrent souvent les prix de marche, les donnees fondamentales, les indicateurs macroeconomiques et les evenements news. Chaque famille a ses delais, biais et usages.',
+        body: 'Les datasets financiers couvrent souvent les prix de marche, les donnees fondamentales, les indicateurs macroeconomiques et les evenements news. Chaque famille a ses delais, biais et usages.',
         keyPoints: [
           'Prix et volumes decrivent le marche en temps quasi reel.',
           'Fundamentals et macro ont souvent plus de latence mais cadrent le regime de fond.',
@@ -310,8 +291,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'quality',
         title: 'Qualite et gouvernance',
-        body:
-          'Un dataset utile doit expliciter sa source, son horodatage, ses revisions et ses trous de couverture. Sans ces metadonnees, le risque de sur-interpreter un signal augmente.',
+        body: 'Un dataset utile doit expliciter sa source, son horodatage, ses revisions et ses trous de couverture. Sans ces metadonnees, le risque de sur-interpreter un signal augmente.',
         keyPoints: [
           'Toujours verifier provenance, fraicheur et revisions.',
           'Un champ manquant ou revise peut inverser une conclusion.',
@@ -321,8 +301,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'pitfalls',
         title: 'Pieges frequents',
-        body:
-          'Les principaux pieges sont le look-ahead bias, les survivorship biases et la confusion entre correlation et causalite. Une lecture prudente prefere des hypotheses explicites et testables.',
+        body: 'Les principaux pieges sont le look-ahead bias, les survivorship biases et la confusion entre correlation et causalite. Une lecture prudente prefere des hypotheses explicites et testables.',
         keyPoints: [
           'Eviter d utiliser une valeur publiee apres la date analysee.',
           'Ne pas confondre signal descriptif et preuve causale.',
@@ -351,8 +330,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'time',
         title: 'Le temps absorbe la volatilite',
-        body:
-          'Plus l horizon est long, plus un investisseur peut attendre la normalisation potentielle d un marche apres un choc, meme si rien n est garanti.',
+        body: 'Plus l horizon est long, plus un investisseur peut attendre la normalisation potentielle d un marche apres un choc, meme si rien n est garanti.',
         keyPoints: [
           'Le risque de devoir vendre au mauvais moment baisse quand le temps disponible augmente.',
           'Le court terme supporte mal les actifs volatils.',
@@ -362,8 +340,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'bucket',
         title: 'Segmentation par objectif',
-        body:
-          'Il est souvent plus utile de separer les enveloppes selon les usages de l argent que de chercher un profil unique pour tout le patrimoine.',
+        body: 'Il est souvent plus utile de separer les enveloppes selon les usages de l argent que de chercher un profil unique pour tout le patrimoine.',
         keyPoints: [
           'Une meme personne peut avoir plusieurs horizons.',
           'Les projets de court terme exigent souvent plus de liquidite.',
@@ -392,8 +369,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'discipline',
         title: 'Discipline de portefeuille',
-        body:
-          'Le reequilibrage limite la derive d allocation et force a vendre une partie de ce qui a trop monte ou a renforcer ce qui pese moins que prevu.',
+        body: 'Le reequilibrage limite la derive d allocation et force a vendre une partie de ce qui a trop monte ou a renforcer ce qui pese moins que prevu.',
         keyPoints: [
           'Il reconnecte les poids de portefeuille a une cible explicite.',
           'Il transforme une intention de risque en geste concret.',
@@ -403,8 +379,7 @@ const KNOWLEDGE_PACK: KnowledgeTopic[] = [
       {
         sectionId: 'methods',
         title: 'Methodes pratiques',
-        body:
-          'On peut reequilibrer a date fixe, par bandes de tolerance, ou au fil des nouveaux apports pour limiter les frottements.',
+        body: 'On peut reequilibrer a date fixe, par bandes de tolerance, ou au fil des nouveaux apports pour limiter les frottements.',
         keyPoints: [
           'Les apports reguliers peuvent reduire les arbitrages necessaires.',
           'Une regle simple vaut mieux qu un timing opportuniste.',
@@ -470,10 +445,7 @@ const STOP_WORDS = new Set([
 ])
 
 const GUARDRAIL_PATTERNS: Array<{
-  reason: Extract<
-    FallbackReason,
-    'guardrail_personalized_advice' | 'guardrail_regulatory_or_tax'
-  >
+  reason: Extract<FallbackReason, 'guardrail_personalized_advice' | 'guardrail_regulatory_or_tax'>
   patterns: RegExp[]
 }> = [
   {
@@ -523,7 +495,10 @@ const buildTopicSearchTerms = (topic: KnowledgeTopic) =>
     ...topic.tags.flatMap(tokenize),
     ...topic.aliases.flatMap(tokenize),
     ...topic.relatedQuestions.flatMap(tokenize),
-    ...topic.sections.flatMap(section => [...tokenize(section.title), ...section.keywords.flatMap(tokenize)]),
+    ...topic.sections.flatMap(section => [
+      ...tokenize(section.title),
+      ...section.keywords.flatMap(tokenize),
+    ]),
   ])
 
 const inferIntent = (question: string, tokens: string[]): KnowledgeIntent => {
@@ -555,7 +530,9 @@ const inferIntent = (question: string, tokens: string[]): KnowledgeIntent => {
   return 'unknown'
 }
 
-const detectGuardrailReason = (question: string): Extract<
+const detectGuardrailReason = (
+  question: string
+): Extract<
   FallbackReason,
   'guardrail_personalized_advice' | 'guardrail_regulatory_or_tax'
 > | null => {
@@ -573,7 +550,9 @@ const scoreTopic = (topic: KnowledgeTopic, question: string, queryTokens: string
   const searchableTerms = buildTopicSearchTerms(topic)
   const searchableSet = new Set(searchableTerms)
   const titleTokens = tokenize(topic.title)
-  const aliasMatches = topic.aliases.filter(alias => normalizedQuestion.includes(normalizeText(alias))).length
+  const aliasMatches = topic.aliases.filter(alias =>
+    normalizedQuestion.includes(normalizeText(alias))
+  ).length
   const relatedQuestionMatches = topic.relatedQuestions.filter(related =>
     normalizedQuestion.includes(normalizeText(related))
   ).length
@@ -581,8 +560,7 @@ const scoreTopic = (topic: KnowledgeTopic, question: string, queryTokens: string
   const overlap = queryTokens.filter(token => searchableSet.has(token)).length
   const titleOverlap = queryTokens.filter(token => titleTokens.includes(token)).length
 
-  const score =
-    overlap * 2 + titleOverlap * 2 + aliasMatches * 4 + relatedQuestionMatches * 3
+  const score = overlap * 2 + titleOverlap * 2 + aliasMatches * 4 + relatedQuestionMatches * 3
 
   return {
     score,
@@ -633,10 +611,7 @@ const toConfidence = ({
   }
 
   const margin = Math.max(0, topScore - secondScore)
-  const confidenceScore = Math.max(
-    0,
-    Math.min(1, topScore / 16 + Math.min(0.2, margin / 20))
-  )
+  const confidenceScore = Math.max(0, Math.min(1, topScore / 16 + Math.min(0.2, margin / 20)))
 
   if (confidenceScore >= 0.72 && topScore >= 8) {
     return {
@@ -1003,9 +978,7 @@ export const buildAdvisorKnowledgeAnswer = ({
             ? `${topTopic.title}: comment raisonner`
             : `${topTopic.title}: repere pedagogique`,
       summary: `${topTopic.summary} ${supportingSections[0]?.body ?? ''}`.trim(),
-      keyPoints: unique(
-        supportingSections.flatMap(section => section.keyPoints).slice(0, 4)
-      ),
+      keyPoints: unique(supportingSections.flatMap(section => section.keyPoints).slice(0, 4)),
       nextStep: topTopic.nextStep,
       guardrail: EDUCATIONAL_GUARDRAIL,
     },

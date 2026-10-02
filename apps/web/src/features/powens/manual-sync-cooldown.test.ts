@@ -30,7 +30,7 @@ describe('powens manual sync cooldown UI', () => {
         VITE_POWENS_SYNC_COOLDOWN_UI_ENABLED: 'false',
         VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS: '90',
       },
-    } as Window & typeof globalThis)
+    })
 
     expect(getPowensManualSyncCooldownUiConfig()).toEqual({
       enabled: false,
@@ -41,7 +41,7 @@ describe('powens manual sync cooldown UI', () => {
   it('keeps an in-memory cooldown countdown and settles into ready after expiry', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-27T10:00:00.000Z'))
-    vi.stubGlobal('window', {} as Window & typeof globalThis)
+    vi.stubGlobal('window', {})
 
     startPowensManualSyncCooldown(120)
 

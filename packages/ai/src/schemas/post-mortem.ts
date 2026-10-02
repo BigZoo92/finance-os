@@ -137,13 +137,7 @@ export const postMortemJsonSchema = {
         properties: {
           kind: {
             type: 'string',
-            enum: [
-              'assumption',
-              'caveat',
-              'risk_calibration',
-              'evidence_gap',
-              'strategy_quality',
-            ],
+            enum: ['assumption', 'caveat', 'risk_calibration', 'evidence_gap', 'strategy_quality'],
           },
           title: { type: 'string', minLength: 4, maxLength: 160 },
           description: { type: 'string', minLength: 8, maxLength: 480 },

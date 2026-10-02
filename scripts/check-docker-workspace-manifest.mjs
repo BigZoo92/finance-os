@@ -1,26 +1,18 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
+import { load } from 'js-yaml'
 
 const repoRoot = process.cwd()
 const dockerfilePath = join(repoRoot, 'infra/docker/Dockerfile')
 
-const workspacePackagePaths = [
-  'apps/api',
-  'apps/web',
-  'apps/worker',
-  'packages/ai',
-  'packages/db',
-  'packages/env',
-  'packages/external-investments',
-  'packages/finance-engine',
-  'packages/powens',
-  'packages/prelude',
-  'packages/provider-contract',
-  'packages/provider-runtime',
-  'packages/redis',
-  'packages/ui',
-]
+// `pnpm install --frozen-lockfile` refuses to run unless every importer the
+// lockfile records has its manifest in the build context, so the workspace
+// list comes from the lockfile rather than from a hand-kept copy.
+const lockfile = load(readFileSync(join(repoRoot, 'pnpm-lock.yaml'), 'utf8'))
+const workspacePackagePaths = Object.keys(lockfile.importers ?? {})
+  .filter(importerPath => importerPath !== '.')
+  .sort()
 
 const runtimeApps = {
   api: 'apps/api',
@@ -98,16 +90,9 @@ const copyPackageFromBundlePattern = (target, packagePath) =>
     )}\\s+\\.\\/${escapeRegex(packagePath)}\\b`
   )
 
-const manifestPaths = new Set()
-for (const appPath of ['apps/api', 'apps/web', 'apps/worker']) {
-  for (const packagePath of collectWorkspaceDependencyPaths(appPath)) {
-    manifestPaths.add(packagePath)
-  }
-}
-
 const errors = []
 const manifestStage = getStageBlock('manifests')
-for (const packagePath of [...manifestPaths].sort()) {
+for (const packagePath of workspacePackagePaths) {
   errors.push(
     ...assertContains({
       content: manifestStage,
@@ -148,7 +133,6 @@ if (errors.length > 0) {
   process.exit(1)
 }
 
-const checked = [...manifestPaths]
-  .sort()
-  .map(packagePath => relative(repoRoot, join(repoRoot, packagePath)))
-console.log(`Docker workspace manifest check passed (${checked.length} workspace packages).`)
+console.log(
+  `Docker workspace manifest check passed (${workspacePackagePaths.length} workspace packages).`
+)

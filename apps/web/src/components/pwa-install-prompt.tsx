@@ -1,3 +1,4 @@
+import { styled } from '@finance-os/styled-system/jsx'
 import { Button } from '@finance-os/ui/components'
 import { useEffect, useState } from 'react'
 import {
@@ -96,21 +97,44 @@ export function PwaInstallPrompt() {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[var(--z-toast)] flex justify-center px-4 lg:bottom-4">
-      <div className="pointer-events-auto w-full max-w-xl rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg">
-        <p className="text-sm font-semibold">Installer Finance OS</p>
-        <p className="mt-1 text-xs text-muted-foreground">
+    <styled.div
+      pointerEvents="none"
+      position="fixed"
+      insetX="0"
+      bottom="24"
+      zIndex="toast"
+      display="flex"
+      justifyContent="center"
+      px="4"
+      lg={{ bottom: '4' }}
+    >
+      <styled.div
+        pointerEvents="auto"
+        w="full"
+        maxW="xl"
+        rounded="xl"
+        borderWidth="1px"
+        borderColor="border"
+        bg="card"
+        p="4"
+        color="card.foreground"
+        shadow="lg"
+      >
+        <styled.p textStyle="sm" fontWeight="semibold">
+          Installer Finance OS
+        </styled.p>
+        <styled.p mt="1" textStyle="xs" color="muted.foreground">
           Ajoute l’application à ton écran d’accueil pour un accès plus rapide.
-        </p>
-        <div className="mt-3 flex items-center justify-end gap-2">
+        </styled.p>
+        <styled.div mt="3" display="flex" alignItems="center" justifyContent="flex-end" gap="2">
           <Button type="button" variant="outline" onClick={dismissPrompt}>
             Plus tard
           </Button>
           <Button type="button" onClick={() => void handleInstallClick()}>
             Installer
           </Button>
-        </div>
-      </div>
-    </div>
+        </styled.div>
+      </styled.div>
+    </styled.div>
   )
 }

@@ -1,5 +1,5 @@
-import type { NormalizedNewsSignalDraft } from './news-types'
 import type { SignalSourceGroup } from '../repositories/dashboard-signal-sources-repository'
+import type { NormalizedNewsSignalDraft } from './news-types'
 
 /**
  * Signal domain grouping for the Donnees & signaux system.
@@ -37,12 +37,27 @@ const AI_TECH_ATTENTION_PATTERNS = [
   { pattern: /\b(gemma|gemini|google ai)\b/i, reason: 'Changement Google AI' },
   { pattern: /\b(qwen|deepseek|mistral|llama)\b/i, reason: 'Changement modele open-source' },
   { pattern: /\b(kimi|hermes)\b/i, reason: 'Changement Kimi/Hermes' },
-  { pattern: /\bpric(e|ing)\b.*\b(api|model|token|credit)/i, reason: 'Changement pricing provider IA' },
-  { pattern: /\b(context window|context length|1[0-9]{6}\s*token)/i, reason: 'Changement contexte/capacite modele' },
+  {
+    pattern: /\bpric(e|ing)\b.*\b(api|model|token|credit)/i,
+    reason: 'Changement pricing provider IA',
+  },
+  {
+    pattern: /\b(context window|context length|1[0-9]{6}\s*token)/i,
+    reason: 'Changement contexte/capacite modele',
+  },
   { pattern: /\b(prompt caching|batch api|discount)\b/i, reason: 'Changement caching/batch IA' },
-  { pattern: /\b(agent|agentic|tool.?use|mcp)\b.*\b(framework|sdk|release|launch)/i, reason: 'Nouveau framework/outil agentic' },
-  { pattern: /\b(security|vuln|exploit|jailbreak)\b.*\b(ai|llm|model|agent)/i, reason: 'Securite IA' },
-  { pattern: /\b(ai|artificial intelligence)\b.*\b(market|stock|etf|fund|invest)/i, reason: 'IA et marches financiers' },
+  {
+    pattern: /\b(agent|agentic|tool.?use|mcp)\b.*\b(framework|sdk|release|launch)/i,
+    reason: 'Nouveau framework/outil agentic',
+  },
+  {
+    pattern: /\b(security|vuln|exploit|jailbreak)\b.*\b(ai|llm|model|agent)/i,
+    reason: 'Securite IA',
+  },
+  {
+    pattern: /\b(ai|artificial intelligence)\b.*\b(market|stock|etf|fund|invest)/i,
+    reason: 'IA et marches financiers',
+  },
 ]
 
 const FINANCE_ATTENTION_KEYWORDS = [
@@ -59,19 +74,32 @@ const FINANCE_ATTENTION_KEYWORDS = [
 // ---------------------------------------------------------------------------
 
 const FINANCE_DOMAINS = new Set([
-  'finance', 'markets', 'macroeconomy', 'central_banks', 'monetary_policy',
-  'earnings', 'guidance', 'filings', 'mna', 'capital_markets', 'credit',
-  'real_estate', 'commodities', 'energy',
+  'finance',
+  'markets',
+  'macroeconomy',
+  'central_banks',
+  'monetary_policy',
+  'earnings',
+  'guidance',
+  'filings',
+  'mna',
+  'capital_markets',
+  'credit',
+  'real_estate',
+  'commodities',
+  'energy',
 ])
 
 const AI_TECH_DOMAINS = new Set([
-  'ai', 'technology', 'model_releases', 'product_launches', 'cybersecurity',
+  'ai',
+  'technology',
+  'model_releases',
+  'product_launches',
+  'cybersecurity',
   'cyber_incidents',
 ])
 
-const REGULATORY_DOMAINS = new Set([
-  'regulation', 'legislation', 'public_policy',
-])
+const REGULATORY_DOMAINS = new Set(['regulation', 'legislation', 'public_policy'])
 
 /**
  * Classify a normalized signal draft into the broader signal domain
@@ -81,7 +109,8 @@ export const classifySignal = (
   signal: NormalizedNewsSignalDraft,
   sourceGroup?: SignalSourceGroup
 ): SignalClassification => {
-  const text = `${signal.title} ${signal.summary ?? ''} ${signal.contentSnippet ?? ''}`.toLowerCase()
+  const text =
+    `${signal.title} ${signal.summary ?? ''} ${signal.contentSnippet ?? ''}`.toLowerCase()
   const domains = new Set(signal.domains)
 
   // Determine signal domain
@@ -133,11 +162,12 @@ export const classifySignal = (
 
   // Scores
   const impactScore = Math.min(100, signal.marketImpactScore + (requiresAttention ? 20 : 0))
-  const urgencyScore = Math.min(100,
+  const urgencyScore = Math.min(
+    100,
     signal.severity * 5 +
-    (requiresAttention ? 30 : 0) +
-    (signal.confidence >= 7 ? 10 : 0) +
-    (signal.novelty >= 7 ? 10 : 0)
+      (requiresAttention ? 30 : 0) +
+      (signal.confidence >= 7 ? 10 : 0) +
+      (signal.novelty >= 7 ? 10 : 0)
   )
 
   return {

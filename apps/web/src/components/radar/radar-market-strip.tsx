@@ -6,8 +6,71 @@
  * render the same markup. Each item is a real button that focuses the
  * market in the field; unknown variations are omitted, never shown as zero.
  */
+import { css, cva } from '@finance-os/styled-system/css'
 import { PercentChange } from '@finance-os/ui/components'
 import type { RadarScope } from '@/features/radar/view-model'
+
+// `scrollbar: 'hidden'` is the former `[-ms-overflow-style:none] [scrollbar-width:none]
+// [&::-webkit-scrollbar]:hidden` trio.
+const strip = css({
+  display: 'flex',
+  gap: '2',
+  overflowX: 'auto',
+  pb: '1',
+  scrollbar: 'hidden',
+  lg: {
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    columnGap: '6',
+    rowGap: '2',
+    overflow: 'visible',
+    pb: '0',
+  },
+})
+
+const stripItem = css({ flexShrink: '0' })
+
+const stripButton = cva({
+  base: {
+    display: 'flex',
+    minH: '9',
+    alignItems: 'baseline',
+    gap: '2',
+    whiteSpace: 'nowrap',
+    rounded: 'control',
+    borderWidth: '1px',
+    borderColor: 'foreground/10',
+    bg: 'surface.1',
+    px: '2.5',
+    py: '1.5',
+    outlineStyle: 'none',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+    lg: { minH: '7', borderWidth: '0', bg: 'transparent', px: '0.5', py: '0' },
+  },
+  variants: {
+    focused: {
+      true: { color: 'foreground' },
+      false: { color: 'foreground/85', _hover: { color: 'foreground' } },
+    },
+  },
+})
+
+const stripLabel = css({ textStyle: 'xs', lg: { fontSize: '13px' } })
+
+// `font-financial text-[11px] tabular-nums lg:text-xs`. The `lg` size is written as
+// longhands: a conditional `textStyle` sits in the compositions layer and would lose
+// to the base `fontSize` atom.
+const stripValue = css({
+  textStyle: 'financial',
+  fontSize: '11px',
+  fontVariantNumeric: 'tabular-nums',
+  color: 'foreground/65',
+  lg: { fontSize: 'xs', lineHeight: 'xs' },
+})
 
 type RadarMarketStripProps = {
   items: RadarScope['strip']
@@ -19,35 +82,29 @@ export function RadarMarketStrip({ items, focusedId, onSelect }: RadarMarketStri
   if (items.length === 0) return null
 
   return (
-    <ul
-      aria-label="Marchés suivis"
-      className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:items-baseline lg:justify-between lg:gap-x-6 lg:gap-y-2 lg:overflow-visible lg:pb-0"
-    >
+    <ul aria-label="Marchés suivis" className={strip}>
       {items.map(item => {
         const focused = focusedId === item.id
         return (
-          <li key={item.id} className="shrink-0">
+          <li key={item.id} className={stripItem}>
             <button
               type="button"
               aria-pressed={focused}
               onClick={event => onSelect(item.id, event.currentTarget)}
-              className={`flex min-h-9 items-baseline gap-2 whitespace-nowrap rounded-control border border-foreground/10 bg-surface-1 px-2.5 py-1.5 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring/70 lg:min-h-7 lg:border-0 lg:bg-transparent lg:px-0.5 lg:py-0 ${
-                focused ? 'text-foreground' : 'text-foreground/85 hover:text-foreground'
-              }`}
+              className={stripButton({ focused })}
             >
-              <span className="text-xs lg:text-[13px]">{item.label}</span>
+              <span className={stripLabel}>{item.label}</span>
               {item.kind === 'market' ? (
                 item.changePct !== null ? (
                   <PercentChange
                     value={item.changePct}
                     decimals={1}
-                    className="text-[11px] lg:text-xs"
+                    fontSize="11px"
+                    lg={{ fontSize: 'xs', lineHeight: 'xs' }}
                   />
                 ) : null
               ) : (
-                <span className="font-financial text-[11px] tabular-nums text-foreground/65 lg:text-xs">
-                  {item.display}
-                </span>
+                <span className={stripValue}>{item.display}</span>
               )}
             </button>
           </li>

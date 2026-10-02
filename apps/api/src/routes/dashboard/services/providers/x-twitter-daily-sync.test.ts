@@ -19,7 +19,10 @@ const tweet = (overrides: Partial<XTwitterTimelineTweet> = {}): XTwitterTimeline
   lang: overrides.lang ?? 'en',
 })
 
-const okPage = (tweets: XTwitterTimelineTweet[], nextToken: string | null = null): XTwitterTimelinePage => ({
+const okPage = (
+  tweets: XTwitterTimelineTweet[],
+  nextToken: string | null = null
+): XTwitterTimelinePage => ({
   tweets,
   meta: { nextToken, resultCount: tweets.length },
   statusCode: 200,
@@ -131,7 +134,11 @@ describe('runPreviousDaySync', () => {
       window,
       config: {
         ...baseConfig,
-        budget: { ...baseConfig.budget, manuallyConfirmed: false, requireManualConfirmationOverUsd: 0.05 },
+        budget: {
+          ...baseConfig.budget,
+          manuallyConfirmed: false,
+          requireManualConfirmationOverUsd: 0.05,
+        },
       },
       fetchTimeline: async () => okPage([]),
     })
@@ -143,8 +150,7 @@ describe('runPreviousDaySync', () => {
   it('50 accounts × $20/month: nominal monthly cost stays under budget with safety margin', () => {
     const POST_READ_COST_USD = 0.005
     const USER_READ_COST_USD = 0.01
-    const nominalMonthlyPostReads =
-      baseConfig.caps.maxPostReadsPerDay * 30 * POST_READ_COST_USD
+    const nominalMonthlyPostReads = baseConfig.caps.maxPostReadsPerDay * 30 * POST_READ_COST_USD
     // Post-reads alone must fit in 20 USD with margin (nominal automatic_capped run)
     expect(nominalMonthlyPostReads).toBeLessThan(20)
     // Even with the absolute ceiling of 3 user-reads/day for 30 days, the total
@@ -330,7 +336,10 @@ describe('runPreviousDaySync', () => {
   })
 
   it('marks tweets as keptForAdvisor only above relevance threshold and within max-per-day', async () => {
-    const tweets = [tweet({ id: 'h', text: '$SPY breaking out' }), tweet({ id: 'l', text: 'cat picture' })]
+    const tweets = [
+      tweet({ id: 'h', text: '$SPY breaking out' }),
+      tweet({ id: 'l', text: 'cat picture' }),
+    ]
     const fetcher: XTwitterTimelineFetcher = async () => okPage(tweets, null)
     const outcome = await runPreviousDaySync({
       accounts: accounts.slice(0, 1),

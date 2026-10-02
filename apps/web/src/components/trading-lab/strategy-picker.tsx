@@ -1,3 +1,4 @@
+import { css } from '@finance-os/styled-system/css'
 import type { TradingLabStrategy } from '@/features/trading-lab-api'
 
 type Props = {
@@ -7,12 +8,28 @@ type Props = {
   disabled?: boolean
 }
 
+const field = css({ display: 'flex', flexDirection: 'column', gap: '1', textStyle: 'xs' })
+
+const fieldLabel = css({ color: 'muted.foreground' })
+
+const control = css({
+  rounded: 'md',
+  borderWidth: '1px',
+  borderColor: 'border',
+  bg: 'surface.1',
+  px: '2',
+  py: '1.5',
+  textStyle: 'sm',
+  color: 'foreground',
+  _disabled: { opacity: '0.5' },
+})
+
 export function StrategyPicker({ strategies, value, onChange, disabled }: Props) {
   return (
-    <label className="flex flex-col gap-1 text-xs">
-      <span className="text-muted-foreground">Stratégie</span>
+    <label className={field}>
+      <span className={fieldLabel}>Stratégie</span>
       <select
-        className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground disabled:opacity-50"
+        className={control}
         value={value ?? ''}
         disabled={disabled}
         onChange={event => {

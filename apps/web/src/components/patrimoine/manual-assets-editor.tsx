@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   CurrencyAmount,
@@ -93,6 +95,45 @@ const validateDraft = (draft: ManualAssetDraft) => {
   return null
 }
 
+// Tailwind's `space-y-*` put the margin on every child but the last. Panda's
+// `spaceY` moves it onto the following sibling, which is not the same box once
+// an inline-level child (a Status chip, a <span> label) sits in the stack.
+const stackedSection = css({ '& > :not(:last-child)': { marginBlockEnd: '4' } })
+
+const field = cva({
+  base: { textStyle: 'sm', '& > :not(:last-child)': { marginBlockEnd: '2' } },
+  variants: {
+    wide: {
+      true: { sm: { gridColumn: 'span 2 / span 2' } },
+      false: {},
+    },
+  },
+  defaultVariants: { wide: false },
+})
+
+// The trigger recipe owns `width: fit-content`; a `min-width` stretches it to the
+// field without racing that atom (max(fit-content, 100%) is the field width).
+
+const noteField = css({
+  minH: '24',
+  w: 'full',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'input',
+  bg: 'transparent',
+  px: '3',
+  py: '2',
+  textStyle: 'sm',
+  outlineStyle: 'none',
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const dividedList = css({
+  borderYWidth: '1px',
+  borderColor: 'border',
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border' },
+})
+
 export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
   const queryClient = useQueryClient()
   const assetsQuery = useQuery(dashboardManualAssetsQueryOptionsWithMode({ mode: 'admin' }))
@@ -147,13 +188,21 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
   const assets = assetsQuery.data?.items ?? []
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section className={stackedSection}>
+      <styled.div
+        display="flex"
+        flexWrap="wrap"
+        alignItems="flex-end"
+        justifyContent="space-between"
+        gap="3"
+      >
         <div>
-          <h2 className="text-lg font-semibold">Actifs manuels</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <styled.h2 textStyle="lg" fontWeight="semibold">
+            Actifs manuels
+          </styled.h2>
+          <styled.p mt="1" textStyle="sm" color="muted.foreground">
             Valorisations saisies par vous, identifiées comme manuelles.
-          </p>
+          </styled.p>
         </div>
         <Button
           type="button"
@@ -165,40 +214,67 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
         >
           Ajouter un actif
         </Button>
-      </div>
+      </styled.div>
 
       {assetsQuery.isPending ? <Status tone="progress" label="Chargement" /> : null}
       {assetsQuery.isError ? (
         <Status tone="attention" label="Actifs manuels indisponibles" />
       ) : null}
       {!assetsQuery.isPending && assets.length === 0 ? (
-        <div className="border border-dashed border-border p-6 text-sm text-muted-foreground">
+        <styled.div
+          borderWidth="1px"
+          borderStyle="dashed"
+          borderColor="border"
+          p="6"
+          textStyle="sm"
+          color="muted.foreground"
+        >
           Aucun actif manuel
-        </div>
+        </styled.div>
       ) : (
-        <div className="divide-y divide-border border-y border-border">
+        <div className={dividedList}>
           {assets.map(asset => (
-            <article
+            <styled.article
               key={asset.assetId}
-              className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+              display="flex"
+              flexDirection="column"
+              gap="3"
+              py="4"
+              sm={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="font-medium">{asset.name}</p>
+              <styled.div minW="0">
+                <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="3">
+                  <styled.p fontWeight="medium">{asset.name}</styled.p>
                   <ValuationState state="manual" />
                   {!asset.enabled ? <Status tone="neutral" label="Masqué" /> : null}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                </styled.div>
+                <styled.div
+                  mt="2"
+                  display="flex"
+                  flexWrap="wrap"
+                  columnGap="4"
+                  rowGap="1"
+                  textStyle="xs"
+                  color="muted.foreground"
+                >
                   <span>{assetTypeLabel(asset.type)}</span>
                   {asset.category ? <span>{asset.category}</span> : null}
                   <Freshness asOf={asset.valuationAsOf} />
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                </styled.div>
+              </styled.div>
+              <styled.div
+                display="flex"
+                flexWrap="wrap"
+                alignItems="center"
+                gap="2"
+                sm={{ justifyContent: 'flex-end' }}
+              >
                 <CurrencyAmount
                   value={asset.valuation}
                   currency={asset.currency}
-                  className="mr-2 text-sm font-semibold"
+                  mr="2"
+                  textStyle="sm"
+                  fontWeight="semibold"
                 />
                 <Button
                   type="button"
@@ -242,8 +318,8 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                     Supprimer
                   </Button>
                 )}
-              </div>
-            </article>
+              </styled.div>
+            </styled.article>
           ))}
         </div>
       )}
@@ -254,7 +330,17 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
           if (!next && !saveMutation.isPending) closeEditor()
         }}
       >
-        <DialogContent className="max-sm:bottom-0 max-sm:left-0 max-sm:top-auto max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
+        <DialogContent
+          smDown={{
+            bottom: '0',
+            left: '0',
+            top: 'auto',
+            w: 'full',
+            maxW: 'none',
+            translate: '0 0',
+            roundedBottom: '0',
+          }}
+        >
           <DialogHeader>
             <DialogTitle>
               {editingId === null ? 'Ajouter un actif manuel' : 'Modifier l’actif manuel'}
@@ -263,8 +349,12 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
               La valeur reste signalée comme manuelle dans toutes les vues.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2 text-sm" htmlFor="manual-asset-type">
+          <styled.div
+            display="grid"
+            gap="4"
+            sm={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+          >
+            <label className={field()} htmlFor="manual-asset-type">
               <span>Type</span>
               <Select
                 value={draft.assetType}
@@ -275,7 +365,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                   }))
                 }
               >
-                <SelectTrigger id="manual-asset-type" className="w-full">
+                <SelectTrigger id="manual-asset-type" w="full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -285,7 +375,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 </SelectContent>
               </Select>
             </label>
-            <label className="space-y-2 text-sm" htmlFor="manual-asset-currency">
+            <label className={field()} htmlFor="manual-asset-currency">
               <span>Devise</span>
               <Input
                 id="manual-asset-currency"
@@ -296,7 +386,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 }
               />
             </label>
-            <label className="space-y-2 text-sm sm:col-span-2" htmlFor="manual-asset-name">
+            <label className={field({ wide: true })} htmlFor="manual-asset-name">
               <span>Nom</span>
               <Input
                 id="manual-asset-name"
@@ -305,7 +395,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}
               />
             </label>
-            <label className="space-y-2 text-sm" htmlFor="manual-asset-valuation">
+            <label className={field()} htmlFor="manual-asset-valuation">
               <span>Valorisation</span>
               <Input
                 id="manual-asset-valuation"
@@ -319,7 +409,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 }
               />
             </label>
-            <label className="space-y-2 text-sm" htmlFor="manual-asset-date">
+            <label className={field()} htmlFor="manual-asset-date">
               <span>Valorisation au</span>
               <Input
                 id="manual-asset-date"
@@ -330,7 +420,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 }
               />
             </label>
-            <label className="space-y-2 text-sm sm:col-span-2" htmlFor="manual-asset-category">
+            <label className={field({ wide: true })} htmlFor="manual-asset-category">
               <span>Catégorie</span>
               <Input
                 id="manual-asset-category"
@@ -341,7 +431,7 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 }
               />
             </label>
-            <label className="space-y-2 text-sm sm:col-span-2" htmlFor="manual-asset-note">
+            <label className={field({ wide: true })} htmlFor="manual-asset-note">
               <span>Note</span>
               <textarea
                 id="manual-asset-note"
@@ -349,10 +439,17 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 maxLength={280}
                 rows={3}
                 onChange={event => setDraft(current => ({ ...current, note: event.target.value }))}
-                className="min-h-24 w-full rounded-control border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                className={noteField}
               />
             </label>
-            <label className="flex min-h-11 items-center gap-3 text-sm sm:col-span-2">
+            <styled.label
+              display="flex"
+              minH="11"
+              alignItems="center"
+              gap="3"
+              textStyle="sm"
+              sm={{ gridColumn: 'span 2 / span 2' }}
+            >
               <input
                 type="checkbox"
                 checked={draft.enabled}
@@ -361,10 +458,12 @@ export function ManualAssetsEditor({ range }: { range: DashboardRange }) {
                 }
               />
               <span>Afficher cet actif dans le patrimoine</span>
-            </label>
-          </div>
+            </styled.label>
+          </styled.div>
           {validationError ? (
-            <p className="text-sm text-muted-foreground">{validationError}</p>
+            <styled.p textStyle="sm" color="muted.foreground">
+              {validationError}
+            </styled.p>
           ) : null}
           {saveMutation.isError ? (
             <Status tone="negative" label="Enregistrement impossible" />

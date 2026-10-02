@@ -5,9 +5,14 @@
  * semibold title. Identical across pages so navigation keeps titles
  * visually anchored.
  */
+import { css, cva, cx } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+import type { JsxStyleProps } from '@finance-os/styled-system/types'
+import { withStyleProps } from '@finance-os/ui/lib/style-props'
 import { motion, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 
+/** Root style props (`mb`, `pb`, `sm={{…}}`) merge into the header's own styles. */
 type PageHeaderProps = {
   eyebrow?: ReactNode
   title: ReactNode
@@ -18,7 +23,33 @@ type PageHeaderProps = {
   /** Tightens vertical rhythm — used for dense sub-pages. */
   compact?: boolean
   className?: string
-}
+} & JsxStyleProps
+
+const headerRoot = css.raw({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4',
+  sm: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+})
+
+const pageTitle = cva({
+  base: {
+    fontWeight: 'semibold',
+    letterSpacing: 'tight',
+    color: 'foreground',
+    lineHeight: 'tight',
+  },
+  variants: {
+    compact: {
+      true: { textStyle: 'xl' },
+      false: { textStyle: '2xl' },
+    },
+    withEyebrow: {
+      true: { mt: '2.5' },
+      false: {},
+    },
+  },
+})
 
 export function PageHeader({
   eyebrow,
@@ -28,43 +59,60 @@ export function PageHeader({
   actions,
   status,
   compact,
-  className = '',
+  className,
+  ...styleProps
 }: PageHeaderProps) {
   const prefersReducedMotion = useReducedMotion()
+  const { className: rootStyles } = withStyleProps(styleProps, headerRoot)
 
   return (
     <motion.header
       initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-      className={`flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between ${className}`}
+      className={cx(rootStyles, className)}
     >
-      <div className="min-w-0 flex-1">
+      <styled.div minW="0" flex="1">
         {eyebrow && (
-          <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+          <styled.p
+            display="flex"
+            alignItems="center"
+            gap="2"
+            fontFamily="mono"
+            fontSize="11px"
+            textTransform="uppercase"
+            letterSpacing="0.16em"
+            color="muted.foreground"
+          >
             {icon && (
-              <span className="flex items-center text-primary/80" aria-hidden="true">
+              <styled.span display="flex" alignItems="center" color="primary/80" aria-hidden="true">
                 {icon}
-              </span>
+              </styled.span>
             )}
             {eyebrow}
-          </p>
+          </styled.p>
         )}
-        <h1
-          className={`font-semibold tracking-tight text-foreground leading-tight ${
-            compact ? 'text-xl' : 'text-2xl'
-          } ${eyebrow ? 'mt-2.5' : ''}`}
-        >
+        <h1 className={pageTitle({ compact: Boolean(compact), withEyebrow: Boolean(eyebrow) })}>
           {title}
         </h1>
         {description && (
-          <p className="mt-2 max-w-prose text-[13px] text-muted-foreground leading-relaxed">
+          <styled.p
+            mt="2"
+            maxW="prose"
+            fontSize="13px"
+            color="muted.foreground"
+            lineHeight="relaxed"
+          >
             {description}
-          </p>
+          </styled.p>
         )}
-        {status && <div className="mt-3">{status}</div>}
-      </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {status && <styled.div mt="3">{status}</styled.div>}
+      </styled.div>
+      {actions && (
+        <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2">
+          {actions}
+        </styled.div>
+      )}
     </motion.header>
   )
 }

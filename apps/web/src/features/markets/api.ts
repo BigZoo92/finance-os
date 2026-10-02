@@ -16,7 +16,9 @@ export const fetchMarketsOverview = async () => {
       macro: {
         ...response.macro,
         items:
-          response.macro.items.length > 0 ? response.macro.items : getDemoMarketsOverview().macro.items,
+          response.macro.items.length > 0
+            ? response.macro.items
+            : getDemoMarketsOverview().macro.items,
       },
     }
   } catch (error) {

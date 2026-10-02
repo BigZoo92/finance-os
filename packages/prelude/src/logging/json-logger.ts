@@ -2,11 +2,7 @@ export type JsonLogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 type JsonLogger = {
   getConfiguredLogLevel: () => JsonLogLevel
-  logEvent: (event: {
-    level: JsonLogLevel
-    msg: string
-    [key: string]: unknown
-  }) => void
+  logEvent: (event: { level: JsonLogLevel; msg: string; [key: string]: unknown }) => void
 }
 
 const REDACTED_VALUE = '[REDACTED]'

@@ -14,15 +14,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-full = [
-  "vectorbt>=0.26.2",
-  "quantstats>=0.0.64",
-]
-dev = [
-  "httpx>=0.28.0",
-  "pytest>=8.3.0",
-  "ruff>=0.14.0",
-]
+full = ["vectorbt>=0.26.2", "quantstats>=0.0.64"]
+dev = ["httpx>=0.28.0", "pytest>=8.3.0", "ruff>=0.14.0"]
 
 [build-system]
 requires = ["hatchling>=1.26.0"]

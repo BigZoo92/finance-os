@@ -15,7 +15,7 @@ Read `packages/db/AGENTS.md`. The schema files and migration journal are authori
 4. Make migrations additive and rollback-aware. Separate destructive cleanup from compatibility rollout.
 5. Preserve unique constraints and idempotent conflict targets used by provider ingestion.
 6. Omit absent optional values instead of writing `undefined`; decide null semantics explicitly.
-7. Never resume reads/writes from legacy `external_investment_credential` rows.
+7. Never reintroduce the legacy `external_investment_credential` table (dropped in migration 0038); provider credentials are server environment only.
 8. Add indexes from measured query shapes, then inspect the query plan when performance motivates the change.
 
 ## Verification

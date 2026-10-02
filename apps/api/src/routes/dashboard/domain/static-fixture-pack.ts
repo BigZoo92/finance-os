@@ -17,8 +17,10 @@ export const getDashboardNewsFixture = (requestId: string): DashboardNewsRespons
     {
       id: 'fixture-news-1',
       title: 'ECB blog highlights slower inflation impulse across the euro area',
-      summary: 'A softer price pulse and weaker industrial demand reinforce a more data-dependent policy path.',
-      contentSnippet: 'The update points to a cooler inflation impulse with uneven demand conditions across sectors.',
+      summary:
+        'A softer price pulse and weaker industrial demand reinforce a more data-dependent policy path.',
+      contentSnippet:
+        'The update points to a cooler inflation impulse with uneven demand conditions across sectors.',
       url: 'https://example.com/fixture-news-1',
       canonicalUrl: 'https://example.com/fixture-news-1',
       sourceName: 'ECB blog',
@@ -101,8 +103,10 @@ export const getDashboardNewsFixture = (requestId: string): DashboardNewsRespons
     {
       id: 'fixture-news-2',
       title: 'Anthropic ships a security-focused model release for enterprise workflows',
-      summary: 'The launch could pressure pricing across AI tooling while lifting enterprise automation demand.',
-      contentSnippet: 'New controls and workflow integrations increase relevance for cyber and cloud vendors.',
+      summary:
+        'The launch could pressure pricing across AI tooling while lifting enterprise automation demand.',
+      contentSnippet:
+        'New controls and workflow integrations increase relevance for cyber and cloud vendors.',
       url: 'https://example.com/fixture-news-2',
       canonicalUrl: 'https://example.com/fixture-news-2',
       sourceName: 'Finance-OS Fixture Wire',
@@ -156,7 +160,8 @@ export const getDashboardNewsFixture = (requestId: string): DashboardNewsRespons
       scoringReasons: ['technology regime shift relevance', 'multi-sector spillover'],
       metadataCard: {
         title: 'Anthropic ships a security-focused model release for enterprise workflows',
-        description: 'A product launch with cross-sector relevance across cloud, AI and cyber vendors.',
+        description:
+          'A product launch with cross-sector relevance across cloud, AI and cyber vendors.',
         canonicalUrl: 'https://example.com/fixture-news-2',
         imageUrl: null,
         imageCandidates: [],
@@ -299,7 +304,9 @@ export const getDashboardNewsFixture = (requestId: string): DashboardNewsRespons
         affectedSectors: item.affectedSectors,
         affectedTickers: item.affectedTickers,
         whyItMatters: item.whyItMatters,
-        supportingUrls: item.sources.map(source => source.providerUrl).filter((value): value is string => Boolean(value)),
+        supportingUrls: item.sources
+          .map(source => source.providerUrl)
+          .filter((value): value is string => Boolean(value)),
       })),
       mostImpactedSectors: [
         { sector: 'AI software', score: 81 },

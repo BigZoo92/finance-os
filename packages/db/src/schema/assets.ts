@@ -15,12 +15,10 @@ export const assetTypeEnum = pgEnum('asset_type', ['cash', 'investment', 'manual
 
 export const assetOriginEnum = pgEnum('asset_origin', ['provider', 'manual'])
 
-export const investmentPositionCostBasisSourceEnum = pgEnum('investment_position_cost_basis_source', [
-  'minimal',
-  'provider',
-  'manual',
-  'unknown',
-])
+export const investmentPositionCostBasisSourceEnum = pgEnum(
+  'investment_position_cost_basis_source',
+  ['minimal', 'provider', 'manual', 'unknown']
+)
 
 export const asset = pgTable(
   'asset',

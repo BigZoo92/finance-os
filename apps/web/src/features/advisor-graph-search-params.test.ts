@@ -51,7 +51,7 @@ describe('validateAdvisorGraphSearch', () => {
   })
 
   it('ignores unknown extra params', () => {
-    const r = validateAdvisorGraphSearch({ node: 'a', lens: 'atlas', extra: 'evil' } as Record<string, unknown>)
+    const r = validateAdvisorGraphSearch({ node: 'a', lens: 'atlas', extra: 'evil' })
     expect(r.node).toBe('a')
     expect(r.lens).toBe('atlas')
     expect((r as unknown as Record<string, unknown>).extra).toBeUndefined()
@@ -60,26 +60,17 @@ describe('validateAdvisorGraphSearch', () => {
 
 describe('diffSearch', () => {
   it('returns null when nothing changes', () => {
-    const r = diffSearch(
-      { node: 'a', lens: 'atlas' },
-      { nodeId: 'a', lensId: 'atlas' }
-    )
+    const r = diffSearch({ node: 'a', lens: 'atlas' }, { nodeId: 'a', lensId: 'atlas' })
     expect(r).toBeNull()
   })
 
   it('proposes the new node when it changes', () => {
-    const r = diffSearch(
-      { node: 'a', lens: 'atlas' },
-      { nodeId: 'b', lensId: 'atlas' }
-    )
+    const r = diffSearch({ node: 'a', lens: 'atlas' }, { nodeId: 'b', lensId: 'atlas' })
     expect(r).toEqual({ node: 'b', lens: 'atlas' })
   })
 
   it('clears node when set to null', () => {
-    const r = diffSearch(
-      { node: 'a', lens: 'atlas' },
-      { nodeId: null, lensId: 'atlas' }
-    )
+    const r = diffSearch({ node: 'a', lens: 'atlas' }, { nodeId: null, lensId: 'atlas' })
     expect(r).toEqual({ node: undefined, lens: 'atlas' })
   })
 })

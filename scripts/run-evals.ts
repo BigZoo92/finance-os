@@ -68,12 +68,15 @@ const evaluateCase = (caseSeed: AiEvalCaseSeed): CaseOutcome => {
 const groupByCategory = (
   outcomes: readonly CaseOutcome[]
 ): Map<AiEvalCategory, { passed: number; failed: number; skipped: number; total: number }> => {
-  const out = new Map<AiEvalCategory, {
-    passed: number
-    failed: number
-    skipped: number
-    total: number
-  }>()
+  const out = new Map<
+    AiEvalCategory,
+    {
+      passed: number
+      failed: number
+      skipped: number
+      total: number
+    }
+  >()
   for (const outcome of outcomes) {
     const bucket = out.get(outcome.category) ?? {
       passed: 0,
@@ -121,10 +124,7 @@ const formatHumanSummary = (outcomes: readonly CaseOutcome[]): string => {
   return lines.join('\n')
 }
 
-const main = (
-  argv: readonly string[],
-  options?: { cases?: readonly AiEvalCaseSeed[] }
-): number => {
+const main = (argv: readonly string[], options?: { cases?: readonly AiEvalCaseSeed[] }): number => {
   const flags = parseArgs(argv)
   const cases = options?.cases ?? DEFAULT_AI_EVAL_CASES
   const outcomes = cases.map(evaluateCase)

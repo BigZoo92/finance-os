@@ -1,6 +1,11 @@
 export type RecurringCommitmentKind = 'fixed_charge' | 'subscription'
 export type RecurringCommitmentValidationStatus = 'suggested' | 'validated' | 'rejected'
-export type RecurringCommitmentPeriodicity = 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'unknown'
+export type RecurringCommitmentPeriodicity =
+  | 'weekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'yearly'
+  | 'unknown'
 
 export interface RecurringDetectionTransactionInput {
   bookingDate: string
@@ -44,7 +49,10 @@ const normalizeLabel = (value: string): string =>
     .toLowerCase()
     .replace(/\d+/g, ' ')
     .replace(/[^a-z\s]/g, ' ')
-    .replace(/\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/g, ' ')
+    .replace(
+      /\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/g,
+      ' '
+    )
     .replace(/\s+/g, ' ')
     .trim()
 
@@ -89,7 +97,7 @@ const hasStableAmount = (amounts: number[]): boolean => {
 }
 
 const groupByRecurringSignal = (
-  transactions: RecurringDetectionTransactionInput[],
+  transactions: RecurringDetectionTransactionInput[]
 ): Map<string, GroupedCommitment> => {
   const grouped = new Map<string, GroupedCommitment>()
 
@@ -108,7 +116,10 @@ const groupByRecurringSignal = (
     const existing = grouped.get(key)
 
     if (existing) {
-      existing.transactions.push({ bookingDate: transaction.bookingDate, amount: transaction.amount })
+      existing.transactions.push({
+        bookingDate: transaction.bookingDate,
+        amount: transaction.amount,
+      })
       continue
     }
 
@@ -128,7 +139,10 @@ export const detectRecurringCommitmentSuggestions = (input: {
   manualValidations: RecurringCommitmentManualValidationInput[]
 }): RecurringCommitmentSuggestion[] => {
   const validationByKey = new Map(
-    input.manualValidations.map(item => [`${item.kind}|${item.canonicalLabel}|${item.currency}`, item.validationStatus]),
+    input.manualValidations.map(item => [
+      `${item.kind}|${item.canonicalLabel}|${item.currency}`,
+      item.validationStatus,
+    ])
   )
 
   const grouped = groupByRecurringSignal(input.transactions)
@@ -139,7 +153,9 @@ export const detectRecurringCommitmentSuggestions = (input: {
       continue
     }
 
-    const sortedTransactions = [...group.transactions].sort((left, right) => left.bookingDate.localeCompare(right.bookingDate))
+    const sortedTransactions = [...group.transactions].sort((left, right) =>
+      left.bookingDate.localeCompare(right.bookingDate)
+    )
     const dayDiffs: number[] = []
 
     for (let index = 1; index < sortedTransactions.length; index += 1) {
@@ -162,7 +178,9 @@ export const detectRecurringCommitmentSuggestions = (input: {
       continue
     }
 
-    const periodicity = getPeriodicityFromAverageGap(dayDiffs.reduce((total, value) => total + value, 0) / dayDiffs.length)
+    const periodicity = getPeriodicityFromAverageGap(
+      dayDiffs.reduce((total, value) => total + value, 0) / dayDiffs.length
+    )
 
     if (periodicity === 'unknown') {
       continue

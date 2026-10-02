@@ -8,10 +8,10 @@
 // per-file `@vitest-environment jsdom` directive so they don't change the global vitest config
 // (which stays `node` for the rest of the suite).
 
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
+import { afterEach, describe, expect, it } from 'vitest'
 import { HypothesisLabSection } from '@/components/trading-lab/hypothesis-lab'
 import { PatternDetectionPanel } from '@/components/trading-lab/pattern-detection-panel'
 import { StrategyScorecardCard } from '@/components/trading-lab/strategy-scorecard-card'

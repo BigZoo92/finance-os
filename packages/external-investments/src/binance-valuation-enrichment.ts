@@ -140,9 +140,7 @@ export const enrichBinanceValuations = async ({
           ),
           `Resolved via Binance ${outcome.providerSymbol} (${outcome.source}).${fxProvenance}`,
         ],
-        degradedReasons: position.degradedReasons.filter(
-          reason => reason !== 'VALUATION_PARTIAL'
-        ),
+        degradedReasons: position.degradedReasons.filter(reason => reason !== 'VALUATION_PARTIAL'),
       })
       continue
     }
@@ -223,8 +221,7 @@ export const createSnapshotFxFetcher = ({
 
     const rateMs = new Date(row.rateTimestamp).getTime()
     const isStale =
-      !Number.isFinite(rateMs) ||
-      new Date(now()).getTime() - rateMs > row.staleAfterSeconds * 1000
+      !Number.isFinite(rateMs) || new Date(now()).getTime() - rateMs > row.staleAfterSeconds * 1000
 
     return {
       rate: 1 / row.rate,

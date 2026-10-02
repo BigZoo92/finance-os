@@ -180,10 +180,7 @@ export const scoreRiskCalibration = (caseSeed: AiEvalCaseSeed): ScoringResult =>
   }
 
   // 4. Cautious language when degraded.
-  if (
-    expectation.requireCautiousLanguageWhenDegraded === true &&
-    (dataIsStale || dataIsMissing)
-  ) {
+  if (expectation.requireCautiousLanguageWhenDegraded === true && (dataIsStale || dataIsMissing)) {
     const markers = anyStringContains(corpus, UNCERTAINTY_MARKERS)
     if (markers.length === 0) {
       failed.push('missing_cautious_language_when_degraded')

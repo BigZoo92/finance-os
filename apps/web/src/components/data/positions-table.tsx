@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Amount,
   Button,
@@ -11,6 +13,23 @@ import {
 } from '@finance-os/ui/components'
 import type { InvestmentPositionRow } from '@/features/investments/view-model'
 
+const tableFrame = css({ borderYWidth: '1px', borderColor: 'border' })
+
+// Below `md` every row becomes a two-column card with its own bottom rule.
+const mobileRow = css({
+  mdDown: {
+    my: '1',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    columnGap: '4',
+    borderBottomWidth: '1px',
+    borderColor: 'border',
+    py: '3',
+  },
+})
+
+const visuallyHidden = css({ srOnly: true })
+
 export function PositionsTable({
   positions,
   onSelect,
@@ -19,9 +38,9 @@ export function PositionsTable({
   onSelect: (position: InvestmentPositionRow, trigger: HTMLButtonElement) => void
 }) {
   return (
-    <div className="border-y border-border">
-      <DataTable className="max-md:block">
-        <DataTableHeader className="max-md:sr-only">
+    <div className={tableFrame}>
+      <DataTable mdDown={{ display: 'block' }}>
+        <DataTableHeader mdDown={{ srOnly: true }}>
           <DataTableRow>
             <DataTableHead>Actif</DataTableHead>
             <DataTableHead>Classe</DataTableHead>
@@ -30,28 +49,27 @@ export function PositionsTable({
             <DataTableHead numeric>Poids</DataTableHead>
             <DataTableHead numeric>P&amp;L</DataTableHead>
             <DataTableHead>
-              <span className="sr-only">Détail</span>
+              <span className={visuallyHidden}>Détail</span>
             </DataTableHead>
           </DataTableRow>
         </DataTableHeader>
-        <DataTableBody className="max-md:block max-md:divide-y-0">
+        <DataTableBody mdDown={{ display: 'block' }}>
           {positions.map(position => (
-            <DataTableRow
-              key={position.id}
-              className="max-md:my-1 max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-x-4 max-md:border-b max-md:border-border max-md:py-3"
-            >
-              <DataTableCell className="max-md:order-1 max-md:p-0">
-                <p className="font-medium">{position.symbol ?? position.asset}</p>
+            <DataTableRow key={position.id} className={mobileRow}>
+              <DataTableCell mdDown={{ order: '1', p: '0' }}>
+                <styled.p fontWeight="medium">{position.symbol ?? position.asset}</styled.p>
                 {position.symbol ? (
-                  <p className="mt-1 text-xs text-muted-foreground">{position.asset}</p>
+                  <styled.p mt="1" textStyle="xs" color="muted.foreground">
+                    {position.asset}
+                  </styled.p>
                 ) : null}
               </DataTableCell>
-              <DataTableCell className="text-muted-foreground max-md:order-3 max-md:py-2 max-md:pl-0">
+              <DataTableCell color="muted.foreground" mdDown={{ order: '3', py: '2', pl: '0' }}>
                 {position.assetClass === 'unknown'
                   ? 'Non classé'
                   : position.assetClass.toUpperCase()}
               </DataTableCell>
-              <DataTableCell className="max-md:order-4 max-md:py-2 max-md:pr-0 max-md:text-right">
+              <DataTableCell mdDown={{ order: '4', py: '2', pr: '0', textAlign: 'right' }}>
                 {position.provider === 'ibkr'
                   ? 'IBKR'
                   : position.provider === 'binance'
@@ -60,23 +78,24 @@ export function PositionsTable({
                       ? 'Powens'
                       : 'Manuel'}
               </DataTableCell>
-              <DataTableCell numeric className="max-md:order-2 max-md:p-0">
+              <DataTableCell numeric mdDown={{ order: '2', p: '0' }}>
                 <Amount value={position.value} unavailable="dash" />
               </DataTableCell>
               <DataTableCell
                 numeric
-                className="text-muted-foreground max-md:order-5 max-md:py-2 max-md:pl-0"
+                color="muted.foreground"
+                mdDown={{ order: '5', py: '2', pl: '0' }}
               >
                 {position.weightPct === null ? (
                   <span>
                     <span aria-hidden="true">-</span>
-                    <span className="sr-only">Indisponible</span>
+                    <span className={visuallyHidden}>Indisponible</span>
                   </span>
                 ) : (
                   `${position.weightPct.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
                 )}
               </DataTableCell>
-              <DataTableCell numeric className="max-md:order-6 max-md:py-2 max-md:pr-0">
+              <DataTableCell numeric mdDown={{ order: '6', py: '2', pr: '0' }}>
                 <div>
                   <Amount value={position.pnlAmount} signed unavailable="dash" />
                 </div>
@@ -84,16 +103,20 @@ export function PositionsTable({
                   value={position.pnlPercent}
                   decimals={1}
                   unavailableLabel="P&L indisponible"
-                  className="text-[11px]"
+                  fontSize="11px"
                 />
               </DataTableCell>
-              <DataTableCell className="text-right max-md:order-7 max-md:col-span-2 max-md:p-0">
+              <DataTableCell
+                textAlign="right"
+                mdDown={{ order: '7', gridColumn: 'span 2 / span 2', p: '0' }}
+              >
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={event => onSelect(position, event.currentTarget)}
-                  className="min-h-11 md:min-h-0"
+                  minH="11"
+                  md={{ minH: '0' }}
                 >
                   Détail
                 </Button>

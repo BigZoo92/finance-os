@@ -4,13 +4,13 @@ import { getDashboardAnalyticsMockTransactions } from '../../../mocks/dashboardA
 import { getDashboardSummaryMock } from '../../../mocks/dashboardSummary.mock'
 import { logApiEvent } from '../../../observability/logger'
 import { getDashboardRuntime } from '../context'
-import { dashboardSummaryQuerySchema } from '../schemas'
 import {
   mapSummaryToAnalyticsContract,
   shouldForceAnalyticsDemoAdapter,
   validateAnalyticsContract,
   type DashboardAnalyticsResponse,
 } from '../domain/analytics-contract'
+import { dashboardSummaryQuerySchema } from '../schemas'
 
 export const createAnalyticsRoute = () =>
   new Elysia().get(

@@ -67,7 +67,11 @@ describe('createFxConverter', () => {
   it('ignores invalid rates and picks the most recent per pair', () => {
     const older: FxRateInput = { ...usdRate, rate: 1.2, rateTimestamp: '2026-08-01T00:00:00.000Z' }
     const invalid: FxRateInput = { ...usdRate, rate: 0 }
-    const fx = createFxConverter({ baseCurrency: 'EUR', rates: [older, invalid, usdRate], now: NOW })
+    const fx = createFxConverter({
+      baseCurrency: 'EUR',
+      rates: [older, invalid, usdRate],
+      now: NOW,
+    })
     const result = fx.toBase(108, 'USD')
     expect(result?.value).toBeCloseTo(100, 8)
   })

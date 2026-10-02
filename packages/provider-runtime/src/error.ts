@@ -109,7 +109,7 @@ export const isProviderError = (value: unknown): value is ProviderErrorRuntime =
   const candidate = value as Partial<ProviderErrorRuntime>
   return (
     typeof candidate.code === 'string' &&
-    PROVIDER_ERROR_CODE_SET.has(candidate.code as ProviderErrorCode) &&
+    PROVIDER_ERROR_CODE_SET.has(candidate.code) &&
     typeof candidate.providerId === 'string' &&
     typeof candidate.retryable === 'boolean'
   )

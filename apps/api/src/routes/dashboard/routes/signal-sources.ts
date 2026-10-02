@@ -10,19 +10,16 @@ import {
   computeBlueskyProviderHealth,
   computeXTwitterProviderHealth,
 } from '../domain/signal-provider-health'
-import { createDashboardSignalItemsRepository } from '../repositories/dashboard-signal-items-repository'
-import {
-  type CreateSignalSourceInput,
-  createDashboardSignalSourcesRepository,
-  type SignalSourceRow,
-  type SignalSourceGroup,
-  type UpdateSignalSourceInput,
+import type {
+  CreateSignalSourceInput,
+  SignalSourceGroup,
+  SignalSourceRow,
 } from '../repositories/dashboard-signal-sources-repository'
 import { normalizeManualImportItems } from '../services/providers/manual-import-provider'
 import { normalizeXHandle } from '../services/providers/x-twitter-profile-client'
 import { dedupeXSignalSources } from '../services/providers/x-twitter-signal-source-dedupe'
 import { sendSignalsToKnowledgeGraph } from '../services/signal-graph-ingest'
-import type { ApiDb } from '../types'
+import type { DashboardRouteRuntime } from '../types'
 
 // Demo fixtures for signal sources
 const DEMO_FINANCE_SOURCES = [
@@ -216,9 +213,15 @@ const canonicalizeSignalSourceInput = (
   return { value: { ...input, handle: trimmed } }
 }
 
-export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
-  const repository = createDashboardSignalSourcesRepository({ db })
-  const itemsRepo = createDashboardSignalItemsRepository({ db })
+export const createSignalSourcesRoute = ({
+  repositories,
+  internalServiceToken,
+}: {
+  repositories: Pick<DashboardRouteRuntime['repositories'], 'signalSources' | 'signalItems'>
+  internalServiceToken: string | undefined
+}) => {
+  const repository = repositories.signalSources
+  const itemsRepo = repositories.signalItems
 
   return (
     new Elysia()
@@ -307,10 +310,7 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                   const providerSources = await repository.listSourcesByProvider('x_twitter')
                   const matchingSources = providerSources.filter(source => {
                     const normalized = normalizeXHandle(source.handle)
-                    return (
-                      normalized.ok &&
-                      normalized.handle === canonicalInput.value.handle
-                    )
+                    return normalized.ok && normalized.handle === canonicalInput.value.handle
                   })
                   const existing =
                     matchingSources.length > 0
@@ -321,7 +321,10 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                       ...sourceInput,
                       enabled: true,
                     }
-                    source = await repository.updateSourceFromCanonicalCreate(existing.id, updateInput)
+                    source = await repository.updateSourceFromCanonicalCreate(
+                      existing.id,
+                      updateInput
+                    )
                     sourceAction = 'updated_existing'
                   }
                 }
@@ -375,10 +378,7 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
             },
             real: async () => {
               requireAdmin(context)
-              const source = await repository.updateSource(
-                id,
-                context.body as UpdateSignalSourceInput
-              )
+              const source = await repository.updateSource(id, context.body)
               if (!source) {
                 context.set.status = 404
                 return {
@@ -535,6 +535,7 @@ export const createSignalSourcesRoute = ({ db }: { db: ApiDb }) => {
                       const graphResult = await sendSignalsToKnowledgeGraph({
                         items: topItems,
                         knowledgeServiceUrl: knowledgeUrl,
+                        ...(internalServiceToken !== undefined ? { internalServiceToken } : {}),
                         requestId,
                       })
                       await itemsRepo.markGraphIngested(graphResult.sentIds, 'sent')

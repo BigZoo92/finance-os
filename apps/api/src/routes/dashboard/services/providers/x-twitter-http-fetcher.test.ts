@@ -81,9 +81,7 @@ describe('createXTwitterHttpTimelineFetcher', () => {
   })
 
   it('forwards pagination_token on subsequent calls', async () => {
-    const fetchStub = makeFetcher([
-      jsonResponse(200, { data: [], meta: { next_token: null } }),
-    ])
+    const fetchStub = makeFetcher([jsonResponse(200, { data: [], meta: { next_token: null } })])
     const fetcher = createXTwitterHttpTimelineFetcher({ bearerToken: 'tok', fetch: fetchStub })
     await fetcher({
       userId: 'A2',

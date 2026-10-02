@@ -5,10 +5,10 @@
  * attention items deterministically. Idempotent via dedupeKey.
  */
 
-import { and, desc, eq, sql } from 'drizzle-orm'
 import { schema } from '@finance-os/db'
-import type { ApiDb } from '../types'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { createDashboardTradingLabRepository } from '../repositories/dashboard-trading-lab-repository'
+import type { ApiDb } from '../types'
 
 const STALE_PROVIDER_HOURS = 24
 const SIGNAL_ATTENTION_EXPIRY_DAYS = 5
@@ -56,14 +56,15 @@ export const runAttentionAutoGenerator = async ({
         and(
           eq(schema.signalItem.requiresAttention, true),
           sql`${schema.signalItem.relevanceScore} >= ${minRelevance}`,
-          sql`${schema.signalItem.confidenceScore} >= ${minConfidence}`,
-        ),
+          sql`${schema.signalItem.confidenceScore} >= ${minConfidence}`
+        )
       )
       .orderBy(desc(schema.signalItem.publishedAt))
       .limit(20)
 
     for (const row of signalRows) {
-      const severity = row.urgencyScore >= 80 ? 'critical' : row.urgencyScore >= 60 ? 'important' : 'watch'
+      const severity =
+        row.urgencyScore >= 80 ? 'critical' : row.urgencyScore >= 60 ? 'important' : 'watch'
       await repo.upsertAttentionItem({
         sourceType: 'signal',
         sourceId: `signal:${row.id}`,
@@ -89,7 +90,7 @@ export const runAttentionAutoGenerator = async ({
       .from(schema.newsProviderState)
       .where(
         sql`(${schema.newsProviderState.lastSuccessAt} IS NULL OR ${schema.newsProviderState.lastSuccessAt} < ${cutoff})
-            AND ${schema.newsProviderState.enabled} = true`,
+            AND ${schema.newsProviderState.enabled} = true`
       )
       .limit(20)
 

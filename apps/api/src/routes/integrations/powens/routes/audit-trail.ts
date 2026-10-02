@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import { demoOrReal } from '../../../../auth/demo-mode'
 import { getRequestMeta } from '../../../../auth/context'
+import { demoOrReal } from '../../../../auth/demo-mode'
 import { requireAdmin } from '../../../../auth/guard'
 import { getPowensRuntime } from '../context'
 

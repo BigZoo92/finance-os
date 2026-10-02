@@ -132,9 +132,7 @@ describe('GET /advisor/knowledge/graph', () => {
   it('marks every example overlay node when includeExamples=true is set in admin', async () => {
     const app = createGraphTestApp({ mode: 'admin' })
     const response = await app.handle(
-      new Request(
-        'http://finance-os.local/advisor/knowledge/graph?includeExamples=true'
-      )
+      new Request('http://finance-os.local/advisor/knowledge/graph?includeExamples=true')
     )
     const dto = (await response.json()) as AdvisorKnowledgeGraphDto
     expect(dto.meta.origin).toBe('mixed')

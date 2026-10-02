@@ -92,9 +92,7 @@ export const chooseCanonicalXSignalSource = <T extends XSignalSourceDedupeInput>
 ): T => {
   const first = sources[0]
   if (!first) throw new Error('chooseCanonicalXSignalSource requires at least one source')
-  return sources
-    .slice()
-    .sort((a, b) => compareCanonicalCandidates(b, a, canonicalHandle))[0] as T
+  return sources.slice().sort((a, b) => compareCanonicalCandidates(b, a, canonicalHandle))[0] as T
 }
 
 const duplicateReason = (

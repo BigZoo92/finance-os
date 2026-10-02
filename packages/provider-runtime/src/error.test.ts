@@ -26,7 +26,7 @@ describe('createProviderError', () => {
   it('rejects unknown codes', () => {
     expect(() => {
       createProviderError({
-        // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
+        // testing invalid input
         code: 'not_a_real_code' as any,
         providerId: pid,
         message: 'x',
@@ -123,7 +123,7 @@ describe('providerErrorToSafeJson', () => {
       'retryable',
       'safeDetails',
     ])
-    expect((json as Record<string, unknown>).stack).toBeUndefined()
+    expect((json as unknown as Record<string, unknown>).stack).toBeUndefined()
     expect(json.code).toBe('tos_blocked')
     expect(json.capability).toBe('market.quotes.read')
   })

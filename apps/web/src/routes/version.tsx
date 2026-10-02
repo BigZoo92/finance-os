@@ -1,4 +1,4 @@
-import { resolveRuntimeVersion } from '../../../../packages/prelude/src/runtime'
+import { resolveRuntimeVersion } from '@finance-os/prelude/runtime'
 import { createFileRoute } from '@tanstack/react-router'
 
 const VERSION_HEADERS = {

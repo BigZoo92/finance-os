@@ -62,7 +62,9 @@ export const generateDeterministicOhlcv = (input: {
   volatility?: number
   maxBars?: number
 }): OhlcvBar[] => {
-  const seed = stringToSeed(`${input.symbol}|${input.startDate.toISOString().slice(0, 10)}|${input.endDate.toISOString().slice(0, 10)}`)
+  const seed = stringToSeed(
+    `${input.symbol}|${input.startDate.toISOString().slice(0, 10)}|${input.endDate.toISOString().slice(0, 10)}`
+  )
   const rand = mulberry32(seed)
   const drift = input.driftPerDay ?? 0.00035
   const vol = input.volatility ?? 0.012

@@ -3,27 +3,23 @@ import { getRequestMeta } from '../../../auth/context'
 import { demoOrReal } from '../../../auth/demo-mode'
 import { requireAdmin } from '../../../auth/guard'
 import { logApiEvent, toErrorLogFields } from '../../../observability/logger'
-import {
-  createHypothesisUseCases,
-  isHypothesisValidationError,
-} from '../domain/trading-lab/hypotheses/create-hypothesis-use-cases'
-import { isHypothesisExecutionInstructionError } from '../domain/trading-lab/hypotheses/detect-execution-instruction'
+import { internalServiceHeaders } from '../../../services/internal-service-auth'
+import type {
+  StrategyScorecardInputBacktestRun,
+  StrategyScorecardInputStrategy,
+} from '../domain/trading-lab'
 import {
   buildDemoStrategyScorecard,
+  createHypothesisUseCases,
   createStrategyScorecardUseCase,
-  type StrategyScorecardInputBacktestRun,
-  type StrategyScorecardInputStrategy,
-} from '../domain/trading-lab/scorecard/compute-strategy-scorecard'
-import { createDashboardTradingLabRepository } from '../repositories/dashboard-trading-lab-repository'
-import { createDashboardSignalItemsRepository } from '../repositories/dashboard-signal-items-repository'
-import {
-  resolveMarketData,
-  type DataSourcePreference,
-} from '../services/trading-lab-market-data'
-import { sendBacktestToKnowledgeGraph } from '../services/trading-lab-graph-ingest'
+  isHypothesisExecutionInstructionError,
+  isHypothesisValidationError,
+} from '../domain/trading-lab'
 import { buildDemoPatternDetectionResponse } from '../services/pattern-detection-demo'
 import { createQuantPatternsDetectProvider } from '../services/providers/quant-patterns-detect-provider'
-import type { ApiDb } from '../types'
+import { sendBacktestToKnowledgeGraph } from '../services/trading-lab-graph-ingest'
+import { type DataSourcePreference, resolveMarketData } from '../services/trading-lab-market-data'
+import type { ApiDb, DashboardRouteRuntime } from '../types'
 
 // ---------------------------------------------------------------------------
 // Demo fixtures — deterministic, no service calls
@@ -64,11 +60,19 @@ const DEMO_STRATEGIES = [
       { name: 'ema', params: { period: 10 } },
       { name: 'ema', params: { period: 20 } },
     ],
-    entryRules: [{ id: 'ec-1', description: 'EMA10 crosses above EMA20', condition: 'ema_fast > ema_slow' }],
-    exitRules: [{ id: 'ec-2', description: 'EMA10 crosses below EMA20', condition: 'ema_fast < ema_slow' }],
+    entryRules: [
+      { id: 'ec-1', description: 'EMA10 crosses above EMA20', condition: 'ema_fast > ema_slow' },
+    ],
+    exitRules: [
+      { id: 'ec-2', description: 'EMA10 crosses below EMA20', condition: 'ema_fast < ema_slow' },
+    ],
     riskRules: [],
     assumptions: ['Trend persistence in selected timeframe', 'Sufficient liquidity'],
-    caveats: ['Experimental — no proven edge', 'Whipsaws in sideways markets', 'Past performance is not predictive'],
+    caveats: [
+      'Experimental — no proven edge',
+      'Whipsaws in sideways markets',
+      'Past performance is not predictive',
+    ],
     scope: 'demo',
     createdAt: '2026-04-26T10:00:00Z',
     updatedAt: '2026-04-26T10:00:00Z',
@@ -119,9 +123,39 @@ const DEMO_EQUITY_CURVE = buildDemoEquityCurve()
 const DEMO_DRAWDOWNS = buildDemoDrawdowns(DEMO_EQUITY_CURVE)
 
 const DEMO_TRADES = [
-  { entryDate: '2023-01-15', exitDate: '2023-03-20', side: 'long', entryPrice: 395.2, exitPrice: 410.5, size: 25.3, pnl: 387.15, pnlPct: 0.0387, fees: 10.2 },
-  { entryDate: '2023-04-10', exitDate: '2023-06-15', side: 'long', entryPrice: 412.3, exitPrice: 430.1, size: 24.5, pnl: 436.1, pnlPct: 0.0431, fees: 10.8 },
-  { entryDate: '2023-07-01', exitDate: '2023-08-20', side: 'long', entryPrice: 440.2, exitPrice: 425.6, size: 23.8, pnl: -347.48, pnlPct: -0.0332, fees: 10.4 },
+  {
+    entryDate: '2023-01-15',
+    exitDate: '2023-03-20',
+    side: 'long',
+    entryPrice: 395.2,
+    exitPrice: 410.5,
+    size: 25.3,
+    pnl: 387.15,
+    pnlPct: 0.0387,
+    fees: 10.2,
+  },
+  {
+    entryDate: '2023-04-10',
+    exitDate: '2023-06-15',
+    side: 'long',
+    entryPrice: 412.3,
+    exitPrice: 430.1,
+    size: 24.5,
+    pnl: 436.1,
+    pnlPct: 0.0431,
+    fees: 10.8,
+  },
+  {
+    entryDate: '2023-07-01',
+    exitDate: '2023-08-20',
+    side: 'long',
+    entryPrice: 440.2,
+    exitPrice: 425.6,
+    size: 23.8,
+    pnl: -347.48,
+    pnlPct: -0.0332,
+    fees: 10.4,
+  },
 ]
 
 const DEMO_BACKTESTS = [
@@ -179,9 +213,33 @@ const DEMO_CAPABILITIES = {
   ok: true,
   quantServiceAvailable: false,
   paperOnly: true,
-  strategies: ['buy_and_hold', 'ema_crossover', 'rsi_mean_reversion', 'parabolic_sar_trend', 'orb_breakout'],
-  indicators: ['ema', 'sma', 'rsi', 'macd', 'parabolic_sar', 'atr', 'bollinger_bands', 'support_resistance'],
-  metrics: ['cagr', 'volatility', 'sharpe', 'sortino', 'max_drawdown', 'calmar', 'win_rate', 'profit_factor'],
+  strategies: [
+    'buy_and_hold',
+    'ema_crossover',
+    'rsi_mean_reversion',
+    'parabolic_sar_trend',
+    'orb_breakout',
+  ],
+  indicators: [
+    'ema',
+    'sma',
+    'rsi',
+    'macd',
+    'parabolic_sar',
+    'atr',
+    'bollinger_bands',
+    'support_resistance',
+  ],
+  metrics: [
+    'cagr',
+    'volatility',
+    'sharpe',
+    'sortino',
+    'max_drawdown',
+    'calmar',
+    'win_rate',
+    'profit_factor',
+  ],
   caveats: [
     'Paper-trading only. No real capital at risk.',
     'Backtests are simulations, not predictions.',
@@ -241,8 +299,7 @@ const DEMO_HYPOTHESES = [
     tags: ['paper-only', 'sectors', 'macro'],
     parameters: {
       hypothesis: {
-        thesis:
-          '3-of-5 late-cycle indicator flip presages defensive outperformance over 90 days.',
+        thesis: '3-of-5 late-cycle indicator flip presages defensive outperformance over 90 days.',
         invalidationCriteria: [
           'Defensives underperform cyclicals over the next 90 trading days',
           'Late-cycle indicators flip back within 21 days',
@@ -268,20 +325,24 @@ const DEMO_HYPOTHESES = [
 
 export const createTradingLabRoute = ({
   db,
+  repositories,
   quantServiceEnabled,
   quantServiceUrl,
   quantServiceTimeoutMs,
   knowledgeServiceEnabled,
   knowledgeServiceUrl,
+  internalServiceToken,
   graphIngestEnabled,
   marketDataDeps,
 }: {
   db: ApiDb
+  repositories: Pick<DashboardRouteRuntime['repositories'], 'tradingLab' | 'signalItems'>
   quantServiceEnabled: boolean
   quantServiceUrl: string
   quantServiceTimeoutMs: number
   knowledgeServiceEnabled: boolean
   knowledgeServiceUrl: string
+  internalServiceToken: string | undefined
   graphIngestEnabled: boolean
   marketDataDeps: {
     eodhdApiKey: string | undefined
@@ -291,8 +352,8 @@ export const createTradingLabRoute = ({
     forceFixtureFallback: boolean
   }
 }) => {
-  const repo = createDashboardTradingLabRepository({ db })
-  const signalItemsRepo = createDashboardSignalItemsRepository({ db })
+  const repo = repositories.tradingLab
+  const signalItemsRepo = repositories.signalItems
   const hypotheses = createHypothesisUseCases({ repository: repo })
 
   // PR12 — Strategy Scorecard. Pure read use-case that aggregates the QUALITY OF EVIDENCE
@@ -313,22 +374,20 @@ export const createTradingLabRoute = ({
       },
       listBacktestRunsForStrategy: async strategyId => {
         const rows = await repo.listBacktestRuns({ strategyId, limit: 100 })
-        return rows.map(
-          (row): StrategyScorecardInputBacktestRun => ({
-            id: row.id,
-            runStatus: row.runStatus,
-            feesBps: row.feesBps,
-            slippageBps: row.slippageBps,
-            metrics: (row.metrics ?? null) as Record<string, unknown> | null,
-            resultSummary: (row.resultSummary ?? null) as Record<string, unknown> | null,
-            createdAt: row.createdAt,
-            trades: row.trades,
-            // PR14 — pass the equity curve through so the scorecard's advanced-metrics helper
-            // can compute Calmar / Ulcer / VaR / rolling Sharpe / etc. The shape matches:
-            //   Array<{ date: string; equity: number }>
-            equityCurve: row.equityCurve ?? null,
-          })
-        )
+        return rows.map((row): StrategyScorecardInputBacktestRun => ({
+          id: row.id,
+          runStatus: row.runStatus,
+          feesBps: row.feesBps,
+          slippageBps: row.slippageBps,
+          metrics: row.metrics ?? null,
+          resultSummary: row.resultSummary ?? null,
+          createdAt: row.createdAt,
+          trades: row.trades,
+          // PR14 — pass the equity curve through so the scorecard's advanced-metrics helper
+          // can compute Calmar / Ulcer / VaR / rolling Sharpe / etc. The shape matches:
+          //   Array<{ date: string; equity: number }>
+          equityCurve: row.equityCurve ?? null,
+        }))
       },
     },
   })
@@ -337,11 +396,15 @@ export const createTradingLabRoute = ({
   // The `/patterns/detect` admin handler is rewired to call `quantPatternsDetectProvider`
   // below. The other quant-service endpoints (capabilities, backtest, walk-forward) keep
   // using the inline helper for now; broader migration is intentionally deferred.
+  // Omit the key when unset so `exactOptionalPropertyTypes` stays satisfied downstream.
+  const internalAuth = internalServiceToken !== undefined ? { internalServiceToken } : {}
+
   const quantPatternsDetectProvider = createQuantPatternsDetectProvider({
     config: {
       enabled: quantServiceEnabled,
       url: quantServiceUrl,
       timeoutMs: quantServiceTimeoutMs,
+      ...internalAuth,
     },
     logTarget: { logEvent: logApiEvent },
   })
@@ -357,15 +420,13 @@ export const createTradingLabRoute = ({
     }
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(
-        () => controller.abort(),
-        timeoutMs ?? quantServiceTimeoutMs
-      )
+      const timeout = setTimeout(() => controller.abort(), timeoutMs ?? quantServiceTimeoutMs)
       const resp = await fetch(`${quantServiceUrl}${path}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-request-id': requestId,
+          ...internalServiceHeaders(internalServiceToken),
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -381,236 +442,149 @@ export const createTradingLabRoute = ({
     }
   }
 
-  return new Elysia({ prefix: '/trading-lab' })
-    // --- Capabilities ---
-    .get('/capabilities', async context => {
-      const requestId = getRequestMeta(context).requestId
-      return demoOrReal({
-        context,
-        demo: () => DEMO_CAPABILITIES,
-        real: async () => {
-          if (!quantServiceEnabled) {
-            return { ...DEMO_CAPABILITIES, quantServiceAvailable: false }
-          }
-          const result = await callQuantService('/quant/capabilities', null, requestId)
-          if (!result.ok) {
-            return { ...DEMO_CAPABILITIES, quantServiceAvailable: false }
-          }
-          return { ok: true, quantServiceAvailable: true, paperOnly: true, ...(result.data as object) }
-        },
-      })
-    })
-
-    // --- Patterns (PR10) ---
-    // Read-only proxy to quant-service /quant/patterns/detect. Demo returns
-    // deterministic fixtures; admin forwards the request. NEVER an execution
-    // path; the quant-service self-scans output for execution vocabulary.
-    //
-    // Macro Prompt 2-fix — admin path rewired through the provider abstraction
-    // (`quantPatternsDetectProvider`). Public response shape is preserved verbatim:
-    //   - success → { ok: true, ...upstreamBody }
-    //   - disabled → 503 { ok: false, code: 'QUANT_SERVICE_DISABLED', message, requestId }
-    //   - any other failure → 503 { ok: false, code: 'QUANT_SERVICE_UNAVAILABLE', message, requestId }
-    // Demo branch is intentionally NOT routed through the wrapper — the constraint
-    // is "demo route does NOT call the quant provider wrapper or quant-service".
-    .post(
-      '/patterns/detect',
-      async context => {
+  return (
+    new Elysia({ prefix: '/trading-lab' })
+      // --- Capabilities ---
+      .get('/capabilities', async context => {
         const requestId = getRequestMeta(context).requestId
         return demoOrReal({
           context,
-          demo: () => buildDemoPatternDetectionResponse(context.body),
+          demo: () => DEMO_CAPABILITIES,
           real: async () => {
-            const result = await quantPatternsDetectProvider.call(
-              context.body as Parameters<typeof quantPatternsDetectProvider.call>[0],
-              {
+            if (!quantServiceEnabled) {
+              return { ...DEMO_CAPABILITIES, quantServiceAvailable: false }
+            }
+            const result = await callQuantService('/quant/capabilities', null, requestId)
+            if (!result.ok) {
+              return { ...DEMO_CAPABILITIES, quantServiceAvailable: false }
+            }
+            return {
+              ok: true,
+              quantServiceAvailable: true,
+              paperOnly: true,
+              ...(result.data as object),
+            }
+          },
+        })
+      })
+
+      // --- Patterns (PR10) ---
+      // Read-only proxy to quant-service /quant/patterns/detect. Demo returns
+      // deterministic fixtures; admin forwards the request. NEVER an execution
+      // path; the quant-service self-scans output for execution vocabulary.
+      //
+      // Macro Prompt 2-fix — admin path rewired through the provider abstraction
+      // (`quantPatternsDetectProvider`). Public response shape is preserved verbatim:
+      //   - success → { ok: true, ...upstreamBody }
+      //   - disabled → 503 { ok: false, code: 'QUANT_SERVICE_DISABLED', message, requestId }
+      //   - any other failure → 503 { ok: false, code: 'QUANT_SERVICE_UNAVAILABLE', message, requestId }
+      // Demo branch is intentionally NOT routed through the wrapper — the constraint
+      // is "demo route does NOT call the quant provider wrapper or quant-service".
+      .post(
+        '/patterns/detect',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => buildDemoPatternDetectionResponse(context.body),
+            real: async () => {
+              const result = await quantPatternsDetectProvider.call(context.body, {
                 mode: 'admin',
                 requestId,
                 now: new Date(),
                 reason: 'route:trading-lab.patterns.detect',
+              })
+              if (result.ok) {
+                return { ok: true, ...(result.data.response as object) }
               }
-            )
-            if (result.ok) {
-              return { ok: true, ...(result.data.response as object) }
-            }
-            context.set.status = 503
-            if (result.error.code === 'disabled_by_flag') {
+              context.set.status = 503
+              if (result.error.code === 'disabled_by_flag') {
+                return {
+                  ok: false,
+                  code: 'QUANT_SERVICE_DISABLED',
+                  message: 'Quant service is disabled',
+                  requestId,
+                }
+              }
               return {
                 ok: false,
-                code: 'QUANT_SERVICE_DISABLED',
-                message: 'Quant service is disabled',
+                code: 'QUANT_SERVICE_UNAVAILABLE',
+                message: result.error.causeRedacted ?? 'Quant service unreachable',
                 requestId,
               }
-            }
-            return {
-              ok: false,
-              code: 'QUANT_SERVICE_UNAVAILABLE',
-              message: result.error.causeRedacted ?? 'Quant service unreachable',
-              requestId,
-            }
-          },
-        })
-      },
-      {
-        body: t.Object({
-          symbol: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
-          timeframe: t.String({ minLength: 1, maxLength: 16 }),
-          candles: t.Array(
-            t.Object({
-              timestamp: t.String({ minLength: 1, maxLength: 64 }),
-              open: t.Number(),
-              high: t.Number(),
-              low: t.Number(),
-              close: t.Number(),
-              volume: t.Optional(t.Union([t.Number(), t.Null()])),
-            }),
-            { maxItems: 5000 }
-          ),
-          patterns: t.Optional(
-            t.Array(
-              t.Union([
-                t.Literal('ema20_horizontal_level'),
-                t.Literal('ema200_one_touch'),
-                t.Literal('parabolic_sar_rci'),
-                t.Literal('volume_profile_zones'),
-                // PR15B — SMC/ICT deterministic detector pack
-                t.Literal('fair_value_gap'),
-                t.Literal('liquidity_sweep'),
-                t.Literal('break_of_structure'),
-                t.Literal('change_of_character'),
-                t.Literal('order_block_candidate'),
-              ]),
-              { maxItems: 9 }
-            )
-          ),
-          options: t.Optional(
-            t.Object({
-              horizontalLevelTolerancePct: t.Optional(t.Number({ minimum: 0.05, maximum: 5 })),
-              emaTouchTolerancePct: t.Optional(t.Number({ minimum: 0.05, maximum: 5 })),
-              minCandles: t.Optional(t.Number({ minimum: 10, maximum: 2000 })),
-              volumeProfileBins: t.Optional(t.Number({ minimum: 4, maximum: 200 })),
-            })
-          ),
-        }),
-      }
-    )
-
-    // --- Strategies ---
-    .get('/strategies', async context => {
-      return demoOrReal({
-        context,
-        demo: () => ({ ok: true, strategies: DEMO_STRATEGIES }),
-        real: async () => {
-          const strategies = await repo.listStrategies()
-          return { ok: true, strategies }
-        },
-      })
-    })
-    .get('/strategies/:id', async context => {
-      const id = Number(context.params.id)
-      const requestId = getRequestMeta(context).requestId
-      return demoOrReal({
-        context,
-        demo: () => {
-          const s = DEMO_STRATEGIES.find(s => s.id === id)
-          if (!s) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
-          }
-          return { ok: true, strategy: s }
-        },
-        real: async () => {
-          const strategy = await repo.getStrategy(id)
-          if (!strategy) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
-          }
-          return { ok: true, strategy }
-        },
-      })
-    })
-    // PR12 — Strategy Scorecard. Read-only evidence-quality view; never an execution path.
-    .get('/strategies/:id/scorecard', async context => {
-      const id = Number(context.params.id)
-      const requestId = getRequestMeta(context).requestId
-      if (!Number.isFinite(id) || id <= 0) {
-        context.set.status = 400
-        return { ok: false, code: 'INVALID_ID', message: 'Invalid strategy id', requestId }
-      }
-      return demoOrReal({
-        context,
-        demo: () =>
-          buildDemoStrategyScorecard({ strategyId: id, generatedAt: new Date() }),
-        real: async () => {
-          const scorecard = await scorecardUseCase.getStrategyScorecard({
-            mode: 'admin',
-            requestId,
-            strategyId: id,
+            },
           })
-          if (!scorecard) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
-          }
-          return scorecard
         },
-      })
-    })
-    .post(
-      '/strategies',
-      async context => {
-        const requestId = getRequestMeta(context).requestId
+        {
+          body: t.Object({
+            symbol: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+            timeframe: t.String({ minLength: 1, maxLength: 16 }),
+            candles: t.Array(
+              t.Object({
+                timestamp: t.String({ minLength: 1, maxLength: 64 }),
+                open: t.Number(),
+                high: t.Number(),
+                low: t.Number(),
+                close: t.Number(),
+                volume: t.Optional(t.Union([t.Number(), t.Null()])),
+              }),
+              { maxItems: 5000 }
+            ),
+            patterns: t.Optional(
+              t.Array(
+                t.Union([
+                  t.Literal('ema20_horizontal_level'),
+                  t.Literal('ema200_one_touch'),
+                  t.Literal('parabolic_sar_rci'),
+                  t.Literal('volume_profile_zones'),
+                  // PR15B — SMC/ICT deterministic detector pack
+                  t.Literal('fair_value_gap'),
+                  t.Literal('liquidity_sweep'),
+                  t.Literal('break_of_structure'),
+                  t.Literal('change_of_character'),
+                  t.Literal('order_block_candidate'),
+                ]),
+                { maxItems: 9 }
+              )
+            ),
+            options: t.Optional(
+              t.Object({
+                horizontalLevelTolerancePct: t.Optional(t.Number({ minimum: 0.05, maximum: 5 })),
+                emaTouchTolerancePct: t.Optional(t.Number({ minimum: 0.05, maximum: 5 })),
+                minCandles: t.Optional(t.Number({ minimum: 10, maximum: 2000 })),
+                volumeProfileBins: t.Optional(t.Number({ minimum: 4, maximum: 200 })),
+              })
+            ),
+          }),
+        }
+      )
+
+      // --- Strategies ---
+      .get('/strategies', async context => {
         return demoOrReal({
           context,
-          demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-          },
+          demo: () => ({ ok: true, strategies: DEMO_STRATEGIES }),
           real: async () => {
-            requireAdmin(context)
-            try {
-              const strategy = await repo.createStrategy(context.body)
-              context.set.status = 201
-              return { ok: true, strategy }
-            } catch (error) {
-              logApiEvent({ level: 'error', msg: 'trading_lab_strategy_create_failed', requestId, ...toErrorLogFields({ error, includeStack: false }) })
-              context.set.status = 400
-              return { ok: false, code: 'CREATE_FAILED', message: 'Failed to create strategy', requestId }
-            }
+            const strategies = await repo.listStrategies()
+            return { ok: true, strategies }
           },
         })
-      },
-      {
-        body: t.Object({
-          name: t.String(),
-          slug: t.String(),
-          description: t.Optional(t.String()),
-          strategyType: t.Optional(t.String()),
-          status: t.Optional(t.String()),
-          tags: t.Optional(t.Array(t.String())),
-          parameters: t.Optional(t.Record(t.String(), t.Unknown())),
-          indicators: t.Optional(t.Array(t.Object({ name: t.String(), params: t.Record(t.String(), t.Unknown()) }))),
-          entryRules: t.Optional(t.Array(t.Object({ id: t.String(), description: t.String(), condition: t.String() }))),
-          exitRules: t.Optional(t.Array(t.Object({ id: t.String(), description: t.String(), condition: t.String() }))),
-          riskRules: t.Optional(t.Array(t.Object({ id: t.String(), description: t.String(), condition: t.String() }))),
-          assumptions: t.Optional(t.Array(t.String())),
-          caveats: t.Optional(t.Array(t.String())),
-        }),
-      }
-    )
-    .patch(
-      '/strategies/:id',
-      async context => {
-        const requestId = getRequestMeta(context).requestId
+      })
+      .get('/strategies/:id', async context => {
         const id = Number(context.params.id)
+        const requestId = getRequestMeta(context).requestId
         return demoOrReal({
           context,
           demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+            const s = DEMO_STRATEGIES.find(s => s.id === id)
+            if (!s) {
+              context.set.status = 404
+              return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
+            }
+            return { ok: true, strategy: s }
           },
           real: async () => {
-            requireAdmin(context)
-            const strategy = await repo.updateStrategy(id, context.body)
+            const strategy = await repo.getStrategy(id)
             if (!strategy) {
               context.set.status = 404
               return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
@@ -618,690 +592,141 @@ export const createTradingLabRoute = ({
             return { ok: true, strategy }
           },
         })
-      },
-      {
-        body: t.Object({
-          name: t.Optional(t.String()),
-          description: t.Optional(t.String()),
-          strategyType: t.Optional(t.String()),
-          status: t.Optional(t.String()),
-          enabled: t.Optional(t.Boolean()),
-          tags: t.Optional(t.Array(t.String())),
-          parameters: t.Optional(t.Record(t.String(), t.Unknown())),
-          assumptions: t.Optional(t.Array(t.String())),
-          caveats: t.Optional(t.Array(t.String())),
-        }),
-      }
-    )
-    .delete('/strategies/:id', async context => {
-      const requestId = getRequestMeta(context).requestId
-      const id = Number(context.params.id)
-      return demoOrReal({
-        context,
-        demo: () => {
-          context.set.status = 403
-          return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-        },
-        real: async () => {
-          requireAdmin(context)
-          const strategy = await repo.archiveStrategy(id)
-          if (!strategy) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
-          }
-          return { ok: true, strategy }
-        },
       })
-    })
-
-    // --- Hypothesis Lab (PR3) ---
-    // A manual hypothesis is a tradingLabStrategy row with strategyType='manual-hypothesis'.
-    // No new table; reuses the existing strategy + paper-scenario surface.
-    .get('/hypotheses', async context => {
-      return demoOrReal({
-        context,
-        demo: () => ({ ok: true, hypotheses: DEMO_HYPOTHESES }),
-        real: async () => {
-          const items = await hypotheses.listManualHypotheses()
-          return { ok: true, hypotheses: items }
-        },
-      })
-    })
-    .get('/hypotheses/:id', async context => {
-      const id = Number(context.params.id)
-      const requestId = getRequestMeta(context).requestId
-      return demoOrReal({
-        context,
-        demo: () => {
-          const found = DEMO_HYPOTHESES.find(h => h.id === id)
-          if (!found) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
-          }
-          return { ok: true, hypothesis: found }
-        },
-        real: async () => {
-          const found = await hypotheses.getManualHypothesisById(id)
-          if (!found) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
-          }
-          return { ok: true, hypothesis: found }
-        },
-      })
-    })
-    .post(
-      '/hypotheses',
-      async context => {
-        const requestId = getRequestMeta(context).requestId
-        return demoOrReal({
-          context,
-          demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-          },
-          real: async () => {
-            requireAdmin(context)
-            try {
-              const hypothesis = await hypotheses.createManualHypothesis({
-                name: context.body.name,
-                slug: context.body.slug,
-                ...(context.body.description !== undefined ? { description: context.body.description } : {}),
-                ...(context.body.thesis !== undefined ? { thesis: context.body.thesis } : {}),
-                ...(context.body.assumptions !== undefined ? { assumptions: context.body.assumptions } : {}),
-                ...(context.body.caveats !== undefined ? { caveats: context.body.caveats } : {}),
-                invalidationCriteria: context.body.invalidationCriteria,
-                ...(context.body.entryRules !== undefined ? { entryRules: context.body.entryRules } : {}),
-                ...(context.body.exitRules !== undefined ? { exitRules: context.body.exitRules } : {}),
-                ...(context.body.riskRules !== undefined ? { riskRules: context.body.riskRules } : {}),
-                ...(context.body.parameters !== undefined ? { parameters: context.body.parameters } : {}),
-                ...(context.body.indicators !== undefined ? { indicators: context.body.indicators } : {}),
-                ...(context.body.tags !== undefined ? { tags: context.body.tags } : {}),
-                ...(context.body.status !== undefined ? { status: context.body.status } : {}),
-              })
-              context.set.status = 201
-              return { ok: true, hypothesis }
-            } catch (error) {
-              if (isHypothesisExecutionInstructionError(error)) {
-                context.set.status = 422
-                return {
-                  ok: false,
-                  code: error.code,
-                  message: error.message,
-                  matches: error.matches,
-                  requestId,
-                }
-              }
-              if (isHypothesisValidationError(error)) {
-                context.set.status = 422
-                return {
-                  ok: false,
-                  code: error.code,
-                  message: error.message,
-                  field: error.field,
-                  requestId,
-                }
-              }
-              logApiEvent({
-                level: 'error',
-                msg: 'trading_lab_hypothesis_create_failed',
-                requestId,
-                ...toErrorLogFields({ error, includeStack: false }),
-              })
-              context.set.status = 400
-              return { ok: false, code: 'CREATE_FAILED', message: 'Failed to create hypothesis', requestId }
-            }
-          },
-        })
-      },
-      {
-        body: t.Object({
-          name: t.String({ minLength: 1, maxLength: 120 }),
-          slug: t.String({ minLength: 1, maxLength: 120, pattern: '^[a-z0-9-]+$' }),
-          description: t.Optional(t.String({ maxLength: 4000 })),
-          thesis: t.Optional(t.String({ maxLength: 2000 })),
-          assumptions: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
-          caveats: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
-          invalidationCriteria: t.Array(t.String({ minLength: 1, maxLength: 400 }), {
-            minItems: 1,
-            maxItems: 32,
-          }),
-          entryRules: t.Optional(
-            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
-          ),
-          exitRules: t.Optional(
-            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
-          ),
-          riskRules: t.Optional(
-            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
-          ),
-          parameters: t.Optional(t.Record(t.String(), t.Unknown())),
-          indicators: t.Optional(
-            t.Array(t.Object({ name: t.String({ minLength: 1, maxLength: 80 }), params: t.Record(t.String(), t.Unknown()) }), { maxItems: 16 })
-          ),
-          tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 24 })),
-          status: t.Optional(
-            t.Union([t.Literal('draft'), t.Literal('active-paper'), t.Literal('archived')])
-          ),
-        }),
-      }
-    )
-    .patch(
-      '/hypotheses/:id',
-      async context => {
-        const requestId = getRequestMeta(context).requestId
+      // PR12 — Strategy Scorecard. Read-only evidence-quality view; never an execution path.
+      .get('/strategies/:id/scorecard', async context => {
         const id = Number(context.params.id)
-        return demoOrReal({
-          context,
-          demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-          },
-          real: async () => {
-            requireAdmin(context)
-            try {
-              const updated = await hypotheses.updateManualHypothesis(id, context.body)
-              if (!updated) {
-                context.set.status = 404
-                return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
-              }
-              return { ok: true, hypothesis: updated }
-            } catch (error) {
-              if (isHypothesisExecutionInstructionError(error)) {
-                context.set.status = 422
-                return {
-                  ok: false,
-                  code: error.code,
-                  message: error.message,
-                  matches: error.matches,
-                  requestId,
-                }
-              }
-              if (isHypothesisValidationError(error)) {
-                context.set.status = 422
-                return {
-                  ok: false,
-                  code: error.code,
-                  message: error.message,
-                  field: error.field,
-                  requestId,
-                }
-              }
-              throw error
-            }
-          },
-        })
-      },
-      {
-        body: t.Object({
-          name: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
-          description: t.Optional(t.Union([t.String({ maxLength: 4000 }), t.Null()])),
-          thesis: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
-          assumptions: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
-          caveats: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })),
-          invalidationCriteria: t.Optional(
-            t.Array(t.String({ minLength: 1, maxLength: 400 }), { minItems: 1, maxItems: 32 })
-          ),
-          entryRules: t.Optional(
-            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
-          ),
-          exitRules: t.Optional(
-            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
-          ),
-          riskRules: t.Optional(
-            t.Array(t.Object({ id: t.String({ minLength: 1, maxLength: 80 }), description: t.String({ minLength: 1, maxLength: 400 }), condition: t.String({ minLength: 1, maxLength: 400 }) }), { maxItems: 32 })
-          ),
-          parameters: t.Optional(t.Record(t.String(), t.Unknown())),
-          indicators: t.Optional(
-            t.Array(t.Object({ name: t.String({ minLength: 1, maxLength: 80 }), params: t.Record(t.String(), t.Unknown()) }), { maxItems: 16 })
-          ),
-          tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 24 })),
-          status: t.Optional(
-            t.Union([t.Literal('draft'), t.Literal('active-paper'), t.Literal('archived')])
-          ),
-        }),
-      }
-    )
-    .post('/hypotheses/:id/archive', async context => {
-      const requestId = getRequestMeta(context).requestId
-      const id = Number(context.params.id)
-      return demoOrReal({
-        context,
-        demo: () => {
-          context.set.status = 403
-          return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-        },
-        real: async () => {
-          requireAdmin(context)
-          const archived = await hypotheses.archiveManualHypothesis(id)
-          if (!archived) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
-          }
-          return { ok: true, hypothesis: archived }
-        },
-      })
-    })
-    .post(
-      '/hypotheses/:id/scenarios',
-      async context => {
         const requestId = getRequestMeta(context).requestId
-        const id = Number(context.params.id)
+        if (!Number.isFinite(id) || id <= 0) {
+          context.set.status = 400
+          return { ok: false, code: 'INVALID_ID', message: 'Invalid strategy id', requestId }
+        }
         return demoOrReal({
           context,
-          demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-          },
+          demo: () => buildDemoStrategyScorecard({ strategyId: id, generatedAt: new Date() }),
           real: async () => {
-            requireAdmin(context)
-            try {
-              const scenario = await hypotheses.createScenarioForHypothesis(id, {
-                name: context.body.name,
-                ...(context.body.description !== undefined ? { description: context.body.description } : {}),
-                ...(context.body.thesis !== undefined ? { thesis: context.body.thesis } : {}),
-                ...(context.body.expectedOutcome !== undefined ? { expectedOutcome: context.body.expectedOutcome } : {}),
-                invalidationCriteria: context.body.invalidationCriteria,
-                ...(context.body.riskNotes !== undefined ? { riskNotes: context.body.riskNotes } : {}),
-                ...(context.body.linkedSignalItemId !== undefined ? { linkedSignalItemId: context.body.linkedSignalItemId } : {}),
-                ...(context.body.linkedNewsArticleId !== undefined ? { linkedNewsArticleId: context.body.linkedNewsArticleId } : {}),
-              })
-              if (!scenario) {
-                context.set.status = 404
-                return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
-              }
-              context.set.status = 201
-              return { ok: true, scenario }
-            } catch (error) {
-              if (isHypothesisExecutionInstructionError(error)) {
-                context.set.status = 422
-                return {
-                  ok: false,
-                  code: error.code,
-                  message: error.message,
-                  matches: error.matches,
-                  requestId,
-                }
-              }
-              if (isHypothesisValidationError(error)) {
-                context.set.status = 422
-                return {
-                  ok: false,
-                  code: error.code,
-                  message: error.message,
-                  field: error.field,
-                  requestId,
-                }
-              }
-              throw error
-            }
-          },
-        })
-      },
-      {
-        body: t.Object({
-          name: t.String({ minLength: 1, maxLength: 120 }),
-          description: t.Optional(t.String({ maxLength: 4000 })),
-          thesis: t.Optional(t.String({ maxLength: 2000 })),
-          expectedOutcome: t.Optional(t.String({ maxLength: 2000 })),
-          invalidationCriteria: t.String({ minLength: 1, maxLength: 1200 }),
-          riskNotes: t.Optional(t.String({ maxLength: 2000 })),
-          linkedSignalItemId: t.Optional(t.Number()),
-          linkedNewsArticleId: t.Optional(t.Number()),
-        }),
-      }
-    )
-
-    // --- Backtest runs ---
-    .get('/backtests', async context => {
-      const q = context.query as Record<string, string | undefined>
-      return demoOrReal({
-        context,
-        demo: () => ({ ok: true, backtests: DEMO_BACKTESTS }),
-        real: async () => {
-          const opts: { strategyId?: number; limit?: number } = {}
-          if (q.strategyId) opts.strategyId = Number(q.strategyId)
-          if (q.limit) opts.limit = Number(q.limit)
-          const backtests = await repo.listBacktestRuns(opts)
-          return { ok: true, backtests }
-        },
-      })
-    })
-    .get('/backtests/:id', async context => {
-      const id = Number(context.params.id)
-      const requestId = getRequestMeta(context).requestId
-      return demoOrReal({
-        context,
-        demo: () => {
-          const b = DEMO_BACKTESTS.find(b => b.id === id)
-          if (!b) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Backtest run not found', requestId }
-          }
-          return { ok: true, backtest: b }
-        },
-        real: async () => {
-          const backtest = await repo.getBacktestRun(id)
-          if (!backtest) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Backtest run not found', requestId }
-          }
-          return { ok: true, backtest }
-        },
-      })
-    })
-    .post(
-      '/backtests/run',
-      async context => {
-        const requestId = getRequestMeta(context).requestId
-        return demoOrReal({
-          context,
-          demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-          },
-          real: async () => {
-            requireAdmin(context)
-            const {
-              strategyId,
-              symbol,
-              exchange,
-              timeframe,
-              startDate,
-              endDate,
-              initialCash,
-              feesBps,
-              slippageBps,
-              spreadBps,
-              data,
-              useDemoData,
-              dataSourcePreference,
-              preferredProvider,
-            } = context.body
-
-            const startDateObj = new Date(startDate)
-            const endDateObj = new Date(endDate)
-            const interval = timeframe ?? '1d'
-
-            // Pick effective preference. Legacy callers may still pass
-            // useDemoData=false → "provider", useDemoData=true → "auto".
-            const effectivePreference: DataSourcePreference =
-              dataSourcePreference ??
-              (Array.isArray(data) && data.length > 0
-                ? 'caller_provided'
-                : useDemoData === false
-                  ? 'provider'
-                  : 'auto')
-
-            // Resolve OHLCV through adapter (cache → provider → fixture chain)
-            const resolution = await resolveMarketData({
-              input: {
-                symbol,
-                ...(exchange ? { exchange } : {}),
-                interval,
-                startDate: startDateObj,
-                endDate: endDateObj,
-                dataSourcePreference: effectivePreference,
-                preferredProvider: preferredProvider ?? 'auto',
-                callerData: Array.isArray(data) ? data : null,
-                requestId,
-              },
-              deps: { db, ...marketDataDeps },
+            const scorecard = await scorecardUseCase.getStrategyScorecard({
+              mode: 'admin',
+              requestId,
+              strategyId: id,
             })
-
-            // Build initial run record with resolved data source
-            const dataSource = resolution.ok
-              ? resolution.resolvedMarketDataSource
-              : 'unavailable'
-
-            const runInput: Parameters<typeof repo.createBacktestRun>[0] = {
-              strategyId,
-              name: `${symbol} ${startDate.slice(0, 10)} to ${endDate.slice(0, 10)}`,
-              symbol,
-              startDate: startDateObj,
-              endDate: endDateObj,
-              marketDataSource: dataSource,
-            }
-            if (timeframe !== undefined) runInput.timeframe = timeframe
-            if (initialCash !== undefined) runInput.initialCash = initialCash
-            if (feesBps !== undefined) runInput.feesBps = feesBps
-            if (slippageBps !== undefined) runInput.slippageBps = slippageBps
-            if (spreadBps !== undefined) runInput.spreadBps = spreadBps
-
-            const run = await repo.createBacktestRun(runInput)
-
-            if (!resolution.ok) {
-              await repo.updateBacktestRunResult(run.id, {
-                runStatus: 'failed',
-                runStartedAt: new Date(),
-                runFinishedAt: new Date(),
-                durationMs: 0,
-                errorSummary: resolution.message,
-              })
-              context.set.status = 422
-              return {
-                ok: false,
-                code: resolution.code,
-                message: resolution.message,
-                attempted: resolution.attempted,
-                runId: run.id,
-                requestId,
-              }
-            }
-            const ohlcv = resolution.bars
-
-            if (ohlcv.length < 5) {
-              await repo.updateBacktestRunResult(run.id, {
-                runStatus: 'failed',
-                runStartedAt: new Date(),
-                runFinishedAt: new Date(),
-                durationMs: 0,
-                errorSummary: `Only ${ohlcv.length} bars resolved (minimum 5).`,
-              })
-              context.set.status = 422
-              return {
-                ok: false,
-                code: 'DATA_UNAVAILABLE',
-                message: `Only ${ohlcv.length} bars resolved (minimum 5).`,
-                resolvedMarketDataSource: resolution.resolvedMarketDataSource,
-                runId: run.id,
-                requestId,
-              }
-            }
-
-            // Get strategy
-            const strategy = await repo.getStrategy(strategyId)
-            if (!strategy) {
+            if (!scorecard) {
               context.set.status = 404
-              return { ok: false, code: 'STRATEGY_NOT_FOUND', message: 'Strategy not found', requestId }
+              return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
             }
-
-            // Call quant service
-            const startedAt = new Date()
-            const strategyParams = (strategy.parameters ?? {}) as Record<string, unknown>
-            const strategyTypeForQuant =
-              (strategyParams.strategy_type as string | undefined) ??
-              (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')
-                ? 'buy_and_hold'
-                : 'buy_and_hold')
-            const quantResult = await callQuantService(
-              '/quant/backtest',
-              {
-                strategy_type: strategyTypeForQuant,
-                data: ohlcv,
-                initial_cash: initialCash,
-                fees_bps: feesBps,
-                slippage_bps: slippageBps,
-                spread_bps: spreadBps,
-                params: strategyParams,
-              },
-              requestId,
-              60_000
-            )
-
-            if (!quantResult.ok) {
-              await repo.updateBacktestRunResult(run.id, {
-                runStatus: 'failed',
-                runStartedAt: startedAt,
-                runFinishedAt: new Date(),
-                durationMs: Date.now() - startedAt.getTime(),
-                errorSummary: quantResult.error ?? 'Quant service error',
-              })
-              // Surface as attention item (fail-soft, do not break response)
-              try {
-                await repo.upsertAttentionItem({
-                  sourceType: 'trading-lab',
-                  sourceId: `backtest:${run.id}`,
-                  severity: 'important',
-                  title: `Backtest failed: ${strategy.name}`,
-                  summary: quantResult.error ?? 'Quant service error',
-                  reason: 'Backtest run failed',
-                  actionHref: '/ia/trading-lab',
-                  dedupeKey: `trading-lab:backtest:${run.id}`,
-                  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-                })
-              } catch {
-                /* fail-soft */
-              }
-
-              context.set.status = 502
-              return {
-                ok: false,
-                code: 'BACKTEST_FAILED',
-                message: quantResult.error ?? 'Backtest failed',
-                runId: run.id,
-                requestId,
-              }
-            }
-
-            const qd = quantResult.data as Record<string, unknown>
-            const metrics = qd.metrics as Record<string, unknown> | null
-            const caveats = (qd.caveats as string[] | undefined) ?? []
-            await repo.updateBacktestRunResult(run.id, {
-              runStatus: 'completed',
-              runStartedAt: startedAt,
-              runFinishedAt: new Date(),
-              durationMs: Date.now() - startedAt.getTime(),
-              paramsHash: qd.params_hash as string,
-              dataHash: qd.data_hash as string,
-              resultSummary: {
-                strategy_type: qd.strategy_type,
-                dataSource,
-                dataProvider: resolution.dataProvider,
-                dataQuality: resolution.dataQuality,
-                dataWarnings: resolution.dataWarnings,
-                fallbackUsed: resolution.fallbackUsed,
-                fallbackReason: resolution.fallbackReason,
-                firstBarDate: resolution.firstBarDate,
-                lastBarDate: resolution.lastBarDate,
-                dataPoints: ohlcv.length,
-              },
-              metrics: metrics ?? {},
-              equityCurve: qd.equity_curve as Array<{ date: string; equity: number }>,
-              trades: qd.trades as Array<Record<string, unknown>>,
-              drawdowns: qd.drawdowns as Array<{ date: string; drawdown: number }>,
-            })
-
-            // Auto-trigger graph ingest (fail-soft)
-            const graphResult = await sendBacktestToKnowledgeGraph({
-              knowledgeServiceUrl,
-              knowledgeServiceEnabled,
-              ingestEnabled: graphIngestEnabled,
-              requestId,
-              input: {
-                strategy: {
-                  id: strategy.id,
-                  name: strategy.name,
-                  slug: strategy.slug,
-                  strategyType: strategy.strategyType,
-                  status: strategy.status,
-                  description: strategy.description ?? null,
-                  tags: strategy.tags as string[],
-                  assumptions: (strategy.assumptions as string[]) ?? [],
-                  caveats: (strategy.caveats as string[]) ?? [],
-                  indicators: (strategy.indicators as Array<{ name: string; params: Record<string, unknown> }>) ?? [],
-                },
-                backtest: {
-                  id: run.id,
-                  symbol,
-                  startDate: startDateObj,
-                  endDate: endDateObj,
-                  initialCash: initialCash ?? 10000,
-                  feesBps: feesBps ?? 10,
-                  slippageBps: slippageBps ?? 5,
-                  metrics,
-                  paramsHash: (qd.params_hash as string) ?? null,
-                  dataHash: (qd.data_hash as string) ?? null,
-                  runStatus: 'completed',
-                },
-                caveats,
-              },
-            })
-            if (!graphResult.ok) {
-              logApiEvent({
-                level: 'info',
-                msg: 'trading_lab_graph_ingest_skipped',
-                requestId,
-                reason: graphResult.reason ?? 'unknown',
-                runId: run.id,
-              })
-            }
-
-            return {
-              ok: true,
-              runId: run.id,
-              metrics,
-              caveats,
-              resolvedMarketDataSource: resolution.resolvedMarketDataSource,
-              dataProvider: resolution.dataProvider,
-              dataQuality: resolution.dataQuality,
-              dataWarnings: resolution.dataWarnings,
-              fallbackUsed: resolution.fallbackUsed,
-              fallbackReason: resolution.fallbackReason,
-              barsCount: resolution.barsCount,
-              firstBarDate: resolution.firstBarDate,
-              lastBarDate: resolution.lastBarDate,
-              graphIngest: { ok: graphResult.ok, reason: graphResult.reason ?? null },
-              requestId,
-            }
+            return scorecard
           },
         })
-      },
-      {
-        body: t.Object({
-          strategyId: t.Number(),
-          symbol: t.String(),
-          exchange: t.Optional(t.String()),
-          timeframe: t.Optional(t.String()),
-          startDate: t.String(),
-          endDate: t.String(),
-          initialCash: t.Optional(t.Number()),
-          feesBps: t.Optional(t.Number()),
-          slippageBps: t.Optional(t.Number()),
-          spreadBps: t.Optional(t.Number()),
-          data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
-          useDemoData: t.Optional(t.Boolean()),
-          dataSourcePreference: t.Optional(
-            t.Union([
-              t.Literal('auto'),
-              t.Literal('cached'),
-              t.Literal('provider'),
-              t.Literal('caller_provided'),
-              t.Literal('deterministic_fixture'),
-            ])
-          ),
-          preferredProvider: t.Optional(
-            t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
-          ),
-        }),
-      }
-    )
-
-    // --- Walk-forward validation ---
-    .post(
-      '/backtests/walk-forward',
-      async context => {
+      })
+      .post(
+        '/strategies',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              try {
+                const strategy = await repo.createStrategy(context.body)
+                context.set.status = 201
+                return { ok: true, strategy }
+              } catch (error) {
+                logApiEvent({
+                  level: 'error',
+                  msg: 'trading_lab_strategy_create_failed',
+                  requestId,
+                  ...toErrorLogFields({ error, includeStack: false }),
+                })
+                context.set.status = 400
+                return {
+                  ok: false,
+                  code: 'CREATE_FAILED',
+                  message: 'Failed to create strategy',
+                  requestId,
+                }
+              }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            name: t.String(),
+            slug: t.String(),
+            description: t.Optional(t.String()),
+            strategyType: t.Optional(t.String()),
+            status: t.Optional(t.String()),
+            tags: t.Optional(t.Array(t.String())),
+            parameters: t.Optional(t.Record(t.String(), t.Unknown())),
+            indicators: t.Optional(
+              t.Array(t.Object({ name: t.String(), params: t.Record(t.String(), t.Unknown()) }))
+            ),
+            entryRules: t.Optional(
+              t.Array(t.Object({ id: t.String(), description: t.String(), condition: t.String() }))
+            ),
+            exitRules: t.Optional(
+              t.Array(t.Object({ id: t.String(), description: t.String(), condition: t.String() }))
+            ),
+            riskRules: t.Optional(
+              t.Array(t.Object({ id: t.String(), description: t.String(), condition: t.String() }))
+            ),
+            assumptions: t.Optional(t.Array(t.String())),
+            caveats: t.Optional(t.Array(t.String())),
+          }),
+        }
+      )
+      .patch(
+        '/strategies/:id',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          const id = Number(context.params.id)
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              const strategy = await repo.updateStrategy(id, context.body)
+              if (!strategy) {
+                context.set.status = 404
+                return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
+              }
+              return { ok: true, strategy }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            name: t.Optional(t.String()),
+            description: t.Optional(t.String()),
+            strategyType: t.Optional(t.String()),
+            status: t.Optional(t.String()),
+            enabled: t.Optional(t.Boolean()),
+            tags: t.Optional(t.Array(t.String())),
+            parameters: t.Optional(t.Record(t.String(), t.Unknown())),
+            assumptions: t.Optional(t.Array(t.String())),
+            caveats: t.Optional(t.Array(t.String())),
+          }),
+        }
+      )
+      .delete('/strategies/:id', async context => {
         const requestId = getRequestMeta(context).requestId
+        const id = Number(context.params.id)
         return demoOrReal({
           context,
           demo: () => {
@@ -1315,529 +740,1367 @@ export const createTradingLabRoute = ({
           },
           real: async () => {
             requireAdmin(context)
-            const {
-              strategyId,
-              symbol,
-              exchange,
-              timeframe,
-              startDate,
-              endDate,
-              initialCash,
-              feesBps,
-              slippageBps,
-              spreadBps,
-              data,
-              dataSourcePreference,
-              preferredProvider,
-              trainBars,
-              testBars,
-              stepBars,
-            } = context.body
-
-            const startDateObj = new Date(startDate)
-            const endDateObj = new Date(endDate)
-            const interval = timeframe ?? '1d'
-
-            const resolution = await resolveMarketData({
-              input: {
-                symbol,
-                ...(exchange ? { exchange } : {}),
-                interval,
-                startDate: startDateObj,
-                endDate: endDateObj,
-                dataSourcePreference: dataSourcePreference ?? 'auto',
-                preferredProvider: preferredProvider ?? 'auto',
-                callerData: Array.isArray(data) ? data : null,
-                requestId,
-              },
-              deps: { db, ...marketDataDeps },
-            })
-
-            if (!resolution.ok) {
-              context.set.status = 422
-              return {
-                ok: false,
-                code: resolution.code,
-                message: resolution.message,
-                attempted: resolution.attempted,
-                requestId,
-              }
-            }
-
-            const strategy = await repo.getStrategy(strategyId)
+            const strategy = await repo.archiveStrategy(id)
             if (!strategy) {
               context.set.status = 404
-              return {
-                ok: false,
-                code: 'STRATEGY_NOT_FOUND',
-                message: 'Strategy not found',
-                requestId,
-              }
+              return { ok: false, code: 'NOT_FOUND', message: 'Strategy not found', requestId }
             }
-
-            const strategyParams = (strategy.parameters ?? {}) as Record<string, unknown>
-            const strategyTypeForQuant =
-              (strategyParams.strategy_type as string | undefined) ??
-              (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')
-                ? 'buy_and_hold'
-                : 'buy_and_hold')
-
-            const quantResult = await callQuantService(
-              '/quant/walk-forward',
-              {
-                strategy_type: strategyTypeForQuant,
-                data: resolution.bars,
-                initial_cash: initialCash ?? 10000,
-                fees_bps: feesBps ?? 10,
-                slippage_bps: slippageBps ?? 5,
-                spread_bps: spreadBps ?? 2,
-                params: strategyParams,
-                train_bars: trainBars ?? 120,
-                test_bars: testBars ?? 30,
-                step_bars: stepBars ?? 30,
-              },
-              requestId,
-              90_000
-            )
-            if (!quantResult.ok) {
-              context.set.status = 502
-              return {
-                ok: false,
-                code: 'WALK_FORWARD_FAILED',
-                message: quantResult.error ?? 'Walk-forward failed',
-                requestId,
-              }
-            }
-
-            const wf = quantResult.data as Record<string, unknown>
-            return {
-              ok: true,
-              strategyId,
-              symbol,
-              interval,
-              resolvedMarketDataSource: resolution.resolvedMarketDataSource,
-              dataProvider: resolution.dataProvider,
-              dataQuality: resolution.dataQuality,
-              fallbackUsed: resolution.fallbackUsed,
-              barsCount: resolution.barsCount,
-              windows: wf.windows,
-              inSample: wf.in_sample,
-              outOfSample: wf.out_of_sample,
-              stabilityScore: wf.stability_score,
-              degradationRatio: wf.degradation_ratio,
-              overfitWarning: wf.overfit_warning,
-              summary: wf.summary,
-              caveats: [
-                'Walk-forward validation reduces — but does not eliminate — overfitting risk.',
-                'Out-of-sample metrics still depend on past regime persistence.',
-                'Paper-trading only. No real capital at risk.',
-              ],
-              requestId,
-            }
+            return { ok: true, strategy }
           },
         })
-      },
-      {
-        body: t.Object({
-          strategyId: t.Number(),
-          symbol: t.String(),
-          exchange: t.Optional(t.String()),
-          timeframe: t.Optional(t.String()),
-          startDate: t.String(),
-          endDate: t.String(),
-          initialCash: t.Optional(t.Number()),
-          feesBps: t.Optional(t.Number()),
-          slippageBps: t.Optional(t.Number()),
-          spreadBps: t.Optional(t.Number()),
-          data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
-          dataSourcePreference: t.Optional(
-            t.Union([
-              t.Literal('auto'),
-              t.Literal('cached'),
-              t.Literal('provider'),
-              t.Literal('caller_provided'),
-              t.Literal('deterministic_fixture'),
-            ])
-          ),
-          preferredProvider: t.Optional(
-            t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
-          ),
-          trainBars: t.Optional(t.Number()),
-          testBars: t.Optional(t.Number()),
-          stepBars: t.Optional(t.Number()),
-        }),
-      }
-    )
+      })
 
-    // --- Market data preview (admin-only — useful for the runner UI) ---
-    .post(
-      '/market-data/preview',
-      async context => {
-        const requestId = getRequestMeta(context).requestId
+      // --- Hypothesis Lab (PR3) ---
+      // A manual hypothesis is a tradingLabStrategy row with strategyType='manual-hypothesis'.
+      // No new table; reuses the existing strategy + paper-scenario surface.
+      .get('/hypotheses', async context => {
         return demoOrReal({
           context,
-          demo: () => ({
-            ok: true,
-            resolvedMarketDataSource: 'deterministic_fixture' as const,
-            dataProvider: 'fixture' as const,
-            dataQuality: 'synthetic' as const,
-            barsCount: 0,
-            firstBarDate: null,
-            lastBarDate: null,
-            fallbackUsed: false,
-            fallbackReason: null,
-            sample: [],
-            dataWarnings: ['Demo mode: synthetic preview only.'],
-            requestId,
-          }),
+          demo: () => ({ ok: true, hypotheses: DEMO_HYPOTHESES }),
           real: async () => {
-            requireAdmin(context)
-            const {
-              symbol,
-              exchange,
-              timeframe,
-              startDate,
-              endDate,
-              dataSourcePreference,
-              preferredProvider,
-              data,
-            } = context.body
-            const resolution = await resolveMarketData({
-              input: {
-                symbol,
-                ...(exchange ? { exchange } : {}),
-                interval: timeframe ?? '1d',
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
-                dataSourcePreference: dataSourcePreference ?? 'auto',
-                preferredProvider: preferredProvider ?? 'auto',
-                callerData: Array.isArray(data) ? data : null,
-                requestId,
-              },
-              deps: { db, ...marketDataDeps },
-            })
-            if (!resolution.ok) {
-              context.set.status = 422
-              return {
-                ok: false,
-                code: resolution.code,
-                message: resolution.message,
-                attempted: resolution.attempted,
-                requestId,
-              }
-            }
-            return {
-              ok: true,
-              resolvedMarketDataSource: resolution.resolvedMarketDataSource,
-              dataProvider: resolution.dataProvider,
-              dataQuality: resolution.dataQuality,
-              dataWarnings: resolution.dataWarnings,
-              barsCount: resolution.barsCount,
-              firstBarDate: resolution.firstBarDate,
-              lastBarDate: resolution.lastBarDate,
-              fallbackUsed: resolution.fallbackUsed,
-              fallbackReason: resolution.fallbackReason,
-              sample: resolution.bars.slice(0, 50),
-              requestId,
-            }
+            const items = await hypotheses.listManualHypotheses()
+            return { ok: true, hypotheses: items }
           },
         })
-      },
-      {
-        body: t.Object({
-          symbol: t.String(),
-          exchange: t.Optional(t.String()),
-          timeframe: t.Optional(t.String()),
-          startDate: t.String(),
-          endDate: t.String(),
-          dataSourcePreference: t.Optional(
-            t.Union([
-              t.Literal('auto'),
-              t.Literal('cached'),
-              t.Literal('provider'),
-              t.Literal('caller_provided'),
-              t.Literal('deterministic_fixture'),
-            ])
-          ),
-          preferredProvider: t.Optional(
-            t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
-          ),
-          data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
-        }),
-      }
-    )
-
-    // --- Scenarios ---
-    .get('/scenarios', async context => {
-      return demoOrReal({
-        context,
-        demo: () => ({ ok: true, scenarios: DEMO_SCENARIOS }),
-        real: async () => {
-          const scenarios = await repo.listScenarios()
-          return { ok: true, scenarios }
-        },
       })
-    })
-    .post(
-      '/scenarios',
-      async context => {
+      .get('/hypotheses/:id', async context => {
+        const id = Number(context.params.id)
         const requestId = getRequestMeta(context).requestId
         return demoOrReal({
           context,
           demo: () => {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+            const found = DEMO_HYPOTHESES.find(h => h.id === id)
+            if (!found) {
+              context.set.status = 404
+              return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+            }
+            return { ok: true, hypothesis: found }
           },
           real: async () => {
-            requireAdmin(context)
-            const scenario = await repo.createScenario(context.body)
-            context.set.status = 201
-            return { ok: true, scenario }
+            const found = await hypotheses.getManualHypothesisById(id)
+            if (!found) {
+              context.set.status = 404
+              return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
+            }
+            return { ok: true, hypothesis: found }
           },
         })
-      },
-      {
-        body: t.Object({
-          name: t.String(),
-          description: t.Optional(t.String()),
-          linkedSignalItemId: t.Optional(t.Number()),
-          linkedNewsArticleId: t.Optional(t.Number()),
-          linkedStrategyId: t.Optional(t.Number()),
-          thesis: t.Optional(t.String()),
-          expectedOutcome: t.Optional(t.String()),
-          invalidationCriteria: t.Optional(t.String()),
-          riskNotes: t.Optional(t.String()),
-        }),
-      }
-    )
-    .patch(
-      '/scenarios/:id',
-      async context => {
+      })
+      .post(
+        '/hypotheses',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              try {
+                const hypothesis = await hypotheses.createManualHypothesis({
+                  name: context.body.name,
+                  slug: context.body.slug,
+                  ...(context.body.description !== undefined
+                    ? { description: context.body.description }
+                    : {}),
+                  ...(context.body.thesis !== undefined ? { thesis: context.body.thesis } : {}),
+                  ...(context.body.assumptions !== undefined
+                    ? { assumptions: context.body.assumptions }
+                    : {}),
+                  ...(context.body.caveats !== undefined ? { caveats: context.body.caveats } : {}),
+                  invalidationCriteria: context.body.invalidationCriteria,
+                  ...(context.body.entryRules !== undefined
+                    ? { entryRules: context.body.entryRules }
+                    : {}),
+                  ...(context.body.exitRules !== undefined
+                    ? { exitRules: context.body.exitRules }
+                    : {}),
+                  ...(context.body.riskRules !== undefined
+                    ? { riskRules: context.body.riskRules }
+                    : {}),
+                  ...(context.body.parameters !== undefined
+                    ? { parameters: context.body.parameters }
+                    : {}),
+                  ...(context.body.indicators !== undefined
+                    ? { indicators: context.body.indicators }
+                    : {}),
+                  ...(context.body.tags !== undefined ? { tags: context.body.tags } : {}),
+                  ...(context.body.status !== undefined ? { status: context.body.status } : {}),
+                })
+                context.set.status = 201
+                return { ok: true, hypothesis }
+              } catch (error) {
+                if (isHypothesisExecutionInstructionError(error)) {
+                  context.set.status = 422
+                  return {
+                    ok: false,
+                    code: error.code,
+                    message: error.message,
+                    matches: error.matches,
+                    requestId,
+                  }
+                }
+                if (isHypothesisValidationError(error)) {
+                  context.set.status = 422
+                  return {
+                    ok: false,
+                    code: error.code,
+                    message: error.message,
+                    field: error.field,
+                    requestId,
+                  }
+                }
+                logApiEvent({
+                  level: 'error',
+                  msg: 'trading_lab_hypothesis_create_failed',
+                  requestId,
+                  ...toErrorLogFields({ error, includeStack: false }),
+                })
+                context.set.status = 400
+                return {
+                  ok: false,
+                  code: 'CREATE_FAILED',
+                  message: 'Failed to create hypothesis',
+                  requestId,
+                }
+              }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            name: t.String({ minLength: 1, maxLength: 120 }),
+            slug: t.String({ minLength: 1, maxLength: 120, pattern: '^[a-z0-9-]+$' }),
+            description: t.Optional(t.String({ maxLength: 4000 })),
+            thesis: t.Optional(t.String({ maxLength: 2000 })),
+            assumptions: t.Optional(
+              t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })
+            ),
+            caveats: t.Optional(
+              t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })
+            ),
+            invalidationCriteria: t.Array(t.String({ minLength: 1, maxLength: 400 }), {
+              minItems: 1,
+              maxItems: 32,
+            }),
+            entryRules: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.String({ minLength: 1, maxLength: 80 }),
+                  description: t.String({ minLength: 1, maxLength: 400 }),
+                  condition: t.String({ minLength: 1, maxLength: 400 }),
+                }),
+                { maxItems: 32 }
+              )
+            ),
+            exitRules: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.String({ minLength: 1, maxLength: 80 }),
+                  description: t.String({ minLength: 1, maxLength: 400 }),
+                  condition: t.String({ minLength: 1, maxLength: 400 }),
+                }),
+                { maxItems: 32 }
+              )
+            ),
+            riskRules: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.String({ minLength: 1, maxLength: 80 }),
+                  description: t.String({ minLength: 1, maxLength: 400 }),
+                  condition: t.String({ minLength: 1, maxLength: 400 }),
+                }),
+                { maxItems: 32 }
+              )
+            ),
+            parameters: t.Optional(t.Record(t.String(), t.Unknown())),
+            indicators: t.Optional(
+              t.Array(
+                t.Object({
+                  name: t.String({ minLength: 1, maxLength: 80 }),
+                  params: t.Record(t.String(), t.Unknown()),
+                }),
+                { maxItems: 16 }
+              )
+            ),
+            tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 24 })),
+            status: t.Optional(
+              t.Union([t.Literal('draft'), t.Literal('active-paper'), t.Literal('archived')])
+            ),
+          }),
+        }
+      )
+      .patch(
+        '/hypotheses/:id',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          const id = Number(context.params.id)
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              try {
+                const updated = await hypotheses.updateManualHypothesis(id, context.body)
+                if (!updated) {
+                  context.set.status = 404
+                  return {
+                    ok: false,
+                    code: 'NOT_FOUND',
+                    message: 'Hypothesis not found',
+                    requestId,
+                  }
+                }
+                return { ok: true, hypothesis: updated }
+              } catch (error) {
+                if (isHypothesisExecutionInstructionError(error)) {
+                  context.set.status = 422
+                  return {
+                    ok: false,
+                    code: error.code,
+                    message: error.message,
+                    matches: error.matches,
+                    requestId,
+                  }
+                }
+                if (isHypothesisValidationError(error)) {
+                  context.set.status = 422
+                  return {
+                    ok: false,
+                    code: error.code,
+                    message: error.message,
+                    field: error.field,
+                    requestId,
+                  }
+                }
+                throw error
+              }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            name: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+            description: t.Optional(t.Union([t.String({ maxLength: 4000 }), t.Null()])),
+            thesis: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+            assumptions: t.Optional(
+              t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })
+            ),
+            caveats: t.Optional(
+              t.Array(t.String({ minLength: 1, maxLength: 400 }), { maxItems: 32 })
+            ),
+            invalidationCriteria: t.Optional(
+              t.Array(t.String({ minLength: 1, maxLength: 400 }), { minItems: 1, maxItems: 32 })
+            ),
+            entryRules: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.String({ minLength: 1, maxLength: 80 }),
+                  description: t.String({ minLength: 1, maxLength: 400 }),
+                  condition: t.String({ minLength: 1, maxLength: 400 }),
+                }),
+                { maxItems: 32 }
+              )
+            ),
+            exitRules: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.String({ minLength: 1, maxLength: 80 }),
+                  description: t.String({ minLength: 1, maxLength: 400 }),
+                  condition: t.String({ minLength: 1, maxLength: 400 }),
+                }),
+                { maxItems: 32 }
+              )
+            ),
+            riskRules: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.String({ minLength: 1, maxLength: 80 }),
+                  description: t.String({ minLength: 1, maxLength: 400 }),
+                  condition: t.String({ minLength: 1, maxLength: 400 }),
+                }),
+                { maxItems: 32 }
+              )
+            ),
+            parameters: t.Optional(t.Record(t.String(), t.Unknown())),
+            indicators: t.Optional(
+              t.Array(
+                t.Object({
+                  name: t.String({ minLength: 1, maxLength: 80 }),
+                  params: t.Record(t.String(), t.Unknown()),
+                }),
+                { maxItems: 16 }
+              )
+            ),
+            tags: t.Optional(t.Array(t.String({ minLength: 1, maxLength: 80 }), { maxItems: 24 })),
+            status: t.Optional(
+              t.Union([t.Literal('draft'), t.Literal('active-paper'), t.Literal('archived')])
+            ),
+          }),
+        }
+      )
+      .post('/hypotheses/:id/archive', async context => {
         const requestId = getRequestMeta(context).requestId
         const id = Number(context.params.id)
         return demoOrReal({
           context,
           demo: () => {
             context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+            return {
+              ok: false,
+              code: 'DEMO_MODE_FORBIDDEN',
+              message: 'Admin session required',
+              requestId,
+            }
           },
           real: async () => {
             requireAdmin(context)
-            const scenario = await repo.updateScenario(id, context.body)
-            if (!scenario) {
+            const archived = await hypotheses.archiveManualHypothesis(id)
+            if (!archived) {
               context.set.status = 404
-              return { ok: false, code: 'NOT_FOUND', message: 'Scenario not found', requestId }
+              return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found', requestId }
             }
-            return { ok: true, scenario }
+            return { ok: true, hypothesis: archived }
           },
         })
-      },
-      {
-        body: t.Object({
-          name: t.Optional(t.String()),
-          description: t.Optional(t.String()),
-          status: t.Optional(t.String()),
-          thesis: t.Optional(t.String()),
-          expectedOutcome: t.Optional(t.String()),
-          invalidationCriteria: t.Optional(t.String()),
-          riskNotes: t.Optional(t.String()),
-        }),
-      }
-    )
-
-    // --- Attention ---
-    .get('/attention', async context => {
-      const q = context.query as Record<string, string | undefined>
-      return demoOrReal({
-        context,
-        demo: () => ({
-          ok: true,
-          items: [
-            {
-              id: 1,
-              sourceType: 'signal',
-              sourceId: 'demo-signal-1',
-              severity: 'important',
-              status: 'open',
-              title: 'Fed rate decision signal detected',
-              summary: 'Multiple sources report potential Fed policy shift.',
-              reason: 'High-impact macro signal from multiple providers',
-              actionHref: '/radar',
-              dedupeKey: 'demo-attention-1',
-              scope: 'demo',
-              createdAt: '2026-04-26T08:00:00Z',
-              updatedAt: '2026-04-26T08:00:00Z',
-              expiresAt: null,
-              acknowledgedAt: null,
-              resolvedAt: null,
+      })
+      .post(
+        '/hypotheses/:id/scenarios',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          const id = Number(context.params.id)
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
             },
-          ],
-          openCount: 1,
-        }),
-        real: async () => {
-          const opts: { status?: string; sourceType?: string; severity?: string } = {}
-          if (q.status) opts.status = q.status
-          if (q.sourceType) opts.sourceType = q.sourceType
-          if (q.severity) opts.severity = q.severity
-          const [items, openCount] = await Promise.all([
-            repo.listAttentionItems(opts),
-            repo.countOpenAttentionItems(),
-          ])
-          return { ok: true, items, openCount }
+            real: async () => {
+              requireAdmin(context)
+              try {
+                const scenario = await hypotheses.createScenarioForHypothesis(id, {
+                  name: context.body.name,
+                  ...(context.body.description !== undefined
+                    ? { description: context.body.description }
+                    : {}),
+                  ...(context.body.thesis !== undefined ? { thesis: context.body.thesis } : {}),
+                  ...(context.body.expectedOutcome !== undefined
+                    ? { expectedOutcome: context.body.expectedOutcome }
+                    : {}),
+                  invalidationCriteria: context.body.invalidationCriteria,
+                  ...(context.body.riskNotes !== undefined
+                    ? { riskNotes: context.body.riskNotes }
+                    : {}),
+                  ...(context.body.linkedSignalItemId !== undefined
+                    ? { linkedSignalItemId: context.body.linkedSignalItemId }
+                    : {}),
+                  ...(context.body.linkedNewsArticleId !== undefined
+                    ? { linkedNewsArticleId: context.body.linkedNewsArticleId }
+                    : {}),
+                })
+                if (!scenario) {
+                  context.set.status = 404
+                  return {
+                    ok: false,
+                    code: 'NOT_FOUND',
+                    message: 'Hypothesis not found',
+                    requestId,
+                  }
+                }
+                context.set.status = 201
+                return { ok: true, scenario }
+              } catch (error) {
+                if (isHypothesisExecutionInstructionError(error)) {
+                  context.set.status = 422
+                  return {
+                    ok: false,
+                    code: error.code,
+                    message: error.message,
+                    matches: error.matches,
+                    requestId,
+                  }
+                }
+                if (isHypothesisValidationError(error)) {
+                  context.set.status = 422
+                  return {
+                    ok: false,
+                    code: error.code,
+                    message: error.message,
+                    field: error.field,
+                    requestId,
+                  }
+                }
+                throw error
+              }
+            },
+          })
         },
-      })
-    })
-    .patch('/attention/:id', async context => {
-      const requestId = getRequestMeta(context).requestId
-      const id = Number(context.params.id)
-      const { status } = context.body as { status: string }
-      return demoOrReal({
-        context,
-        demo: () => {
-          context.set.status = 403
-          return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
-        },
-        real: async () => {
-          requireAdmin(context)
-          const validStatuses = ['open', 'acknowledged', 'dismissed', 'resolved'] as const
-          const typedStatus = validStatuses.includes(status as typeof validStatuses[number])
-            ? (status as typeof validStatuses[number])
-            : 'open'
-          const item = await repo.updateAttentionItemStatus(id, typedStatus)
-          if (!item) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Attention item not found', requestId }
-          }
-          return { ok: true, item }
-        },
-      })
-    })
+        {
+          body: t.Object({
+            name: t.String({ minLength: 1, maxLength: 120 }),
+            description: t.Optional(t.String({ maxLength: 4000 })),
+            thesis: t.Optional(t.String({ maxLength: 2000 })),
+            expectedOutcome: t.Optional(t.String({ maxLength: 2000 })),
+            invalidationCriteria: t.String({ minLength: 1, maxLength: 1200 }),
+            riskNotes: t.Optional(t.String({ maxLength: 2000 })),
+            linkedSignalItemId: t.Optional(t.Number()),
+            linkedNewsArticleId: t.Optional(t.Number()),
+          }),
+        }
+      )
 
-    // --- Attention rebuild (auto-generate from signals/providers/runs) ---
-    .post('/attention/rebuild', async context => {
-      const requestId = getRequestMeta(context).requestId
-      return demoOrReal({
-        context,
-        demo: () => ({ ok: true, generated: 0, fromSignals: 0, fromProviders: 0, fromIngestionRuns: 0, fromBacktests: 0, requestId }),
-        real: async () => {
-          requireAdmin(context)
-          try {
-            const { runAttentionAutoGenerator } = await import(
-              '../services/attention-auto-generator'
-            )
-            const result = await runAttentionAutoGenerator({ db })
-            return { ...result, requestId }
-          } catch (error) {
-            logApiEvent({
-              level: 'error',
-              msg: 'attention_rebuild_failed',
-              requestId,
-              ...toErrorLogFields({ error, includeStack: false }),
-            })
-            context.set.status = 500
-            return {
-              ok: false,
-              code: 'ATTENTION_REBUILD_FAILED',
-              message: 'Failed to rebuild attention items',
-              requestId,
-            }
-          }
-        },
+      // --- Backtest runs ---
+      .get('/backtests', async context => {
+        const q = context.query as Record<string, string | undefined>
+        return demoOrReal({
+          context,
+          demo: () => ({ ok: true, backtests: DEMO_BACKTESTS }),
+          real: async () => {
+            const opts: { strategyId?: number; limit?: number } = {}
+            if (q.strategyId) opts.strategyId = Number(q.strategyId)
+            if (q.limit) opts.limit = Number(q.limit)
+            const backtests = await repo.listBacktestRuns(opts)
+            return { ok: true, backtests }
+          },
+        })
       })
-    })
-
-    // --- Create scenario from signal (prefill thesis) ---
-    .post(
-      '/scenarios/from-signal',
-      async context => {
+      .get('/backtests/:id', async context => {
+        const id = Number(context.params.id)
         const requestId = getRequestMeta(context).requestId
-        const { signalItemId, linkedStrategyId } = context.body
+        return demoOrReal({
+          context,
+          demo: () => {
+            const b = DEMO_BACKTESTS.find(b => b.id === id)
+            if (!b) {
+              context.set.status = 404
+              return { ok: false, code: 'NOT_FOUND', message: 'Backtest run not found', requestId }
+            }
+            return { ok: true, backtest: b }
+          },
+          real: async () => {
+            const backtest = await repo.getBacktestRun(id)
+            if (!backtest) {
+              context.set.status = 404
+              return { ok: false, code: 'NOT_FOUND', message: 'Backtest run not found', requestId }
+            }
+            return { ok: true, backtest }
+          },
+        })
+      })
+      .post(
+        '/backtests/run',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              const {
+                strategyId,
+                symbol,
+                exchange,
+                timeframe,
+                startDate,
+                endDate,
+                initialCash,
+                feesBps,
+                slippageBps,
+                spreadBps,
+                data,
+                useDemoData,
+                dataSourcePreference,
+                preferredProvider,
+              } = context.body
+
+              const startDateObj = new Date(startDate)
+              const endDateObj = new Date(endDate)
+              const interval = timeframe ?? '1d'
+
+              // Pick effective preference. Legacy callers may still pass
+              // useDemoData=false → "provider", useDemoData=true → "auto".
+              const effectivePreference: DataSourcePreference =
+                dataSourcePreference ??
+                (Array.isArray(data) && data.length > 0
+                  ? 'caller_provided'
+                  : useDemoData === false
+                    ? 'provider'
+                    : 'auto')
+
+              // Resolve OHLCV through adapter (cache → provider → fixture chain)
+              const resolution = await resolveMarketData({
+                input: {
+                  symbol,
+                  ...(exchange ? { exchange } : {}),
+                  interval,
+                  startDate: startDateObj,
+                  endDate: endDateObj,
+                  dataSourcePreference: effectivePreference,
+                  preferredProvider: preferredProvider ?? 'auto',
+                  callerData: Array.isArray(data) ? data : null,
+                  requestId,
+                },
+                deps: { db, ...marketDataDeps },
+              })
+
+              // Build initial run record with resolved data source
+              const dataSource = resolution.ok ? resolution.resolvedMarketDataSource : 'unavailable'
+
+              const runInput: Parameters<typeof repo.createBacktestRun>[0] = {
+                strategyId,
+                name: `${symbol} ${startDate.slice(0, 10)} to ${endDate.slice(0, 10)}`,
+                symbol,
+                startDate: startDateObj,
+                endDate: endDateObj,
+                marketDataSource: dataSource,
+              }
+              if (timeframe !== undefined) runInput.timeframe = timeframe
+              if (initialCash !== undefined) runInput.initialCash = initialCash
+              if (feesBps !== undefined) runInput.feesBps = feesBps
+              if (slippageBps !== undefined) runInput.slippageBps = slippageBps
+              if (spreadBps !== undefined) runInput.spreadBps = spreadBps
+
+              const run = await repo.createBacktestRun(runInput)
+
+              if (!resolution.ok) {
+                await repo.updateBacktestRunResult(run.id, {
+                  runStatus: 'failed',
+                  runStartedAt: new Date(),
+                  runFinishedAt: new Date(),
+                  durationMs: 0,
+                  errorSummary: resolution.message,
+                })
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: resolution.code,
+                  message: resolution.message,
+                  attempted: resolution.attempted,
+                  runId: run.id,
+                  requestId,
+                }
+              }
+              const ohlcv = resolution.bars
+
+              if (ohlcv.length < 5) {
+                await repo.updateBacktestRunResult(run.id, {
+                  runStatus: 'failed',
+                  runStartedAt: new Date(),
+                  runFinishedAt: new Date(),
+                  durationMs: 0,
+                  errorSummary: `Only ${ohlcv.length} bars resolved (minimum 5).`,
+                })
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: 'DATA_UNAVAILABLE',
+                  message: `Only ${ohlcv.length} bars resolved (minimum 5).`,
+                  resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+                  runId: run.id,
+                  requestId,
+                }
+              }
+
+              // Get strategy
+              const strategy = await repo.getStrategy(strategyId)
+              if (!strategy) {
+                context.set.status = 404
+                return {
+                  ok: false,
+                  code: 'STRATEGY_NOT_FOUND',
+                  message: 'Strategy not found',
+                  requestId,
+                }
+              }
+
+              // Call quant service
+              const startedAt = new Date()
+              const strategyParams = strategy.parameters ?? {}
+              const strategyTypeForQuant =
+                (strategyParams.strategy_type as string | undefined) ??
+                (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')
+                  ? 'buy_and_hold'
+                  : 'buy_and_hold')
+              const quantResult = await callQuantService(
+                '/quant/backtest',
+                {
+                  strategy_type: strategyTypeForQuant,
+                  data: ohlcv,
+                  initial_cash: initialCash,
+                  fees_bps: feesBps,
+                  slippage_bps: slippageBps,
+                  spread_bps: spreadBps,
+                  params: strategyParams,
+                },
+                requestId,
+                60_000
+              )
+
+              if (!quantResult.ok) {
+                await repo.updateBacktestRunResult(run.id, {
+                  runStatus: 'failed',
+                  runStartedAt: startedAt,
+                  runFinishedAt: new Date(),
+                  durationMs: Date.now() - startedAt.getTime(),
+                  errorSummary: quantResult.error ?? 'Quant service error',
+                })
+                // Surface as attention item (fail-soft, do not break response)
+                try {
+                  await repo.upsertAttentionItem({
+                    sourceType: 'trading-lab',
+                    sourceId: `backtest:${run.id}`,
+                    severity: 'important',
+                    title: `Backtest failed: ${strategy.name}`,
+                    summary: quantResult.error ?? 'Quant service error',
+                    reason: 'Backtest run failed',
+                    actionHref: '/ia/trading-lab',
+                    dedupeKey: `trading-lab:backtest:${run.id}`,
+                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                  })
+                } catch {
+                  /* fail-soft */
+                }
+
+                context.set.status = 502
+                return {
+                  ok: false,
+                  code: 'BACKTEST_FAILED',
+                  message: quantResult.error ?? 'Backtest failed',
+                  runId: run.id,
+                  requestId,
+                }
+              }
+
+              const qd = quantResult.data as Record<string, unknown>
+              const metrics = qd.metrics as Record<string, unknown> | null
+              const caveats = (qd.caveats as string[] | undefined) ?? []
+              await repo.updateBacktestRunResult(run.id, {
+                runStatus: 'completed',
+                runStartedAt: startedAt,
+                runFinishedAt: new Date(),
+                durationMs: Date.now() - startedAt.getTime(),
+                paramsHash: qd.params_hash,
+                dataHash: qd.data_hash,
+                resultSummary: {
+                  strategy_type: qd.strategy_type,
+                  dataSource,
+                  dataProvider: resolution.dataProvider,
+                  dataQuality: resolution.dataQuality,
+                  dataWarnings: resolution.dataWarnings,
+                  fallbackUsed: resolution.fallbackUsed,
+                  fallbackReason: resolution.fallbackReason,
+                  firstBarDate: resolution.firstBarDate,
+                  lastBarDate: resolution.lastBarDate,
+                  dataPoints: ohlcv.length,
+                },
+                metrics: metrics ?? {},
+                equityCurve: qd.equity_curve,
+                trades: qd.trades,
+                drawdowns: qd.drawdowns,
+              })
+
+              // Auto-trigger graph ingest (fail-soft)
+              const graphResult = await sendBacktestToKnowledgeGraph({
+                knowledgeServiceUrl,
+                knowledgeServiceEnabled,
+                ...internalAuth,
+                ingestEnabled: graphIngestEnabled,
+                requestId,
+                input: {
+                  strategy: {
+                    id: strategy.id,
+                    name: strategy.name,
+                    slug: strategy.slug,
+                    strategyType: strategy.strategyType,
+                    status: strategy.status,
+                    description: strategy.description ?? null,
+                    tags: strategy.tags,
+                    assumptions: strategy.assumptions ?? [],
+                    caveats: strategy.caveats ?? [],
+                    indicators: strategy.indicators ?? [],
+                  },
+                  backtest: {
+                    id: run.id,
+                    symbol,
+                    startDate: startDateObj,
+                    endDate: endDateObj,
+                    initialCash: initialCash ?? 10000,
+                    feesBps: feesBps ?? 10,
+                    slippageBps: slippageBps ?? 5,
+                    metrics,
+                    paramsHash: (qd.params_hash as string) ?? null,
+                    dataHash: (qd.data_hash as string) ?? null,
+                    runStatus: 'completed',
+                  },
+                  caveats,
+                },
+              })
+              if (!graphResult.ok) {
+                logApiEvent({
+                  level: 'info',
+                  msg: 'trading_lab_graph_ingest_skipped',
+                  requestId,
+                  reason: graphResult.reason ?? 'unknown',
+                  runId: run.id,
+                })
+              }
+
+              return {
+                ok: true,
+                runId: run.id,
+                metrics,
+                caveats,
+                resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+                dataProvider: resolution.dataProvider,
+                dataQuality: resolution.dataQuality,
+                dataWarnings: resolution.dataWarnings,
+                fallbackUsed: resolution.fallbackUsed,
+                fallbackReason: resolution.fallbackReason,
+                barsCount: resolution.barsCount,
+                firstBarDate: resolution.firstBarDate,
+                lastBarDate: resolution.lastBarDate,
+                graphIngest: { ok: graphResult.ok, reason: graphResult.reason ?? null },
+                requestId,
+              }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            strategyId: t.Number(),
+            symbol: t.String(),
+            exchange: t.Optional(t.String()),
+            timeframe: t.Optional(t.String()),
+            startDate: t.String(),
+            endDate: t.String(),
+            initialCash: t.Optional(t.Number()),
+            feesBps: t.Optional(t.Number()),
+            slippageBps: t.Optional(t.Number()),
+            spreadBps: t.Optional(t.Number()),
+            data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
+            useDemoData: t.Optional(t.Boolean()),
+            dataSourcePreference: t.Optional(
+              t.Union([
+                t.Literal('auto'),
+                t.Literal('cached'),
+                t.Literal('provider'),
+                t.Literal('caller_provided'),
+                t.Literal('deterministic_fixture'),
+              ])
+            ),
+            preferredProvider: t.Optional(
+              t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
+            ),
+          }),
+        }
+      )
+
+      // --- Walk-forward validation ---
+      .post(
+        '/backtests/walk-forward',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              const {
+                strategyId,
+                symbol,
+                exchange,
+                timeframe,
+                startDate,
+                endDate,
+                initialCash,
+                feesBps,
+                slippageBps,
+                spreadBps,
+                data,
+                dataSourcePreference,
+                preferredProvider,
+                trainBars,
+                testBars,
+                stepBars,
+              } = context.body
+
+              const startDateObj = new Date(startDate)
+              const endDateObj = new Date(endDate)
+              const interval = timeframe ?? '1d'
+
+              const resolution = await resolveMarketData({
+                input: {
+                  symbol,
+                  ...(exchange ? { exchange } : {}),
+                  interval,
+                  startDate: startDateObj,
+                  endDate: endDateObj,
+                  dataSourcePreference: dataSourcePreference ?? 'auto',
+                  preferredProvider: preferredProvider ?? 'auto',
+                  callerData: Array.isArray(data) ? data : null,
+                  requestId,
+                },
+                deps: { db, ...marketDataDeps },
+              })
+
+              if (!resolution.ok) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: resolution.code,
+                  message: resolution.message,
+                  attempted: resolution.attempted,
+                  requestId,
+                }
+              }
+
+              const strategy = await repo.getStrategy(strategyId)
+              if (!strategy) {
+                context.set.status = 404
+                return {
+                  ok: false,
+                  code: 'STRATEGY_NOT_FOUND',
+                  message: 'Strategy not found',
+                  requestId,
+                }
+              }
+
+              const strategyParams = strategy.parameters ?? {}
+              const strategyTypeForQuant =
+                (strategyParams.strategy_type as string | undefined) ??
+                (typeof strategy.slug === 'string' && strategy.slug.includes('buy-and-hold')
+                  ? 'buy_and_hold'
+                  : 'buy_and_hold')
+
+              const quantResult = await callQuantService(
+                '/quant/walk-forward',
+                {
+                  strategy_type: strategyTypeForQuant,
+                  data: resolution.bars,
+                  initial_cash: initialCash ?? 10000,
+                  fees_bps: feesBps ?? 10,
+                  slippage_bps: slippageBps ?? 5,
+                  spread_bps: spreadBps ?? 2,
+                  params: strategyParams,
+                  train_bars: trainBars ?? 120,
+                  test_bars: testBars ?? 30,
+                  step_bars: stepBars ?? 30,
+                },
+                requestId,
+                90_000
+              )
+              if (!quantResult.ok) {
+                context.set.status = 502
+                return {
+                  ok: false,
+                  code: 'WALK_FORWARD_FAILED',
+                  message: quantResult.error ?? 'Walk-forward failed',
+                  requestId,
+                }
+              }
+
+              const wf = quantResult.data as Record<string, unknown>
+              return {
+                ok: true,
+                strategyId,
+                symbol,
+                interval,
+                resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+                dataProvider: resolution.dataProvider,
+                dataQuality: resolution.dataQuality,
+                fallbackUsed: resolution.fallbackUsed,
+                barsCount: resolution.barsCount,
+                windows: wf.windows,
+                inSample: wf.in_sample,
+                outOfSample: wf.out_of_sample,
+                stabilityScore: wf.stability_score,
+                degradationRatio: wf.degradation_ratio,
+                overfitWarning: wf.overfit_warning,
+                summary: wf.summary,
+                caveats: [
+                  'Walk-forward validation reduces — but does not eliminate — overfitting risk.',
+                  'Out-of-sample metrics still depend on past regime persistence.',
+                  'Paper-trading only. No real capital at risk.',
+                ],
+                requestId,
+              }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            strategyId: t.Number(),
+            symbol: t.String(),
+            exchange: t.Optional(t.String()),
+            timeframe: t.Optional(t.String()),
+            startDate: t.String(),
+            endDate: t.String(),
+            initialCash: t.Optional(t.Number()),
+            feesBps: t.Optional(t.Number()),
+            slippageBps: t.Optional(t.Number()),
+            spreadBps: t.Optional(t.Number()),
+            data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
+            dataSourcePreference: t.Optional(
+              t.Union([
+                t.Literal('auto'),
+                t.Literal('cached'),
+                t.Literal('provider'),
+                t.Literal('caller_provided'),
+                t.Literal('deterministic_fixture'),
+              ])
+            ),
+            preferredProvider: t.Optional(
+              t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
+            ),
+            trainBars: t.Optional(t.Number()),
+            testBars: t.Optional(t.Number()),
+            stepBars: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // --- Market data preview (admin-only — useful for the runner UI) ---
+      .post(
+        '/market-data/preview',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => ({
+              ok: true,
+              resolvedMarketDataSource: 'deterministic_fixture' as const,
+              dataProvider: 'fixture' as const,
+              dataQuality: 'synthetic' as const,
+              barsCount: 0,
+              firstBarDate: null,
+              lastBarDate: null,
+              fallbackUsed: false,
+              fallbackReason: null,
+              sample: [],
+              dataWarnings: ['Demo mode: synthetic preview only.'],
+              requestId,
+            }),
+            real: async () => {
+              requireAdmin(context)
+              const {
+                symbol,
+                exchange,
+                timeframe,
+                startDate,
+                endDate,
+                dataSourcePreference,
+                preferredProvider,
+                data,
+              } = context.body
+              const resolution = await resolveMarketData({
+                input: {
+                  symbol,
+                  ...(exchange ? { exchange } : {}),
+                  interval: timeframe ?? '1d',
+                  startDate: new Date(startDate),
+                  endDate: new Date(endDate),
+                  dataSourcePreference: dataSourcePreference ?? 'auto',
+                  preferredProvider: preferredProvider ?? 'auto',
+                  callerData: Array.isArray(data) ? data : null,
+                  requestId,
+                },
+                deps: { db, ...marketDataDeps },
+              })
+              if (!resolution.ok) {
+                context.set.status = 422
+                return {
+                  ok: false,
+                  code: resolution.code,
+                  message: resolution.message,
+                  attempted: resolution.attempted,
+                  requestId,
+                }
+              }
+              return {
+                ok: true,
+                resolvedMarketDataSource: resolution.resolvedMarketDataSource,
+                dataProvider: resolution.dataProvider,
+                dataQuality: resolution.dataQuality,
+                dataWarnings: resolution.dataWarnings,
+                barsCount: resolution.barsCount,
+                firstBarDate: resolution.firstBarDate,
+                lastBarDate: resolution.lastBarDate,
+                fallbackUsed: resolution.fallbackUsed,
+                fallbackReason: resolution.fallbackReason,
+                sample: resolution.bars.slice(0, 50),
+                requestId,
+              }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            symbol: t.String(),
+            exchange: t.Optional(t.String()),
+            timeframe: t.Optional(t.String()),
+            startDate: t.String(),
+            endDate: t.String(),
+            dataSourcePreference: t.Optional(
+              t.Union([
+                t.Literal('auto'),
+                t.Literal('cached'),
+                t.Literal('provider'),
+                t.Literal('caller_provided'),
+                t.Literal('deterministic_fixture'),
+              ])
+            ),
+            preferredProvider: t.Optional(
+              t.Union([t.Literal('auto'), t.Literal('eodhd'), t.Literal('twelvedata')])
+            ),
+            data: t.Optional(t.Array(t.Record(t.String(), t.Unknown()))),
+          }),
+        }
+      )
+
+      // --- Scenarios ---
+      .get('/scenarios', async context => {
+        return demoOrReal({
+          context,
+          demo: () => ({ ok: true, scenarios: DEMO_SCENARIOS }),
+          real: async () => {
+            const scenarios = await repo.listScenarios()
+            return { ok: true, scenarios }
+          },
+        })
+      })
+      .post(
+        '/scenarios',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              const scenario = await repo.createScenario(context.body)
+              context.set.status = 201
+              return { ok: true, scenario }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            name: t.String(),
+            description: t.Optional(t.String()),
+            linkedSignalItemId: t.Optional(t.Number()),
+            linkedNewsArticleId: t.Optional(t.Number()),
+            linkedStrategyId: t.Optional(t.Number()),
+            thesis: t.Optional(t.String()),
+            expectedOutcome: t.Optional(t.String()),
+            invalidationCriteria: t.Optional(t.String()),
+            riskNotes: t.Optional(t.String()),
+          }),
+        }
+      )
+      .patch(
+        '/scenarios/:id',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          const id = Number(context.params.id)
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              const scenario = await repo.updateScenario(id, context.body)
+              if (!scenario) {
+                context.set.status = 404
+                return { ok: false, code: 'NOT_FOUND', message: 'Scenario not found', requestId }
+              }
+              return { ok: true, scenario }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            name: t.Optional(t.String()),
+            description: t.Optional(t.String()),
+            status: t.Optional(t.String()),
+            thesis: t.Optional(t.String()),
+            expectedOutcome: t.Optional(t.String()),
+            invalidationCriteria: t.Optional(t.String()),
+            riskNotes: t.Optional(t.String()),
+          }),
+        }
+      )
+
+      // --- Attention ---
+      .get('/attention', async context => {
+        const q = context.query as Record<string, string | undefined>
+        return demoOrReal({
+          context,
+          demo: () => ({
+            ok: true,
+            items: [
+              {
+                id: 1,
+                sourceType: 'signal',
+                sourceId: 'demo-signal-1',
+                severity: 'important',
+                status: 'open',
+                title: 'Fed rate decision signal detected',
+                summary: 'Multiple sources report potential Fed policy shift.',
+                reason: 'High-impact macro signal from multiple providers',
+                actionHref: '/radar',
+                dedupeKey: 'demo-attention-1',
+                scope: 'demo',
+                createdAt: '2026-04-26T08:00:00Z',
+                updatedAt: '2026-04-26T08:00:00Z',
+                expiresAt: null,
+                acknowledgedAt: null,
+                resolvedAt: null,
+              },
+            ],
+            openCount: 1,
+          }),
+          real: async () => {
+            const opts: { status?: string; sourceType?: string; severity?: string } = {}
+            if (q.status) opts.status = q.status
+            if (q.sourceType) opts.sourceType = q.sourceType
+            if (q.severity) opts.severity = q.severity
+            const [items, openCount] = await Promise.all([
+              repo.listAttentionItems(opts),
+              repo.countOpenAttentionItems(),
+            ])
+            return { ok: true, items, openCount }
+          },
+        })
+      })
+      .patch('/attention/:id', async context => {
+        const requestId = getRequestMeta(context).requestId
+        const id = Number(context.params.id)
+        const { status } = context.body as { status: string }
         return demoOrReal({
           context,
           demo: () => {
             context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required', requestId }
+            return {
+              ok: false,
+              code: 'DEMO_MODE_FORBIDDEN',
+              message: 'Admin session required',
+              requestId,
+            }
           },
           real: async () => {
             requireAdmin(context)
-            const signal = await signalItemsRepo.getItemById(signalItemId)
-            if (!signal) {
+            const validStatuses = ['open', 'acknowledged', 'dismissed', 'resolved'] as const
+            const typedStatus = validStatuses.includes(status as (typeof validStatuses)[number])
+              ? (status as (typeof validStatuses)[number])
+              : 'open'
+            const item = await repo.updateAttentionItemStatus(id, typedStatus)
+            if (!item) {
               context.set.status = 404
-              return { ok: false, code: 'SIGNAL_NOT_FOUND', message: 'Signal item not found', requestId }
+              return {
+                ok: false,
+                code: 'NOT_FOUND',
+                message: 'Attention item not found',
+                requestId,
+              }
             }
-
-            const tickerHint =
-              signal.tickers && signal.tickers.length > 0 ? ` (tickers: ${signal.tickers.slice(0, 3).join(', ')})` : ''
-            const thesis =
-              `Hypothesis derived from signal "${signal.title}"${tickerHint}.\n` +
-              `Reason: ${signal.attentionReason ?? 'flagged signal'}.\n` +
-              `Domain: ${signal.signalDomain}. Source: ${signal.sourceProvider}.\n\n` +
-              `Note: signals alone are weak evidence — corroborate with deterministic data and challenger before acting.`
-            const invalidation =
-              'Define explicit price/event/time invalidation criteria before tracking this scenario.'
-
-            const scenarioInput: Parameters<typeof repo.createScenario>[0] = {
-              name: signal.title.slice(0, 120),
-              description: `Scenario auto-generated from signal #${signal.id}`,
-              linkedSignalItemId: signal.id,
-              thesis,
-              invalidationCriteria: invalidation,
-              riskNotes:
-                'Paper-trading only. Backtests are not predictions. Technical strategies are experimental.',
-            }
-            if (linkedStrategyId !== undefined) scenarioInput.linkedStrategyId = linkedStrategyId
-
-            const scenario = await repo.createScenario(scenarioInput)
-            context.set.status = 201
-            return { ok: true, scenario, requestId }
+            return { ok: true, item }
           },
         })
-      },
-      {
-        body: t.Object({
-          signalItemId: t.Number(),
-          linkedStrategyId: t.Optional(t.Number()),
-        }),
-      }
-    )
-
-    // --- Unified signals feed ---
-    .get('/signals/feed', async context => {
-      const q = context.query as Record<string, string | undefined>
-      return demoOrReal({
-        context,
-        demo: () => ({
-          ok: true,
-          items: [],
-          total: 0,
-          caveats: ['Demo mode: no live signal data'],
-        }),
-        real: async () => {
-          // Delegate to existing signal items repository for now
-          // Unified feed combines news_article + signal_item
-          const { createDashboardSignalItemsRepository } = await import(
-            '../repositories/dashboard-signal-items-repository'
-          )
-          const itemsRepo = createDashboardSignalItemsRepository({ db })
-          const limit = Number(q.limit) || 50
-          const offset = Number(q.offset) || 0
-          const opts: Parameters<typeof itemsRepo.listItems>[0] = { limit, offset }
-          if (q.signalDomain) opts.signalDomain = q.signalDomain
-          if (q.sourceProvider) opts.sourceProvider = q.sourceProvider
-          if (q.requiresAttention === 'true') opts.requiresAttention = true
-
-          const items = await itemsRepo.listItems(opts)
-          const total = await itemsRepo.countItems()
-          return {
-            ok: true,
-            items: items.map(item => ({
-              ...item,
-              sourceType: item.sourceType ?? 'social',
-              sourceProvider: item.sourceProvider,
-            })),
-            total,
-          }
-        },
       })
-    })
+
+      // --- Attention rebuild (auto-generate from signals/providers/runs) ---
+      .post('/attention/rebuild', async context => {
+        const requestId = getRequestMeta(context).requestId
+        return demoOrReal({
+          context,
+          demo: () => ({
+            ok: true,
+            generated: 0,
+            fromSignals: 0,
+            fromProviders: 0,
+            fromIngestionRuns: 0,
+            fromBacktests: 0,
+            requestId,
+          }),
+          real: async () => {
+            requireAdmin(context)
+            try {
+              const { runAttentionAutoGenerator } =
+                await import('../services/attention-auto-generator')
+              const result = await runAttentionAutoGenerator({ db })
+              return { ...result, requestId }
+            } catch (error) {
+              logApiEvent({
+                level: 'error',
+                msg: 'attention_rebuild_failed',
+                requestId,
+                ...toErrorLogFields({ error, includeStack: false }),
+              })
+              context.set.status = 500
+              return {
+                ok: false,
+                code: 'ATTENTION_REBUILD_FAILED',
+                message: 'Failed to rebuild attention items',
+                requestId,
+              }
+            }
+          },
+        })
+      })
+
+      // --- Create scenario from signal (prefill thesis) ---
+      .post(
+        '/scenarios/from-signal',
+        async context => {
+          const requestId = getRequestMeta(context).requestId
+          const { signalItemId, linkedStrategyId } = context.body
+          return demoOrReal({
+            context,
+            demo: () => {
+              context.set.status = 403
+              return {
+                ok: false,
+                code: 'DEMO_MODE_FORBIDDEN',
+                message: 'Admin session required',
+                requestId,
+              }
+            },
+            real: async () => {
+              requireAdmin(context)
+              const signal = await signalItemsRepo.getItemById(signalItemId)
+              if (!signal) {
+                context.set.status = 404
+                return {
+                  ok: false,
+                  code: 'SIGNAL_NOT_FOUND',
+                  message: 'Signal item not found',
+                  requestId,
+                }
+              }
+
+              const tickerHint =
+                signal.tickers && signal.tickers.length > 0
+                  ? ` (tickers: ${signal.tickers.slice(0, 3).join(', ')})`
+                  : ''
+              const thesis =
+                `Hypothesis derived from signal "${signal.title}"${tickerHint}.\n` +
+                `Reason: ${signal.attentionReason ?? 'flagged signal'}.\n` +
+                `Domain: ${signal.signalDomain}. Source: ${signal.sourceProvider}.\n\n` +
+                `Note: signals alone are weak evidence — corroborate with deterministic data and challenger before acting.`
+              const invalidation =
+                'Define explicit price/event/time invalidation criteria before tracking this scenario.'
+
+              const scenarioInput: Parameters<typeof repo.createScenario>[0] = {
+                name: signal.title.slice(0, 120),
+                description: `Scenario auto-generated from signal #${signal.id}`,
+                linkedSignalItemId: signal.id,
+                thesis,
+                invalidationCriteria: invalidation,
+                riskNotes:
+                  'Paper-trading only. Backtests are not predictions. Technical strategies are experimental.',
+              }
+              if (linkedStrategyId !== undefined) scenarioInput.linkedStrategyId = linkedStrategyId
+
+              const scenario = await repo.createScenario(scenarioInput)
+              context.set.status = 201
+              return { ok: true, scenario, requestId }
+            },
+          })
+        },
+        {
+          body: t.Object({
+            signalItemId: t.Number(),
+            linkedStrategyId: t.Optional(t.Number()),
+          }),
+        }
+      )
+
+      // --- Unified signals feed ---
+      .get('/signals/feed', async context => {
+        const q = context.query as Record<string, string | undefined>
+        return demoOrReal({
+          context,
+          demo: () => ({
+            ok: true,
+            items: [],
+            total: 0,
+            caveats: ['Demo mode: no live signal data'],
+          }),
+          real: async () => {
+            // Delegate to the injected signal items repository for now
+            // Unified feed combines news_article + signal_item
+            const itemsRepo = repositories.signalItems
+            const limit = Number(q.limit) || 50
+            const offset = Number(q.offset) || 0
+            const opts: Parameters<typeof itemsRepo.listItems>[0] = { limit, offset }
+            if (q.signalDomain) opts.signalDomain = q.signalDomain
+            if (q.sourceProvider) opts.sourceProvider = q.sourceProvider
+            if (q.requiresAttention === 'true') opts.requiresAttention = true
+
+            const items = await itemsRepo.listItems(opts)
+            const total = await itemsRepo.countItems()
+            return {
+              ok: true,
+              items: items.map(item => ({
+                ...item,
+                sourceType: item.sourceType ?? 'social',
+                sourceProvider: item.sourceProvider,
+              })),
+              total,
+            }
+          },
+        })
+      })
+  )
 }

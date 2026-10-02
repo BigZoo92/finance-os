@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'bun:test'
+import { afterEach, describe, expect, it, setSystemTime } from 'bun:test'
+import { createInMemoryRedisClient } from '@finance-os/redis'
 import {
   buildDashboardNewsIngestRequest,
+  NEWS_INGEST_LOCK_KEY,
+  NEWS_INGEST_LOCK_TTL_SECONDS,
   startDashboardNewsScheduler,
   triggerDashboardNewsIngest,
 } from './news-ingest-scheduler'
@@ -17,20 +20,25 @@ describe('buildDashboardNewsIngestRequest', () => {
     expect(request.init.method).toBe('POST')
     expect(request.init.body).toBe(JSON.stringify({ trigger: 'scheduled' }))
     expect((request.init.headers as Record<string, string>)['x-request-id']).toBe('req-news-build')
-    expect((request.init.headers as Record<string, string>)['x-internal-token']).toBe('secret-token')
+    expect((request.init.headers as Record<string, string>)['x-internal-token']).toBe(
+      'secret-token'
+    )
   })
 })
 
 describe('triggerDashboardNewsIngest', () => {
-  it('skips when another ingest run already owns the lock', async () => {
+  afterEach(() => {
+    setSystemTime()
+  })
+
+  it('skips when another ingest run already owns the lock and leaves that lock intact', async () => {
+    const redis = createInMemoryRedisClient()
+    await redis.client.set(NEWS_INGEST_LOCK_KEY, 'foreign-token', { NX: true, EX: 60 })
     const events: Array<Record<string, unknown>> = []
     let fetchCalled = false
 
     const result = await triggerDashboardNewsIngest({
-      redisClient: {
-        set: async () => null,
-        del: async () => 0,
-      },
+      redisClient: redis.client,
       apiInternalUrl: 'http://api.internal.local',
       log: event => {
         events.push(event)
@@ -42,24 +50,24 @@ describe('triggerDashboardNewsIngest', () => {
       requestId: 'req-news-skip',
     })
 
-    expect(result.status).toBe('skipped')
+    expect(result).toEqual({ status: 'skipped', requestId: 'req-news-skip' })
     expect(fetchCalled).toBe(false)
     expect(events[0]?.msg).toBe('worker news ingest skipped because another run is active')
+    expect(await redis.client.get(NEWS_INGEST_LOCK_KEY)).toBe('foreign-token')
   })
 
-  it('posts to the dashboard ingest route and releases the lock on success', async () => {
+  it('posts to the dashboard ingest route with the lease signal and releases the lock on success', async () => {
+    const redis = createInMemoryRedisClient()
     const events: Array<Record<string, unknown>> = []
-    const deletedKeys: string[] = []
-    const requests: Array<{ url: string; headers: Record<string, string> }> = []
+    const requests: Array<{
+      url: string
+      headers: Record<string, string>
+      signalAborted: boolean | null
+      lockHeldDuringRequest: boolean
+    }> = []
 
     const result = await triggerDashboardNewsIngest({
-      redisClient: {
-        set: async () => 'OK',
-        del: async key => {
-          deletedKeys.push(key)
-          return 1
-        },
-      },
+      redisClient: redis.client,
       apiInternalUrl: 'http://api.internal.local/',
       privateAccessToken: 'internal-token',
       log: event => {
@@ -69,6 +77,8 @@ describe('triggerDashboardNewsIngest', () => {
         requests.push({
           url: String(url),
           headers: (init?.headers as Record<string, string>) ?? {},
+          signalAborted: init?.signal instanceof AbortSignal ? init.signal.aborted : null,
+          lockHeldDuringRequest: (await redis.client.get(NEWS_INGEST_LOCK_KEY)) !== null,
         })
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       },
@@ -87,10 +97,59 @@ describe('triggerDashboardNewsIngest', () => {
           'x-internal-token': 'internal-token',
           'x-request-id': 'req-news-success',
         },
+        signalAborted: false,
+        lockHeldDuringRequest: true,
       },
     ])
-    expect(deletedKeys).toEqual(['news:dashboard:ingest:lock'])
+    expect(await redis.client.get(NEWS_INGEST_LOCK_KEY)).toBeNull()
     expect(events.at(-1)?.msg).toBe('worker news ingest triggered')
+  })
+
+  it('releases the lock when the trigger fails', async () => {
+    const redis = createInMemoryRedisClient()
+
+    const result = await triggerDashboardNewsIngest({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: () => {},
+      fetchImpl: async () => new Response('boom', { status: 500 }),
+      requestId: 'req-news-fail',
+    })
+
+    expect(result.status).toBe('failed')
+    expect(await redis.client.get(NEWS_INGEST_LOCK_KEY)).toBeNull()
+  })
+
+  it('does not release a successor lock when its own lease expired mid-run', async () => {
+    const start = new Date('2026-09-25T10:00:00.000Z')
+    setSystemTime(start)
+    const redis = createInMemoryRedisClient()
+    const events: Array<Record<string, unknown>> = []
+
+    const result = await triggerDashboardNewsIngest({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: event => {
+        events.push(event)
+      },
+      fetchImpl: async () => {
+        // The lease expires while the HTTP call is still pending and a successor takes over.
+        setSystemTime(new Date(start.getTime() + (NEWS_INGEST_LOCK_TTL_SECONDS + 1) * 1000))
+        expect(
+          await redis.client.set(NEWS_INGEST_LOCK_KEY, 'successor-token', { NX: true, EX: 60 })
+        ).toBe('OK')
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      },
+      requestId: 'req-news-expired',
+    })
+
+    expect(result).toEqual({ status: 'triggered', requestId: 'req-news-expired' })
+    expect(await redis.client.get(NEWS_INGEST_LOCK_KEY)).toBe('successor-token')
+    expect(
+      events.some(
+        event => event.level === 'warn' && String(event.msg).includes('lock release skipped')
+      )
+    ).toBe(true)
   })
 })
 
@@ -124,14 +183,14 @@ describe('startDashboardNewsScheduler', () => {
       log: event => {
         events.push(event)
       },
-      setIntervalFn: ((handler: TimerHandler, timeout?: number) => {
+      setIntervalFn: (handler: () => void, timeout?: number) => {
         void handler
         intervals.push(timeout ?? 0)
         return 123 as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      },
     })
 
-    expect(timer).toBe(123)
+    expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
     expect(intervals).toEqual([900000])
     expect(events.at(-1)?.msg).toBe('worker news scheduler started')
   })

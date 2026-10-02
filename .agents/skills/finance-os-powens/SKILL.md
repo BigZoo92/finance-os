@@ -9,6 +9,7 @@ Read `apps/api/AGENTS.md` and `packages/powens/AGENTS.md`.
 
 ## Trust boundary
 
+- `createPowensClient` requests run through the shared provider policy (`@finance-os/provider-runtime/policy`): `timeoutMs` per attempt, `maxRetries` transient retries (408/429/5xx and network errors) with exponential jittered backoff, and an optional `signal` for cancellation. Do not reintroduce manual retry loops.
 - Demo never calls Powens, Redis, or the database.
 - Connect and callback are admin-only except for a valid short-lived signed callback state.
 - The state implementation is `apps/api/src/auth/powens-state.ts`: it is signed with `AUTH_SESSION_SECRET`, contains `admin` and `exp`, and uses timing-safe verification. Do not invent nonce/user fields without changing the contract and tests.

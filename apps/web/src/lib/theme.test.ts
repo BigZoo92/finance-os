@@ -22,7 +22,7 @@ function mockMatchMedia(prefersDark: boolean) {
 }
 
 function runBootstrapScript() {
-  // biome-ignore lint/security/noGlobalEval: The test executes the inline <head> bootstrap exactly as the browser would.
+  // oxlint-disable-next-line eslint/no-eval -- The test executes the inline <head> bootstrap exactly as the browser would.
   window.eval(themeBootstrapScript)
 }
 

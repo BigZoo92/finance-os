@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
+import { type Token, token } from '@finance-os/styled-system/tokens'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   AdvisorGraph,
   AdvisorGraphLink,
@@ -61,8 +64,30 @@ interface CanvasSize {
   height: number
 }
 
-function readCssVariable(style: CSSStyleDeclaration, name: string, fallback: string): string {
-  const value = style.getPropertyValue(name).trim()
+// The WebGL scene needs resolved colors: the palette reads Panda's semantic
+// color variables from <html> so it follows the `.dark` class like the DOM does.
+const PALETTE_TOKENS: Readonly<Record<keyof KnowledgeGraphPalette, Token>> = {
+  background: 'colors.background',
+  surface: 'colors.surface.1',
+  foreground: 'colors.foreground',
+  mutedForeground: 'colors.muted.foreground',
+  primary: 'colors.primary',
+  positive: 'colors.positive',
+  negative: 'colors.negative',
+  warning: 'colors.warning',
+  teal: 'colors.teal',
+  warmAccent: 'colors.warmAccent',
+  ai: 'colors.ai',
+}
+
+// `token.var('colors.primary')` is `var(--colors-primary)`; getPropertyValue wants
+// the bare custom property name.
+function toCustomPropertyName(reference: string): string {
+  return reference.startsWith('var(') ? reference.slice('var('.length, -1) : reference
+}
+
+function readTokenValue(style: CSSStyleDeclaration, path: Token, fallback: string): string {
+  const value = style.getPropertyValue(toCustomPropertyName(token.var(path))).trim()
   return value.length > 0 ? value : fallback
 }
 
@@ -71,17 +96,21 @@ function readKnowledgeGraphPalette(): KnowledgeGraphPalette {
   const style = getComputedStyle(document.documentElement)
   const fallback = DEFAULT_KNOWLEDGE_GRAPH_PALETTE
   return {
-    background: readCssVariable(style, '--background', fallback.background),
-    surface: readCssVariable(style, '--surface-1', fallback.surface),
-    foreground: readCssVariable(style, '--foreground', fallback.foreground),
-    mutedForeground: readCssVariable(style, '--muted-foreground', fallback.mutedForeground),
-    primary: readCssVariable(style, '--primary', fallback.primary),
-    positive: readCssVariable(style, '--positive', fallback.positive),
-    negative: readCssVariable(style, '--negative', fallback.negative),
-    warning: readCssVariable(style, '--warning', fallback.warning),
-    teal: readCssVariable(style, '--teal', fallback.teal),
-    warmAccent: readCssVariable(style, '--warm-accent', fallback.warmAccent),
-    ai: readCssVariable(style, '--ai', fallback.ai),
+    background: readTokenValue(style, PALETTE_TOKENS.background, fallback.background),
+    surface: readTokenValue(style, PALETTE_TOKENS.surface, fallback.surface),
+    foreground: readTokenValue(style, PALETTE_TOKENS.foreground, fallback.foreground),
+    mutedForeground: readTokenValue(
+      style,
+      PALETTE_TOKENS.mutedForeground,
+      fallback.mutedForeground
+    ),
+    primary: readTokenValue(style, PALETTE_TOKENS.primary, fallback.primary),
+    positive: readTokenValue(style, PALETTE_TOKENS.positive, fallback.positive),
+    negative: readTokenValue(style, PALETTE_TOKENS.negative, fallback.negative),
+    warning: readTokenValue(style, PALETTE_TOKENS.warning, fallback.warning),
+    teal: readTokenValue(style, PALETTE_TOKENS.teal, fallback.teal),
+    warmAccent: readTokenValue(style, PALETTE_TOKENS.warmAccent, fallback.warmAccent),
+    ai: readTokenValue(style, PALETTE_TOKENS.ai, fallback.ai),
   }
 }
 
@@ -123,13 +152,42 @@ function useKnowledgeGraphPalette(): KnowledgeGraphPalette {
   return palette
 }
 
+const statusOverlay = css({
+  position: 'absolute',
+  inset: '0',
+  zIndex: '10',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  p: '8',
+  textAlign: 'center',
+})
+
+const sceneFrame = css({
+  position: 'relative',
+  h: 'full',
+  w: 'full',
+  overflow: 'hidden',
+  rounded: 'frame',
+  borderWidth: '1px',
+  borderColor: 'border/60',
+  bg: 'surface.0',
+})
+
+const visuallyHidden = css({ srOnly: true })
+
+// Scene washes: inline `style` keeps the gradients next to the runtime canvas,
+// with the colors resolved through Panda's token variables.
+const SCENE_BACKGROUND = `radial-gradient(ellipse at center, ${token('colors.surface.1')} 0%, ${token('colors.surface.0')} 72%)`
+const SCENE_GLOW = `radial-gradient(circle at 30% 20%, color-mix(in srgb, ${token('colors.primary')} 12%, transparent) 0%, transparent 45%), radial-gradient(circle at 75% 80%, color-mix(in srgb, ${token('colors.teal')} 10%, transparent) 0%, transparent 52%)`
+const SCENE_GRID = `radial-gradient(color-mix(in srgb, ${token('colors.foreground')} 16%, transparent) 0.5px, transparent 0.5px), radial-gradient(color-mix(in srgb, ${token('colors.foreground')} 10%, transparent) 0.5px, transparent 0.5px)`
+
 function renderStatus(message: string) {
   return (
-    <div
-      className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center"
-      aria-live="polite"
-    >
-      <p className="max-w-md text-sm leading-relaxed text-muted-foreground">{message}</p>
+    <div className={statusOverlay} aria-live="polite">
+      <styled.p maxW="md" fontSize="sm" lineHeight="relaxed" color="muted.foreground">
+        {message}
+      </styled.p>
     </div>
   )
 }
@@ -164,13 +222,17 @@ export function KnowledgeGraph3D({
     onRenderError,
     onWebGlFailure,
   })
-  callbacksRef.current = {
-    onSelectNode,
-    onSelectLink,
-    onRenderStateChange,
-    onRenderError,
-    onWebGlFailure,
-  }
+  // Latest callbacks for the runtime and the async effects, refreshed after
+  // every commit (never written during render).
+  useLayoutEffect(() => {
+    callbacksRef.current = {
+      onSelectNode,
+      onSelectLink,
+      onRenderStateChange,
+      onRenderError,
+      onWebGlFailure,
+    }
+  })
 
   const [runtime, setRuntime] = useState<KnowledgeGraphRuntime | null>(null)
   const [renderState, setRenderState] = useState<KnowledgeGraphRenderState>('idle')
@@ -215,7 +277,6 @@ export function KnowledgeGraph3D({
 
   useEffect(() => {
     if (!hasNodes) {
-      setRenderState('idle')
       callbacksRef.current.onRenderStateChange?.('idle')
       return
     }
@@ -265,6 +326,8 @@ export function KnowledgeGraph3D({
       cancelled = true
       ownedRuntime?.destroy()
       if (runtimeRef.current === ownedRuntime) runtimeRef.current = null
+      // Back to idle when the graph empties (the next run reports loading).
+      setRenderState('idle')
     }
   }, [hasNodes])
 
@@ -331,29 +394,27 @@ export function KnowledgeGraph3D({
       role="img"
       aria-label={'Carte interactive de la m\u00e9moire financi\u00e8re'}
       data-render-state={renderState}
-      className="relative h-full w-full overflow-hidden rounded-frame border border-border/60 bg-surface-0"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse at center, var(--surface-1) 0%, var(--surface-0) 72%)',
-      }}
+      className={sceneFrame}
+      style={{ backgroundImage: SCENE_BACKGROUND }}
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 45%), radial-gradient(circle at 75% 80%, color-mix(in srgb, var(--teal) 10%, transparent) 0%, transparent 52%)',
-        }}
+      <styled.div
+        pointerEvents="none"
+        position="absolute"
+        inset="0"
+        style={{ backgroundImage: SCENE_GLOW }}
       />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
+      <styled.div
+        pointerEvents="none"
+        position="absolute"
+        inset="0"
+        opacity="0.4"
         style={{
-          backgroundImage:
-            'radial-gradient(color-mix(in srgb, var(--foreground) 16%, transparent) 0.5px, transparent 0.5px), radial-gradient(color-mix(in srgb, var(--foreground) 10%, transparent) 0.5px, transparent 0.5px)',
+          backgroundImage: SCENE_GRID,
           backgroundPosition: '0 0, 45px 45px',
           backgroundSize: '90px 90px, 160px 160px',
         }}
       />
-      <div ref={mountRef} className="absolute inset-0" />
+      <styled.div ref={mountRef} position="absolute" inset="0" />
 
       {!hasNodes
         ? renderStatus('Aucun souvenir ne correspond aux filtres actuels.')
@@ -365,7 +426,7 @@ export function KnowledgeGraph3D({
               )
             : null}
       {renderState === 'ready' ? (
-        <span className="sr-only">{'La carte 3D est pr\u00eate.'}</span>
+        <span className={visuallyHidden}>{'La carte 3D est pr\u00eate.'}</span>
       ) : null}
     </div>
   )

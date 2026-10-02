@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Button, Status } from '@finance-os/ui/components'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -9,6 +11,20 @@ import { pushToast } from '@/lib/toast-store'
 import { ManualSocialImportDialog } from './manual-social-import-dialog'
 
 type Confirmation = 'firehose' | 'x-sync' | 'x-resolve' | null
+
+const operationSection = css({ borderTopWidth: '1px', borderColor: 'border/60', pt: '4' })
+
+const sectionTitle = css({ textStyle: 'sm', fontWeight: 'semibold' })
+
+const sectionLead = css({ mt: '1', textStyle: 'xs', color: 'muted.foreground' })
+
+const confirmationBox = css({
+  mt: '3',
+  rounded: 'control',
+  borderWidth: '1px',
+  borderColor: 'warning/35',
+  p: '3',
+})
 
 export function SocialOperations() {
   const queryClient = useQueryClient()
@@ -94,25 +110,23 @@ export function SocialOperations() {
   const estimate = estimateMutation.data
 
   return (
-    <div className="space-y-6">
+    <styled.div spaceY="6">
       {feedback ? (
         <div aria-live="polite">
           <Status tone="neutral" label={feedback} />
         </div>
       ) : null}
 
-      <section aria-labelledby="manual-social-title" className="border-t border-border/60 pt-4">
-        <h3 id="manual-social-title" className="text-sm font-semibold">
+      <section aria-labelledby="manual-social-title" className={operationSection}>
+        <h3 id="manual-social-title" className={sectionTitle}>
           Import manuel
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Ajoute des signaux fournis manuellement.
-        </p>
+        <p className={sectionLead}>Ajoute des signaux fournis manuellement.</p>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="mt-3"
+          mt="3"
           disabled={pending}
           onClick={() => setImportOpen(true)}
         >
@@ -120,14 +134,14 @@ export function SocialOperations() {
         </Button>
       </section>
 
-      <section aria-labelledby="x-sync-title" className="border-t border-border/60 pt-4">
-        <h3 id="x-sync-title" className="text-sm font-semibold">
+      <section aria-labelledby="x-sync-title" className={operationSection}>
+        <h3 id="x-sync-title" className={sectionTitle}>
           Synchronisation X
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className={sectionLead}>
           Teste le volume avant de charger les publications de la veille.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <styled.div mt="3" display="flex" flexWrap="wrap" gap="2">
           <Button
             type="button"
             variant="outline"
@@ -146,10 +160,10 @@ export function SocialOperations() {
           >
             Synchroniser la veille
           </Button>
-        </div>
+        </styled.div>
         {confirmation === 'x-sync' ? (
           <ConfirmationPanel
-            text="Cette action peut consommer le budget X disponible. Continuer ?"
+            text="Cette action peut consommer le budget X disponible. Continuer ?"
             pending={xSyncMutation.isPending}
             onCancel={() => setConfirmation(null)}
             onConfirm={() => xSyncMutation.mutate(false)}
@@ -157,18 +171,16 @@ export function SocialOperations() {
         ) : null}
       </section>
 
-      <section aria-labelledby="x-resolve-title" className="border-t border-border/60 pt-4">
-        <h3 id="x-resolve-title" className="text-sm font-semibold">
+      <section aria-labelledby="x-resolve-title" className={operationSection}>
+        <h3 id="x-resolve-title" className={sectionTitle}>
           Sources X
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Vérifie les comptes qui ne sont pas encore reconnus.
-        </p>
+        <p className={sectionLead}>Vérifie les comptes qui ne sont pas encore reconnus.</p>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="mt-3"
+          mt="3"
           disabled={pending}
           onClick={() => setConfirmation('x-resolve')}
         >
@@ -176,7 +188,7 @@ export function SocialOperations() {
         </Button>
         {confirmation === 'x-resolve' ? (
           <ConfirmationPanel
-            text="Cette vérification peut consommer le budget X disponible. Continuer ?"
+            text="Cette vérification peut consommer le budget X disponible. Continuer ?"
             pending={resolveMutation.isPending}
             onCancel={() => setConfirmation(null)}
             onConfirm={() => resolveMutation.mutate()}
@@ -184,11 +196,11 @@ export function SocialOperations() {
         ) : null}
       </section>
 
-      <section aria-labelledby="firehose-title" className="border-t border-border/60 pt-4">
-        <h3 id="firehose-title" className="text-sm font-semibold">
+      <section aria-labelledby="firehose-title" className={operationSection}>
+        <h3 id="firehose-title" className={sectionTitle}>
           Free Firehose
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className={sectionLead}>
           Collecte les sources gratuites disponibles avec une limite hebdomadaire.
         </p>
         {!estimate ? (
@@ -196,22 +208,22 @@ export function SocialOperations() {
             type="button"
             variant="outline"
             size="sm"
-            className="mt-3"
+            mt="3"
             disabled={pending}
             onClick={() => estimateMutation.mutate()}
           >
             Préparer
           </Button>
         ) : (
-          <div className="mt-3 space-y-3">
-            <p className="font-mono text-[11px] text-muted-foreground">
+          <styled.div mt="3" spaceY="3">
+            <styled.p fontFamily="mono" fontSize="11px" color="muted.foreground">
               Jusqu’à {estimate.maxRecords ?? 0} enregistrements. {estimate.runsLastWeek ?? 0}{' '}
               exécution cette semaine sur {estimate.weeklyCap ?? 0}.
-            </p>
+            </styled.p>
             {estimate.wouldBeBlockedByCap ? (
               <Status tone="attention" label="Limite hebdomadaire atteinte" />
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <styled.div display="flex" flexWrap="wrap" gap="2">
                 <Button
                   type="button"
                   variant="outline"
@@ -230,13 +242,13 @@ export function SocialOperations() {
                 >
                   Lancer
                 </Button>
-              </div>
+              </styled.div>
             )}
-          </div>
+          </styled.div>
         )}
         {confirmation === 'firehose' ? (
           <ConfirmationPanel
-            text="Lancer la collecte Free Firehose maintenant ?"
+            text="Lancer la collecte Free Firehose maintenant ?"
             pending={firehoseMutation.isPending}
             onCancel={() => setConfirmation(null)}
             onConfirm={() => firehoseMutation.mutate(false)}
@@ -252,7 +264,7 @@ export function SocialOperations() {
           pushToast({ title: 'Signaux actualisés', tone: 'success' })
         }}
       />
-    </div>
+    </styled.div>
   )
 }
 
@@ -268,20 +280,16 @@ function ConfirmationPanel({
   onConfirm: () => void
 }) {
   return (
-    <div
-      className="mt-3 rounded-control border border-warning/35 p-3"
-      role="alertdialog"
-      aria-label="Confirmer l’opération"
-    >
-      <p className="text-sm">{text}</p>
-      <div className="mt-3 flex justify-end gap-2">
+    <div className={confirmationBox} role="alertdialog" aria-label="Confirmer l’opération">
+      <styled.p textStyle="sm">{text}</styled.p>
+      <styled.div mt="3" display="flex" justifyContent="flex-end" gap="2">
         <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={onCancel}>
           Annuler
         </Button>
         <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onConfirm}>
           {pending ? 'En cours' : 'Confirmer'}
         </Button>
-      </div>
+      </styled.div>
     </div>
   )
 }

@@ -1,5 +1,11 @@
 import { createHmac } from 'node:crypto'
+import {
+  ProviderOperationError,
+  type ProviderRetryPolicy,
+  runProviderOperationOrThrow,
+} from '@finance-os/provider-runtime/policy'
 import { ExternalInvestmentProviderError } from './errors'
+import type { ExternalInvestmentFetch } from './types'
 
 export const BINANCE_READONLY_ALLOWED_ENDPOINTS = new Set([
   '/api/v3/account',
@@ -79,7 +85,11 @@ export type BinanceReadonlyClientConfig = {
   recvWindowMs: number
   timeoutMs: number
   now?: () => number
-  fetchImpl?: typeof fetch
+  fetchImpl?: ExternalInvestmentFetch
+  /** Transport retry policy; Binance read-only calls do not retry unless configured. */
+  retry?: ProviderRetryPolicy
+  /** Caller cancellation, e.g. the sync lease; aborts the in-flight request and stops retries. */
+  signal?: AbortSignal
 }
 
 export type BinanceAccountInfo = {
@@ -129,111 +139,105 @@ export const createBinanceReadonlyClient = ({
   timeoutMs,
   now = () => Date.now(),
   fetchImpl = fetch,
+  retry,
+  signal,
 }: BinanceReadonlyClientConfig) => {
-  const publicGet = async <TResponse>(path: string, params: BinanceRequestParams = {}) => {
-    assertBinanceReadonlyEndpoint({ method: 'GET', path })
+  const classifyBinanceError = (error: unknown) => ({
+    retryable: error instanceof ExternalInvestmentProviderError ? error.retryable : true,
+  })
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    const queryString = toQueryString(params)
-    const url = `${baseUrl.replace(/\/+$/, '')}${path}${queryString ? `?${queryString}` : ''}`
-
-    try {
-      const response = await fetchImpl(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-        signal: controller.signal,
-      })
-
-      if (!response.ok) {
-        const retryable = response.status === 418 || response.status === 429 || response.status >= 500
-        throw new ExternalInvestmentProviderError({
-          provider: 'binance',
-          code:
-            response.status === 401 || response.status === 403
-              ? 'PROVIDER_CREDENTIALS_INVALID'
-              : response.status === 418 || response.status === 429
-                ? 'PROVIDER_RATE_LIMITED'
-                : 'PROVIDER_SCHEMA_CHANGED',
-          message: `Binance read-only endpoint failed with HTTP ${response.status}.`,
-          retryable,
-          statusCode: response.status,
-        })
-      }
-
-      return (await response.json()) as TResponse
-    } catch (error) {
-      if (error instanceof ExternalInvestmentProviderError) {
-        throw error
-      }
-      throw new ExternalInvestmentProviderError({
-        provider: 'binance',
-        code: error instanceof Error && error.name === 'AbortError' ? 'PROVIDER_TIMEOUT' : 'PROVIDER_SCHEMA_CHANGED',
-        message: error instanceof Error ? error.message : String(error),
-        retryable: true,
-      })
-    } finally {
-      clearTimeout(timeout)
+  const toBinanceProviderError = (error: unknown) => {
+    if (error instanceof ExternalInvestmentProviderError) {
+      return error
     }
+    if (error instanceof ProviderOperationError) {
+      return new ExternalInvestmentProviderError({
+        provider: 'binance',
+        code: 'PROVIDER_TIMEOUT',
+        message:
+          error.kind === 'cancelled'
+            ? 'Binance request was cancelled before completion.'
+            : 'Binance request timed out.',
+        retryable: error.kind !== 'cancelled',
+      })
+    }
+    return new ExternalInvestmentProviderError({
+      provider: 'binance',
+      code: 'PROVIDER_SCHEMA_CHANGED',
+      message: error instanceof Error ? error.message : String(error),
+      retryable: true,
+    })
   }
 
-  const signedGet = async <TResponse>(path: string, params: BinanceRequestParams = {}) => {
-    assertBinanceReadonlyEndpoint({ method: 'GET', path })
-
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
-    const timestamp = now()
-    const { signedQueryString } = signBinanceUserDataParams({
-      secret: apiSecret,
-      params: {
-        ...params,
-        recvWindow: recvWindowMs,
-        timestamp,
-      },
-    })
-
-    try {
-      const response = await fetchImpl(`${baseUrl.replace(/\/+$/, '')}${path}?${signedQueryString}`, {
-        method: 'GET',
-        headers: {
-          'X-MBX-APIKEY': apiKey,
-          Accept: 'application/json',
-        },
-        signal: controller.signal,
-      })
-
-      if (!response.ok) {
-        const retryable = response.status === 418 || response.status === 429 || response.status >= 500
-        throw new ExternalInvestmentProviderError({
-          provider: 'binance',
-          code:
-            response.status === 401 || response.status === 403
-              ? 'PROVIDER_CREDENTIALS_INVALID'
-              : response.status === 418 || response.status === 429
-                ? 'PROVIDER_RATE_LIMITED'
-                : 'PROVIDER_SCHEMA_CHANGED',
-          message: `Binance read-only endpoint failed with HTTP ${response.status}.`,
-          retryable,
-          statusCode: response.status,
-        })
-      }
-
-      return (await response.json()) as TResponse
-    } catch (error) {
-      if (error instanceof ExternalInvestmentProviderError) {
-        throw error
-      }
+  const readJson = async <TResponse>(response: Response) => {
+    if (!response.ok) {
+      const retryable = response.status === 418 || response.status === 429 || response.status >= 500
       throw new ExternalInvestmentProviderError({
         provider: 'binance',
-        code: error instanceof Error && error.name === 'AbortError' ? 'PROVIDER_TIMEOUT' : 'PROVIDER_SCHEMA_CHANGED',
-        message: error instanceof Error ? error.message : String(error),
-        retryable: true,
+        code:
+          response.status === 401 || response.status === 403
+            ? 'PROVIDER_CREDENTIALS_INVALID'
+            : response.status === 418 || response.status === 429
+              ? 'PROVIDER_RATE_LIMITED'
+              : 'PROVIDER_SCHEMA_CHANGED',
+        message: `Binance read-only endpoint failed with HTTP ${response.status}.`,
+        retryable,
+        statusCode: response.status,
       })
-    } finally {
-      clearTimeout(timeout)
     }
+    return (await response.json()) as TResponse
+  }
+
+  const request = <TResponse>(operation: string, url: string, headers: Record<string, string>) =>
+    runProviderOperationOrThrow({
+      provider: 'binance',
+      operation,
+      policy: { timeoutMs, ...(retry ? { retry } : {}) },
+      ...(signal ? { signal } : {}),
+      classify: classifyBinanceError,
+      run: async attemptSignal =>
+        readJson<TResponse>(
+          await fetchImpl(url, { method: 'GET', headers, signal: attemptSignal })
+        ),
+    }).catch((error: unknown) => {
+      throw toBinanceProviderError(error)
+    })
+
+  const publicGet = <TResponse>(path: string, params: BinanceRequestParams = {}) => {
+    assertBinanceReadonlyEndpoint({ method: 'GET', path })
+    const queryString = toQueryString(params)
+    const url = `${baseUrl.replace(/\/+$/, '')}${path}${queryString ? `?${queryString}` : ''}`
+    return request<TResponse>(`public${path}`, url, { Accept: 'application/json' })
+  }
+
+  const signedGet = <TResponse>(path: string, params: BinanceRequestParams = {}) => {
+    assertBinanceReadonlyEndpoint({ method: 'GET', path })
+    // The timestamp and signature are computed per attempt so a retried request
+    // never replays a stale recvWindow.
+    return runProviderOperationOrThrow({
+      provider: 'binance',
+      operation: `signed${path}`,
+      policy: { timeoutMs, ...(retry ? { retry } : {}) },
+      ...(signal ? { signal } : {}),
+      classify: classifyBinanceError,
+      run: async attemptSignal => {
+        const { signedQueryString } = signBinanceUserDataParams({
+          secret: apiSecret,
+          params: { ...params, recvWindow: recvWindowMs, timestamp: now() },
+        })
+        const response = await fetchImpl(
+          `${baseUrl.replace(/\/+$/, '')}${path}?${signedQueryString}`,
+          {
+            method: 'GET',
+            headers: { 'X-MBX-APIKEY': apiKey, Accept: 'application/json' },
+            signal: attemptSignal,
+          }
+        )
+        return readJson<TResponse>(response)
+      },
+    }).catch((error: unknown) => {
+      throw toBinanceProviderError(error)
+    })
   }
 
   return {

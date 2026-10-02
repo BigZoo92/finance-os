@@ -1,0 +1,7 @@
+{
+  "$comment": "Measured on 2026-09-26 after the Vite 8 migration: 58 JS chunks, 880 kB gzip (2.9 MB raw), CSS 27 kB gzip, largest chunk (3D knowledge graph runtime, lazy) 345 kB gzip. Budgets keep ~10% headroom; raise them in the change that explains the growth.",
+  "jsGzipBytes": 990000,
+  "jsRawBytes": 3400000,
+  "cssGzipBytes": 40000,
+  "largestJsChunkGzipBytes": 390000
+}

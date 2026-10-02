@@ -77,7 +77,14 @@ export interface FinanceEngineInput {
   currency: string
   monthlyIncome: number
   monthlyExpenses: number
-  liquidCashValue: number
+  /**
+   * Liquid cash in base currency. `null` means the cash position is unknown or
+   * only partially valued: the engine then keeps liquidity-dependent metrics
+   * (emergency fund, runway) unavailable instead of computing them from a
+   * truncated sum. Unknown is never zero.
+   */
+  liquidCashValue: number | null
+  /** Positions with a known, valued amount. Unvalued holdings are not positions. */
   positions: FinancePositionInput[]
   goals: FinanceGoalInput[]
   dailyWealth: DailyWealthPoint[]

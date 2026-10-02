@@ -7,6 +7,7 @@ import {
   DashboardDerivedRecomputeDisabledError,
 } from '../domain/derived-recompute'
 import { createDashboardRuntimePlugin } from '../plugin'
+import { createRuntimeRepositoriesFixture } from '../test-support/runtime-repositories-fixture'
 import type { DashboardDerivedRecomputeStatusResponse, DashboardRouteRuntime } from '../types'
 import { createDerivedRecomputeRoute } from './derived-recompute'
 
@@ -55,10 +56,7 @@ const createDashboardRuntime = (
   const payload = createDerivedRecomputePayload()
 
   return {
-    repositories: {
-      readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
-      derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
-    },
+    repositories: createRuntimeRepositoriesFixture(),
     useCases: {
       getSummary: async () => {
         throw new Error('not used in derived recompute tests')

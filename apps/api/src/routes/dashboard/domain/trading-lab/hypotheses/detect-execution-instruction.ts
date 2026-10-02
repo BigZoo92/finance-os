@@ -34,7 +34,7 @@ const BARE_EXECUTION_PHRASES = [
   'go short',
   'open the position',
   'close the position',
-  "open the trade",
+  'open the trade',
   'open a margin',
   'open margin',
   'enter the position',
@@ -45,16 +45,12 @@ const BARE_EXECUTION_PHRASES = [
   'place the sell',
 ] as const
 
-const stripDiacritics = (value: string): string =>
-  value.normalize('NFD').replace(/[̀-ͯ]/g, '')
+const stripDiacritics = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const buildPattern = (needle: string): RegExp =>
-  new RegExp(
-    `(?:^|[^\\w])${escapeRegex(stripDiacritics(needle).toLowerCase())}(?:[^\\w]|$)`,
-    'i'
-  )
+  new RegExp(`(?:^|[^\\w])${escapeRegex(stripDiacritics(needle).toLowerCase())}(?:[^\\w]|$)`, 'i')
 
 export interface ExecutionInstructionMatch {
   reason: 'bare_imperative' | 'directive_with_term'

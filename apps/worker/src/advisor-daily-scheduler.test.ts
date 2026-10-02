@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test'
+import { createInMemoryRedisClient } from '@finance-os/redis'
 import {
+  ADVISOR_DAILY_LOCK_KEY,
   buildDashboardAdvisorDailyRequest,
   shouldTriggerAdvisorDailyRunInMarketOpenWindow,
   startDashboardAdvisorScheduler,
@@ -17,7 +19,9 @@ describe('buildDashboardAdvisorDailyRequest', () => {
     expect(request.url).toBe('http://api.internal.local/dashboard/advisor/run-daily')
     expect(request.init.method).toBe('POST')
     expect(request.init.body).toBe(JSON.stringify({ trigger: 'scheduled' }))
-    expect((request.init.headers as Record<string, string>)['x-request-id']).toBe('req-advisor-build')
+    expect((request.init.headers as Record<string, string>)['x-request-id']).toBe(
+      'req-advisor-build'
+    )
     expect((request.init.headers as Record<string, string>)['x-internal-token']).toBe(
       'secret-token'
     )
@@ -25,15 +29,14 @@ describe('buildDashboardAdvisorDailyRequest', () => {
 })
 
 describe('triggerDashboardAdvisorDailyRun', () => {
-  it('skips when another advisor run already owns the lock', async () => {
+  it('skips when another advisor run already owns the lock and leaves that lock intact', async () => {
+    const redis = createInMemoryRedisClient()
+    await redis.client.set(ADVISOR_DAILY_LOCK_KEY, 'foreign-token', { NX: true, EX: 60 })
     const events: Array<Record<string, unknown>> = []
     let fetchCalled = false
 
     const result = await triggerDashboardAdvisorDailyRun({
-      redisClient: {
-        set: async () => null,
-        del: async () => 0,
-      },
+      redisClient: redis.client,
       apiInternalUrl: 'http://api.internal.local',
       log: event => {
         events.push(event)
@@ -45,24 +48,23 @@ describe('triggerDashboardAdvisorDailyRun', () => {
       requestId: 'req-advisor-skip',
     })
 
-    expect(result.status).toBe('skipped')
+    expect(result).toEqual({ status: 'skipped', requestId: 'req-advisor-skip' })
     expect(fetchCalled).toBe(false)
     expect(events[0]?.msg).toBe('worker advisor daily run skipped because another run is active')
+    expect(await redis.client.get(ADVISOR_DAILY_LOCK_KEY)).toBe('foreign-token')
   })
 
-  it('posts to the dashboard advisor route and releases the lock on success', async () => {
+  it('posts to the dashboard advisor route with the lease signal and releases the lock on success', async () => {
+    const redis = createInMemoryRedisClient()
     const events: Array<Record<string, unknown>> = []
-    const deletedKeys: string[] = []
-    const requests: Array<{ url: string; headers: Record<string, string> }> = []
+    const requests: Array<{
+      url: string
+      headers: Record<string, string>
+      signalAborted: boolean | null
+    }> = []
 
     const result = await triggerDashboardAdvisorDailyRun({
-      redisClient: {
-        set: async () => 'OK',
-        del: async key => {
-          deletedKeys.push(key)
-          return 1
-        },
-      },
+      redisClient: redis.client,
       apiInternalUrl: 'http://api.internal.local/',
       privateAccessToken: 'internal-token',
       log: event => {
@@ -72,6 +74,7 @@ describe('triggerDashboardAdvisorDailyRun', () => {
         requests.push({
           url: String(url),
           headers: (init?.headers as Record<string, string>) ?? {},
+          signalAborted: init?.signal instanceof AbortSignal ? init.signal.aborted : null,
         })
         return new Response(JSON.stringify({ ok: true }), { status: 200 })
       },
@@ -90,10 +93,26 @@ describe('triggerDashboardAdvisorDailyRun', () => {
           'x-internal-token': 'internal-token',
           'x-request-id': 'req-advisor-success',
         },
+        signalAborted: false,
       },
     ])
-    expect(deletedKeys).toEqual(['advisor:dashboard:daily:lock'])
+    expect(await redis.client.get(ADVISOR_DAILY_LOCK_KEY)).toBeNull()
     expect(events.at(-1)?.msg).toBe('worker advisor daily run triggered')
+  })
+
+  it('releases the lock when the trigger fails', async () => {
+    const redis = createInMemoryRedisClient()
+
+    const result = await triggerDashboardAdvisorDailyRun({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api.internal.local',
+      log: () => {},
+      fetchImpl: async () => new Response('boom', { status: 500 }),
+      requestId: 'req-advisor-fail',
+    })
+
+    expect(result.status).toBe('failed')
+    expect(await redis.client.get(ADVISOR_DAILY_LOCK_KEY)).toBeNull()
   })
 })
 
@@ -154,14 +173,14 @@ describe('startDashboardAdvisorScheduler', () => {
       log: event => {
         events.push(event)
       },
-      setIntervalFn: ((handler: TimerHandler, timeout?: number) => {
+      setIntervalFn: (handler: () => void, timeout?: number) => {
         intervals.push(timeout ?? 0)
-        void handler()
+        handler()
         return 123 as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      },
     })
 
-    expect(timer).toBe(123)
+    expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
     expect(triggerCalls).toEqual(['called'])
     expect(intervals).toEqual([900000])
     expect(events.at(-1)?.msg).toBe('worker advisor scheduler started')
@@ -189,15 +208,15 @@ describe('startDashboardAdvisorScheduler', () => {
       },
       nowFn: () => ticks.shift() ?? new Date('2026-04-22T13:25:00.000Z'),
       log: () => undefined,
-      setIntervalFn: ((handler: TimerHandler) => {
-        void handler()
-        void handler()
-        void handler()
+      setIntervalFn: (handler: () => void) => {
+        handler()
+        handler()
+        handler()
         return 123 as unknown as ReturnType<typeof setInterval>
-      }) as typeof setInterval,
+      },
     })
 
-    expect(timer).toBe(123)
+    expect(timer).toBe(123 as unknown as ReturnType<typeof setInterval>)
     expect(triggerCalls).toEqual(['called', 'called'])
   })
 })

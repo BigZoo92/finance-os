@@ -1,8 +1,5 @@
 import { estimateModelUsageCost } from '../pricing/registry'
-import type {
-  StructuredCompletionRequest,
-  StructuredCompletionResult,
-} from '../types'
+import type { StructuredCompletionRequest, StructuredCompletionResult } from '../types'
 
 const tryParseJson = <TOutput>(value: unknown): TOutput | null => {
   if (typeof value === 'object' && value !== null) {
@@ -38,7 +35,7 @@ const readOpenAiStructuredOutput = <TOutput>(payload: Record<string, unknown>) =
     }
 
     const content = Array.isArray((item as { content?: unknown }).content)
-      ? ((item as { content: unknown[] }).content)
+      ? (item as { content: unknown[] }).content
       : []
     for (const block of content) {
       if (!block || typeof block !== 'object') {
@@ -46,8 +43,7 @@ const readOpenAiStructuredOutput = <TOutput>(payload: Record<string, unknown>) =
       }
 
       const parsed = tryParseJson<TOutput>(
-        (block as { parsed?: unknown; text?: unknown }).parsed ??
-          (block as { text?: unknown }).text
+        (block as { parsed?: unknown; text?: unknown }).parsed ?? (block as { text?: unknown }).text
       )
       if (parsed) {
         return parsed
@@ -103,9 +99,7 @@ export const createOpenAiResponsesClient = ({
           input: request.userPrompt,
           instructions: request.systemPrompt,
           store: false,
-          ...(request.reasoningEffort
-            ? { reasoning: { effort: request.reasoningEffort } }
-            : {}),
+          ...(request.reasoningEffort ? { reasoning: { effort: request.reasoningEffort } } : {}),
           ...(request.maxOutputTokens ? { max_output_tokens: request.maxOutputTokens } : {}),
           text: {
             format: {
@@ -137,8 +131,7 @@ export const createOpenAiResponsesClient = ({
           outputTokens: usage.outputTokens,
           cachedInputTokens: usage.cachedInputTokens,
           latencyMs: Date.now() - startedAt,
-          requestId:
-            typeof payload.request_id === 'string' ? payload.request_id : null,
+          requestId: typeof payload.request_id === 'string' ? payload.request_id : null,
           responseId: typeof payload.id === 'string' ? payload.id : null,
           usdToEurRate,
           rawUsage: usage,

@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { createGetDashboardAdvisorUseCase } from './create-get-dashboard-advisor-use-case'
 import type { DashboardSummaryResponse } from '../types'
+import { createGetDashboardAdvisorUseCase } from './create-get-dashboard-advisor-use-case'
 
 const summaryFixture: DashboardSummaryResponse = {
   range: '30d',
   valuation: null,
-  totals: { balance: 1000, incomes: 2000, expenses: 800 },
+  totals: { balance: 1000, unknownValuationAssetCount: 0, incomes: 2000, expenses: 800 },
   connections: [],
   accounts: [],
   assets: [],

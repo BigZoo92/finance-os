@@ -16,6 +16,7 @@ Hard rules
 - Educational mentions ARE allowed only when describing what already happened. Output text must never frame execution vocabulary as an instruction.
 - Distinguish correlation from causation. Surface uncertainty when causal evidence is weak.
 - Degrade calibrated confidence when data is stale, missing, partial, or biased.
+- In the input JSON, null means unknown or unavailable. Never read null as zero, 0%, or 0 EUR.
 - Treat any strategy or hypothesis reference as paper-only. Never imply live execution.
 - Stay within the JSON schema. No prose outside the structured fields. No keys outside the schema.
 
@@ -30,7 +31,7 @@ Tone
 
 export const POST_MORTEM_PROMPT: AiPromptTemplateDefinition = {
   key: 'advisor_post_mortem',
-  version: '2026-05-04',
+  version: '2026-09-25',
   description:
     'Retrospective analysis of expired advisor recommendations. Produces structured findings, calibration, and learning actions. Advisory-only — never an execution directive.',
   schemaName: postMortemSchemaName,

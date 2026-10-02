@@ -153,10 +153,10 @@ const redactValue = (value: unknown, key: string | undefined, ctx: RedactCtx): u
 
   // Map / Set / class instance / TypedArray / etc. — never trust their toString.
   if (typeof value === 'object') {
-    if (ctx.seen.has(value as object)) {
+    if (ctx.seen.has(value)) {
       return CIRCULAR_VALUE
     }
-    ctx.seen.add(value as object)
+    ctx.seen.add(value)
     const ctor = (value as { constructor?: { name?: string } }).constructor?.name ?? 'Object'
     return `[${ctor}]`
   }
@@ -204,10 +204,10 @@ const collectUnredactedSensitive = (
   if (value === null || typeof value !== 'object') {
     return
   }
-  if (seen.has(value as object)) {
+  if (seen.has(value)) {
     return
   }
-  seen.add(value as object)
+  seen.add(value)
 
   if (Array.isArray(value)) {
     value.forEach((entry, idx) => {

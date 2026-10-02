@@ -36,10 +36,7 @@ const buildFakeRedis = (initial: { storedValue?: string | null; evalThrows?: Err
       state.storedValue = value
       return 'OK'
     },
-    async eval(
-      _script: string,
-      options: { keys: string[]; arguments: string[] }
-    ): Promise<number> {
+    async eval(_script: string, options: { keys: string[]; arguments: string[] }): Promise<number> {
       if (state.evalThrows) throw state.evalThrows
       const argument = options.arguments[0] ?? ''
       const key = options.keys[0] ?? ''

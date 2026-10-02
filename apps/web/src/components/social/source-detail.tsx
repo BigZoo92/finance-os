@@ -6,6 +6,8 @@
  * contributed to current events. Admin management stays here, behind a
  * canonical confirmation Dialog for deletion.
  */
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   Dialog,
@@ -39,14 +41,83 @@ type SourceDetailProps = {
   onDelete: () => void
 }
 
+const detailRow = css({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '4',
+  textStyle: 'xs',
+})
+
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 text-xs">
-      <dt className="shrink-0 text-foreground/45">{label}</dt>
-      <dd className="min-w-0 text-right text-foreground">{children}</dd>
+    <div className={detailRow}>
+      <styled.dt flexShrink="0" color="foreground/45">
+        {label}
+      </styled.dt>
+      <styled.dd minW="0" textAlign="right" color="foreground">
+        {children}
+      </styled.dd>
     </div>
   )
 }
+
+const handleText = css({
+  mt: '0.5',
+  truncate: true,
+  fontFamily: 'mono',
+  fontSize: '11px',
+  color: 'foreground/45',
+})
+
+const escapeHint = css({ fontFamily: 'mono', fontSize: '10px', color: 'foreground/35' })
+
+const detailFacts = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2.5',
+  borderTopWidth: '1px',
+  borderColor: 'foreground/9',
+  pt: '3.5',
+})
+
+const topicsLabel = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.12em',
+  color: 'foreground/45',
+})
+
+const detailActions = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  columnGap: '4',
+  rowGap: '2',
+  borderTopWidth: '1px',
+  borderColor: 'foreground/9',
+  pt: '3.5',
+})
+
+const profileLink = css({
+  mr: 'auto',
+  textStyle: 'xs',
+  color: 'foreground/60',
+  outlineStyle: 'none',
+  _hover: { color: 'foreground' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
+
+const radarLink = css({
+  textStyle: 'xs',
+  fontWeight: 'medium',
+  color: 'primary',
+  outlineStyle: 'none',
+  _hover: { textDecorationLine: 'underline' },
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+})
 
 export function SourceDetail({
   source,
@@ -62,27 +133,29 @@ export function SourceDetail({
   const status = STATUS_PRESENTATION[source.status]
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex items-start gap-3.5">
+    <styled.div display="flex" flexDirection="column" gap="3.5">
+      <styled.div display="flex" alignItems="flex-start" gap="3.5">
         <SourceAvatar source={source} size="lg" selected />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold text-foreground">{source.name}</p>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-foreground/45">
-            @{source.handle}
-          </p>
-        </div>
+        <styled.div minW="0" flex="1">
+          <styled.p truncate textStyle="md" fontWeight="semibold" color="foreground">
+            {source.name}
+          </styled.p>
+          <p className={handleText}>@{source.handle}</p>
+        </styled.div>
         {showEscapeHint ? (
-          <span aria-hidden="true" className="font-mono text-[10px] text-foreground/35">
+          <span aria-hidden="true" className={escapeHint}>
             ESC
           </span>
         ) : null}
-      </div>
+      </styled.div>
 
       {source.bio ? (
-        <p className="text-[13px] leading-relaxed text-foreground/75">{source.bio}</p>
+        <styled.p fontSize="13px" lineHeight="relaxed" color="foreground/75">
+          {source.bio}
+        </styled.p>
       ) : null}
 
-      <dl className="flex flex-col gap-2.5 border-t border-foreground/9 pt-3.5">
+      <dl className={detailFacts}>
         <DetailRow label="Source">{PLATFORM_LABEL[source.platform]}</DetailRow>
         <DetailRow label="Statut">
           <Status tone={status.tone} label={status.label} />
@@ -95,43 +168,33 @@ export function SourceDetail({
         ) : null}
         {relatedSignals > 0 ? (
           <DetailRow label="Récent">
-            <span className="font-mono">
+            <styled.span fontFamily="mono">
               {relatedSignals} {relatedSignals > 1 ? 'événements associés' : 'événement associé'}
-            </span>
+            </styled.span>
           </DetailRow>
         ) : null}
       </dl>
 
       {source.tags.length > 0 ? (
-        <div className="border-t border-foreground/9 pt-3.5">
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-foreground/45">
-            Sujets
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        <styled.div borderTopWidth="1px" borderColor="foreground/9" pt="3.5">
+          <p className={topicsLabel}>Sujets</p>
+          <styled.div mt="2" display="flex" flexWrap="wrap" gap="1.5">
             {source.tags.map(tag => (
               <TagChip key={tag}>{tag}</TagChip>
             ))}
-          </div>
-        </div>
+          </styled.div>
+        </styled.div>
       ) : null}
 
       {relatedSignals > 0 || isAdmin || source.url ? (
-        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-t border-foreground/9 pt-3.5">
+        <div className={detailActions}>
           {source.url ? (
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="mr-auto text-xs text-foreground/60 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
-            >
+            <a href={source.url} target="_blank" rel="noreferrer noopener" className={profileLink}>
               Ouvrir le profil
             </a>
           ) : null}
           {relatedSignals > 0 ? (
-            <Link
-              to="/radar"
-              className="text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/70"
-            >
+            <Link to="/radar" className={radarLink}>
               Voir dans Radar
             </Link>
           ) : null}
@@ -150,7 +213,8 @@ export function SourceDetail({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="text-negative hover:text-negative"
+                color="negative"
+                _hover={{ color: 'negative' }}
                 disabled={togglePending || deletePending}
                 onClick={() => setConfirmOpen(true)}
               >
@@ -162,7 +226,7 @@ export function SourceDetail({
       ) : null}
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent maxW="sm">
           <DialogHeader>
             <DialogTitle>Supprimer cette source</DialogTitle>
             <DialogDescription>
@@ -190,6 +254,6 @@ export function SourceDetail({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </styled.div>
   )
 }

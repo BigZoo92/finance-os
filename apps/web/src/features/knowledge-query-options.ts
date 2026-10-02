@@ -56,10 +56,11 @@ export const knowledgeGraphQueryOptionsWithMode = ({
   queryOptions({
     queryKey: knowledgeQueryKeys.graph(scope, includeExamples, limit, mode),
     queryFn: () => {
-      const args: { scope: AdvisorKnowledgeGraphScope; includeExamples: boolean; limit?: number } = {
-        scope,
-        includeExamples,
-      }
+      const args: { scope: AdvisorKnowledgeGraphScope; includeExamples: boolean; limit?: number } =
+        {
+          scope,
+          includeExamples,
+        }
       if (typeof limit === 'number') args.limit = limit
       return fetchKnowledgeGraphDto(args)
     },

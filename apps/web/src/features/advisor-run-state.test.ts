@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { DashboardAdvisorManualOperationResponse } from './dashboard-types'
 import {
   describeManualOperationError,
   isAdvisorManualOperationActive,
   resolveAdvisorManualOperationUiStatus,
 } from './advisor-run-state'
+import type { DashboardAdvisorManualOperationResponse } from './dashboard-types'
 
 const makeOperation = (
   overrides: Partial<DashboardAdvisorManualOperationResponse>
@@ -110,7 +110,10 @@ describe('describeManualOperationError', () => {
   })
 
   it('surfaces a genuine run error as an actionable failure with its message', () => {
-    const descriptor = describeManualOperationError('MANUAL_REFRESH_AND_RUN_FAILED', 'TypeError: x.toFixed')
+    const descriptor = describeManualOperationError(
+      'MANUAL_REFRESH_AND_RUN_FAILED',
+      'TypeError: x.toFixed'
+    )
     expect(descriptor?.category).toBe('real_error')
     expect(descriptor?.recovered).toBe(false)
     expect(descriptor?.actionable).toBe(true)

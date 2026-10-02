@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { createAdvisorManualRefreshAndRunUseCases } from './create-manual-refresh-and-run-use-case'
+import type { DashboardAdvisorManualOperationResponse } from '../../advisor-contract'
 import type {
   DashboardAdvisorRepository,
   DashboardMarketsRepository,
@@ -7,7 +7,7 @@ import type {
   DashboardReadRepository,
   RedisClient,
 } from '../../types'
-import type { DashboardAdvisorManualOperationResponse } from '../../advisor-contract'
+import { createAdvisorManualRefreshAndRunUseCases } from './create-manual-refresh-and-run-use-case'
 
 const createRepositoryStore = (
   initialOperation: DashboardAdvisorManualOperationResponse | null = null
@@ -158,10 +158,9 @@ describe('createAdvisorManualRefreshAndRunUseCases', () => {
 
     const useCases = createAdvisorManualRefreshAndRunUseCases({
       repository: store.repository as DashboardAdvisorRepository,
-      readModel:
-        ({
-          listPowensConnections: async () => [],
-        } as unknown as DashboardReadRepository),
+      readModel: {
+        listPowensConnections: async () => [],
+      } as unknown as DashboardReadRepository,
       enqueueAllConnectionsSync: async () => undefined,
       ingestNews: async () => ({
         fetchedCount: 0,
@@ -203,10 +202,9 @@ describe('createAdvisorManualRefreshAndRunUseCases', () => {
           },
         },
       }),
-      redisClient:
-        ({
-          set: async () => null,
-        } as unknown as RedisClient),
+      redisClient: {
+        set: async () => null,
+      } as unknown as RedisClient,
     })
 
     const result = await useCases.startManualRefreshAndRun({
@@ -223,10 +221,9 @@ describe('createAdvisorManualRefreshAndRunUseCases', () => {
 
     const useCases = createAdvisorManualRefreshAndRunUseCases({
       repository: store.repository as DashboardAdvisorRepository,
-      readModel:
-        ({
-          listPowensConnections: async () => [],
-        } as unknown as DashboardReadRepository),
+      readModel: {
+        listPowensConnections: async () => [],
+      } as unknown as DashboardReadRepository,
       newsRepository: {
         getNewsCacheState: async () => ({
           lastSuccessAt: new Date('2026-04-14T08:05:00.000Z'),
@@ -300,11 +297,10 @@ describe('createAdvisorManualRefreshAndRunUseCases', () => {
           },
         },
       }),
-      redisClient:
-        ({
-          set: async () => 'OK',
-          eval: async () => 1,
-        } as unknown as RedisClient),
+      redisClient: {
+        set: async () => 'OK',
+        eval: async () => 1,
+      } as unknown as RedisClient,
     })
 
     const queued = await useCases.startManualRefreshAndRun({

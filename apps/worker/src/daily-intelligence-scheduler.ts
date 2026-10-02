@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto'
+import { type RedisLockClient, withRedisLock } from '@finance-os/redis'
+import type { FetchImpl, IntervalScheduler } from './scheduler-types'
 
 export const DAILY_INTELLIGENCE_LOCK_KEY = 'daily-intelligence:run:lock'
 export const DAILY_INTELLIGENCE_LOCK_TTL_SECONDS = 30 * 60
@@ -6,18 +8,6 @@ export const DAILY_INTELLIGENCE_MAX_DURATION_SECONDS = 60 * 60
 
 export type DailyIntelligenceRunKind = 'night' | 'morning' | 'manual' | 'dry_run'
 type ScheduledDailyIntelligenceRunKind = 'night' | 'morning'
-
-type RedisLockClient = {
-  set: (
-    key: string,
-    value: string,
-    options: {
-      NX: true
-      EX: number
-    }
-  ) => Promise<string | null>
-  del: (key: string) => Promise<number>
-}
 
 type SchedulerLogger = (event: {
   level: 'info' | 'warn' | 'error'
@@ -350,19 +340,72 @@ export const triggerDailyIntelligenceRun = async ({
   apiInternalUrl: string
   privateAccessToken?: string
   log: SchedulerLogger
-  fetchImpl?: typeof fetch
+  fetchImpl?: FetchImpl
   requestId?: string
   runKind?: DailyIntelligenceRunKind
   dryRun?: boolean
   lockTtlSeconds?: number
 }) => {
   const lockKey = `${DAILY_INTELLIGENCE_LOCK_KEY}:${runKind}`
-  const lock = await redisClient.set(lockKey, requestId, {
-    NX: true,
-    EX: Math.max(1, Math.floor(lockTtlSeconds)),
-  })
+  const outcome = await withRedisLock(
+    {
+      client: redisClient,
+      key: lockKey,
+      ttlSeconds: lockTtlSeconds,
+      log,
+    },
+    async ({ signal }) => {
+      try {
+        const request = buildDailyIntelligenceRequest({
+          apiInternalUrl,
+          requestId,
+          runKind,
+          dryRun,
+          ...(privateAccessToken ? { privateAccessToken } : {}),
+        })
+        const response = await fetchImpl(request.url, { ...request.init, signal })
 
-  if (lock !== 'OK') {
+        if (!response.ok) {
+          const text = await response.text()
+          throw new Error(`DAILY_INTELLIGENCE_HTTP_${response.status}:${text.slice(0, 200)}`)
+        }
+
+        log({
+          level: 'info',
+          msg: 'worker daily intelligence run triggered',
+          requestId,
+          apiInternalUrl,
+          runKind,
+          dryRun,
+        })
+
+        return {
+          status: 'triggered' as const,
+          requestId,
+          runKind,
+        }
+      } catch (error) {
+        log({
+          level: 'error',
+          msg: 'worker daily intelligence trigger failed',
+          requestId,
+          apiInternalUrl,
+          runKind,
+          dryRun,
+          errMessage: toSafeErrorMessage(error),
+        })
+
+        return {
+          status: 'failed' as const,
+          requestId,
+          runKind,
+          errorMessage: toSafeErrorMessage(error),
+        }
+      }
+    }
+  )
+
+  if (outcome.status === 'skipped') {
     log({
       level: 'warn',
       msg: 'worker daily intelligence skipped because another run is active',
@@ -377,55 +420,7 @@ export const triggerDailyIntelligenceRun = async ({
     }
   }
 
-  try {
-    const request = buildDailyIntelligenceRequest({
-      apiInternalUrl,
-      requestId,
-      runKind,
-      dryRun,
-      ...(privateAccessToken ? { privateAccessToken } : {}),
-    })
-    const response = await fetchImpl(request.url, request.init)
-
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`DAILY_INTELLIGENCE_HTTP_${response.status}:${text.slice(0, 200)}`)
-    }
-
-    log({
-      level: 'info',
-      msg: 'worker daily intelligence run triggered',
-      requestId,
-      apiInternalUrl,
-      runKind,
-      dryRun,
-    })
-
-    return {
-      status: 'triggered' as const,
-      requestId,
-      runKind,
-    }
-  } catch (error) {
-    log({
-      level: 'error',
-      msg: 'worker daily intelligence trigger failed',
-      requestId,
-      apiInternalUrl,
-      runKind,
-      dryRun,
-      errMessage: toSafeErrorMessage(error),
-    })
-
-    return {
-      status: 'failed' as const,
-      requestId,
-      runKind,
-      errorMessage: toSafeErrorMessage(error),
-    }
-  } finally {
-    await redisClient.del(lockKey)
-  }
+  return outcome.value
 }
 
 export const startDailyIntelligenceScheduler = ({
@@ -458,7 +453,7 @@ export const startDailyIntelligenceScheduler = ({
   }) => Promise<unknown>
   log: SchedulerLogger
   nowFn?: () => Date
-  setIntervalFn?: typeof setInterval
+  setIntervalFn?: IntervalScheduler
 }) => {
   if (externalIntegrationsSafeMode) {
     log({

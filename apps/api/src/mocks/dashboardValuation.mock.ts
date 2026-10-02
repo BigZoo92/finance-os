@@ -1,7 +1,7 @@
 import type {
   AssetValuationStatusResponse,
   AssetValuationUnresolvedItem,
-} from '../routes/dashboard/domain/valuation/create-asset-valuation-use-cases'
+} from '../routes/dashboard/domain/valuation'
 
 /**
  * Deterministic demo fixture — arithmetically consistent with

@@ -132,9 +132,7 @@ export const dashboardUserCategorizationDryRunBodySchema = t.Object({
       merchant: t.Optional(t.String({ maxLength: 128 })),
       providerCategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
       customCategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
-      customSubcategory: t.Optional(
-        t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])
-      ),
+      customSubcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
       category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
       subcategory: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 64 }), t.Null()])),
       incomeType: t.Optional(t.Union([dashboardUserCategorizationIncomeTypeSchema, t.Null()])),

@@ -1,7 +1,7 @@
 import { schema } from '@finance-os/db'
 import { eq, notInArray, sql } from 'drizzle-orm'
-import { safeNumber, toIsoOrNull, toProviderFreshnessLabel } from '../domain/market-helpers'
 import { MARKET_PROVIDER_LABELS } from '../domain/market-definitions'
+import { safeNumber, toIsoOrNull, toProviderFreshnessLabel } from '../domain/market-helpers'
 import type {
   DashboardMarketProviderHealth,
   MarketContextBundle,
@@ -55,7 +55,8 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
             overlayProvider: row.overlayProvider as 'eodhd' | 'fred' | 'twelve_data' | null,
             sourceMode: row.sourceMode as 'eod' | 'delayed' | 'intraday',
             marketState: row.marketState as 'open' | 'closed',
-            price: safeNumber(row.price) ?? 0,
+            // An unparseable persisted price is unknown, not a 0 quote.
+            price: safeNumber(row.price),
             previousClose: safeNumber(row.previousClose),
             dayChangePct: safeNumber(row.dayChangePct),
             weekChangePct: safeNumber(row.weekChangePct),
@@ -105,18 +106,14 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
               ...(quote.previousClose !== null
                 ? { previousClose: String(quote.previousClose) }
                 : {}),
-              ...(quote.dayChangePct !== null
-                ? { dayChangePct: String(quote.dayChangePct) }
-                : {}),
+              ...(quote.dayChangePct !== null ? { dayChangePct: String(quote.dayChangePct) } : {}),
               ...(quote.weekChangePct !== null
                 ? { weekChangePct: String(quote.weekChangePct) }
                 : {}),
               ...(quote.monthChangePct !== null
                 ? { monthChangePct: String(quote.monthChangePct) }
                 : {}),
-              ...(quote.ytdChangePct !== null
-                ? { ytdChangePct: String(quote.ytdChangePct) }
-                : {}),
+              ...(quote.ytdChangePct !== null ? { ytdChangePct: String(quote.ytdChangePct) } : {}),
               history: quote.history,
               ...(quote.metadata ? { metadata: quote.metadata } : {}),
             }))
@@ -170,11 +167,15 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
           value: schema.marketMacroObservation.value,
         })
         .from(schema.marketMacroObservation)
-        .orderBy(schema.marketMacroObservation.seriesId, schema.marketMacroObservation.observationDate)
+        .orderBy(
+          schema.marketMacroObservation.seriesId,
+          schema.marketMacroObservation.observationDate
+        )
         .then(rows =>
           rows.map(row => ({
             ...row,
-            value: safeNumber(row.value) ?? 0,
+            // A macro observation without a numeric value is unknown, not 0.
+            value: safeNumber(row.value),
           }))
         )
     },
@@ -263,7 +264,9 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
           ...(input.lastMacroObservationCount !== undefined
             ? { lastMacroObservationCount: input.lastMacroObservationCount }
             : {}),
-          ...(input.lastSignalCount !== undefined ? { lastSignalCount: input.lastSignalCount } : {}),
+          ...(input.lastSignalCount !== undefined
+            ? { lastSignalCount: input.lastSignalCount }
+            : {}),
           ...(input.lastRefreshDurationMs !== undefined
             ? { lastRefreshDurationMs: input.lastRefreshDurationMs }
             : {}),
@@ -291,7 +294,9 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
             ...(input.lastMacroObservationCount !== undefined
               ? { lastMacroObservationCount: input.lastMacroObservationCount }
               : {}),
-            ...(input.lastSignalCount !== undefined ? { lastSignalCount: input.lastSignalCount } : {}),
+            ...(input.lastSignalCount !== undefined
+              ? { lastSignalCount: input.lastSignalCount }
+              : {}),
             ...(input.lastRefreshDurationMs !== undefined
               ? { lastRefreshDurationMs: input.lastRefreshDurationMs }
               : {}),
@@ -420,14 +425,14 @@ export const createDashboardMarketsRepository = ({ db }: { db: ApiDb }) => {
           singleton: true,
           generatedAt: input.generatedAt,
           schemaVersion: input.schemaVersion,
-          bundle: input.bundle as unknown as Record<string, unknown>,
+          bundle: input.bundle,
         })
         .onConflictDoUpdate({
           target: schema.marketContextBundleSnapshot.singleton,
           set: {
             generatedAt: input.generatedAt,
             schemaVersion: input.schemaVersion,
-            bundle: input.bundle as unknown as Record<string, unknown>,
+            bundle: input.bundle,
             updatedAt: new Date(),
           },
         })

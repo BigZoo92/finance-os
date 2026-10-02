@@ -59,12 +59,19 @@ export const createGdeltNewsProvider = ({
                 : null
         const publishedAt = publishedAtRaw ? new Date(publishedAtRaw) : null
 
-        if (!title || !providerUrl || !providerArticleId || !publishedAt || Number.isNaN(publishedAt.getTime())) {
+        if (
+          !title ||
+          !providerUrl ||
+          !providerArticleId ||
+          !publishedAt ||
+          Number.isNaN(publishedAt.getTime())
+        ) {
           return null
         }
 
         const sourceDomain =
-          trimOrNull(typeof article.domain === 'string' ? article.domain : null) ?? new URL(providerUrl).hostname
+          trimOrNull(typeof article.domain === 'string' ? article.domain : null) ??
+          new URL(providerUrl).hostname
 
         return {
           provider: 'gdelt_doc' as const,
@@ -92,7 +99,9 @@ export const createGdeltNewsProvider = ({
           geoScope: 'global' as const,
           publishedAt,
           metadata: {
-            ...(typeof article.socialimage === 'string' ? { socialImage: article.socialimage } : {}),
+            ...(typeof article.socialimage === 'string'
+              ? { socialImage: article.socialimage }
+              : {}),
             ...(typeof article.tone === 'string' ? { tone: article.tone } : {}),
           },
           rawPayload: sanitizePayload(article),

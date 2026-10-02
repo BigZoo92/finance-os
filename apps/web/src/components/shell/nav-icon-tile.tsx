@@ -3,6 +3,7 @@
  * (dropdown items, mobile tabs, drawer rows). Low radius, thin warm frame,
  * canvas background.
  */
+import { cva, cx } from '@finance-os/styled-system/css'
 import type { IconComponent } from '@finance-os/ui/icons/types'
 
 type NavIconTileProps = {
@@ -13,19 +14,33 @@ type NavIconTileProps = {
   className?: string
 }
 
-export function NavIconTile({ icon: Icon, size = 'md', active, className = '' }: NavIconTileProps) {
-  const box =
-    size === 'sm'
-      ? 'h-5 w-5 rounded-tile [&_svg]:h-3 [&_svg]:w-3'
-      : 'h-9 w-9 rounded-control [&_svg]:h-4 [&_svg]:w-4'
+const navIconTile = cva({
+  base: {
+    display: 'grid',
+    flexShrink: '0',
+    placeItems: 'center',
+    borderWidth: '1px',
+    transitionProperty: 'colors',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+  },
+  variants: {
+    size: {
+      sm: { h: '5', w: '5', rounded: 'tile', '& svg': { h: '3', w: '3' } },
+      md: { h: '9', w: '9', rounded: 'control', '& svg': { h: '4', w: '4' } },
+    },
+    active: {
+      true: { borderColor: 'primary', bg: 'primary/12', color: 'primary' },
+      false: { borderColor: 'foreground/16', bg: 'background', color: 'foreground/70' },
+    },
+  },
+})
+
+export function NavIconTile({ icon: Icon, size = 'md', active, className }: NavIconTileProps) {
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center border transition-colors duration-150 ${box} ${
-        active
-          ? 'border-primary bg-primary/12 text-primary'
-          : 'border-foreground/16 bg-background text-foreground/70'
-      } ${className}`}
+      className={cx(navIconTile({ size, active: Boolean(active) }), className)}
     >
       <Icon size={size === 'sm' ? 12 : 16} />
     </span>

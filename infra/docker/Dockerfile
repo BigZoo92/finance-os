@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-ARG NODE_VERSION=22.15.0
-ARG BUN_VERSION=1.2.22
-ARG PNPM_VERSION=10.15.0
+ARG NODE_VERSION=24.21.0
+ARG BUN_VERSION=1.4.2
+ARG PNPM_VERSION=11.28.0
 ARG GIT_SHA=unknown
 ARG GIT_TAG=unknown
 ARG BUILD_TIME=unknown
@@ -12,7 +12,9 @@ ARG PNPM_VERSION
 ENV PNPM_HOME=/pnpm
 ENV PATH=${PNPM_HOME}:${PATH}
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+# pnpm is installed from its npm package at the exact pinned version (corepack is
+# deprecated in Node 24 and removed later).
+RUN npm install -g pnpm@${PNPM_VERSION} && pnpm --version
 
 FROM pnpm-base AS manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -20,6 +22,8 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY packages/ai/package.json packages/ai/package.json
+COPY packages/api-contract/package.json packages/api-contract/package.json
+COPY packages/config-ts/package.json packages/config-ts/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/env/package.json packages/env/package.json
 COPY packages/external-investments/package.json packages/external-investments/package.json
@@ -29,9 +33,15 @@ COPY packages/prelude/package.json packages/prelude/package.json
 COPY packages/provider-contract/package.json packages/provider-contract/package.json
 COPY packages/provider-runtime/package.json packages/provider-runtime/package.json
 COPY packages/redis/package.json packages/redis/package.json
+COPY packages/styled-system/package.json packages/styled-system/package.json
 COPY packages/ui/package.json packages/ui/package.json
 
 FROM manifests AS deps
+# The styled-system `prepare` script runs `panda codegen` during the install; it
+# needs the Panda config, the preset sources and the tsconfig chain the config
+# loader reads (codegen does not scan `include`).
+COPY packages/config-ts packages/config-ts
+COPY packages/styled-system packages/styled-system
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build-web
@@ -43,7 +53,6 @@ ARG VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=300
 ARG VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=true
 ARG VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=true
 ARG VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=true
-ARG API_INTERNAL_URL=http://finance-os-api:3001
 ENV NODE_ENV=production
 ENV VITE_APP_TITLE=${VITE_APP_TITLE}
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
@@ -52,7 +61,6 @@ ENV VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS=${VITE_POWENS_SYNC_COOLDOWN_UI_SECONDS}
 ENV VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED=${VITE_DASHBOARD_HEALTH_SIGNALS_ENABLED}
 ENV VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED=${VITE_DASHBOARD_HEALTH_GLOBAL_INDICATOR_ENABLED}
 ENV VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED=${VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED}
-ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 RUN pnpm --filter @finance-os/web build
 
 FROM manifests AS deps-api
@@ -61,6 +69,7 @@ RUN pnpm install --frozen-lockfile --prod --filter @finance-os/api...
 FROM deps-api AS bundle-api
 COPY apps/api apps/api
 COPY packages/ai packages/ai
+COPY packages/api-contract packages/api-contract
 COPY packages/db packages/db
 COPY packages/env packages/env
 COPY packages/external-investments packages/external-investments
@@ -79,8 +88,6 @@ ARG BUILD_TIME
 ENV NODE_ENV=production \
     API_HOST=0.0.0.0 \
     API_PORT=3001 \
-    RUN_DB_MIGRATIONS=true \
-    DRIZZLE_MIGRATIONS_FOLDER=packages/db/drizzle \
     HEALTHCHECK_URL=http://127.0.0.1:3001/health \
     GIT_SHA=${GIT_SHA} \
     GIT_TAG=${GIT_TAG} \
@@ -90,6 +97,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=bundle-api --chown=app:app /app/node_modules ./node_modules
 COPY --from=bundle-api --chown=app:app /app/apps/api ./apps/api
 COPY --from=bundle-api --chown=app:app /app/packages/ai ./packages/ai
+COPY --from=bundle-api --chown=app:app /app/packages/api-contract ./packages/api-contract
 COPY --from=bundle-api --chown=app:app /app/packages/db ./packages/db
 COPY --from=bundle-api --chown=app:app /app/packages/env ./packages/env
 COPY --from=bundle-api --chown=app:app /app/packages/external-investments ./packages/external-investments
@@ -115,6 +123,8 @@ COPY packages/env packages/env
 COPY packages/external-investments packages/external-investments
 COPY packages/powens packages/powens
 COPY packages/prelude packages/prelude
+COPY packages/provider-contract packages/provider-contract
+COPY packages/provider-runtime packages/provider-runtime
 COPY packages/redis packages/redis
 COPY infra/docker infra/docker
 
@@ -140,6 +150,8 @@ COPY --from=bundle-worker --chown=app:app /app/packages/env ./packages/env
 COPY --from=bundle-worker --chown=app:app /app/packages/external-investments ./packages/external-investments
 COPY --from=bundle-worker --chown=app:app /app/packages/powens ./packages/powens
 COPY --from=bundle-worker --chown=app:app /app/packages/prelude ./packages/prelude
+COPY --from=bundle-worker --chown=app:app /app/packages/provider-contract ./packages/provider-contract
+COPY --from=bundle-worker --chown=app:app /app/packages/provider-runtime ./packages/provider-runtime
 COPY --from=bundle-worker --chown=app:app /app/packages/redis ./packages/redis
 COPY --from=bundle-worker --chown=app:app /app/infra/docker ./infra/docker
 RUN chmod +x ./infra/docker/entrypoints/worker-entrypoint.sh

@@ -1,3 +1,4 @@
+import { styled } from '@finance-os/styled-system/jsx'
 import type { ReactNode } from 'react'
 
 type SectionHeadingProps = {
@@ -14,20 +15,46 @@ export function PersonalSectionHeading({
   actions,
 }: SectionHeadingProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
+    <styled.div
+      display="flex"
+      flexDirection="column"
+      gap="3"
+      sm={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}
+    >
+      <styled.div minW="0">
         {eyebrow ? (
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-primary/65">
+          <styled.p
+            fontFamily="mono"
+            fontSize="10px"
+            fontWeight="semibold"
+            textTransform="uppercase"
+            letterSpacing="0.22em"
+            color="primary/65"
+          >
             {eyebrow}
-          </p>
+          </styled.p>
         ) : null}
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">{title}</h2>
+        <styled.h2
+          mt="1"
+          textStyle="xl"
+          fontWeight="semibold"
+          letterSpacing="tight"
+          color="foreground"
+        >
+          {title}
+        </styled.h2>
         {description ? (
-          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <styled.p mt="1" maxW="2xl" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
+            {description}
+          </styled.p>
         ) : null}
-      </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </div>
+      </styled.div>
+      {actions ? (
+        <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2">
+          {actions}
+        </styled.div>
+      ) : null}
+    </styled.div>
   )
 }
 
@@ -41,11 +68,34 @@ export function PersonalEmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="rounded-frame border border-dashed border-border/45 bg-surface-1/35 px-4 py-8 text-center">
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
-    </div>
+    <styled.div
+      rounded="frame"
+      borderWidth="1px"
+      borderStyle="dashed"
+      borderColor="border/45"
+      bg="surface.1/35"
+      px="4"
+      py="8"
+      textAlign="center"
+    >
+      <styled.p textStyle="sm" fontWeight="semibold" color="foreground">
+        {title}
+      </styled.p>
+      <styled.p
+        mx="auto"
+        mt="1"
+        maxW="md"
+        textStyle="sm"
+        lineHeight="relaxed"
+        color="muted.foreground"
+      >
+        {description}
+      </styled.p>
+      {action ? (
+        <styled.div mt="4" display="flex" justifyContent="center">
+          {action}
+        </styled.div>
+      ) : null}
+    </styled.div>
   )
 }
-

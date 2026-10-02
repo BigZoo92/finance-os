@@ -1,3 +1,5 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Badge, Button, CurrencyAmount, Progress, Status } from '@finance-os/ui/components'
 import {
   ChevronDownPixelIcon,
@@ -82,6 +84,182 @@ const bucketProgressTone = (
   return 'warning'
 }
 
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.19em',
+  color: 'muted.foreground',
+})
+
+const titleRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+})
+
+const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
+
+const mutedIcon = css({ color: 'muted.foreground' })
+
+const planTotalRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  borderTopWidth: '1px',
+  borderColor: 'border/70',
+  pt: '4',
+  fontFamily: 'mono',
+  fontSize: '11px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  color: 'muted.foreground',
+})
+
+const journalSummary = css({
+  display: 'flex',
+  minH: '11',
+  cursor: 'pointer',
+  listStyleType: 'none',
+  alignItems: 'center',
+  gap: '3',
+  rounded: 'control',
+  textStyle: 'sm',
+  fontWeight: 'medium',
+  outlineStyle: 'none',
+  _focusVisible: { boxShadow: '0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)' },
+  '&::-webkit-details-marker': { display: 'none' },
+})
+
+// The chevron follows the open state of its `<details>` group.
+const journalChevron = css({
+  color: 'muted.foreground',
+  transitionProperty: 'transform, translate, scale, rotate',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  '[data-group=disclosure][open] &': { rotate: '180deg' },
+  _motionReduce: { transitionProperty: 'none' },
+})
+
+const journalEntry = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1',
+  borderLeftWidth: '1px',
+  borderColor: 'border/70',
+  py: '1',
+  pl: '3',
+  sm: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: '4' },
+})
+
+const actionRow = css({
+  borderBottomWidth: '1px',
+  borderColor: 'border/70',
+  _last: { borderBottomWidth: '0' },
+})
+
+const actionRowButton = css({
+  display: 'grid',
+  minH: '74px',
+  w: 'full',
+  gridTemplateColumns: '88px minmax(0, 1fr) auto',
+  alignItems: 'center',
+  columnGap: '3',
+  py: '3',
+  textAlign: 'left',
+  outlineStyle: 'none',
+  transitionProperty: 'colors',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { bg: 'accent/25' },
+  _focusVisible: {
+    boxShadow: 'inset 0 0 0 2px color-mix(in srgb, {colors.ring} 70%, transparent)',
+  },
+  sm: { gridTemplateColumns: '105px minmax(0, 1.2fr) minmax(120px, 0.7fr) auto', columnGap: '5' },
+})
+
+const actionMeta = css({
+  mt: '1',
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  columnGap: '2',
+  fontFamily: 'mono',
+  fontSize: '10px',
+  color: 'muted.foreground',
+})
+
+const bucketTone = cva({
+  base: {},
+  variants: {
+    bucket: {
+      core: { color: 'foreground' },
+      growth: { color: 'ai' },
+      asymmetric: { color: 'warning' },
+    },
+  },
+})
+
+const rowChevron = cva({
+  base: {
+    color: 'muted.foreground',
+    transitionProperty: 'transform, translate, scale, rotate',
+    transitionDuration: '150ms',
+    transitionTimingFunction: 'default',
+    _motionReduce: { transitionProperty: 'none' },
+  },
+  variants: {
+    expanded: {
+      true: { rotate: '180deg' },
+      false: {},
+    },
+  },
+})
+
+const actionDetail = css({
+  display: 'grid',
+  gap: '4',
+  bg: 'surface.1/45',
+  px: '3',
+  py: '4',
+  textStyle: 'xs',
+  sm: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', px: '4' },
+})
+
+const detailLabel = css({
+  fontFamily: 'mono',
+  fontSize: '9px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+// Tailwind's `divide-y` drew the rule under every row but the last.
+const loadingRows = css({
+  display: 'block',
+  '& > :not(:last-child)': { borderBottomWidth: '1px', borderColor: 'border/70' },
+})
+
+const skeleton = cva({
+  base: {
+    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+    bg: 'muted',
+    _motionReduce: { animation: 'none' },
+  },
+  variants: {
+    shape: {
+      control: { rounded: 'control' },
+      pill: { rounded: 'full' },
+      flat: {},
+    },
+  },
+  defaultVariants: { shape: 'control' },
+})
+
+const Skeleton = styled('span', skeleton)
+const SkeletonBlock = styled('div', skeleton)
+
 function AdvisorPage() {
   const queryClient = useQueryClient()
   const [profileOpen, setProfileOpen] = useState(false)
@@ -162,19 +340,24 @@ function AdvisorPage() {
 
   if (!advisorVisible) {
     return (
-      <div className="space-y-8">
+      <styled.div spaceY="8">
         <PageHeader icon={<RobotPixelIcon size={13} />} eyebrow="IA" title="Advisor" />
-        <section className="border-y border-border/60 py-10" aria-labelledby="advisor-unavailable">
-          <h2 id="advisor-unavailable" className="text-base font-medium">
+        <styled.section
+          borderYWidth="1px"
+          borderColor="border/60"
+          py="10"
+          aria-labelledby="advisor-unavailable"
+        >
+          <styled.h2 id="advisor-unavailable" textStyle="md" fontWeight="medium">
             Advisor indisponible sur cette session
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+          </styled.h2>
+          <styled.p mt="2" maxW="xl" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
             {flags.enabled
               ? 'Cette expérience est réservée à la session administrateur.'
               : 'Cette expérience est désactivée par la configuration actuelle.'}
-          </p>
-        </section>
-      </div>
+          </styled.p>
+        </styled.section>
+      </styled.div>
     )
   }
 
@@ -190,28 +373,30 @@ function AdvisorPage() {
   const hasError = strategyQuery.isError || planQuery.isError
 
   return (
-    <div className="space-y-7">
+    <styled.div spaceY="7">
       <PageHeader
         icon={<RobotPixelIcon size={13} />}
         eyebrow="IA"
         title="Advisor"
         status={
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <styled.div display="flex" flexWrap="wrap" alignItems="center" columnGap="4" rowGap="2">
             <PlanStatus plan={plan} isLoading={isLoading} />
             {plan?.generatedAt ? (
-              <span className="font-mono text-[11px] text-muted-foreground">
+              <styled.span fontFamily="mono" fontSize="11px" color="muted.foreground">
                 Mis à jour {formatDateTime(plan.generatedAt)}
-              </span>
+              </styled.span>
             ) : null}
             {isDemo ? <Badge variant="warning">Démo déterministe</Badge> : null}
-          </div>
+          </styled.div>
         }
         actions={
-          <div className="flex w-full gap-2 sm:w-auto">
+          <styled.div display="flex" w="full" gap="2" sm={{ w: 'auto' }}>
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 flex-1 sm:min-h-9 sm:flex-none"
+              minH="11"
+              flex="1"
+              sm={{ minH: '9', flex: 'none' }}
               onClick={() => setProfileOpen(true)}
             >
               <CogPixelIcon size={14} aria-hidden="true" />
@@ -221,7 +406,9 @@ function AdvisorPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11 flex-1 sm:min-h-9 sm:flex-none"
+                minH="11"
+                flex="1"
+                sm={{ minH: '9', flex: 'none' }}
                 onClick={() => generatePlanMutation.mutate()}
                 disabled={generatePlanMutation.isPending}
               >
@@ -229,47 +416,67 @@ function AdvisorPage() {
                 {generatePlanMutation.isPending ? 'Calcul en cours' : 'Actualiser le plan'}
               </Button>
             ) : null}
-          </div>
+          </styled.div>
         }
       />
 
       {hasError ? (
-        <output className="block border-l-2 border-warning pl-3">
+        <styled.output display="block" borderLeftWidth="2px" borderColor="warning" pl="3">
           <Status tone="attention" label="Certaines données sont momentanément indisponibles" />
-        </output>
+        </styled.output>
       ) : null}
 
-      <section
-        className="grid border-y border-border/70 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]"
+      <styled.section
+        display="grid"
+        borderYWidth="1px"
+        borderColor="border/70"
+        lg={{ gridTemplateColumns: 'minmax(0, 1.55fr) minmax(320px, 0.85fr)' }}
         aria-labelledby="current-investment-plan"
       >
-        <div className="min-w-0 py-7 lg:pr-12">
-          <div className="flex flex-wrap items-end justify-between gap-4">
+        <styled.div minW="0" py="7" lg={{ pr: '12' }}>
+          <styled.div
+            display="flex"
+            flexWrap="wrap"
+            alignItems="flex-end"
+            justifyContent="space-between"
+            gap="4"
+          >
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.19em] text-muted-foreground">
-                Plan d’investissement actuel
-              </p>
-              <h2
+              <p className={eyebrow}>Plan d’investissement actuel</p>
+              <styled.h2
                 id="current-investment-plan"
-                className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1"
+                mt="3"
+                display="flex"
+                flexWrap="wrap"
+                alignItems="baseline"
+                columnGap="3"
+                rowGap="1"
               >
                 <CurrencyAmount
                   value={allocation.plan.value}
                   currency={allocation.plan.currency}
                   decimals={0}
                   unavailableLabel="Montant indisponible"
-                  className="text-3xl font-medium tracking-tight sm:text-4xl"
+                  textStyle="3xl"
+                  fontWeight="medium"
+                  sm={{ textStyle: '4xl' }}
                 />
                 {allocation.plan.value !== null ? (
-                  <span className="font-mono text-sm font-normal text-muted-foreground sm:text-base">
+                  <styled.span
+                    fontFamily="mono"
+                    textStyle="sm"
+                    fontWeight="normal"
+                    color="muted.foreground"
+                    sm={{ textStyle: 'md' }}
+                  >
                     à orienter
-                  </span>
+                  </styled.span>
                 ) : null}
-              </h2>
+              </styled.h2>
               {allocation.plan.reason === 'mixed_currency' ? (
-                <p className="mt-2 text-xs text-warning">
+                <styled.p mt="2" textStyle="xs" color="warning">
                   Le total n’est pas affiché car plusieurs devises sont présentes.
-                </p>
+                </styled.p>
               ) : null}
             </div>
             {plan ? (
@@ -277,17 +484,17 @@ function AdvisorPage() {
                 {plan.dataQualityStatus === 'ready' ? 'Plan disponible' : 'Plan partiel'}
               </Badge>
             ) : null}
-          </div>
+          </styled.div>
 
-          <div className="mt-7 border-t border-border/70">
+          <styled.div mt="7" borderTopWidth="1px" borderColor="border/70">
             {isLoading ? (
               <PlanRowsLoading />
             ) : plan === null ? (
               <EmptyPlan isAdmin={isAdmin} onGenerate={() => generatePlanMutation.mutate()} />
             ) : rows.length === 0 ? (
-              <p className="py-8 text-sm text-muted-foreground">
+              <styled.p py="8" textStyle="sm" color="muted.foreground">
                 Aucune action n’est définie dans le plan actuel.
-              </p>
+              </styled.p>
             ) : (
               rows.map(row => (
                 <AdvisorActionRow
@@ -298,91 +505,105 @@ function AdvisorPage() {
                 />
               ))
             )}
-          </div>
+          </styled.div>
 
           {rows.length > 0 ? (
-            <div className="flex items-center justify-between border-t border-border/70 pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            <div className={planTotalRow}>
               <span>Total du plan</span>
               <CurrencyAmount
                 value={allocation.plan.value}
                 currency={allocation.plan.currency}
                 decimals={0}
                 unavailable="dash"
-                className="text-sm text-foreground"
+                textStyle="sm"
+                color="foreground"
               />
             </div>
           ) : null}
-        </div>
+        </styled.div>
 
-        <div className="border-t border-border/70 py-7 lg:border-l lg:border-t-0 lg:pl-10">
+        <styled.div
+          borderTopWidth="1px"
+          borderColor="border/70"
+          py="7"
+          lg={{ borderLeftWidth: '1px', borderTopWidth: '0', pl: '10' }}
+        >
           <AllocationComparison comparison={allocation} />
-          <section className="mt-7 border-t border-border/70 pt-6" aria-labelledby="flash-title">
-            <div className="flex items-center justify-between gap-3">
-              <h2
-                id="flash-title"
-                className="font-mono text-[10px] uppercase tracking-[0.19em] text-muted-foreground"
-              >
+          <styled.section
+            mt="7"
+            borderTopWidth="1px"
+            borderColor="border/70"
+            pt="6"
+            aria-labelledby="flash-title"
+          >
+            <div className={titleRow}>
+              <h2 id="flash-title" className={eyebrow}>
                 Flash
               </h2>
-              <span aria-hidden="true" className="size-1 rounded-full bg-muted-foreground/45" />
+              <styled.span aria-hidden="true" boxSize="1" rounded="full" bg="muted.foreground/45" />
             </div>
             {!flash.supported ? (
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{flash.message}</p>
+              <styled.p mt="3" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
+                {flash.message}
+              </styled.p>
             ) : null}
-          </section>
-        </div>
-      </section>
+          </styled.section>
+        </styled.div>
+      </styled.section>
 
-      <details className="group border-b border-border/60 pb-6">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-control text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/70 [&::-webkit-details-marker]:hidden">
-          <NotebookPixelIcon size={15} aria-hidden="true" className="text-muted-foreground" />
+      <styled.details
+        data-group="disclosure"
+        borderBottomWidth="1px"
+        borderColor="border/60"
+        pb="6"
+      >
+        <summary className={journalSummary}>
+          <NotebookPixelIcon size={15} aria-hidden="true" className={mutedIcon} />
           <span>Journal de décisions</span>
-          <span className="ml-auto font-mono text-[11px] text-muted-foreground">
+          <styled.span ml="auto" fontFamily="mono" fontSize="11px" color="muted.foreground">
             {journalQuery.data?.items.length ?? 0}
-          </span>
-          <ChevronDownPixelIcon
-            size={14}
-            aria-hidden="true"
-            className="text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none"
-          />
+          </styled.span>
+          <ChevronDownPixelIcon size={14} aria-hidden="true" className={journalChevron} />
         </summary>
-        <div className="mt-3 space-y-2 pl-7">
+        <styled.div mt="3" spaceY="2" pl="7">
           {journalQuery.isPending ? (
-            <p className="text-sm text-muted-foreground">Chargement du journal…</p>
+            <p className={mutedText}>Chargement du journal…</p>
           ) : journalQuery.isError ? (
-            <p className="text-sm text-muted-foreground">Journal momentanément indisponible.</p>
+            <p className={mutedText}>Journal momentanément indisponible.</p>
           ) : (journalQuery.data?.items.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune décision enregistrée.</p>
+            <p className={mutedText}>Aucune décision enregistrée.</p>
           ) : (
             journalQuery.data?.items.map(entry => (
-              <article
-                key={entry.id}
-                className="flex flex-col gap-1 border-l border-border/70 py-1 pl-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
-              >
+              <article key={entry.id} className={journalEntry}>
                 <div>
-                  <p className="text-sm text-foreground">{DECISION_LABEL[entry.decision]}</p>
+                  <styled.p textStyle="sm" color="foreground">
+                    {DECISION_LABEL[entry.decision]}
+                  </styled.p>
                   {entry.freeNote ? (
-                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                    <styled.p mt="0.5" lineClamp="2" textStyle="xs" color="muted.foreground">
                       {entry.freeNote}
-                    </p>
+                    </styled.p>
                   ) : null}
                 </div>
-                <time
+                <styled.time
                   dateTime={entry.decidedAt}
-                  className="shrink-0 font-mono text-[10px] text-muted-foreground"
+                  flexShrink="0"
+                  fontFamily="mono"
+                  fontSize="10px"
+                  color="muted.foreground"
                 >
                   {formatDateTime(entry.decidedAt)}
-                </time>
+                </styled.time>
               </article>
             ))
           )}
-        </div>
-      </details>
+        </styled.div>
+      </styled.details>
 
-      <p className="max-w-3xl text-xs leading-relaxed text-muted-foreground">
+      <styled.p maxW="3xl" textStyle="xs" lineHeight="relaxed" color="muted.foreground">
         Finance-OS prépare des recommandations. Il ne passe aucun ordre et ne transfère aucun fonds.
         Toute décision reste soumise à votre validation.
-      </p>
+      </styled.p>
 
       <AdvisorProfileDrawer
         open={profileOpen}
@@ -394,7 +615,7 @@ function AdvisorPage() {
         mutationError={updateProfileMutation.isError}
         onSubmit={input => updateProfileMutation.mutate(input)}
       />
-    </div>
+    </styled.div>
   )
 }
 
@@ -432,18 +653,12 @@ function AdvisorActionRow({
       : row.actionTone === 'attention'
         ? 'warning'
         : 'outline'
-  const riskClass =
-    row.bucket === 'asymmetric'
-      ? 'text-warning'
-      : row.bucket === 'growth'
-        ? 'text-ai'
-        : 'text-foreground'
 
   return (
-    <article className="border-b border-border/70 last:border-b-0">
+    <article className={actionRow}>
       <button
         type="button"
-        className="grid min-h-[74px] w-full grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-x-3 py-3 text-left outline-none transition-colors hover:bg-accent/25 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70 sm:grid-cols-[105px_minmax(0,1.2fr)_minmax(120px,0.7fr)_auto] sm:gap-x-5"
+        className={actionRowButton}
         aria-expanded={expanded}
         aria-controls={detailId}
         onClick={onToggle}
@@ -453,66 +668,73 @@ function AdvisorActionRow({
           currency={row.currency}
           decimals={0}
           unavailable="dash"
-          className="text-lg font-medium text-foreground"
+          textStyle="lg"
+          fontWeight="medium"
+          color="foreground"
         />
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-medium text-foreground">{row.asset}</span>
-          <span className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-[10px] text-muted-foreground">
+        <styled.span minW="0">
+          <styled.span
+            display="block"
+            truncate
+            textStyle="sm"
+            fontWeight="medium"
+            color="foreground"
+          >
+            {row.asset}
+          </styled.span>
+          <span className={actionMeta}>
             <span>{row.destination}</span>
-            <span className={riskClass}>{row.bucketLabel}</span>
+            <span className={bucketTone({ bucket: row.bucket })}>{row.bucketLabel}</span>
           </span>
-        </span>
-        <span className="hidden text-xs leading-relaxed text-muted-foreground sm:block">
+        </styled.span>
+        <styled.span
+          display="none"
+          textStyle="xs"
+          lineHeight="relaxed"
+          color="muted.foreground"
+          sm={{ display: 'block' }}
+        >
           {row.shortReason}
-        </span>
-        <span className="flex items-center justify-end gap-2">
+        </styled.span>
+        <styled.span display="flex" alignItems="center" justifyContent="flex-end" gap="2">
           <Badge variant={badgeVariant}>{row.actionLabel}</Badge>
-          <ChevronDownPixelIcon
-            size={13}
-            aria-hidden="true"
-            className={`text-muted-foreground transition-transform motion-reduce:transition-none ${
-              expanded ? 'rotate-180' : ''
-            }`}
-          />
-        </span>
+          <ChevronDownPixelIcon size={13} aria-hidden="true" className={rowChevron({ expanded })} />
+        </styled.span>
       </button>
       {expanded ? (
-        <div
-          id={detailId}
-          className="grid gap-4 bg-surface-1/45 px-3 py-4 text-xs sm:grid-cols-3 sm:px-4"
-        >
+        <div id={detailId} className={actionDetail}>
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-              Pourquoi
-            </p>
-            <p className="mt-1.5 leading-relaxed text-foreground">{row.shortReason}</p>
+            <p className={detailLabel}>Pourquoi</p>
+            <styled.p mt="1.5" lineHeight="relaxed" color="foreground">
+              {row.shortReason}
+            </styled.p>
             {row.caveat && row.caveat !== row.shortReason ? (
-              <p className="mt-1 leading-relaxed text-warning">{row.caveat}</p>
+              <styled.p mt="1" lineHeight="relaxed" color="warning">
+                {row.caveat}
+              </styled.p>
             ) : null}
           </div>
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-              Allocation
-            </p>
-            <p className="mt-1.5 text-muted-foreground">
+            <p className={detailLabel}>Allocation</p>
+            <styled.p mt="1.5" color="muted.foreground">
               Cible {formatPercent(row.targetWeightPct)}
-            </p>
-            <p className="mt-1 text-muted-foreground">
+            </styled.p>
+            <styled.p mt="1" color="muted.foreground">
               Actuelle {formatPercent(row.currentWeightPct)}
-            </p>
+            </styled.p>
           </div>
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-              Données
-            </p>
-            <p className="mt-1.5 text-foreground">{row.freshnessLabel}</p>
-            <p className="mt-1 leading-relaxed text-muted-foreground">
+            <p className={detailLabel}>Données</p>
+            <styled.p mt="1.5" color="foreground">
+              {row.freshnessLabel}
+            </styled.p>
+            <styled.p mt="1" lineHeight="relaxed" color="muted.foreground">
               {row.amountKind === 'contribution'
                 ? 'Montant d’apport proposé, sans exécution.'
                 : row.amountKind === 'trade'
                   ? 'Montant indicatif soumis à validation.'
                   : 'Montant non déterminé.'}
-            </p>
+            </styled.p>
           </div>
         </div>
       ) : null}
@@ -523,11 +745,8 @@ function AdvisorActionRow({
 function AllocationComparison({ comparison }: { comparison: AdvisorAllocationComparison }) {
   return (
     <section aria-labelledby="allocation-comparison-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2
-          id="allocation-comparison-title"
-          className="font-mono text-[10px] uppercase tracking-[0.19em] text-muted-foreground"
-        >
+      <div className={titleRow}>
+        <h2 id="allocation-comparison-title" className={eyebrow}>
           Cible et plan actuel
         </h2>
         <Status
@@ -535,15 +754,23 @@ function AllocationComparison({ comparison }: { comparison: AdvisorAllocationCom
           label={comparison.targetIsValid ? 'Cible complète' : 'Cible à vérifier'}
         />
       </div>
-      <div className="mt-5 space-y-5">
+      <styled.div mt="5" spaceY="5">
         {comparison.rows.map(row => (
           <div key={row.bucket}>
-            <div className="mb-2 flex items-baseline justify-between gap-3">
-              <p className="text-xs font-medium text-foreground">{row.label}</p>
-              <p className="font-mono text-[10px] text-muted-foreground">
+            <styled.div
+              mb="2"
+              display="flex"
+              alignItems="baseline"
+              justifyContent="space-between"
+              gap="3"
+            >
+              <styled.p textStyle="xs" fontWeight="medium" color="foreground">
+                {row.label}
+              </styled.p>
+              <styled.p fontFamily="mono" fontSize="10px" color="muted.foreground">
                 cible {formatPercent(row.targetPct)}, plan {formatPercent(row.planPct)}
-              </p>
-            </div>
+              </styled.p>
+            </styled.div>
             <Progress
               value={row.planPct}
               tone={bucketProgressTone(row.bucket)}
@@ -551,44 +778,53 @@ function AllocationComparison({ comparison }: { comparison: AdvisorAllocationCom
             />
           </div>
         ))}
-      </div>
-      <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+      </styled.div>
+      <styled.p mt="4" fontSize="11px" lineHeight="relaxed" color="muted.foreground">
         La cible décrit le profil long terme. Le plan montre uniquement l’orientation proposée
         maintenant.
-      </p>
+      </styled.p>
     </section>
   )
 }
 
 function EmptyPlan({ isAdmin, onGenerate }: { isAdmin: boolean; onGenerate: () => void }) {
   return (
-    <div className="py-8">
-      <p className="text-sm font-medium text-foreground">Aucun plan d’investissement actuel</p>
-      <p className="mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
+    <styled.div py="8">
+      <styled.p textStyle="sm" fontWeight="medium" color="foreground">
+        Aucun plan d’investissement actuel
+      </styled.p>
+      <styled.p mt="1" maxW="lg" textStyle="sm" lineHeight="relaxed" color="muted.foreground">
         Finance-OS n’affiche pas de recommandation chiffrée tant qu’aucun plan réel n’est
         disponible.
-      </p>
+      </styled.p>
       {isAdmin ? (
-        <Button type="button" variant="outline" className="mt-4 min-h-11" onClick={onGenerate}>
+        <Button type="button" variant="outline" mt="4" minH="11" onClick={onGenerate}>
           Calculer un plan
         </Button>
       ) : null}
-    </div>
+    </styled.div>
   )
 }
 
 function PlanRowsLoading() {
   return (
-    <output aria-label="Chargement des actions" className="block divide-y divide-border/70">
+    <output aria-label="Chargement des actions" className={loadingRows}>
       {[0, 1, 2].map(index => (
-        <div key={index} className="grid min-h-[74px] grid-cols-[88px_1fr_auto] items-center gap-3">
-          <span className="h-5 w-16 animate-pulse rounded-control bg-muted motion-reduce:animate-none" />
-          <span className="space-y-2">
-            <span className="block h-4 w-32 animate-pulse rounded-control bg-muted motion-reduce:animate-none" />
-            <span className="block h-3 w-24 animate-pulse rounded-control bg-muted/70 motion-reduce:animate-none" />
-          </span>
-          <span className="h-6 w-20 animate-pulse rounded-full bg-muted motion-reduce:animate-none" />
-        </div>
+        <styled.div
+          key={index}
+          display="grid"
+          minH="74px"
+          gridTemplateColumns="88px 1fr auto"
+          alignItems="center"
+          gap="3"
+        >
+          <Skeleton h="5" w="16" />
+          <styled.span spaceY="2">
+            <Skeleton display="block" h="4" w="32" />
+            <Skeleton display="block" h="3" w="24" bg="muted/70" />
+          </styled.span>
+          <Skeleton shape="pill" h="6" w="20" />
+        </styled.div>
       ))}
     </output>
   )
@@ -596,9 +832,15 @@ function PlanRowsLoading() {
 
 function AdvisorLoading() {
   return (
-    <output className="block space-y-8" aria-label="Chargement de l’Advisor">
-      <div className="h-8 w-36 animate-pulse rounded-control bg-muted motion-reduce:animate-none" />
-      <div className="h-72 animate-pulse border-y border-border/60 bg-surface-1/35 motion-reduce:animate-none" />
-    </output>
+    <styled.output display="block" spaceY="8" aria-label="Chargement de l’Advisor">
+      <SkeletonBlock h="8" w="36" />
+      <SkeletonBlock
+        shape="flat"
+        h="72"
+        borderYWidth="1px"
+        borderColor="border/60"
+        bg="surface.1/35"
+      />
+    </styled.output>
   )
 }

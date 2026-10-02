@@ -14,7 +14,8 @@ Read `packages/external-investments/AGENTS.md` if present, then `docs/integratio
 - Never add mutations for order placement, withdrawals, transfers, convert, margin/futures, staking/earn, rebalancing, or hidden execution-ready DTOs. Read-only provider histories may include orders, trades, transfers, or withdrawals as analytics inputs.
 - Preserve both runtime kill switches: `EXTERNAL_INTEGRATIONS_SAFE_MODE` and `EXTERNAL_INVESTMENTS_SAFE_MODE`.
 - Credentials are server environment only: `BINANCE_SPOT_API_KEY`, `BINANCE_SPOT_API_SECRET`, `IBKR_FLEX_TOKEN`, `IBKR_FLEX_QUERY_IDS`.
-- Never add browser credential forms or resume reads/writes from `external_investment_credential`.
+- Provider requests go through `runProviderOperationOrThrow` from `@finance-os/provider-runtime/policy` (timeout, transient-only retry, lease cancellation via `signal`); never add ad-hoc AbortController/setTimeout/sleep retry loops in a client, and map `ProviderOperationError` (`timeout`/`cancelled`) to `PROVIDER_TIMEOUT`.
+- Never add browser credential forms or reintroduce the legacy `external_investment_credential` table (dropped in migration 0038).
 
 ## Workflow
 

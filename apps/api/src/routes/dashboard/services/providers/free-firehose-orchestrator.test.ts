@@ -95,7 +95,7 @@ describe('runFreeFirehose dry-run mode', () => {
   it('passes dryRun=true to each provider', async () => {
     const received: { dryRun?: boolean } = {}
     const provider1: FreeFirehoseProviderRunner = {
-      id: 'gdelt' as never,
+      id: 'gdelt',
       maxRecords: 100,
       run: async ({ dryRun }) => {
         received.dryRun = dryRun
@@ -121,7 +121,7 @@ describe('runFreeFirehose weekly quota', () => {
       mode: 'live',
       providers: [
         {
-          id: 'gdelt' as never,
+          id: 'gdelt',
           maxRecords: 100,
           run: async () => {
             providerInvoked = true
@@ -145,7 +145,7 @@ describe('runFreeFirehose weekly quota', () => {
       mode: 'live',
       providers: [
         {
-          id: 'gdelt' as never,
+          id: 'gdelt',
           maxRecords: 100,
           run: async () => {
             providerInvoked = true
@@ -211,7 +211,7 @@ describe('runFreeFirehose live mode', () => {
           insertedCount: 0,
           dedupedCount: 0,
           failedCount: 3,
-          errorCodes: ['HN_500' as string],
+          errorCodes: ['HN_500'],
         }),
       ] as FreeFirehoseProviderRunner[],
       history: stubHistory(0),
@@ -227,7 +227,7 @@ describe('runFreeFirehose live mode', () => {
       mode: 'live',
       providers: [
         {
-          id: 'gdelt' as never,
+          id: 'gdelt',
           maxRecords: 100,
           run: async () => {
             throw new Error('boom')

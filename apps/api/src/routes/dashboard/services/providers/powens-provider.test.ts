@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import type { Provider, ProviderCallContext } from '@finance-os/provider-contract'
+import type { ProviderCallContext } from '@finance-os/provider-contract'
 import {
   assertProviderContract,
   assertProviderDoesNotExposeForbiddenCapabilities,
@@ -44,8 +44,8 @@ describe('createPowensProvider', () => {
       listConnectionStatuses: async () => [],
       logTarget: target,
     })
-    assertProviderContract(handle.provider as unknown as Provider)
-    assertProviderDoesNotExposeForbiddenCapabilities(handle.provider as unknown as Provider)
+    assertProviderContract(handle.provider)
+    assertProviderDoesNotExposeForbiddenCapabilities(handle.provider)
     expect(String(handle.provider.id)).toBe('powens')
     expect(handle.provider.capability).toBe('banking.accounts.read')
   })

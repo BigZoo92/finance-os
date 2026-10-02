@@ -2,7 +2,8 @@ import type { DashboardTransactionsResponse } from '../../types'
 
 const normalize = (value: string) => value.trim().toLowerCase()
 
-const matchAny = (value: string, patterns: string[]) => patterns.some(pattern => value.includes(pattern))
+const matchAny = (value: string, patterns: string[]) =>
+  patterns.some(pattern => value.includes(pattern))
 
 export const buildDeterministicTransactionSuggestions = (
   transactions: DashboardTransactionsResponse['items']
@@ -18,7 +19,8 @@ export const buildDeterministicTransactionSuggestions = (
     .map(item => {
       const haystack = normalize(`${item.label} ${item.accountName ?? ''}`)
       let suggestedKind = item.direction === 'income' ? 'income' : 'expense'
-      let suggestedCategory = item.resolvedCategory ?? (item.direction === 'income' ? 'income' : 'expenses')
+      let suggestedCategory =
+        item.resolvedCategory ?? (item.direction === 'income' ? 'income' : 'expenses')
       let suggestedSubcategory: string | null = item.subcategory
       const suggestedTags: string[] = []
       const rationale: string[] = []

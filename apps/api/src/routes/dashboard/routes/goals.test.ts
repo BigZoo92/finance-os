@@ -3,6 +3,7 @@ import { createProviderRegistry } from '@finance-os/provider-runtime'
 import { Elysia } from 'elysia'
 import { getDashboardGoalsMock } from '../../../mocks/dashboardGoals.mock'
 import { createDashboardRuntimePlugin } from '../plugin'
+import { createRuntimeRepositoriesFixture } from '../test-support/runtime-repositories-fixture'
 import type { DashboardGoalResponse, DashboardRouteRuntime } from '../types'
 import { createGoalsRoute } from './goals'
 
@@ -33,10 +34,7 @@ const createDashboardRuntime = (
   const baseGoal = createGoalPayload()
 
   return {
-    repositories: {
-      readModel: {} as DashboardRouteRuntime['repositories']['readModel'],
-      derivedRecompute: {} as DashboardRouteRuntime['repositories']['derivedRecompute'],
-    },
+    repositories: createRuntimeRepositoriesFixture(),
     useCases: {
       getSummary: async () => {
         throw new Error('not used in goals tests')

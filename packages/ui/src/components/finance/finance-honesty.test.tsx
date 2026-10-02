@@ -6,15 +6,16 @@
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-
+import { Status } from '../status/status'
+import { ValuationState } from '../status/valuation-state'
 import { Amount, CurrencyAmount } from './amount'
 import { PercentChange, TrendIndicator } from './percent-change'
 import { Progress } from './progress'
-import { Status } from '../status/status'
-import { ValuationState } from '../status/valuation-state'
 
 const render = (node: React.ReactElement) =>
-  renderToStaticMarkup(node).replace(/[\u00A0\u202F\u2009\u2007]/g, " ").replace(/−/g, '-')
+  renderToStaticMarkup(node)
+    .replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')
+    .replace(/−/g, '-')
 
 describe('Amount', () => {
   it('renders Indisponible for null, never 0 €', () => {
@@ -40,7 +41,7 @@ describe('Amount', () => {
   it('renders positive and negative amounts with tabular mono treatment', () => {
     const positive = render(<Amount value={67070.44} />)
     expect(positive).toContain('67 070,44 €')
-    expect(positive).toContain('font-financial')
+    expect(positive).toContain('ff_mono')
     expect(positive).toContain('tabular-nums')
     expect(render(<Amount value={-1234.5} />)).toContain('-1 234,50 €')
   })
@@ -72,23 +73,29 @@ describe('PercentChange', () => {
   it('renders a real zero without fake sign or semantic color', () => {
     const html = render(<PercentChange value={0} />)
     expect(html).toContain('0,00 %')
-    expect(html).not.toContain('text-positive')
-    expect(html).not.toContain('text-negative')
+    expect(html).not.toContain('c_positive')
+    expect(html).not.toContain('c_negative')
   })
 
   it('keeps the sign in the text so color is never the only signal', () => {
     const up = render(<PercentChange value={8.51} />)
     expect(up).toContain('+8,51 %')
-    expect(up).toContain('text-positive')
+    expect(up).toContain('c_positive')
     const down = render(<PercentChange value={-3.2} />)
     expect(down).toContain('-3,20 %')
-    expect(down).toContain('text-negative')
+    expect(down).toContain('c_negative')
   })
 })
 
 describe('TrendIndicator', () => {
   it('renders nothing for unknown deltas', () => {
-    expect(render(<span><TrendIndicator value={null} /></span>)).toBe('<span></span>')
+    expect(
+      render(
+        <span>
+          <TrendIndicator value={null} />
+        </span>
+      )
+    ).toBe('<span></span>')
   })
 
   it('pairs the glyph with a text equivalent', () => {

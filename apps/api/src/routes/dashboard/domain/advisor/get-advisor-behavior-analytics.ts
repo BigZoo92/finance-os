@@ -36,9 +36,9 @@ const DECISION_KINDS = ['accepted', 'rejected', 'deferred', 'ignored'] as const
 type DecisionKind = (typeof DECISION_KINDS)[number]
 
 const PERMANENT_CAVEATS: readonly string[] = [
-  "Analyse rétrospective basée sur le journal de décisions. Ne constitue pas une recommandation.",
+  'Analyse rétrospective basée sur le journal de décisions. Ne constitue pas une recommandation.',
   "Aucune causalité inférée : un schéma observé n'est pas une preuve d'effet.",
-  "Les notes libres ne sont jamais incluses dans cette analyse.",
+  'Les notes libres ne sont jamais incluses dans cette analyse.',
 ]
 
 export const clampWindowDays = (raw: number | null | undefined): number => {
@@ -94,10 +94,7 @@ export interface BehaviorAnalyticsOutcome {
 }
 
 export interface BehaviorAnalyticsRepositoryAdapter {
-  listDecisionsForBehaviorAnalytics: (input: {
-    windowDays: number
-    limit: number
-  }) => Promise<{
+  listDecisionsForBehaviorAnalytics: (input: { windowDays: number; limit: number }) => Promise<{
     decisions: BehaviorAnalyticsDecision[]
     outcomes: BehaviorAnalyticsOutcome[]
   }>
@@ -210,7 +207,9 @@ export const computeBehaviorAnalytics = (
     }
   )
 
-  const reasonCodeBreakdown: DashboardAdvisorBehaviorReasonCodeBreakdownEntry[] = [...reasonAgg.entries()]
+  const reasonCodeBreakdown: DashboardAdvisorBehaviorReasonCodeBreakdownEntry[] = [
+    ...reasonAgg.entries(),
+  ]
     .sort((a, b) => {
       // Most-frequent first; tie-break alphabetical for determinism.
       if (b[1].count !== a[1].count) return b[1].count - a[1].count
@@ -219,7 +218,10 @@ export const computeBehaviorAnalytics = (
     .map(([reasonCode, agg]) => {
       const evaluated = agg.positive + agg.negative
       let caution: string | null = null
-      if (evaluated >= BEHAVIOR_INSUFFICIENT_SAMPLE && agg.negative >= 2 * Math.max(1, agg.positive)) {
+      if (
+        evaluated >= BEHAVIOR_INSUFFICIENT_SAMPLE &&
+        agg.negative >= 2 * Math.max(1, agg.positive)
+      ) {
         caution = 'Plus de résultats négatifs que positifs sur un échantillon évalué.'
       }
       return {

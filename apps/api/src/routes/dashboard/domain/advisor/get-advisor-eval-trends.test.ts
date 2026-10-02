@@ -207,7 +207,11 @@ describe('computeAdvisorEvalTrends', () => {
         summary: {
           failedCaseKeys: ['rec-needs-evidence'],
           failedCaseDetails: [
-            { caseId: 'rec-needs-evidence', category: 'recommendation_quality', failedExpectations: [] },
+            {
+              caseId: 'rec-needs-evidence',
+              category: 'recommendation_quality',
+              failedExpectations: [],
+            },
           ],
         },
       }),
@@ -264,9 +268,7 @@ describe('buildDeterministicAdvisorEvalTrendsDemo', () => {
 
 describe('createAdvisorEvalTrendsUseCase', () => {
   const repoCalls: Array<{ windowDays: number; limit: number }> = []
-  const buildRepo = (
-    runs: DashboardAdvisorEvalRunResponse[]
-  ): EvalTrendsRepositoryAdapter => ({
+  const buildRepo = (runs: DashboardAdvisorEvalRunResponse[]): EvalTrendsRepositoryAdapter => ({
     listAdvisorEvalTrendRuns: async input => {
       repoCalls.push(input)
       return runs

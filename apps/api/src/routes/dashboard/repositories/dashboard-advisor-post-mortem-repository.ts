@@ -11,21 +11,17 @@ import type {
   PostMortemListResponse,
   PostMortemRepositoryAdapter,
   PostMortemRunStatus,
-} from '../domain/advisor/post-mortem/create-post-mortem-use-cases'
+} from '../domain/advisor'
 import type { ApiDb } from '../types'
 
 const toIso = (value: Date | null | undefined): string | null => value?.toISOString() ?? null
 
-const toRiskLevel = (
-  raw: unknown
-): 'low' | 'medium' | 'high' | null => {
+const toRiskLevel = (raw: unknown): 'low' | 'medium' | 'high' | null => {
   if (raw === 'low' || raw === 'medium' || raw === 'high') return raw
   return null
 }
 
-const toDecisionKind = (
-  raw: unknown
-): 'accepted' | 'rejected' | 'deferred' | 'ignored' | null => {
+const toDecisionKind = (raw: unknown): 'accepted' | 'rejected' | 'deferred' | 'ignored' | null => {
   if (raw === 'accepted' || raw === 'rejected' || raw === 'deferred' || raw === 'ignored') {
     return raw
   }
@@ -121,7 +117,9 @@ export const createDashboardAdvisorPostMortemRepository = ({
 
       if (rows.length === 0) return []
 
-      const recommendationIds: number[] = rows.map((r: (typeof rows)[number]) => r.recommendation.id)
+      const recommendationIds: number[] = rows.map(
+        (r: (typeof rows)[number]) => r.recommendation.id
+      )
       const recommendationKeys: string[] = rows
         .map((r: (typeof rows)[number]) => r.recommendation.recommendationKey)
         .filter((v: string | null): v is string => typeof v === 'string')
@@ -141,10 +139,13 @@ export const createDashboardAdvisorPostMortemRepository = ({
               )
               .orderBy(desc(schema.advisorDecisionJournal.decidedAt))
 
-      const decisionByRecommendationId = new Map<number, typeof decisionRows[number]>()
-      const decisionByRecommendationKey = new Map<string, typeof decisionRows[number]>()
+      const decisionByRecommendationId = new Map<number, (typeof decisionRows)[number]>()
+      const decisionByRecommendationKey = new Map<string, (typeof decisionRows)[number]>()
       for (const row of decisionRows) {
-        if (row.recommendationId !== null && !decisionByRecommendationId.has(row.recommendationId)) {
+        if (
+          row.recommendationId !== null &&
+          !decisionByRecommendationId.has(row.recommendationId)
+        ) {
           decisionByRecommendationId.set(row.recommendationId, row)
         }
         if (
@@ -166,7 +167,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
               .orderBy(schema.advisorDecisionOutcome.observedAt)
       type OutcomeRow = (typeof outcomeRows)[number]
       const outcomesByDecisionId = new Map<number, OutcomeRow[]>()
-      for (const o of outcomeRows as OutcomeRow[]) {
+      for (const o of outcomeRows) {
         const list = outcomesByDecisionId.get(o.decisionId) ?? []
         list.push(o)
         outcomesByDecisionId.set(o.decisionId, list)
@@ -180,7 +181,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
             decisionByRecommendationKey.get(recommendation.recommendationKey)) ||
           null
         const decisionOutcomes =
-          decision !== null ? outcomesByDecisionId.get(decision.id) ?? [] : []
+          decision !== null ? (outcomesByDecisionId.get(decision.id) ?? []) : []
 
         const expiresAt = recommendation.expiresAt
         const horizonDays =
@@ -209,16 +210,12 @@ export const createDashboardAdvisorPostMortemRepository = ({
               ? Number.parseFloat(recommendation.confidence)
               : null,
           recommendationRiskLevel: toRiskLevel(recommendation.riskLevel),
-          evidence: Array.isArray(recommendation.evidence)
-            ? (recommendation.evidence as string[])
-            : [],
-          assumptions: Array.isArray(recommendation.assumptions)
-            ? (recommendation.assumptions as string[])
-            : [],
+          evidence: Array.isArray(recommendation.evidence) ? recommendation.evidence : [],
+          assumptions: Array.isArray(recommendation.assumptions) ? recommendation.assumptions : [],
           outcomes: decisionOutcomes.map(o => ({
             outcomeKind: o.outcomeKind,
             observedAt: o.observedAt.toISOString(),
-            learningTags: Array.isArray(o.learningTags) ? (o.learningTags as string[]) : [],
+            learningTags: Array.isArray(o.learningTags) ? o.learningTags : [],
           })),
           // Hypothesis context: only attached when the recommendation links cleanly to a manual
           // hypothesis through its evidence/assumptions metadata. PR4 keeps this conservative —
@@ -274,7 +271,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
         })
         .returning()
       if (!row) throw new Error('Failed to insert advisor post-mortem row')
-      return mapPostMortemRow(row as PostMortemRow)
+      return mapPostMortemRow(row)
     },
 
     async listPostMortems(input) {
@@ -295,7 +292,7 @@ export const createDashboardAdvisorPostMortemRepository = ({
         .where(eq(schema.advisorPostMortem.id, id))
         .limit(1)
       if (!row) return null
-      return mapPostMortemRow(row as PostMortemRow)
+      return mapPostMortemRow(row)
     },
   }
 }

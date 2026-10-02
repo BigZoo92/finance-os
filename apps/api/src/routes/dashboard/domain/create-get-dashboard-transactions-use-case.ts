@@ -31,9 +31,7 @@ interface CreateGetDashboardTransactionsUseCaseDependencies {
       accountName: string | null
     }>
   >
-  listTransactionSyncMetadata: (
-    connectionIds: string[]
-  ) => Promise<
+  listTransactionSyncMetadata: (connectionIds: string[]) => Promise<
     Array<{
       powensConnectionId: string
       connectionStatus: 'connected' | 'syncing' | 'error' | 'reconnect_required' | null
@@ -86,9 +84,7 @@ const toStableBucket = (value: string) => {
   return Math.abs(hash)
 }
 
-const summarizeDisagreement = (
-  counters: Map<string, { total: number; disagreements: number }>
-) => {
+const summarizeDisagreement = (counters: Map<string, { total: number; disagreements: number }>) => {
   return [...counters.entries()]
     .map(([key, entry]) => ({ key, total: entry.total, disagreements: entry.disagreements }))
     .sort((left, right) => {
@@ -140,7 +136,9 @@ export const createGetDashboardTransactionsUseCase = ({
     }
 
     const metadataCoverage = new Set(syncMetadata.map(row => row.powensConnectionId))
-    const hasMissingSyncMetadata = connectionIds.some(connectionId => !metadataCoverage.has(connectionId))
+    const hasMissingSyncMetadata = connectionIds.some(
+      connectionId => !metadataCoverage.has(connectionId)
+    )
     const latestSyncedAtMs = syncMetadata.reduce<number | null>((latest, row) => {
       const current = row.lastSyncAt?.getTime()
       if (!Number.isFinite(current)) {
@@ -149,7 +147,9 @@ export const createGetDashboardTransactionsUseCase = ({
       return latest === null ? (current ?? null) : Math.max(latest, current ?? 0)
     }, null)
     const snapshotAgeSeconds =
-      latestSyncedAtMs === null ? null : Math.max(0, Math.round((now().getTime() - latestSyncedAtMs) / 1000))
+      latestSyncedAtMs === null
+        ? null
+        : Math.max(0, Math.round((now().getTime() - latestSyncedAtMs) / 1000))
     const staleThresholdSeconds = staleAfterMinutes * 60
     const hasSyncing = syncMetadata.some(row => row.connectionStatus === 'syncing')
     const hasFailures = syncMetadata.some(
@@ -286,19 +286,20 @@ export const createGetDashboardTransactionsUseCase = ({
       }
     })
     const shadowLatencyMs = Math.max(0, now().getTime() - categorizationStartedAt)
-    const shadowDisabledReason =
-      !categorizationMigration.enabled
-        ? 'disabled'
-        : shadowLatencyMs > categorizationMigration.shadowLatencyBudgetMs
-          ? 'latency_budget_exceeded'
-          : null
+    const shadowDisabledReason = !categorizationMigration.enabled
+      ? 'disabled'
+      : shadowLatencyMs > categorizationMigration.shadowLatencyBudgetMs
+        ? 'latency_budget_exceeded'
+        : null
     if (onCategorizationMigrationEvaluated) {
       const disagreementRate = items.length === 0 ? 0 : disagreementCount / items.length
       onCategorizationMigrationEvaluated({
         mode: 'admin',
         evaluatedAt: now().toISOString(),
         total: items.length,
-        rolloutPercent: categorizationMigration.enabled ? categorizationMigration.rolloutPercent : 0,
+        rolloutPercent: categorizationMigration.enabled
+          ? categorizationMigration.rolloutPercent
+          : 0,
         disagreements: disagreementCount,
         disagreementRate,
         overAlertThreshold: disagreementRate >= categorizationMigration.alertDisagreementRate,

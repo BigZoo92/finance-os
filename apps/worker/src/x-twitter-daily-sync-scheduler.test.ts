@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'bun:test'
+import { createInMemoryRedisClient } from '@finance-os/redis'
 import {
   __testing,
   shouldTriggerXDailySync,
   startXDailySyncScheduler,
+  triggerXDailySync,
+  X_DAILY_PREVIOUS_DAY_LOCK_KEY,
 } from './x-twitter-daily-sync-scheduler'
 
 describe('shouldTriggerXDailySync', () => {
@@ -58,11 +61,72 @@ describe('buildXDailySyncRequest', () => {
       requestId: 'req-1',
       privateAccessToken: 'tok',
     })
-    expect(req.url).toBe(
-      'http://api:3001/dashboard/signals/x-twitter/daily-previous-day-sync'
-    )
+    expect(req.url).toBe('http://api:3001/dashboard/signals/x-twitter/daily-previous-day-sync')
     expect((req.init.headers as Record<string, string>)['x-internal-token']).toBe('tok')
     expect(req.init.body).toContain('automatic_capped')
+  })
+})
+
+describe('triggerXDailySync', () => {
+  it('skips when another sync already owns the lock and leaves that lock intact', async () => {
+    const redis = createInMemoryRedisClient()
+    await redis.client.set(X_DAILY_PREVIOUS_DAY_LOCK_KEY, 'foreign-token', { NX: true, EX: 60 })
+    const events: Array<Record<string, unknown>> = []
+    let fetchCalled = false
+
+    const result = await triggerXDailySync({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api:3001',
+      log: event => {
+        events.push(event)
+      },
+      fetchImpl: async () => {
+        fetchCalled = true
+        return new Response(null, { status: 200 })
+      },
+      requestId: 'req-x-skip',
+    })
+
+    expect(result).toEqual({ status: 'skipped', requestId: 'req-x-skip' })
+    expect(fetchCalled).toBe(false)
+    expect(events[0]?.msg).toBe('worker x daily sync skipped because another run is active')
+    expect(await redis.client.get(X_DAILY_PREVIOUS_DAY_LOCK_KEY)).toBe('foreign-token')
+  })
+
+  it('posts with the lease signal and releases the lock on success', async () => {
+    const redis = createInMemoryRedisClient()
+    const signals: Array<boolean | null> = []
+
+    const result = await triggerXDailySync({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api:3001',
+      log: () => {},
+      fetchImpl: async (_url, init) => {
+        signals.push(init?.signal instanceof AbortSignal ? init.signal.aborted : null)
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      },
+      requestId: 'req-x-ok',
+      lockTtlSeconds: 120,
+    })
+
+    expect(result).toEqual({ status: 'triggered', requestId: 'req-x-ok' })
+    expect(signals).toEqual([false])
+    expect(await redis.client.get(X_DAILY_PREVIOUS_DAY_LOCK_KEY)).toBeNull()
+  })
+
+  it('releases the lock when the trigger fails', async () => {
+    const redis = createInMemoryRedisClient()
+
+    const result = await triggerXDailySync({
+      redisClient: redis.client,
+      apiInternalUrl: 'http://api:3001',
+      log: () => {},
+      fetchImpl: async () => new Response('boom', { status: 500 }),
+      requestId: 'req-x-fail',
+    })
+
+    expect(result.status).toBe('failed')
+    expect(await redis.client.get(X_DAILY_PREVIOUS_DAY_LOCK_KEY)).toBeNull()
   })
 })
 

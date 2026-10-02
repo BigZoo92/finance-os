@@ -30,6 +30,7 @@ import {
   providerErr,
   providerOk,
 } from '@finance-os/provider-runtime'
+import { internalServiceHeaders } from '../../../../services/internal-service-auth'
 import { buildDemoPatternDetectionResponse } from '../pattern-detection-demo'
 
 const PROVIDER_ID = asProviderId('quant-service')
@@ -56,6 +57,8 @@ export interface QuantPatternsDetectProviderConfig {
   readonly enabled: boolean
   readonly url: string
   readonly timeoutMs: number
+  /** Server-only `INTERNAL_SERVICE_TOKEN`; sent as `x-internal-service-token` when set. */
+  readonly internalServiceToken?: string
 }
 
 export type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>
@@ -181,6 +184,7 @@ export const createQuantPatternsDetectProvider = (
             headers: {
               'content-type': 'application/json',
               'x-request-id': ctx.requestId,
+              ...internalServiceHeaders(config.internalServiceToken),
             },
             body: JSON.stringify(input),
             signal: controller.signal,

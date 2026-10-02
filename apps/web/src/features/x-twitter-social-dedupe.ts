@@ -38,33 +38,31 @@ const time = (value: string | null | undefined): number =>
   value ? new Date(value).getTime() || 0 : 0
 
 const chooseVisibleSource = (sources: SignalSource[], canonicalHandle: string): SignalSource =>
-  sources
-    .slice()
-    .sort((a, b) => {
-      const scoresA = [
-        a.externalId ? 1 : 0,
-        hasProfile(a) ? 1 : 0,
-        a.enabled ? 1 : 0,
-        a.handle.trim().toLowerCase() === canonicalHandle ? 1 : 0,
-        time(a.updatedAt),
-        time(a.createdAt),
-        a.priority,
-      ]
-      const scoresB = [
-        b.externalId ? 1 : 0,
-        hasProfile(b) ? 1 : 0,
-        b.enabled ? 1 : 0,
-        b.handle.trim().toLowerCase() === canonicalHandle ? 1 : 0,
-        time(b.updatedAt),
-        time(b.createdAt),
-        b.priority,
-      ]
-      for (let i = 0; i < scoresA.length; i += 1) {
-        const diff = (scoresB[i] ?? 0) - (scoresA[i] ?? 0)
-        if (diff !== 0) return diff
-      }
-      return a.id - b.id
-    })[0] as SignalSource
+  sources.slice().sort((a, b) => {
+    const scoresA = [
+      a.externalId ? 1 : 0,
+      hasProfile(a) ? 1 : 0,
+      a.enabled ? 1 : 0,
+      a.handle.trim().toLowerCase() === canonicalHandle ? 1 : 0,
+      time(a.updatedAt),
+      time(a.createdAt),
+      a.priority,
+    ]
+    const scoresB = [
+      b.externalId ? 1 : 0,
+      hasProfile(b) ? 1 : 0,
+      b.enabled ? 1 : 0,
+      b.handle.trim().toLowerCase() === canonicalHandle ? 1 : 0,
+      time(b.updatedAt),
+      time(b.createdAt),
+      b.priority,
+    ]
+    for (let i = 0; i < scoresA.length; i += 1) {
+      const diff = (scoresB[i] ?? 0) - (scoresA[i] ?? 0)
+      if (diff !== 0) return diff
+    }
+    return a.id - b.id
+  })[0] as SignalSource
 
 export const dedupeSignalSourcesForDisplay = (
   sources: SignalSource[]
@@ -90,7 +88,10 @@ export const dedupeSignalSourcesForDisplay = (
         keptId: kept.id,
         rawHandle: duplicate.handle,
         canonicalHandle,
-        reason: kept.externalId && !duplicate.externalId ? 'kept_has_external_id' : 'same_canonical_handle',
+        reason:
+          kept.externalId && !duplicate.externalId
+            ? 'kept_has_external_id'
+            : 'same_canonical_handle',
       })
     }
   }

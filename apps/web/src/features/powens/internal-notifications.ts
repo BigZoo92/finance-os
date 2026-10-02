@@ -61,53 +61,47 @@ export const getPowensInternalNotifications = ({
   }, new Map())
 
   const notifications = connections.reduce<PowensInternalNotification[]>((acc, connection) => {
-      if (connection.status === 'reconnect_required') {
-        acc.push(
-          {
-            id: `powens-reconnect-${connection.powensConnectionId}`,
-            connectionId: connection.powensConnectionId,
-            title: 'Reconnexion Powens requise',
-            detail: toConnectionDetail(connection),
-            level: 'critical' as const,
-          },
-        )
-        return acc
-      }
-
-      if (connection.status === 'error') {
-        acc.push(
-          {
-            id: `powens-error-${connection.powensConnectionId}`,
-            connectionId: connection.powensConnectionId,
-            title: 'Connexion Powens en erreur',
-            detail: toConnectionDetail(connection),
-            level: 'warning' as const,
-          },
-        )
-        return acc
-      }
-
-      const latestRun = latestRunByConnectionId.get(connection.powensConnectionId)
-      if (latestRun?.result === 'reconnect_required') {
-        acc.push(
-          {
-            id: `powens-run-reconnect-${connection.powensConnectionId}`,
-            connectionId: connection.powensConnectionId,
-            title: 'Sync Powens bloquee: reconnect_required',
-            detail: `Dernier run ${latestRun.startedAt}`,
-            level: 'critical' as const,
-          },
-        )
-        return acc
-      }
-
+    if (connection.status === 'reconnect_required') {
+      acc.push({
+        id: `powens-reconnect-${connection.powensConnectionId}`,
+        connectionId: connection.powensConnectionId,
+        title: 'Reconnexion Powens requise',
+        detail: toConnectionDetail(connection),
+        level: 'critical' as const,
+      })
       return acc
-    }, [])
+    }
+
+    if (connection.status === 'error') {
+      acc.push({
+        id: `powens-error-${connection.powensConnectionId}`,
+        connectionId: connection.powensConnectionId,
+        title: 'Connexion Powens en erreur',
+        detail: toConnectionDetail(connection),
+        level: 'warning' as const,
+      })
+      return acc
+    }
+
+    const latestRun = latestRunByConnectionId.get(connection.powensConnectionId)
+    if (latestRun?.result === 'reconnect_required') {
+      acc.push({
+        id: `powens-run-reconnect-${connection.powensConnectionId}`,
+        connectionId: connection.powensConnectionId,
+        title: 'Sync Powens bloquee: reconnect_required',
+        detail: `Dernier run ${latestRun.startedAt}`,
+        level: 'critical' as const,
+      })
+      return acc
+    }
+
+    return acc
+  }, [])
 
   return notifications.sort((left, right) => {
-      if (left.level === right.level) {
-        return left.connectionId.localeCompare(right.connectionId)
-      }
-      return left.level === 'critical' ? -1 : 1
-    })
+    if (left.level === right.level) {
+      return left.connectionId.localeCompare(right.connectionId)
+    }
+    return left.level === 'critical' ? -1 : 1
+  })
 }

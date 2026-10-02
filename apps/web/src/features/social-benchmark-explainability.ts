@@ -80,7 +80,8 @@ const buildDeterministicInsights = ({
       {
         id: 'fallback-generic',
         title: 'Repère prudent par défaut',
-        summary: 'Pas assez de positions pour comparer finement votre portefeuille à un benchmark social.',
+        summary:
+          'Pas assez de positions pour comparer finement votre portefeuille à un benchmark social.',
         detail:
           'Le panel reste actif mais applique une règle générique : diversification progressive et suivi hebdomadaire des écarts.',
         confidence: 'low',
@@ -102,7 +103,9 @@ const buildDeterministicInsights = ({
   const largest = sorted[0]
   const concentration = largest ? largest.value / totalValue : 0
   const cashDrag = totalValue > 0 ? cashValue / totalValue : 0
-  const lowQualityCoverage = sorted.filter(position => position.source === 'minimal' || position.source === 'unknown').length
+  const lowQualityCoverage = sorted.filter(
+    position => position.source === 'minimal' || position.source === 'unknown'
+  ).length
 
   const insights: BenchmarkExplainabilityInsight[] = [
     {
@@ -150,7 +153,9 @@ const buildDeterministicInsights = ({
 }
 
 export const getSocialBenchmarkExplainabilityEnabled = () => {
-  return parseBooleanUiFlag(readPublicRuntimeEnv('VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED')) ?? true
+  return (
+    parseBooleanUiFlag(readPublicRuntimeEnv('VITE_SOCIAL_BENCHMARK_EXPLAINABILITY_ENABLED')) ?? true
+  )
 }
 
 export const buildSocialBenchmarkExplainability = ({
@@ -180,10 +185,15 @@ export const buildSocialBenchmarkExplainability = ({
   }
 
   try {
+    // Only valued assets and positions participate; unknown values are neither
+    // counted as 0 nor allowed to shrink a share denominator silently.
     const cashValue = assets
       .filter(asset => asset.type === 'cash')
-      .reduce((sum, asset) => sum + asset.valuation, 0)
-    const totalValue = positions.reduce((sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0), 0)
+      .reduce((sum, asset) => sum + (asset.valuation ?? 0), 0)
+    const totalValue = positions.reduce(
+      (sum, p) => sum + (p.currentValue ?? p.lastKnownValue ?? 0),
+      0
+    )
 
     const insights = buildDeterministicInsights({ positions, cashValue, totalValue })
     const staleInsight = positions.every(position => !position.valuedAt)
@@ -223,7 +233,9 @@ export const buildSocialBenchmarkExplainability = ({
   }
 }
 
-export const logSocialBenchmarkExplainabilityEvent = (model: SocialBenchmarkExplainabilityModel) => {
+export const logSocialBenchmarkExplainabilityEvent = (
+  model: SocialBenchmarkExplainabilityModel
+) => {
   console.info(EXPLAINABILITY_SCOPE, {
     event: 'explainability_generated',
     traceId: model.traceId,

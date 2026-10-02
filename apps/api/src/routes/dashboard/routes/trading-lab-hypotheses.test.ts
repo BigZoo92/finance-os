@@ -86,7 +86,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
         name: input.name,
         slug: input.slug,
         description: input.description ?? null,
-        strategyType: (input.strategyType ?? 'experimental') as string,
+        strategyType: input.strategyType ?? 'experimental',
         status: (input.status ?? 'draft') as StoredStrategy['status'],
         enabled: input.enabled ?? true,
         tags: input.tags ?? [],
@@ -109,9 +109,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
     async updateStrategy(id, patch) {
       const idx = state.strategies.findIndex(s => s.id === id)
       if (idx === -1) {
-        return null as unknown as Awaited<
-          ReturnType<HypothesesRepositoryAdapter['updateStrategy']>
-        >
+        return null
       }
       const current = state.strategies[idx] as StoredStrategy
       const merged: StoredStrategy = {
@@ -120,9 +118,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
         updatedAt: new Date(),
       }
       state.strategies[idx] = merged
-      return merged as unknown as Awaited<
-        ReturnType<HypothesesRepositoryAdapter['updateStrategy']>
-      >
+      return merged as unknown as Awaited<ReturnType<HypothesesRepositoryAdapter['updateStrategy']>>
     },
     async archiveStrategy(id) {
       return repo.updateStrategy(id, { status: 'archived' })
@@ -146,9 +142,7 @@ const buildFakeRepository = (): { repo: HypothesesRepositoryAdapter; state: Fake
         updatedAt: now,
       }
       state.scenarios.push(created)
-      return created as unknown as Awaited<
-        ReturnType<HypothesesRepositoryAdapter['createScenario']>
-      >
+      return created
     },
   }
   return { repo, state }
@@ -178,123 +172,117 @@ const DEMO_HYPOTHESES = [
 const buildHypothesisRoutes = (hypotheses: ReturnType<typeof createHypothesisUseCases>) => {
   // Mirrors the demoOrReal pattern used by the real trading-lab route block. We re-implement
   // it inline here to keep the test free of upstream DB imports.
-  return (
-    new Elysia({ prefix: '/trading-lab' })
-      .get('/hypotheses', context => {
-        if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
-          return { ok: true, hypotheses: DEMO_HYPOTHESES }
-        }
-        return hypotheses.listManualHypotheses().then(items => ({ ok: true, hypotheses: items }))
-      })
-      .get('/hypotheses/:id', async context => {
-        const id = Number(context.params.id)
-        if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
-          const found = DEMO_HYPOTHESES.find(h => h.id === id)
-          if (!found) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found' }
-          }
-          return { ok: true, hypothesis: found }
-        }
-        const hypothesis = await hypotheses.getManualHypothesisById(id)
-        if (!hypothesis) {
+  return new Elysia({ prefix: '/trading-lab' })
+    .get('/hypotheses', context => {
+      if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
+        return { ok: true, hypotheses: DEMO_HYPOTHESES }
+      }
+      return hypotheses.listManualHypotheses().then(items => ({ ok: true, hypotheses: items }))
+    })
+    .get('/hypotheses/:id', async context => {
+      const id = Number(context.params.id)
+      if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
+        const found = DEMO_HYPOTHESES.find(h => h.id === id)
+        if (!found) {
           context.set.status = 404
           return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found' }
         }
-        return { ok: true, hypothesis }
-      })
-      .post(
-        '/hypotheses',
-        async context => {
-          if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required' }
-          }
-          requireAdmin(context)
-          try {
-            const created = await hypotheses.createManualHypothesis(context.body)
-            context.set.status = 201
-            return { ok: true, hypothesis: created }
-          } catch (error) {
-            if (isHypothesisExecutionInstructionError(error)) {
-              context.set.status = 422
-              return {
-                ok: false,
-                code: error.code,
-                message: error.message,
-                matches: error.matches,
-              }
-            }
-            if (isHypothesisValidationError(error)) {
-              context.set.status = 422
-              return { ok: false, code: error.code, message: error.message, field: error.field }
-            }
-            throw error
-          }
-        },
-        {
-          body: t.Object({
-            name: t.String({ minLength: 1, maxLength: 120 }),
-            slug: t.String({ minLength: 1, maxLength: 120, pattern: '^[a-z0-9-]+$' }),
-            description: t.Optional(t.String({ maxLength: 4000 })),
-            thesis: t.Optional(t.String({ maxLength: 2000 })),
-            assumptions: t.Optional(t.Array(t.String(), { maxItems: 32 })),
-            caveats: t.Optional(t.Array(t.String(), { maxItems: 32 })),
-            invalidationCriteria: t.Array(t.String(), { minItems: 1, maxItems: 32 }),
-          }),
-        }
-      )
-      .post('/hypotheses/:id/archive', async context => {
+        return { ok: true, hypothesis: found }
+      }
+      const hypothesis = await hypotheses.getManualHypothesisById(id)
+      if (!hypothesis) {
+        context.set.status = 404
+        return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found' }
+      }
+      return { ok: true, hypothesis }
+    })
+    .post(
+      '/hypotheses',
+      async context => {
         if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
           context.set.status = 403
           return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required' }
         }
         requireAdmin(context)
-        const archived = await hypotheses.archiveManualHypothesis(Number(context.params.id))
-        if (!archived) {
+        try {
+          const created = await hypotheses.createManualHypothesis(context.body)
+          context.set.status = 201
+          return { ok: true, hypothesis: created }
+        } catch (error) {
+          if (isHypothesisExecutionInstructionError(error)) {
+            context.set.status = 422
+            return {
+              ok: false,
+              code: error.code,
+              message: error.message,
+              matches: error.matches,
+            }
+          }
+          if (isHypothesisValidationError(error)) {
+            context.set.status = 422
+            return { ok: false, code: error.code, message: error.message, field: error.field }
+          }
+          throw error
+        }
+      },
+      {
+        body: t.Object({
+          name: t.String({ minLength: 1, maxLength: 120 }),
+          slug: t.String({ minLength: 1, maxLength: 120, pattern: '^[a-z0-9-]+$' }),
+          description: t.Optional(t.String({ maxLength: 4000 })),
+          thesis: t.Optional(t.String({ maxLength: 2000 })),
+          assumptions: t.Optional(t.Array(t.String(), { maxItems: 32 })),
+          caveats: t.Optional(t.Array(t.String(), { maxItems: 32 })),
+          invalidationCriteria: t.Array(t.String(), { minItems: 1, maxItems: 32 }),
+        }),
+      }
+    )
+    .post('/hypotheses/:id/archive', async context => {
+      if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
+        context.set.status = 403
+        return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required' }
+      }
+      requireAdmin(context)
+      const archived = await hypotheses.archiveManualHypothesis(Number(context.params.id))
+      if (!archived) {
+        context.set.status = 404
+        return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found' }
+      }
+      return { ok: true, hypothesis: archived }
+    })
+    .post(
+      '/hypotheses/:id/scenarios',
+      async context => {
+        if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
+          context.set.status = 403
+          return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required' }
+        }
+        requireAdmin(context)
+        const scenario = await hypotheses.createScenarioForHypothesis(
+          Number(context.params.id),
+          context.body
+        )
+        if (!scenario) {
           context.set.status = 404
           return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found' }
         }
-        return { ok: true, hypothesis: archived }
-      })
-      .post(
-        '/hypotheses/:id/scenarios',
-        async context => {
-          if ((context as unknown as { auth: { mode: 'admin' | 'demo' } }).auth.mode === 'demo') {
-            context.set.status = 403
-            return { ok: false, code: 'DEMO_MODE_FORBIDDEN', message: 'Admin session required' }
-          }
-          requireAdmin(context)
-          const scenario = await hypotheses.createScenarioForHypothesis(
-            Number(context.params.id),
-            context.body
-          )
-          if (!scenario) {
-            context.set.status = 404
-            return { ok: false, code: 'NOT_FOUND', message: 'Hypothesis not found' }
-          }
-          context.set.status = 201
-          return { ok: true, scenario }
-        },
-        {
-          body: t.Object({
-            name: t.String({ minLength: 1, maxLength: 120 }),
-            invalidationCriteria: t.String({ minLength: 1, maxLength: 1200 }),
-            thesis: t.Optional(t.String({ maxLength: 2000 })),
-            description: t.Optional(t.String({ maxLength: 4000 })),
-            expectedOutcome: t.Optional(t.String({ maxLength: 2000 })),
-            riskNotes: t.Optional(t.String({ maxLength: 2000 })),
-          }),
-        }
-      )
-  )
+        context.set.status = 201
+        return { ok: true, scenario }
+      },
+      {
+        body: t.Object({
+          name: t.String({ minLength: 1, maxLength: 120 }),
+          invalidationCriteria: t.String({ minLength: 1, maxLength: 1200 }),
+          thesis: t.Optional(t.String({ maxLength: 2000 })),
+          description: t.Optional(t.String({ maxLength: 4000 })),
+          expectedOutcome: t.Optional(t.String({ maxLength: 2000 })),
+          riskNotes: t.Optional(t.String({ maxLength: 2000 })),
+        }),
+      }
+    )
 }
 
-const buildApp = ({
-  mode,
-}: {
-  mode: 'admin' | 'demo'
-}) => {
+const buildApp = ({ mode }: { mode: 'admin' | 'demo' }) => {
   const { repo, state } = buildFakeRepository()
   const useCases = createHypothesisUseCases({ repository: repo })
   const app = new Elysia()
@@ -310,9 +298,7 @@ const buildApp = ({
 describe('Hypothesis Lab routes', () => {
   it('GET /trading-lab/hypotheses returns deterministic demo fixtures', async () => {
     const { app } = buildApp({ mode: 'demo' })
-    const response = await app.handle(
-      new Request('http://finance-os.local/trading-lab/hypotheses')
-    )
+    const response = await app.handle(new Request('http://finance-os.local/trading-lab/hypotheses'))
     const payload = (await response.json()) as {
       ok: boolean
       hypotheses: Array<{ strategyType: string }>

@@ -94,7 +94,7 @@ const buildFakeRepository = (): {
         name: input.name,
         slug: input.slug,
         description: input.description ?? null,
-        strategyType: (input.strategyType ?? 'experimental') as string,
+        strategyType: input.strategyType ?? 'experimental',
         status: (input.status ?? 'draft') as StoredStrategy['status'],
         enabled: input.enabled ?? true,
         tags: input.tags ?? [],
@@ -117,9 +117,7 @@ const buildFakeRepository = (): {
     async updateStrategy(id, patch) {
       const idx = state.strategies.findIndex(s => s.id === id)
       if (idx === -1) {
-        return null as unknown as Awaited<
-          ReturnType<HypothesesRepositoryAdapter['updateStrategy']>
-        >
+        return null
       }
       const current = state.strategies[idx] as StoredStrategy
       const merged: StoredStrategy = {
@@ -128,9 +126,7 @@ const buildFakeRepository = (): {
         updatedAt: new Date(),
       }
       state.strategies[idx] = merged
-      return merged as unknown as Awaited<
-        ReturnType<HypothesesRepositoryAdapter['updateStrategy']>
-      >
+      return merged as unknown as Awaited<ReturnType<HypothesesRepositoryAdapter['updateStrategy']>>
     },
     async archiveStrategy(id) {
       return repo.updateStrategy(id, { status: 'archived' })
@@ -154,9 +150,7 @@ const buildFakeRepository = (): {
         updatedAt: now,
       }
       state.scenarios.push(created)
-      return created as unknown as Awaited<
-        ReturnType<HypothesesRepositoryAdapter['createScenario']>
-      >
+      return created
     },
   }
 
@@ -190,7 +184,7 @@ describe('createHypothesisUseCases', () => {
     expect(created.caveats.every((c: string) => !c.startsWith('invalidation: '))).toBe(true)
 
     // Hypothesis-specific data lives under `parameters.hypothesis` (structured).
-    const params = created.parameters as Record<string, unknown>
+    const params = created.parameters
     expect(params._hypothesisThesis).toBeUndefined()
     const hypothesis = params.hypothesis as {
       thesis: string | null
@@ -219,7 +213,7 @@ describe('createHypothesisUseCases', () => {
         horizon: '90d',
       })
     )
-    const hypothesis = (created.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = created.parameters.hypothesis as {
       evidenceNotes?: string[]
       horizon?: string | null
     }
@@ -236,7 +230,7 @@ describe('createHypothesisUseCases', () => {
         parameters: { fastPeriod: 10, slowPeriod: 30, customMeta: { source: 'trader-notes' } },
       })
     )
-    const params = created.parameters as Record<string, unknown>
+    const params = created.parameters
     expect(params.fastPeriod).toBe(10)
     expect(params.slowPeriod).toBe(30)
     expect(params.customMeta).toEqual({ source: 'trader-notes' })
@@ -251,9 +245,7 @@ describe('createHypothesisUseCases', () => {
 
     let caught: unknown = null
     try {
-      await useCases.createManualHypothesis(
-        validCreateInput({ invalidationCriteria: [] })
-      )
+      await useCases.createManualHypothesis(validCreateInput({ invalidationCriteria: [] }))
     } catch (error) {
       caught = error
     }
@@ -327,7 +319,7 @@ describe('createHypothesisUseCases', () => {
     expect(updated?.caveats.every((c: string) => !c.startsWith('invalidation: '))).toBe(true)
     expect(updated?.caveats).toEqual(['Replaced caveat'])
 
-    const hypothesis = (updated?.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = (updated?.parameters ?? {}).hypothesis as {
       thesis: string | null
       invalidationCriteria: string[]
     }
@@ -348,7 +340,7 @@ describe('createHypothesisUseCases', () => {
         'EUR/USD realized vol > 2.0x baseline',
       ],
     })
-    const hypothesis = (updated?.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = (updated?.parameters ?? {}).hypothesis as {
       invalidationCriteria: string[]
     }
     expect(hypothesis.invalidationCriteria).toEqual([
@@ -392,7 +384,7 @@ describe('createHypothesisUseCases', () => {
       // A caller trying to overwrite hypothesis via parameters must not succeed.
       parameters: { hypothesis: { thesis: 'malicious override', invalidationCriteria: [] } },
     })
-    const hypothesis = (updated?.parameters as Record<string, unknown>).hypothesis as {
+    const hypothesis = (updated?.parameters ?? {}).hypothesis as {
       thesis: string | null
       invalidationCriteria: string[]
     }

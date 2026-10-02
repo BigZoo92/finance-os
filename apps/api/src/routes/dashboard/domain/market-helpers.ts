@@ -23,9 +23,9 @@ const toParts = (value: Date, timeZone: string) => {
   })
 
   return Object.fromEntries(
-    formatter.formatToParts(value).flatMap(part =>
-      part.type === 'literal' ? [] : [[part.type, part.value]]
-    )
+    formatter
+      .formatToParts(value)
+      .flatMap(part => (part.type === 'literal' ? [] : [[part.type, part.value]]))
   ) as Record<string, string>
 }
 

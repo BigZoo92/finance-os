@@ -1,9 +1,4 @@
 import { apiFetch, ApiRequestError } from '@/lib/api'
-import {
-  getDemoDashboardNews,
-  getDemoDashboardSummary,
-  getDemoDashboardTransactions,
-} from './demo-data'
 import type {
   DashboardAdvisorAssumptionsResponse,
   DashboardAdvisorAssetDetailsResponse,
@@ -44,6 +39,11 @@ import type {
   DashboardSummaryResponse,
   DashboardTransactionsResponse,
 } from './dashboard-types'
+import {
+  getDemoDashboardNews,
+  getDemoDashboardSummary,
+  getDemoDashboardTransactions,
+} from './demo-data'
 
 const toSearchParams = (params: Record<string, string | number | undefined>) => {
   const search = new URLSearchParams()

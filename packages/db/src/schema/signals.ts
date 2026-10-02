@@ -26,7 +26,10 @@ export const signalSource = pgTable(
     group: text('group').notNull().$type<'finance' | 'ai_tech'>(),
     enabled: boolean('enabled').notNull().default(true),
     priority: integer('priority').notNull().default(50),
-    tags: jsonb('tags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    tags: jsonb('tags')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     language: text('language').notNull().default('en'),
     includePatterns: jsonb('include_patterns')
       .$type<string[]>()
@@ -121,11 +124,26 @@ export const signalItem = pgTable(
     publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
     fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull(),
     language: text('language').notNull().default('en'),
-    entities: jsonb('entities').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    tickers: jsonb('tickers').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    sectors: jsonb('sectors').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    regions: jsonb('regions').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    topics: jsonb('topics').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    entities: jsonb('entities')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    tickers: jsonb('tickers')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sectors: jsonb('sectors')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    regions: jsonb('regions')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    topics: jsonb('topics')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     signalDomain: text('signal_domain').notNull().default('unknown'),
     relevanceScore: integer('relevance_score').notNull().default(0),
     noveltyScore: integer('novelty_score').notNull().default(0),
@@ -225,7 +243,13 @@ export const freeFirehoseRun = pgTable(
       .notNull()
       .default('running')
       .$type<
-        'running' | 'success' | 'partial' | 'failed' | 'failed_timeout' | 'cancelled' | 'skipped_quota'
+        | 'running'
+        | 'success'
+        | 'partial'
+        | 'failed'
+        | 'failed_timeout'
+        | 'cancelled'
+        | 'skipped_quota'
       >(),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),

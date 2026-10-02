@@ -6,7 +6,6 @@
 
 import {
   FORBIDDEN_PROVIDER_CAPABILITIES,
-  type ForbiddenProviderCapability,
   PROVIDER_ERROR_CODES,
   PROVIDER_HEALTH_STATUSES,
   type Provider,
@@ -44,7 +43,7 @@ export const assertProviderContract = (provider: Provider): void => {
 }
 
 export const assertProviderDoesNotExposeForbiddenCapabilities = (provider: Provider): void => {
-  if (FORBIDDEN_CAPABILITY_SET.has(provider.capability as ForbiddenProviderCapability)) {
+  if (FORBIDDEN_CAPABILITY_SET.has(provider.capability)) {
     throw new Error(
       `assertProviderDoesNotExposeForbiddenCapabilities: forbidden capability "${provider.capability}" exposed by "${provider.id}"`
     )

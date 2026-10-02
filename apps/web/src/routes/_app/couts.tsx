@@ -1,3 +1,5 @@
+import { css } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import {
   Button,
   CurrencyAmount,
@@ -19,7 +21,7 @@ import { Panel } from '@/components/surfaces/panel'
 import { authMeQueryOptions } from '@/features/auth-query-options'
 import type { AuthMode } from '@/features/auth-types'
 import { resolveAuthViewState } from '@/features/auth-view-state'
-import { COST_PERIODS, createCostsViewModel, type CostPeriod } from '@/features/costs-view-model'
+import { COST_PERIODS, type CostPeriod, createCostsViewModel } from '@/features/costs-view-model'
 import {
   dashboardAdvisorSpendQueryOptionsWithMode,
   dashboardCostOverviewQueryOptionsWithMode,
@@ -38,6 +40,65 @@ export const Route = createFileRoute('/_app/couts')({
     ])
   },
   component: CostsPage,
+})
+
+const demoNotice = css({
+  borderYWidth: '1px',
+  borderColor: 'border/60',
+  py: '3',
+  textStyle: 'sm',
+  color: 'muted.foreground',
+})
+
+const eyebrow = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.16em',
+  color: 'muted.foreground',
+})
+
+const totalSkeleton = css({
+  h: '10',
+  w: '44',
+  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+  rounded: 'control',
+  bg: 'muted',
+})
+
+const sectionTitle = css({ textStyle: 'sm', fontWeight: 'semibold' })
+
+const mutedText = css({ textStyle: 'sm', color: 'muted.foreground' })
+
+const costLine = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  alignItems: 'center',
+  gap: '4',
+  borderBottomWidth: '1px',
+  borderColor: 'border/50',
+  py: '4',
+  _last: { borderBottomWidth: '0' },
+})
+
+// `text-[10px]` on the Status chip: the recipe's `xs` text style keeps its line
+// height, so it is pinned to the inherited one like the former `leading-[inherit]`.
+const provenanceChip = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  lineHeight: 'inherit',
+})
+
+const breakdownRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+  borderBottomWidth: '1px',
+  borderColor: 'border/50',
+  py: '3',
+  _last: { borderBottomWidth: '0' },
 })
 
 function CostsPage() {
@@ -64,7 +125,7 @@ function CostsPage() {
   const pending = spendQuery.isPending || overviewQuery.isPending
 
   return (
-    <div className="space-y-7">
+    <styled.div spaceY="7">
       <PageHeader
         eyebrow="Ops"
         icon={<CoinsPixelIcon size={12} />}
@@ -82,23 +143,38 @@ function CostsPage() {
       />
 
       {authViewState === 'demo' ? (
-        <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
+        <div className={demoNotice}>
           Lecture seule avec données de démonstration. Aucune source réelle n’est interrogée.
         </div>
       ) : null}
 
-      <section className="border-y border-border/60 py-6" aria-labelledby="known-costs-title">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+      <styled.section
+        borderYWidth="1px"
+        borderColor="border/60"
+        py="6"
+        aria-labelledby="known-costs-title"
+      >
+        <styled.div
+          display="flex"
+          flexWrap="wrap"
+          alignItems="flex-end"
+          justifyContent="space-between"
+          gap="4"
+        >
           <div>
-            <p
-              id="known-costs-title"
-              className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground"
-            >
+            <p id="known-costs-title" className={eyebrow}>
               Coûts connus {model.periodLabel}
             </p>
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+            <styled.div
+              mt="2"
+              display="flex"
+              flexWrap="wrap"
+              alignItems="baseline"
+              columnGap="4"
+              rowGap="2"
+            >
               {pending ? (
-                <span className="h-10 w-44 animate-pulse rounded-control bg-muted" />
+                <span className={totalSkeleton} />
               ) : model.totals.length > 0 ? (
                 model.totals.map(total => (
                   <CurrencyAmount
@@ -106,49 +182,55 @@ function CostsPage() {
                     value={total.value}
                     currency={total.currency}
                     decimals={total.currency === 'USD' ? 4 : 2}
-                    className="text-3xl font-semibold tracking-tight"
+                    textStyle="3xl"
+                    fontWeight="semibold"
                   />
                 ))
               ) : (
-                <CurrencyAmount value={null} currency={null} className="text-xl" />
+                <CurrencyAmount value={null} currency={null} textStyle="xl" />
               )}
-            </div>
+            </styled.div>
           </div>
           {model.partial ? (
             <Status tone="attention" label="Couverture partielle" />
           ) : (
             <Status tone="positive" label="Couverture complète" />
           )}
-        </div>
+        </styled.div>
         {model.totals.length > 1 ? (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <styled.p mt="3" textStyle="xs" color="muted.foreground">
             Les devises restent séparées. Aucun taux de conversion n’est supposé.
-          </p>
+          </styled.p>
         ) : null}
-      </section>
+      </styled.section>
 
       <Panel title="Évolution Advisor" description="Dépenses quotidiennes mesurées en USD">
         <CostEvolutionChart data={model.daily} />
       </Panel>
 
       <section aria-labelledby="cost-breakdown-title">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 id="cost-breakdown-title" className="text-sm font-semibold">
+        <styled.div
+          mb="2"
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          gap="3"
+        >
+          <h2 id="cost-breakdown-title" className={sectionTitle}>
             Répartition
           </h2>
           <Button type="button" variant="ghost" size="sm" onClick={() => setAiDetailOpen(true)}>
             Détail IA
           </Button>
-        </div>
-        <div className="border-y border-border/60">
-          {model.lines.map((line, index) => (
-            <div
-              key={`${line.id}-${line.currency}-${index}`}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border/50 py-4 last:border-b-0"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-medium">{line.label}</p>
+        </styled.div>
+        <styled.div borderYWidth="1px" borderColor="border/60">
+          {model.lines.map(line => (
+            <div key={`${line.id}-${line.currency}`} className={costLine}>
+              <styled.div minW="0">
+                <styled.div display="flex" flexWrap="wrap" alignItems="center" gap="2">
+                  <styled.p textStyle="sm" fontWeight="medium">
+                    {line.label}
+                  </styled.p>
                   <Status
                     tone={
                       line.provenance === 'estimated' || line.provenance === 'mixed'
@@ -157,50 +239,65 @@ function CostsPage() {
                     }
                     label={line.provenanceLabel}
                     withDot={false}
-                    className="font-mono text-[10px] uppercase"
+                    className={provenanceChip}
                   />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{line.detail}</p>
-              </div>
+                </styled.div>
+                <styled.p mt="1" textStyle="xs" color="muted.foreground">
+                  {line.detail}
+                </styled.p>
+              </styled.div>
               <CurrencyAmount
                 value={line.value}
                 currency={line.currency}
                 decimals={line.currency === 'USD' ? 4 : 2}
-                className="text-right text-sm font-semibold"
+                textAlign="right"
+                textStyle="sm"
+                fontWeight="semibold"
               />
             </div>
           ))}
-        </div>
+        </styled.div>
       </section>
 
-      <section aria-labelledby="cost-anomalies-title" className="border-y border-border/60 py-5">
-        <h2 id="cost-anomalies-title" className="text-sm font-semibold">
+      <styled.section
+        aria-labelledby="cost-anomalies-title"
+        borderYWidth="1px"
+        borderColor="border/60"
+        py="5"
+      >
+        <h2 id="cost-anomalies-title" className={sectionTitle}>
           Anomalies
         </h2>
         {model.anomalies === null ? (
-          <p className="mt-2 text-sm text-muted-foreground">Analyse indisponible</p>
+          <styled.p mt="2" textStyle="sm" color="muted.foreground">
+            Analyse indisponible
+          </styled.p>
         ) : model.anomalies.length === 0 ? (
-          <div className="mt-3">
+          <styled.div mt="3">
             <Status tone="positive" label="Aucune anomalie" />
-          </div>
+          </styled.div>
         ) : (
-          <ul className="mt-3 space-y-3">
+          <styled.ul mt="3" spaceY="3">
             {model.anomalies.map(anomaly => (
-              <li
+              <styled.li
                 key={`${anomaly.kind}-${anomaly.message}`}
-                className="flex items-start gap-3 text-sm"
+                display="flex"
+                alignItems="flex-start"
+                gap="3"
+                textStyle="sm"
               >
                 <Status
                   tone={anomaly.severity === 'critical' ? 'negative' : 'attention'}
                   label={anomaly.severity === 'critical' ? 'Échec' : 'Attention'}
-                  className="mt-0.5 shrink-0"
+                  mt="0.5"
+                  flexShrink="0"
                 />
                 <span>{anomaly.message}</span>
-              </li>
+              </styled.li>
             ))}
-          </ul>
+          </styled.ul>
         )}
-      </section>
+      </styled.section>
 
       <Drawer open={aiDetailOpen} onOpenChange={setAiDetailOpen}>
         <DrawerContent side={isMobile ? 'bottom' : 'right'}>
@@ -208,19 +305,19 @@ function CostsPage() {
             <DrawerTitle>Détail IA</DrawerTitle>
             <DrawerDescription>Répartition du registre Advisor disponible.</DrawerDescription>
           </DrawerHeader>
-          <div className="space-y-6 px-5 pb-6">
+          <styled.div spaceY="6" px="5" pb="6">
             {model.aiBreakdown === null ? (
-              <p className="text-sm text-muted-foreground">Détail indisponible</p>
+              <p className={mutedText}>Détail indisponible</p>
             ) : (
               <>
                 <Breakdown title="Par fonction" rows={model.aiBreakdown.byFeature} />
                 <Breakdown title="Par modèle" rows={model.aiBreakdown.byModel} />
               </>
             )}
-          </div>
+          </styled.div>
         </DrawerContent>
       </Drawer>
-    </div>
+    </styled.div>
   )
 }
 
@@ -233,23 +330,20 @@ function Breakdown({
 }) {
   return (
     <section>
-      <h3 className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-        {title}
-      </h3>
+      <h3 className={eyebrow}>{title}</h3>
       {rows.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">Aucune donnée</p>
+        <styled.p mt="3" textStyle="sm" color="muted.foreground">
+          Aucune donnée
+        </styled.p>
       ) : (
-        <div className="mt-2 border-y border-border/60">
+        <styled.div mt="2" borderYWidth="1px" borderColor="border/60">
           {rows.map(row => (
-            <div
-              key={row.key}
-              className="flex items-center justify-between gap-3 border-b border-border/50 py-3 last:border-b-0"
-            >
-              <span className="text-sm">{row.label}</span>
-              <CurrencyAmount value={row.usd} currency="USD" decimals={4} className="text-sm" />
+            <div key={row.key} className={breakdownRow}>
+              <styled.span textStyle="sm">{row.label}</styled.span>
+              <CurrencyAmount value={row.usd} currency="USD" decimals={4} textStyle="sm" />
             </div>
           ))}
-        </div>
+        </styled.div>
       )}
     </section>
   )

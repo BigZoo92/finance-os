@@ -95,7 +95,11 @@ export const createInvestmentStrategyRoute = ({
       if (enabledError) return enabledError
 
       const runtime = getDashboardRuntime(context)
-      const useCase = getUseCase(context, runtime.useCases.getInvestmentStrategy, 'Investment strategy')
+      const useCase = getUseCase(
+        context,
+        runtime.useCases.getInvestmentStrategy,
+        'Investment strategy'
+      )
       if (typeof useCase !== 'function') return useCase
 
       return useCase({
@@ -249,7 +253,11 @@ export const createInvestmentStrategyRoute = ({
         if (enabledError) return enabledError
 
         const runtime = getDashboardRuntime(context)
-        const useCase = getUseCase(context, runtime.useCases.getAdvisorAssetDetails, 'Asset details')
+        const useCase = getUseCase(
+          context,
+          runtime.useCases.getAdvisorAssetDetails,
+          'Asset details'
+        )
         if (typeof useCase !== 'function') return useCase
 
         return useCase({

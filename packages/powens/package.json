@@ -1,7 +1,7 @@
 {
   "name": "@finance-os/powens",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -9,6 +9,10 @@
     "./crypto": "./src/crypto.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@finance-os/provider-runtime": "workspace:*"
   }
 }

@@ -3,6 +3,10 @@ import { writeFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import { createDbClient, schema } from '@finance-os/db'
 import {
+  EXTERNAL_INVESTMENTS_JOB_QUEUE_KEY,
+  parseExternalInvestmentsJob,
+} from '@finance-os/external-investments'
+import {
   createPowensClient,
   decryptString,
   POWENS_JOB_QUEUE_KEY,
@@ -13,41 +17,38 @@ import {
   parsePowensJob,
   serializePowensJob,
 } from '@finance-os/powens'
-import {
-  EXTERNAL_INVESTMENTS_JOB_QUEUE_KEY,
-  parseExternalInvestmentsJob,
-} from '@finance-os/external-investments'
 import { buildRuntimeHealthWithFlags, resolveRuntimeVersion } from '@finance-os/prelude'
-import { createRedisClient } from '@finance-os/redis'
+import { acquireRedisLock, createRedisClient } from '@finance-os/redis'
 import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
-import { env } from './env'
-import {
-  collectNormalizedIbans,
-  dedupePowensAccountRows,
-  normalizePowensIban,
-} from './powens-account-dedupe'
-import {
-  startDashboardMarketsScheduler,
-  triggerDashboardMarketsRefresh,
-} from './market-refresh-scheduler'
 import {
   startDashboardAdvisorScheduler,
   triggerDashboardAdvisorDailyRun,
 } from './advisor-daily-scheduler'
 import {
-  startDailyIntelligenceScheduler,
-  triggerDailyIntelligenceRun,
-} from './daily-intelligence-scheduler'
-import { startPostMortemScheduler, triggerAdvisorPostMortemRun } from './post-mortem-scheduler'
-import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
-import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
-import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
-import { startXDailySyncScheduler, triggerXDailySync } from './x-twitter-daily-sync-scheduler'
-import {
   startAttentionRebuildScheduler,
   triggerAttentionRebuild,
 } from './attention-rebuild-scheduler'
+import {
+  startDailyIntelligenceScheduler,
+  triggerDailyIntelligenceRun,
+} from './daily-intelligence-scheduler'
+import { env } from './env'
+import { createExternalInvestmentsSyncWorker } from './external-investments-sync'
+import { buildWorkerFeatureFlagsAudit } from './feature-flags-audit'
+import {
+  startDashboardMarketsScheduler,
+  triggerDashboardMarketsRefresh,
+} from './market-refresh-scheduler'
+import { startDashboardNewsScheduler, triggerDashboardNewsIngest } from './news-ingest-scheduler'
 import { logWorkerEvent } from './observability/logger'
+import { startPostMortemScheduler, triggerAdvisorPostMortemRun } from './post-mortem-scheduler'
+import {
+  collectNormalizedIbans,
+  dedupePowensAccountRows,
+  normalizePowensIban,
+} from './powens-account-dedupe'
+import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
+import { startPowensAutoSyncScheduler } from './powens-auto-sync-scheduler'
 import {
   buildProviderRawImportRow,
   deriveAccountBalance,
@@ -56,18 +57,17 @@ import {
   deriveTransactionProviderObjectAt,
   type ProviderRawImportInsert,
 } from './raw-import'
+import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
+import { startSocialSignalScheduler, triggerSocialSignalIngest } from './social-signal-scheduler'
+import { detectSyncIntegrityIssues } from './sync-integrity-checks'
 import {
   type PersistedSyncReasonCode,
   type PersistedSyncStatus,
   resolvePersistedSyncSnapshot,
 } from './sync-status-persistence'
 import { parseDisabledProviders, resolveSyncWindow } from './sync-window'
-import { shouldRunReconnectRecoverySync } from './reconnect-recovery'
-import { resolveAssetTypeFromPowensAccountType } from './powens-account-type'
-import { detectSyncIntegrityIssues } from './sync-integrity-checks'
 import { detectTransactionGaps } from './transaction-gap-detection'
-import { createExternalInvestmentsSyncWorker } from './external-investments-sync'
-import { buildWorkerFeatureFlagsAudit } from './feature-flags-audit'
+import { startXDailySyncScheduler, triggerXDailySync } from './x-twitter-daily-sync-scheduler'
 
 const dbClient = createDbClient(env.DATABASE_URL)
 const redisClient = createRedisClient(env.REDIS_URL)
@@ -454,33 +454,12 @@ const logPersistedSyncTransition = (params: {
   })
 }
 
-const acquireConnectionLock = async (connectionId: string) => {
-  const lockKey = `${CONNECTION_LOCK_PREFIX}${connectionId}`
-  const lockToken = randomUUID()
-  const acquired = await redisClient.client.set(lockKey, lockToken, {
-    NX: true,
-    EX: LOCK_TTL_SECONDS,
+const acquireConnectionLock = (connectionId: string) =>
+  acquireRedisLock({
+    client: redisClient.client,
+    key: `${CONNECTION_LOCK_PREFIX}${connectionId}`,
+    ttlSeconds: LOCK_TTL_SECONDS,
   })
-
-  if (acquired !== 'OK') {
-    return null
-  }
-
-  return {
-    key: lockKey,
-    token: lockToken,
-  }
-}
-
-const releaseConnectionLock = async (lock: { key: string; token: string }) => {
-  await redisClient.client.eval(
-    'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end',
-    {
-      keys: [lock.key],
-      arguments: [lock.token],
-    }
-  )
-}
 
 const dedupeRowsByKey = <T>(rows: T[], getKey: (row: T) => string): T[] => {
   if (rows.length <= 1) {
@@ -1311,7 +1290,17 @@ const syncConnection = async (params: {
       failureStatus,
     })
   } finally {
-    await releaseConnectionLock(lock)
+    const released = await lock.release()
+    if (released !== 'released') {
+      logWorkerEvent({
+        level: 'warn',
+        msg: 'worker connection lock release skipped',
+        connectionId,
+        requestId: requestId ?? 'n/a',
+        syncId: runId,
+        releaseStatus: released,
+      })
+    }
   }
 }
 
@@ -1605,6 +1594,7 @@ const startXDailySyncSchedulerInstance = () => {
 }
 
 const consumeJobs = async () => {
+  // oxlint-disable-next-line eslint/no-unmodified-loop-condition -- the SIGTERM and SIGINT handlers flip keepRunning.
   while (keepRunning) {
     try {
       const message = await redisClient.client.blPop(

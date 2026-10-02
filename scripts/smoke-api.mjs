@@ -139,11 +139,7 @@ const finalize = async () => {
   if (failed.length === 0) {
     const message = `Smoke API checks passed (${total}/${total}).`
     console.log(message)
-    await writeSummary([
-      '## API smoke checks',
-      '',
-      `- ✅ Passed: ${total}/${total}`,
-    ])
+    await writeSummary(['## API smoke checks', '', `- ✅ Passed: ${total}/${total}`])
     return
   }
 

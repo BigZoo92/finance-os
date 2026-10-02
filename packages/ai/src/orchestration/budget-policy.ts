@@ -54,18 +54,14 @@ export const computeAiBudgetState = ({
   }
 
   const challengerAllowed =
-    !blocked &&
-    dailyRatio < challengerDisableRatio &&
-    monthlyRatio < challengerDisableRatio
+    !blocked && dailyRatio < challengerDisableRatio && monthlyRatio < challengerDisableRatio
 
   if (!challengerAllowed && !blocked) {
     reasons.push('challenger_budget_guard')
   }
 
   const deepAnalysisAllowed =
-    !blocked &&
-    dailyRatio < deepAnalysisDisableRatio &&
-    monthlyRatio < deepAnalysisDisableRatio
+    !blocked && dailyRatio < deepAnalysisDisableRatio && monthlyRatio < deepAnalysisDisableRatio
 
   if (!deepAnalysisAllowed && !blocked) {
     reasons.push('deep_analysis_budget_guard')

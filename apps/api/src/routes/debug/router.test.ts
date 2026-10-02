@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Elysia } from 'elysia'
-import { createDebugRoutes } from './router'
 import type { PowensRoutesDependencies } from '../integrations/powens/types'
+import { createDebugRoutes } from './router'
 
 type DebugHealthResponse = {
   ok: boolean
@@ -37,7 +37,7 @@ const createDebugTestApp = ({
     redisClient: {
       ping: redisPing ?? (async () => 'PONG'),
     } as PowensRoutesDependencies['redisClient'],
-    env: ({
+    env: {
       NODE_ENV: 'test',
       APP_COMMIT_SHA: null,
       APP_VERSION: null,
@@ -55,7 +55,7 @@ const createDebugTestApp = ({
       AUTH_ALLOW_INSECURE_COOKIE_IN_PROD: false,
       AUTH_SESSION_TTL_DAYS: 30,
       AUTH_LOGIN_RATE_LIMIT_PER_MIN: 5,
-    } as unknown) as PowensRoutesDependencies['env'],
+    } as unknown as PowensRoutesDependencies['env'],
   }
 
   return new Elysia()

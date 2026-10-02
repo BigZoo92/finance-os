@@ -125,7 +125,9 @@ export const fetchTradingLabBacktests = (opts?: { strategyId?: number; limit?: n
 }
 
 export const fetchTradingLabBacktest = (id: number) =>
-  apiFetch<{ ok: boolean; backtest: TradingLabBacktestRun }>(`/dashboard/trading-lab/backtests/${id}`)
+  apiFetch<{ ok: boolean; backtest: TradingLabBacktestRun }>(
+    `/dashboard/trading-lab/backtests/${id}`
+  )
 
 export const fetchTradingLabScenarios = () =>
   apiFetch<{ ok: boolean; scenarios: TradingLabScenario[] }>('/dashboard/trading-lab/scenarios')
@@ -326,14 +328,11 @@ export interface CreateStrategyRequest {
 }
 
 export const createTradingLabStrategy = (body: CreateStrategyRequest) =>
-  apiFetch<{ ok: boolean; strategy: TradingLabStrategy }>(
-    '/dashboard/trading-lab/strategies',
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    }
-  )
+  apiFetch<{ ok: boolean; strategy: TradingLabStrategy }>('/dashboard/trading-lab/strategies', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 
 export const updateTradingLabStrategy = (
   id: number,
@@ -355,7 +354,8 @@ export const archiveTradingLabStrategy = (id: number) =>
   )
 
 export const triggerAttentionRebuildApi = () =>
-  apiFetch<{ ok: boolean; generated: number }>(
-    '/dashboard/trading-lab/attention/rebuild',
-    { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }
-  )
+  apiFetch<{ ok: boolean; generated: number }>('/dashboard/trading-lab/attention/rebuild', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  })

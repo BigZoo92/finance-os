@@ -1,8 +1,10 @@
+import { css, cva } from '@finance-os/styled-system/css'
+import { styled } from '@finance-os/styled-system/jsx'
 import { Button, Input } from '@finance-os/ui/components'
 import { EyePixelIcon } from '@finance-os/ui/icons/pixel/eye'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
-import { useState, type FormEvent } from 'react'
+import { type FormEvent, useState } from 'react'
 import { BrandMark } from '@/components/brand/brand-mark'
 import { postAuthLogin } from '@/features/auth-api'
 import { authMeQueryOptions } from '@/features/auth-query-options'
@@ -11,6 +13,12 @@ import { removeKnowledgeQueriesForAuthTransition } from '@/features/knowledge-qu
 import { powensQueryKeys } from '@/features/powens/query-options'
 import { ApiRequestError } from '@/lib/api'
 import { pushToast } from '@/lib/toast-store'
+
+// A text input's value; a file entry (never expected here) reads as empty.
+const readTextField = (formData: FormData, name: string): string => {
+  const value = formData.get(name)
+  return typeof value === 'string' ? value : ''
+}
 
 const toLoginErrorMessage = (value: unknown) => {
   if (value instanceof ApiRequestError && (value.status === 401 || value.status === 403)) {
@@ -31,25 +39,285 @@ export const Route = createFileRoute('/login')({
 })
 
 const signalWidths = [
-  359, 116, 353, 142, 344, 167, 333, 191, 321, 214, 306, 236, 290, 257, 272, 276, 252,
-  294,
+  359, 116, 353, 142, 344, 167, 333, 191, 321, 214, 306, 236, 290, 257, 272, 276, 252, 294,
 ] as const
+
+/*
+ * Login signature composition. The static layers below are the former
+ * `login-*` rules of the UI package globals, kept declaration for declaration
+ * (gradients on the `login.*` tokens, 767px mobile overrides as `mdDown`,
+ * reveal / activity motion gated by `_motionSafe`).
+ */
+
+const loginCanvas = css({
+  position: 'relative',
+  minH: '100vh',
+  overflowX: 'hidden',
+  color: 'foreground',
+  bgImage:
+    'radial-gradient(1200px 760px at 42% 46%, {colors.login.canvas.center} 0%, {colors.login.canvas.mid} 55%, {colors.login.canvas.edge} 100%)',
+  md: { minH: '100dvh' },
+  mdDown: {
+    bgImage:
+      'radial-gradient(500px 420px at 30% 32%, {colors.login.canvas.center} 0%, {colors.login.canvas.mid} 60%, {colors.login.canvas.edge} 100%)',
+  },
+})
+
+const ledgerGrid = css({
+  position: 'absolute',
+  inset: '0',
+  bgImage:
+    'repeating-linear-gradient(0deg, oklch(from {colors.foreground} l c h / 3%) 0, oklch(from {colors.foreground} l c h / 3%) 1px, transparent 1px, transparent 73px), repeating-linear-gradient(90deg, oklch(from {colors.foreground} l c h / 3%) 0, oklch(from {colors.foreground} l c h / 3%) 1px, transparent 1px, transparent 73px)',
+  mdDown: { backgroundSize: '65px 65px' },
+})
+
+const signalGlow = css({
+  position: 'absolute',
+  left: '8%',
+  top: '7%',
+  h: '86%',
+  w: '66%',
+  bgImage: 'radial-gradient(ellipse, oklch(from {colors.primary} l c h / 16%) 0%, transparent 70%)',
+})
+
+const signalBlade = css({
+  position: 'absolute',
+  bottom: '8%',
+  left: '40.3%',
+  top: '10%',
+  w: '1px',
+  bgImage:
+    'linear-gradient(to bottom, transparent 0%, oklch(from {colors.primary} l c h / 85%) 18%, oklch(from {colors.primary} l c h / 85%) 82%, transparent 100%)',
+})
+
+const signalLine = cva({
+  base: {
+    position: 'relative',
+    display: 'block',
+    h: '1.5px',
+    bg: 'oklch(from {colors.foreground} l c h / 24%)',
+  },
+  variants: {
+    active: {
+      true: {
+        bg: 'oklch(from {colors.primary} l c h / 75%)',
+        '& > span': {
+          position: 'absolute',
+          top: '-1.25px',
+          right: '-6px',
+          w: '4px',
+          h: '4px',
+          bg: 'oklch(from {colors.primary} l c h / 90%)',
+        },
+      },
+      false: {},
+    },
+  },
+})
+
+const crosshair = cva({
+  base: {
+    position: 'absolute',
+    boxSize: '2',
+    color: 'foreground/25',
+    _before: {
+      content: '""',
+      position: 'absolute',
+      left: '50%',
+      h: 'full',
+      w: '1px',
+      bg: 'currentColor',
+    },
+    _after: {
+      content: '""',
+      position: 'absolute',
+      top: '50%',
+      h: '1px',
+      w: 'full',
+      bg: 'currentColor',
+    },
+  },
+  variants: {
+    corner: {
+      bottomLeft: { bottom: '9%', left: '8%' },
+      topRight: { right: '5.5%', top: '13%' },
+    },
+  },
+})
+
+const brandHeader = css({
+  position: 'relative',
+  zIndex: '10',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2.5',
+  px: '6',
+  pt: 'max(1.5rem, env(safe-area-inset-top))',
+  md: { position: 'absolute', left: '11', top: '9', px: '0', pt: '0' },
+  _motionSafe: { animation: 'loginReveal 420ms {easings.outExpo} both' },
+})
+
+const loginGrid = css({
+  position: 'relative',
+  zIndex: '10',
+  mx: 'auto',
+  display: 'grid',
+  minH: 'calc(100svh - 4.25rem)',
+  w: 'full',
+  maxW: '1220px',
+  gridTemplateRows: 'minmax(13rem, 0.75fr) auto',
+  gap: '8',
+  px: '6',
+  pb: 'max(3.5rem, env(safe-area-inset-bottom))',
+  pt: '12',
+  md: {
+    minH: '100dvh',
+    gridTemplateColumns: 'minmax(0, 1fr) 380px',
+    gridTemplateRows: 'repeat(1, minmax(0, 1fr))',
+    alignItems: 'center',
+    gap: '20',
+    px: '0',
+    pt: '20',
+    pb: '20',
+  },
+})
+
+const titleSection = css({
+  position: 'relative',
+  alignSelf: 'center',
+  pl: '7',
+  md: { pl: '0' },
+  _motionSafe: { animation: 'loginReveal 420ms {easings.outExpo} 60ms both' },
+})
+
+const mobileTitleRail = css({
+  pointerEvents: 'none',
+  position: 'absolute',
+  bottom: '-28%',
+  left: '0',
+  top: '-30%',
+  w: '1px',
+  bgImage:
+    'linear-gradient(to bottom in oklab, transparent 0%, color-mix(in srgb, {colors.primary} 80%, transparent) 50%, transparent 100%)',
+  md: { display: 'none' },
+})
+
+const wordmark = css({
+  fontSize: 'clamp(3.15rem, 16vw, 4rem)',
+  fontWeight: 'bold',
+  lineHeight: '0.94',
+  letterSpacing: '-0.05em',
+  md: { fontSize: 'clamp(5.75rem, 8.5vw, 7.75rem)' },
+})
+
+const wordmarkOutline = css({
+  color: 'transparent',
+  WebkitTextStroke: '1.5px oklch(from {colors.foreground} l c h / 55%)',
+})
+
+const loginPanel = css({
+  w: 'full',
+  alignSelf: 'flex-end',
+  rounded: 'surface',
+  borderWidth: '1px',
+  borderColor: 'foreground/13',
+  bg: 'login.panel',
+  p: '6',
+  boxShadow: '0 30px 70px oklch(0 0 0 / 32%)',
+  md: { alignSelf: 'center', p: '8', boxShadow: '0 40px 90px oklch(0 0 0 / 34%)' },
+  _motionSafe: { animation: 'loginReveal 420ms {easings.outExpo} 120ms both' },
+})
+
+const formMessage = cva({
+  base: { display: 'flex', alignItems: 'center', gap: '2', textStyle: 'xs' },
+  variants: {
+    tone: {
+      error: { color: 'negative' },
+      info: { color: 'warning' },
+    },
+  },
+})
+
+const fieldLabel = css({
+  fontFamily: 'mono',
+  fontSize: '10px',
+  fontWeight: 'medium',
+  textTransform: 'uppercase',
+  letterSpacing: '0.18em',
+  color: 'foreground/50',
+})
+
+const passwordToggle = css({
+  position: 'absolute',
+  right: '0',
+  top: '0',
+  display: 'grid',
+  boxSize: '11',
+  placeItems: 'center',
+  rounded: 'control',
+  color: 'foreground/50',
+  transitionProperty: 'color, transform',
+  transitionDuration: '150ms',
+  transitionTimingFunction: 'default',
+  _hover: { color: 'foreground' },
+  _focusVisible: {
+    outlineStyle: 'none',
+    boxShadow: 'inset 0 0 0 2px color-mix(in srgb, {colors.primary} 70%, transparent)',
+  },
+  _active: { scale: '0.96' },
+})
+
+const loginActivity = css({
+  display: 'inline-flex',
+  gap: '3px',
+  '& > span': {
+    w: '5px',
+    h: '5px',
+    bg: 'primary',
+    _motionSafe: { animation: 'loginActivity 700ms ease-in-out infinite' },
+  },
+  '& > span:nth-child(2)': {
+    _motionSafe: { animation: 'loginActivity 700ms ease-in-out 90ms infinite' },
+  },
+  '& > span:nth-child(4)': {
+    _motionSafe: { animation: 'loginActivity 700ms ease-in-out 90ms infinite' },
+  },
+  '& > span:nth-child(3)': {
+    _motionSafe: { animation: 'loginActivity 700ms ease-in-out 180ms infinite' },
+  },
+})
 
 function LoginSignalField() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="login-ledger-grid absolute inset-0" />
-      <div className="login-signal-glow absolute left-[8%] top-[7%] h-[86%] w-[66%]" />
-      <div className="login-signal-blade absolute bottom-[8%] left-[40.3%] top-[10%] w-px">
-        <span className="absolute -left-0.5 -top-0.5 size-[5px] bg-primary" />
-        <span className="absolute -bottom-0.5 -left-0.5 size-[5px] bg-primary" />
+    <styled.div
+      aria-hidden="true"
+      pointerEvents="none"
+      position="absolute"
+      inset="0"
+      overflow="hidden"
+    >
+      <div className={ledgerGrid} />
+      <div className={signalGlow} />
+      <div className={signalBlade}>
+        <styled.span position="absolute" left="-0.5" top="-0.5" boxSize="5px" bg="primary" />
+        <styled.span position="absolute" bottom="-0.5" left="-0.5" boxSize="5px" bg="primary" />
       </div>
-      <div className="absolute left-[42%] top-[18.8%] hidden w-[25%] min-w-72 flex-col gap-8 md:flex">
+      <styled.div
+        position="absolute"
+        left="42%"
+        top="18.8%"
+        display="none"
+        w="25%"
+        minW="72"
+        flexDirection="column"
+        gap="8"
+        md={{ display: 'flex' }}
+      >
         {signalWidths.map((width, index) => {
           const isSignal = index === 8 || index === 9
           return (
             <span
-              className={isSignal ? 'login-signal-line is-active' : 'login-signal-line'}
+              className={signalLine({ active: isSignal })}
               key={`${String(width)}-${String(index)}`}
               style={{ width: `${String((width / 359) * 100)}%` }}
             >
@@ -57,10 +325,10 @@ function LoginSignalField() {
             </span>
           )
         })}
-      </div>
-      <div className="absolute bottom-[9%] left-[8%] size-2 text-foreground/25 before:absolute before:left-1/2 before:h-full before:w-px before:bg-current after:absolute after:top-1/2 after:h-px after:w-full after:bg-current" />
-      <div className="absolute right-[5.5%] top-[13%] size-2 text-foreground/25 before:absolute before:left-1/2 before:h-full before:w-px before:bg-current after:absolute after:top-1/2 after:h-px after:w-full after:bg-current" />
-    </div>
+      </styled.div>
+      <div className={crosshair({ corner: 'bottomLeft' })} />
+      <div className={crosshair({ corner: 'topRight' })} />
+    </styled.div>
   )
 }
 
@@ -89,8 +357,8 @@ function LoginPage() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const email = String(formData.get('email') ?? '').trim()
-    const password = String(formData.get('password') ?? '')
+    const email = readTextField(formData, 'email').trim()
+    const password = readTextField(formData, 'password')
     if (!email || !password) {
       pushToast({
         title: 'Champs requis',
@@ -103,66 +371,78 @@ function LoginPage() {
   }
 
   const errorMessage = loginMutation.error ? toLoginErrorMessage(loginMutation.error) : null
-  const formMessage = errorMessage ?? infoMessage
+  const formMessageText = errorMessage ?? infoMessage
   const isError = Boolean(errorMessage)
 
   return (
-    <main
-      id="main-content"
-      className="login-canvas relative min-h-screen min-h-[100svh] overflow-x-hidden text-foreground md:min-h-[100dvh]"
-    >
+    <main id="main-content" className={loginCanvas}>
       <LoginSignalField />
 
-      <header className="login-reveal-brand relative z-10 flex items-center gap-2.5 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] md:absolute md:left-11 md:top-9 md:p-0">
-        <BrandMark size="md" className="md:h-7 md:w-7" />
-        <span className="text-sm font-semibold tracking-[-0.01em] md:text-[15px]">Finance-OS</span>
+      <header className={brandHeader}>
+        <BrandMark size="md" className={css({ md: { h: '7', w: '7' } })} />
+        <styled.span
+          textStyle="sm"
+          fontWeight="semibold"
+          letterSpacing="-0.01em"
+          md={{ fontSize: '15px' }}
+        >
+          Finance-OS
+        </styled.span>
       </header>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100svh-4.25rem)] w-full max-w-[1220px] grid-rows-[minmax(13rem,0.75fr)_auto] gap-8 px-6 pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-12 md:min-h-[100dvh] md:grid-cols-[minmax(0,1fr)_380px] md:grid-rows-1 md:items-center md:gap-20 md:px-0 md:py-20">
-        <section className="login-reveal-title relative self-center pl-7 md:pl-0" aria-labelledby="login-title">
-          <div className="pointer-events-none absolute bottom-[-28%] left-0 top-[-30%] w-px bg-gradient-to-b from-transparent via-primary/80 to-transparent md:hidden">
-            <span className="absolute -left-0.5 top-0 size-1 bg-primary" />
+      <div className={loginGrid}>
+        <section className={titleSection} aria-labelledby="login-title">
+          <div className={mobileTitleRail}>
+            <styled.span position="absolute" left="-0.5" top="0" boxSize="1" bg="primary" />
           </div>
-          <h1
-            id="login-title"
-            className="text-[clamp(3.15rem,16vw,4rem)] font-bold leading-[0.94] tracking-[-0.05em] md:text-[clamp(5.75rem,8.5vw,7.75rem)]"
-          >
-            <span className="block">FINANCE</span>
-            <span className="flex items-start gap-2.5 md:gap-[18px]">
-              <span className="login-wordmark-outline">OS</span>
-              <span className="mt-3 size-1.5 bg-primary md:mt-[22px] md:size-[9px]" />
-            </span>
+          <h1 id="login-title" className={wordmark}>
+            <styled.span display="block">FINANCE</styled.span>
+            <styled.span display="flex" alignItems="flex-start" gap="2.5" md={{ gap: '18px' }}>
+              <span className={wordmarkOutline}>OS</span>
+              <styled.span mt="3" boxSize="1.5" bg="primary" md={{ mt: '22px', boxSize: '9px' }} />
+            </styled.span>
           </h1>
-          <p className="mt-[18px] font-mono text-[9px] uppercase tracking-[0.3em] text-foreground/40 md:mt-[34px] md:text-[11px] md:tracking-[0.34em]">
+          <styled.p
+            mt="18px"
+            fontFamily="mono"
+            fontSize="9px"
+            textTransform="uppercase"
+            letterSpacing="0.3em"
+            color="foreground/40"
+            md={{ mt: '34px', fontSize: '11px', letterSpacing: '0.34em' }}
+          >
             Personal finance OS
-          </p>
+          </styled.p>
         </section>
 
-        <section className="login-reveal-panel w-full self-end rounded-surface border border-foreground/13 bg-[var(--login-panel)] p-6 shadow-[0_30px_70px_oklch(0_0_0/32%)] md:self-center md:p-8 md:shadow-[0_40px_90px_oklch(0_0_0/34%)]">
-          <h2 className="text-base font-semibold tracking-[-0.01em] md:text-[17px]">Se connecter</h2>
+        <section className={loginPanel}>
+          <styled.h2
+            textStyle="md"
+            fontWeight="semibold"
+            letterSpacing="-0.01em"
+            md={{ fontSize: '17px' }}
+          >
+            Se connecter
+          </styled.h2>
 
-          <div className="mt-3 min-h-5" aria-live="polite" aria-atomic="true">
-            {formMessage ? (
-              <p
-                id="login-message"
-                className={
-                  isError
-                    ? 'flex items-center gap-2 text-xs text-negative'
-                    : 'flex items-center gap-2 text-xs text-warning'
-                }
-              >
-                <span className="size-[5px] shrink-0 rounded-full bg-current" aria-hidden="true" />
-                {formMessage}
+          <styled.div mt="3" minH="5" aria-live="polite" aria-atomic="true">
+            {formMessageText ? (
+              <p id="login-message" className={formMessage({ tone: isError ? 'error' : 'info' })}>
+                <styled.span
+                  boxSize="5px"
+                  flexShrink="0"
+                  rounded="full"
+                  bg="currentColor"
+                  aria-hidden="true"
+                />
+                {formMessageText}
               </p>
             ) : null}
-          </div>
+          </styled.div>
 
-          <form className="mt-2" onSubmit={handleSubmit} aria-busy={loginMutation.isPending}>
+          <styled.form mt="2" onSubmit={handleSubmit} aria-busy={loginMutation.isPending}>
             <div>
-              <label
-                className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-foreground/50"
-                htmlFor="email"
-              >
+              <label className={fieldLabel} htmlFor="email">
                 Email
               </label>
               <Input
@@ -175,50 +455,64 @@ function LoginPage() {
                 spellCheck={false}
                 autoComplete="email"
                 placeholder="votre@email.fr"
-                className="mt-2 h-11 bg-[var(--login-field)] px-3.5 text-sm shadow-none"
+                mt="2"
+                h="11"
+                bg="login.field"
+                px="3.5"
+                textStyle="sm"
+                boxShadow="none"
                 required
               />
             </div>
 
-            <div className="mt-[18px]">
-              <label
-                className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-foreground/50"
-                htmlFor="password"
-              >
+            <styled.div mt="18px">
+              <label className={fieldLabel} htmlFor="password">
                 Mot de passe
               </label>
-              <div className="relative mt-2">
+              <styled.div position="relative" mt="2">
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   aria-invalid={isError}
-                  aria-describedby={formMessage ? 'login-message' : undefined}
-                  className="h-11 bg-[var(--login-field)] px-3.5 pr-12 text-sm shadow-none"
+                  aria-describedby={formMessageText ? 'login-message' : undefined}
+                  h="11"
+                  bg="login.field"
+                  pl="3.5"
+                  pr="12"
+                  textStyle="sm"
+                  boxShadow="none"
                   required
                 />
                 <button
                   type="button"
-                  className="absolute right-0 top-0 grid size-11 place-items-center rounded-control text-foreground/50 transition-[color,transform] duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 active:scale-[0.96]"
+                  className={passwordToggle}
                   aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword(value => !value)}
                 >
                   <EyePixelIcon size={16} />
                 </button>
-              </div>
-            </div>
+              </styled.div>
+            </styled.div>
 
             <Button
               type="submit"
               variant="secondary"
               size="lg"
-              className="mt-[26px] w-full rounded-control border-0 bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background"
+              mt="26px"
+              w="full"
+              rounded="control"
+              borderWidth="0"
+              bg="foreground"
+              color="background"
+              shadow="sm"
+              _hover={{ bg: 'foreground/90', color: 'background' }}
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? (
-                <span className="login-activity" aria-hidden="true">
+                <span className={loginActivity} aria-hidden="true">
                   <span />
                   <span />
                   <span />
@@ -226,23 +520,47 @@ function LoginPage() {
                   <span />
                 </span>
               ) : (
-                <span className="size-[7px] bg-primary" aria-hidden="true" />
+                <styled.span boxSize="7px" bg="primary" aria-hidden="true" />
               )}
               {loginMutation.isPending ? 'Connexion' : 'Se connecter'}
             </Button>
 
-            <Button asChild type="button" variant="ghost" className="mt-1.5 ml-auto flex min-h-10 w-fit px-0 text-xs">
+            <Button
+              asChild
+              type="button"
+              variant="ghost"
+              mt="1.5"
+              ml="auto"
+              display="flex"
+              minH="10"
+              w="fit"
+              px="0"
+              textStyle="xs"
+            >
               <Link to="/">Continuer en démo</Link>
             </Button>
-          </form>
+          </styled.form>
         </section>
       </div>
 
-      <footer className="absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-6 z-10 flex gap-4 font-mono text-[9px] uppercase tracking-[0.14em] text-foreground/30 md:bottom-8 md:left-11 md:gap-[22px] md:text-[10px]">
+      <styled.footer
+        position="absolute"
+        bottom="max(1.25rem, env(safe-area-inset-bottom))"
+        left="6"
+        zIndex="10"
+        display="flex"
+        gap="4"
+        fontFamily="mono"
+        fontSize="9px"
+        textTransform="uppercase"
+        letterSpacing="0.14em"
+        color="foreground/30"
+        md={{ bottom: '8', left: '11', gap: '22px', fontSize: '10px' }}
+      >
         <span>EUR</span>
         <span>Paris</span>
         <span>Admin</span>
-      </footer>
+      </styled.footer>
     </main>
   )
 }

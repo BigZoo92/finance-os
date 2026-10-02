@@ -181,7 +181,7 @@ describe('public runtime env', () => {
         VITE_DASHBOARD_HEALTH_WIDGET_BADGES_ENABLED: 'false',
         VITE_UI_RECONNECT_BANNER_ENABLED: 'false',
       },
-    } as Window & typeof globalThis)
+    })
 
     expect(readPublicRuntimeEnv('VITE_APP_TITLE')).toBe('Finance OS Browser')
     expect(readPublicRuntimeEnv('VITE_API_BASE_URL')).toBe('/browser-api')
