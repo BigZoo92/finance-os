@@ -119,6 +119,8 @@ durable record; the pull request description summarizes it.
 | GitNexus (CLI and MCP) failed with `ERR_DLOPEN_FAILED` after a reinstall | Modernization (P6 build policy skipped `@ladybugdb/core`'s copy-only install script) | Script reviewed and allowed |
 | Two Zod majors shipped; the API and worker declared zod without importing it | Pre-existing | One zod, unused declarations removed |
 | A boot error echoed the first 18 characters of an invalid `AUTH_*PASSWORD_HASH` value (a misplaced plaintext password) | Pre-existing | The message names the variable only; test asserts the value never appears |
+| A fresh install (CI, Docker) failed with `ERR_PNPM_IGNORED_BUILDS` for esbuild and protobufjs | Modernization (P6 `allowBuilds` list written against an already built local `node_modules`) | Both reviewed and listed as `false` (optional install scripts); validated by `check:ci` in a clean worktree without `.env` |
+| The demo transactions fixture test needed a complete API environment and failed wherever no `.env` exists, as in CI | Pre-existing | The route passes the two demo settings to the fixture, which no longer reads the API environment |
 | Unhandled promises, unknown values stringified as `[object Object]`, refs written during render, state reset synchronously inside effects | Pre-existing, surfaced by oxlint's type-aware and React rules | Promises awaited or explicitly voided, typed text helpers, `useSyncExternalStore` for client-only state, refs refreshed in layout effects |
 
 ## Measurements
@@ -210,8 +212,10 @@ Measured and not adopted:
 
 Validated on 2026-10-02 at the head of the branch:
 
+- `pnpm check:ci`, `pnpm moon:ci` and the E2E suite also pass in a clean
+  worktree with a fresh install and no `.env`, as CI runs them.
 - `pnpm check:ci` passed every step, including the new format check.
-  Tests: api 773, web 477, worker 114, provider-runtime 77,
+  Tests: api 774, web 477, worker 114, provider-runtime 77,
   external-investments 67, ui 64, ai 48, finance-engine 39, env 30,
   provider-contract 16, redis 12, api-contract 8, powens 4, db 3, Python
   25 + 78.
