@@ -18,13 +18,12 @@ Dependency failures degrade individual surfaces; they do not make the cockpit un
 | `apps/worker` | Redis job consumer and scheduled ingestion |
 | `apps/knowledge-service` | Internal temporal knowledge/GraphRAG service |
 | `apps/quant-service` | Isolated research and backtest service |
-| `apps/desktop` | Tauri shell around the web product |
 | `packages/*` | Shared finance, provider, data, env, Redis, and UI contracts |
 | `infra/docker` | Containers, health checks, and production alerting |
 
 ## Local setup
 
-Runtimes are pinned in one place each: Node.js in `.node-version` (24 LTS, also `.nvmrc`), pnpm in the `packageManager` field of `package.json` (pnpm 11 manages its own version from that field), Bun in `.bun-version` (1.4, runs the API, worker, and Bun-native tests), Python in `.python-version` (3.12, frozen with `uv`), and Rust through the Tauri toolchain. CI and the Docker images read the same files and arguments. Docker Compose is required for local infrastructure.
+Runtimes are pinned in one place each: Node.js in `.node-version` (24 LTS, also `.nvmrc`), pnpm in the `packageManager` field of `package.json` (pnpm 11 manages its own version from that field), Bun in `.bun-version` (1.4, runs the API, worker, and Bun-native tests), and Python in `.python-version` (3.12, frozen with `uv`). CI and the Docker images read the same files and arguments. Docker Compose is required for local infrastructure.
 
 ```powershell
 pnpm install --frozen-lockfile

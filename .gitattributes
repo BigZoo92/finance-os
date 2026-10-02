@@ -22,7 +22,6 @@
 *.svg text eol=lf
 *.sql text eol=lf
 *.py text eol=lf
-*.rs text eol=lf
 *.sh text eol=lf
 *.env.example text eol=lf
 Dockerfile text eol=lf
@@ -34,7 +33,6 @@ Dockerfile text eol=lf
 # attempt line-based conflict resolution on them.
 pnpm-lock.yaml text eol=lf -diff merge=binary
 uv.lock text eol=lf -diff merge=binary
-Cargo.lock text eol=lf -diff merge=binary
 
 # Generated sources: diffable but flagged so reviewers can collapse them.
 apps/web/src/routeTree.gen.ts linguist-generated=true
@@ -47,7 +45,6 @@ packages/db/drizzle/meta/*.json linguist-generated=true
 *.gif binary
 *.webp binary
 *.ico binary
-*.icns binary
 *.woff binary
 *.woff2 binary
 *.ttf binary

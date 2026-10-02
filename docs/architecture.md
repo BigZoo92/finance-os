@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-  B[Browser / Tauri] --> W[apps/web]
+  B[Browser] --> W[apps/web]
   W -->|internal /api proxy| A[apps/api]
   A --> P[(PostgreSQL)]
   A --> R[(Redis)]
@@ -30,7 +30,6 @@ Only `apps/web` receives public traffic. The API, worker, knowledge service, qua
 | `worker` | Typed Redis queues, schedules, ingestion, derived recompute, heartbeat |
 | `knowledge-service` | Internal temporal graph ingestion/retrieval with provenance and contradiction history |
 | `quant-service` | Isolated read-only research/backtesting; no brokerage execution |
-| `desktop` | Tauri packaging and platform shell; it does not fork product logic |
 
 ## Shared packages
 

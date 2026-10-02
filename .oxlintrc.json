@@ -135,7 +135,6 @@
     "**/.moon/**",
     "e2e/__visual__/**",
     "test-results/**",
-    "apps/desktop/src-tauri/target/**",
     "**/.venv/**"
   ]
 }
